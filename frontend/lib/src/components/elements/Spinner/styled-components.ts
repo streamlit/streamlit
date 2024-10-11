@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { Spinner } from "baseui/spinner"
-import isPropValid from "@emotion/is-prop-valid"
 interface ThemedStyledSpinnerProps {
   usingCustomTheme: boolean
 }
@@ -26,14 +26,14 @@ export const ThemedStyledSpinner = styled(Spinner, {
 })<ThemedStyledSpinnerProps>(({ theme, usingCustomTheme }) => {
   return {
     fontSize: theme.fontSizes.sm,
-    width: "1.375rem",
-    height: "1.375rem",
-    borderWidth: "3px",
-    radius: "4px",
+    width: theme.sizes.spinnerSize,
+    height: theme.sizes.spinnerSize,
+    borderWidth: theme.sizes.spinnerThickness,
+    radius: theme.radii.md,
     justifyContents: "center",
     padding: theme.spacing.none,
     margin: theme.spacing.none,
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     borderTopColor: usingCustomTheme
       ? theme.colors.primary
       : theme.colors.blue70,
@@ -52,7 +52,7 @@ export const StyledSpinner = styled.div<StyledSpinnerProps>(
     width: width,
     ...(cache
       ? {
-          paddingBottom: "1rem",
+          paddingBottom: theme.spacing.lg,
           background: `linear-gradient(to bottom, ${theme.colors.bgColor} 0%, ${theme.colors.bgColor} 80%, transparent 100%)`,
         }
       : null),

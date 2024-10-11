@@ -18,14 +18,16 @@ import React, { ReactElement } from "react"
 
 import "@testing-library/jest-dom"
 
+import { screen } from "@testing-library/react"
+
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { render } from "@streamlit/lib/src/test_util"
-import { screen } from "@testing-library/react"
 import { BlockNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
 import VerticalBlock from "./Block"
 
+const FAKE_SCRIPT_HASH = "fake_script_hash"
 class ResizeObserver {
   observe(): void {}
 
@@ -36,6 +38,7 @@ class ResizeObserver {
 
 function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     children,
     new BlockProto({ allowEmpty: true, column: { weight } })
   )
@@ -45,6 +48,7 @@ function makeHorizontalBlock(numColumns: number): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     Array.from({ length: numColumns }, () => makeColumn(weight)),
     new BlockProto({ allowEmpty: true, horizontal: { gap: "small" } })
   )
@@ -55,6 +59,7 @@ function makeVerticalBlock(
   additionalProps: Partial<BlockProto> = {}
 ): BlockNode {
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     children,
     new BlockProto({ allowEmpty: true, ...additionalProps })
   )
@@ -85,10 +90,22 @@ describe("Vertical Block Component", () => {
     const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)])
     render(makeVerticalBlockComponent(block))
 
-    expect(screen.getAllByTestId("column")).toHaveLength(4)
+    expect(screen.getAllByTestId("stColumn")).toHaveLength(4)
     expect(
       screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
     ).not.toHaveStyle("overflow: auto")
+  })
+
+  it("should add the user-specified key as class", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      id: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
+    })
+    render(makeVerticalBlockComponent(block))
+
+    expect(screen.getByTestId("stVerticalBlock")).toBeVisible()
+    expect(screen.getByTestId("stVerticalBlock")).toHaveClass(
+      "st-key-first-container"
+    )
   })
 
   it("should activate scrolling when height is set", () => {

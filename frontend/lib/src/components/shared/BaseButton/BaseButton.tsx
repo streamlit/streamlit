@@ -15,33 +15,33 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
-  BaseButtonProps as BaseButtonPropsT,
   BaseButtonKind,
+  BaseButtonProps as BaseButtonPropsT,
   BaseButtonSize,
   StyledBorderlessIconButton,
-  StyledIconButton,
-  StyledLinkButton,
-  StyledMinimalButton,
-  StyledPrimaryButton,
-  StyledSecondaryButton,
-  StyledTertiaryButton,
-  StyledPrimaryFormSubmitButton,
-  StyledSecondaryFormSubmitButton,
+  StyledBorderlessIconButtonActive,
+  StyledElementToolbarButton,
   StyledHeaderButton,
   StyledHeaderNoPaddingButton,
-  StyledElementToolbarButton,
+  StyledIconButton,
+  StyledIconButtonActive,
+  StyledLinkButton,
+  StyledMinimalButton,
+  StyledPillsButton,
+  StyledPillsButtonActive,
+  StyledPrimaryButton,
+  StyledPrimaryFormSubmitButton,
+  StyledSecondaryButton,
+  StyledSecondaryFormSubmitButton,
+  StyledTertiaryButton,
 } from "./styled-components"
 
-function BaseButton({
-  kind,
-  size,
-  disabled,
-  onClick,
-  fluidWidth,
-  children,
-  autoFocus,
-}: BaseButtonPropsT): ReactElement {
+function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
+  const { kind, size, disabled, onClick, fluidWidth, children, autoFocus } =
+    props
+
   let ComponentType = StyledPrimaryButton
 
   if (kind === BaseButtonKind.SECONDARY) {
@@ -50,10 +50,18 @@ function BaseButton({
     ComponentType = StyledTertiaryButton
   } else if (kind === BaseButtonKind.LINK) {
     ComponentType = StyledLinkButton
-  } else if (kind === BaseButtonKind.ICON) {
+  } else if (kind === BaseButtonKind.SEGMENT) {
     ComponentType = StyledIconButton
+  } else if (kind === BaseButtonKind.SEGMENT_ACTIVE) {
+    ComponentType = StyledIconButtonActive
+  } else if (kind === BaseButtonKind.PILLS) {
+    ComponentType = StyledPillsButton
+  } else if (kind === BaseButtonKind.PILLS_ACTIVE) {
+    ComponentType = StyledPillsButtonActive
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
+  } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {
+    ComponentType = StyledBorderlessIconButtonActive
   } else if (kind === BaseButtonKind.MINIMAL) {
     ComponentType = StyledMinimalButton
   } else if (kind === BaseButtonKind.PRIMARY_FORM_SUBMIT) {
@@ -71,12 +79,13 @@ function BaseButton({
   return (
     <ComponentType
       kind={kind}
-      size={size || BaseButtonSize.MEDIUM}
+      size={size ?? BaseButtonSize.MEDIUM}
       fluidWidth={fluidWidth || false}
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
-      data-testid={`baseButton-${kind}`}
+      data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
+      aria-label={props["aria-label"] ?? ""}
     >
       {children}
     </ComponentType>

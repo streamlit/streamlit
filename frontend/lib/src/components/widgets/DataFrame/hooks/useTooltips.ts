@@ -17,8 +17,8 @@
 import React from "react"
 
 import {
-  GridCell,
   DataEditorProps,
+  GridCell,
   GridMouseEventArgs,
 } from "@glideapps/glide-data-grid"
 

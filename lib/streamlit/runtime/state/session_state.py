@@ -37,16 +37,18 @@ from streamlit import config, util
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
+    ValueFieldName,
     WidgetMetadata,
-    is_keyed_widget_id,
-    is_widget_id,
+    is_array_value_field_name,
+    is_element_id,
+    is_keyed_element_id,
 )
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
-from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -55,9 +57,6 @@ if TYPE_CHECKING:
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
-)
-SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY: Final = (
-    f"{STREAMLIT_INTERNAL_KEY_PREFIX}_PAGE_SCRIPT_HASH"
 )
 
 
@@ -188,7 +187,7 @@ class WStates(MutableMapping[str, Any]):
     def remove_stale_widgets(
         self,
         active_widget_ids: set[str],
-        fragment_ids_this_run: set[str] | None,
+        fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
         self.states = {
@@ -277,8 +276,58 @@ class WStates(MutableMapping[str, Any]):
 def _missing_key_error_message(key: str) -> str:
     return (
         f'st.session_state has no key "{key}". Did you forget to initialize it? '
-        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+        f"More info: https://docs.streamlit.io/develop/concepts/architecture/session-state#initialization"
     )
+
+
+@dataclass
+class KeyIdMapper:
+    """A mapping of user-provided keys to element IDs.
+    It also maps element IDs to user-provided keys so that this reverse mapping
+    does not have to be computed ad-hoc.
+    All built-in dict-operations such as setting and deleting expect the key as the
+    argument, not the element ID.
+    """
+
+    _key_id_mapping: dict[str, str] = field(default_factory=dict)
+    _id_key_mapping: dict[str, str] = field(default_factory=dict)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._key_id_mapping
+
+    def __setitem__(self, key: str, widget_id: Any) -> None:
+        self._key_id_mapping[key] = widget_id
+        self._id_key_mapping[widget_id] = key
+
+    def __delitem__(self, key: str) -> None:
+        self.delete(key)
+
+    @property
+    def id_key_mapping(self) -> dict[str, str]:
+        return self._id_key_mapping
+
+    def set_key_id_mapping(self, key_id_mapping: dict[str, str]) -> None:
+        self._key_id_mapping = key_id_mapping
+        self._id_key_mapping = {v: k for k, v in key_id_mapping.items()}
+
+    def get_id_from_key(self, key: str, default: Any = None) -> str:
+        return self._key_id_mapping.get(key, default)
+
+    def get_key_from_id(self, widget_id: str) -> str:
+        return self._id_key_mapping[widget_id]
+
+    def update(self, other: KeyIdMapper) -> None:
+        self._key_id_mapping.update(other._key_id_mapping)
+        self._id_key_mapping.update(other._id_key_mapping)
+
+    def clear(self):
+        self._key_id_mapping.clear()
+        self._id_key_mapping.clear()
+
+    def delete(self, key: str):
+        widget_id = self._key_id_mapping[key]
+        del self._key_id_mapping[key]
+        del self._id_key_mapping[widget_id]
 
 
 @dataclass
@@ -309,10 +358,11 @@ class SessionState:
     # Widget values from the frontend, usually one changing prompted the script rerun
     _new_widget_state: WStates = field(default_factory=WStates)
 
-    # Keys used for widgets will be eagerly converted to the matching widget id
-    _key_id_mapping: dict[str, str] = field(default_factory=dict)
+    # Keys used for widgets will be eagerly converted to the matching element id
+    _key_id_mapper: KeyIdMapper = field(default_factory=KeyIdMapper)
 
-    # query params are stored in session state because query params will be tied with widget state at one point.
+    # query params are stored in session state because query params will be tied with
+    # widget state at one point.
     query_params: QueryParams = field(default_factory=QueryParams)
 
     def __repr__(self):
@@ -339,13 +389,13 @@ class SessionState:
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
-        self._key_id_mapping.clear()
+        self._key_id_mapper.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
 
-        wid_key_map = self._reverse_key_wid_map
+        wid_key_map = self._key_id_mapper.id_key_mapping
 
         state: dict[str, Any] = {}
 
@@ -354,9 +404,9 @@ class SessionState:
         # happens when the streamlit server restarted or the cache was cleared),
         # then we receive a widget's state from a browser.
         for k in self._keys():
-            if not is_widget_id(k) and not _is_internal_key(k):
+            if not is_element_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif is_keyed_widget_id(k):
+            elif is_keyed_element_id(k):
                 try:
                     key = wid_key_map[k]
                     state[key] = self[k]
@@ -366,12 +416,6 @@ class SessionState:
                     pass
 
         return state
-
-    @property
-    def _reverse_key_wid_map(self) -> dict[str, str]:
-        """Return a mapping of widget_id : widget_key."""
-        wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
-        return wid_key_map
 
     def _keys(self) -> set[str]:
         """All keys active in Session State, with widget keys converted
@@ -401,7 +445,7 @@ class SessionState:
         return len(self._keys())
 
     def __getitem__(self, key: str) -> Any:
-        wid_key_map = self._reverse_key_wid_map
+        wid_key_map = self._key_id_mapper.id_key_mapping
         widget_id = self._get_widget_id(key)
 
         if widget_id in wid_key_map and widget_id == key:
@@ -461,12 +505,10 @@ class SessionState:
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise a StreamlitAPIException instead.
         """
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
 
         if ctx is not None:
-            widget_id = self._key_id_mapping.get(user_key, None)
+            widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
             widget_ids = ctx.widget_ids_this_run
             form_ids = ctx.form_ids_this_run
 
@@ -490,8 +532,8 @@ class SessionState:
         if key in self._old_state:
             del self._old_state[key]
 
-        if key in self._key_id_mapping:
-            del self._key_id_mapping[key]
+        if key in self._key_id_mapper:
+            self._key_id_mapper.delete(key)
 
         if widget_id in self._new_widget_state:
             del self._new_widget_state[widget_id]
@@ -574,9 +616,6 @@ class SessionState:
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
-        # Avoid circular imports.
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
         if ctx is None:
             return
@@ -592,7 +631,7 @@ class SessionState:
             k: v
             for k, v in self._old_state.items()
             if (
-                not is_widget_id(k)
+                not is_element_id(k)
                 or not _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(k),
                     active_widget_ids,
@@ -614,10 +653,10 @@ class SessionState:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
         """
-        return self._key_id_mapping.get(k, k)
+        return self._key_id_mapper.get_id_from_key(k, k)
 
     def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
-        self._key_id_mapping[user_key] = widget_id
+        self._key_id_mapper[user_key] = widget_id
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: str | None
@@ -704,7 +743,7 @@ def _is_internal_key(key: str) -> bool:
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
     active_widget_ids: set[str],
-    fragment_ids_this_run: set[str] | None,
+    fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:
         return True

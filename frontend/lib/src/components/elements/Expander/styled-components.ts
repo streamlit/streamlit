@@ -33,12 +33,12 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
     marginTop: 0,
     width: "100%",
     borderStyle: "solid",
-    borderWidth: `${BORDER_SIZE}px`,
-    borderColor: theme.colors.fadedText10,
-    borderRadius: theme.radii.lg,
+    borderWidth: theme.sizes.borderWidth,
+    borderColor: theme.colors.borderColor,
+    borderRadius: theme.radii.default,
     ...(isStale
       ? {
-          borderColor: theme.colors.fadedText05,
+          borderColor: theme.colors.borderColorLight,
           transition: "border 1s ease-in 0.5s",
         }
       : {}),
@@ -62,9 +62,9 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     display: "flex",
     width: "100%",
     "&:focus-visible": {
-      outline: `${BORDER_SIZE}px solid ${theme.colors.primary}`,
-      outlineOffset: `-${BORDER_SIZE}px`,
-      borderRadius: theme.radii.lg,
+      outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+      outlineOffset: `-${theme.sizes.borderWidth}`,
+      borderRadius: theme.radii.default,
     },
     fontSize: theme.fontSizes.sm,
     paddingLeft: theme.spacing.lg,

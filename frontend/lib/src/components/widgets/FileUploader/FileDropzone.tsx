@@ -15,7 +15,9 @@
  */
 
 import React from "react"
+
 import Dropzone, { FileRejection } from "react-dropzone"
+
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,

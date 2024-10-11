@@ -24,13 +24,13 @@ export const StyledImageList = styled.div(({ theme }) => ({
   rowGap: theme.spacing.lg,
 }))
 
-export const StyledImageContainer = styled.div(() => ({
+export const StyledImageContainer = styled.div({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
   width: "auto",
   flexGrow: 0,
-}))
+})
 
 export const StyledCaption = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
@@ -39,5 +39,5 @@ export const StyledCaption = styled.div(({ theme }) => ({
   textAlign: "center",
   marginTop: theme.spacing.xs,
   wordWrap: "break-word",
-  padding: "0.125rem",
+  padding: theme.spacing.threeXS,
 }))

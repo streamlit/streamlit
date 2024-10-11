@@ -23,7 +23,6 @@ from streamlit.errors import (
     MarkdownFormattedException,
     StreamlitAPIException,
     StreamlitAPIWarning,
-    StreamlitDeprecationWarning,
     UncaughtAppException,
 )
 from streamlit.logger import get_logger
@@ -60,7 +59,7 @@ class ExceptionMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> e = RuntimeError('This is an exception of type RuntimeError')
+        >>> e = RuntimeError("This is an exception of type RuntimeError")
         >>> st.exception(e)
 
         """
@@ -88,22 +87,17 @@ def marshall(exception_proto: ExceptionProto, exception: BaseException) -> None:
     # If this is a StreamlitAPIException, we prune all Streamlit entries
     # from the exception's stack trace.
     is_api_exception = isinstance(exception, StreamlitAPIException)
-    is_deprecation_exception = isinstance(exception, StreamlitDeprecationWarning)
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
     is_uncaught_app_exception = isinstance(exception, UncaughtAppException)
 
-    stack_trace = (
-        []
-        if is_deprecation_exception
-        else _get_stack_trace_str_list(
-            exception, strip_streamlit_stack_entries=is_api_exception
-        )
+    stack_trace = _get_stack_trace_str_list(
+        exception, strip_streamlit_stack_entries=is_api_exception
     )
 
     # Some exceptions (like UserHashError) have an alternate_name attribute so
     # we can pretend to the user that the exception is called something else.
     if getattr(exception, "alternate_name", None) is not None:
-        exception_proto.type = getattr(exception, "alternate_name")
+        exception_proto.type = exception.alternate_name  # type: ignore[attr-defined]
     else:
         exception_proto.type = type(exception).__name__
 

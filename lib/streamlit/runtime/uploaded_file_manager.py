@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import io
 from abc import abstractmethod
-from typing import NamedTuple, Protocol, Sequence
+from typing import TYPE_CHECKING, NamedTuple, Protocol, Sequence
 
 from streamlit import util
-from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.runtime.stats import CacheStatsProvider
+
+if TYPE_CHECKING:
+    from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 
 
 class UploadedFileRec(NamedTuple):

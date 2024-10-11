@@ -18,8 +18,8 @@ import { renderHook } from "@testing-library/react-hooks"
 
 import {
   BaseColumn,
-  TextColumn,
   NumberColumn,
+  TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useCustomRenderer from "./useCustomRenderer"

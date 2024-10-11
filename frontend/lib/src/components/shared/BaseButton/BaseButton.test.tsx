@@ -15,17 +15,17 @@
  */
 
 import React from "react"
-import { screen, fireEvent } from "@testing-library/react"
+
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { render } from "@streamlit/lib/src/test_util"
-
 import { lightTheme } from "@streamlit/lib/src/theme"
 
 import BaseButton, {
-  BaseButtonSize,
   BaseButtonKind,
   BaseButtonProps,
+  BaseButtonSize,
 } from "./BaseButton"
 
 const getProps = (
@@ -48,7 +48,7 @@ describe("Button element", () => {
     it(`renders ${kind} buttons correctly`, () => {
       render(<BaseButton {...getProps({ kind })}>Hello</BaseButton>)
 
-      const buttonWidget = screen.getByTestId(`baseButton-${kind}`)
+      const buttonWidget = screen.getByTestId(`stBaseButton-${kind}`)
 
       expect(buttonWidget).toBeInTheDocument()
     })
@@ -58,7 +58,7 @@ describe("Button element", () => {
         <BaseButton {...getProps({ kind, disabled: true })}>Hello</BaseButton>
       )
 
-      const buttonWidget = screen.getByTestId(`baseButton-${kind}`)
+      const buttonWidget = screen.getByTestId(`stBaseButton-${kind}`)
       expect(buttonWidget).toBeDisabled()
     })
   })

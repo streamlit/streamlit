@@ -15,6 +15,7 @@
  */
 
 import { renderHook } from "@testing-library/react-hooks"
+
 import useScrollAnimation from "./useScrollAnimation"
 
 describe("useScrollAnimation", () => {

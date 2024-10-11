@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ComponentType, ReactNode } from "react"
+import React, { ComponentType, PureComponent, ReactNode } from "react"
+
 import hoistNonReactStatics from "hoist-non-react-statics"
 
 import FullScreenWrapper from "./FullScreenWrapper"

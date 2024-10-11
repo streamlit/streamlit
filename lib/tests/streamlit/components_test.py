@@ -17,8 +17,9 @@ from __future__ import annotations
 import inspect
 import json
 import os
+import threading
 import unittest
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
@@ -29,7 +30,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
-from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.components.v1 import component_arrow
 from streamlit.components.v1.component_registry import (
     ComponentRegistry,
@@ -38,11 +38,17 @@ from streamlit.components.v1.component_registry import (
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import SpecialArg
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.testutil import create_mock_script_run_ctx
+
+if TYPE_CHECKING:
+    from streamlit.components.types.base_custom_component import BaseCustomComponent
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -74,6 +80,9 @@ class DeclareComponentTest(unittest.TestCase):
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
         )
         self.runtime = Runtime(config)
+
+        # declare_component needs a script_run_ctx to be set
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self) -> None:
         Runtime._instance = None
@@ -176,18 +185,20 @@ class DeclareComponentTest(unittest.TestCase):
         component1 = components.declare_component("test1", url=URL)
         component2 = components.declare_component("test2", url=URL)
         component3 = components.declare_component("test3", url=URL)
-        expected_registered_component_names = set(
-            [component1.name, component2.name, component3.name]
-        )
+        expected_registered_component_names = {
+            component1.name,
+            component2.name,
+            component3.name,
+        }
 
         registered_components = ComponentRegistry.instance().get_components()
         self.assertEqual(
             len(registered_components),
             3,
         )
-        registered_component_names = set(
-            [component.name for component in registered_components]
-        )
+        registered_component_names = {
+            component.name for component in registered_components
+        }
         self.assertSetEqual(
             registered_component_names, expected_registered_component_names
         )
@@ -484,6 +495,34 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
             proto.special_args[0],
         )
 
+    def test_on_change_handler(self):
+        """Test the 'on_change' callback param."""
+
+        # we use a list here so that we can update it in the lambda; we cannot assign a variable there.
+        callback_call_value = []
+        expected_element_value = "Called with foo"
+
+        def create_on_change_handler(some_arg: str):
+            return lambda: callback_call_value.append("Called with " + some_arg)
+
+        return_value = self.test_component(
+            key="key", default="baz", on_change=create_on_change_handler("foo")
+        )
+        self.assertEqual("baz", return_value)
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": "key", "default": "baz"}, proto.json_args)
+        current_widget_states = self.script_run_ctx.session_state.get_widget_states()
+        new_widget_state = WidgetState()
+        # copy the custom components state and update the value
+        new_widget_state.CopyFrom(current_widget_states[0])
+        # update the widget's value so that the rerun will execute the callback
+        new_widget_state.json_value = '{"key": "key", "default": "baz2"}'
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_widget_state])
+        )
+        self.assertEqual(callback_call_value[0], expected_element_value)
+
     def assertJSONEqual(self, a, b):
         """Asserts that two JSON dicts are equal. If either arg is a string,
         it will be first converted to a dict with json.loads()."""
@@ -557,6 +596,9 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
             return None
 
         def get_module_name(self, name: str) -> str | None:
+            return None
+
+        def get_component(self, name: str) -> BaseCustomComponent | None:
             return None
 
         def get_components(self) -> list[BaseCustomComponent]:

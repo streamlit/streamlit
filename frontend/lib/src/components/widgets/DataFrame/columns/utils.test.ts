@@ -14,29 +14,30 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import moment, { Moment } from "moment"
+import moment, { Moment } from "moment-timezone"
 import timezoneMock from "timezone-mock"
 
 import {
-  getErrorCell,
-  isErrorCell,
-  getEmptyCell,
-  getTextCell,
-  toSafeArray,
-  toSafeString,
-  toSafeNumber,
-  formatNumber,
-  mergeColumnParameters,
-  isMissingValueCell,
   BaseColumnProps,
-  toSafeBoolean,
-  toGlideColumn,
-  toSafeDate,
   countDecimals,
-  truncateDecimals,
   formatMoment,
+  formatNumber,
+  getEmptyCell,
+  getErrorCell,
+  getTextCell,
+  isErrorCell,
+  isMissingValueCell,
+  mergeColumnParameters,
   removeLineBreaks,
+  toGlideColumn,
+  toSafeArray,
+  toSafeBoolean,
+  toSafeDate,
+  toSafeNumber,
+  toSafeString,
+  truncateDecimals,
 } from "./utils"
+
 import { TextColumn } from "./index"
 
 const MOCK_TEXT_COLUMN_PROPS = {

@@ -15,12 +15,15 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
+
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
-import { render } from "@streamlit/lib/src/test_util"
 
 describe("Tooltip component", () => {
   afterEach(() => {
@@ -45,7 +48,12 @@ describe("Tooltip component", () => {
         style={{}}
       >
         the child
-      </OverflowTooltip>
+      </OverflowTooltip>,
+      {
+        wrapper: ({ children }) => (
+          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+        ),
+      }
     )
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")
@@ -74,7 +82,12 @@ describe("Tooltip component", () => {
         style={{}}
       >
         the child
-      </OverflowTooltip>
+      </OverflowTooltip>,
+      {
+        wrapper: ({ children }) => (
+          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+        ),
+      }
     )
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")

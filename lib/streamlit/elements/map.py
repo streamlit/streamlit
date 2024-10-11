@@ -17,34 +17,26 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
-from typing import TYPE_CHECKING, Any, Collection, Dict, Final, Iterable, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Collection, Final, cast
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
-from streamlit import config, type_util
-from streamlit.color_util import Color, IntColorTuple, is_color_like, to_int_color_tuple
+from streamlit import config, dataframe_util
+from streamlit.elements.lib.color_util import (
+    Color,
+    IntColorTuple,
+    is_color_like,
+    to_int_color_tuple,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from pandas import DataFrame
-    from pandas.io.formats.style import Styler
 
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
-
-
-Data: TypeAlias = Union[
-    "DataFrame",
-    "Styler",
-    Iterable[Any],
-    Dict[Any, Any],
-    None,
-]
 
 # Map used as the basis for st.map.
 _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
@@ -92,6 +84,8 @@ class MapMixin:
         size: None | str | float = None,
         zoom: int | None = None,
         use_container_width: bool = True,
+        width: int | None = None,
+        height: int | None = None,
     ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
@@ -112,14 +106,11 @@ class MapMixin:
 
         To get a token for yourself, create an account at https://mapbox.com.
         For more info on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration
+        https://docs.streamlit.io/develop/api-reference/configuration/config.toml.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, pyspark.sql.DataFrame,\
-            snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table,\
-            Iterable, dict, or None
-
+        data : Anything supported by st.dataframe
             The data to be plotted.
 
         latitude : str or None
@@ -165,9 +156,28 @@ class MapMixin:
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels.
 
-        use_container_width: bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+        use_container_width : bool
+            Whether to override the map's native width with the width of
+            the parent container. If ``use_container_width`` is ``True``
+            (default), Streamlit sets the width of the map to match the width
+            of the parent container. If ``use_container_width`` is ``False``,
+            Streamlit sets the width of the chart to fit its contents according
+            to the plotting library, up to the width of the parent container.
+
+        width : int or None
+            Desired width of the chart expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the width of the chart to fit
+            its contents according to the plotting library, up to the width of
+            the parent container. If ``width`` is greater than the width of the
+            parent container, Streamlit sets the chart width to match the width
+            of the parent container.
+
+            To use ``width``, you must set ``use_container_width=False``.
+
+        height : int or None
+            Desired height of the chart expressed in pixels. If ``height`` is
+            ``None`` (default), Streamlit sets the height of the chart to fit
+            its contents according to the plotting library.
 
         Examples
         --------
@@ -177,8 +187,8 @@ class MapMixin:
         >>>
         >>> df = pd.DataFrame(
         ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...     columns=['lat', 'lon'])
-        ...
+        ...     columns=["lat", "lon"],
+        ... )
         >>> st.map(df)
 
         .. output::
@@ -187,7 +197,7 @@ class MapMixin:
 
         You can also customize the size and color of the datapoints:
 
-        >>> st.map(df, size=20, color='#0044ff')
+        >>> st.map(df, size=20, color="#0044ff")
 
         And finally, you can choose different columns to use for the latitude
         and longitude components, as well as set size and color of each
@@ -197,18 +207,16 @@ class MapMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame({
-        ...     "col1": np.random.randn(1000) / 50 + 37.76,
-        ...     "col2": np.random.randn(1000) / 50 + -122.4,
-        ...     "col3": np.random.randn(1000) * 100,
-        ...     "col4": np.random.rand(1000, 4).tolist(),
-        ... })
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "col1": np.random.randn(1000) / 50 + 37.76,
+        ...         "col2": np.random.randn(1000) / 50 + -122.4,
+        ...         "col3": np.random.randn(1000) * 100,
+        ...         "col4": np.random.rand(1000, 4).tolist(),
+        ...     }
+        ... )
         >>>
-        >>> st.map(df,
-        ...     latitude='col1',
-        ...     longitude='col2',
-        ...     size='col3',
-        ...     color='col4')
+        >>> st.map(df, latitude="col1", longitude="col2", size="col3", color="col4")
 
         .. output::
            https://doc-map-color.streamlit.app/
@@ -232,7 +240,9 @@ class MapMixin:
         deck_gl_json = to_deckgl_json(
             data, latitude, longitude, size, color, map_style, zoom
         )
-        marshall(map_proto, deck_gl_json, use_container_width)
+        marshall(
+            map_proto, deck_gl_json, use_container_width, width=width, height=height
+        )
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
@@ -259,7 +269,7 @@ def to_deckgl_json(
     if hasattr(data, "empty") and data.empty:
         return json.dumps(_DEFAULT_MAP)
 
-    df = type_util.convert_anything_to_df(data)
+    df = dataframe_util.convert_anything_to_pandas_df(data)
 
     lat_col_name = _get_lat_or_lon_col_name(df, "latitude", lat, _DEFAULT_LAT_COL_NAMES)
     lon_col_name = _get_lat_or_lon_col_name(
@@ -480,11 +490,15 @@ def marshall(
     pydeck_proto: DeckGlJsonChartProto,
     pydeck_json: str,
     use_container_width: bool,
+    height: int | None = None,
+    width: int | None = None,
 ) -> None:
-    json_bytes = pydeck_json.encode("utf-8")
-    id = hashlib.md5(json_bytes, **HASHLIB_KWARGS).hexdigest()
-
     pydeck_proto.json = pydeck_json
     pydeck_proto.use_container_width = use_container_width
 
-    pydeck_proto.id = id
+    if width:
+        pydeck_proto.width = width
+    if height:
+        pydeck_proto.height = height
+
+    pydeck_proto.id = ""

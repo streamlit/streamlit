@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """Unit tests for InMemoryCacheStorageWrapper"""
+
+from __future__ import annotations
+
 import unittest
 from unittest.mock import patch
 

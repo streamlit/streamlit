@@ -20,9 +20,9 @@ import styled from "@emotion/styled"
 import { Spinner } from "baseui/spinner"
 
 import {
+  computeSpacingStyle,
   IconSize,
   ThemeColor,
-  computeSpacingStyle,
 } from "@streamlit/lib/src/theme"
 
 interface StyledSpinnerIconProps {
@@ -44,11 +44,11 @@ export const StyledSpinnerIcon = styled(Spinner, {
       justifyContents: "center",
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
-      borderColor: theme.colors.fadedText10,
+      borderColor: theme.colors.borderColor,
       borderTopColor: usingCustomTheme
         ? theme.colors.primary
         : theme.colors.blue70,
-      borderWidth: "0.15em",
+      borderWidth: theme.sizes.spinnerThickness,
       flexGrow: 0,
       flexShrink: 0,
     }
@@ -79,6 +79,36 @@ export const StyledIcon = styled("span", {
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
     flexShrink: 0,
+  }
+})
+
+export interface StyledDynamicIconProps {
+  size?: IconSize
+  margin?: string
+  padding?: string
+}
+
+export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
+  ({ size = "lg", margin = "", padding = "", theme }) => {
+    return {
+      fill: "currentColor",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContents: "center",
+      fontSize: theme.iconSizes[size],
+      width: theme.iconSizes[size],
+      height: theme.iconSizes[size],
+      margin: computeSpacingStyle(margin, theme),
+      padding: computeSpacingStyle(padding, theme),
+      flexShrink: 0,
+    }
+  }
+)
+
+export const StyledImageIcon = styled.img(({}) => {
+  return {
+    width: "100%",
+    height: "100%",
   }
 })
 

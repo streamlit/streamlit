@@ -16,7 +16,7 @@
 
 import React, { useState } from "react"
 
-import { GridColumn, DataEditorProps } from "@glideapps/glide-data-grid"
+import { DataEditorProps, GridColumn } from "@glideapps/glide-data-grid"
 
 type ColumnSizerReturn = Pick<DataEditorProps, "columns" | "onColumnResize">
 

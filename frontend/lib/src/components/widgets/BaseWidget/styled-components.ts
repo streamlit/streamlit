@@ -40,12 +40,12 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
   })
 )
 
-export const StyledWidgetLabelHelp = styled.div(() => ({
+export const StyledWidgetLabelHelp = styled.div({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-end",
   flex: 1,
-}))
+})
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoSm,

@@ -34,6 +34,7 @@ message Block {
   }
 
   bool allow_empty = 8;
+  optional string id = 12;
 
   message Vertical {
     bool border = 1;
@@ -48,6 +49,13 @@ message Block {
   message Column {
     double weight = 1;
     string gap = 2;
+
+    enum VerticalAlignment {
+      TOP = 0;
+      CENTER = 1;
+      BOTTOM = 2;
+    }
+    VerticalAlignment vertical_alignment = 3;
   }
 
   message Expandable {
@@ -72,6 +80,7 @@ message Block {
     string form_id = 1;
     bool clear_on_submit = 2;
     bool border = 3;
+    bool enter_to_submit = 4;
   }
 
   message TabContainer {
@@ -86,6 +95,7 @@ message Block {
     bool use_container_width = 2;
     string help = 3;
     bool disabled = 4;
+    string icon = 5;
   }
 
 
@@ -101,5 +111,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 12
+  // Next ID: 13
 }

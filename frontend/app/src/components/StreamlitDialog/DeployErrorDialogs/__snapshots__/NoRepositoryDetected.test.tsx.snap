@@ -6,7 +6,7 @@ Object {
     The app’s code is not connected to a remote GitHub repository. To deploy on Streamlit Community Cloud, please put your code in a GitHub repository and publish the current branch. Read more in
      
     <a
-      href="https://docs.streamlit.io/streamlit-community-cloud/get-started"
+      href="https://docs.streamlit.io/deploy/streamlit-community-cloud/get-started"
       rel="noopener noreferrer"
       target="_blank"
     >

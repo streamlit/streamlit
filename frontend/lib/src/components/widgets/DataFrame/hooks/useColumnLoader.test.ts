@@ -21,23 +21,23 @@ import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import { UNICODE } from "@streamlit/lib/src/mocks/arrow"
 import {
   BaseColumn,
-  ObjectColumn,
-  TextColumn,
   CheckboxColumn,
-  SelectboxColumn,
+  ColumnCreator,
   ListColumn,
   NumberColumn,
-  ColumnCreator,
+  ObjectColumn,
+  SelectboxColumn,
+  TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useColumnLoader, {
-  ColumnConfigProps,
   applyColumnConfig,
+  COLUMN_POSITION_PREFIX,
+  COLUMN_WIDTH_MAPPING,
+  ColumnConfigProps,
   getColumnConfig,
   getColumnType,
   INDEX_IDENTIFIER,
-  COLUMN_POSITION_PREFIX,
-  COLUMN_WIDTH_MAPPING,
 } from "./useColumnLoader"
 
 const MOCK_COLUMNS: BaseColumn[] = [

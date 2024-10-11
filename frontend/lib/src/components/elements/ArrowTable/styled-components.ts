@@ -15,13 +15,13 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
   fontFamily: theme.genericFonts.bodyFont,
-  padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
-  lineHeight: theme.lineHeights.table,
+  lineHeight: theme.lineHeights.small,
   overflow: ["auto", "overlay"],
 }))
 
@@ -30,12 +30,12 @@ export const StyledTable = styled.table(({ theme }) => ({
   marginBottom: theme.spacing.lg,
   color: theme.colors.bodyText,
   borderCollapse: "collapse",
-  border: `1px solid ${theme.colors.fadedText05}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColorLight}`,
 }))
 
 const styleCellFunction = (theme: EmotionTheme): CSSObject => ({
-  borderBottom: `1px solid ${theme.colors.fadedText05}`,
-  borderRight: `1px solid ${theme.colors.fadedText05}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColorLight}`,
+  borderRight: `${theme.sizes.borderWidth} solid ${theme.colors.borderColorLight}`,
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   fontWeight: theme.fontWeights.normal,
@@ -48,13 +48,6 @@ export const StyledTableCellHeader = styled.th(({ theme }) => ({
   ...styleCellFunction(theme),
 
   color: theme.colors.fadedText60,
-
-  "@media print": {
-    // Firefox prints a double blurred table header. Normal font weight fixes it
-    "@-moz-document url-prefix()": {
-      fontWeight: "normal",
-    },
-  },
 }))
 
 export const StyledEmptyTableCell = styled(StyledTableCell)(({ theme }) => ({

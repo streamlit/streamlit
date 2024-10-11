@@ -23,9 +23,9 @@ import React, { FC, memo } from "react"
 import Flake0 from "@streamlit/lib/src/assets/img/snow/flake-0.png"
 import Flake1 from "@streamlit/lib/src/assets/img/snow/flake-1.png"
 import Flake2 from "@streamlit/lib/src/assets/img/snow/flake-2.png"
-
 import Particles from "@streamlit/lib/src/components/elements/Particles"
 import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
+import { RenderInPortalIfExists } from "@streamlit/lib/src/components/core/Portal/RenderInPortalIfExists"
 
 import { StyledFlake } from "./styled-components"
 
@@ -49,13 +49,16 @@ const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
-    <Particles
-      className="snow"
-      scriptRunId={scriptRunId}
-      numParticleTypes={NUM_FLAKE_TYPES}
-      numParticles={NUM_FLAKES}
-      ParticleComponent={Flake}
-    />
+    <RenderInPortalIfExists>
+      <Particles
+        className="stSnow"
+        data-testid="stSnow"
+        scriptRunId={scriptRunId}
+        numParticleTypes={NUM_FLAKE_TYPES}
+        numParticles={NUM_FLAKES}
+        ParticleComponent={Flake}
+      />
+    </RenderInPortalIfExists>
   )
 }
 

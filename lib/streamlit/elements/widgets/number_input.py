@@ -17,19 +17,30 @@ from __future__ import annotations
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, Union, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast, overload
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
-    get_label_visibility_proto_value,
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
+from streamlit.elements.lib.policies import (
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber, JSNumberBoundsException
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    compute_and_register_element_id,
+    get_label_visibility_proto_value,
+    to_key,
+)
+from streamlit.errors import (
+    StreamlitInvalidNumberFormatError,
+    StreamlitJSNumberBoundsError,
+    StreamlitMixedNumericTypesError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
+)
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -40,14 +51,14 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
 Number: TypeAlias = Union[int, float]
+IntOrNone = TypeVar("IntOrNone", int, None)
+FloatOrNone = TypeVar("FloatOrNone", float, None)
 
 
 @dataclass
@@ -70,47 +81,91 @@ class NumberInputSerde:
 
 
 class NumberInputMixin:
-    @overload
-    def number_input(
-        self,
-        label: str,
-        min_value: Number | None = None,
-        max_value: Number | None = None,
-        value: Number | Literal["min"] = "min",
-        step: Number | None = None,
-        format: str | None = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        placeholder: str | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-    ) -> Number:
-        pass
+    # For easier readability, all the arguments with un-changing types across these overload signatures have been
+    # collapsed onto a single line.
 
+    # fmt: off
+    # If "min_value: int" is given and all other numerical inputs are
+    #   "int"s or not provided (value optionally being "min"), return "int"
+    # If "min_value: int, value: None" is given and all other numerical inputs
+    #   are "int"s or not provided, return "int | None"
     @overload
     def number_input(
         self,
         label: str,
-        min_value: Number | None = None,
-        max_value: Number | None = None,
-        value: None = None,
-        step: Number | None = None,
-        format: str | None = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        placeholder: str | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-    ) -> Number | None:
-        pass
+        min_value: int,
+        max_value: int | None = None,
+        value: IntOrNone | Literal["min"] = "min",
+        step: int | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int | IntOrNone:
+        ...
+
+    # If "max_value: int" is given and all other numerical inputs are
+    #   "int"s or not provided (value optionally being "min"), return "int"
+    # If "max_value: int, value=None" is given and all other numerical inputs
+    #   are "int"s or not provided, return "int | None"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: int | None = None,
+        *,
+        max_value: int,
+        value: IntOrNone | Literal["min"] = "min",
+        step: int | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int | IntOrNone:
+        ...
+
+    # If "value=int" is given and all other numerical inputs are "int"s
+    #   or not provided, return "int"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: int | None = None,
+        max_value: int | None = None,
+        *,
+        value: int,
+        step: int | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int:
+        ...
+
+    # If "step=int" is given and all other numerical inputs are "int"s
+    #   or not provided (value optionally being "min"), return "int"
+    # If "step=int, value=None" is given and all other numerical inputs
+    #   are "int"s or not provided, return "int | None"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: int | None = None,
+        max_value: int | None = None,
+        value: IntOrNone | Literal["min"] = "min",
+        *,
+        step: int,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int | IntOrNone:
+        ...
+
+    # If all numerical inputs are floats (with value optionally being "min")
+    #   or are not provided, return "float"
+    # If only "value=None" is given and none of the other numerical inputs
+    #   are "int"s, return "float | None"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        value: FloatOrNone | Literal["min"] = "min",
+        step: float | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> float | FloatOrNone:
+        ...
+    # # fmt: on
 
     @gather_metrics("number_input")
     def number_input(
@@ -143,71 +198,78 @@ class NumberInputMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         min_value : int, float, or None
             The minimum permitted value.
             If None, there will be no minimum.
+
         max_value : int, float, or None
             The maximum permitted value.
             If None, there will be no maximum.
+
         value : int, float, "min" or None
             The value of this widget when it first renders. If ``None``, will initialize
             empty and return ``None`` until the user provides input.
             If "min" (default), will initialize with min_value, or 0.0 if
             min_value is None.
+
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
+
         format : str or None
             A printf-style format string controlling how the interface should
-            display numbers. Output must be purely numeric. This does not impact
-            the return value. Valid formatters: %d %e %f %g %i %u
+            display numbers. The output must be purely numeric. This does not
+            impact the return value of the widget. Formatting is handled by
+            `sprintf.js <https://github.com/alexei/sprintf.js>`_.
+
+            For example, ``format="%0.1f"`` adjusts the displayed decimal
+            precision to only show one digit after the decimal.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
+
         help : str
             An optional tooltip that gets displayed next to the input.
+
         on_change : callable
             An optional callback invoked when this number_input's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         placeholder : str or None
             An optional string displayed when the number input is empty.
             If None, no placeholder is displayed.
+
         disabled : bool
             An optional boolean, which disables the number input if set to
             True. The default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -235,7 +297,9 @@ class NumberInputMixin:
 
         >>> import streamlit as st
         >>>
-        >>> number = st.number_input("Insert a number", value=None, placeholder="Type a number...")
+        >>> number = st.number_input(
+        ...     "Insert a number", value=None, placeholder="Type a number..."
+        ... )
         >>> st.write("The current number is ", number)
 
         .. output::
@@ -283,49 +347,42 @@ class NumberInputMixin:
     ) -> Number | None:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=value if value != "min" else None, key=key
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "min" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             min_value=min_value,
             max_value=max_value,
             value=value,
             step=step,
             format=format,
-            key=key,
             help=help,
             placeholder=None if placeholder is None else str(placeholder),
-            form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
         )
 
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
-        int_args = all(
+        all_int_args = all(
             isinstance(a, (numbers.Integral, type(None), str))
             for a in number_input_args
         )
 
-        float_args = all(
+        all_float_args = all(
             isinstance(a, (float, type(None), str)) for a in number_input_args
         )
 
-        if not int_args and not float_args:
-            raise StreamlitAPIException(
-                "All numerical arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
-            )
+        if not all_int_args and not all_float_args:
+            raise StreamlitMixedNumericTypesError(value=value, min_value=min_value, max_value=max_value, step=step)
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
@@ -334,9 +391,9 @@ class NumberInputMixin:
         if value == "min":
             if min_value is not None:
                 value = min_value
-            elif int_args and float_args:
+            elif all_int_args and all_float_args:
                 value = 0.0  # if no values are provided, defaults to float
-            elif int_args:
+            elif all_int_args:
                 value = 0
             else:
                 value = 0.0
@@ -345,7 +402,7 @@ class NumberInputMixin:
         float_value = isinstance(value, float)
 
         if value is None:
-            if int_args and not float_args:
+            if all_int_args and not all_float_args:
                 # Select int type if all relevant args are ints:
                 int_value = True
             else:
@@ -377,39 +434,31 @@ class NumberInputMixin:
         try:
             float(format % 2)
         except (TypeError, ValueError):
-            raise StreamlitAPIException(
-                "Format string for st.number_input contains invalid characters: %s"
-                % format
-            )
+            raise StreamlitInvalidNumberFormatError(format)
+
 
         # Ensure that the value matches arguments' types.
-        all_ints = int_value and int_args
+        all_ints = int_value and all_int_args
 
         if min_value is not None and value is not None and min_value > value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be greater than or equal to the `min_value` {min_value}"
-            )
+            raise StreamlitValueBelowMinError(value=value, min_value=min_value)
+
+
         if max_value is not None and value is not None and max_value < value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be less than or equal to the `max_value` {max_value}"
-            )
+            raise StreamlitValueAboveMaxError(value=value, max_value=max_value)
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
         try:
             if all_ints:
                 if min_value is not None:
-                    JSNumber.validate_int_bounds(
-                        min_value, "`min_value`"  # type: ignore
-                    )
+                    JSNumber.validate_int_bounds(int(min_value), "`min_value`")
                 if max_value is not None:
-                    JSNumber.validate_int_bounds(
-                        max_value, "`max_value`"  # type: ignore
-                    )
+                    JSNumber.validate_int_bounds(int(max_value), "`max_value`")
                 if step is not None:
-                    JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
+                    JSNumber.validate_int_bounds(int(step), "`step`")
                 if value is not None:
-                    JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
+                    JSNumber.validate_int_bounds(int(value), "`value`")
             else:
                 if min_value is not None:
                     JSNumber.validate_float_bounds(min_value, "`min_value`")
@@ -420,12 +469,12 @@ class NumberInputMixin:
                 if value is not None:
                     JSNumber.validate_float_bounds(value, "`value`")
         except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
+            raise StreamlitJSNumberBoundsError(str(e))
 
         data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
 
         number_input_proto = NumberInputProto()
-        number_input_proto.id = id
+        number_input_proto.id = element_id
         number_input_proto.data_type = data_type
         number_input_proto.label = label
         if value is not None:
@@ -457,15 +506,14 @@ class NumberInputMixin:
 
         serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
-            "number_input",
-            number_input_proto,
-            user_key=key,
+            number_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="double_value"
         )
 
         if widget_state.value_changed:

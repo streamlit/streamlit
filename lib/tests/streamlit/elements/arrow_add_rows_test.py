@@ -18,7 +18,7 @@ import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 DATAFRAME = pd.DataFrame({"a": [10], "b": [20], "c": [30]})
@@ -63,7 +63,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = chart_command(DATAFRAME)
         element.add_rows(NEW_ROWS)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 
@@ -82,7 +82,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = chart_command(DATAFRAME, x="b", y="c")
         element.add_rows(NEW_ROWS)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 
@@ -100,7 +100,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = chart_command(DATAFRAME, y="b")
         element.add_rows(NEW_ROWS)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 
@@ -119,7 +119,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = chart_command(DATAFRAME, x="b")
         element.add_rows(NEW_ROWS)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 
@@ -138,7 +138,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = chart_command(DATAFRAME, x="b", y=["a", "c"])
         element.add_rows(NEW_ROWS)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 
@@ -159,7 +159,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = chart_command(DATAFRAME, x="b", y=["a", "c"], color=["#f00", "#0f0"])
         element.add_rows(NEW_ROWS)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 
@@ -178,7 +178,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = st.scatter_chart(DATAFRAME2, x="b", y=["a", "c"], size="d")
         element.add_rows(NEW_ROWS2)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 
@@ -197,7 +197,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         element = chart_command(DATAFRAME, x="b", y="a")
         element.add_rows(NEW_ROWS)
 
-        proto = bytes_to_data_frame(
+        proto = convert_arrow_bytes_to_pandas_df(
             self.get_delta_from_queue().arrow_add_rows.data.data
         )
 

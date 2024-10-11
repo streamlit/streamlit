@@ -1,0 +1,19 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Streamlit App",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": ["run", "${file}"]
+      // allows to set breakpoints in installed packages, such as the Streamlit lib itself or custom component code etc.
+      // "justMyCode": false,
+      // allows to use a different installed version of streamlit in another venv folder, e.g.
+      // "program": "~/Projects/streamlit/lib/venv/bin/pytest"
+    }
+  ]
+}

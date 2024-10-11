@@ -14,29 +14,32 @@
  * limitations under the License.
  */
 
+import React, { PureComponent, ReactNode } from "react"
+
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
-import {
-  RERUN_PROMPT_MODAL_DIALOG,
-  BaseButton,
-  BaseButtonKind,
-  Tooltip,
-  Placement,
-  ScriptRunState,
-  Timer,
-  Icon,
-  EmotionTheme,
-  SessionEvent,
-} from "@streamlit/lib"
-import React, { PureComponent, ReactNode } from "react"
-import { HotKeys } from "react-hotkeys"
+import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
 import { SignalConnection } from "typed-signals"
 
+import {
+  BaseButton,
+  BaseButtonKind,
+  EmotionTheme,
+  Icon,
+  Placement,
+  ScriptRunState,
+  SessionEvent,
+  Timer,
+  Tooltip,
+} from "@streamlit/lib"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
  * from a subpath.
@@ -45,12 +48,12 @@ import iconRunning from "@streamlit/app/src/assets/img/icon_running.gif"
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
 
 import {
-  StyledConnectionStatus,
-  StyledConnectionStatusLabel,
-  StyledAppStatus,
   StyledAppButtonContainer,
   StyledAppRunningIcon,
+  StyledAppStatus,
   StyledAppStatusLabel,
+  StyledConnectionStatus,
+  StyledConnectionStatusLabel,
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
@@ -137,10 +140,6 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
   private readonly minimizePromptTimer = new Timer()
 
-  private readonly keyHandlers: {
-    [key: string]: (keyEvent?: KeyboardEvent) => void
-  }
-
   constructor(props: StatusWidgetProps) {
     super(props)
 
@@ -150,12 +149,12 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       scriptChangedOnDisk: false,
       promptHovered: false,
     }
+  }
 
-    this.keyHandlers = {
-      a: this.handleAlwaysRerunClick,
-      // No handler for 'r' since it's handled by app.jsx and precedence
-      // isn't working when multiple components handle the same key
-      // 'r': this.handleRerunClick,
+  handleKeyDown = (keyName: string): void => {
+    // NOTE: 'r' is handled at the App Level
+    if (keyName === "a") {
+      this.handleAlwaysRerunClick()
     }
   }
 
@@ -231,13 +230,13 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
     const prevView = this.curView
     this.curView = this.renderWidget()
-    if (prevView == null && this.curView == null) {
+    if (isNullOrUndefined(prevView) && isNullOrUndefined(this.curView)) {
       return null
     }
 
     let animateIn: boolean
     let renderView: ReactNode
-    if (this.curView != null) {
+    if (notNullOrUndefined(this.curView)) {
       animateIn = true
       renderView = this.curView
     } else {
@@ -255,7 +254,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         unmountOnExit={true}
         classNames="StatusWidget"
       >
-        <StyledStatusWidget key="StatusWidget" data-testid="stStatusWidget">
+        <StyledStatusWidget
+          key="StatusWidget"
+          className="stStatusWidget"
+          data-testid="stStatusWidget"
+        >
           {renderView}
         </StyledStatusWidget>
       </CSSTransition>
@@ -275,7 +278,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         // more responsive by claiming it's started immemdiately.
         return this.renderScriptIsRunning()
       }
-      if (!RERUN_PROMPT_MODAL_DIALOG && this.state.scriptChangedOnDisk) {
+      if (this.state.scriptChangedOnDisk) {
         return this.renderRerunScriptPrompt()
       }
     }
@@ -292,7 +295,10 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
     return (
       <Tooltip content={ui.tooltip} placement={Placement.BOTTOM}>
-        <StyledConnectionStatus data-testid="stConnectionStatus">
+        <StyledConnectionStatus
+          className="stConnectionStatus"
+          data-testid="stConnectionStatus"
+        >
           <Icon size="sm" content={ui.icon} />
           <StyledConnectionStatusLabel
             isMinimized={this.state.statusMinimized}
@@ -366,7 +372,6 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
   /**
    * "Source file changed. [Rerun] [Always Rerun]"
-   * (This is only shown when the RERUN_PROMPT_MODAL_DIALOG feature flag is false)
    */
   private renderRerunScriptPrompt(): ReactNode {
     const rerunRequested =
@@ -374,10 +379,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     const minimized = this.state.promptMinimized && !this.state.promptHovered
     const { colors } = this.props.theme
 
-    // Not sure exactly why attach and focused are necessary on the
-    // HotKeys component here but its not working without them
     return (
-      <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
+      <Hotkeys keyName="a" onKeyDown={this.handleKeyDown}>
         <div
           onMouseEnter={this.onAppPromptHover}
           onMouseLeave={this.onAppPromptUnhover}
@@ -404,7 +407,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
               )}
           </StyledAppStatus>
         </div>
-      </HotKeys>
+      </Hotkeys>
     )
   }
 

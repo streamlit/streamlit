@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export const StyledWrapper = styled.div({
   display: "table",
@@ -39,13 +38,10 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
 
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
-    maxWidth: `calc(100% - 2rem)`,
+    maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
   },
   img: {
     maxWidth: "100%",
-  },
-  code: {
-    background: transparentize(theme.colors.darkenedBgMix100, 0.8),
   },
   "*": {
     fontSize: `${theme.fontSizes.sm} !important`,

@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
+import { AppNode, BlockNode } from "@streamlit/lib/src/AppNode"
+import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
+import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
+import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { EmotionTheme, getDividerColors } from "@streamlit/lib/src/theme"
+import { isValidElementId } from "@streamlit/lib/src/util/utils"
 import {
   FormsData,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
-import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
-import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { EmotionTheme, getDividerColors } from "@streamlit/lib/src/theme"
 
 export function shouldComponentBeEnabled(
   elementType: string,
@@ -47,8 +48,13 @@ export function isElementStale(
 
   if (scriptRunState === ScriptRunState.RUNNING) {
     if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
+      // if the fragmentId is set, we only want to mark elements as stale
+      // that belong to the same fragmentId and have a different scriptRunId.
+      // If they have the same scriptRunId, they were just updated.
       return Boolean(
-        node.fragmentId && fragmentIdsThisRun.includes(node.fragmentId)
+        node.fragmentId &&
+          fragmentIdsThisRun.includes(node.fragmentId) &&
+          node.scriptRunId !== scriptRunId
       )
     }
     return node.scriptRunId !== scriptRunId
@@ -167,4 +173,33 @@ export interface BaseBlockProps {
    * to use it, for example, in Dialogs to prevent fullscreen issues.
    */
   disableFullscreenMode?: boolean
+}
+
+/**
+ * Converts a user-specified key to a valid CSS class name.
+ *
+ * @param key - The key to convert.
+ * @returns A valid CSS class name.
+ */
+export function convertKeyToClassName(key: string | undefined | null): string {
+  if (!key) {
+    return ""
+  }
+  const className = key.trim().replace(/[^a-zA-Z0-9_-]/g, "-")
+  return "st-key-" + className
+}
+
+/**
+ * Returns the user-specified key extracted from the element id, or undefined if the id does
+ * not have a user-specified key.
+ */
+export function getKeyFromId(
+  elementId: string | undefined | null
+): string | undefined {
+  if (!elementId || !isValidElementId(elementId)) {
+    return undefined
+  }
+
+  const userKey = elementId.split("-", 3).pop()
+  return userKey === "None" ? undefined : userKey
 }

@@ -15,11 +15,13 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Text as TextProto } from "@streamlit/lib/src/proto"
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
 } from "@streamlit/lib/src/components/shared/TooltipIcon"
+
 import { StyledText } from "./styled-components"
 
 export interface TextProps {
@@ -33,10 +35,14 @@ export interface TextProps {
 export default function TextElement({
   width,
   element,
-}: TextProps): ReactElement {
+}: Readonly<TextProps>): ReactElement {
   const styleProp = { width }
   return (
-    <StyledLabelHelpWrapper style={styleProp} data-testid="stText">
+    <StyledLabelHelpWrapper
+      style={styleProp}
+      className="stText"
+      data-testid="stText"
+    >
       <StyledText>{element.body}</StyledText>
       {element.help && <InlineTooltipIcon content={element.help} />}
     </StyledLabelHelpWrapper>

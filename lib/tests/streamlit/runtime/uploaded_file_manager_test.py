@@ -14,6 +14,8 @@
 
 """Unit tests for UploadedFileManager"""
 
+from __future__ import annotations
+
 import unittest
 
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager

@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import Final
 from unittest import mock
 from unittest.mock import MagicMock
 
 import tornado.testing
 import tornado.web
 from parameterized import parameterized
-from typing_extensions import Final
 
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage

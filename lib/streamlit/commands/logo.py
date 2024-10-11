@@ -16,17 +16,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Literal
 
 from streamlit import url_util
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-if TYPE_CHECKING:
-    from PIL import Image
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 
 def _invalid_logo_text(field_name: str):
@@ -37,29 +34,93 @@ def _invalid_logo_text(field_name: str):
 def logo(
     image: AtomicImage,
     *,  # keyword-only args:
+    size: Literal["small", "medium", "large"] = "medium",
     link: str | None = None,
     icon_image: AtomicImage | None = None,
 ) -> None:
     """
-    Renders logos in the main and sidebar sections of the page
+    Renders a logo in the upper-left corner of your app and its sidebar.
+
+    If ``st.logo`` is called multiple times within a page, Streamlit will
+    render the image passed in the last call. For the most consistent results,
+    call ``st.logo`` early in your page script and choose an image that works
+    well in both light and dark mode. Avoid empty margins around your image.
+
+    If your logo does not work well for both light and dark mode, consider
+    setting the theme and hiding the settings menu from users with the
+    `configuration option <https://docs.streamlit.io/develop/api-reference/configuration/config.toml>`_
+    ``client.toolbarMode="minimal"``.
 
     Parameters
     ----------
-    image: Anything supported by st.image or str
-        The app logo to be displayed in the top left corner of the sidebar of your app
-        (as well as the main section if icon_image param is not provided).
-    link : str or None
-        The external url to be opened when a user clicks on the logo (must start with
-        http:// or https://)
-    icon_image: numpy.ndarray, BytesIO, str, or None
-        The app logo to be displayed in the top left corner of the main section of your
-        app.
+    image: Anything supported by st.image
+        The image to display in the upper-left corner of your app and its
+        sidebar. If ``icon_image`` is also provided, then Streamlit will only
+        display ``image`` in the sidebar.
 
-    Example
-    -------
+        Streamlit scales the image to a max height set by ``size`` and a max
+        width to fit within the sidebar.
+    size: "small", "medium", or "large"
+        The size of the image displayed in the upper-left corner of the app and its
+        sidebar. The possible values are as follows:
+
+        - ``"small"``: 20px max height
+        - ``"medium"`` (default): 24px max height
+        - ``"large"``: 32px max height
+
+    link : str or None
+        The external URL to open when a user clicks on the logo. The URL must
+        start with "\\http://" or "\\https://". If ``link`` is ``None`` (default),
+        the logo will not include a hyperlink.
+    icon_image: Anything supported by st.image or None
+        An optional, typically smaller image to replace ``image`` in the
+        upper-left corner when the sidebar is closed. If ``icon_image`` is
+        ``None`` (default), Streamlit will always display ``image`` in the
+        upper-left corner, regardless of whether the sidebar is open or closed.
+        Otherwise, Streamlit will render ``icon_image`` in the upper-left
+        corner of the app when the sidebar is closed.
+
+        Streamlit scales the image to a max height set by ``size`` and a max
+        width to fit within the sidebar. If the sidebar is closed, the max
+        width is retained from when it was last open.
+
+        For best results, pass a wide or horizontal image to ``image`` and a
+        square image to ``icon_image``. Or, pass a square image to ``image``
+        and leave ``icon_image=None``.
+
+    Examples
+    --------
+    A common design practice is to use a wider logo in the sidebar, and a
+    smaller, icon-styled logo in your app's main body.
+
     >>> import streamlit as st
     >>>
-    >>> st.logo(streamlit_full, link="https://streamlit.io/gallery", icon_image=streamlit_small)
+    >>> st.logo(
+    ...     LOGO_URL_LARGE,
+    ...     link="https://streamlit.io/gallery",
+    ...     icon_image=LOGO_URL_SMALL,
+    ... )
+
+    Try switching logos around in the following example:
+
+    >>> import streamlit as st
+    >>>
+    >>> HORIZONTAL_RED = "images/horizontal_red.png"
+    >>> ICON_RED = "images/icon_red.png"
+    >>> HORIZONTAL_BLUE = "images/horizontal_blue.png"
+    >>> ICON_BLUE = "images/icon_blue.png"
+    >>>
+    >>> options = [HORIZONTAL_RED, ICON_RED, HORIZONTAL_BLUE, ICON_BLUE]
+    >>> sidebar_logo = st.selectbox("Sidebar logo", options, 0)
+    >>> main_body_logo = st.selectbox("Main body logo", options, 1)
+    >>>
+    >>> st.logo(sidebar_logo, icon_image=main_body_logo)
+    >>> st.sidebar.markdown("Hi!")
+
+    .. output::
+        https://doc-logo.streamlit.app/
+        height: 300px
+
     """
 
     ctx = get_script_run_ctx()
@@ -78,8 +139,8 @@ def logo(
             image_id="logo",
         )
         fwd_msg.logo.image = image_url
-    except Exception:
-        raise StreamlitAPIException(_invalid_logo_text("image"))
+    except Exception as ex:
+        raise StreamlitAPIException(_invalid_logo_text("image")) from ex
 
     if link:
         # Handle external links:
@@ -101,7 +162,22 @@ def logo(
                 image_id="icon-image",
             )
             fwd_msg.logo.icon_image = icon_image_url
-        except Exception:
-            raise StreamlitAPIException(_invalid_logo_text("icon_image"))
+        except Exception as ex:
+            raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
+
+    def validate_size(size):
+        if isinstance(size, str):
+            image_size = size.lower()
+            valid_sizes = ["small", "medium", "large"]
+
+            if image_size in valid_sizes:
+                return image_size
+
+        raise StreamlitAPIException(
+            f'The size argument to st.logo must be "small", "medium", or "large". \n'
+            f"The argument passed was {size}."
+        )
+
+    fwd_msg.logo.size = validate_size(size)
 
     ctx.enqueue(fwd_msg)

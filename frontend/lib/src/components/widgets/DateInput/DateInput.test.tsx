@@ -15,16 +15,18 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   DateInput as DateInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
-
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import DateInput, { Props } from "./DateInput"
 
 const originalDate = "1970/1/20"
@@ -140,7 +142,7 @@ describe("DateInput widget", () => {
     const props = getProps()
     render(<DateInput {...props} />)
 
-    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(
+    expect(screen.getByTestId("stDateInputField")).toHaveValue(
       fullOriginalDate
     )
   })
@@ -148,7 +150,7 @@ describe("DateInput widget", () => {
   it("can be disabled", () => {
     const props = getProps()
     render(<DateInput {...props} disabled={true} />)
-    expect(screen.getByTestId("stDateInput-Input")).toBeDisabled()
+    expect(screen.getByTestId("stDateInputField")).toBeDisabled()
   })
 
   it("updates the widget value when it's changed", () => {
@@ -156,10 +158,10 @@ describe("DateInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
-    const datePicker = screen.getByTestId("stDateInput-Input")
+    const datePicker = screen.getByTestId("stDateInputField")
     fireEvent.change(datePicker, { target: { value: newDate } })
 
-    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(newDate)
+    expect(screen.getByTestId("stDateInputField")).toHaveValue(newDate)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       [newDate],
@@ -175,7 +177,7 @@ describe("DateInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
-    const dateInput = screen.getByTestId("stDateInput-Input")
+    const dateInput = screen.getByTestId("stDateInputField")
 
     fireEvent.change(dateInput, {
       target: { value: newDate },
@@ -232,13 +234,13 @@ describe("DateInput widget", () => {
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
 
-    const dateInput = screen.getByTestId("stDateInput-Input")
+    const dateInput = screen.getByTestId("stDateInputField")
     fireEvent.change(dateInput, {
       target: { value: newDate },
     })
@@ -254,7 +256,7 @@ describe("DateInput widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(dateInput).toHaveValue(fullOriginalDate)

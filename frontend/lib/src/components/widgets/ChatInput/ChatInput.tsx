@@ -15,12 +15,13 @@
  */
 
 import React, {
+  ChangeEvent,
+  KeyboardEvent,
   useEffect,
   useRef,
   useState,
-  ChangeEvent,
-  KeyboardEvent,
 } from "react"
+
 import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -30,11 +31,10 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 
 import {
-  StyledChatInputContainer,
   StyledChatInput,
+  StyledChatInputContainer,
   StyledInputInstructionsContainer,
   StyledSendIconButton,
   StyledSendIconButtonContainer,
@@ -196,13 +196,14 @@ function ChatInput({
           overrides={{
             Root: {
               style: {
+                minHeight: theme.sizes.minElementHeight,
                 outline: "none",
                 backgroundColor: theme.colors.transparent,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: "1px",
-                borderRightWidth: "1px",
-                borderTopWidth: "1px",
-                borderBottomWidth: "1px",
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
                 width: `${width}px`,
               },
             },
@@ -216,7 +217,7 @@ function ChatInput({
                 "data-testid": "stChatInputTextArea",
               },
               style: {
-                lineHeight: "1.4",
+                lineHeight: theme.lineHeights.inputWidget,
                 backgroundColor: theme.colors.transparent,
                 "::placeholder": {
                   color: placeholderColor,
@@ -226,16 +227,18 @@ function ChatInput({
                   : "auto",
                 maxHeight: maxHeight ? `${maxHeight}px` : "none",
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: "3rem",
                 paddingLeft: theme.spacing.sm,
                 paddingBottom: theme.spacing.sm,
                 paddingTop: theme.spacing.sm,
+                // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
+                // and some additional margin between the icon and the text (spacing.sm).
+                paddingRight: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
               },
             },
           }}
         />
         {/* Hide the character limit in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <StyledInputInstructionsContainer>
             <InputInstructions
               dirty={dirty}

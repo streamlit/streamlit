@@ -15,14 +15,16 @@
  */
 
 import React from "react"
-import { screen, fireEvent } from "@testing-library/react"
+
+import { fireEvent, screen } from "@testing-library/react"
+
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import { DownloadButton as DownloadButtonProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
-import DownloadButton, { Props, createDownloadLink } from "./DownloadButton"
+
+import DownloadButton, { createDownloadLink, Props } from "./DownloadButton"
 
 jest.mock("@streamlit/lib/src/WidgetStateManager")
 jest.mock("@streamlit/lib/src/StreamlitEndpoints")
@@ -62,7 +64,6 @@ describe("DownloadButton widget", () => {
 
     const downloadButton = screen.getByTestId("stDownloadButton")
 
-    expect(downloadButton).toHaveClass("row-widget")
     expect(downloadButton).toHaveClass("stDownloadButton")
     expect(downloadButton).toHaveStyle(`width: ${props.width}px`)
   })

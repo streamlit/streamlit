@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
 import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_prefixed_markdown, get_element_by_key
+from e2e_playwright.shared.dataframe_utils import click_on_cell, get_open_cell_overlay
+from e2e_playwright.shared.toolbar_utils import (
+    assert_fullscreen_toolbar_button_interactions,
+)
 
 # This test suite covers all interactions of dataframe & data_editor
 
@@ -199,33 +205,11 @@ def test_clicking_on_fullscreen_toolbar_button(
 ):
     """Test that clicking on fullscreen toolbar button expands the dataframe into fullscreen."""
 
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(0)
-    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
-    fullscreen_wrapper = app.get_by_test_id("stFullScreenFrame").nth(0)
-
-    fullscreen_toolbar_button = dataframe_toolbar.get_by_test_id(
-        "stElementToolbarButton"
-    ).last
-
-    # Activate toolbar:
-    dataframe_element.hover()
-    # Check that it is visible
-    expect(dataframe_toolbar).to_have_css("opacity", "1")
-
-    # Click on expand to fullscreen button:
-    fullscreen_toolbar_button.click()
-
-    # Check that it is visible
-    assert_snapshot(
-        fullscreen_wrapper,
-        name="st_dataframe-fullscreen_expanded",
-    )
-
-    # Click again on fullscreen button to close fullscreen mode:
-    fullscreen_toolbar_button.click()
-    assert_snapshot(
-        fullscreen_wrapper,
-        name="st_dataframe-fullscreen_collapsed",
+    assert_fullscreen_toolbar_button_interactions(
+        app,
+        assert_snapshot=assert_snapshot,
+        widget_test_id="stDataFrame",
+        filename_prefix="st_dataframe",
     )
 
 
@@ -294,7 +278,7 @@ def _test_csv_download(
 
     download = download_info.value
     download_path = download.path()
-    with open(download_path, "r", encoding="UTF-8") as f:
+    with open(download_path, encoding="UTF-8") as f:
         content = f.read()
         # the app uses a fixed seed, so the data is always the same. This is the reason why we can check it here.
         some_row = "1,-0.977277879876411,0.9500884175255894,-0.1513572082976979,-0.10321885179355784,0.41059850193837233"
@@ -334,7 +318,7 @@ def test_csv_download_button_in_iframe(iframed_app: IframedPage):
     """
 
     page: Page = iframed_app.page
-    frame_locator: FrameLocator = iframed_app.open_app()
+    frame_locator: FrameLocator = iframed_app.open_app(None)
 
     _test_csv_download(page, frame_locator)
 
@@ -362,16 +346,86 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
     with page.expect_event(
         "response",
         lambda response: response.url.endswith("_stcore/host-config")
-        and response.json()["enforceDownloadInNewTab"] == True,
+        and response.json()["enforceDownloadInNewTab"] is True,
         timeout=10000,
     ):
-        frame_locator: FrameLocator = iframed_app.open_app()
+        frame_locator: FrameLocator = iframed_app.open_app(None)
         _test_csv_download(page, frame_locator)
 
 
+def test_number_cell_read_only_overlay_formatting(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the number cell overlay is formatted correctly."""
+    overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
+    # Click on the first cell of the table
+    click_on_cell(overlay_test_df, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    assert_snapshot(cell_overlay, name="st_dataframe-number_col_overlay")
+
+
+def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the number cell can be edited."""
+    cell_overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(3)
+    # Click on the first cell of the table
+    click_on_cell(cell_overlay_test_df, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    assert_snapshot(cell_overlay, name="st_data_editor-number_col_editor")
+
+    # Change the value
+    cell_overlay.locator(".gdg-input").fill("9876.54")
+    # Press Enter to apply the change
+    themed_app.keyboard.press("Enter")
+    wait_for_app_run(themed_app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(themed_app, "Edited DF:", "9876.54", exact_match=False)
+
+
+def test_text_cell_read_only_overlay_formatting(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the text cell overlay is formatted correctly."""
+    overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
+    # Click on the first cell of the table
+    click_on_cell(overlay_test_df, 1, 1, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (text) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_text("hello\nworld")
+    assert_snapshot(cell_overlay, name="st_dataframe-text_col_overlay")
+
+
+def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the number cell can be edited."""
+    cell_overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(3)
+    # Click on the first cell of the table
+    click_on_cell(cell_overlay_test_df, 1, 1, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_text("hello\nworld")
+    assert_snapshot(cell_overlay, name="st_data_editor-text_col_editor")
+
+    # Change the value
+    cell_overlay.locator(".gdg-input").fill("edited value")
+    # Press Enter to apply the change
+    themed_app.keyboard.press("Enter")
+    wait_for_app_run(themed_app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(
+        themed_app, "Edited DF:", "edited value", exact_match=False
+    )
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "data_editor")).to_be_visible()
+
+
 # TODO(lukasmasuch): Add additional interactive tests:
-# - Selecting a cell
-# - Opening a cell
-# - Applying a cell edit
 # - Copy data to clipboard
 # - Paste in data

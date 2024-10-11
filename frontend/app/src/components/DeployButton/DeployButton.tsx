@@ -14,27 +14,26 @@
  * limitations under the License.
  */
 
-import React, { MouseEvent, ReactElement } from "react"
+import React, { FC, MouseEvent } from "react"
+
 import { BaseButton, BaseButtonKind } from "@streamlit/lib"
+
 import { DeployButtonContainer } from "./styled-components"
 
 interface IDeployButtonProps {
   onClick: (event: MouseEvent<HTMLButtonElement>) => any
 }
 
-class DeployButton extends React.Component<IDeployButtonProps> {
-  render(): ReactElement {
-    const { onClick } = this.props
-    return (
-      <div className="stDeployButton" data-testid="stDeployButton">
-        <BaseButton kind={BaseButtonKind.HEADER_BUTTON} onClick={onClick}>
-          <DeployButtonContainer>
-            <span>Deploy</span>
-          </DeployButtonContainer>
-        </BaseButton>
-      </div>
-    )
-  }
+const DeployButton: FC<IDeployButtonProps> = ({ onClick }) => {
+  return (
+    <div className="stAppDeployButton" data-testid="stAppDeployButton">
+      <BaseButton kind={BaseButtonKind.HEADER_BUTTON} onClick={onClick}>
+        <DeployButtonContainer>
+          <span>Deploy</span>
+        </DeployButtonContainer>
+      </BaseButton>
+    </div>
+  )
 }
 
 export default DeployButton

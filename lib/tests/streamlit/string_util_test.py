@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
 
 from parameterized import parameterized
@@ -21,10 +23,6 @@ from streamlit.errors import StreamlitAPIException
 
 
 class StringUtilTest(unittest.TestCase):
-    def test_decode_ascii(self):
-        """Test streamlit.string_util.decode_ascii."""
-        self.assertEqual("test string.", string_util.decode_ascii(b"test string."))
-
     @parameterized.expand(
         [
             ("", False),

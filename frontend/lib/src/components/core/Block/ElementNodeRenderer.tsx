@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
+import React, { ReactElement, Suspense } from "react"
+
+import debounceRender from "react-debounce-render"
+import classNames from "classnames"
+
 import {
-  Arrow as ArrowProto,
   Alert as AlertProto,
+  Arrow as ArrowProto,
+  AudioInput as AudioInputProto,
   Audio as AudioProto,
   BokehChart as BokehChartProto,
+  ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
-  DownloadButton as DownloadButtonProto,
   CameraInput as CameraInputProto,
   ChatInput as ChatInputProto,
   Checkbox as CheckboxProto,
@@ -28,42 +34,40 @@ import {
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
-  FileUploader as FileUploaderProto,
-  Html as HtmlProto,
-  MultiSelect as MultiSelectProto,
-  NumberInput as NumberInputProto,
-  Radio as RadioProto,
-  Skeleton as SkeletonProto,
-  Selectbox as SelectboxProto,
-  Slider as SliderProto,
-  Spinner as SpinnerProto,
-  TextArea as TextAreaProto,
-  TextInput as TextInputProto,
-  TimeInput as TimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
+  DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
+  FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
+  Heading as HeadingProto,
+  Html as HtmlProto,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
   Metric as MetricProto,
+  MultiSelect as MultiSelectProto,
+  NumberInput as NumberInputProto,
   PageLink as PageLinkProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
+  Radio as RadioProto,
+  Selectbox as SelectboxProto,
+  Skeleton as SkeletonProto,
+  Slider as SliderProto,
+  Spinner as SpinnerProto,
+  TextArea as TextAreaProto,
+  TextInput as TextInputProto,
   Text as TextProto,
+  TimeInput as TimeInputProto,
   Toast as ToastProto,
   Video as VideoProto,
-  Heading as HeadingProto,
 } from "@streamlit/lib/src/proto"
-
-import React, { ReactElement, Suspense } from "react"
-import debounceRender from "react-debounce-render"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
+import ElementFullscreenWrapper from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenWrapper"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-
 // Load (non-lazy) elements.
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
 import ArrowTable from "@streamlit/lib/src/components/elements/ArrowTable"
@@ -78,18 +82,19 @@ import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
-
 import Maybe from "@streamlit/lib/src/components/core/Maybe"
 import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { getElementId } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseBlockProps,
-  shouldComponentBeEnabled,
+  convertKeyToClassName,
+  getKeyFromId,
   isComponentStale,
+  shouldComponentBeEnabled,
 } from "./utils"
-
 import { StyledElementContainer } from "./styled-components"
 
 // Lazy-load elements.
@@ -152,8 +157,15 @@ const Video = React.lazy(
 )
 
 // Lazy-load widgets.
+const AudioInput = React.lazy(
+  () => import("@streamlit/lib/src/components/widgets/AudioInput")
+)
+
 const Button = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/Button")
+)
+const ButtonGroup = React.lazy(
+  () => import("@streamlit/lib/src/components/widgets/ButtonGroup")
 )
 const DownloadButton = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/DownloadButton")
@@ -299,6 +311,7 @@ const RawElementNodeRenderer = (
         <StreamlitSyntaxHighlighter
           language={codeProto.language}
           showLineNumbers={codeProto.showLineNumbers}
+          wrapLines={codeProto.wrapLines}
         >
           {codeProto.codeText}
         </StreamlitSyntaxHighlighter>
@@ -307,10 +320,12 @@ const RawElementNodeRenderer = (
 
     case "deckGlJsonChart":
       return (
-        <DeckGlJsonChart
-          element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
-          {...elementProps}
-        />
+        <ElementFullscreenWrapper width={widgetProps.width}>
+          <DeckGlJsonChart
+            element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+            {...widgetProps}
+          />
+        </ElementFullscreenWrapper>
       )
 
     case "docString":
@@ -322,7 +337,7 @@ const RawElementNodeRenderer = (
       )
 
     case "empty":
-      return <div className="stHidden" data-testid="stEmpty" />
+      return <div className="stEmpty" data-testid="stEmpty" />
 
     case "exception":
       return (
@@ -490,6 +505,20 @@ const RawElementNodeRenderer = (
         />
       )
 
+    case "audioInput": {
+      const audioInputProto = node.element.audioInput as AudioInputProto
+      widgetProps.disabled = widgetProps.disabled || audioInputProto.disabled
+
+      return (
+        <AudioInput
+          key={audioInputProto.id}
+          uploadClient={props.uploadClient}
+          element={audioInputProto}
+          {...widgetProps}
+        ></AudioInput>
+      )
+    }
+
     case "button": {
       const buttonProto = node.element.button as ButtonProto
       widgetProps.disabled = widgetProps.disabled || buttonProto.disabled
@@ -506,6 +535,18 @@ const RawElementNodeRenderer = (
         )
       }
       return <Button element={buttonProto} {...widgetProps} />
+    }
+
+    case "buttonGroup": {
+      const buttonGroupProto = node.element.buttonGroup as ButtonGroupProto
+      widgetProps.disabled = widgetProps.disabled || buttonGroupProto.disabled
+      return (
+        <ButtonGroup
+          key={buttonGroupProto.id}
+          element={buttonGroupProto}
+          {...widgetProps}
+        />
+      )
     }
 
     case "downloadButton": {
@@ -734,6 +775,10 @@ const ElementNodeRenderer = (
     fragmentIdsThisRun
   )
 
+  // Get the user key - if it was specified - and use it as CSS class name:
+  const elementId = getElementId(node.element)
+  const userKey = getKeyFromId(elementId)
+
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
@@ -741,13 +786,17 @@ const ElementNodeRenderer = (
   return (
     <Maybe enable={enable}>
       <StyledElementContainer
+        className={classNames(
+          "stElementContainer",
+          "element-container",
+          convertKeyToClassName(userKey)
+        )}
+        data-testid="stElementContainer"
         data-stale={isStale}
         // Applying stale opacity in fullscreen mode
         // causes the fullscreen overlay to be transparent.
         isStale={isStale && !isFullScreen}
         width={width}
-        className={"element-container"}
-        data-testid={"element-container"}
         elementType={elementType}
       >
         <ErrorBoundary width={width}>

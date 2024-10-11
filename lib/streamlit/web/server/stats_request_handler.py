@@ -18,11 +18,12 @@ from typing import TYPE_CHECKING
 
 import tornado.web
 
-from streamlit.runtime.stats import CacheStat, StatsManager
+from streamlit.web.server import allow_cross_origin_requests
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
 if TYPE_CHECKING:
     from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
+    from streamlit.runtime.stats import CacheStat, StatsManager
 
 
 class StatsRequestHandler(tornado.web.RequestHandler):
@@ -30,9 +31,6 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         self._manager = stats_manager
 
     def set_default_headers(self):
-        # Avoid a circular import
-        from streamlit.web.server import allow_cross_origin_requests
-
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 

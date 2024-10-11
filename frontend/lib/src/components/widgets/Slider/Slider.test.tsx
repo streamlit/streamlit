@@ -15,9 +15,9 @@
  */
 
 import React from "react"
-import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
 
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
 import TimezoneMock from "timezone-mock"
 
 import {
@@ -27,6 +27,7 @@ import {
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import Slider, { Props } from "./Slider"
 
 const getProps = (
@@ -139,8 +140,8 @@ describe("Slider widget", () => {
     const props = getProps()
     render(<Slider {...props} />)
 
-    const min = screen.getByTestId("stTickBarMin")
-    const max = screen.getByTestId("stTickBarMax")
+    const min = screen.getByTestId("stSliderTickBarMin")
+    const max = screen.getByTestId("stSliderTickBarMax")
     expect(min).toHaveTextContent("0")
     expect(max).toHaveTextContent("10")
   })
@@ -150,15 +151,16 @@ describe("Slider widget", () => {
       const props = getProps()
       render(<Slider {...props} />)
 
-      const slider = screen.getByRole("slider")
+      const slider = screen.getByTestId("stSlider")
       expect(slider).toBeInTheDocument()
+      expect(slider).toHaveClass("stSlider")
     })
 
     it("displays a thumb value", () => {
       const props = getProps()
       render(<Slider {...props} />)
 
-      expect(screen.getAllByTestId("stThumbValue")).toHaveLength(1)
+      expect(screen.getAllByTestId("stSliderThumbValue")).toHaveLength(1)
     })
 
     it("has the correct value", () => {
@@ -198,7 +200,7 @@ describe("Slider widget", () => {
     it("resets its value when form is cleared", async () => {
       // Create a widget in a clearOnSubmit form
       const props = getProps({ formId: "form" })
-      props.widgetMgr.setFormClearOnSubmit("form", true)
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
 
       render(<Slider {...props} />)
 
@@ -219,7 +221,7 @@ describe("Slider widget", () => {
       expect(slider).toHaveAttribute("aria-valuenow", "6")
 
       // "Submit" the form
-      props.widgetMgr.submitForm("form")
+      props.widgetMgr.submitForm("form", undefined)
 
       // Our widget should be reset, and the widgetMgr should be updated
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
@@ -248,7 +250,7 @@ describe("Slider widget", () => {
       const props = getProps({ default: [1, 9] })
       render(<Slider {...props} />)
 
-      expect(screen.getAllByTestId("stThumbValue")).toHaveLength(2)
+      expect(screen.getAllByTestId("stSliderThumbValue")).toHaveLength(2)
     })
 
     it("has the correct value", () => {
@@ -390,8 +392,8 @@ describe("Slider widget", () => {
       })
       render(<Slider {...props} />)
 
-      const min = screen.getByTestId("stTickBarMin")
-      const max = screen.getByTestId("stTickBarMax")
+      const min = screen.getByTestId("stSliderTickBarMin")
+      const max = screen.getByTestId("stSliderTickBarMax")
 
       expect(min).toHaveTextContent("1970-01-01")
       expect(max).toHaveTextContent("1970-01-29")

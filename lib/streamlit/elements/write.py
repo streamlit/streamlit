@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-import json
 import types
+from collections import ChainMap, UserDict, UserList
+from collections.abc import ItemsView, KeysView, ValuesView
 from io import StringIO
 from typing import (
     TYPE_CHECKING,
@@ -31,21 +32,18 @@ from typing import (
     cast,
 )
 
-from streamlit import type_util
+from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.string_util import (
     is_mem_address_str,
     max_char_sequence,
     probably_contains_html_tags,
 )
-from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 # Special methods:
 HELP_TYPES: Final[tuple[type[Any], ...]] = (
@@ -100,7 +98,7 @@ class WriteMixin:
         Example
         -------
         You can pass an OpenAI stream as shown in our tutorial, `Build a \
-        basic LLM chat app <https://docs.streamlit.io/knowledge-base/tutorials\
+        basic LLM chat app <https://docs.streamlit.io/develop/tutorials/llms\
         /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
         you can pass a generic generator function as input:
 
@@ -142,7 +140,7 @@ class WriteMixin:
 
         # Just apply some basic checks for common iterable types that should
         # not be passed in here.
-        if isinstance(stream, str) or type_util.is_dataframe_like(stream):
+        if isinstance(stream, str) or dataframe_util.is_dataframe_like(stream):
             raise StreamlitAPIException(
                 "`st.write_stream` expects a generator or stream-like object as input "
                 f"not {type(stream)}. Please use `st.write` instead for "
@@ -189,7 +187,7 @@ class WriteMixin:
             if type_util.is_openai_chunk(chunk):
                 # Try to convert OpenAI chat completion chunk to a string:
                 try:
-                    if len(chunk.choices) == 0:
+                    if len(chunk.choices) == 0 or chunk.choices[0].delta is None:
                         # The choices list can be empty. E.g. when using the
                         # AzureOpenAI client, the first chunk will always be empty.
                         chunk = ""
@@ -273,12 +271,13 @@ class WriteMixin:
             - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(data_frame)     : Displays the DataFrame as a table.
+            - write(dataframe)      : Displays any dataframe-like object in an interactive table.
+            - write(dict)           : Displays dict-like in an interactive viewer.
+            - write(list)           : Displays list-like in an interactive viewer.
             - write(error)          : Prints an exception specially.
             - write(func)           : Displays information about a function.
             - write(module)         : Displays information about the module.
             - write(class)          : Displays information about a class.
-            - write(dict)           : Displays dict in an interactive widget.
             - write(mpl_fig)        : Displays a Matplotlib figure.
             - write(generator)      : Streams the output of a generator.
             - write(openai.Stream)  : Streams the output of an OpenAI stream.
@@ -290,20 +289,23 @@ class WriteMixin:
             - write(bokeh_fig)      : Displays a Bokeh figure.
             - write(sympy_expr)     : Prints SymPy expression using LaTeX.
             - write(htmlable)       : Prints _repr_html_() for the object if available.
+            - write(db_cursor)      : Displays DB API 2.0 cursor results in a table.
             - write(obj)            : Prints str(obj) if otherwise unknown.
 
+
         unsafe_allow_html : bool
-            This is a keyword-only argument that defaults to False.
+            Whether to render HTML within ``*args``. This only applies to
+            strings or objects falling back on ``_repr_html_()``. If this is
+            ``False`` (default), any HTML tags found in ``body`` will be
+            escaped and therefore treated as raw text. If this is ``True``, any
+            HTML expressions within ``body`` will be rendered.
 
-            By default, any HTML tags found in strings will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
+            Adding custom HTML to your app impacts safety, styling, and
+            maintainability.
 
-            That said, *we strongly advise against it*. It is hard to write secure
-            HTML, so by using this argument you may be compromising your users'
-            security. For more information, see:
-
-            https://github.com/streamlit/streamlit/issues/152
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         **kwargs : any
             Keyword arguments. Not used.
@@ -322,7 +324,7 @@ class WriteMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.write('Hello, *World!* :sunglasses:')
+        >>> st.write("Hello, *World!* :sunglasses:")
 
         ..  output::
             https://doc-write1.streamlit.app/
@@ -335,10 +337,14 @@ class WriteMixin:
         >>> import pandas as pd
         >>>
         >>> st.write(1234)
-        >>> st.write(pd.DataFrame({
-        ...     'first column': [1, 2, 3, 4],
-        ...     'second column': [10, 20, 30, 40],
-        ... }))
+        >>> st.write(
+        ...     pd.DataFrame(
+        ...         {
+        ...             "first column": [1, 2, 3, 4],
+        ...             "second column": [10, 20, 30, 40],
+        ...         }
+        ...     )
+        ... )
 
         ..  output::
             https://doc-write2.streamlit.app/
@@ -348,8 +354,8 @@ class WriteMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.write('1 + 1 = ', 2)
-        >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
+        >>> st.write("1 + 1 = ", 2)
+        >>> st.write("Below is a DataFrame:", data_frame, "Above is a dataframe.")
 
         ..  output::
             https://doc-write3.streamlit.app/
@@ -362,12 +368,12 @@ class WriteMixin:
         >>> import numpy as np
         >>> import altair as alt
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
+        >>> df = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
+        >>> c = (
+        ...     alt.Chart(df)
+        ...     .mark_circle()
+        ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
+        ... )
         >>>
         >>> st.write(c)
 
@@ -421,22 +427,12 @@ class WriteMixin:
                         item()
                     else:
                         self.write(item, unsafe_allow_html=unsafe_allow_html)
-            elif type_util.is_unevaluated_data_object(
-                arg
-            ) or type_util.is_snowpark_row_list(arg):
-                flush_buffer()
-                self.dg.dataframe(arg)
-            elif type_util.is_dataframe_like(arg):
-                import numpy as np
-
-                flush_buffer()
-                if len(np.shape(arg)) > 2:
-                    self.dg.text(arg)
-                else:
-                    self.dg.dataframe(arg)
             elif isinstance(arg, Exception):
                 flush_buffer()
                 self.dg.exception(arg)
+            elif dataframe_util.is_dataframe_like(arg):
+                flush_buffer()
+                self.dg.dataframe(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
                 self.dg.altair_chart(arg)
@@ -464,14 +460,29 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(
-                arg, (dict, list, SessionStateProxy, UserInfoProxy, QueryParamsProxy)
+            elif (
+                isinstance(
+                    arg,
+                    (
+                        dict,
+                        list,
+                        map,
+                        enumerate,
+                        types.MappingProxyType,
+                        UserDict,
+                        ChainMap,
+                        UserList,
+                        ItemsView,
+                        KeysView,
+                        ValuesView,
+                    ),
+                )
+                or type_util.is_custom_dict(arg)
+                or type_util.is_namedtuple(arg)
+                or type_util.is_pydantic_model(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)
-            elif type_util.is_namedtuple(arg):
-                flush_buffer()
-                self.dg.json(json.dumps(arg._asdict()))
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
@@ -497,13 +508,20 @@ class WriteMixin:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
             elif (
-                hasattr(arg, "_repr_html_")
-                and callable(arg._repr_html_)
+                type_util.has_callable_attr(arg, "_repr_html_")
                 and (repr_html := arg._repr_html_())
                 and (unsafe_allow_html or not probably_contains_html_tags(repr_html))
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
+            elif type_util.has_callable_attr(
+                arg, "to_pandas"
+            ) or type_util.has_callable_attr(arg, "__dataframe__"):
+                # This object can very likely be converted to a DataFrame
+                # using the to_pandas, to_arrow, or the dataframe interchange
+                # protocol.
+                flush_buffer()
+                self.dg.dataframe(arg)
             else:
                 stringified_arg = str(arg)
 

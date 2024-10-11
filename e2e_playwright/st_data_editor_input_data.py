@@ -19,7 +19,7 @@ import pandas as pd
 
 import streamlit as st
 from shared.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
-from streamlit.type_util import DataFormat
+from streamlit.dataframe_util import DataFormat
 
 np.random.seed(0)
 random.seed(0)

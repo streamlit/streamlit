@@ -18,11 +18,11 @@ from typing import Any, Final, Iterator, MutableMapping
 
 from streamlit import logger as _logger
 from streamlit import runtime
+from streamlit.elements.lib.utils import Key
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.common import require_valid_user_key
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.type_util import Key
 
 _LOGGER: Final = _logger.get_logger(__name__)
 
@@ -40,7 +40,9 @@ def get_session_state() -> SafeSessionState:
     st.session_state.
     """
     global _state_use_warning_already_displayed
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        get_script_run_ctx,
+    )
 
     ctx = get_script_run_ctx()
 
@@ -146,5 +148,5 @@ class SessionStateProxy(MutableMapping[Key, Any]):
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
         f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it? '
-        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+        f"More info: https://docs.streamlit.io/develop/concepts/architecture/session-state#initialization"
     )

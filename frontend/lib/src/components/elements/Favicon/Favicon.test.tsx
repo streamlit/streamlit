@@ -15,6 +15,7 @@
  */
 
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
+
 import { handleFavicon } from "./Favicon"
 
 function getFaviconHref(): string {
@@ -34,13 +35,13 @@ const CRESCENT_MOON_TWEMOJI_URL =
   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f319.png"
 
 const FLAG_MATERIAL_ICON_URL =
-  "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/flag/default/24px.svg"
+  "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/flag/default/24px.svg"
 
 const SMART_DISPLAY_MATERIAL_ICON_URL =
-  "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/smart_display/default/24px.svg"
+  "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/smart_display/default/24px.svg"
 
 const ACCESSIBILITY_NEW_MATERIAL_ICON_URL =
-  "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/accessibility_new/default/24px.svg"
+  "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/accessibility_new/default/24px.svg"
 
 test("is set up with the default favicon", () => {
   expect(getFaviconHref()).toBe("http://localhost/default.png")

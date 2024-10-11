@@ -24,8 +24,14 @@ import streamlit as st
 # SCATTER CHART
 st.header("Altair Chart with point and interval selection")
 
+
 # taken from vega_datasets cars example
-cars = data.cars()
+@st.cache_data  # use caching to avoid a potential issue with flakiness
+def get_cars_data():
+    return data.cars()
+
+
+cars = get_cars_data()
 interval = alt.selection_interval()
 
 point = alt.selection_point()
@@ -272,7 +278,7 @@ selection = st.altair_chart(
 st.header("Selections in fragment:")
 
 
-@st.experimental_fragment
+@st.fragment
 def test_fragment():
     selection = st.altair_chart(
         histogram_point,

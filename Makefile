@@ -30,6 +30,7 @@ PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard
 .PHONY: help
 help:
 	@# Magic line used to create self-documenting makefiles.
+	@# Note that this means the documenting comment just before the command (but after the .PHONY) must be all one line, and should begin with a capital letter and end with a period.
 	@# See https://stackoverflow.com/a/35730928
 	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")),c}1{c=0}' Makefile | column -s: -t
 
@@ -48,14 +49,11 @@ all-devel: init develop pre-commit-install
 	@echo ""
 
 .PHONY: mini-devel
-# Get minimal dependencies for development and install Streamlit into Python
-# environment -- but do not build the frontend.
+# Get minimal dependencies for development and install Streamlit into Python environment -- but do not build the frontend.
 mini-devel: mini-init develop pre-commit-install
 
 .PHONY: build-deps
-# An even smaller installation than mini-devel. Installs the bare minimum
-# necessary to build Streamlit (by leaving out some dependencies necessary for
-# the development process). Does not build the frontend.
+# An even smaller installation than mini-devel. Installs the bare minimum necessary to build Streamlit (by leaving out some dependencies necessary for the development process). Does not build the frontend.
 build-deps: mini-init develop
 
 .PHONY: init
@@ -81,28 +79,23 @@ develop:
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init
 
 .PHONY: python-init-all
-# Install Streamlit and all (test and dev) requirements
+# Install Streamlit and all (test and dev) requirements.
 python-init-all:
 	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=true make python-init
 
 .PHONY: python-init-dev-only
-# Install Streamlit and dev requirements
+# Install Streamlit and dev requirements.
 python-init-dev-only:
 	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=false make python-init
 
 .PHONY: python-init-test-only
-# Install Streamlit and test requirements
+# Install Streamlit and test requirements.
 python-init-test-only: lib/test-requirements.txt
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true make python-init
 
-.PHONY: python-init-test-min-deps
-# Install Streamlit and test requirements, with minimum dependency versions
-python-init-test-min-deps:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true USE_CONSTRAINTS_FILE=true CONSTRAINTS_URL="lib/min-constraints-gen.txt" make python-init
-
 .PHONY: python-init
 python-init:
-	pip_args=("--editable" "lib[snowflake]");\
+	pip_args=("--editable" "./lib");\
 	if [ "${USE_CONSTRAINTS_FILE}" = "true" ] ; then\
 		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
 	fi;\
@@ -124,22 +117,20 @@ python-init:
 	fi;\
 
 .PHONY: pylint
-# Verify that our Python files are properly formatted.
+# Verify that our Python files are properly formatted and that there are no lint errors.
 pylint:
-	# Does not modify any files. Returns with a non-zero
-	# status if anything is not properly formatted. (This isn't really
-	# "linting"; we're not checking anything but code style.)
-	if command -v "black" > /dev/null; then \
-		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
-		$(BLACK) --diff --check lib/tests/ && \
-		$(BLACK) --diff --check e2e/scripts/ ; \
-	fi
+	# Checks if the formatting is correct:
+	ruff format --check
+	# Run linter:
+	ruff check
 
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
 pyformat:
-	pre-commit run black --all-files --hook-stage manual
-	pre-commit run isort --all-files --hook-stage manual
+	# Sort imports ( see https://docs.astral.sh/ruff/formatter/#sorting-imports )
+	ruff check --select I --fix
+	# Run code formatter
+	ruff format
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -147,24 +138,23 @@ pytest:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
-# Run Python integration tests for snowflake.
-pytest-snowflake:
+# Run Python integration tests.
+# This requires the integration-requirements to be installed.
+pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
-			--require-snowflake \
+			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
-	./scripts/mypy
+	mypy --config-file=lib/mypy.ini --namespace-packages lib/streamlit/ lib/tests/streamlit/typing/ scripts/
 
 .PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.
@@ -172,12 +162,12 @@ bare-execution-tests:
 	python3 scripts/run_bare_execution_tests.py
 
 .PHONY: cli-smoke-tests
-# Verify that CLI boots as expected when called with `python -m streamlit`
+# Verify that CLI boots as expected when called with `python -m streamlit`.
 cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
 .PHONY: cli-regression-tests
-# Verify that CLI boots as expected when called with `python -m streamlit`
+# Verify that CLI boots as expected when called with `python -m streamlit`.
 cli-regression-tests: install
 	pytest scripts/cli_regression_tests.py
 
@@ -203,7 +193,7 @@ conda-distribution:
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
-# Build lib and (maybe) frontend assets, and then run 'conda-distribution'
+# Build lib and (maybe) frontend assets, and then run 'conda-distribution'.
 conda-package: build-deps
 	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
 		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
@@ -221,6 +211,7 @@ clean:
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	rm -rf .mypy_cache
+	rm -rf .ruff_cache
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
@@ -242,8 +233,6 @@ MIN_PROTOC_VERSION = 3.20
 .PHONY: check-protoc
 # Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
 check-protoc:
-	@# We support Python protobuf 4.21, which is incompatible with code generated from
-	@# protoc < 3.20
 	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
 		exit 1; \
@@ -284,10 +273,12 @@ protobuf: check-protoc
 	) > ./lib/src/proto.d.ts
 
 .PHONY: react-init
+# React init.
 react-init:
 	cd frontend/ ; yarn install --frozen-lockfile
 
 .PHONY: react-build
+# React build.
 react-build:
 	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
@@ -301,7 +292,7 @@ frontend-fast:
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-lib
-# Build the frontend library
+# Build the frontend library.
 frontend-lib:
 	cd frontend/ ; yarn run buildLib;
 
@@ -311,13 +302,13 @@ frontend-app:
 	cd frontend/ ; yarn run buildApp
 
 .PHONY: jslint
-# Lint the JS code
+# Lint the JS code.
 jslint:
 	cd frontend; \
 		yarn lint;
 
 .PHONY: tstypecheck
-# Type check the JS/TS code
+# Typecheck the JS/TS code.
 tstypecheck:
 	pre-commit run typecheck-lib --all-files --hook-stage manual && pre-commit run typecheck-app --all-files --hook-stage manual
 
@@ -331,15 +322,10 @@ jsformat:
 jstest:
 	cd frontend; TESTPATH=$(TESTPATH) yarn run test
 
-.PHONY: jscoverage
+.PHONY: jstestcoverage
 # Run JS unit tests and generate a coverage report.
-jscoverage:
-	cd frontend; yarn run test --coverage --watchAll=false
-
-.PHONY: e2etest
-# Run E2E tests.
-e2etest:
-	./scripts/run_e2e_tests.py
+jstestcoverage:
+	cd frontend; TESTPATH=$(TESTPATH) yarn run testcoverage
 
 .PHONY: playwright
 # Run playwright E2E tests (without custom component tests).
@@ -414,22 +400,22 @@ gen-min-dep-constraints:
 	python scripts/get_min_versions.py >lib/min-constraints-gen.txt
 
 .PHONY: pre-commit-install
+# Pre-commit install.
 pre-commit-install:
 	pre-commit install
 
 .PHONY: ensure-relative-imports
-# ensure relative imports exist within the lib/dist folder when doing yarn buildLibProd
+# Ensure relative imports exist within the lib/dist folder when doing yarn buildLibProd.
 ensure-relative-imports:
 	./scripts/ensure_relative_imports.sh
 
 .PHONY frontend-lib-prod:
-# build the production version for @streamlit/lib
+# Build the production version for @streamlit/lib.
 frontend-lib-prod:
 	cd frontend/ ; yarn run buildLibProd;
 
 .PHONY streamlit-lib-prod:
-# build the production version for @streamlit/lib
-# while also doing a make init so it's a single command
+# Build the production version for @streamlit/lib while also doing a make init so it's a single command.
 streamlit-lib-prod:
 	make mini-init;
 	make frontend-lib-prod;

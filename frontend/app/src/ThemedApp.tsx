@@ -16,11 +16,12 @@
 
 import React from "react"
 
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import { CUSTOM_THEME_NAME, RootStyleProvider } from "@streamlit/lib"
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
+import { PortalProvider } from "@streamlit/lib/src/components/core/Portal/PortalProvider"
+import { WindowDimensionsProvider } from "@streamlit/lib/src/components/shared/WindowDimensions/Provider"
 
 import AppWithScreencast from "./App"
-import { StyledDataFrameOverlay } from "@streamlit/app/src/styled-components"
 import { useThemeManager } from "./util/useThemeManager"
 
 const ThemedApp = (): JSX.Element => {
@@ -31,10 +32,13 @@ const ThemedApp = (): JSX.Element => {
 
   return (
     <RootStyleProvider theme={activeTheme}>
-      {hasCustomFonts && <FontFaceDeclaration fontFaces={fontFaces} />}
-      <AppWithScreencast theme={themeManager} />
-      {/* The data grid requires one root level portal element for rendering cell overlays */}
-      <StyledDataFrameOverlay id="portal" data-testid="portal" />
+      <WindowDimensionsProvider>
+        {/* The data grid requires one root level portal element for rendering cell overlays */}
+        <PortalProvider>
+          {hasCustomFonts && <FontFaceDeclaration fontFaces={fontFaces} />}
+          <AppWithScreencast theme={themeManager} />
+        </PortalProvider>
+      </WindowDimensionsProvider>
     </RootStyleProvider>
   )
 }

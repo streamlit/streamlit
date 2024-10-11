@@ -15,12 +15,15 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
+
 import { useTheme } from "@emotion/react"
+import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulTooltip } from "baseui/tooltip"
+
 import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
-import { StatefulTooltip, ACCESSIBILITY_TYPE, PLACEMENT } from "baseui/tooltip"
+
 import { StyledTooltipContentWrapper } from "./styled-components"
 
 export enum Placement {
@@ -57,7 +60,7 @@ function Tooltip({
   onMouseEnterDelay,
 }: TooltipProps): ReactElement {
   const theme: EmotionTheme = useTheme()
-  const { colors, fontSizes, radii } = theme
+  const { colors, fontSizes, radii, fontWeights } = theme
 
   return (
     <StatefulTooltip
@@ -83,10 +86,10 @@ function Tooltip({
             // shorthand version `borderRadius` is used here since the long
             // names are used by BaseWeb and mixing the two is apparently
             // bad :(
-            borderTopLeftRadius: radii.md,
-            borderTopRightRadius: radii.md,
-            borderBottomLeftRadius: radii.md,
-            borderBottomRightRadius: radii.md,
+            borderTopLeftRadius: radii.default,
+            borderTopRightRadius: radii.default,
+            borderBottomLeftRadius: radii.default,
+            borderBottomRightRadius: radii.default,
 
             paddingTop: "0 !important",
             paddingBottom: "0 !important",
@@ -103,7 +106,7 @@ function Tooltip({
               : colors.secondaryBg,
             color: colors.bodyText,
             fontSize: fontSizes.sm,
-            fontWeight: "normal",
+            fontWeight: fontWeights.normal,
 
             // See the long comment about `borderRadius`. The same applies here
             // to `padding`.

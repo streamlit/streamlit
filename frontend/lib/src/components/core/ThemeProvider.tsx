@@ -15,13 +15,14 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
+
 import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
 import {
-  EmotionTheme,
-  baseuiLightTheme,
   BaseUILightTheme,
+  baseuiLightTheme,
+  EmotionTheme,
 } from "@streamlit/lib/src/theme"
 
 export interface ThemeProviderProps {

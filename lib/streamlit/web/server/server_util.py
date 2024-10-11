@@ -16,12 +16,13 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import TYPE_CHECKING, Final, Literal
 from urllib.parse import urljoin
 
-import tornado.web
-
 from streamlit import config, net_util, url_util
+
+if TYPE_CHECKING:
+    from tornado.web import RequestHandler
 
 # The port reserved for internal development.
 DEVELOPMENT_PORT: Final = 3000
@@ -75,10 +76,17 @@ def _get_server_address_if_manually_set() -> str | None:
     return None
 
 
-def make_url_path_regex(*path, **kwargs) -> str:
+def make_url_path_regex(
+    *path, trailing_slash: Literal["optional", "required", "prohibited"] = "optional"
+) -> str:
     """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
     path = [x.strip("/") for x in path if x]  # Filter out falsely components.
-    path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"
+    path_format = r"^/%s$"
+    if trailing_slash == "optional":
+        path_format = r"^/%s/?$"
+    elif trailing_slash == "required":
+        path_format = r"^/%s/$"
+
     return path_format % "/".join(path)
 
 
@@ -120,9 +128,7 @@ def _get_browser_address_bar_port() -> int:
     return int(config.get_option("browser.serverPort"))
 
 
-def emit_endpoint_deprecation_notice(
-    handler: tornado.web.RequestHandler, new_path: str
-) -> None:
+def emit_endpoint_deprecation_notice(handler: RequestHandler, new_path: str) -> None:
     """
     Emits the warning about deprecation of HTTP endpoint in the HTTP header.
     """

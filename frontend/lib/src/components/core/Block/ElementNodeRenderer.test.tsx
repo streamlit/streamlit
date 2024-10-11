@@ -15,10 +15,11 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import {
   Balloons as BalloonsProto,
   ForwardMsgMetadata,
@@ -33,9 +34,12 @@ import {
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { mockEndpoints, mockSessionInfo } from "@streamlit/lib/src/mocks/mocks"
+
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
+
+const FAKE_SCRIPT_HASH = "fake_script_hash"
 
 function createBalloonNode(scriptRunId: string): ElementNode {
   const node = new ElementNode(
@@ -43,7 +47,8 @@ function createBalloonNode(scriptRunId: string): ElementNode {
       show: true,
     }),
     ForwardMsgMetadata.create({}),
-    scriptRunId
+    scriptRunId,
+    FAKE_SCRIPT_HASH
   )
   node.element.type = "balloons"
   return node
@@ -55,7 +60,8 @@ function createSnowNode(scriptRunId: string): ElementNode {
       show: true,
     }),
     ForwardMsgMetadata.create({}),
-    scriptRunId
+    scriptRunId,
+    FAKE_SCRIPT_HASH
   )
   node.element.type = "snow"
   return node
@@ -102,8 +108,9 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
+      expect(elementNodeRenderer).toHaveClass("stElementContainer")
       // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
@@ -119,12 +126,12 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("balloons")
+      expect(elementRendererChildren[0]).toHaveClass("stBalloons")
     })
   })
 
@@ -140,7 +147,7 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
@@ -157,12 +164,12 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("snow")
+      expect(elementRendererChildren[0]).toHaveClass("stSnow")
     })
   })
 })

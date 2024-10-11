@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Create a release using Github API"""
+
 import os
 
 import requests

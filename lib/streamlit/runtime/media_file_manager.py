@@ -28,7 +28,9 @@ _LOGGER: Final = get_logger(__name__)
 
 def _get_session_id() -> str:
     """Get the active AppSession's session_id."""
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        get_script_run_ctx,
+    )
 
     ctx = get_script_run_ctx()
     if ctx is None:
@@ -82,12 +84,12 @@ class MediaFileManager:
         self._storage = storage
 
         # Dict of [file_id -> MediaFileMetadata]
-        self._file_metadata: dict[str, MediaFileMetadata] = dict()
+        self._file_metadata: dict[str, MediaFileMetadata] = {}
 
         # Dict[session ID][coordinates] -> file_id.
-        self._files_by_session_and_coord: dict[
-            str, dict[str, str]
-        ] = collections.defaultdict(dict)
+        self._files_by_session_and_coord: dict[str, dict[str, str]] = (
+            collections.defaultdict(dict)
+        )
 
         # MediaFileManager is used from multiple threads, so all operations
         # need to be protected with a Lock. (This is not an RLock, which

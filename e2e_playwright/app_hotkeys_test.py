@@ -14,13 +14,18 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    expect_prefixed_markdown,
+)
+
 
 def test_shows_clear_cache_dialog_when_c_is_pressed(app: Page):
     app.keyboard.type("c")
     expect(app.get_by_role("dialog")).to_be_visible()
     expect(app.get_by_role("dialog")).to_have_text(
         """
-Clear cachesAre you sure you want to clear the app's function caches?This will remove all cached entries from functions using @st.cache, @st.cache_data, and @st.cache_resource.CancelClear caches
+Clear cachesAre you sure you want to clear the app's function caches?This will remove all cached entries from functions using @st.cache_data and @st.cache_resource.CancelClear caches
     """
     )
 
@@ -40,12 +45,15 @@ def test_does_not_clear_cache_dialog_when_c_is_pressed_inside_text_input(app: Pa
 
 
 def test_reruns_when_r_is_pressed(app: Page):
+    expect_prefixed_markdown(app, "Script runs:", "1", exact_match=False)
     app.keyboard.type("r")
-    expect(app.get_by_test_id("stStatusWidget")).to_be_visible()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Script runs:", "2", exact_match=False)
 
 
-def test_does_not_clear_cache_dialog_when_r_is_pressed_inside_text_input(
+def test_does_not_rerun_when_r_is_pressed_inside_text_input(
     app: Page,
 ):
-    app.get_by_test_id("stTextInput").press("r")
-    expect(app.get_by_test_id("stStatusWidget")).not_to_be_visible()
+    app.get_by_test_id("stTextInput").locator("input").press("r")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Script runs:", "1", exact_match=False)

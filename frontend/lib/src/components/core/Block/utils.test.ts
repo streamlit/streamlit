@@ -17,11 +17,17 @@
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
-import { isElementStale } from "./utils"
+import { convertKeyToClassName, getKeyFromId, isElementStale } from "./utils"
 
 describe("isElementStale", () => {
-  // @ts-expect-error
-  const node = new ElementNode(null, null, "myScriptRunId", "myFragmentId")
+  const node = new ElementNode(
+    // @ts-expect-error
+    null,
+    null,
+    "myScriptRunId",
+    "activeScriptHash",
+    "myFragmentId"
+  )
 
   it("returns true if scriptRunState is RERUN_REQUESTED", () => {
     expect(
@@ -35,10 +41,17 @@ describe("isElementStale", () => {
   })
 
   // When running in a fragment, the only elements that should be set to stale
-  // are those belonging to the fragment that's currently running.
-  it("if running and currentFragmentId is set, compares with node's fragmentId", () => {
+  // are those belonging to the fragment that's currently running and only if the script run id is different.
+  // If the script run id is the same, the element has just been updated and is not stale.
+  it("if running and currentFragmentId is set, compares with node's fragmentId and scriptrunId", () => {
     expect(
       isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
+        "myFragmentId",
+      ])
+    ).toBe(false)
+
+    expect(
+      isElementStale(node, ScriptRunState.RUNNING, "otherScriptRunId", [
         "myFragmentId",
       ])
     ).toBe(true)
@@ -73,4 +86,65 @@ describe("isElementStale", () => {
       expect(isElementStale(node, s, "someOtherScriptRunId", [])).toBe(false)
     })
   })
+})
+
+describe("convertKeyToClassName", () => {
+  const testCases = [
+    { input: undefined, expected: "" },
+    { input: null, expected: "" },
+    { input: "", expected: "" },
+    { input: "helloWorld", expected: "st-key-helloWorld" },
+    { input: "hello world!", expected: "st-key-hello-world-" },
+    { input: "123Start", expected: "st-key-123Start" },
+    { input: "My_Class-Name", expected: "st-key-My_Class-Name" },
+    {
+      input: "invalid#characters$here",
+      expected: "st-key-invalid-characters-here",
+    },
+    { input: "another$Test_case", expected: "st-key-another-Test_case" },
+  ]
+
+  test.each(testCases)(
+    "converts $input to $expected",
+    ({ input, expected }) => {
+      expect(convertKeyToClassName(input)).toBe(expected)
+    }
+  )
+})
+
+describe("getKeyFromId", () => {
+  const testCases = [
+    {
+      input: "",
+      expected: undefined,
+    },
+    {
+      input: undefined,
+      expected: undefined,
+    },
+    {
+      input: "$ID-899e9b72e1539f21f8e82565d36609d0-foo",
+      expected: undefined,
+    },
+    {
+      input: "$$ID-899e9b72e1539f21f8e82565d36609d0-None",
+      expected: undefined,
+    },
+    { input: "helloWorld", expected: undefined },
+    {
+      input: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
+      expected: "first container",
+    },
+    {
+      input: "$$ID-foo-bar",
+      expected: "bar",
+    },
+  ]
+
+  test.each(testCases)(
+    "extracts the key from $input",
+    ({ input, expected }) => {
+      expect(getKeyFromId(input)).toBe(expected)
+    }
+  )
 })

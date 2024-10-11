@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """Unit tests for the Streamlit CLI."""
+
+from __future__ import annotations
+
 import contextlib
 import os
 import subprocess
@@ -28,9 +31,8 @@ import requests
 import requests_mock
 from click.testing import CliRunner
 from parameterized import parameterized
-from requests.adapters import HTTPAdapter
+from requests.adapters import HTTPAdapter, Retry
 from testfixtures import tempdir
-from urllib3 import Retry
 
 import streamlit
 import streamlit.web.bootstrap
@@ -173,6 +175,41 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
+    def test_run_command_with_multiple_secrets_path_single_value(self):
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
+            "streamlit.web.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+            result = self.runner.invoke(
+                cli, ["run", "file_name.py", "--secrets.files=secrets1.toml"]
+            )
+
+        streamlit.web.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
+        assert kwargs["flag_options"]["secrets_files"] == ("secrets1.toml",)
+        assert result.exit_code == 0
+
+    def test_run_command_with_multiple_secrets_path_multiple_value(self):
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
+            "streamlit.web.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+            result = self.runner.invoke(
+                cli,
+                [
+                    "run",
+                    "file_name.py",
+                    "--secrets.files=secrets1.toml",
+                    "--secrets.files=secrets2.toml",
+                ],
+            )
+
+        streamlit.web.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
+        assert kwargs["flag_options"]["secrets_files"] == (
+            "secrets1.toml",
+            "secrets2.toml",
+        )
+        assert result.exit_code == 0
+
     @parameterized.expand(["mapbox.token", "server.cookieSecret"])
     def test_run_command_with_sensitive_options_as_flag(self, sensitive_option):
         with patch("streamlit.url_util.is_url", return_value=False), patch(
@@ -313,20 +350,20 @@ class CliTest(unittest.TestCase):
 
     def test_docs_command(self):
         """Tests the docs command opens the browser"""
-        with patch("streamlit.util.open_browser") as mock_open_browser:
+        with patch("streamlit.cli_util.open_browser") as mock_open_browser:
             self.runner.invoke(cli, ["docs"])
             mock_open_browser.assert_called_once_with("https://docs.streamlit.io")
 
     def test_hello_command(self):
         """Tests the hello command runs the hello script in streamlit"""
-        from streamlit.hello import Hello
+        from streamlit.hello import streamlit_app
 
         with patch("streamlit.web.cli._main_run") as mock_main_run:
             self.runner.invoke(cli, ["hello"])
 
             mock_main_run.assert_called_once()
             positional_args = mock_main_run.call_args[0]
-            self.assertEqual(positional_args[0], Hello.__file__)
+            self.assertEqual(positional_args[0], streamlit_app.__file__)
 
     @patch("streamlit.logger.get_logger")
     def test_hello_command_with_logs(self, get_logger):
@@ -368,43 +405,15 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
-    @patch("streamlit.runtime.legacy_caching.clear_cache")
     @patch(
         "streamlit.runtime.caching.storage.local_disk_cache_storage.LocalDiskCacheStorageManager.clear_all"
     )
     @patch("streamlit.runtime.caching.cache_resource.clear")
-    def test_cache_clear_all_caches(
-        self, clear_resource_caches, clear_data_caches, clear_legacy_cache
-    ):
-        """cli.clear_cache should clear st.cache, st.cache_data and st.cache_resource"""
+    def test_cache_clear_all_caches(self, clear_resource_caches, clear_data_caches):
+        """cli.clear_cache should clear st.cache_data and st.cache_resource"""
         self.runner.invoke(cli, ["cache", "clear"])
         clear_resource_caches.assert_called_once()
         clear_data_caches.assert_called_once()
-        clear_legacy_cache.assert_called_once()
-
-    @patch("builtins.print")
-    def test_cache_clear_command_with_cache(self, mock_print):
-        """Tests clear cache announces that cache is cleared when completed"""
-        with patch(
-            "streamlit.runtime.legacy_caching.clear_cache", return_value=True
-        ) as mock_clear_cache:
-            self.runner.invoke(cli, ["cache", "clear"])
-            mock_clear_cache.assert_called()
-            first_call = mock_print.call_args[0]
-            first_arg = first_call[0]
-            self.assertTrue(first_arg.startswith("Cleared directory"))
-
-    @patch("builtins.print")
-    def test_cache_clear_command_without_cache(self, mock_print):
-        """Tests clear cache announces when there is nothing to clear"""
-        with patch(
-            "streamlit.runtime.legacy_caching.clear_cache", return_value=False
-        ) as mock_clear_cache:
-            self.runner.invoke(cli, ["cache", "clear"])
-            mock_clear_cache.assert_called()
-            first_call = mock_print.call_args[0]
-            first_arg = first_call[0]
-            self.assertTrue(first_arg.startswith("Nothing to clear"))
 
     def test_activate_command(self):
         """Tests activating a credential"""

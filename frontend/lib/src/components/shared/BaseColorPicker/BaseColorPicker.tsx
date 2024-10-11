@@ -15,26 +15,29 @@
  */
 
 import React from "react"
+
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
+
 import {
-  WidgetLabel,
   StyledWidgetLabelHelpInline,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 import { logWarning } from "@streamlit/lib/src/util/log"
+
 import {
-  StyledColorPicker,
   StyledChromePicker,
+  StyledColorBlock,
+  StyledColorPicker,
   StyledColorPreview,
   StyledColorValue,
-  StyledColorBlock,
 } from "./styled-components"
 
 export interface BaseColorPickerProps {
-  disabled?: boolean
+  disabled: boolean
   width?: number
   value: string
   showValue?: boolean
@@ -106,19 +109,14 @@ class BaseColorPicker extends React.PureComponent<
     const { width, showValue, label, labelVisibility, help, disabled } =
       this.props
     const { value } = this.state
-    const cursor = disabled ? "not-allowed" : "default"
-    const style = { width, cursor }
-    const previewStyle = {
-      cursor,
-      "pointer-events": disabled ? "none" : "auto",
-    }
-    const blockStyle = {
-      backgroundColor: value,
-      opacity: disabled ? "0.4" : "",
-    }
 
     return (
-      <StyledColorPicker data-testid="stColorPicker" style={style}>
+      <StyledColorPicker
+        className="stColorPicker"
+        data-testid="stColorPicker"
+        width={width}
+        disabled={disabled}
+      >
         <WidgetLabel
           label={label}
           disabled={disabled}
@@ -142,8 +140,12 @@ class BaseColorPicker extends React.PureComponent<
             </StyledChromePicker>
           )}
         >
-          <StyledColorPreview style={previewStyle}>
-            <StyledColorBlock style={blockStyle} data-testid="stColorBlock" />
+          <StyledColorPreview disabled={disabled}>
+            <StyledColorBlock
+              data-testid="stColorPickerBlock"
+              backgroundColor={value}
+              disabled={disabled}
+            />
             {showValue && (
               <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
             )}

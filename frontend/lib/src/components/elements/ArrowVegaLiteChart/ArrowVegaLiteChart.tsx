@@ -16,7 +16,7 @@
 
 import React, { PureComponent } from "react"
 
-import { withTheme } from "@emotion/react"
+import { Global, withTheme } from "@emotion/react"
 import embed from "vega-embed"
 import * as vega from "vega"
 import { SignalValue } from "vega"
@@ -24,40 +24,39 @@ import { expressionInterpreter } from "vega-interpreter"
 import isEqual from "lodash/isEqual"
 
 import {
+  debounce,
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
+import {
   WidgetInfo,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import {
-  debounce,
-  notNullOrUndefined,
-  isNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
-import { logWarning, logMessage } from "@streamlit/lib/src/util/log"
+import { logMessage, logWarning } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 
-import "@streamlit/lib/src/assets/css/vega-embed.css"
-import "@streamlit/lib/src/assets/css/vega-tooltip.css"
-
 import {
-  getDataSets,
-  VegaLiteChartElement,
-  getDataArray,
   dataIsAnAppendOfPrev,
+  getDataArray,
   getDataArrays,
+  getDataSets,
   getInlineData,
+  VegaLiteChartElement,
 } from "./arrowUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
-import { StyledVegaLiteChartContainer } from "./styled-components"
+import {
+  StyledVegaLiteChartContainer,
+  StyledVegaLiteChartTooltips,
+} from "./styled-components"
 
 const DEFAULT_DATA_NAME = "source"
 
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
- * For example, in e2e/scripts/add_rows.py
  */
 const BOTTOM_PADDING = 20
 
@@ -299,7 +298,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       spec.padding = {}
     }
 
-    if (spec.padding.bottom == null) {
+    if (isNullOrUndefined(spec.padding.bottom)) {
       spec.padding.bottom = BOTTOM_PADDING
     }
 
@@ -591,16 +590,22 @@ export class ArrowVegaLiteChart extends PureComponent<
       throw this.state.error
     }
 
+    // Create the container inside which Vega draws its content.
+    // To style the Vega tooltip, we need to apply global styles since
+    // the tooltip element is drawn outside of this component.
     return (
-      // Create the container Vega draws inside.
-      <StyledVegaLiteChartContainer
-        data-testid="stArrowVegaLiteChart"
-        useContainerWidth={this.props.element.useContainerWidth}
-        isFullScreen={this.props.isFullScreen}
-        ref={c => {
-          this.element = c
-        }}
-      />
+      <>
+        <Global styles={StyledVegaLiteChartTooltips} />
+        <StyledVegaLiteChartContainer
+          data-testid="stVegaLiteChart"
+          className="stVegaLiteChart"
+          useContainerWidth={this.props.element.useContainerWidth}
+          isFullScreen={this.props.isFullScreen}
+          ref={c => {
+            this.element = c
+          }}
+        />
+      </>
     )
   }
 }

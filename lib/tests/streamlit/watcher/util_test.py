@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
@@ -21,7 +23,7 @@ from streamlit.watcher import util
 
 class UtilTest(unittest.TestCase):
     def test_md5_calculation_succeeds_with_bytes_input(self):
-        with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")) as m:
+        with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")):
             md5 = util.calc_md5_with_blocking_retries("foo")
             self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
 
@@ -39,7 +41,7 @@ class UtilTest(unittest.TestCase):
     def test_md5_calculation_can_pass_glob(self, mock_stable_dir_identifier):
         mock_stable_dir_identifier.return_value = "hello"
 
-        md5 = util.calc_md5_with_blocking_retries("foo", glob_pattern="*.py")
+        util.calc_md5_with_blocking_retries("foo", glob_pattern="*.py")
         mock_stable_dir_identifier.assert_called_once_with("foo", "*.py")
 
     @patch("os.path.exists", MagicMock(return_value=False))
@@ -56,7 +58,7 @@ class UtilTest(unittest.TestCase):
             m.assert_called_once_with("foo", "rb")
 
 
-class FakeStat(object):
+class FakeStat:
     """Emulates the output of os.stat()."""
 
     def __init__(self, mtime):
@@ -83,12 +85,10 @@ class DirHelperTests(unittest.TestCase):
     def setUp(self) -> None:
         self._test_dir = tempfile.TemporaryDirectory()
 
-        create_file = lambda prefix, suffix: tempfile.NamedTemporaryFile(
-            dir=self._test_dir.name,
-            prefix=prefix,
-            suffix=suffix,
-            delete=False,
-        )
+        def create_file(prefix, suffix):
+            return tempfile.NamedTemporaryFile(
+                dir=self._test_dir.name, prefix=prefix, suffix=suffix, delete=False
+            )
 
         create_file("01", ".py")
         create_file("02", ".py")

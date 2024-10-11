@@ -17,20 +17,20 @@
 import {
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
-  LoadingScreenType,
   getCookie,
   getEmbedUrlParams,
   getLoadingScreenType,
-  isEmbed,
-  setCookie,
-  preserveEmbedQueryParams,
   isColoredLineDisplayed,
-  isToolbarDisplayed,
+  isDarkThemeInQueryParams,
+  isEmbed,
+  isLightThemeInQueryParams,
   isPaddingDisplayed,
   isScrollingHidden,
-  isLightTheme,
-  isDarkTheme,
+  isToolbarDisplayed,
   keysToSnakeCase,
+  LoadingScreenType,
+  preserveEmbedQueryParams,
+  setCookie,
 } from "./utils"
 
 describe("getCookie", () => {
@@ -252,8 +252,8 @@ describe("isEmbed", () => {
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
-    expect(isLightTheme()).toBe(false)
-    expect(isDarkTheme()).toBe(false)
+    expect(isLightThemeInQueryParams()).toBe(false)
+    expect(isDarkThemeInQueryParams()).toBe(false)
   })
 
   it("embed Options should return false even if ?embed=false", () => {
@@ -291,7 +291,7 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isLightTheme()).toBe(true)
+    expect(isLightThemeInQueryParams()).toBe(true)
   })
 
   it("should specify dark theme if in embed options", () => {
@@ -301,7 +301,7 @@ describe("isEmbed", () => {
       },
     }))
 
-    expect(isDarkTheme()).toBe(true)
+    expect(isDarkThemeInQueryParams()).toBe(true)
   })
 
   it("should disable scrolling if in embed options", () => {
@@ -315,8 +315,8 @@ describe("isEmbed", () => {
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(true)
-    expect(isLightTheme()).toBe(false)
-    expect(isDarkTheme()).toBe(false)
+    expect(isLightThemeInQueryParams()).toBe(false)
+    expect(isDarkThemeInQueryParams()).toBe(false)
   })
 
   it("should show padding if in embed options", () => {
@@ -330,8 +330,8 @@ describe("isEmbed", () => {
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(true)
     expect(isScrollingHidden()).toBe(false)
-    expect(isLightTheme()).toBe(false)
-    expect(isDarkTheme()).toBe(false)
+    expect(isLightThemeInQueryParams()).toBe(false)
+    expect(isDarkThemeInQueryParams()).toBe(false)
   })
 
   it("should show the toolbar if in embed options", () => {
@@ -345,8 +345,8 @@ describe("isEmbed", () => {
     expect(isToolbarDisplayed()).toBe(true)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
-    expect(isLightTheme()).toBe(false)
-    expect(isDarkTheme()).toBe(false)
+    expect(isLightThemeInQueryParams()).toBe(false)
+    expect(isDarkThemeInQueryParams()).toBe(false)
   })
 
   it("should show the colored line if in embed options", () => {
@@ -360,8 +360,8 @@ describe("isEmbed", () => {
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
-    expect(isLightTheme()).toBe(false)
-    expect(isDarkTheme()).toBe(false)
+    expect(isLightThemeInQueryParams()).toBe(false)
+    expect(isDarkThemeInQueryParams()).toBe(false)
   })
 
   it("isEmbed is case insensitive, so should return true when ?embed=TrUe", () => {

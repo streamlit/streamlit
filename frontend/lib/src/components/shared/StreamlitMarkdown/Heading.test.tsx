@@ -18,10 +18,12 @@ import React from "react"
 import "@testing-library/jest-dom"
 
 import { screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
+
 import Heading, { HeadingProtoProps } from "./Heading"
 
 const getHeadingProps = (
@@ -47,6 +49,9 @@ describe("Heading", () => {
     expect(heading).not.toHaveTextContent("this is a new line")
     expect(screen.getByText("this is a new line")).toBeInTheDocument()
     expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
+
+    const headingElement = screen.getByTestId("stHeading")
+    expect(headingElement).toHaveClass("stHeading")
   })
 
   it("renders properly without a new line", () => {

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { Video } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import React, {
   ReactElement,
   useCallback,
@@ -23,10 +21,13 @@ import React, {
   useRef,
   useState,
 } from "react"
+
+import { Video } from "@emotion-icons/open-iconic"
+import { useTheme } from "@emotion/react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
-import { debounce } from "@streamlit/lib/src/util/utils"
 
+import { debounce } from "@streamlit/lib/src/util/utils"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import themeColors from "@streamlit/lib/src/theme/emotionBaseTheme/themeColors"
@@ -120,7 +121,7 @@ const WebcamComponent = ({
   const theme: EmotionTheme = useTheme()
 
   return (
-    <StyledCameraInput width={debouncedWidth} data-testid="stWebcamComponent">
+    <StyledCameraInput data-testid="stCameraInputWebcamComponent">
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
       !clearPhotoInProgress ? (
@@ -129,7 +130,7 @@ const WebcamComponent = ({
         isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
       )}
       <StyledBox
-        data-testid="stWebcamStyledBox"
+        data-testid="stCameraInputWebcamStyledBox"
         hidden={
           webcamPermission !== WebcamPermission.SUCCESS &&
           !disabled &&
@@ -148,7 +149,7 @@ const WebcamComponent = ({
             // The aspect ration of video stream may be different depending on a camera.
             height={(debouncedWidth * 9) / 16}
             style={{
-              borderRadius: `${theme.radii.lg} ${theme.radii.lg} 0 0`,
+              borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
             }}
             onUserMediaError={() => {
               setWebcamPermissionState(WebcamPermission.ERROR)

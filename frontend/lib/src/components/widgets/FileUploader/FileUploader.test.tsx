@@ -15,20 +15,22 @@
  */
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
-import userEvent from "@testing-library/user-event"
 
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { default as userEvent } from "@testing-library/user-event"
+
+import { render } from "@streamlit/lib/src/test_util"
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
+  IFileURLs,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
-  IFileURLs,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
 import FileUploader, { Props } from "./FileUploader"
 
 const createFile = (filename = "filename.txt"): File => {
@@ -113,7 +115,8 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename.txt",
         }),
       ]),
-      { fromUi: false }
+      { fromUi: false },
+      undefined
     )
 
     render(<FileUploader {...props} />)
@@ -635,7 +638,7 @@ describe("FileUploader widget tests", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
 
@@ -667,7 +670,7 @@ describe("FileUploader widget tests", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
     rerender(<FileUploader {...props} />)
 
     // Our widget should be reset, and the widgetMgr should be updated

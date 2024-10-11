@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 
 import {
   BaseColumnProps,

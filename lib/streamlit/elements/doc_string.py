@@ -90,7 +90,7 @@ class HelpMixin:
         >>>     return 'Woof!'
         >>>
         >>>
-        >>> fido = Dog('poodle', 'white')
+        >>> fido = Dog("poodle", "white")
         >>>
         >>> st.help(fido)
 
@@ -291,15 +291,7 @@ def _get_variable_name_from_code_str(code):
 
     # If constant, there's no variable name.
     # E.g. st.help("foo") or st.help(123) should give you None.
-    elif type(arg_node) in (
-        ast.Constant,
-        # Python 3.7 support:
-        ast.Num,
-        ast.Str,
-        ast.Bytes,
-        ast.NameConstant,
-        ast.Ellipsis,
-    ):
+    elif type(arg_node) is ast.Constant:
         return None
 
     # Otherwise, return whatever is inside st.help(<-- here -->)
@@ -375,7 +367,7 @@ def _is_stcommand(tree, command_name):
     """Checks whether the AST in tree is a call for command_name."""
     root_node = tree.body[0].value
 
-    if not type(root_node) is ast.Call:
+    if not isinstance(root_node, ast.Call):
         return False
 
     return (

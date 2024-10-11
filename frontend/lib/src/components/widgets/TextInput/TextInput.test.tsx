@@ -17,15 +17,17 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen, fireEvent, within } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { fireEvent, screen, within } from "@testing-library/react"
+import { default as userEvent } from "@testing-library/user-event"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import {
-  TextInput as TextInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
+  TextInput as TextInputProto,
 } from "@streamlit/lib/src/proto"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import TextInput, { Props } from "./TextInput"
 
 const getProps = (
@@ -41,6 +43,7 @@ const getProps = (
   }),
   width: 300,
   disabled: false,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
@@ -102,7 +105,7 @@ describe("TextInput widget", () => {
     const textInput = screen.getByRole("textbox")
     expect(textInput).toHaveAttribute("type", "text")
     // Check that no show/hide button renders
-    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const textInputContainer = screen.getByTestId("stTextInputRootElement")
     const showButton = within(textInputContainer).queryByRole("button")
     expect(showButton).not.toBeInTheDocument()
   })
@@ -113,7 +116,7 @@ describe("TextInput widget", () => {
     const passwordTextInput = screen.getByPlaceholderText("Placeholder")
     expect(passwordTextInput).toHaveAttribute("type", "password")
     // Check for the show/hide button
-    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const textInputContainer = screen.getByTestId("stTextInputRootElement")
     const showButton = within(textInputContainer).getByRole("button")
     expect(showButton).toBeInTheDocument()
   })
@@ -166,7 +169,6 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByTestId("stTextInput")
 
-    expect(textInput).toHaveClass("row-widget")
     expect(textInput).toHaveClass("stTextInput")
     expect(textInput).toHaveStyle(`width: ${props.width}px`)
   })
@@ -248,6 +250,7 @@ describe("TextInput widget", () => {
   it("does update widget value on text changes when inside of a form", async () => {
     const props = getProps({ formId: "formId" })
     const setStringValueSpy = jest.spyOn(props.widgetMgr, "setStringValue")
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
 
     render(<TextInput {...props} />)
 
@@ -255,6 +258,7 @@ describe("TextInput widget", () => {
     fireEvent.change(textInput, { target: { value: "TEST" } })
     expect(textInput).toHaveValue("TEST")
 
+    fireEvent.focus(textInput)
     expect(
       await screen.findByText("Press Enter to submit form")
     ).toBeInTheDocument()
@@ -278,6 +282,7 @@ describe("TextInput widget", () => {
     fireEvent.change(textInput, { target: { value: "TEST" } })
     expect(textInput).toHaveValue("TEST")
 
+    fireEvent.focus(textInput)
     expect(await screen.findByText("Press Enter to apply")).toBeInTheDocument()
 
     // Check that the last call was in componentDidMount.
@@ -294,7 +299,7 @@ describe("TextInput widget", () => {
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
@@ -304,7 +309,7 @@ describe("TextInput widget", () => {
     fireEvent.change(textInput, { target: { value: "TEST" } })
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textInput).toHaveValue(props.element.default)
@@ -318,15 +323,91 @@ describe("TextInput widget", () => {
     )
   })
 
+  it("shows Input Instructions on dirty state by default", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TextInput {...props} />)
+
+    // Trigger dirty state
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    expect(screen.getByText("Press Enter to apply")).toBeVisible()
+  })
+
+  it("shows Input Instructions if in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<TextInput {...props} />)
+
+    // Trigger dirty state
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
+  })
+
+  // For this scenario https://github.com/streamlit/streamlit/issues/7079
+  it("shows Input Instructions if focused again in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    // Remove focus
+    fireEvent.blur(textInput)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+
+    // Then focus again
+    fireEvent.focus(textInput)
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
+  })
+
+  it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest
+      .spyOn(props.widgetMgr, "allowFormEnterToSubmit")
+      .mockReturnValue(false)
+
+    render(<TextInput {...props} />)
+
+    // Trigger dirty state
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
+  })
+
   it("hides Please enter to apply text when width is smaller than 180px", () => {
     const props = getProps({}, { width: 100 })
     render(<TextInput {...props} />)
+
+    // Focus on input
+    const textInput = screen.getByRole("textbox")
+    fireEvent.focus(textInput)
+
     expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", () => {
     const props = getProps({}, { width: 190 })
     render(<TextInput {...props} />)
+
+    // Focus on input
+    const textInput = screen.getByRole("textbox")
+    fireEvent.focus(textInput)
+
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 

@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { CSSProperties, ReactElement } from "react"
 
 import {
-  IImage,
-  Image as ImageProto,
   ImageList as ImageListProto,
+  Image as ImageProto,
 } from "@streamlit/lib/src/proto"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
@@ -38,10 +37,18 @@ export interface ImageListProps {
   height?: number
 }
 
+/**
+ * @see WidthBehaviour on the Backend
+ * @see the Image.proto file
+ */
 enum WidthBehavior {
   OriginalWidth = -1,
+  /** @deprecated */
   ColumnWidth = -2,
+  /** @deprecated */
   AutoWidth = -3,
+  MinImageOrContainer = -4,
+  MaxImageOrContainer = -5,
 }
 
 /**
@@ -53,19 +60,26 @@ export function ImageList({
   element,
   height,
   endpoints,
-}: ImageListProps): ReactElement {
+}: Readonly<ImageListProps>): ReactElement {
   // The width field in the proto sets the image width, but has special
-  // cases for -1, -2, and -3.
+  // cases the values in the WidthBehavior enum.
   let containerWidth: number | undefined
   const protoWidth = element.width
 
   if (
-    protoWidth === WidthBehavior.OriginalWidth ||
-    protoWidth === WidthBehavior.AutoWidth
+    [
+      WidthBehavior.OriginalWidth,
+      WidthBehavior.AutoWidth,
+      WidthBehavior.MinImageOrContainer,
+    ].includes(protoWidth)
   ) {
     // Use the original image width.
     containerWidth = undefined
-  } else if (protoWidth === WidthBehavior.ColumnWidth) {
+  } else if (
+    [WidthBehavior.ColumnWidth, WidthBehavior.MaxImageOrContainer].includes(
+      protoWidth
+    )
+  ) {
     // Use the column width
     containerWidth = width
   } else if (protoWidth > 0) {
@@ -75,26 +89,27 @@ export function ImageList({
     throw Error(`Invalid image width: ${protoWidth}`)
   }
 
-  const imgStyle: any = {}
+  const imgStyle: CSSProperties = {}
 
   if (height && isFullScreen) {
     imgStyle.maxHeight = height
-    imgStyle["object-fit"] = "contain"
+    imgStyle.objectFit = "contain"
   } else {
     imgStyle.width = containerWidth
-
-    if (protoWidth === WidthBehavior.AutoWidth) {
-      // Cap the image width, so it doesn't exceed the column width
-      imgStyle.maxWidth = "100%"
-    }
+    // Cap the image width, so it doesn't exceed its parent container width
+    imgStyle.maxWidth = "100%"
   }
 
   return (
-    <StyledImageList style={{ width }}>
-      {element.imgs.map((iimage: IImage, idx: number): ReactElement => {
+    <StyledImageList
+      className="stImage"
+      data-testid="stImage"
+      style={{ width }}
+    >
+      {element.imgs.map((iimage, idx): ReactElement => {
         const image = iimage as ImageProto
         return (
-          <StyledImageContainer key={idx} data-testid="stImage">
+          <StyledImageContainer data-testid="stImageContainer" key={idx}>
             <img
               style={imgStyle}
               src={endpoints.buildMediaURL(image.url)}

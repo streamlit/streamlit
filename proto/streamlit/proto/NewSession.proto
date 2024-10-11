@@ -66,6 +66,9 @@ message NewSession {
   // The fragment IDs being run in this session if it corresponds to a fragment
   // script run.
   repeated string fragment_ids_this_run = 10;
+
+  // Hash of the main script running (ie streamlit run main_script.py)
+  string main_script_hash = 11;
 }
 
 // Contains the session status that existed at the time the user connected.
@@ -110,7 +113,7 @@ message Config {
   // See config option "ui.hideTopBar".
   bool hide_top_bar = 6;
 
-  // See config option "ui.hideSidebarNav".
+  // See config option "client.showSidebarNavigation".
   bool hide_sidebar_nav = 7;
 
   // See config option "client.toolbarMode".

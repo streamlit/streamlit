@@ -15,10 +15,12 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
+
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
+
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 
-import { StyledIcon, StyledEmojiIcon } from "./styled-components"
+import { StyledEmojiIcon, StyledIcon } from "./styled-components"
 
 interface GetDefaultPropsArgs {
   size?: IconSize
@@ -84,7 +86,7 @@ export const EmojiIcon = ({
   testid,
 }: EmojiIconProps): ReactElement => (
   <StyledEmojiIcon
-    data-testid={testid}
+    data-testid={testid || "stIconEmoji"}
     aria-hidden="true"
     {...getDefaultProps({ size, margin, padding })}
   >

@@ -38,7 +38,7 @@ st.caption(
 st.caption("This is a caption with a help tooltip", help="This is some help tooltip!")
 
 st.caption(
-    """This is a caption that contains a bunch of interesting markdown:
+    """:material/chevron_right:  This is a caption that contains a bunch of interesting markdown:
 
 # heading 1
 

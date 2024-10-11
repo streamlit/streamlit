@@ -21,11 +21,12 @@ import {
   DATETIMETZ,
   FLOAT64,
   INT64,
-  UINT64,
   RANGE,
+  UINT64,
   UNICODE,
 } from "@streamlit/lib/src/mocks/arrow"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+
 import { getDataArray } from "./arrowUtils"
 
 describe("Types of dataframe indexes as x axis", () => {

@@ -15,12 +15,92 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import moment from "moment"
-import { HotKeys, KeyMap } from "react-hotkeys"
+import Hotkeys from "react-hot-keys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
+import without from "lodash/without"
 
-// Other local imports.
+import {
+  AppConfig,
+  AppRoot,
+  AutoRerun,
+  BackMsg,
+  BaseUriParts,
+  ComponentRegistry,
+  Config,
+  createFormsData,
+  createPresetThemes,
+  createTheme,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
+  Delta,
+  DeployedAppMetadata,
+  ensureError,
+  extractPageNameFromPathName,
+  FileUploadClient,
+  FileURLsResponse,
+  FormsData,
+  ForwardMsg,
+  ForwardMsgMetadata,
+  generateUID,
+  getCachedTheme,
+  getElementId,
+  getEmbeddingIdClassName,
+  getHostSpecifiedTheme,
+  getIFrameEnclosingApp,
+  GitInfo,
+  handleFavicon,
+  hashString,
+  HostCommunicationManager,
+  IAppPage,
+  ICustomThemeConfig,
+  IGitInfo,
+  IHostConfigResponse,
+  IMenuItem,
+  Initialize,
+  isColoredLineDisplayed,
+  isEmbed,
+  isInChildFrame,
+  isPaddingDisplayed,
+  isPresetTheme,
+  isScrollingHidden,
+  isToolbarDisplayed,
+  IToolbarItem,
+  LibConfig,
+  LibContext,
+  logError,
+  logMessage,
+  Logo,
+  Navigation,
+  NewSession,
+  notUndefined,
+  PageConfig,
+  PageInfo,
+  PageNotFound,
+  PageProfile,
+  PagesChanged,
+  ParentMessage,
+  PerformanceEvents,
+  PresetThemeName,
+  ScriptRunState,
+  SessionEvent,
+  SessionInfo,
+  SessionStatus,
+  StreamlitEndpoints,
+  ThemeConfig,
+  toExportedTheme,
+  toThemeInput,
+  WidgetStateManager,
+  WidgetStates,
+} from "@streamlit/lib"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+  preserveEmbedQueryParams,
+} from "@streamlit/lib/src/util/utils"
+import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget"
@@ -36,94 +116,18 @@ import {
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-import {
-  generateUID,
-  getElementWidgetID,
-  getEmbeddingIdClassName,
-  getIFrameEnclosingApp,
-  hashString,
-  isColoredLineDisplayed,
-  isEmbed,
-  isInChildFrame,
-  isPaddingDisplayed,
-  isScrollingHidden,
-  isToolbarDisplayed,
-  notUndefined,
-  setCookie,
-  extractPageNameFromPathName,
-  BaseUriParts,
-  RERUN_PROMPT_MODAL_DIALOG,
-  SessionInfo,
-  FileUploadClient,
-  logError,
-  logMessage,
-  AppRoot,
-  ComponentRegistry,
-  handleFavicon,
-  createAutoTheme,
-  createTheme,
-  CUSTOM_THEME_NAME,
-  getCachedTheme,
-  isPresetTheme,
-  ThemeConfig,
-  toExportedTheme,
-  StreamlitEndpoints,
-  ensureError,
-  LibContext,
-  AppPage,
-  AutoRerun,
-  BackMsg,
-  Config,
-  CustomThemeConfig,
-  Delta,
-  FileURLsResponse,
-  ForwardMsg,
-  ForwardMsgMetadata,
-  GitInfo,
-  IAppPage,
-  IGitInfo,
-  Initialize,
-  Logo,
-  NewSession,
-  PageConfig,
-  PageInfo,
-  PageNotFound,
-  PageProfile,
-  PagesChanged,
-  ParentMessage,
-  SessionEvent,
-  SessionStatus,
-  WidgetStates,
-  ScriptRunState,
-  HostCommunicationManager,
-  IMenuItem,
-  IToolbarItem,
-  DeployedAppMetadata,
-  PerformanceEvents,
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-  IHostConfigResponse,
-  LibConfig,
-  AppConfig,
-} from "@streamlit/lib"
-import without from "lodash/without"
-
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
-
 import { DefaultStreamlitEndpoints } from "@streamlit/app/src/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-
 import { StyledApp } from "@streamlit/app/src/styled-components"
-
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
 import { ThemeManager } from "./util/useThemeManager"
+import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -141,6 +145,7 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   layout: PageConfig.Layout
+  pageLayouts: Record<string, PageConfig.Layout>
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
@@ -151,9 +156,16 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
-  appLogo: Logo | null
+  expandSidebarNav: boolean
   appPages: IAppPage[]
+  navSections: string[]
+  // The hash of the current page executing
   currentPageScriptHash: string
+  // In MPAv2, the main page is executed before and after the current
+  // page. The main page is the script the app is started with, and the current
+  // page is the dynamically loaded page-script. In MPAv1, the main page holds
+  // no relevance as only one page loads at a time.
+  mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
   // host communication info
@@ -167,7 +179,7 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timer[]
+  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
 }
 
@@ -233,15 +245,27 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
+  private readonly appNavigation: AppNavigation
+
   public constructor(props: Props) {
     super(props)
 
     // Initialize immerjs
     enableImmerPlugins()
 
+    // Theme hashes are only created for custom theme, and the custom theme
+    // may come from localStorage. We need to create the hash here to ensure
+    // that the theme is correctly represented.
+    let themeHash = this.createThemeHash()
+    if (!isPresetTheme(props.theme.activeTheme)) {
+      themeHash = this.createThemeHash(
+        toThemeInput(props.theme.activeTheme.emotion) as CustomThemeConfig
+      )
+    }
+
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty(true),
+      elements: AppRoot.empty("", true), // Blank Main Script Hash for initial render
       isFullScreen: false,
       scriptName: "",
       scriptRunId: INITIAL_SCRIPT_RUN_ID,
@@ -252,16 +276,18 @@ export class App extends PureComponent<Props, State> {
         runOnSave: false,
       },
       layout: PageConfig.Layout.CENTERED,
+      pageLayouts: {},
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
-      themeHash: this.createThemeHash(),
+      themeHash,
       gitInfo: null,
       formsData: createFormsData(),
-      appLogo: null,
       appPages: [],
+      navSections: [],
       currentPageScriptHash: "",
+      mainScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
       // the user would see top bar elements for a few ms if this defaulted to
@@ -270,6 +296,7 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
+      expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
@@ -305,7 +332,7 @@ export class App extends PureComponent<Props, State> {
       setInputsDisabled: inputsDisabled => {
         this.setState({ inputsDisabled })
       },
-      themeChanged: this.props.theme.setImportedTheme,
+      themeChanged: this.handleThemeMessage,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
@@ -337,6 +364,15 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadataChanged: deployedAppMetadata => {
         this.setState({ deployedAppMetadata })
       },
+      restartWebsocketConnection: () => {
+        if (!this.connectionManager) {
+          this.initializeConnectionManager()
+        }
+      },
+      terminateWebsocketConnection: () => {
+        this.connectionManager?.disconnect()
+        this.connectionManager = null
+      },
     })
 
     this.endpoints = new DefaultStreamlitEndpoints({
@@ -352,7 +388,7 @@ export class App extends PureComponent<Props, State> {
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
-        this.widgetMgr.setFormsWithUploads(formIds),
+        this.widgetMgr.setFormsWithUploadsInProgress(formIds),
       requestFileURLs: this.requestFileURLs,
     })
 
@@ -360,6 +396,12 @@ export class App extends PureComponent<Props, State> {
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
+    this.appNavigation = new AppNavigation(
+      this.hostCommunicationMgr,
+      this.maybeUpdatePageUrl,
+      this.onPageNotFound,
+      this.onPageIconChanged
+    )
 
     window.streamlitDebug = {
       clearForwardMsgCache: this.debugClearForwardMsgCache,
@@ -368,32 +410,7 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  /**
-   * Global keyboard shortcuts.
-   */
-  keyMap: KeyMap = {
-    RERUN: "r",
-    CLEAR_CACHE: "c",
-    // We use key up for stop recording to ensure the esc key doesn't trigger
-    // other actions (like exiting modals)
-    STOP_RECORDING: { sequence: "esc", action: "keyup" },
-  }
-
-  keyHandlers = {
-    RERUN: () => {
-      this.rerunScript()
-    },
-    CLEAR_CACHE: () => {
-      if (showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode)) {
-        this.openClearCacheDialog()
-      }
-    },
-    STOP_RECORDING: this.props.screenCast.stopRecording,
-  }
-
-  componentDidMount(): void {
-    // Initialize connection manager here, to avoid
-    // "Can't call setState on a component that is not yet mounted." error.
+  initializeConnectionManager(): void {
     this.connectionManager = new ConnectionManager({
       sessionInfo: this.sessionInfo,
       endpoints: this.endpoints,
@@ -431,6 +448,17 @@ export class App extends PureComponent<Props, State> {
         this.setLibConfig(libConfig)
       },
     })
+  }
+
+  componentDidMount(): void {
+    // Initialize connection manager here, to avoid
+    // "Can't call setState on a component that is not yet mounted." error.
+    this.initializeConnectionManager()
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SCRIPT_RUN_STATE_CHANGED",
+      scriptRunState: this.state.scriptRunState,
+    })
 
     if (isScrollingHidden()) {
       document.body.classList.add("embedded")
@@ -461,11 +489,6 @@ export class App extends PureComponent<Props, State> {
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
-    })
-
-    this.hostCommunicationMgr.sendMessageToHost({
-      type: "SCRIPT_RUN_STATE_CHANGED",
-      scriptRunState: this.state.scriptRunState,
     })
 
     this.metricsMgr.enqueue("viewReport")
@@ -546,14 +569,29 @@ export class App extends PureComponent<Props, State> {
       const { environmentInfo } = initializeMsg
 
       if (
-        environmentInfo != null &&
-        environmentInfo.streamlitVersion != null
+        notNullOrUndefined(environmentInfo) &&
+        notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
         return currentStreamlitVersion != environmentInfo.streamlitVersion
       }
     }
 
     return false
+  }
+
+  handleThemeMessage = (
+    themeName?: PresetThemeName,
+    theme?: ICustomThemeConfig
+  ): void => {
+    const [, lightTheme, darkTheme] = createPresetThemes()
+    const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+    if (themeName === lightTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(lightTheme)
+    } else if (themeName === darkTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(darkTheme)
+    } else if (theme) {
+      this.props.theme.setImportedTheme(theme)
+    }
   }
 
   /**
@@ -564,19 +602,44 @@ export class App extends PureComponent<Props, State> {
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
 
-    this.setState({ connectionState: newState })
-
     if (newState === ConnectionState.CONNECTED) {
-      logMessage("Reconnected to server; requesting a script run")
-      this.widgetMgr.sendUpdateWidgetsMessage()
-      this.setState({ dialog: null })
+      logMessage("Reconnected to server.")
+
+      const lastRunWasInterrupted =
+        this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED ||
+        this.state.scriptRunState === ScriptRunState.RUNNING
+
+      // We request a script rerun if:
+      //   1. this is the first time we establish a websocket connection to the
+      //      server, or
+      //   2. our last script run attempt was interrupted by the websocket
+      //      connection dropping.
+      if (!this.sessionInfo.last || lastRunWasInterrupted) {
+        logMessage("Requesting a script run.")
+        this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+        this.setState({ dialog: null })
+      }
+
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "WEBSOCKET_CONNECTED",
+      })
     } else {
-      setCookie("_streamlit_xsrf", "")
+      // If we're starting from the CONNECTED state and going to any other
+      // state, we must be disconnecting.
+      if (this.state.connectionState === ConnectionState.CONNECTED) {
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "WEBSOCKET_DISCONNECTED",
+          attemptingToReconnect:
+            newState !== ConnectionState.DISCONNECTED_FOREVER,
+        })
+      }
 
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
       }
     }
+
+    this.setState({ connectionState: newState })
   }
 
   handleGitInfoChanged = (gitInfo: IGitInfo): void => {
@@ -644,7 +707,10 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
-        logo: (logo: Logo) => this.setState({ appLogo: logo }),
+        logo: (logo: Logo) =>
+          this.handleLogo(logo, msgProto.metadata as ForwardMsgMetadata),
+        navigation: (navigation: Navigation) =>
+          this.handleNavigation(navigation),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -653,9 +719,31 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
+    // Pass the current page & run ID for cleanup
+    const logoMetadata = {
+      activeScriptHash: metadata.activeScriptHash,
+      scriptRunId: this.state.scriptRunId,
+    }
+
+    this.setState(
+      {
+        elements: this.pendingElementsBuffer.appRootWithLogo(
+          logo,
+          logoMetadata
+        ),
+      },
+      () => {
+        this.pendingElementsBuffer = this.state.elements
+      }
+    )
+  }
+
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
     const { title, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
+
+    this.appNavigation.handlePageConfigChanged(pageConfig)
 
     if (title) {
       this.hostCommunicationMgr.sendMessageToHost({
@@ -667,11 +755,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
-      handleFavicon(
-        favicon,
-        this.hostCommunicationMgr.sendMessageToHost,
-        this.endpoints
-      )
+      this.onPageIconChanged(favicon)
     }
 
     // Only change layout/sidebar when the page config has changed.
@@ -714,32 +798,29 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
-    const { pageName } = pageNotFound
+    this.maybeSetState(this.appNavigation.handlePageNotFound(pageNotFound))
+  }
 
-    this.onPageNotFound(pageName)
-
-    const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
-    this.setState({ currentPageScriptHash }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_CURRENT_PAGE_NAME",
-        currentPageName: "",
-        currentPageScriptHash,
-      })
-    })
+  onPageIconChanged = (iconUrl: string): void => {
+    handleFavicon(
+      iconUrl,
+      this.hostCommunicationMgr.sendMessageToHost,
+      this.endpoints
+    )
   }
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
-    const { appPages } = pagesChangedMsg
-    this.setState({ appPages }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_APP_PAGES",
-        appPages,
-      })
-    })
+    this.maybeSetState(this.appNavigation.handlePagesChanged(pagesChangedMsg))
+  }
+
+  handleNavigation = (navigationMsg: Navigation): void => {
+    this.maybeSetState(this.appNavigation.handleNavigation(navigationMsg))
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
     const pageProfileObj = PageProfile.toObject(pageProfile)
+
+    const browserInfo = getBrowserInfo()
     this.metricsMgr.enqueue("pageProfile", {
       ...pageProfileObj,
       isFragmentRun: Boolean(pageProfileObj.isFragmentRun),
@@ -752,12 +833,13 @@ export class App extends PureComponent<Props, State> {
       totalLoadTime: Math.round(
         (performance.now() - this.state.latestRunTime) * 1000
       ),
+      browserInfo,
     })
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
     const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId)
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
     }, autoRerun.interval * 1000)
 
     this.setState((prevState: State) => {
@@ -788,7 +870,7 @@ export class App extends PureComponent<Props, State> {
         // If the scriptCompileError dialog is open and the script starts
         // running, close it.
         if (
-          dialog != null &&
+          notNullOrUndefined(dialog) &&
           dialog.type === DialogType.SCRIPT_COMPILE_ERROR
         ) {
           dialog = undefined
@@ -802,15 +884,6 @@ export class App extends PureComponent<Props, State> {
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
-
-        const customComponentCounter =
-          this.metricsMgr.getAndResetCustomComponentCounter()
-        Object.entries(customComponentCounter).forEach(([name, count]) => {
-          this.metricsMgr.enqueue("customComponentStats", {
-            name,
-            count,
-          })
-        })
       }
 
       return {
@@ -836,17 +909,6 @@ export class App extends PureComponent<Props, State> {
         type: DialogType.SCRIPT_COMPILE_ERROR,
         exception: sessionEvent.scriptCompilationException,
         onClose: () => {},
-      }
-      this.openDialog(newDialog)
-    } else if (
-      RERUN_PROMPT_MODAL_DIALOG &&
-      sessionEvent.type === "scriptChangedOnDisk"
-    ) {
-      const newDialog: DialogProps = {
-        type: DialogType.SCRIPT_CHANGED,
-        onRerun: this.rerunScript,
-        onClose: () => {},
-        allowRunOnSave: this.state.allowRunOnSave,
       }
       this.openDialog(newDialog)
     }
@@ -891,6 +953,14 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  maybeSetState(stateUpdate: MaybeStateUpdate): void {
+    if (stateUpdate) {
+      const [newState, callback] = stateUpdate
+
+      this.setState(newState as State, callback)
+    }
+  }
+
   /**
    * Handler for ForwardMsg.newSession messages. This runs on each rerun
    * @param newSessionProto a NewSession protobuf
@@ -911,80 +981,42 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
+    const {
+      appHash,
+      pageLayouts,
+      currentPageScriptHash: prevPageScriptHash,
+    } = this.state
     const {
       scriptRunId,
       name: scriptName,
       mainScriptPath,
       fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
+      mainScriptHash,
     } = newSessionProto
-
-    // mainPage must be a string as we're guaranteed at this point that
-    // newSessionProto.appPages is nonempty and has a truthy pageName.
-    // Otherwise, we'd either have no main script or a nameless main script,
-    // neither of which can happen.
-    const mainPage = newSessionProto.appPages[0] as AppPage
-    // We're similarly guaranteed that newPageName will be found / truthy
-    // here.
-    const newPageName = newSessionProto.appPages.find(
-      p => p.pageScriptHash === newPageScriptHash
-    )?.pageName as string
-    const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
-      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
-        clearInterval(value)
-      })
-      this.setState({ autoReruns: [] })
+      this.cleanupAutoReruns()
 
       const config = newSessionProto.config as Config
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
-      this.maybeUpdatePageUrl(mainPage.pageName, newPageName, viewingMainPage)
       this.processThemeInput(themeInput)
       this.setState({
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         latestRunTime: performance.now(),
+        mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
         // empty array.
         fragmentIdsThisRun,
       })
+      this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
 
-      // We separate the state of the navigation as we intend to perform
-      // this work through an abstraction of multipage apps in advance
-      // of supporting v2.
-      this.setState(
-        {
-          hideSidebarNav: config.hideSidebarNav,
-          appPages: newSessionProto.appPages,
-          currentPageScriptHash: newPageScriptHash,
-        },
-        () => {
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_APP_PAGES",
-            appPages: newSessionProto.appPages,
-          })
-
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_CURRENT_PAGE_NAME",
-            currentPageName: viewingMainPage ? "" : newPageName,
-            currentPageScriptHash: newPageScriptHash,
-          })
-        }
-      )
-
-      // Set the title and favicon to their default values if we are not running
-      // a fragment.
-      document.title = `${newPageName} · Streamlit`
-      handleFavicon(
-        `${process.env.PUBLIC_URL}/favicon.png`,
-        this.hostCommunicationMgr.sendMessageToHost,
-        this.endpoints
-      )
+      // Set the favicon to its default values
+      this.onPageIconChanged(`${process.env.PUBLIC_URL}/favicon.png`)
     } else {
       this.setState({
         fragmentIdsThisRun,
@@ -999,10 +1031,7 @@ export class App extends PureComponent<Props, State> {
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
-    this.metricsMgr.enqueue("updateReport", {
-      numPages: newSessionProto.appPages.length,
-      isMainPage: viewingMainPage,
-    })
+    this.metricsMgr.enqueue("updateReport")
 
     if (
       appHash === newSessionHash &&
@@ -1012,8 +1041,27 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
       })
     } else {
-      this.clearAppState(newSessionHash, scriptRunId, scriptName)
+      this.clearAppState(
+        newSessionHash,
+        scriptRunId,
+        scriptName,
+        mainScriptHash
+      )
     }
+
+    // Use previously saved layout if exists, otherwise default to CENTERED
+    // Pages using set_page_config(layout=...) will be overriding these values
+    this.setState((prevState: State) => {
+      const newLayout =
+        pageLayouts[newPageScriptHash] ?? PageConfig.Layout.CENTERED
+      return {
+        layout: newLayout,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: newLayout === PageConfig.Layout.WIDE,
+        },
+      }
+    })
   }
 
   /**
@@ -1031,26 +1079,25 @@ export class App extends PureComponent<Props, State> {
       gatherUsageStats: config.gatherUsageStats,
     })
 
-    this.handleSessionStatusChanged(initialize.sessionStatus)
+    // Protobuf typing cannot handle complex types, so we need to cast to what
+    // we know it should be
+    this.handleSessionStatusChanged(initialize.sessionStatus as SessionStatus)
   }
 
   /**
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
-    const targetAppPage =
-      this.state.appPages.find(appPage =>
-        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
-        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
-        document.location.pathname.endsWith("/" + appPage.pageName)
-      ) ?? this.state.appPages[0]
+    const { currentPageScriptHash } = this.state
+    const targetAppPage = this.appNavigation.findPageByUrlPath(
+      document.location.pathname
+    )
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
-    const isSamePage =
-      targetAppPage?.pageScriptHash === this.state.currentPageScriptHash
+    const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
 
-    if (targetAppPage == null || (hasAnchor && isSamePage)) {
+    if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
     this.onPageChange(targetAppPage.pageScriptHash as string)
@@ -1111,7 +1158,9 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        this.setAndSendTheme(createAutoTheme())
+        // Reset to the auto theme taking into account any host preferences
+        // aka embed query params.
+        this.setAndSendTheme(getHostSpecifiedTheme())
       }
     }
   }
@@ -1133,33 +1182,36 @@ export class App extends PureComponent<Props, State> {
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
-      // Clear any stale elements left over from the previous run.
-      // (We don't do this if our script had a compilation error and didn't
-      // finish successfully.)
-      this.setState(
-        ({ scriptRunId, fragmentIdsThisRun }) => ({
-          // Apply any pending elements that haven't been applied.
-          elements: this.pendingElementsBuffer.clearStaleNodes(
-            scriptRunId,
-            fragmentIdsThisRun
-          ),
-        }),
-        () => {
-          // We now have no pending elements.
-          this.pendingElementsBuffer = this.state.elements
-        }
-      )
-
       if (
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
         status ===
           ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
       ) {
+        // Clear any stale elements left over from the previous run.
+        // We only do that for completed runs, not for runs that were finished early
+        // due to reruns; this is to avoid flickering of elements where they disappear for
+        // a moment and then are readded by a new session. After the new session finished,
+        // leftover elements will be cleared after finished successfully.
+        // We also don't do this if our script had a compilation error and didn't
+        // finish successfully.
+        this.setState(
+          ({ scriptRunId, fragmentIdsThisRun }) => ({
+            // Apply any pending elements that haven't been applied.
+            elements: this.pendingElementsBuffer.clearStaleNodes(
+              scriptRunId,
+              fragmentIdsThisRun
+            ),
+          }),
+          () => {
+            this.pendingElementsBuffer = this.state.elements
+          }
+        )
+
         // Tell the WidgetManager which widgets still exist. It will remove
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementId(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1167,8 +1219,15 @@ export class App extends PureComponent<Props, State> {
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
-      // the cache.
-      if (this.connectionManager !== null) {
+      // the cache. We expect the sessionInfo to be populated at this point,
+      // but we have observed race conditions tied to a rerun occurring
+      // before a NewSession message is processed. This issue should not
+      // disrupt users and is not a critical need for the message cache
+      if (
+        this.connectionManager !== null &&
+        status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
+        this.sessionInfo.isSet
+      ) {
         this.connectionManager.incrementMessageCacheRunCount(
           this.sessionInfo.current.maxCachedMessageAge
         )
@@ -1182,7 +1241,8 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     appHash: string,
     scriptRunId: string,
-    scriptName: string
+    scriptName: string,
+    mainScriptHash: string
   ): void {
     const { hideSidebarNav, elements } = this.state
     // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
@@ -1193,11 +1253,22 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(false, sidebarElements),
+        elements: this.appNavigation.clearPageElements(
+          this.pendingElementsBuffer,
+          mainScriptHash,
+          sidebarElements
+        ),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
-        this.widgetMgr.removeInactive(new Set([]))
+        // Tell the WidgetManager which widgets still exist. It will remove
+        // widget state for widgets that have been removed.
+        const activeWidgetIds = new Set(
+          Array.from(this.state.elements.getElements())
+            .map(element => getElementId(element))
+            .filter(notUndefined)
+        )
+        this.widgetMgr.removeInactive(activeWidgetIds)
       }
     )
   }
@@ -1246,9 +1317,6 @@ export class App extends PureComponent<Props, State> {
       deltaMsg,
       metadataMsg
     )
-
-    // Update metrics
-    this.metricsMgr.handleDeltaMessage(deltaMsg)
 
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true
@@ -1305,6 +1373,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Clear all auto reruns that were registered. This should be called whenever
+   * the content of the auto rerun function might not be valid anymore and could
+   * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
+   */
+  cleanupAutoReruns = (): void => {
+    this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
+      clearInterval(value)
+    })
+    this.setState({ autoReruns: [] })
+  }
+
+  /**
    * Reruns the script.
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
@@ -1327,8 +1407,6 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
-    this.metricsMgr.enqueue("rerunScript")
-
     this.setState({ scriptRunState: ScriptRunState.RERUN_REQUESTED })
 
     // Note: `rerunScript` is incorrectly called in some places.
@@ -1340,7 +1418,8 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
-    this.widgetMgr.sendUpdateWidgetsMessage()
+    // Trigger a full app rerun:
+    this.widgetMgr.sendUpdateWidgetsMessage(undefined)
   }
 
   sendLoadGitInfoBackMsg = (): void => {
@@ -1357,8 +1436,41 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    this.setState({ appLogo: null })
-    this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
+    const { elements, mainScriptHash } = this.state
+
+    // We are about to change the page, so clear all auto reruns
+    // This also happens in handleNewSession, but it might be too late compared
+    // to small interval values, which might trigger a rerun before the new
+    // session message is processed
+    this.cleanupAutoReruns()
+
+    // We want to keep widget states for widgets that are still active
+    // from the common script
+    const nextPageElements = this.appNavigation.clearPageElements(
+      elements,
+      mainScriptHash,
+      undefined
+    )
+    const activeWidgetIds = new Set(
+      Array.from(nextPageElements.getElements())
+        .map(element => getElementId(element))
+        .filter(notUndefined)
+    )
+
+    // Save current page layout before rerun
+    this.setState((prevState: State) => {
+      const pageLayouts = prevState.pageLayouts
+      pageLayouts[prevState.currentPageScriptHash] = prevState.layout
+      return {
+        pageLayouts: pageLayouts,
+      }
+    })
+
+    this.sendRerunBackMsg(
+      this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
+      undefined,
+      pageScriptHash
+    )
   }
 
   isAppInReadyState = (prevState: Readonly<State>): boolean => {
@@ -1373,7 +1485,8 @@ export class App extends PureComponent<Props, State> {
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
     fragmentId?: string,
-    pageScriptHash?: string
+    pageScriptHash?: string,
+    isAutoRerun?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1427,6 +1540,7 @@ export class App extends PureComponent<Props, State> {
           pageScriptHash,
           pageName,
           fragmentId,
+          isAutoRerun,
         },
       })
     )
@@ -1506,7 +1620,6 @@ export class App extends PureComponent<Props, State> {
   clearCache = (): void => {
     this.closeDialog()
     if (this.isServerConnected()) {
-      this.metricsMgr.enqueue("clearCache")
       const backMsg = new BackMsg({ clearCache: true })
       backMsg.type = "clearCache"
       this.sendBackMsg(backMsg)
@@ -1711,6 +1824,29 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleKeyDown = (keyName: string): void => {
+    switch (keyName) {
+      case "c":
+        // CLEAR CACHE
+        if (
+          showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode)
+        ) {
+          this.openClearCacheDialog()
+        }
+        break
+      case "r":
+        // RERUN
+        this.rerunScript()
+        break
+    }
+  }
+
+  handleKeyUp = (keyName: string): void => {
+    if (keyName === "esc") {
+      this.props.screenCast.stopRecording()
+    }
+  }
+
   render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -1725,6 +1861,7 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       hideTopBar,
       hideSidebarNav,
+      expandSidebarNav,
       currentPageScriptHash,
       hostHideSidebarNav,
       pageLinkBaseUrl,
@@ -1734,6 +1871,8 @@ export class App extends PureComponent<Props, State> {
       libConfig,
       appConfig,
       inputsDisabled,
+      appPages,
+      navSections,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1759,10 +1898,6 @@ export class App extends PureComponent<Props, State> {
     const widgetsDisabled =
       inputsDisabled || connectionState !== ConnectionState.CONNECTED
 
-    // Attach and focused props provide a way to handle Global Hot Keys
-    // https://github.com/greena13/react-hotkeys/issues/41
-    // attach: DOM element the keyboard listeners should attach to
-    // focused: A way to force focus behaviour
     return (
       <AppContext.Provider
         value={{
@@ -1796,20 +1931,20 @@ export class App extends PureComponent<Props, State> {
             fragmentIdsThisRun: this.state.fragmentIdsThisRun,
           }}
         >
-          <HotKeys
-            keyMap={this.keyMap}
-            handlers={this.keyHandlers}
-            attach={window}
-            focused={true}
+          <Hotkeys
+            keyName="r,c,esc"
+            onKeyDown={this.handleKeyDown}
+            onKeyUp={this.handleKeyUp}
           >
             <StyledApp
               className={outerDivClass}
               data-testid="stApp"
-              data-teststate={
+              data-test-script-state={
                 scriptRunId == INITIAL_SCRIPT_RUN_ID
                   ? "initial"
                   : scriptRunState
               }
+              data-test-connection-state={connectionState}
             >
               {/* The tabindex below is required for testing. */}
               <Header>
@@ -1869,15 +2004,17 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
-                appLogo={this.state.appLogo}
-                appPages={this.state.appPages}
+                appLogo={elements.logo}
+                appPages={appPages}
+                navSections={navSections}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+                expandSidebarNav={expandSidebarNav}
               />
               {renderedDialog}
             </StyledApp>
-          </HotKeys>
+          </Hotkeys>
         </LibContext.Provider>
       </AppContext.Provider>
     )

@@ -15,12 +15,13 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
-import { screen, fireEvent } from "@testing-library/react"
-import "@testing-library/jest-dom"
 
+import { fireEvent, screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import Radio, { Props } from "./Radio"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -32,7 +33,6 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   options: ["a", "b", "c"],
   captions: [],
   label: "Label",
-  theme: mockTheme.emotion,
   ...props,
 })
 
@@ -82,7 +82,6 @@ describe("Radio widget", () => {
     render(<Radio {...props} />)
     const radioElement = screen.getByTestId("stRadio")
 
-    expect(radioElement).toHaveClass("row-widget")
     expect(radioElement).toHaveClass("stRadio")
     expect(radioElement).toHaveStyle(`width: ${props.width}px`)
   })

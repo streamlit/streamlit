@@ -32,13 +32,13 @@ export const StyledTooltipIconWrapper =
     },
   }))
 
-export const StyledLabelHelpWrapper = styled.div(() => ({
+export const StyledLabelHelpWrapper = styled.div({
   display: "flex",
   visibility: "visible",
   verticalAlign: "middle",
   flexDirection: "row",
   alignItems: "center",
-}))
+})
 
 export const StyledLabelHelpInline = styled.label(({ theme }) => ({
   marginLeft: theme.spacing.xs,

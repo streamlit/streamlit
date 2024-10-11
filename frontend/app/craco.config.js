@@ -17,7 +17,7 @@ module.exports = {
   devServer: {
     static: {
       watch: {
-        ignored: [/node_modules/, "*.test.{ts,tsx}", /cypress/],
+        ignored: [/node_modules/, "*.test.{ts,tsx}"],
       },
     },
   },
@@ -107,6 +107,29 @@ module.exports = {
       const tsRule = oneOfRule.oneOf.find(rule =>
         rule.test.toString().includes("ts|tsx")
       )
+
+      if (process.env.OMIT_HASH_FROM_MAIN_FILES) {
+        // Use fixed names for the main JS & CSS files, if asked to.
+        webpackConfig.output.filename = "static/js/[name].js"
+        webpackConfig.output.cssFilename = "static/css/[name].css"
+        // Use fixed names for font files as well.
+        webpackConfig.output.assetModuleFilename = "static/media/[base]"
+
+        // The MiniCssExtractPlugin doesn't honor cssFilename, so recreate the
+        // plugin with better settings if it's present.
+        const cssPluginIndex = webpackConfig.plugins.findIndex(
+          value => value.constructor?.name === "MiniCssExtractPlugin"
+        )
+        if (cssPluginIndex >= 0) {
+          const MiniCssExtractPlugin = require("mini-css-extract-plugin")
+          const cssPlugin = webpackConfig.plugins[cssPluginIndex]
+          const newPlugin = new MiniCssExtractPlugin({
+            filename: webpackConfig.output.cssFilename,
+            chunkFilename: cssPlugin.options.chunkFilename,
+          })
+          webpackConfig.plugins[cssPluginIndex] = newPlugin
+        }
+      }
 
       tsRule.include = undefined
       tsRule.exclude = /node_modules/

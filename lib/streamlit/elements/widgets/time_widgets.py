@@ -32,12 +32,17 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.policies import (
+    check_widget_policies,
+    maybe_raise_label_warnings,
+)
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
+    to_key,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
@@ -51,9 +56,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import adjust_years
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -71,7 +74,7 @@ ALLOWED_DATE_FORMATS: Final = re.compile(
 
 
 def _parse_date_value(
-    value: DateValue | Literal["today"] | Literal["default_value_today"],
+    value: Literal["today", "default_value_today"] | DateValue,
 ) -> tuple[list[date] | None, bool]:
     parsed_dates: list[date]
     range_value: bool = False
@@ -86,7 +89,7 @@ def _parse_date_value(
     elif isinstance(value, date):
         parsed_dates = [value]
     elif isinstance(value, (list, tuple)):
-        if not len(value) in (0, 1, 2):
+        if len(value) not in {0, 1, 2}:
             raise StreamlitAPIException(
                 "DateInput value should either be an date/datetime or a list/tuple of "
                 "0 - 2 date/datetime values"
@@ -154,7 +157,7 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue | Literal["today"] | Literal["default_value_today"],
+        value: Literal["today", "default_value_today"] | DateValue,
         min_value: SingleDateValue,
         max_value: SingleDateValue,
     ) -> _DateInputValues:
@@ -308,59 +311,58 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this time input is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         value : datetime.time/datetime.datetime, "now" or None
             The value of this widget when it first renders. This will be
             cast to str internally. If ``None``, will initialize empty and
             return ``None`` until the user selects a time. If "now" (default),
             will initialize with the current time.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
+
         help : str
             An optional tooltip that gets displayed next to the input.
+
         on_change : callable
             An optional callback invoked when this time_input's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         disabled : bool
             An optional boolean, which disables the time input if set to True.
             The default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible".
+
         step : int or timedelta
             The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
             You can also pass a datetime.timedelta object.
@@ -427,10 +429,12 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=value if value != "now" else None, key=key
+
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "now" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -449,16 +453,14 @@ class TimeWidgetsMixin:
                 "The type of value should be one of datetime, time or None"
             )
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
-            key=key,
             help=help,
             step=step,
-            form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
         )
         del value
 
@@ -467,7 +469,7 @@ class TimeWidgetsMixin:
             parsed_time = None
 
         time_input_proto = TimeInputProto()
-        time_input_proto.id = id
+        time_input_proto.id = element_id
         time_input_proto.label = label
         if parsed_time is not None:
             time_input_proto.default = time.strftime(parsed_time, "%H:%M")
@@ -493,15 +495,14 @@ class TimeWidgetsMixin:
 
         serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
-            "time_input",
-            time_input_proto,
-            user_key=key,
+            time_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
@@ -516,7 +517,9 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue | Literal["today"] = "default_value_today",  # type: ignore[assignment]
+        value: DateValue
+        | Literal["today", "default_value_today"]
+        | None = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -535,65 +538,66 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this date input is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime, "today", or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
             users to provide a range. If ``None``, will initialize empty and
             return ``None`` until the user provides input. If "today" (default),
             will initialize with today as a single-date picker.
+
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. If value is a date, defaults to value - 10 years.
             If value is the interval [start, end], defaults to start - 10 years.
+
         max_value : datetime.date or datetime.datetime
             The maximum selectable date. If value is a date, defaults to value + 10 years.
             If value is the interval [start, end], defaults to end + 10 years.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
+
         help : str
             An optional tooltip that gets displayed next to the input.
+
         on_change : callable
             An optional callback invoked when this date_input's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         format : str
             A format string controlling how the interface should display dates.
             Supports "YYYY/MM/DD" (default), "DD/MM/YYYY", or "MM/DD/YYYY".
             You may also use a period (.) or hyphen (-) as separators.
+
         disabled : bool
             An optional boolean, which disables the date input if set to True.
             The default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -674,7 +678,7 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: (
-            DateValue | Literal["today"] | Literal["default_value_today"]
+            Literal["today", "default_value_today"] | DateValue
         ) = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
@@ -691,15 +695,16 @@ class TimeWidgetsMixin:
     ) -> DateWidgetReturn:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=value if value != "default_value_today" else None, key=key
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "default_value_today" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic(
-            v: SingleDateValue | Literal["today"] | Literal["default_value_today"],
+            v: SingleDateValue | Literal["today", "default_value_today"],
         ) -> str | None:
             if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
@@ -720,18 +725,16 @@ class TimeWidgetsMixin:
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=parsed,
             min_value=parsed_min_date,
             max_value=parsed_max_date,
-            key=key,
             help=help,
             format=format,
-            form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
@@ -765,7 +768,7 @@ class TimeWidgetsMixin:
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
-        date_input_proto.id = id
+        date_input_proto.id = element_id
         date_input_proto.is_range = parsed_values.is_range
         date_input_proto.disabled = disabled
         date_input_proto.label_visibility.value = get_label_visibility_proto_value(
@@ -792,15 +795,14 @@ class TimeWidgetsMixin:
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
-            "date_input",
-            date_input_proto,
-            user_key=key,
+            date_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_array_value",
         )
 
         if widget_state.value_changed:

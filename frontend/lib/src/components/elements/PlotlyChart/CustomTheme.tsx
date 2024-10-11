@@ -17,16 +17,16 @@
 import merge from "lodash/merge"
 
 import {
+  EmotionTheme,
+  getBlue80,
+  getCategoricalColorsArray,
   getDecreasingRed,
+  getDivergingColorsArray,
   getGray30,
   getGray70,
   getGray90,
   getIncreasingGreen,
-  hasLightBackgroundColor,
-  EmotionTheme,
   getSequentialColorsArray,
-  getCategoricalColorsArray,
-  getDivergingColorsArray,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { logError } from "@streamlit/lib/src/util/log"
@@ -137,7 +137,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
-      bordercolor: colors.fadedText10,
+      bordercolor: colors.borderColor,
       font: {
         color: getGray70(theme),
         family: genericFonts.bodyFont,
@@ -372,10 +372,7 @@ function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
 
   spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
   spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
-  spec = spec.replaceAll(
-    TOTAL,
-    hasLightBackgroundColor(theme) ? theme.colors.blue80 : theme.colors.blue40
-  )
+  spec = spec.replaceAll(TOTAL, getBlue80(theme))
 
   spec = spec.replaceAll(GRAY_30, getGray30(theme))
   spec = spec.replaceAll(GRAY_70, getGray70(theme))

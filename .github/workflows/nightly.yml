@@ -13,7 +13,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     permissions:
       # Additional permission needed to generate tag
@@ -71,27 +71,16 @@ jobs:
     permissions:
       # Pass additional permission needed to upload constraints
       contents: write
-    uses: ./.github/workflows/python-versions.yml
+    uses: ./.github/workflows/python-tests.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
     secrets:
-      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
 
   run-javascript-tests:
     needs: create-nightly-tag
     uses: ./.github/workflows/js-tests.yml
-    with:
-      ref: ${{needs.create-nightly-tag.outputs.tag}}
-
-  run-py-prod-deps-smoke-test:
-    needs: create-nightly-tag
-    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
-    with:
-      ref: ${{needs.create-nightly-tag.outputs.tag}}
-
-  run-cypress-tests:
-    needs: create-nightly-tag
-    uses: ./.github/workflows/cypress.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
 
@@ -110,8 +99,6 @@ jobs:
       - create-nightly-tag
       - run-python-tests
       - run-javascript-tests
-      - run-py-prod-deps-smoke-test
-      - run-cypress-tests
       - run-playwright-tests
 
     env:
@@ -129,10 +116,6 @@ jobs:
         run: python scripts/slack_notifications.py nightly python
       - if: ${{ needs.run-javascript-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly js
-      - if: ${{ needs.run-py-prod-deps-smoke-test.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly py_prod
-      - if: ${{ needs.run-cypress-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly cypress
       - if: ${{ needs.run-playwright-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly playwright
 
@@ -144,15 +127,13 @@ jobs:
       - create-nightly-tag
       - run-python-tests
       - run-javascript-tests
-      - run-py-prod-deps-smoke-test
-      - run-cypress-tests
       - run-playwright-tests
     permissions:
       id-token: write
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     outputs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
@@ -188,10 +169,11 @@ jobs:
       - name: Build Package
         timeout-minutes: 120
         run: |
+          sudo apt update
           sudo apt install rsync
           make package
       - name: Store Whl File
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: whl_file
           path: lib/dist/*.whl
@@ -202,6 +184,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CORE_PREVIEWS_S3_SECRET_KEY }}
         run: |
+          sudo apt update
           sudo apt install -y awscli
 
           cd lib/dist
@@ -235,7 +218,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     steps:
       - name: Checkout Core Previews Repo

@@ -16,18 +16,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Sequence,
+    Tuple,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeGuard
 
-from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
-    get_label_visibility_proto_value,
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.options_selector_utils import (
+    index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+)
+from streamlit.elements.lib.policies import (
+    check_widget_policies,
+    maybe_raise_label_warnings,
+)
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    compute_and_register_element_id,
+    get_label_visibility_proto_value,
+    save_for_app_testing,
+    to_key,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -41,20 +60,8 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
-    compute_widget_id,
-    save_for_app_testing,
 )
-from streamlit.type_util import (
-    Key,
-    LabelVisibility,
-    OptionSequence,
-    T,
-    check_python_comparable,
-    ensure_indexable,
-    maybe_raise_label_warnings,
-    to_key,
-)
-from streamlit.util import index_
+from streamlit.type_util import T, check_python_comparable
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -85,7 +92,7 @@ class SelectSliderSerde(Generic[T]):
         # The widget always returns floats, so convert to ints before indexing
         return_value: tuple[T, T] = cast(
             Tuple[T, T],
-            tuple(map(lambda x: self.options[int(x)], ui_value)),
+            tuple(self.options[int(x)] for x in ui_value),
         )
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
@@ -103,12 +110,58 @@ class SelectSliderSerde(Generic[T]):
 
 
 class SelectSliderMixin:
+    @overload
+    def select_slider(  # type: ignore[overload-overlap]
+        self,
+        label: str,
+        options: OptionSequence[T],
+        value: tuple[T, T] | list[T],
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> tuple[T, T]: ...
+
+    # The overload-overlap error given by mypy here stems from
+    # the fact that
+    #
+    #   opt:List[object] = [1, 2, "3"]
+    #   select_slider("foo", options=opt, value=[1, 2])
+    #
+    # matches both overloads; "opt" matches
+    # OptionsSequence[T] in each case, binding T to object.
+    # However, the list[int] type of "value" can be interpreted
+    # as subtype of object, or as a subtype of List[object],
+    # meaning it matches both signatures.
+
+    @overload
+    def select_slider(
+        self,
+        label: str,
+        options: OptionSequence[T] = (),
+        value: T | None = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
     @gather_metrics("select_slider")
     def select_slider(
         self,
         label: str,
         options: OptionSequence[T] = (),
-        value: object = None,
+        value: T | Sequence[T] | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
@@ -134,64 +187,64 @@ class SelectSliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         options : Iterable
-            Labels for the select options in an Iterable. For example, this can
-            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
-            pandas.Index. For pandas.DataFrame, the first column is used.
-            Each label will be cast to str internally by default.
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
+
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower
             and upper bounds is rendered. For example, if set to `(1, 10)` the
             slider will have a selectable range between 1 and 10.
             Defaults to first option.
+
         format_func : function
             Function to modify the display of the labels from the options.
             argument. It receives the option as an argument and its output
             will be cast to str.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
+
         help : str
             An optional tooltip that gets displayed next to the select slider.
+
         on_change : callable
             An optional callback invoked when this select_slider's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         disabled : bool
             An optional boolean, which disables the select slider if set to True.
             The default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -210,7 +263,16 @@ class SelectSliderMixin:
         >>>
         >>> color = st.select_slider(
         ...     "Select a color of the rainbow",
-        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"])
+        ...     options=[
+        ...         "red",
+        ...         "orange",
+        ...         "yellow",
+        ...         "green",
+        ...         "blue",
+        ...         "indigo",
+        ...         "violet",
+        ...     ],
+        ... )
         >>> st.write("My favorite color is", color)
 
         And here's an example of a range select slider:
@@ -219,8 +281,17 @@ class SelectSliderMixin:
         >>>
         >>> start_color, end_color = st.select_slider(
         ...     "Select a range of color wavelength",
-        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
-        ...     value=("red", "blue"))
+        ...     options=[
+        ...         "red",
+        ...         "orange",
+        ...         "yellow",
+        ...         "green",
+        ...         "blue",
+        ...         "indigo",
+        ...         "violet",
+        ...     ],
+        ...     value=("red", "blue"),
+        ... )
         >>> st.write("You selected wavelengths between", start_color, "and", end_color)
 
         .. output::
@@ -248,7 +319,7 @@ class SelectSliderMixin:
         self,
         label: str,
         options: OptionSequence[T] = (),
-        value: object = None,
+        value: T | Sequence[T] | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
@@ -261,12 +332,15 @@ class SelectSliderMixin:
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = ensure_indexable(options)
+        opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if len(opt) == 0:
@@ -292,20 +366,18 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             value=slider_value,
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
         )
 
         slider_proto = SliderProto()
-        slider_proto.id = id
+        slider_proto.id = element_id
         slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
@@ -326,15 +398,14 @@ class SelectSliderMixin:
         serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
         widget_state = register_widget(
-            "slider",
-            slider_proto,
-            user_key=key,
+            slider_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="double_array_value",
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(
@@ -348,7 +419,7 @@ class SelectSliderMixin:
             slider_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue("slider", slider_proto)
         return widget_state.value

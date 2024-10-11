@@ -15,12 +15,15 @@
  */
 
 import React, { ReactElement } from "react"
-import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
+
+import { OptionListProps, StyledEmptyState, StyledList } from "baseui/menu"
 import { FixedSizeList } from "react-window"
+
 import {
-  Placement,
   OverflowTooltip,
+  Placement,
 } from "@streamlit/lib/src/components/shared/Tooltip"
+
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
 const LIST_ITEM_HEIGHT = 40
@@ -64,7 +67,7 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
       <StyledList
         $style={{ height: `${EMPTY_LIST_HEIGHT}px` }}
         ref={ref}
-        data-testid="stVirtualDropdownEmpty"
+        data-testid="stSelectboxVirtualDropdownEmpty"
       >
         <StyledEmptyState {...childrenProps} />
       </StyledList>
@@ -77,7 +80,7 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
     <StyledList
       ref={ref}
       $style={{ paddingTop: 0, paddingBottom: 0 }}
-      data-testid="stVirtualDropdown"
+      data-testid="stSelectboxVirtualDropdown"
     >
       <FixedSizeList
         width="100%"

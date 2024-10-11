@@ -37,10 +37,8 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
+from streamlit import dataframe_util
 from streamlit import logger as _logger
-from streamlit import type_util
-from streamlit.deprecation_util import deprecate_func_name
-from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -54,19 +52,21 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
+from streamlit.type_util import is_type
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
@@ -84,7 +84,7 @@ _LOGGER: Final = _logger.get_logger(__name__)
 EditableData = TypeVar(
     "EditableData",
     bound=Union[
-        DataFrameGenericAlias[Any],  # covers DataFrame and Series
+        dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
         Tuple[Any],
         List[Any],
         Set[Any],
@@ -376,11 +376,13 @@ def _apply_dataframe_edits(
     if data_editor_state.get("edited_rows"):
         _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
 
-    if data_editor_state.get("added_rows"):
-        _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
-
     if data_editor_state.get("deleted_rows"):
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
+
+    if data_editor_state.get("added_rows"):
+        # The addition of new rows needs to happen after the deletion to not have
+        # unexpected side-effects, like https://github.com/streamlit/streamlit/issues/8854
+        _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
 
 def _is_supported_index(df_index: pd.Index) -> bool:
@@ -414,8 +416,8 @@ def _is_supported_index(df_index: pd.Index) -> bool:
             # Period type isn't editable currently:
             # pd.PeriodIndex,
         ]
-        # We need to check these index types without importing, since they are deprecated
-        # and planned to be removed soon.
+        # We need to check these index types without importing, since they are
+        # deprecated and planned to be removed soon.
         or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
@@ -596,44 +598,50 @@ class DataEditorMixin:
 
         The data editor widget allows you to edit dataframes and many other data structures in a table-like UI.
 
-        .. warning::
-            When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
-            1.23.0, the data editor's representation in ``st.session_state`` was changed.
-            The ``edited_cells`` dictionary is now called ``edited_rows`` and uses a
-            different format (``{0: {"column name": "edited value"}}`` instead of
-            ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
-            ``st.experimental_data_editor`` in combination with ``st.session_state``.
-
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
+        data : Anything supported by st.dataframe
             The data to edit in the data editor.
 
             .. note::
                 - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
+                - Text and number formatting from ``column_config`` always takes
+                  precedence over text and number formatting from ``pandas.Styler``.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
-                  complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
-                  fractions.Fraction, pandas.Interval, and pandas.Period.
-                - To prevent overflow in JavaScript, columns containing datetime.timedelta
-                  and pandas.Timedelta values will default to uneditable but this can be
-                  changed through column configuration.
+                  ``complex``, ``list``, ``tuple``, ``bytes``, ``bytearray``,
+                  ``memoryview``, ``dict``, ``set``, ``frozenset``,
+                  ``fractions.Fraction``, ``pandas.Interval``, and
+                  ``pandas.Period``.
+                - To prevent overflow in JavaScript, columns containing
+                  ``datetime.timedelta`` and ``pandas.Timedelta`` values will
+                  default to uneditable, but this can be changed through column
+                  configuration.
 
         width : int or None
-            Desired width of the data editor expressed in pixels. If None, the width will
-            be automatically determined.
+            Desired width of the data editor expressed in pixels. If ``width``
+            is ``None`` (default), Streamlit sets the data editor width to fit
+            its contents up to the width of the parent container. If ``width``
+            is greater than the width of the parent container, Streamlit sets
+            the data editor width to match the width of the parent container.
 
         height : int or None
-            Desired height of the data editor expressed in pixels. If None, the height will
-            be automatically determined.
+            Desired height of the data editor expressed in pixels. If ``height``
+            is ``None`` (default), Streamlit sets the height to show at most
+            ten rows. Vertical scrolling within the data editor element is
+            enabled when the height does not accomodate all rows.
 
         use_container_width : bool
-            If True, set the data editor width to the width of the parent container.
-            This takes precedence over the width argument. Defaults to False.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the data editor's width according to ``width``. If
+            ``use_container_width`` is ``True``, Streamlit sets the width of
+            the data editor to match the width of the parent container.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), the visibility of
-            index columns is automatically determined based on the data.
+            Whether to hide the index column(s). If ``hide_index`` is ``None``
+            (default), the visibility of index columns is automatically
+            determined based on the data.
 
         column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
@@ -654,7 +662,7 @@ class DataEditorMixin:
             * One of the column types defined under ``st.column_config``, e.g.
               ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
-              and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+              and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
 
@@ -673,8 +681,7 @@ class DataEditorMixin:
         key : str
             An optional string to use as the unique key for this widget. If this
             is omitted, a key will be generated for the widget based on its
-            content. Multiple widgets of the same type may not share the same
-            key.
+            content. No two widgets may have the same key.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
@@ -777,26 +784,23 @@ class DataEditorMixin:
         import pandas as pd
         import pyarrow as pa
 
-        # Import here to avoid cyclic import warning
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
-        )
-
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None,
+            writes_allowed=False,
+        )
 
         if column_order is not None:
             column_order = list(column_order)
 
         column_config_mapping: ColumnConfigMapping = {}
 
-        data_format = type_util.determine_data_format(data)
-        if data_format == DataFormat.UNKNOWN:
+        data_format = dataframe_util.determine_data_format(data)
+        if data_format == dataframe_util.DataFormat.UNKNOWN:
             raise StreamlitAPIException(
                 f"The data type ({type(data).__name__}) or format is not supported by the data editor. "
                 "Please convert your data into a Pandas Dataframe or another supported data format."
@@ -804,7 +808,7 @@ class DataEditorMixin:
 
         # The dataframe should always be a copy of the original data
         # since we will apply edits directly to it.
-        data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
+        data_df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=True)
 
         # Check if the index is supported.
         if not _is_supported_index(data_df.index):
@@ -818,18 +822,37 @@ class DataEditorMixin:
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
-        apply_data_specific_configs(
-            column_config_mapping, data_df, data_format, check_arrow_compatibility=True
-        )
+
+        # Deactivate editing for columns that are not compatible with arrow
+        for column_name, column_data in data_df.items():
+            if dataframe_util.is_colum_type_arrow_incompatible(column_data):
+                update_column_config(
+                    column_config_mapping, column_name, {"disabled": True}
+                )
+                # Convert incompatible type to string
+                data_df[column_name] = column_data.astype("string")
+
+        apply_data_specific_configs(column_config_mapping, data_format)
 
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
-        # Temporary workaround: We hide range indices if num_rows is dynamic.
-        # since the current way of handling this index during editing is a bit confusing.
-        if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
+
+        has_range_index = isinstance(data_df.index, pd.RangeIndex)
+
+        if not has_range_index:
+            # If the index is not a range index, we will configure it as required
+            # since the user is required to provide a (unique) value for editing.
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
+
+        if hide_index is None and has_range_index and num_rows == "dynamic":
+            # Temporary workaround:
+            # We hide range indices if num_rows is dynamic.
+            # since the current way of handling this index during editing is a
+            # bit confusing. The user can still decide to show the index by
+            # setting hide_index explicitly to False.
+            hide_index = True
 
         if hide_index is not None:
             update_column_config(
@@ -855,16 +878,17 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
-        arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
+        arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(arrow_table)
 
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
+            form_id=current_form_id(self.dg),
             data=arrow_bytes,
             width=width,
             height=height,
@@ -872,13 +896,10 @@ class DataEditorMixin:
             column_order=column_order,
             column_config_mapping=str(column_config_mapping),
             num_rows=num_rows,
-            key=key,
-            form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
         )
 
         proto = ArrowProto()
-        proto.id = id
+        proto.id = element_id
 
         proto.use_container_width = use_container_width
 
@@ -902,7 +923,7 @@ class DataEditorMixin:
 
         proto.form_id = current_form_id(self.dg)
 
-        if type_util.is_pandas_styler(data):
+        if dataframe_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
             # Get first 10 chars of md5 hash of the key or delta path as styler uuid
             # and set it as styler uuid.
@@ -923,36 +944,21 @@ class DataEditorMixin:
         serde = DataEditorSerde()
 
         widget_state = register_widget(
-            "data_editor",
-            proto,
-            user_key=key,
+            proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
         self.dg._enqueue("arrow_data_frame", proto)
-        return type_util.convert_df_to_data_format(data_df, data_format)
+        return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-    # TODO(lukasmasuch): Remove the deprecated function name after 2023-09-01:
-    # Also remove the warning message in the `st.data_editor` docstring.
-    experimental_data_editor = deprecate_func_name(
-        gather_metrics("experimental_data_editor", data_editor),
-        "experimental_data_editor",
-        "2023-09-01",
-        """
-**Breaking change:** The data editor's representation in `st.session_state` was changed. The `edited_cells` dictionary is now called `edited_rows` and uses a
-different format (`{0: {"column name": "edited value"}}` instead of
-`{"0:1": "edited value"}`). You may need to adjust the code if your app uses
-`st.experimental_data_editor` in combination with `st.session_state`."
-""",
-    )

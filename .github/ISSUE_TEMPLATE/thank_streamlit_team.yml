@@ -1,0 +1,10 @@
+name: 🙏 Thank the Streamlit team!
+description: Have some kind words to share with the Streamlit team? We'd love to hear them!
+labels: ["type:kudos"]
+body:
+  - type: textarea
+    attributes:
+      label: Message
+      description: Type your message to the Streamlit team here
+    validations:
+      required: false

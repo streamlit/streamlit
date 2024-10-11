@@ -15,37 +15,39 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, Close } from "@emotion-icons/material-outlined"
+
+import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
 import {
-  Icon,
   BaseButton,
   BaseButtonKind,
   EmotionTheme,
-  localStorageAvailable,
-  StreamlitEndpoints,
-  IsSidebarContext,
-  isEmbed,
-  isColoredLineDisplayed,
   IAppPage,
-  PageConfig,
+  Icon,
+  isColoredLineDisplayed,
+  isEmbed,
+  IsSidebarContext,
+  localStorageAvailable,
   Logo,
+  PageConfig,
+  StreamlitEndpoints,
 } from "@streamlit/lib"
 
 import {
+  RESIZE_HANDLE_WIDTH,
+  StyledCollapseSidebarButton,
+  StyledLogo,
+  StyledLogoLink,
+  StyledNoLogoSpacer,
+  StyledOpenSidebarButton,
+  StyledResizeHandle,
   StyledSidebar,
   StyledSidebarContent,
-  StyledSidebarUserContent,
-  StyledResizeHandle,
   StyledSidebarHeaderContainer,
-  StyledCollapseSidebarButton,
   StyledSidebarOpenContainer,
-  StyledOpenSidebarButton,
-  StyledLogo,
-  StyledNoLogoSpacer,
-  StyledLogoLink,
+  StyledSidebarUserContent,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 
@@ -58,9 +60,11 @@ export interface SidebarProps {
   hasElements: boolean
   appLogo: Logo | null
   appPages: IAppPage[]
+  navSections: string[]
   onPageChange: (pageName: string) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean
+  expandSidebarNav: boolean
 }
 
 interface State {
@@ -68,8 +72,8 @@ interface State {
   sidebarWidth: string
   lastInnerWidth: number
 
-  // When hovering the nav
-  hideScrollbar: boolean
+  // When hovering sidebar header
+  showSidebarCollapse: boolean
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -98,7 +102,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
-      hideScrollbar: false,
+      showSidebarCollapse: false,
     }
   }
 
@@ -206,8 +210,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
-  hideScrollbar = (newValue: boolean): void => {
-    this.setState({ hideScrollbar: newValue })
+  onMouseOver = (): void => {
+    this.setState({ showSidebarCollapse: true })
+  }
+
+  onMouseOut = (): void => {
+    this.setState({ showSidebarCollapse: false })
   }
 
   // Additional safeguard for sidebar height sizing
@@ -225,7 +233,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   renderLogo(collapsed: boolean): ReactElement {
-    const { appLogo } = this.props
+    const { appLogo, endpoints } = this.props
+    const { sidebarWidth } = this.state
 
     if (!appLogo) {
       return <StyledNoLogoSpacer data-testid="stLogoSpacer" />
@@ -233,7 +242,19 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const displayImage =
       collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
-    const source = this.props.endpoints.buildMediaURL(displayImage)
+    const source = endpoints.buildMediaURL(displayImage)
+
+    const logo = (
+      <StyledLogo
+        src={source}
+        size={appLogo.size}
+        sidebarWidth={sidebarWidth}
+        alt="Logo"
+        className="stLogo"
+        data-testid="stLogo"
+      />
+    )
+
     if (appLogo.link) {
       return (
         <StyledLogoLink
@@ -242,15 +263,15 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           rel="noreferrer"
           data-testid="stLogoLink"
         >
-          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+          {logo}
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+    return logo
   }
 
   public render(): ReactNode {
-    const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
+    const { collapsedSidebar, sidebarWidth, showSidebarCollapse } = this.state
     const {
       appPages,
       chevronDownshift,
@@ -259,7 +280,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       onPageChange,
       currentPageScriptHash,
       hideSidebarNav,
+      expandSidebarNav,
+      navSections,
     } = this.props
+
+    const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
 
     // Handles checking the URL params
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
@@ -269,24 +294,22 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     // The tabindex is required to support scrolling by arrow keys.
     return (
       <>
-        {collapsedSidebar && (
-          <StyledSidebarOpenContainer
-            chevronDownshift={chevronDownshift}
-            isCollapsed={collapsedSidebar}
-            data-testid="collapsedControl"
-          >
-            {this.renderLogo(true)}
-            <StyledOpenSidebarButton>
-              <BaseButton
-                kind={BaseButtonKind.HEADER_NO_PADDING}
-                onClick={this.toggleCollapse}
-              >
-                <Icon content={ChevronRight} size="xl" />
-              </BaseButton>
-            </StyledOpenSidebarButton>
-          </StyledSidebarOpenContainer>
-        )}
+        <StyledSidebarOpenContainer
+          chevronDownshift={chevronDownshift}
+          data-testid="stSidebarCollapsedControl"
+        >
+          {this.renderLogo(true)}
+          <StyledOpenSidebarButton>
+            <BaseButton
+              kind={BaseButtonKind.HEADER_NO_PADDING}
+              onClick={this.toggleCollapse}
+            >
+              <Icon content={ChevronRight} size="xl" />
+            </BaseButton>
+          </StyledOpenSidebarButton>
+        </StyledSidebarOpenContainer>
         <Resizable
+          className="stSidebar"
           data-testid="stSidebar"
           aria-expanded={!collapsedSidebar}
           enable={{
@@ -295,14 +318,18 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             bottom: false,
             left: false,
           }}
-          handleStyles={{ right: { width: "8px", right: "-6px" } }}
+          handleStyles={{
+            right: {
+              width: RESIZE_HANDLE_WIDTH,
+              right: "-6px",
+            },
+          }}
           handleComponent={{
             right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}
           size={{
             width: sidebarWidth,
-            // Addresses height glitch when anchor used - issue #6264
-            height: sidebarAdjust ? window.innerHeight - 2 : "100%",
+            height: "auto",
           }}
           as={StyledSidebar}
           onResizeStop={(e, direction, ref, d) => {
@@ -317,32 +344,40 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         >
           <StyledSidebarContent
             data-testid="stSidebarContent"
-            hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
+            onMouseOver={this.onMouseOver}
+            onMouseOut={this.onMouseOut}
           >
             <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
               {this.renderLogo(false)}
-              <StyledCollapseSidebarButton data-testid="stSidebarCollapseButton">
+              <StyledCollapseSidebarButton
+                showSidebarCollapse={showSidebarCollapse}
+                data-testid="stSidebarCollapseButton"
+              >
                 <BaseButton
-                  kind={BaseButtonKind.HEADER_BUTTON}
+                  kind={BaseButtonKind.HEADER_NO_PADDING}
                   onClick={this.toggleCollapse}
                 >
-                  <Icon content={Close} size="lg" />
+                  <Icon content={ChevronLeft} size="xl" />
                 </BaseButton>
               </StyledCollapseSidebarButton>
             </StyledSidebarHeaderContainer>
-            {!hideSidebarNav && (
+            {hasPageNavAbove && (
               <SidebarNav
                 endpoints={this.props.endpoints}
                 appPages={appPages}
                 collapseSidebar={this.toggleCollapse}
                 currentPageScriptHash={currentPageScriptHash}
+                navSections={navSections}
                 hasSidebarElements={hasElements}
-                hideParentScrollbar={this.hideScrollbar}
+                expandSidebarNav={expandSidebarNav}
                 onPageChange={onPageChange}
               />
             )}
-            <StyledSidebarUserContent data-testid="stSidebarUserContent">
+            <StyledSidebarUserContent
+              hasPageNavAbove={hasPageNavAbove}
+              data-testid="stSidebarUserContent"
+            >
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>

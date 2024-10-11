@@ -23,6 +23,7 @@ if _get_scriptrunner_frame() is None:
         """
     )
 
+
 # Testing case where there are no docs.
 class FooWithNoDocs:
     my_static_var_1 = 123
@@ -32,6 +33,7 @@ st.help(FooWithNoDocs)
 
 # Testing case where there are no members.
 st.help(globals)
+
 
 # Test case where there the docs need to scroll,
 # and test case where some members doesn't have docs.

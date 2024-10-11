@@ -15,6 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface StyledFileDropzone {
@@ -27,7 +28,7 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     alignItems: "center",
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.secondaryBg,
-    borderRadius: theme.radii.lg,
+    borderRadius: theme.radii.default,
     ":focus": {
       outline: "none",
     },
@@ -38,11 +39,11 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   })
 )
 
-export const StyledFileDropzoneInstructions = styled.div(() => ({
+export const StyledFileDropzoneInstructions = styled.div({
   marginRight: "auto",
   alignItems: "center",
   display: "flex",
-}))
+})
 
 export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
   ({ theme }) => ({
@@ -71,9 +72,9 @@ export const StyledUploadedFiles = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.lg,
 }))
 
-export const StyledUploadedFilesList = styled.ul(() => ({
+export const StyledUploadedFilesList = styled.ul(({ theme }) => ({
   listStyleType: "none",
-  marginBottom: 0,
+  marginBottom: theme.spacing.none,
 }))
 
 export const StyledUploadedFilesListItem = styled.li(({ theme }) => ({

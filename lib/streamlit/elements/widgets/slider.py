@@ -18,19 +18,35 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from numbers import Integral, Real
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Final, Sequence, Tuple, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    List,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
+from streamlit.elements.lib.policies import (
+    check_widget_policies,
+    maybe_raise_label_warnings,
+)
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
+    to_key,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -41,20 +57,35 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SliderScalarT = TypeVar("SliderScalarT", int, float, date, time, datetime)
+SliderNumericT = TypeVar("SliderNumericT", int, float)
+SliderDatelikeT = TypeVar("SliderDatelikeT", date, time, datetime)
 
-Step: TypeAlias = Union[int, float, timedelta]
-SliderScalar: TypeAlias = Union[int, float, date, time, datetime]
+SliderNumericSpanT: TypeAlias = Union[
+    List[SliderNumericT],
+    Tuple[()],
+    Tuple[SliderNumericT],
+    Tuple[SliderNumericT, SliderNumericT],
+]
+SliderDatelikeSpanT: TypeAlias = Union[
+    List[SliderDatelikeT],
+    Tuple[()],
+    Tuple[SliderDatelikeT],
+    Tuple[SliderDatelikeT, SliderDatelikeT],
+]
 
+StepNumericT: TypeAlias = SliderNumericT
+StepDatelikeT: TypeAlias = timedelta
+
+SliderStep = Union[int, float, timedelta]
+SliderScalar = Union[int, float, date, time, datetime]
+SliderValueT = TypeVar("SliderValueT", int, float, date, time, datetime)
 SliderValueGeneric: TypeAlias = Union[
-    SliderScalarT,
-    Sequence[SliderScalarT],
+    SliderValueT,
+    Sequence[SliderValueT],
 ]
 SliderValue: TypeAlias = Union[
     SliderValueGeneric[int],
@@ -63,11 +94,10 @@ SliderValue: TypeAlias = Union[
     SliderValueGeneric[time],
     SliderValueGeneric[datetime],
 ]
-
 SliderReturnGeneric: TypeAlias = Union[
-    SliderScalarT,
-    Tuple[SliderScalarT],
-    Tuple[SliderScalarT, SliderScalarT],
+    SliderValueT,
+    Tuple[SliderValueT],
+    Tuple[SliderValueT, SliderValueT],
 ]
 SliderReturn: TypeAlias = Union[
     SliderReturnGeneric[int],
@@ -163,14 +193,152 @@ class SliderSerde:
 
 
 class SliderMixin:
-    @gather_metrics("slider")
+    # For easier readability, all the arguments with un-changing types across these overload signatures have been
+    # collapsed onto a single line.
+
+    # fmt: off
+    # If min/max/value/step are not provided, then we return an int.
+    # if ONLY step is provided, then it must be an int and we return an int.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: None = None,
+        max_value: None = None,
+        value:  None = None,
+        step: int | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int:
+        ...
+
+    # If min-value or max_value is provided and a numeric type, and value (if provided)
+    #   is a singular numeric, return the same numeric type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderNumericT | None = None,
+        max_value: SliderNumericT | None = None,
+        value: SliderNumericT | None = None,
+        step: StepNumericT[SliderNumericT] | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> SliderNumericT:
+        ...
+
+    # If value is provided and a sequence of numeric type,
+    #   return a tuple of the same numeric type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderNumericT | None = None,
+        max_value: SliderNumericT | None = None,
+        *,
+        value: SliderNumericSpanT[SliderNumericT],
+        step: StepNumericT[SliderNumericT] | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> tuple[SliderNumericT, SliderNumericT]:
+        ...
+
+    # If value is provided positionally and a sequence of numeric type,
+    #   return a tuple of the same numeric type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderNumericT,
+        max_value: SliderNumericT,
+        value: SliderNumericSpanT[SliderNumericT],
+        /,
+        step: StepNumericT[SliderNumericT] | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> tuple[SliderNumericT, SliderNumericT]:
+        ...
+
+    # If min-value is provided and a datelike type, and value (if provided)
+    #   is a singular datelike, return the same datelike type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderDatelikeT,
+        max_value: SliderDatelikeT | None = None,
+        value: SliderDatelikeT | None = None,
+        step: StepDatelikeT | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> SliderDatelikeT:
+        ...
+
+    # If max-value is provided and a datelike type, and value (if provided)
+    #   is a singular datelike, return the same datelike type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderDatelikeT | None = None,
+        *,
+        max_value: SliderDatelikeT,
+        value: SliderDatelikeT | None = None,
+        step: StepDatelikeT | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> SliderDatelikeT:
+        ...
+
+    # If value is provided and a datelike type, return the same datelike type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderDatelikeT | None = None,
+        max_value: SliderDatelikeT | None = None,
+        *,
+        value: SliderDatelikeT,
+        step: StepDatelikeT | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> SliderDatelikeT:
+        ...
+
+    # If value is provided and a sequence of datelike type,
+    #   return a tuple of the same datelike type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderDatelikeT | None = None,
+        max_value: SliderDatelikeT | None = None,
+        *,
+        value: SliderDatelikeSpanT[SliderDatelikeT],
+        step: StepDatelikeT | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> tuple[SliderDatelikeT, SliderDatelikeT]:
+        ...
+
+    # If value is provided positionally and a sequence of datelike type,
+    #   return a tuple of the same datelike type.
+    @overload
+    def slider(
+        self,
+        label: str,
+        min_value: SliderDatelikeT,
+        max_value: SliderDatelikeT,
+        value: SliderDatelikeSpanT[SliderDatelikeT],
+        /,
+        step: StepDatelikeT | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> tuple[SliderDatelikeT, SliderDatelikeT]:
+        ...
+
+    # fmt: on
+
+    # https://github.com/python/mypy/issues/17614
+    @gather_metrics("slider")  # type: ignore[misc]
     def slider(
         self,
         label: str,
         min_value: SliderScalar | None = None,
         max_value: SliderScalar | None = None,
         value: SliderValue | None = None,
-        step: Step | None = None,
+        step: SliderStep | None = None,
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -180,11 +348,6 @@ class SliderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        # TODO(harahu): Add overload definitions. The return type is
-        #  `SliderReturn`, in reality, but the return type is left as `Any`
-        #  until we have proper overload definitions in place. Otherwise the
-        #  user would have to cast the return value more often than not, which
-        #  can be annoying.
     ) -> Any:
         r"""Display a slider widget.
 
@@ -208,74 +371,76 @@ class SliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         min_value : a supported type or None
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 if a float,
             value - timedelta(days=14) if a date/datetime, time.min if a time
+
         max_value : a supported type or None
             The maximum permitted value.
             Defaults to 100 if the value is an int, 1.0 if a float,
             value + timedelta(days=14) if a date/datetime, time.max if a time
+
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower
             and upper bounds is rendered. For example, if set to `(1, 10)` the
             slider will have a selectable range between 1 and 10.
             Defaults to min_value.
+
         step : int, float, timedelta, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 if a float,
             timedelta(days=1) if a date/datetime, timedelta(minutes=15) if a time
             (or if max_value - min_value < 1 day)
+
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. This does not impact the return value.
             Formatter for int/float supports: %d %e %f %g %i
             Formatter for date/time/datetime uses Moment.js notation:
             https://momentjs.com/docs/#/displaying/format/
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
+
         help : str
             An optional tooltip that gets displayed next to the slider.
+
         on_change : callable
             An optional callback invoked when this slider's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         disabled : bool
             An optional boolean, which disables the slider if set to True. The
             default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -300,9 +465,7 @@ class SliderMixin:
 
         >>> import streamlit as st
         >>>
-        >>> values = st.slider(
-        ...     "Select a range of values",
-        ...     0.0, 100.0, (25.0, 75.0))
+        >>> values = st.slider("Select a range of values", 0.0, 100.0, (25.0, 75.0))
         >>> st.write("Values:", values)
 
         This is a range time slider:
@@ -311,8 +474,8 @@ class SliderMixin:
         >>> from datetime import time
         >>>
         >>> appointment = st.slider(
-        ...     "Schedule your appointment:",
-        ...     value=(time(11, 30), time(12, 45)))
+        ...     "Schedule your appointment:", value=(time(11, 30), time(12, 45))
+        ... )
         >>> st.write("You're scheduled for:", appointment)
 
         Finally, a datetime slider:
@@ -323,7 +486,8 @@ class SliderMixin:
         >>> start_time = st.slider(
         ...     "When do you start?",
         ...     value=datetime(2020, 1, 1, 9, 30),
-        ...     format="MM/DD/YY - hh:mm")
+        ...     format="MM/DD/YY - hh:mm",
+        ... )
         >>> st.write("Start time:", start_time)
 
         .. output::
@@ -355,7 +519,7 @@ class SliderMixin:
         min_value=None,
         max_value=None,
         value=None,
-        step: Step | None = None,
+        step=None,
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -369,24 +533,25 @@ class SliderMixin:
     ) -> SliderReturn:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "slider",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             min_value=min_value,
             max_value=max_value,
             value=value,
             step=step,
             format=format,
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
         )
 
         SUPPORTED_TYPES = {
@@ -501,7 +666,7 @@ class SliderMixin:
         if max_value is None:
             max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
-            step = cast(Step, DEFAULTS[data_type]["step"])
+            step = DEFAULTS[data_type]["step"]
             if data_type in (
                 SliderProto.DATETIME,
                 SliderProto.DATE,
@@ -517,18 +682,15 @@ class SliderMixin:
 
         # Ensure that all arguments are of the same type.
         slider_args = [min_value, max_value, step]
-        int_args = all(map(lambda a: isinstance(a, Integral), slider_args))
+        int_args = all(isinstance(a, Integral) for a in slider_args)
         float_args = all(
-            map(
-                lambda a: isinstance(a, Real) and not isinstance(a, Integral),
-                slider_args,
-            )
+            isinstance(a, Real) and not isinstance(a, Integral) for a in slider_args
         )
         # When min and max_value are the same timelike, step should be a timedelta
         timelike_args = (
             data_type in TIMELIKE_TYPES
             and isinstance(step, timedelta)
-            and type(min_value) == type(max_value)
+            and type(min_value) is type(max_value)
         )
 
         if not int_args and not float_args and not timelike_args:
@@ -638,7 +800,7 @@ class SliderMixin:
 
         slider_proto = SliderProto()
         slider_proto.type = SliderProto.Type.SLIDER
-        slider_proto.id = id
+        slider_proto.id = element_id
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = value
@@ -659,15 +821,14 @@ class SliderMixin:
         serde = SliderSerde(value, data_type, single_value, orig_tz)
 
         widget_state = register_widget(
-            "slider",
-            slider_proto,
-            user_key=key,
+            slider_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="double_array_value",
         )
 
         if widget_state.value_changed:

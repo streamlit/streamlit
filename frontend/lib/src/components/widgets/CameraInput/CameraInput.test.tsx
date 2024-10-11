@@ -18,7 +18,6 @@ import React from "react"
 import "@testing-library/jest-dom"
 
 import { screen } from "@testing-library/react"
-
 import { enableFetchMocks } from "jest-fetch-mock"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -79,8 +78,10 @@ describe("CameraInput widget", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<CameraInput {...props} />)
+    const cameraInput = screen.getByTestId("stCameraInput")
+    expect(cameraInput).toBeInTheDocument()
+    expect(cameraInput).toHaveClass("stCameraInput")
 
-    expect(screen.getByTestId("stCameraInput")).toBeInTheDocument()
     expect(screen.getByText("Take Photo")).toBeInTheDocument()
     // WidgetStateManager should have been called on mounting
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)

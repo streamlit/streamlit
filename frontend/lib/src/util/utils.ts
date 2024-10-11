@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-import {
-  Alert as AlertProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
-  Element,
-  Skeleton as SkeletonProto,
-} from "@streamlit/lib/src/proto"
+import decamelize from "decamelize"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
-import decamelize from "decamelize"
+
+import {
+  Alert as AlertProto,
+  Element,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Skeleton as SkeletonProto,
+} from "@streamlit/lib/src/proto"
+
+// This prefix should be in sync with the value on the python side:
+const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -179,7 +183,7 @@ export function isPaddingDisplayed(): boolean {
 /**
  * Returns true if the URL parameters contain ?embed_options=light_theme (case insensitive).
  */
-export function isLightTheme(): boolean {
+export function isLightThemeInQueryParams(): boolean {
   // NOTE: We don't check for ?embed=true here, because we want to allow display without any
   // other embed options (for example in our e2e tests).
   return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
@@ -190,7 +194,7 @@ export function isLightTheme(): boolean {
 /**
  * Returns true if the URL parameters contain ?embed_options=dark_theme (case insensitive).
  */
-export function isDarkTheme(): boolean {
+export function isDarkThemeInQueryParams(): boolean {
   // NOTE: We don't check for ?embed=true here, because we want to allow display without any
   // other embed options (for example in our e2e tests).
   return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
@@ -257,7 +261,7 @@ export function hashString(s: string): string {
  * if the value is null or undefined.
  */
 export function requireNonNull<T>(obj: T | null | undefined): T {
-  if (obj == null) {
+  if (isNullOrUndefined(obj)) {
     throw new Error("value is null")
   }
   return obj
@@ -274,7 +278,7 @@ export function notUndefined<T>(value: T | undefined): value is T {
  * A type predicate that is true if the given value is not null.
  */
 export function notNull<T>(value: T | null): value is T {
-  return value != null
+  return notNullOrUndefined(value)
 }
 
 /**
@@ -342,14 +346,30 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
-/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
-export function getElementWidgetID(element: Element): string | undefined {
-  return get(element as any, [requireNonNull(element.type), "id"])
+export function isValidElementId(
+  elementId: string | undefined | null
+): boolean {
+  if (!elementId) {
+    return false
+  }
+  return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
+}
+
+/**
+ * If the element has a valid ID, returns it. Otherwise, returns undefined.
+ */
+export function getElementId(element: Element): string | undefined {
+  const elementId = get(element as any, [requireNonNull(element.type), "id"])
+  if (elementId && isValidElementId(elementId)) {
+    // We only care about valid element IDs (with the correct prefix)
+    return elementId
+  }
+  return undefined
 }
 
 /** True if the given form ID is non-null and non-empty. */
 export function isValidFormId(formId?: string): formId is string {
-  return formId != null && formId.length > 0
+  return notNullOrUndefined(formId) && formId.length > 0
 }
 
 /** True if the given widget element is part of a form. */
@@ -545,4 +565,16 @@ export function keysToSnakeCase(
     acc[newKey] = value
     return acc
   }, {} as Record<string, any>)
+}
+
+/**
+ *
+ * @param scssValue: a string containing a value in rem units
+ * @returns pixel value of the given rem value
+ */
+export const convertScssRemValueToPixels = (scssValue: string): number => {
+  const remValue = parseFloat(scssValue)
+  return (
+    remValue * parseFloat(getComputedStyle(document.documentElement).fontSize)
+  )
 }

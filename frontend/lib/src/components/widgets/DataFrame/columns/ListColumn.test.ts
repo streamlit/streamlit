@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind, BubbleCell } from "@glideapps/glide-data-grid"
+import { BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import ListColumn from "./ListColumn"
 

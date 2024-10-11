@@ -16,15 +16,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
-from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.options_selector_utils import index_, maybe_coerce_enum
+from streamlit.elements.lib.policies import (
+    check_widget_policies,
+    maybe_raise_label_warnings,
+)
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
-    maybe_coerce_enum,
+    save_for_app_testing,
+    to_key,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
@@ -37,18 +44,10 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
-    Key,
-    LabelVisibility,
-    OptionSequence,
     T,
     check_python_comparable,
-    ensure_indexable,
-    maybe_raise_label_warnings,
-    to_key,
 )
-from streamlit.util import index_
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -82,6 +81,44 @@ class RadioSerde(Generic[T]):
 
 
 class RadioMixin:
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T | None: ...
+
     @gather_metrics("radio")
     def radio(
         self,
@@ -106,71 +143,74 @@ class RadioMixin:
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         options : Iterable
-            Labels for the select options in an Iterable. For example, this can
-            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
-            pandas.Index. For pandas.DataFrame, the first column is used.
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
 
             Labels can include markdown as described in the ``label`` parameter
             and will be cast to str internally by default.
+
         index : int or None
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.
             Defaults to 0 (the first option).
+
         format_func : function
             Function to modify the display of radio options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
             the radio.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
+
         help : str
             An optional tooltip that gets displayed next to the radio.
+
         on_change : callable
             An optional callback invoked when this radio's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         disabled : bool
             An optional boolean, which disables the radio button if set to
             True. The default is False.
+
         horizontal : bool
             An optional boolean, which orients the radio group horizontally.
             The default is false (vertical buttons).
+
         captions : iterable of str or None
             A list of captions to show below each radio button. If None (default),
             no captions are shown.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -189,7 +229,12 @@ class RadioMixin:
         >>> genre = st.radio(
         ...     "What's your favorite movie genre",
         ...     [":rainbow[Comedy]", "***Drama***", "Documentary :movie_camera:"],
-        ...     captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."])
+        ...     captions=[
+        ...         "Laugh out loud.",
+        ...         "Get the popcorn.",
+        ...         "Never stop learning.",
+        ...     ],
+        ... )
         >>>
         >>> if genre == ":rainbow[Comedy]":
         ...     st.write("You selected comedy.")
@@ -255,26 +300,27 @@ class RadioMixin:
     ) -> T | None:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None if index == 0 else index, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None if index == 0 else index,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = ensure_indexable(options)
+        opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
-            key=key,
             help=help,
             horizontal=horizontal,
             captions=captions,
-            form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:
@@ -302,7 +348,7 @@ class RadioMixin:
             index = None
 
         radio_proto = RadioProto()
-        radio_proto.id = id
+        radio_proto.id = element_id
         radio_proto.label = label
         if index is not None:
             radio_proto.default = index
@@ -323,15 +369,14 @@ class RadioMixin:
         serde = RadioSerde(opt, index)
 
         widget_state = register_widget(
-            "radio",
-            radio_proto,
-            user_key=key,
+            radio_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="int_value",
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
@@ -343,7 +388,7 @@ class RadioMixin:
             radio_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("radio", radio_proto)
         return widget_state.value
 

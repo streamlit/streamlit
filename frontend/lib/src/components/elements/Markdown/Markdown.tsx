@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
+
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
 import {
   InlineTooltipIcon,
@@ -34,10 +35,10 @@ export interface MarkdownProps {
 export default function Markdown({
   width,
   element,
-}: MarkdownProps): ReactElement {
+}: Readonly<MarkdownProps>): ReactElement {
   const styleProp = { width }
   return (
-    <div className="stMarkdown" style={styleProp} data-testid="stMarkdown">
+    <div className="stMarkdown" data-testid="stMarkdown" style={styleProp}>
       {element.help ? (
         <StyledLabelHelpWrapper>
           <StreamlitMarkdown

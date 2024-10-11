@@ -15,6 +15,7 @@
 """Magic unit test."""
 
 import ast
+import sys
 import unittest
 
 import streamlit.runtime.scriptrunner.magic as magic
@@ -78,9 +79,13 @@ a = 1
 for i in range(10):
     for j in range(2):
         a
+    else:
+        a
+else:
+    a
 
 """
-        self._testCode(CODE_FOR_STATEMENT, 1)
+        self._testCode(CODE_FOR_STATEMENT, 3)
 
     def test_try_statement(self):
         """Test try statements"""
@@ -88,15 +93,71 @@ for i in range(10):
 try:
     a = 10
     a
+except RuntimeError:
+    a
 except Exception:
     try:
         a
+    except RuntimeError:
+        a
+    except Exception:
+        a
+    else:
+        a
     finally:
         a
+else:
+    a
 finally:
     a
 """
-        self._testCode(CODE_TRY_STATEMENT, 4)
+        self._testCode(CODE_TRY_STATEMENT, 9)
+
+    @unittest.skipIf(
+        not sys.version_info >= (3, 11), "Not supported in this Python version"
+    )
+    def test_try_star_statement(self):
+        """Test try statements with except* clauses"""
+        CODE_TRY_STAR_STATEMENT = """
+try:
+    a = 10
+    a
+except* RuntimeError:
+    a
+except* Exception:
+    try:
+        a
+    except* RuntimeError:
+        a
+    except* Exception:
+        a
+    else:
+        a
+    finally:
+        a
+else:
+    a
+finally:
+    a
+"""
+        self._testCode(CODE_TRY_STAR_STATEMENT, 9)
+
+    @unittest.skipIf(
+        not sys.version_info >= (3, 10), "Not supported in this Python version"
+    )
+    def test_match_statement(self):
+        """Test match statements"""
+        CODE_MATCH_STATEMENT = """
+a = 1
+match a:
+    case 1:
+        a
+    case 2:
+        a
+    case _:
+        a
+"""
+        self._testCode(CODE_MATCH_STATEMENT, 3)
 
     def test_function_call_statement(self):
         """Test with function calls"""
@@ -123,8 +184,14 @@ with None:
 a = 10
 while True:
     a
+    while True:
+        a
+    else:
+        a
+else:
+    a
 """
-        self._testCode(CODE_WHILE_STATEMENT, 1)
+        self._testCode(CODE_WHILE_STATEMENT, 4)
 
     def test_yield_statement(self):
         """Test that 'yield' expressions do not get magicked"""

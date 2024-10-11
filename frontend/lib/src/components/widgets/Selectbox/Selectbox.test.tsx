@@ -15,14 +15,15 @@
  */
 
 import React from "react"
+
+import "@testing-library/jest-dom"
+import { act, fireEvent, screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
-import { Selectbox, Props } from "./Selectbox"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+
+import Selectbox, { Props } from "./Selectbox"
 
 const getProps = (
   elementProps: Partial<SelectboxProto> = {},
@@ -37,7 +38,6 @@ const getProps = (
   }),
   width: 0,
   disabled: false,
-  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
@@ -55,7 +55,9 @@ describe("Selectbox widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<Selectbox {...props} />)
-    expect(screen.getByTestId("stSelectbox")).toBeInTheDocument()
+    const selectbox = screen.getByTestId("stSelectbox")
+    expect(selectbox).toBeInTheDocument()
+    expect(selectbox).toHaveClass("stSelectbox")
   })
 
   it("sets widget value on mount", () => {
@@ -103,10 +105,10 @@ describe("Selectbox widget", () => {
     expect(screen.getByText("b")).toBeInTheDocument()
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
 
@@ -123,7 +125,9 @@ describe("Selectbox widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    await act(async () => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByText("a")).toBeInTheDocument()

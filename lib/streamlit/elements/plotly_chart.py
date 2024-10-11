@@ -36,18 +36,18 @@ from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
-from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import matplotlib
@@ -80,18 +80,24 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
 
 class PlotlySelectionState(TypedDict, total=False):
     """
-    A dictionary representing the current selection state of the plotly chart.
+    The schema for the Plotly chart selection state.
+
+    The selection state is stored in a dictionary-like object that supports both
+    key and attribute notation. Selection states cannot be programmatically
+    changed or set through Session State.
 
     Attributes
     ----------
     points : list[dict[str, Any]]
-        The selected data points in the chart, this also includes
-        the the data points selected by the box and lasso mode.
+        The selected data points in the chart, including the data points
+        selected by the box and lasso mode. The data includes the values
+        associated to each point and a point index used to populate
+        ``point_indices``. If additional information has been assigned to your
+        points, such as size or legend group, this is also included.
 
     point_indices : list[int]
-        The numerical indices of all selected data points in the chart,
-        this also includes the indices of the points selected by the box
-        and lasso mode.
+        The numerical indices of all selected data points in the chart. The
+        details of each identified point are included in ``points``.
 
     box : list[dict[str, Any]]
         The metadata related to the box selection. This includes the
@@ -100,6 +106,58 @@ class PlotlySelectionState(TypedDict, total=False):
     lasso : list[dict[str, Any]]
         The metadata related to the lasso selection. This includes the
         coordinates of the selected area.
+
+    Example
+    -------
+    When working with more complicated graphs, the ``points`` attribute
+    displays additional information. Try selecting points in the following
+    example:
+
+    >>> import streamlit as st
+    >>> import plotly.express as px
+    >>>
+    >>> df = px.data.iris()
+    >>> fig = px.scatter(
+    ...     df,
+    ...     x="sepal_width",
+    ...     y="sepal_length",
+    ...     color="species",
+    ...     size="petal_length",
+    ...     hover_data=["petal_width"],
+    ... )
+    >>>
+    >>> event = st.plotly_chart(fig, key="iris", on_select="rerun")
+    >>>
+    >>> event.selection
+
+    .. output::
+        https://doc-chart-events-plotly-selection-state.streamlit.app
+        height: 600px
+
+    This is an example of the selection state when selecting a single point:
+
+    >>> {
+    >>>   "points": [
+    >>>     {
+    >>>       "curve_number": 2,
+    >>>       "point_number": 9,
+    >>>       "point_index": 9,
+    >>>       "x": 3.6,
+    >>>       "y": 7.2,
+    >>>       "customdata": [
+    >>>         2.5
+    >>>       ],
+    >>>       "marker_size": 6.1,
+    >>>       "legendgroup": "virginica"
+    >>>     }
+    >>>   ],
+    >>>   "point_indices": [
+    >>>     9
+    >>>   ],
+    >>>   "box": [],
+    >>>   "lasso": []
+    >>> }
+
     """
 
     points: list[dict[str, Any]]
@@ -110,12 +168,42 @@ class PlotlySelectionState(TypedDict, total=False):
 
 class PlotlyState(TypedDict, total=False):
     """
-    A dictionary representing the current selection state of the plotly chart.
+    The schema for the Plotly chart event state.
+
+    The event state is stored in a dictionary-like object that supports both
+    key and attribute notation. Event states cannot be programmatically
+    changed or set through Session State.
+
+    Only selection events are supported at this time.
 
     Attributes
     ----------
-    selection : PlotlySelectionState
-        The state of the `on_select` event.
+    selection : dict
+        The state of the ``on_select`` event. This attribute returns a
+        dictionary-like object that supports both key and attribute notation.
+        The attributes are described by the ``PlotlySelectionState`` dictionary
+        schema.
+
+    Example
+    -------
+    Try selecting points by any of the three available methods (direct click,
+    box, or lasso). The current selection state is available through Session
+    State or as the output of the chart function.
+
+    >>> import streamlit as st
+    >>> import plotly.express as px
+    >>>
+    >>> df = px.data.iris()  # iris is a pandas DataFrame
+    >>> fig = px.scatter(df, x="sepal_width", y="sepal_length")
+    >>>
+    >>> event = st.plotly_chart(fig, key="iris", on_select="rerun")
+    >>>
+    >>> event
+
+    .. output::
+        https://doc-chart-events-plotly-state.streamlit.app
+        height: 600px
+
     """
 
     selection: PlotlySelectionState
@@ -123,7 +211,9 @@ class PlotlyState(TypedDict, total=False):
 
 @dataclass
 class PlotlyChartSelectionSerde:
-    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart selection state."""
+    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart
+    selection state.
+    """
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
         empty_selection_state: PlotlyState = {
@@ -188,11 +278,13 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
-        selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        selection_mode: SelectionMode | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
-    ) -> DeltaGenerator:
-        ...
+    ) -> DeltaGenerator: ...
 
     @overload
     def plotly_chart(
@@ -203,11 +295,13 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
-        selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        selection_mode: SelectionMode | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
-    ) -> PlotlyState:
-        ...
+    ) -> PlotlyState: ...
 
     @gather_metrics("plotly_chart")
     def plotly_chart(
@@ -218,64 +312,101 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
-        selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        selection_mode: SelectionMode | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
-        Plotly is a charting library for Python. The arguments to this function
-        closely follow the ones for Plotly's `plot()` function. You can find
-        more about Plotly at https://plot.ly/python.
+        `Plotly <https://plot.ly/python>`_ is a charting library for Python.
+        The arguments to this function closely follow the ones for Plotly's
+        ``plot()`` function.
 
-        To show Plotly charts in Streamlit, call `st.plotly_chart` wherever you
-        would call Plotly's `py.plot` or `py.iplot`.
+        To show Plotly charts in Streamlit, call ``st.plotly_chart`` wherever
+        you would call Plotly's ``py.plot`` or ``py.iplot``.
 
         Parameters
         ----------
         figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,\
-            dict/list of plotly.graph_objs.Figure/Data
+            or dict/list of plotly.graph_objs.Figure/Data
 
-            See https://plot.ly/python/ for examples of graph descriptions.
+            The Plotly ``Figure`` or ``Data`` object to render. See
+            https://plot.ly/python/ for examples of graph descriptions.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
+            Whether to override the figure's native width with the width of
+            the parent container. If ``use_container_width`` is ``False``
+            (default), Streamlit sets the width of the chart to fit its contents
+            according to the plotting library, up to the width of the parent
+            container. If ``use_container_width`` is ``True``, Streamlit sets
+            the width of the figure to match the width of the parent container.
 
         theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
+            The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
+            Streamlit uses its own design default. If ``theme`` is ``None``,
+            Streamlit falls back to the default behavior of the library.
 
         key : str
-            An optional string to use as the unique key for this element when used in combination
-            with ```on_select```. If this is omitted, a key will be generated for the widget based
-            on its content. Multiple widgets of the same type may not share the same key.
+            An optional string to use for giving this element a stable
+            identity. If ``key`` is ``None`` (default), this element's identity
+            will be determined based on the values of the other parameters.
+
+            Additionally, if selections are activated and ``key`` is provided,
+            Streamlit will register the key in Session State to store the
+            selection state. The selection state is read-only.
 
         on_select : "ignore" or "rerun" or callable
-            Controls the behavior in response to selection events on the charts. Can be one of:
-            - "ignore" (default): Streamlit will not react to any selection events in the chart.
-            - "rerun: Streamlit will rerun the app when the user selects data in the chart. In this case,
-              ```st.plotly_chart``` will return the selection data as a dictionary.
-            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
-              callback function before the rest of the app. The selection data can be retrieved through
-              session state by setting the key parameter.
+            How the figure should respond to user selection events. This
+            controls whether or not the figure behaves like an input widget.
+            ``on_select`` can be one of the following:
 
-        selection_mode : "points", "box", "lasso" or an iterable of these
-            The selection mode of the table. Can be one of:
-            - "points": The chart will allow selections based on individual data points.
-            - "box": The chart will allow selections based on rectangular areas.
-            - "lasso": The chart will allow selections based on freeform areas.
-            - An iterable of the above options: The chart will allow selections based on the modes specified.
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the chart. The figure will not behave like an input
+              widget.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              data in the chart. In this case, ``st.plotly_chart`` will return
+              the selection data as a dictionary.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.plotly_chart`` will return the selection data
+              as a dictionary.
+
+        selection_mode : "points", "box", "lasso" or an Iterable of these
+            The selection mode of the chart. This can be one of the following:
+
+            - ``"points"``: The chart will allow selections based on individual
+              data points.
+            - ``"box"``: The chart will allow selections based on rectangular
+              areas.
+            - ``"lasso"``: The chart will allow selections based on freeform
+              areas.
+            - An ``Iterable`` of the above options: The chart will allow
+              selections based on the modes specified.
 
             All selections modes are activated by default.
 
         **kwargs
-            Any argument accepted by Plotly's `plot()` function.
+            Any argument accepted by Plotly's ``plot()`` function.
+
+        Returns
+        -------
+        element or dict
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
+            internal placeholder for the chart element. Otherwise, this command
+            returns a dictionary-like object that supports both key and
+            attribute notation. The attributes are described by the
+            ``PlotlyState`` dictionary schema.
 
         Example
         -------
         The example below comes straight from the examples at
-        https://plot.ly/python:
+        https://plot.ly/python. Note that ``plotly.figure_factory`` requires
+        ``scipy`` to run.
 
         >>> import streamlit as st
         >>> import numpy as np
@@ -300,7 +431,7 @@ class PlotlyMixin:
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
-           height: 400px
+           height: 550px
 
         """
         import plotly.io
@@ -312,18 +443,22 @@ class PlotlyMixin:
 
         if "sharing" in kwargs:
             show_deprecation_warning(
-                "The `sharing` parameter has been deprecated and will be removed in a future release. "
-                "Plotly charts will always be rendered using Streamlit's offline mode."
+                "The `sharing` parameter has been deprecated and will be removed "
+                "in a future release. Plotly charts will always be rendered using "
+                "Streamlit's offline mode."
             )
 
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+                f'You set theme="{theme}" while Streamlit charts only support '
+                "theme=”streamlit” or theme=None to fallback to the default "
+                "library theme."
             )
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
             raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+                f"You have passed {on_select} to `on_select`. But only 'ignore', "
+                "'rerun', or a callable is supported."
             )
 
         key = to_key(key)
@@ -332,17 +467,15 @@ class PlotlyMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            # Import here to avoid circular imports
-            from streamlit.elements.utils import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
             )
-
-            check_cache_replay_rules()
-            if callable(on_select):
-                check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         if type_util.is_type(figure_or_data, "matplotlib.figure.Figure"):
             # Convert matplotlib figure to plotly figure:
@@ -370,18 +503,16 @@ class PlotlyMixin:
         # We are computing the widget id for all plotly uses
         # to also allow non-widget Plotly charts to keep their state
         # when the frontend component gets unmounted and remounted.
-        plotly_chart_proto.id = compute_widget_id(
+        plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
-            key=key,
+            form_id=plotly_chart_proto.form_id,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
             selection_mode=selection_mode,
             is_selection_activated=is_selection_activated,
             theme=theme,
-            form_id=plotly_chart_proto.form_id,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
         )
 
         if is_selection_activated:
@@ -393,13 +524,12 @@ class PlotlyMixin:
             serde = PlotlyChartSelectionSerde()
 
             widget_state = register_widget(
-                "plotly_chart",
-                plotly_chart_proto,
-                user_key=key,
+                plotly_chart_proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)

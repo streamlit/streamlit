@@ -16,9 +16,9 @@
 
 import styled from "@emotion/styled"
 
-export const StyledFormSubmitContent = styled.div(() => ({
+export const StyledFormSubmitContent = styled.div({
   display: "flex",
-}))
+})
 
 export interface StyledFormProps {
   border: boolean
@@ -26,9 +26,9 @@ export interface StyledFormProps {
 
 export const StyledForm = styled.div<StyledFormProps>(({ theme, border }) => ({
   ...(border && {
-    border: `1px solid ${theme.colors.fadedText10}`,
-    borderRadius: theme.radii.lg,
-    padding: "calc(1em - 1px)", // 1px to account for border.
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    borderRadius: theme.radii.default,
+    padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
   }),
 }))
 

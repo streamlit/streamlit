@@ -22,17 +22,17 @@ from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
 from typing_extensions import TypeAlias
 
-import streamlit as st
 from streamlit import runtime, type_util, url_util
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import time_to_seconds
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
+
 
 MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
@@ -95,7 +96,7 @@ class MediaMixin:
             one of the following:
 
             * ``None`` (default): The element plays from the beginning.
-            * An``int`` or ``float`` specifying the time in seconds. ``float``
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
               values are rounded down to whole seconds.
             * A string specifying the time in a format supported by `Pandas'
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
@@ -167,7 +168,6 @@ class MediaMixin:
         start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         audio_proto = AudioProto()
-        coordinates = self.dg._get_delta_path_str()
 
         is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
 
@@ -176,11 +176,11 @@ class MediaMixin:
                 "`sample_rate` must be specified when `data` is a numpy array."
             )
         if not is_data_numpy_array and sample_rate is not None:
-            st.warning(
+            self.dg.warning(
                 "Warning: `sample_rate` will be ignored since data is not a numpy "
                 "array."
             )
-
+        coordinates = self.dg._get_delta_path_str()
         marshall_audio(
             coordinates,
             audio_proto,
@@ -191,6 +191,7 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            form_id=current_form_id(self.dg),
         )
         return self.dg._enqueue("audio", audio_proto)
 
@@ -288,7 +289,7 @@ class MediaMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> video_file = open('myvideo.mp4', 'rb')
+        >>> video_file = open("myvideo.mp4", "rb")
         >>> video_bytes = video_file.read()
         >>>
         >>> st.video(video_bytes)
@@ -349,6 +350,7 @@ class MediaMixin:
             loop,
             autoplay,
             muted,
+            form_id=current_form_id(self.dg),
         )
         return self.dg._enqueue("video", video_proto)
 
@@ -376,7 +378,7 @@ def _reshape_youtube_url(url: str) -> str | None:
 
     Example
     -------
-    >>> print(_reshape_youtube_url('https://youtu.be/_T8LGqJtuGc'))
+    >>> print(_reshape_youtube_url("https://youtu.be/_T8LGqJtuGc"))
 
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc
@@ -457,6 +459,7 @@ def marshall_video(
     loop: bool = False,
     autoplay: bool = False,
     muted: bool = False,
+    form_id: str | None = None,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -499,6 +502,9 @@ def marshall_video(
     muted: bool
         Whether the video should play with the audio silenced. This can be used to
         enable autoplay without user interaction. Defaults to False.
+    form_id: str | None
+        The ID of the form that this element is placed in. Provide None if
+        the element is not placed in a form.
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
@@ -565,10 +571,12 @@ def marshall_video(
                 ) from original_err
 
     if autoplay:
-        ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        proto.id = compute_and_register_element_id(
             "video",
+            # video does not yet allow setting a user-defined key
+            user_key=None,
+            form_id=form_id,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -576,10 +584,7 @@ def marshall_video(
             loop=loop,
             autoplay=autoplay,
             muted=muted,
-            page=ctx.page_script_hash if ctx else None,
         )
-
-        proto.id = id
 
 
 def _parse_start_time_end_time(
@@ -633,29 +638,29 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data: npt.NDArray[Any] = np.array(data, dtype=float)
+    transformed_data: npt.NDArray[Any] = np.array(data, dtype=float)
 
-    if len(data.shape) == 1:
+    if len(cast(NumpyShape, transformed_data.shape)) == 1:
         nchan = 1
-    elif len(data.shape) == 2:
+    elif len(transformed_data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,
         # "L1R1L2R2..." for stereo. See
         # http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
         # for channel ordering
-        nchan = data.shape[0]
-        data = data.T.ravel()
+        nchan = transformed_data.shape[0]
+        transformed_data = transformed_data.T.ravel()
     else:
         raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
 
-    if data.size == 0:
-        return data.astype(np.int16).tobytes(), nchan
+    if transformed_data.size == 0:
+        return transformed_data.astype(np.int16).tobytes(), nchan
 
-    max_abs_value = np.max(np.abs(data))
+    max_abs_value = np.max(np.abs(transformed_data))
     # 16-bit samples are stored as 2's-complement signed integers,
     # ranging from -32768 to 32767.
     # scaled_data is PCM 16 bit numpy array, that's why we multiply [-1, 1] float
     # values to 32_767 == 2 ** 15 - 1.
-    np_array = (data / max_abs_value) * 32767
+    np_array = (transformed_data / max_abs_value) * 32767
     scaled_data = np_array.astype(np.int16)
     return scaled_data.tobytes(), nchan
 
@@ -698,6 +703,7 @@ def marshall_audio(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    form_id: str | None = None,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -724,6 +730,9 @@ def marshall_audio(
     autoplay : bool
         Whether the audio should start playing automatically.
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
+    form_id: str | None
+        The ID of the form that this element is placed in. Provide None if
+        the element is not placed in a form.
     """
 
     proto.start_time = start_time
@@ -741,10 +750,11 @@ def marshall_audio(
         _marshall_av_media(coordinates, proto, data, mimetype)
 
     if autoplay:
-        ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        proto.id = compute_and_register_element_id(
             "audio",
+            user_key=None,
+            form_id=form_id,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -752,6 +762,4 @@ def marshall_audio(
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
-            page=ctx.page_script_hash if ctx else None,
         )
-        proto.id = id

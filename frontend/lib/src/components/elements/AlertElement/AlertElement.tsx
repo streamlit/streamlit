@@ -22,6 +22,7 @@ import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
+
 import { StyledAlertContent } from "./styled-components"
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {
@@ -54,7 +55,7 @@ export default function AlertElement({
   body,
   kind,
   width,
-}: AlertElementProps): ReactElement {
+}: Readonly<AlertElementProps>): ReactElement {
   const markdownWidth = {
     // Fix issue #6394 - Need to account for 1.25rem padding + 0.5rem gap when icon present
     width: icon ? `calc(100% - 1.75rem)` : "100%",

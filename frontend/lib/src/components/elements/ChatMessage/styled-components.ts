@@ -19,6 +19,8 @@ import { transparentize } from "color2k"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
+const AVATAR_SIZE = "2rem"
+
 export interface StyledChatMessageContainerProps {
   background: boolean
 }
@@ -32,7 +34,7 @@ export const StyledChatMessageContainer =
       gap: theme.spacing.sm,
       padding: theme.spacing.lg,
       paddingRight: background ? theme.spacing.lg : 0,
-      borderRadius: theme.radii.lg,
+      borderRadius: theme.radii.default,
       ...(background
         ? {
             backgroundColor: lightTheme
@@ -61,18 +63,18 @@ export const StyledAvatarBackground = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)
   return {
     display: "flex",
-    border: `1px solid ${
+    border: `${theme.sizes.borderWidth} solid ${
       lightTheme ? theme.colors.gray40 : theme.colors.gray85
     }`,
     backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
     color: lightTheme ? theme.colors.gray90 : theme.colors.white,
-    lineHeight: "1",
+    lineHeight: theme.lineHeights.none,
     fontSize: theme.fontSizes.md,
     // Ensure the avatar always respects the width/height
     flexShrink: 0,
-    width: "2rem",
-    height: "2rem",
-    borderRadius: theme.radii.lg,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: theme.radii.default,
     alignItems: "center",
     justifyContent: "center",
   }
@@ -87,11 +89,11 @@ export const StyledAvatarIcon = styled.div<StyledAvatarIconProps>(
     const lightTheme = hasLightBackgroundColor(theme)
     return {
       display: "flex",
-      width: "2rem",
-      height: "2rem",
+      width: AVATAR_SIZE,
+      height: AVATAR_SIZE,
       // Ensure the avatar always respects the width/height
       flexShrink: 0,
-      borderRadius: theme.radii.lg,
+      borderRadius: theme.radii.default,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: background,
@@ -102,11 +104,11 @@ export const StyledAvatarIcon = styled.div<StyledAvatarIconProps>(
 
 export const StyledAvatarImage = styled.img(({ theme }) => {
   return {
-    width: "2rem",
-    height: "2rem",
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
     // Ensure the avatar always respects the width/height
     flexShrink: 0,
-    borderRadius: theme.radii.lg,
+    borderRadius: theme.radii.default,
     objectFit: "cover",
     display: "flex",
   }

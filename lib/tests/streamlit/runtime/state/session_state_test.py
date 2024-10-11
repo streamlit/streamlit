@@ -13,10 +13,13 @@
 # limitations under the License.
 
 """Session state unit tests."""
+
+from __future__ import annotations
+
 import unittest
 from copy import deepcopy
 from datetime import date, datetime, timedelta
-from typing import Any, List, Tuple
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,13 +28,17 @@ from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    UnserializableSessionStateError,
+)
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
-from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
+from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX
 from streamlit.runtime.state.session_state import (
+    KeyIdMapper,
     Serialized,
     Value,
     WidgetMetadata,
@@ -43,7 +50,9 @@ from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
 
-identity = lambda x: x
+
+def identity(x):
+    return x
 
 
 def _raw_session_state() -> SessionState:
@@ -247,15 +256,15 @@ class SessionStateUpdateTest(DeltaGeneratorTestCase):
 
         st.checkbox("checkbox", value=True, key="c")
 
-        assert state.c == True
+        assert state.c is True
 
     def test_setting_before_widget_creation(self):
         state = st.session_state
         state.c = True
-        assert state.c == True
+        assert state.c is True
 
         c = st.checkbox("checkbox", key="c")
-        assert c == True
+        assert c is True
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -396,6 +405,10 @@ class SessionStateSerdeTest(DeltaGeneratorTestCase):
             key="date_interval",
         )
         check_roundtrip("date_interval", date_interval)
+
+    def test_feedback_serde(self):
+        feedback = st.feedback("stars", key="feedback")
+        check_roundtrip("feedback", feedback)
 
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_file_uploader_serde(self, get_upload_files_patch):
@@ -538,7 +551,7 @@ def _compact_copy(state: SessionState) -> SessionState:
     return state_copy
 
 
-def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
+def _sorted_items(state: SessionState) -> list[tuple[str, Any]]:
     """Return all key-value pairs in the SessionState.
     The returned list is sorted by key for easier comparison.
     """
@@ -552,7 +565,7 @@ class SessionStateMethodTests(unittest.TestCase):
         new_widget_state = WStates(
             {
                 "baz": Value("qux2"),
-                f"{GENERATED_WIDGET_ID_PREFIX}-foo-None": Value("bar"),
+                f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None": Value("bar"),
             },
         )
         self.session_state = SessionState(
@@ -565,7 +578,7 @@ class SessionStateMethodTests(unittest.TestCase):
             "foo": "bar2",
             "baz": "qux2",
             "corge": "grault",
-            f"{GENERATED_WIDGET_ID_PREFIX}-foo-None": "bar",
+            f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None": "bar",
         }
         assert self.session_state._new_session_state == {}
         assert self.session_state._new_widget_state == WStates()
@@ -587,7 +600,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_clear_state(self):
         # Sanity test
-        keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_ID_PREFIX}-foo-None"}
+        keys = {"foo", "baz", "corge", f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None"}
         self.assertEqual(keys, self.session_state._keys())
 
         # Clear state
@@ -607,7 +620,7 @@ class SessionStateMethodTests(unittest.TestCase):
         old_state = {"foo": "bar", "corge": "grault"}
         new_session_state = {}
         new_widget_state = WStates(
-            {f"{GENERATED_WIDGET_ID_PREFIX}-baz": Serialized(WidgetStateProto())},
+            {f"{GENERATED_ELEMENT_ID_PREFIX}-baz": Serialized(WidgetStateProto())},
         )
         self.session_state = SessionState(
             old_state, new_session_state, new_widget_state
@@ -640,10 +653,13 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx.widget_ids_this_run = {"widget_id"}
 
         with patch(
-            "streamlit.runtime.scriptrunner.get_script_run_ctx", return_value=mock_ctx
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
         ):
             with pytest.raises(StreamlitAPIException) as e:
-                self.session_state._key_id_mapping = {"widget_id": "widget_id"}
+                self.session_state._key_id_mapper.set_key_id_mapping(
+                    {"widget_id": "widget_id"}
+                )
                 self.session_state["widget_id"] = "blah"
             assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
 
@@ -652,7 +668,8 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx.form_ids_this_run = {"form_id"}
 
         with patch(
-            "streamlit.runtime.scriptrunner.get_script_run_ctx", return_value=mock_ctx
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
         ):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state["form_id"] = "blah"
@@ -676,8 +693,8 @@ class SessionStateMethodTests(unittest.TestCase):
         assert not self.session_state._widget_changed("foo")
 
     def test_remove_stale_widgets(self):
-        existing_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-existing_widget"
-        generated_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-removed_widget"
+        existing_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-existing_widget"
+        generated_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-removed_widget"
 
         self.session_state._old_state = {
             existing_widget_key: True,
@@ -706,7 +723,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
         self.session_state._remove_stale_widgets({existing_widget_key})
 
-        assert self.session_state[existing_widget_key] == True
+        assert self.session_state[existing_widget_key] is True
         assert generated_widget_key not in self.session_state
         assert self.session_state["val_set_via_state"] == 5
 
@@ -719,7 +736,7 @@ class SessionStateMethodTests(unittest.TestCase):
         WIDGET_VALUE = 123
 
         metadata = WidgetMetadata(
-            id=f"{GENERATED_WIDGET_ID_PREFIX}-0-widget_id_1",
+            id=f"{GENERATED_ELEMENT_ID_PREFIX}-0-widget_id_1",
             deserializer=lambda _, __: WIDGET_VALUE,
             serializer=identity,
             value_type="int_value",
@@ -740,7 +757,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
         lam_func = nested()
         self.session_state["unserializable"] = lam_func
-        with pytest.raises(Exception):
+        with pytest.raises(UnserializableSessionStateError):
             self.session_state._check_serializable()
 
 
@@ -786,8 +803,8 @@ def test_map_set_del(m, key, value1):
 
 
 @given(state=stst.session_state())
-def test_key_wid_lookup_equiv(state):
-    k_wid_map = state._key_id_mapping
+def test_key_wid_lookup_equiv(state: SessionState):
+    k_wid_map = state._key_id_mapper._key_id_mapping
     for k, wid in k_wid_map.items():
         assert state[k] == state[wid]
 
@@ -871,13 +888,17 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         stat = state.get_stats()[0]
         assert stat.category_name == "st_session_state"
 
+        # The expected size of the session state in bytes.
+        # It composes of the session_state's fields.
+        expected_session_state_size_bytes = 3000
+
         init_size = stat.byte_length
-        assert init_size < 2500
+        assert init_size < expected_session_state_size_bytes
 
         state["foo"] = 2
         new_size = state.get_stats()[0].byte_length
         assert new_size > init_size
-        assert new_size < 2500
+        assert new_size < expected_session_state_size_bytes
 
         state["foo"] = 1
         new_size_2 = state.get_stats()[0].byte_length
@@ -886,8 +907,74 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="checkbox")
         new_size_3 = state.get_stats()[0].byte_length
         assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < 2500
+        assert new_size_3 - new_size_2 < expected_session_state_size_bytes
 
         state._compact_state()
         new_size_4 = state.get_stats()[0].byte_length
         assert new_size_4 <= new_size_3
+
+
+class KeyIdMapperTest(unittest.TestCase):
+    def test_key_id_mapping(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+
+    def test_key_id_mapping_errors(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("nonexistent") is None
+        with pytest.raises(KeyError):
+            key_id_mapper.get_key_from_id("nonexistent")
+
+    def test_key_id_mapping_clear(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+        key_id_mapper.clear()
+        assert key_id_mapper.get_id_from_key("key") is None
+        with pytest.raises(KeyError):
+            key_id_mapper.get_key_from_id("wid")
+
+    def test_key_id_mapping_delete(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+        del key_id_mapper["key"]
+        assert key_id_mapper.get_id_from_key("key") is None
+        with pytest.raises(KeyError):
+            key_id_mapper.get_key_from_id("wid")
+
+    def test_key_id_mapping_set_key_id_mapping(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        key_id_mapper["key2"] = "wid2"
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+        assert key_id_mapper.get_id_from_key("key2") == "wid2"
+        assert key_id_mapper.get_key_from_id("wid2") == "key2"
+
+    def test_key_id_mapping_update(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+
+        key_id_mapper2 = KeyIdMapper()
+        key_id_mapper2.set_key_id_mapping({"key2": "wid2"})
+        key_id_mapper.update(key_id_mapper2)
+        assert key_id_mapper.get_id_from_key("key2") == "wid2"
+        assert key_id_mapper.get_key_from_id("wid2") == "key2"
+
+        key_id_mapper3 = KeyIdMapper()
+        key_id_mapper3.set_key_id_mapping({"key": "wid3"})
+        key_id_mapper.update(key_id_mapper3)
+        assert key_id_mapper.get_id_from_key("key") == "wid3"
+        assert key_id_mapper.get_key_from_id("wid3") == "key"
+        assert key_id_mapper.get_id_from_key("key2") == "wid2"
+        assert key_id_mapper.get_key_from_id("wid2") == "key2"
+        assert key_id_mapper.get_id_from_key("key") == "wid3"
+        assert key_id_mapper.get_key_from_id("wid") == "key"

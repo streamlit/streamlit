@@ -57,7 +57,12 @@ st.button(
     "button 6 (container_width + help)", use_container_width=True, help="help text"
 )
 
-st.button("_button 7_ (**styled** :green[label])")
+st.button(
+    ":material/search: _button 7_ (**styled** :green[label]) :material/arrow_forward:"
+)
+
+st.button("Like Button", icon=":material/thumb_up:")
+st.button("Star Button", icon="⭐")
 
 cols = st.columns(3)
 

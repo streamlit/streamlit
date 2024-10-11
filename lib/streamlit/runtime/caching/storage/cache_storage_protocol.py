@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" Declares the CacheStorageContext dataclass, which contains parameter information for
+"""Declares the CacheStorageContext dataclass, which contains parameter information for
 each function decorated by `@st.cache_data` (for example: ttl, max_entries etc.)
 
 Declares the CacheStorageManager protocol, which implementations are used

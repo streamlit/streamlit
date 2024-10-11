@@ -33,7 +33,7 @@ class LatexTest(DeltaGeneratorTestCase):
 
             a, b = sympy.symbols("a b")
             out = a + b
-        except:
+        except Exception:
             out = "a + b"
 
         st.latex(out)

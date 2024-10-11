@@ -15,8 +15,8 @@
  */
 
 import {
-  GridCell,
   BooleanCell,
+  GridCell,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
@@ -26,8 +26,8 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  toSafeString,
   toSafeBoolean,
+  toSafeString,
 } from "./utils"
 
 /**

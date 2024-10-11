@@ -29,10 +29,10 @@ export const StyledResizableContainer =
       position: "relative",
       display: "inline-block",
 
-      "& .glideDataEditor": {
+      "& .stDataFrameGlideDataEditor": {
         height: "100%",
         minWidth: "100%",
-        borderRadius: theme.radii.lg,
+        borderRadius: theme.radii.default,
       },
 
       "& .dvn-scroller": {

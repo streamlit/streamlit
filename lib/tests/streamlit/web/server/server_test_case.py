@@ -12,18 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import urllib.parse
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import tornado.testing
 import tornado.web
 import tornado.websocket
-from tornado.websocket import WebSocketClientConnection
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession
 from streamlit.web.server import Server
+
+if TYPE_CHECKING:
+    from tornado.websocket import WebSocketClientConnection
 
 
 class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
@@ -101,7 +106,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         )
         ServerTestCase._next_session_id += 1
 
-        mock_session = mock.MagicMock(AppSession, autospec=True, *args, **kwargs)
+        mock_session = mock.MagicMock(AppSession, autospec=True, *args, **kwargs)  # noqa: B026
         type(mock_session).id = mock_id
         return mock_session
 

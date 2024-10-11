@@ -18,13 +18,13 @@ import merge from "lodash/merge"
 import mergeWith from "lodash/mergeWith"
 
 import {
-  getGray30,
-  getGray70,
-  hasLightBackgroundColor,
+  EmotionTheme,
+  getBlue80,
   getCategoricalColorsArray,
   getDivergingColorsArray,
+  getGray30,
+  getGray70,
   getSequentialColorsArray,
-  EmotionTheme,
 } from "@streamlit/lib/src/theme"
 
 export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
@@ -107,8 +107,6 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       stroke: "transparent",
       continuousHeight: 350,
       continuousWidth: 400,
-      discreteHeight: 350,
-      discreteWidth: { step: 20 },
     },
     concat: {
       columns: 1,
@@ -118,9 +116,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
     },
     mark: {
       tooltip: true,
-      ...(hasLightBackgroundColor(theme)
-        ? { color: "#0068C9" }
-        : { color: "#83C9FF" }),
+      color: getBlue80(theme),
     },
     bar: {
       binSpacing: theme.spacing.twoXSPx,
@@ -185,8 +181,6 @@ export function applyThemeDefaults(config: any, theme: EmotionTheme): any {
       stroke: getGray30(theme),
       continuousHeight: 350,
       continuousWidth: 400,
-      discreteHeight: 350,
-      discreteWidth: { step: 20 },
     },
     mark: {
       tooltip: true,

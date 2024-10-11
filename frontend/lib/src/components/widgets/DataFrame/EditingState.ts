@@ -17,8 +17,8 @@
 import { GridCell } from "@glideapps/glide-data-grid"
 
 import {
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
 import { BaseColumn, isMissingValueCell } from "./columns"

@@ -15,6 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { StyledClearIcon } from "baseui/input/styled-components"
 import { ChevronDown } from "baseui/icon"
@@ -23,19 +24,19 @@ import { withTheme } from "@emotion/react"
 import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
-  labelVisibilityProtoValueToEnum,
   isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
 
 import { StyledClearIconContainer } from "./styled-components"
@@ -165,41 +166,42 @@ class TimeInput extends PureComponent<Props, State> {
           overrides: {
             ControlContainer: {
               style: {
+                height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: "1px",
-                borderRightWidth: "1px",
-                borderTopWidth: "1px",
-                borderBottomWidth: "1px",
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
               },
             },
 
             IconsContainer: {
               style: () => ({
-                paddingRight: ".5rem",
+                paddingRight: theme.spacing.sm,
               }),
             },
 
             ValueContainer: {
               style: () => ({
+                lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: ".5rem",
-                paddingLeft: ".5rem",
-                paddingBottom: ".5rem",
-                paddingTop: ".5rem",
+                paddingRight: theme.spacing.sm,
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
               }),
             },
 
             SingleValue: {
               props: {
-                // For easier testing - indicates div that holds the selected time
-                "data-testid": "stTimeInput-timeDisplay",
+                "data-testid": "stTimeInputTimeDisplay",
               },
             },
 
             Dropdown: {
               style: () => ({
-                paddingTop: 0,
-                paddingBottom: 0,
+                paddingTop: theme.spacing.none,
+                paddingBottom: theme.spacing.none,
               }),
             },
 
@@ -209,7 +211,7 @@ class TimeInput extends PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: "1px",
+                      marginTop: theme.spacing.px,
                     }),
                   },
                 },

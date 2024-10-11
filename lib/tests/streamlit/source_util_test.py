@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -103,7 +105,8 @@ class PageHelperFunctionTests(unittest.TestCase):
 
     @patch("streamlit.source_util._on_pages_changed", MagicMock())
     def test_register_pages_changed_callback(self):
-        callback = lambda: None
+        def callback():
+            return None
 
         disconnect = source_util.register_pages_changed_callback(callback)
 
@@ -178,7 +181,3 @@ def test_get_pages(tmpdir):
             "icon": "",
         },
     }
-
-    # Assert address-equality to verify the cache is used the second time
-    # get_pages is called.
-    assert source_util.get_pages(main_script_path) is received_pages

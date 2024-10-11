@@ -15,13 +15,14 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
-import { screen } from "@testing-library/react"
-import "@testing-library/jest-dom"
 
+import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
 import Snow, {
-  SnowProps,
   NUM_FLAKES,
+  SnowProps,
 } from "@streamlit/lib/src/components/elements/Snow/index"
 
 const getProps = (): SnowProps => ({
@@ -40,7 +41,7 @@ describe("Snow element", () => {
     const props = getProps()
     render(<Snow {...props} />)
 
-    const snowElement = screen.getByTestId("snow")
+    const snowElement = screen.getByTestId("stSnow")
     expect(snowElement).toBeInTheDocument()
 
     const snowImages = screen.getAllByRole("img")
@@ -51,11 +52,11 @@ describe("Snow element", () => {
     })
   })
 
-  it("renders as hidden element", () => {
+  it("uses correct top-level class", () => {
     const props = getProps()
     render(<Snow {...props} />)
 
-    const snowElement = screen.getByTestId("snow")
-    expect(snowElement).toHaveClass("stHidden")
+    const snowElement = screen.getByTestId("stSnow")
+    expect(snowElement).toHaveClass("stSnow")
   })
 })

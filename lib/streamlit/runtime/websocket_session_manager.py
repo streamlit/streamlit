@@ -14,12 +14,10 @@
 
 from __future__ import annotations
 
-from typing import Callable, Final, List, cast
+from typing import TYPE_CHECKING, Callable, Final, List, cast
 
 from streamlit.logger import get_logger
 from streamlit.runtime.app_session import AppSession
-from streamlit.runtime.script_data import ScriptData
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
     ActiveSessionInfo,
     SessionClient,
@@ -27,7 +25,11 @@ from streamlit.runtime.session_manager import (
     SessionManager,
     SessionStorage,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+if TYPE_CHECKING:
+    from streamlit.runtime.script_data import ScriptData
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 _LOGGER: Final = get_logger(__name__)
 

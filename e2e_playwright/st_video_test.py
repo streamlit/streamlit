@@ -16,9 +16,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    click_checkbox,
+)
 
 VIDEO_ELEMENTS_COUNT = 11
+
 
 # Chromium miss codecs required to play that mp3 videos
 # https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/
@@ -90,7 +96,7 @@ def test_handles_changes_in_start_time(
     app.wait_for_timeout(2000)
 
     # Change the start time of second video from 6 to 5
-    app.get_by_test_id("stNumberInput").locator("button.step-down").click()
+    app.get_by_test_id("stNumberInput").get_by_test_id("stNumberInputStepDown").click()
     # Wait for the video start time to update
     app.wait_for_timeout(2000)
 
@@ -147,21 +153,20 @@ def test_video_end_time_loop(app: Page, nth_element: int):
     wait_until(app, lambda: 36 < video_element.evaluate("el => el.currentTime") < 38)
 
 
+@pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_autoplay(app: Page):
     """Test that `st.video` autoplay property works correctly."""
     video_elements = app.get_by_test_id("stVideo")
     expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    expect(video_elements.nth(9)).to_be_visible()
-
     video_element = video_elements.nth(9)
+    expect(video_element).to_be_visible()
     video_element.scroll_into_view_if_needed()
     expect(video_element).to_have_js_property("paused", True)
     expect(video_element).to_have_js_property("autoplay", False)
 
-    checkbox_elements = app.get_by_test_id("stCheckbox")
-    autoplay_checkbox = checkbox_elements.nth(0)
-    autoplay_checkbox.click()
+    click_checkbox(app, "Autoplay")
+
     # To prevent flakiness, we wait for the video to load and start playing
     wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
     expect(video_element).to_have_js_property("autoplay", True)
@@ -185,33 +190,32 @@ def test_video_muted_autoplay(app: Page):
     expect(video_element).to_have_js_property("paused", False)
 
 
+@pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_remount_no_autoplay(app: Page):
     """Test that `st.video` remounts correctly without autoplay."""
     video_elements = app.get_by_test_id("stVideo")
     expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    expect(video_elements.nth(9)).to_be_visible()
-
     video_element = video_elements.nth(9)
+
+    expect(video_element).to_be_visible()
     expect(video_element).to_have_js_property("paused", True)
     expect(video_element).to_have_js_property("autoplay", False)
 
-    checkbox_elements = app.get_by_test_id("stCheckbox")
-    autoplay_checkbox = checkbox_elements.nth(0)
-    autoplay_checkbox.click()
+    click_checkbox(app, "Autoplay")
+
     # To prevent flakiness, we wait for the video to load and start playing
     wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
     expect(video_element).to_have_js_property("autoplay", True)
     expect(video_element).to_have_js_property("paused", False)
 
-    autoplay_checkbox.click()
-
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    expect(app.get_by_test_id("stMarkdownContainer").nth(2)).to_have_text(
-        "Create some elements to unmount component"
-    )
-    button_element.click()
-    wait_for_app_run(app)
+    click_checkbox(app, "Autoplay")
+    click_button(app, "Create some elements to unmount component")
 
     expect(video_element).to_have_js_property("autoplay", False)
     expect(video_element).to_have_js_property("paused", True)
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stVideo")

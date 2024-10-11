@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -29,6 +28,7 @@ class CodeElement(DeltaGeneratorTestCase):
 
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.wrap_lines, False)
         self.assertEqual(element.code.language, "python")
 
     def test_st_code_python(self):
@@ -39,6 +39,7 @@ class CodeElement(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.wrap_lines, False)
         self.assertEqual(element.code.language, "python")
 
     def test_st_code_none(self):
@@ -49,6 +50,7 @@ class CodeElement(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.wrap_lines, False)
         self.assertEqual(element.code.language, "plaintext")
 
     def test_st_code_none_with_line_numbers(self):
@@ -59,6 +61,7 @@ class CodeElement(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, True)
+        self.assertEqual(element.code.wrap_lines, False)
         self.assertEqual(element.code.language, "plaintext")
 
     def test_st_code_python_with_line_numbers(self):
@@ -69,4 +72,27 @@ class CodeElement(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, True)
+        self.assertEqual(element.code.wrap_lines, False)
+        self.assertEqual(element.code.language, "python")
+
+    def test_st_code_with_wrap_true(self):
+        """Test st.code with wrap_lines=True."""
+        code = "print('My string = %d' % my_value)"
+        st.code(code, wrap_lines=True)
+
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(element.code.code_text, code)
+        self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.wrap_lines, True)
+        self.assertEqual(element.code.language, "python")
+
+    def test_st_code_with_wrap_false(self):
+        """Test st.code with wrap_lines=False."""
+        code = "print('My string = %d' % my_value)"
+        st.code(code, wrap_lines=False)
+
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(element.code.code_text, code)
+        self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.wrap_lines, False)
         self.assertEqual(element.code.language, "python")

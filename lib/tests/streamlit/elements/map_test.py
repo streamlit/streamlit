@@ -13,20 +13,20 @@
 # limitations under the License.
 
 """Unit tests for st.map()."""
+
 import itertools
 import json
 from unittest import mock
 
 import numpy as np
 import pandas as pd
-import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.testutil import create_snowpark_session, patch_config_options
+from tests.testutil import patch_config_options
 
 mock_df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -57,24 +57,28 @@ class StMapTest(DeltaGeneratorTestCase):
         self.assertEqual(c.get("initialViewState").get("pitch"), 0)
         self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
 
-    @parameterized.expand(
-        itertools.product(
+    def test_alternative_names_columns(self):
+        """Test that it can be called with alternative names of lat/lon columns."""
+        name_combination = itertools.product(
             {"lat", "latitude", "LAT", "LATITUDE"},
             {"lon", "longitude", "LON", "LONGITUDE"},
         )
-    )
-    def test_alternative_names_columns(self, lat_column_name, lon_column_name):
-        """Test that it can be called with alternative names of lat/lon columns."""
-        df = mock_df.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
-        st.map(df)
 
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")), 4)
+        for lat_column_name, lon_column_name in name_combination:
+            df = mock_df.rename(
+                columns={"lat": lat_column_name, "lon": lon_column_name}
+            )
+            st.map(df)
+
+            c = json.loads(
+                self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+            )
+            self.assertEqual(len(c.get("layers")[0].get("data")), 4)
 
     def test_map_uses_convert_anything_to_df(self):
         """Test that st.map uses convert_anything_to_df to convert input data."""
         with mock.patch(
-            "streamlit.type_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_pandas_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = mock_df
 
@@ -343,51 +347,14 @@ class StMapTest(DeltaGeneratorTestCase):
 
         self.assertIn("not allowed to contain null values", str(ctx.exception))
 
-    @pytest.mark.require_snowflake
-    def test_unevaluated_snowpark_table_integration(self):
-        """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
-        with create_snowpark_session() as snowpark_session:
-            table = snowpark_session.sql(
-                """
-                SELECT V1.$1 AS "lat", V1.$2 AS "lon" FROM
-                    (
-                        VALUES (1, 10), (2, 20), (3, 30), (4, 40)
-                    ) AS V1
-                """
-            ).cache_result()
-            st.map(table)
+    def test_map_with_height(self):
+        """Test st.map with height."""
+        st.map(mock_df, height=500)
+        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        self.assertEqual(c.height, 500)
 
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-
-        """Check if map data have 4 rows"""
-        self.assertEqual(len(c["layers"][0]["data"]), 4)
-
-    @pytest.mark.require_snowflake
-    def test_unevaluated_snowpark_dataframe_integration(self):
-        """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
-        with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql(
-                """
-                SELECT V1.$1 AS "lat", V1.$2 AS "lon" FROM
-                    (
-                        VALUES (1, 10), (2, 20), (3, 30), (4, 40)
-                    ) AS V1
-                """
-            )
-            st.map(df)
-
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-
-        """Check if map data have 4 rows"""
-        self.assertEqual(len(c["layers"][0]["data"]), 4)
-
-    def test_id_changes_when_data_changes(self):
-        st.map()
-
-        orig_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-        np.random.seed(0)
-
-        df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
-        st.map(df)
-        new_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-        self.assertNotEqual(orig_id, new_id)
+    def test_map_with_width(self):
+        """Test st.map with width."""
+        st.map(mock_df, width=240)
+        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        self.assertEqual(c.width, 240)

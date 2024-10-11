@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { GridSelection, CompactSelection } from "@glideapps/glide-data-grid"
+import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
 import isEqual from "lodash/isEqual"
 
 import { BaseColumn } from "@streamlit/lib/src/components/widgets/DataFrame/columns"

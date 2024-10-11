@@ -62,6 +62,8 @@ describe("HostCommunicationManager messaging", () => {
       pageLinkBaseUrlChanged: jest.fn(),
       queryParamsChanged: jest.fn(),
       deployedAppMetadataChanged: jest.fn(),
+      restartWebsocketConnection: jest.fn(),
+      terminateWebsocketConnection: jest.fn(),
     })
 
     originalHash = window.location.hash
@@ -431,7 +433,45 @@ describe("HostCommunicationManager messaging", () => {
     expect(
       // @ts-expect-error - props are private
       hostCommunicationMgr.props.themeChanged
-    ).toHaveBeenCalledWith(mockCustomThemeConfig)
+    ).toHaveBeenCalledWith(undefined, mockCustomThemeConfig)
+  })
+
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a dark theme name", async () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_CUSTOM_THEME_CONFIG",
+          themeName: "Dark",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.themeChanged
+    ).toHaveBeenCalledWith("Dark", undefined)
+  })
+
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a light theme name", async () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_CUSTOM_THEME_CONFIG",
+          themeName: "Light",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.themeChanged
+    ).toHaveBeenCalledWith("Light", undefined)
   })
 
   it("can process a received SET_AUTH_TOKEN message with JWT pair", () => {
@@ -450,6 +490,38 @@ describe("HostCommunicationManager messaging", () => {
       // @ts-expect-error - props are private
       hostCommunicationMgr.props.jwtHeaderChanged
     ).toHaveBeenCalledWith(message.data)
+  })
+
+  it("can process a received RESTART_WEBSOCKET_CONNECTION message", () => {
+    const message = new MessageEvent("message", {
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "RESTART_WEBSOCKET_CONNECTION",
+      },
+      origin: "https://devel.streamlit.test",
+    })
+    dispatchEvent("message", message)
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.restartWebsocketConnection
+    ).toHaveBeenCalled()
+  })
+
+  it("can process a received TERMINATE_WEBSOCKET_CONNECTION message", () => {
+    const message = new MessageEvent("message", {
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "TERMINATE_WEBSOCKET_CONNECTION",
+      },
+      origin: "https://devel.streamlit.test",
+    })
+    dispatchEvent("message", message)
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.terminateWebsocketConnection
+    ).toHaveBeenCalled()
   })
 })
 
@@ -477,6 +549,8 @@ describe("Test different origins", () => {
       pageLinkBaseUrlChanged: jest.fn(),
       queryParamsChanged: jest.fn(),
       deployedAppMetadataChanged: jest.fn(),
+      restartWebsocketConnection: jest.fn(),
+      terminateWebsocketConnection: jest.fn(),
     })
 
     dispatchEvent = mockEventListeners()
@@ -573,6 +647,8 @@ describe("HostCommunicationManager external auth token handling", () => {
       pageLinkBaseUrlChanged: jest.fn(),
       queryParamsChanged: jest.fn(),
       deployedAppMetadataChanged: jest.fn(),
+      restartWebsocketConnection: jest.fn(),
+      terminateWebsocketConnection: jest.fn(),
     })
   })
 

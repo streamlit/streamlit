@@ -15,11 +15,13 @@
  */
 
 import React from "react"
-import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+
 import BaseColorPicker, { BaseColorPickerProps } from "./BaseColorPicker"
 
 const getProps = (
@@ -39,6 +41,7 @@ describe("ColorPicker widget", () => {
     render(<BaseColorPicker {...props} />)
     const colorPicker = screen.getByTestId("stColorPicker")
     expect(colorPicker).toBeInTheDocument()
+    expect(colorPicker).toHaveClass("stColorPicker")
   })
 
   it("should render a label in the title", () => {
@@ -80,7 +83,7 @@ describe("ColorPicker widget", () => {
     const props = getProps()
     render(<BaseColorPicker {...props} />)
 
-    const colorBlock = screen.getByTestId("stColorBlock")
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
     fireEvent.click(colorBlock)
 
     expect(colorBlock).toHaveStyle("background-color: #000000")
@@ -93,7 +96,7 @@ describe("ColorPicker widget", () => {
     const props = getProps()
     render(<BaseColorPicker {...props} />)
 
-    const colorBlock = screen.getByTestId("stColorBlock")
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
     fireEvent.click(colorBlock)
 
     const colorInput = screen.getByRole("textbox")
@@ -108,7 +111,7 @@ describe("ColorPicker widget", () => {
     render(<BaseColorPicker {...props} />)
 
     const newColor = "#E91E63"
-    const colorBlock = screen.getByTestId("stColorBlock")
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
     fireEvent.click(colorBlock)
 
     const colorInput = screen.getByRole("textbox")

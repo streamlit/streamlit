@@ -15,15 +15,17 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { screen, fireEvent, within } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
+
 import {
+  CustomThemeConfig,
   darkTheme,
+  fonts,
+  LibContextProps,
   lightTheme,
   toThemeInput,
-  fonts,
-  CustomThemeConfig,
-  LibContextProps,
 } from "@streamlit/lib"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 
@@ -176,7 +178,7 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(themeColorPickers).toHaveLength(4)
 
     const primaryColorPicker = within(themeColorPickers[0]).getByTestId(
-      "stColorBlock"
+      "stColorPickerBlock"
     )
     fireEvent.click(primaryColorPicker)
 
@@ -251,14 +253,6 @@ describe("Opened ThemeCreatorDialog", () => {
   })
 
   it("should copy to clipboard", () => {
-    // This hack is used below to get around `shallow` not supporting the
-    // `useState` hook, and emotion's `useTheme` hook (used by Modal) getting
-    // thrown off by us mocking `useContext` above :(
-    const updateCopied = jest.fn()
-    const useStateSpy = jest.spyOn(React, "useState")
-    // @ts-expect-error
-    useStateSpy.mockImplementation(init => [init, updateCopied])
-
     const props = getProps()
     customRenderLibContext(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
@@ -273,6 +267,6 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 base="light"
 `)
-    expect(updateCopied).toHaveBeenCalledWith(true)
+    expect(screen.getByText("Copied to clipboard")).toBeInTheDocument()
   })
 })

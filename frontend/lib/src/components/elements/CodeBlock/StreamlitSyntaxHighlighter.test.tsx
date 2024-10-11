@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-import { render } from "@streamlit/lib/src/test_util"
 import React from "react"
+
+import { render } from "@streamlit/lib/src/test_util"
+
 import StreamlitSyntaxHighlighter, {
   StreamlitSyntaxHighlighterProps,
 } from "./StreamlitSyntaxHighlighter"

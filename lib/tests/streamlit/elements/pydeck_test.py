@@ -20,6 +20,8 @@ import pydeck as pdk
 
 import streamlit as st
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
@@ -122,3 +124,105 @@ class PyDeckTest(DeltaGeneratorTestCase):
         actual = json.loads(el.deck_gl_json_chart.json)
 
         self.assertEqual(actual, deck_gl_json_chart.EMPTY_MAP)
+
+    def test_on_select_ignore(self):
+        """
+        Test that it can be called with on_select="ignore" and the expected proto
+        is generated.
+        """
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1),
+                ]
+            ),
+            on_select="ignore",
+        )
+
+        el = self.get_delta_from_queue().new_element
+
+        self.assertEqual(el.deck_gl_json_chart.selection_mode, [])
+
+    def test_on_select_rerun(self):
+        """
+        Test that it can be called with on_select="rerun" and the expected proto
+        is generated.
+        """
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1),
+                ]
+            ),
+            on_select="rerun",
+        )
+
+        el = self.get_delta_from_queue().new_element
+
+        self.assertEqual(
+            el.deck_gl_json_chart.selection_mode,
+            [PydeckProto.SelectionMode.SINGLE_OBJECT],
+        )
+
+    def test_selection_mode_multiselect(self):
+        """
+        Test that it can be called with selection_mode="multi-object" and the
+        expected proto is generated.
+        """
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1),
+                ]
+            ),
+            on_select="rerun",
+            selection_mode="multi-object",
+        )
+
+        el = self.get_delta_from_queue().new_element
+
+        self.assertEqual(
+            el.deck_gl_json_chart.selection_mode,
+            [PydeckProto.SelectionMode.MULTI_OBJECT],
+        )
+
+    def test_unknown_selection_mode_raises_exception(self):
+        """
+        Test that it throws an StreamlitAPIException when an unknown
+        selection_mode is given
+        """
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[
+                        pdk.Layer("ScatterplotLayer", data=df1),
+                    ]
+                ),
+                on_select="rerun",
+                selection_mode="multi-row",
+            )
+
+        self.assertTrue("Invalid selection mode: multi-row" in str(e.exception))
+
+    def test_selection_mode_set(self):
+        """
+        Test that it throws an StreamlitAPIException when a set is given for
+        selection_mode
+        """
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.pydeck_chart(
+                pdk.Deck(
+                    layers=[
+                        pdk.Layer("ScatterplotLayer", data=df1),
+                    ]
+                ),
+                on_select="rerun",
+                selection_mode={"multi-object"},
+            )
+
+        self.assertTrue("Invalid selection mode: {'multi-object'}." in str(e.exception))

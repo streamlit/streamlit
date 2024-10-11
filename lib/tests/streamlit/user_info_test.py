@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import threading
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -32,10 +35,10 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
 
     def test_user_email_attr(self):
         """Test that `st.user.email` returns user info from ScriptRunContext"""
-        self.assertEqual(st.experimental_user.email, "test@test.com")
+        self.assertEqual(st.experimental_user.email, "test@example.com")
 
     def test_user_email_key(self):
-        self.assertEqual(st.experimental_user["email"], "test@test.com")
+        self.assertEqual(st.experimental_user["email"], "test@example.com")
 
     def test_user_non_existing_attr(self):
         """Test that an error is raised when called non existed attr."""
@@ -104,9 +107,9 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                     session_state=SafeSessionState(SessionState(), lambda: None),
                     uploaded_file_mgr=None,
                     main_script_path="",
-                    page_script_hash="",
                     user_info={"email": "something@else.com"},
                     fragment_storage=MemoryFragmentStorage(),
+                    pages_manager=PagesManager(""),
                 ),
             )
 

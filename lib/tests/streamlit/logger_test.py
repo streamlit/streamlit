@@ -14,6 +14,8 @@
 
 """Logger Unittest."""
 
+from __future__ import annotations
+
 import logging
 import unittest
 from collections import OrderedDict

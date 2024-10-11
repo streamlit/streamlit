@@ -15,47 +15,65 @@
  */
 
 import React from "react"
+
 import {
   act,
   fireEvent,
-  screen,
-  waitFor,
   render,
   RenderResult,
+  screen,
+  waitFor,
 } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import cloneDeep from "lodash/cloneDeep"
+
 import {
+  Config,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
+  FileUploadClient,
+  getDefaultTheme,
+  getHostSpecifiedTheme,
+  HOST_COMM_VERSION,
+  HostCommunicationManager,
+  lightTheme,
   LocalStore,
+  mockEndpoints,
+  mockSessionInfoProps,
   mockWindowLocation,
+  PagesChanged,
+  RootStyleProvider,
   ScriptRunState,
   SessionInfo,
-  createAutoTheme,
-  CUSTOM_THEME_NAME,
-  lightTheme,
   toExportedTheme,
-  mockSessionInfoProps,
-  Config,
-  CustomThemeConfig,
-  ForwardMsg,
-  INewSession,
-  HostCommunicationManager,
-  PagesChanged,
-  HOST_COMM_VERSION,
-  mockEndpoints,
   WidgetStateManager,
-  FileUploadClient,
-  RootStyleProvider,
-  getDefaultTheme,
 } from "@streamlit/lib"
+import {
+  Delta,
+  Element,
+  ForwardMsg,
+  ForwardMsgMetadata,
+  IAutoRerun,
+  ILogo,
+  INavigation,
+  INewSession,
+  IPageConfig,
+  IPageInfo,
+  IPageNotFound,
+  IPagesChanged,
+  IParentMessage,
+  SessionEvent,
+  SessionStatus,
+} from "@streamlit/lib/src/proto"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
-import { App, Props, showDevelopmentOptions } from "./App"
 import {
   getMenuStructure,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+
+import { App, Props, showDevelopmentOptions } from "./App"
 
 jest.mock("@streamlit/lib/src/baseconsts", () => {
   return {
@@ -148,7 +166,11 @@ jest.mock("@streamlit/lib/src/WidgetStateManager", () => {
   )
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
-    return new actualModule.WidgetStateManager(...props)
+    const widgetStateManager = new actualModule.WidgetStateManager(...props)
+
+    jest.spyOn(widgetStateManager, "sendUpdateWidgetsMessage")
+
+    return widgetStateManager
   })
 
   return {
@@ -163,7 +185,9 @@ jest.mock("@streamlit/app/src/SegmentMetricsManager", () => {
   )
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
-    return new actualModule.SegmentMetricsManager(...props)
+    const metricsMgr = new actualModule.SegmentMetricsManager(...props)
+    jest.spyOn(metricsMgr, "enqueue")
+    return metricsMgr
   })
 
   return {
@@ -235,7 +259,11 @@ const NEW_SESSION_JSON: INewSession = {
     isHello: false,
   },
   appPages: [
-    { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+    {
+      pageScriptHash: "page_script_hash",
+      pageName: "streamlit app",
+      urlPathname: "streamlit_app",
+    },
   ],
   pageScriptHash: "page_script_hash",
   mainScriptPath: "path/to/file.py",
@@ -270,7 +298,7 @@ function renderApp(props: Props): RenderResult {
 }
 
 function getStoredValue<T>(Type: any): T {
-  return Type.mock.results[0].value
+  return Type.mock.results[Type.mock.results.length - 1].value
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -287,14 +315,32 @@ function getMockConnectionManagerProp(propName: string): any {
   return getStoredValue<ConnectionManager>(ConnectionManager).props[propName]
 }
 
+type DeltaWithElement = Omit<Delta, "fragmentId" | "newElement" | "toJSON"> & {
+  newElement: Omit<Element, "toJSON">
+}
+
+type ForwardMsgType =
+  | DeltaWithElement
+  | ForwardMsg.ScriptFinishedStatus
+  | IAutoRerun
+  | ILogo
+  | INavigation
+  | INewSession
+  | IPagesChanged
+  | IPageConfig
+  | IPageInfo
+  | IParentMessage
+  | IPageNotFound
+  | Omit<SessionEvent, "toJSON">
+  | Omit<SessionStatus, "toJSON">
+
 function sendForwardMessage(
-  type: string,
-  message: any,
-  metadata: any = null
+  type: keyof ForwardMsg,
+  message: ForwardMsgType,
+  metadata: Partial<ForwardMsgMetadata> | null = null
 ): void {
   act(() => {
     const fwMessage = new ForwardMsg()
-    // @ts-expect-error
     fwMessage[type] = cloneDeep(message)
     if (metadata) {
       fwMessage.metadata = metadata
@@ -305,7 +351,12 @@ function sendForwardMessage(
 }
 
 function openCacheModal(): void {
-  fireEvent.keyPress(screen.getByTestId("stApp"), {
+  fireEvent.keyDown(document.body, {
+    key: "c",
+    which: 67,
+  })
+
+  fireEvent.keyUp(document.body, {
     key: "c",
     which: 67,
   })
@@ -336,6 +387,48 @@ describe("App", () => {
     unmount()
 
     expect(getMockConnectionManager().disconnect).toHaveBeenCalled()
+  })
+
+  it("correctly sets the data-test-script-state attribute", async () => {
+    renderApp(getProps())
+
+    expect(screen.getByTestId("stApp")).toHaveAttribute(
+      "data-test-script-state",
+      "initial"
+    )
+
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: true,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-script-state",
+        ScriptRunState.RUNNING
+      )
+    })
+
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: false,
+    })
+
+    expect(screen.getByTestId("stApp")).toHaveAttribute(
+      "data-test-script-state",
+      ScriptRunState.NOT_RUNNING
+    )
+
+    sendForwardMessage("sessionEvent", {
+      type: "scriptCompilationException",
+    })
+
+    expect(screen.getByTestId("stApp")).toHaveAttribute(
+      "data-test-script-state",
+      ScriptRunState.COMPILATION_ERROR
+    )
   })
 
   describe("streamlit server version changes", () => {
@@ -397,6 +490,35 @@ describe("App", () => {
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
     expect(screen.getByTestId("stToolbarActions")).toBeInTheDocument()
+  })
+
+  it("sends updateReport to our metrics manager", () => {
+    renderApp(getProps())
+
+    const metricsManager = getStoredValue<SegmentMetricsManager>(
+      SegmentMetricsManager
+    )
+
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
+  })
+
+  it("reruns when the user presses 'r'", () => {
+    renderApp(getProps())
+
+    getMockConnectionManager(true)
+
+    const widgetStateManager =
+      getStoredValue<WidgetStateManager>(WidgetStateManager)
+    expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(document.body, {
+      key: "r",
+      which: 82,
+    })
+
+    expect(widgetStateManager.sendUpdateWidgetsMessage).toHaveBeenCalled()
   })
 
   describe("App.handleNewSession", () => {
@@ -533,6 +655,36 @@ describe("App", () => {
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
     })
 
+    it("removes the cached custom theme from theme options", () => {
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
+      )
+      const props = getProps({
+        theme: {
+          activeTheme: {
+            ...lightTheme,
+            name: CUSTOM_THEME_NAME,
+          },
+          availableThemes: [],
+          setTheme: jest.fn(),
+          addThemes: jest.fn(),
+          setImportedTheme: jest.fn(),
+        },
+      })
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: null,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+    })
+
     it("Does not change dark/light/auto user preferences when removing a custom theme", () => {
       const props = getProps()
       renderApp(props)
@@ -577,7 +729,9 @@ describe("App", () => {
 
       expect(props.theme.setTheme).toHaveBeenCalledTimes(2)
       // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(createAutoTheme())
+      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(
+        getHostSpecifiedTheme()
+      )
     })
 
     it("updates the custom theme if the one received from server has different hash", () => {
@@ -773,8 +927,8 @@ describe("App", () => {
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
 
       const appPages = [
-        { pageScriptHash: "hash1", pageName: "page1" },
-        { pageScriptHash: "hash2", pageName: "page2" },
+        { pageScriptHash: "hash1", pageName: "page1", urlPathname: "page1" },
+        { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
       ]
 
       sendForwardMessage("newSession", {
@@ -789,7 +943,7 @@ describe("App", () => {
       expect(navLinks[0]).toHaveStyle("font-weight: 600")
       expect(navLinks[1]).toHaveStyle("font-weight: 400")
 
-      expect(document.title).toBe("page1 · Streamlit")
+      expect(document.title).toBe("page1")
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_APP_PAGES",
         appPages,
@@ -897,8 +1051,16 @@ describe("App", () => {
         sendForwardMessage("newSession", {
           ...NEW_SESSION_JSON,
           appPages: [
-            { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-            { pageScriptHash: "hash2", pageName: "page2" },
+            {
+              pageScriptHash: "page_script_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+            },
+            {
+              pageScriptHash: "hash2",
+              pageName: "page2",
+              urlPathname: "page2",
+            },
           ],
           pageScriptHash: "hash2",
         })
@@ -935,8 +1097,16 @@ describe("App", () => {
         )
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -978,8 +1148,16 @@ describe("App", () => {
         sendForwardMessage("newSession", {
           ...NEW_SESSION_JSON,
           appPages: [
-            { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-            { pageScriptHash: "hash2", pageName: "page2" },
+            {
+              pageScriptHash: "page_script_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+            },
+            {
+              pageScriptHash: "hash2",
+              pageName: "page2",
+              urlPathname: "page2",
+            },
           ],
           pageScriptHash: "hash2",
         })
@@ -996,8 +1174,16 @@ describe("App", () => {
         history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1031,8 +1217,16 @@ describe("App", () => {
         history.replaceState({}, "", "/page2") // Starting from a not main page.
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1083,7 +1277,7 @@ describe("App", () => {
         fragmentIdsThisRun: [],
       })
 
-      expect(document.title).toBe("streamlit_app · Streamlit")
+      expect(document.title).toBe("streamlit_app")
     })
 
     it("does *not* reset document title if fragment", () => {
@@ -1104,7 +1298,7 @@ describe("App", () => {
     it("initially button should be hidden", () => {
       renderApp(getProps())
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("button should be visible in development mode", () => {
@@ -1118,7 +1312,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.getByTestId("stDeployButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
     })
 
     it("button should be hidden in viewer mode", () => {
@@ -1132,7 +1326,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("button should be hidden for hello app", () => {
@@ -1150,7 +1344,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
   })
 
@@ -1184,8 +1378,16 @@ describe("App", () => {
         isHello: false,
       },
       appPages: [
-        { pageScriptHash: "top_hash", pageName: "streamlit_app" },
-        { pageScriptHash: "sub_hash", pageName: "page2" },
+        {
+          pageScriptHash: "top_hash",
+          pageName: "streamlit app",
+          urlPathname: "",
+        },
+        {
+          pageScriptHash: "sub_hash",
+          pageName: "page2",
+          urlPathname: "page2",
+        },
       ],
       pageScriptHash: "top_hash",
       fragmentIdsThisRun: [],
@@ -1391,7 +1593,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1408,7 +1610,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
       expect(connectionManager.sendMessage).toBeCalledTimes(2)
 
@@ -1428,7 +1630,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1445,7 +1647,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1467,7 +1669,7 @@ describe("App", () => {
       })
 
       window.history.pushState({}, "", "/foo/bar/baz")
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
       expect(
         // @ts-expect-error
@@ -1483,8 +1685,16 @@ describe("App", () => {
       )
 
       const appPages = [
-        { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-        { pageScriptHash: "subpage_hash", pageName: "page2" },
+        {
+          pageScriptHash: "toppage_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+        },
+        {
+          pageScriptHash: "subpage_hash",
+          pageName: "page2",
+          urlPathname: "page2",
+        },
       ]
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1522,13 +1732,330 @@ describe("App", () => {
     })
   })
 
+  describe("App.handleScriptFinished", () => {
+    it("will not increment cache count if session info is not set", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is not set and the script finished early", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is set and the script finished early", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will increment cache count if session info is set", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).toBeCalled()
+    })
+
+    it("will clear stale nodes if finished successfully", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      // Run the script with one new element
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      // this message now belongs to this^ session
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      // start new session
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "different_script_run_id",
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText("Here is some text")).toBeInTheDocument()
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
+      })
+    })
+
+    it("will not clear stale nodes if finished with rerun", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      // Run the script with one new element
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      // these messages now belongs to this^ session
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some other text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 1] }
+      )
+
+      // start new session
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "different_script_run_id",
+      })
+
+      // this message now belongs to this^ session. It overrides the first message of
+      // the previous session because the same delta path is used
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some new text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("Here is some new text")).toBeInTheDocument()
+      })
+      // this message was overridden because same delta-path was used be the 'new text' message
+      await waitFor(() => {
+        expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
+      })
+      await waitFor(() => {
+        expect(screen.getByText("Here is some other text")).toBeInTheDocument()
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY // use finished_fragment_run_successfully here because in the other test we used the finished_successfully status
+      )
+
+      // this message was sent in the new session
+      await waitFor(() => {
+        expect(screen.getByText("Here is some new text")).toBeInTheDocument()
+      })
+
+      // this message was cleaned up because it was sent in the old session
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Here is some other text")
+        ).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe("Logo handling", () => {
+    it("adds logo on receipt of logo ForwardMsg", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+    })
+
+    it("MPA V1 - won't remove logo on page change (based on activeScriptHash)", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new session with a different pageScriptHash
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "different_page_script_hash",
+      })
+
+      // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
+      await waitFor(() => {
+        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      })
+    })
+
+    it("MPA V2 - will remove logo if activeScriptHash does not match", async () => {
+      renderApp(getProps())
+
+      // Trigger handleNavigation (MPA V2)
+      sendForwardMessage("navigation", {
+        appPages: [
+          {
+            pageScriptHash: "page_script_hash",
+            pageName: "streamlit_app",
+            isDefault: true,
+          },
+          { pageScriptHash: "other_page_script_hash", pageName: "Page 1" },
+        ],
+        pageScriptHash: "other_page_script_hash",
+        position: 0,
+      })
+
+      // Logo outside common script
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "other_page_script_hash",
+        }
+      )
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new session with a different pageScriptHash
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "page_script_hash",
+      })
+
+      // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
+      // Cleanup for MPA V2 in filterMainScriptElements
+      await waitFor(() => {
+        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+      })
+    })
+
+    it("will remove logo if scriptRunId does not match", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new scriptRunId via new session
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // Trigger cleanup in script finished handler
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      // Since no logo is sent in this script run, logo must not be present in the script anymore
+      // Stale logo should be removed
+      await waitFor(() => {
+        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+      })
+    })
+  })
+
   //   * handlePageNotFound has branching error messages depending on pageName
   describe("App.handlePageNotFound", () => {
     it("includes the missing page name in error modal message if available", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+        appPages: [
+          {
+            pageScriptHash: "page_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+        ],
         pageScriptHash: "page_hash",
       })
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -1554,7 +2081,13 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+        appPages: [
+          {
+            pageScriptHash: "page_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+        ],
         pageScriptHash: "page_hash",
       })
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -1613,42 +2146,6 @@ describe("App", () => {
         expect(screen.getByText("Here is some text")).toBeInTheDocument()
       })
     })
-
-    it("calls MetricsManager handleDeltaMessage", () => {
-      renderApp(getProps())
-
-      const metricsManager = getStoredValue<SegmentMetricsManager>(
-        SegmentMetricsManager
-      )
-      const handleDeltaMessageSpy = jest.spyOn(
-        metricsManager,
-        "handleDeltaMessage"
-      )
-
-      // Need to set up a Script ID
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-      // Need to set the script to running
-      sendForwardMessage("sessionStatusChanged", {
-        runOnSave: false,
-        scriptIsRunning: true,
-      })
-      sendForwardMessage(
-        "delta",
-        {
-          type: "newElement",
-          newElement: {
-            type: "text",
-            text: {
-              body: "Here is some text",
-              help: "",
-            },
-          },
-        },
-        { deltaPath: [0, 0] }
-      )
-
-      expect(handleDeltaMessageSpy).toHaveBeenCalledTimes(1)
-    })
   })
 
   describe("App.handleAutoRerun and autoRerun interval handling", () => {
@@ -1686,6 +2183,31 @@ describe("App", () => {
 
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
+    })
+
+    it("triggers rerunScript with is_auto_rerun set to true", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+      jest.advanceTimersByTime(1000)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].toJSON()
+      ).toStrictEqual({
+        rerunScript: {
+          fragmentId: "myFragmentId",
+          isAutoRerun: true,
+          pageName: "",
+          pageScriptHash: "",
+          queryString: "",
+          widgetStates: {},
+        },
+      })
     })
   })
 
@@ -1816,6 +2338,104 @@ describe("App", () => {
         expect(result).toEqual(expectedResult)
       }
     )
+  })
+
+  describe("App.handleConnectionStateChanged", () => {
+    it("Sends WEBSOCKET_CONNECTED and WEBSOCKET_DISCONNECTED messages", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_CONNECTED",
+      })
+
+      // Change the ConnectionManager state to anything other than
+      // ConnectionState.CONNECTED. Moving from CONNECTED to any other state
+      // should cause us to send a WEBSOCKET_DISCONNECTED message.
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.PINGING_SERVER
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_DISCONNECTED",
+        attemptingToReconnect: true,
+      })
+    })
+
+    it("Correctly sets the data-test-connection-state attribute", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-connection-state",
+        ConnectionState.INITIAL
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-connection-state",
+        ConnectionState.CONNECTED
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.PINGING_SERVER
+        )
+      )
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-connection-state",
+        ConnectionState.PINGING_SERVER
+      )
+    })
+
+    it("Sets attemptingToReconnect to false if DISCONNECTED_FOREVER", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_CONNECTED",
+      })
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_DISCONNECTED",
+        attemptingToReconnect: false,
+      })
+    })
   })
 
   describe("handles HostCommunication messaging", () => {
@@ -2157,8 +2777,18 @@ describe("App", () => {
       const hostCommunicationMgr = prepareHostCommunicationManager()
 
       const appPages = [
-        { icon: "", pageName: "bob", scriptPath: "bob.py" },
-        { icon: "", pageName: "carl", scriptPath: "carl.py" },
+        {
+          icon: "",
+          pageName: "bob",
+          scriptPath: "bob.py",
+          urlPathname: "bob",
+        },
+        {
+          icon: "",
+          pageName: "carl",
+          scriptPath: "carl.py",
+          urlPathname: "carl",
+        },
       ]
 
       sendForwardMessage("pagesChanged", {
@@ -2193,8 +2823,62 @@ describe("App", () => {
           pageName: "",
           pageScriptHash: "hash1",
           queryString: "",
+          widgetStates: {},
         },
       })
+    })
+
+    it("clears fragment auto rerun intervals when page changes", async () => {
+      prepareHostCommunicationManager()
+
+      // autoRerun uses setInterval under-the-hood, so use fake timers
+      jest.useFakeTimers()
+      sendForwardMessage("autoRerun", {
+        interval: 1, // in seconds
+        fragmentId: "fragmentId",
+      })
+
+      // advance timer X times to trigger the interval-function
+      const times = 3
+      for (let i = 0; i < times; i++) {
+        jest.advanceTimersByTime(1000) // in milliseconds
+      }
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.sendMessage).toBeCalledTimes(times)
+      // ensure that all calls came from the autoRerun by checking the fragment id
+      for (let i = 0; i < times; i++) {
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[i][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            isAutoRerun: true,
+            fragmentId: "fragmentId",
+          })
+        )
+      }
+
+      // trigger a page change. we use a post message instead
+      // of triggering a pange change via a newSession message,
+      // because a new session also clears the autoRerun intervals
+      fireWindowPostMessage({
+        type: "REQUEST_PAGE_CHANGE",
+        pageScriptHash: "hash1",
+      })
+
+      for (let i = 0; i < times; i++) {
+        jest.advanceTimersByTime(1000) // in milliseconds
+      }
+
+      // make sure that no new messages were sent after switching the page
+      // despite advancing the timer. We could check whether clearInterval
+      // was called, but this check is more observing the behavior than checking
+      // the exact interals.
+      const oldCallCountPlusPageChangeRequest = times + 1
+      expect(connectionManager.sendMessage).toBeCalledTimes(
+        oldCallCountPlusPageChangeRequest
+      )
     })
 
     it("shows hostMenuItems", async () => {
@@ -2285,7 +2969,9 @@ describe("App", () => {
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      expect(screen.queryByTestId("stActionButton")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stToolbarActionButton")
+      ).not.toBeInTheDocument()
 
       fireWindowPostMessage({
         type: "SET_TOOLBAR_ITEMS",
@@ -2297,7 +2983,7 @@ describe("App", () => {
         ],
       })
 
-      expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
     })
 
     it("sets hideSidebarNav based on the server config option and host setting", () => {
@@ -2306,8 +2992,8 @@ describe("App", () => {
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
 
       const appPages = [
-        { pageScriptHash: "hash1", pageName: "page1" },
-        { pageScriptHash: "hash2", pageName: "page2" },
+        { pageScriptHash: "hash1", pageName: "page1", urlPathname: "page1" },
+        { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
       ]
 
       sendForwardMessage("newSession", {
@@ -2337,14 +3023,14 @@ describe("App", () => {
         },
       })
 
-      expect(screen.getByTestId("stDeployButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
 
       fireWindowPostMessage({
         type: "SET_MENU_ITEMS",
         items: [{ label: "Host menu item", key: "host-item", type: "text" }],
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("does not relay custom parent messages by default", () => {
@@ -2382,6 +3068,25 @@ describe("App", () => {
         type: "CUSTOM_PARENT_MESSAGE",
         message: "random string",
       })
+    })
+
+    it("properly handles TERMINATE_WEBSOCKET_CONNECTION and RESTART_WEBSOCKET_CONNECTION messages", () => {
+      prepareHostCommunicationManager()
+
+      const originalConnectionManager = getMockConnectionManager()
+
+      fireWindowPostMessage({
+        type: "TERMINATE_WEBSOCKET_CONNECTION",
+      })
+
+      expect(originalConnectionManager.disconnect).toHaveBeenCalled()
+
+      fireWindowPostMessage({
+        type: "RESTART_WEBSOCKET_CONNECTION",
+      })
+
+      const newConnectionManager = getMockConnectionManager()
+      expect(newConnectionManager).not.toBe(originalConnectionManager)
     })
   })
 })

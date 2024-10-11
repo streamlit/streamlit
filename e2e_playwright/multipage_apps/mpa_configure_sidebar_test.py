@@ -18,6 +18,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 
 @pytest.fixture(scope="module")
@@ -54,6 +55,14 @@ def test_page_links_in_main(
     assert_snapshot(page_links.nth(1), name="page-link-hover")
     # Disabled page
     assert_snapshot(page_links.nth(2), name="page-link-disabled")
+
+
+def test_page_links_use_correct_margin(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that page links use the correct margin."""
+    page_link_container = get_element_by_key(app, "page_link_container")
+    assert_snapshot(page_link_container, name="st_page_link-correct_margin")
 
 
 def test_page_links_in_sidebar(
@@ -99,7 +108,9 @@ def test_logo_no_sidebar(
 ):
     """Test that logo renders properly with no sidebar."""
     expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="logo-no-sidebar"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="logo-no-sidebar")

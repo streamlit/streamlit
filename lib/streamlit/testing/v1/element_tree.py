@@ -32,14 +32,13 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit import type_util, util
+from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import (
-    SliderScalar,
-    SliderScalarT,
     SliderSerde,
-    Step,
+    SliderStep,
+    SliderValueT,
 )
 from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
@@ -48,38 +47,39 @@ from streamlit.elements.widgets.time_widgets import (
     _parse_date_value,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from streamlit.proto.Code_pb2 import Code as CodeProto
-from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
-from streamlit.proto.Element_pb2 import Element as ElementProto
-from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.Heading_pb2 import Heading as HeadingProto
-from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
-from streamlit.proto.Metric_pb2 import Metric as MetricProto
-from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
-from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from streamlit.proto.Radio_pb2 import Radio as RadioProto
-from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
-from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
-from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.state.common import TESTING_KEY, user_key_from_widget_id
-from streamlit.runtime.state.safe_session_state import SafeSessionState
+from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
 
+    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+    from streamlit.proto.Block_pb2 import Block as BlockProto
+    from streamlit.proto.Button_pb2 import Button as ButtonProto
+    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
+    from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+    from streamlit.proto.Code_pb2 import Code as CodeProto
+    from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
+    from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
+    from streamlit.proto.Element_pb2 import Element as ElementProto
+    from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.proto.Heading_pb2 import Heading as HeadingProto
+    from streamlit.proto.Json_pb2 import Json as JsonProto
+    from streamlit.proto.Metric_pb2 import Metric as MetricProto
+    from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
+    from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+    from streamlit.proto.Radio_pb2 import Radio as RadioProto
+    from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+    from streamlit.proto.Text_pb2 import Text as TextProto
+    from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
+    from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
+    from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
+    from streamlit.proto.Toast_pb2 import Toast as ToastProto
+    from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
 
 T = TypeVar("T")
@@ -125,8 +125,7 @@ class Element(ABC):
     key: str | None
 
     @abstractmethod
-    def __init__(self, proto: ElementProto, root: ElementTree):
-        ...
+    def __init__(self, proto: ElementProto, root: ElementTree): ...
 
     def __iter__(self):
         yield self
@@ -189,7 +188,7 @@ class Widget(Element, ABC):
     def __init__(self, proto: Any, root: ElementTree):
         self.proto = proto
         self.root = root
-        self.key = user_key_from_widget_id(self.id)
+        self.key = user_key_from_element_id(self.id)
         self._value = None
 
     def set_value(self, v: Any):
@@ -199,16 +198,15 @@ class Widget(Element, ABC):
 
     @property
     @abstractmethod
-    def _widget_state(self) -> WidgetState:
-        ...
+    def _widget_state(self) -> WidgetState: ...
 
 
-El = TypeVar("El", bound=Element, covariant=True)
+El_co = TypeVar("El_co", bound=Element, covariant=True)
 
 
-class ElementList(Generic[El]):
-    def __init__(self, els: Sequence[El]):
-        self._list: Sequence[El] = els
+class ElementList(Generic[El_co]):
+    def __init__(self, els: Sequence[El_co]):
+        self._list: Sequence[El_co] = els
 
     def __len__(self) -> int:
         return len(self._list)
@@ -218,14 +216,12 @@ class ElementList(Generic[El]):
         return len(self)
 
     @overload
-    def __getitem__(self, idx: int) -> El:
-        ...
+    def __getitem__(self, idx: int) -> El_co: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> ElementList[El]:
-        ...
+    def __getitem__(self, idx: slice) -> ElementList[El_co]: ...
 
-    def __getitem__(self, idx: int | slice) -> El | ElementList[El]:
+    def __getitem__(self, idx: int | slice) -> El_co | ElementList[El_co]:
         if isinstance(idx, slice):
             return ElementList(self._list[idx])
         else:
@@ -237,7 +233,7 @@ class ElementList(Generic[El]):
     def __repr__(self):
         return util.repr_(self)
 
-    def __eq__(self, other: ElementList[El] | object) -> bool:
+    def __eq__(self, other: ElementList[El_co] | object) -> bool:
         if isinstance(other, ElementList):
             return self._list == other._list
         else:
@@ -248,11 +244,11 @@ class ElementList(Generic[El]):
         return [e.value for e in self]
 
 
-W = TypeVar("W", bound=Widget, covariant=True)
+W_co = TypeVar("W_co", bound=Widget, covariant=True)
 
 
-class WidgetList(Generic[W], ElementList[W]):
-    def __call__(self, key: str) -> W:
+class WidgetList(ElementList[W_co], Generic[W_co]):
+    def __call__(self, key: str) -> W_co:
         for e in self._list:
             if e.key == key:
                 return e
@@ -510,7 +506,7 @@ class Dataframe(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
@@ -696,6 +692,91 @@ class Metric(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+
+@dataclass(repr=False)
+class ButtonGroup(Widget, Generic[T]):
+    """A representation of button_group that is used by ``st.feedback``."""
+
+    _value: list[T] | None
+
+    proto: ButtonGroupProto = field(repr=False)
+    options: list[ButtonGroupProto.Option]
+    form_id: str
+
+    def __init__(self, proto: ButtonGroupProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "button_group"
+        self.options = list(proto.options)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        ws.int_array_value.data[:] = self.indices
+        return ws
+
+    @property
+    def value(self) -> list[T]:
+        """The currently selected values from the options. (list)"""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(List[T], state[self.id])
+
+    @property
+    def indices(self) -> Sequence[int]:
+        """The indices of the currently selected values from the options. (list)"""
+        return [self.options.index(self.format_func(v)) for v in self.value]
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        """The widget's formatting function for displaying options. (callable)"""
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
+
+    def set_value(self, v: list[T]) -> ButtonGroup[T]:
+        """Set the value of the multiselect widget. (list)"""
+
+        self._value = v
+        return self
+
+    def select(self, v: T) -> ButtonGroup[T]:
+        """
+        Add a selection to the widget. Do nothing if the value is already selected.\
+        If testing a multiselect widget with repeated options, use ``set_value``\
+        instead.
+        """
+        current = self.value
+        if v in current:
+            return self
+        else:
+            new = current.copy()
+            new.append(v)
+            self.set_value(new)
+            return self
+
+    def unselect(self, v: T) -> ButtonGroup[T]:
+        """
+        Remove a selection from the widget. Do nothing if the value is not\
+        already selected. If a value is selected multiple times, the first\
+        instance is removed.
+        """
+        current = self.value
+        if v not in current:
+            return self
+        else:
+            new = current.copy()
+            while v in new:
+                new.remove(v)
+            self.set_value(new)
+            return self
 
 
 @dataclass(repr=False)
@@ -1014,7 +1095,7 @@ class SelectSlider(Widget, Generic[T]):
         except (ValueError, TypeError):
             try:
                 v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
-            except:
+            except:  # noqa: E722
                 raise ValueError(f"Could not find index for {self.value}")
 
         ws = WidgetState()
@@ -1045,17 +1126,17 @@ class SelectSlider(Widget, Generic[T]):
 
 
 @dataclass(repr=False)
-class Slider(Widget, Generic[SliderScalarT]):
+class Slider(Widget, Generic[SliderValueT]):
     """A representation of ``st.slider``."""
 
-    _value: SliderScalarT | Sequence[SliderScalarT] | None
+    _value: SliderValueT | Sequence[SliderValueT] | None
 
     proto: SliderProto = field(repr=False)
     label: str
     data_type: SliderProto.DataType.ValueType
-    min: SliderScalar
-    max: SliderScalar
-    step: Step
+    min: SliderValueT
+    max: SliderValueT
+    step: SliderStep
     help: str
     form_id: str
 
@@ -1064,8 +1145,8 @@ class Slider(Widget, Generic[SliderScalarT]):
         self.type = "slider"
 
     def set_value(
-        self, v: SliderScalarT | Sequence[SliderScalarT]
-    ) -> Slider[SliderScalarT]:
+        self, v: SliderValueT | Sequence[SliderValueT]
+    ) -> Slider[SliderValueT]:
         """Set the (single) value of the slider."""
         self._value = v
         return self
@@ -1082,7 +1163,7 @@ class Slider(Widget, Generic[SliderScalarT]):
         return ws
 
     @property
-    def value(self) -> SliderScalarT | Sequence[SliderScalarT]:
+    def value(self) -> SliderValueT | Sequence[SliderValueT]:
         """The currently selected value or range. (Any or Sequence of Any)"""
         if self._value is not None:
             return self._value
@@ -1093,8 +1174,8 @@ class Slider(Widget, Generic[SliderScalarT]):
             return state[self.id]  # type: ignore
 
     def set_range(
-        self, lower: SliderScalarT, upper: SliderScalarT
-    ) -> Slider[SliderScalarT]:
+        self, lower: SliderValueT, upper: SliderValueT
+    ) -> Slider[SliderValueT]:
         """Set the ranged value of the slider."""
         return self.set_value([lower, upper])
 
@@ -1111,7 +1192,7 @@ class Table(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 @dataclass(repr=False)
@@ -1411,6 +1492,10 @@ class Block:
         return WidgetList(self.get("button"))  # type: ignore
 
     @property
+    def button_group(self) -> WidgetList[ButtonGroup[Any]]:
+        return WidgetList(self.get("button_group"))  # type: ignore
+
+    @property
     def caption(self) -> ElementList[Caption]:
         return ElementList(self.get("caption"))  # type: ignore
 
@@ -1586,7 +1671,7 @@ def repr_(self) -> str:
     """
     classname = self.__class__.__name__
 
-    defaults: list[Any] = [None, "", False, [], set(), dict()]
+    defaults: list[Any] = [None, "", False, [], set(), {}]
 
     if is_dataclass(self):
         fields_vals = (
@@ -1600,11 +1685,11 @@ def repr_(self) -> str:
         fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
 
     reprs = []
-    for field, value in fields_vals:
+    for field_name, value in fields_vals:
         if isinstance(value, dict):
-            line = f"{field}={format_dict(value)}"
+            line = f"{field_name}={format_dict(value)}"
         else:
-            line = f"{field}={value!r}"
+            line = f"{field_name}={value!r}"
         reprs.append(line)
 
     reprs[0] = "\n" + reprs[0]
@@ -1729,9 +1814,9 @@ class Status(Block):
     def state(self):
         if self.icon == "spinner":
             return "running"
-        elif self.icon == "check":
+        elif self.icon == ":material/check:":
             return "complete"
-        elif self.icon == "error":
+        elif self.icon == ":material/error:":
             return "error"
         else:
             raise ValueError("Unknown Status state")
@@ -1886,6 +1971,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Table(elt.arrow_table, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
+            elif ty == "button_group":
+                new_node = ButtonGroup(elt.button_group, root=root)
             elif ty == "chat_input":
                 new_node = ChatInput(elt.chat_input, root=root)
             elif ty == "checkbox":

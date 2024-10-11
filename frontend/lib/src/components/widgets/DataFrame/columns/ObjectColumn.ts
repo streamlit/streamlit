@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 
 import {
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  toSafeString,
   removeLineBreaks,
+  toSafeString,
 } from "./utils"
 
 /**

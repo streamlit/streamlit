@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Send slack notifications"""
+
 import os
 import sys
 
@@ -33,7 +34,6 @@ def send_notification():
         "python": "on python tests",
         "js": "on javascript tests",
         "py_prod": "on python prod dependencies test",
-        "cypress": "on cypress tests",
         "playwright": "on playwright tests",
         "build": "to release",
     }

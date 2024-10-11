@@ -48,6 +48,7 @@ describe("Expander container", () => {
     )
     const expanderContainer = screen.getByTestId("stExpander")
     expect(expanderContainer).toBeInTheDocument()
+    expect(expanderContainer).toHaveClass("stExpander")
   })
 
   it("does not render a list", () => {
@@ -90,7 +91,7 @@ describe("Expander container", () => {
   })
 
   it("renders expander with a check icon", () => {
-    const props = getProps({ icon: "check" })
+    const props = getProps({ icon: ":material/check:" })
     render(
       <Expander {...props}>
         <div>test</div>
@@ -100,13 +101,35 @@ describe("Expander container", () => {
   })
 
   it("renders expander with a error icon", () => {
-    const props = getProps({ icon: "error" })
+    const props = getProps({ icon: ":material/error:" })
     render(
       <Expander {...props}>
         <div>test</div>
       </Expander>
     )
     expect(screen.getByTestId("stExpanderIconError")).toBeInTheDocument()
+  })
+
+  it("renders expander with an emoji icon", () => {
+    const props = getProps({ icon: "🚀" })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIcon")).toBeInTheDocument()
+    expect(screen.getByText("🚀")).toBeInTheDocument()
+  })
+
+  it("renders expander with a material icon", () => {
+    const props = getProps({ icon: ":material/add_circle:" })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIcon")).toBeInTheDocument()
+    expect(screen.getByText("add_circle")).toBeInTheDocument()
   })
 
   it("should render a expanded component", () => {

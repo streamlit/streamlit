@@ -14,10 +14,14 @@
 
 from __future__ import annotations
 
-from streamlit.runtime.caching.storage import CacheStorageManager
+from typing import TYPE_CHECKING
+
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
+
+if TYPE_CHECKING:
+    from streamlit.runtime.caching.storage import CacheStorageManager
 
 
 def create_default_cache_storage_manager() -> CacheStorageManager:

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import unittest
-from typing import Any, Tuple
+from typing import Any
 
 from parameterized import parameterized
 
@@ -126,7 +126,7 @@ class UrlUtilTest(unittest.TestCase):
     def test_is_url_limits_schema(
         self,
         url: str,
-        allowed_schemas: Tuple[url_util.UrlSchema, ...] | None,
+        allowed_schemas: tuple[url_util.UrlSchema, ...] | None,
         expected_value: bool,
     ):
         """Test that is_ur applies the allowed schema parameter."""

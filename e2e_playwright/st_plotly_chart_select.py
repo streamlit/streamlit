@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import time
+
 import numpy as np
 import plotly.express as px
 
@@ -124,17 +126,13 @@ fig = px.histogram(df, x="total_bill")
 def histogram_callback():
     if len(st.session_state.histogram_chart.selection["points"]) > 0:
         st.write("Callback triggered")
-        points = list(
-            point for point in st.session_state.histogram_chart.selection["points"]
-        )
+        points = list(st.session_state.histogram_chart.selection["points"])
         st.dataframe(points)
 
 
 st.plotly_chart(
     fig, on_select=histogram_callback, key="histogram_chart", selection_mode="lasso"
 )
-
-import time
 
 if st.button("Create some elements to unmount component"):
     for _ in range(3):

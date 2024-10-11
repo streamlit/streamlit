@@ -43,7 +43,7 @@ class MarkdownMixin:
         Parameters
         ----------
         body : str
-            The string to display as Github-flavored Markdown. Syntax
+            The string to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
             This also supports:
@@ -51,6 +51,12 @@ class MarkdownMixin:
             * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
               For a list of all supported codes,
               see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * Google Material Symbols (rounded style), using the syntax
+              ``:material/icon_name:``, where "icon_name" is the name of the
+              icon in snake case. For a complete list of icons, see Google's
+              `Material Symbols <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
 
             * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
               must be on their own lines). Supported LaTeX functions are listed
@@ -64,15 +70,17 @@ class MarkdownMixin:
               ``:blue-background[your text here]``.
 
         unsafe_allow_html : bool
-            By default, any HTML tags found in the body will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
+            Whether to render HTML within ``body``. If this is ``False``
+            (default), any HTML tags found in ``body`` will be escaped and
+            therefore treated as raw text. If this is ``True``, any HTML
+            expressions within ``body`` will be rendered.
 
-            That said, we *strongly advise against it*. It is hard to write
-            secure HTML, so by using this argument you may be compromising your
-            users' security. For more information, see:
+            Adding custom HTML to your app impacts safety, styling, and
+            maintainability.
 
-            https://github.com/streamlit/streamlit/issues/152
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         help : str
             An optional tooltip that gets displayed next to the Markdown.
@@ -139,7 +147,7 @@ class MarkdownMixin:
         >>>
         >>> code = '''def hello():
         ...     print("Hello, Streamlit!")'''
-        >>> st.code(code, language='python')
+        >>> st.code(code, language="python")
 
         """
         code_proto = MarkdownProto()
@@ -164,36 +172,27 @@ class MarkdownMixin:
         Parameters
         ----------
         body : str
-            The text to display as Github-flavored Markdown. Syntax
+            The text to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
-            This also supports:
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         unsafe_allow_html : bool
-            By default, any HTML tags found in strings will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
+            Whether to render HTML within ``body``. If this is ``False``
+            (default), any HTML tags found in ``body`` will be escaped and
+            therefore treated as raw text. If this is ``True``, any HTML
+            expressions within ``body`` will be rendered.
 
-            That said, *we strongly advise against it*. It is hard to write secure
-            HTML, so by using this argument you may be compromising your users'
-            security. For more information, see:
+            Adding custom HTML to your app impacts safety, styling, and
+            maintainability.
 
-            https://github.com/streamlit/streamlit/issues/152
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         help : str
             An optional tooltip that gets displayed next to the caption.
@@ -202,8 +201,8 @@ class MarkdownMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.caption('This is a string that explains something above.')
-        >>> st.caption('A caption with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.caption("This is a string that explains something above.")
+        >>> st.caption("A caption with _italics_ :blue[colors] and emojis :sunglasses:")
 
         """
         caption_proto = MarkdownProto()

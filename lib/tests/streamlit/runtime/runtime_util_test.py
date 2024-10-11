@@ -14,6 +14,8 @@
 
 """Unit tests for runtime_util.py."""
 
+from __future__ import annotations
+
 import unittest
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg

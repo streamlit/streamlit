@@ -15,8 +15,10 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
+
 import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
 
 import { AppSkeleton } from "./AppSkeleton"
@@ -29,6 +31,8 @@ describe("AppSkeleton element", () => {
     expect(screen.queryAllByTestId("stAppSkeleton")).toEqual([])
 
     // Then, a few ms later (500ms at time of writing) we show the skeleton.
-    expect(await screen.findByTestId("stAppSkeleton")).toBeVisible()
+    const appSkeleton = await screen.findByTestId("stAppSkeleton")
+    expect(appSkeleton).toBeVisible()
+    expect(appSkeleton).toHaveClass("stAppSkeleton")
   })
 })

@@ -19,14 +19,22 @@ from __future__ import annotations
 import pickle
 import threading
 import types
-from datetime import timedelta
-from typing import Any, Callable, Final, Literal, TypeVar, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
@@ -39,11 +47,9 @@ from streamlit.runtime.caching.cache_utils import (
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
-    ElementMsgData,
     MsgData,
-    MultiCacheResults,
+    show_widget_replay_deprecation,
 )
-from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
@@ -58,9 +64,13 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from streamlit.runtime.caching.hashing import HashFuncsDict
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -80,13 +90,11 @@ class CachedDataFuncInfo(CachedFuncInfo):
         persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | str | None,
-        allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
     ):
         super().__init__(
             func,
             show_spinner=show_spinner,
-            allow_widgets=allow_widgets,
             hash_funcs=hash_funcs,
         )
         self.persist = persist
@@ -115,7 +123,6 @@ class CachedDataFuncInfo(CachedFuncInfo):
             max_entries=self.max_entries,
             ttl=self.ttl,
             display_name=self.display_name,
-            allow_widgets=self.allow_widgets,
         )
 
     def validate_params(self) -> None:
@@ -147,7 +154,6 @@ class DataCaches(CacheStatsProvider):
         max_entries: int | None,
         ttl: int | float | timedelta | str | None,
         display_name: str,
-        allow_widgets: bool,
     ) -> DataCache:
         """Return the mem cache for the given key.
 
@@ -207,7 +213,6 @@ class DataCaches(CacheStatsProvider):
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
                 display_name=display_name,
-                allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
             return cache
@@ -314,20 +319,13 @@ class CacheDataAPI:
     st.cache_data.clear().
     """
 
-    def __init__(
-        self, decorator_metric_name: str, deprecation_warning: str | None = None
-    ):
+    def __init__(self, decorator_metric_name: str):
         """Create a CacheDataAPI instance.
 
         Parameters
         ----------
         decorator_metric_name
-            The metric name to record for decorator usage. `@st.experimental_memo` is
-            deprecated, but we're still supporting it and tracking its usage separately
-            from `@st.cache_data`.
-
-        deprecation_warning
-            An optional deprecation warning to show when the API is accessed.
+            The metric name to record for decorator usage.
         """
 
         # Parameterize the decorator metric name.
@@ -335,7 +333,6 @@ class CacheDataAPI:
         self._decorator = gather_metrics(  # type: ignore
             decorator_metric_name, self._decorator
         )
-        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -343,8 +340,7 @@ class CacheDataAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -357,8 +353,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,
@@ -402,7 +397,7 @@ class CacheDataAPI:
         cache with ``st.cache_data.clear()``.
 
         To cache global resources, use ``st.cache_resource`` instead. Learn more
-        about caching at https://docs.streamlit.io/library/advanced-features/caching.
+        about caching at https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------
@@ -440,10 +435,6 @@ class CacheDataAPI:
 
         experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
-            Support for widgets in cached functions is currently experimental.
-            Setting this parameter to True may lead to excessive memory use since the
-            widget value is treated as an additional input parameter to the cache.
-            We may remove support for this option at any time without notice.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -453,6 +444,12 @@ class CacheDataAPI:
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
 
+        .. deprecated::
+            The cached widget replay functionality was removed in 1.38. Please
+            remove the ``experimental_allow_widgets`` parameter from your
+            caching decorators. This parameter will be removed in a future
+            version.
+
         Example
         -------
         >>> import streamlit as st
@@ -461,7 +458,7 @@ class CacheDataAPI:
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
         ...     return data
-        ...
+        >>>
         >>> d1 = fetch_and_clean_data(DATA_URL_1)
         >>> # Actually executes the function, since this is the first time it was
         >>> # encountered.
@@ -492,7 +489,7 @@ class CacheDataAPI:
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
-        ...
+        >>>
         >>> connection = make_database_connection()
         >>> d1 = fetch_and_clean_data(connection, num_rows=10)
         >>> # Actually executes the function, since this is the first time it was
@@ -512,7 +509,7 @@ class CacheDataAPI:
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
-        ...
+        >>>
         >>> fetch_and_clean_data.clear(_db_connection, 50)
         >>> # Clear the cached entry for the arguments provided.
         >>>
@@ -557,7 +554,8 @@ class CacheDataAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        self._maybe_show_deprecation_warning()
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_data")
 
         def wrapper(f):
             return make_cached_func_wrapper(
@@ -567,7 +565,6 @@ class CacheDataAPI:
                     show_spinner=show_spinner,
                     max_entries=max_entries,
                     ttl=ttl,
-                    allow_widgets=experimental_allow_widgets,
                     hash_funcs=hash_funcs,
                 )
             )
@@ -582,7 +579,6 @@ class CacheDataAPI:
                 show_spinner=show_spinner,
                 max_entries=max_entries,
                 ttl=ttl,
-                allow_widgets=experimental_allow_widgets,
                 hash_funcs=hash_funcs,
             )
         )
@@ -590,15 +586,7 @@ class CacheDataAPI:
     @gather_metrics("clear_data_caches")
     def clear(self) -> None:
         """Clear all in-memory and on-disk data caches."""
-        self._maybe_show_deprecation_warning()
         _data_caches.clear_all()
-
-    def _maybe_show_deprecation_warning(self):
-        """If the API is being accessed with the deprecated `st.experimental_memo` name,
-        show a deprecation warning.
-        """
-        if self._deprecation_warning is not None:
-            show_deprecation_warning(self._deprecation_warning)
 
 
 class DataCache(Cache):
@@ -612,7 +600,6 @@ class DataCache(Cache):
         max_entries: int | None,
         ttl_seconds: float | None,
         display_name: str,
-        allow_widgets: bool = False,
     ):
         super().__init__()
         self.key = key
@@ -621,7 +608,6 @@ class DataCache(Cache):
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.persist = persist
-        self.allow_widgets = allow_widgets
 
     def get_stats(self) -> list[CacheStat]:
         if isinstance(self.storage, CacheStatsProvider):
@@ -642,21 +628,12 @@ class DataCache(Cache):
 
         try:
             entry = pickle.loads(pickled_entry)
-            if not isinstance(entry, MultiCacheResults):
+            if not isinstance(entry, CachedResult):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.
                 self.storage.delete(key)
                 raise CacheKeyNotFoundError()
-
-            ctx = get_script_run_ctx()
-            if not ctx:
-                raise CacheKeyNotFoundError()
-
-            widget_key = entry.get_current_widget_key(ctx, CacheType.DATA)
-            if widget_key in entry.results:
-                return entry.results[widget_key]
-            else:
-                raise CacheKeyNotFoundError()
+            return entry
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
@@ -665,43 +642,13 @@ class DataCache(Cache):
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return
-
-        main_id = st._main.id
-        sidebar_id = st.sidebar.id
-
-        if self.allow_widgets:
-            widgets = {
-                msg.widget_metadata.widget_id
-                for msg in messages
-                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
-            }
-        else:
-            widgets = set()
-
-        multi_cache_results: MultiCacheResults | None = None
-
-        # Try to find in cache storage, then falling back to a new result instance
         try:
-            multi_cache_results = self._read_multi_results_from_storage(key)
-        except (CacheKeyNotFoundError, pickle.UnpicklingError):
-            pass
-
-        if multi_cache_results is None:
-            multi_cache_results = MultiCacheResults(widget_ids=widgets, results={})
-        multi_cache_results.widget_ids.update(widgets)
-        widget_key = multi_cache_results.get_current_widget_key(ctx, CacheType.DATA)
-
-        result = CachedResult(value, messages, main_id, sidebar_id)
-        multi_cache_results.results[widget_key] = result
-
-        try:
-            pickled_entry = pickle.dumps(multi_cache_results)
+            main_id = st._main.id
+            sidebar_id = st.sidebar.id
+            entry = CachedResult(value, messages, main_id, sidebar_id)
+            pickled_entry = pickle.dumps(entry)
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
-
         self.storage.set(key, pickled_entry)
 
     def _clear(self, key: str | None = None) -> None:
@@ -709,22 +656,3 @@ class DataCache(Cache):
             self.storage.clear()
         else:
             self.storage.delete(key)
-
-    def _read_multi_results_from_storage(self, key: str) -> MultiCacheResults:
-        """Look up the results from storage and ensure it has the right type.
-
-        Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
-        entry is malformed.
-        """
-        try:
-            pickled = self.storage.get(key)
-        except CacheStorageKeyNotFoundError as e:
-            raise CacheKeyNotFoundError(str(e)) from e
-
-        maybe_results = pickle.loads(pickled)
-
-        if isinstance(maybe_results, MultiCacheResults):
-            return maybe_results
-        else:
-            self.storage.delete(key)
-            raise CacheKeyNotFoundError()

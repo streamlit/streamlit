@@ -15,20 +15,19 @@
  */
 
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
+import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
+import { PresetThemeName } from "@streamlit/lib/src/theme/types"
+import Resolver from "@streamlit/lib/src/util/Resolver"
 
 import {
+  AppConfig,
+  DeployedAppMetadata,
   IGuestToHostMessage,
   IHostToGuestMessage,
-  VersionedMessage,
   IMenuItem,
   IToolbarItem,
-  DeployedAppMetadata,
-  AppConfig,
+  VersionedMessage,
 } from "./types"
-
-import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
-
-import Resolver from "@streamlit/lib/src/util/Resolver"
 
 export const HOST_COMM_VERSION = 1
 
@@ -43,7 +42,10 @@ export interface HostCommunicationProps {
   readonly clearCache: () => void
   readonly sendAppHeartbeat: () => void
   readonly setInputsDisabled: (inputsDisabled: boolean) => void
-  readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
+  readonly themeChanged: (
+    themeName?: PresetThemeName,
+    themeInfo?: ICustomThemeConfig
+  ) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
   readonly jwtHeaderChanged: (jwtPayload: {
@@ -61,6 +63,8 @@ export interface HostCommunicationProps {
   readonly deployedAppMetadataChanged: (
     deployedAppMetadata: DeployedAppMetadata
   ) => void
+  readonly restartWebsocketConnection: () => void
+  readonly terminateWebsocketConnection: () => void
 }
 
 /**
@@ -246,7 +250,15 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SET_CUSTOM_THEME_CONFIG") {
-      this.props.themeChanged(message.themeInfo)
+      this.props.themeChanged(message.themeName, message.themeInfo)
+    }
+
+    if (message.type === "RESTART_WEBSOCKET_CONNECTION") {
+      this.props.restartWebsocketConnection()
+    }
+
+    if (message.type === "TERMINATE_WEBSOCKET_CONNECTION") {
+      this.props.terminateWebsocketConnection()
     }
   }
 }

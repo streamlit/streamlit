@@ -17,22 +17,24 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from streamlit import _main, type_util
 from streamlit.components.types.base_custom_component import BaseCustomComponent
-from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import check_cache_replay_rules
+from streamlit.dataframe_util import is_dataframe_like
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.policies import check_cache_replay_rules
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import NoValue, register_widget
-from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import to_bytes
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.state import register_widget
+from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import WidgetCallback
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -49,10 +51,17 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
-        return self.create_instance(*args, default=default, key=key, **kwargs)
+        return self.create_instance(
+            *args,
+            default=default,
+            key=key,
+            on_change=on_change,
+            **kwargs,
+        )
 
     @gather_metrics("create_instance")
     def create_instance(
@@ -60,6 +69,7 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
@@ -76,6 +86,8 @@ class CustomComponent(BaseCustomComponent):
         key: str or None
             If not None, this is the user key we use to generate the
             component's "widget ID".
+        on_change: WidgetCallback or None
+            An optional callback invoked when the widget's value changes. No arguments are passed to it.
         **kwargs
             Keyword args to pass to the component.
 
@@ -89,7 +101,7 @@ class CustomComponent(BaseCustomComponent):
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
         try:
-            import pyarrow
+            import pyarrow  # noqa: F401
 
             from streamlit.components.v1 import component_arrow
         except ImportError:
@@ -111,12 +123,12 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         json_args = {}
         special_args = []
         for arg_name, arg_val in all_args.items():
-            if type_util.is_bytes_like(arg_val):
+            if is_bytes_like(arg_val):
                 bytes_arg = SpecialArg()
                 bytes_arg.key = arg_name
                 bytes_arg.bytes = to_bytes(arg_val)
                 special_args.append(bytes_arg)
-            elif type_util.is_dataframe_like(arg_val):
+            elif is_dataframe_like(arg_val):
                 dataframe_arg = SpecialArg()
                 dataframe_arg.key = arg_name
                 component_arrow.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
@@ -131,9 +143,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 "Could not convert component args to JSON", ex
             )
 
-        def marshall_component(
-            dg: DeltaGenerator, element: Element
-        ) -> Any | type[NoValue]:
+        def marshall_component(dg: DeltaGenerator, element: Element) -> Any:
             element.component_instance.component_name = self.name
             element.component_instance.form_id = current_form_id(dg)
             if self.url is not None:
@@ -160,26 +170,22 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
             if key is None:
                 marshall_element_args()
-                computed_id = compute_widget_id(
+                computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
-                    name=self.name,
                     form_id=current_form_id(dg),
+                    name=self.name,
                     url=self.url,
-                    key=key,
                     json_args=serialized_json_args,
                     special_args=special_args,
-                    page=ctx.page_script_hash if ctx else None,
                 )
             else:
-                computed_id = compute_widget_id(
+                computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
-                    name=self.name,
                     form_id=current_form_id(dg),
+                    name=self.name,
                     url=self.url,
-                    key=key,
-                    page=ctx.page_script_hash if ctx else None,
                 )
             element.component_instance.id = computed_id
 
@@ -188,13 +194,12 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 return ui_value
 
             component_state = register_widget(
-                element_type="component_instance",
-                element_proto=element.component_instance,
-                user_key=key,
-                widget_func_name=self.name,
+                element.component_instance.id,
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
                 ctx=ctx,
+                on_change_handler=on_change,
+                value_type="json_value",
             )
             widget_value = component_state.value
 
@@ -209,7 +214,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        dg = _main
+        dg = get_dg_singleton_instance().main_dg
 
         element = Element()
         return_value = marshall_component(dg, element)
@@ -230,7 +235,8 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
     def __ne__(self, other) -> bool:
         """Inequality operator."""
 
-        # we have to use "not X == Y"" here because if we use "X != Y" we call __ne__ again and end up in recursion
+        # we have to use "not X == Y"" here because if we use "X != Y"
+        # we call __ne__ again and end up in recursion
         return not self == other
 
     def __str__(self) -> str:

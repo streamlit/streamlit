@@ -15,22 +15,35 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Callable, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Callable, TypeVar, cast, overload
 
-from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
-from streamlit.elements.lib.dialog import DialogWidth
+from streamlit.delta_generator_singletons import (
+    get_dg_singleton_instance,
+    get_last_dg_added_to_context_stack,
+)
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.fragment import fragment as _fragment
+from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+
+if TYPE_CHECKING:
+    from streamlit.elements.lib.dialog import DialogWidth
 
 
 def _assert_no_nested_dialogs() -> None:
     """Check the current stack for existing DeltaGenerator's of type 'dialog'.
-    Note that the check like this only works when Dialog is called as a context manager, as this populates the dg_stack in delta_generator correctly.
+    Note that the check like this only works when Dialog is called as a context manager,
+    as this populates the dg_stack in delta_generator correctly.
 
-    This does not detect the edge case in which someone calls, for example, `with st.sidebar` inside of a dialog function and opens a dialog in there,
-    as `with st.sidebar` pushes the new DeltaGenerator to the stack. In order to check for that edge case, we could try to check all DeltaGenerators in the stack,
-    and not only the last one. Since we deem this to be an edge case, we lean towards simplicity here.
+    This does not detect the edge case in which someone calls, for example,
+    `with st.sidebar` inside of a dialog function and opens a dialog in there, as
+    `with st.sidebar` pushes the new DeltaGenerator to the stack. In order to check for
+    that edge case, we could try to check all DeltaGenerators in the stack, and not only
+    the last one. Since we deem this to be an edge case, we lean towards simplicity
+    here.
 
     Raises
     ------
@@ -48,55 +61,83 @@ F = TypeVar("F", bound=Callable[..., None])
 
 
 def _dialog_decorator(
-    non_optional_func: F, title: str, *, width: DialogWidth = "small"
+    non_optional_func: F,
+    title: str,
+    *,
+    width: DialogWidth = "small",
+    should_show_deprecation_warning: bool = False,
 ) -> F:
     if title is None or title == "":
         raise StreamlitAPIException(
-            'A non-empty `title` argument has to be provided for dialogs, for example `@st.experimental_dialog("Example Title")`.'
+            "A non-empty `title` argument has to be provided for dialogs, for example "
+            '`@st.dialog("Example Title")`.'
         )
 
     @wraps(non_optional_func)
     def wrap(*args, **kwargs) -> None:
         _assert_no_nested_dialogs()
         # Call the Dialog on the event_dg because it lives outside of the normal
-        # Streamlit UI flow. For example, if it is called from the sidebar, it should not
-        # inherit the sidebar theming.
-        dialog = event_dg._dialog(title=title, dismissible=True, width=width)
+        # Streamlit UI flow. For example, if it is called from the sidebar, it should
+        # not inherit the sidebar theming.
+        dialog = get_dg_singleton_instance().event_dg._dialog(
+            title=title, dismissible=True, width=width
+        )
         dialog.open()
 
-        @_fragment
         def dialog_content() -> None:
-            # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
+            if should_show_deprecation_warning:
+                show_deprecation_warning(
+                    make_deprecated_name_warning(
+                        "experimental_dialog",
+                        "dialog",
+                        "2025-01-01",
+                    )
+                )
+
+            # if the dialog should be closed, st.rerun() has to be called
+            # (same behavior as with st.fragment)
             _ = non_optional_func(*args, **kwargs)
             return None
 
+        # the fragment decorator has multiple return types so that you can pass
+        # arguments to it. Here we know the return type, so we cast
+        fragmented_dialog_content = cast(
+            Callable[[], None],
+            _fragment(
+                dialog_content, additional_hash_info=non_optional_func.__qualname__
+            ),
+        )
+
         with dialog:
-            return dialog_content()
+            fragmented_dialog_content()
+            return None
 
     return cast(F, wrap)
 
 
 @overload
-def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F], F]:
-    ...
-
-
-# 'title' can be a function since `dialog_decorator` is a decorator. We just call it 'title' here though
-# to make the user-doc more friendly as we want the user to pass a title, not a function.
-# The user is supposed to call it like @st.dialog("my_title") , which makes 'title' a positional arg, hence
-# this 'trick'. The overload is required to have a good type hint for the decorated function args.
-@overload
-def dialog_decorator(title: F | None, *, width: DialogWidth = "small") -> F:
-    ...
-
-
-@gather_metrics("experimental_dialog")
 def dialog_decorator(
-    title: F | None | str = "", *, width: DialogWidth = "small"
+    title: str, *, width: DialogWidth = "small"
+) -> Callable[[F], F]: ...
+
+
+# 'title' can be a function since `dialog_decorator` is a decorator.
+# We just call it 'title' here though to make the user-doc more friendly as
+# we want the user to pass a title, not a function. The user is supposed to
+# call it like @st.dialog("my_title") , which makes 'title' a positional arg, hence
+# this 'trick'. The overload is required to have a good type hint for the decorated
+# function args.
+@overload
+def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
+
+
+@gather_metrics("dialog")
+def dialog_decorator(
+    title: F | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
     """Function decorator to create a modal dialog.
 
-    A function decorated with ``@st.experimental_dialog`` becomes a dialog
+    A function decorated with ``@st.dialog`` becomes a dialog
     function. When you call a dialog function, Streamlit inserts a modal dialog
     into your app. Streamlit element commands called within the dialog function
     render inside the modal dialog.
@@ -106,12 +147,12 @@ def dialog_decorator(
     app should generally be stored in Session State.
 
     A user can dismiss a modal dialog by clicking outside of it, clicking the
-    "**X**" in its upper-right corner, or pressing``ESC`` on their keyboard.
+    "**X**" in its upper-right corner, or pressing ``ESC`` on their keyboard.
     Dismissing a modal dialog does not trigger an app rerun. To close the modal
     dialog programmatically, call ``st.rerun()`` explicitly inside of the
     dialog function.
 
-    ``st.experimental_dialog`` inherits behavior from |st.experimental_fragment|_.
+    ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
     Streamlit only reruns the dialog function instead of the full script.
 
@@ -123,12 +164,11 @@ def dialog_decorator(
     handling any side effects of that behavior.
 
     .. warning::
-        A dialog may not open another dialog. Only one dialog function may be
-        called in a script run, which means that only one dialog can be open at
-        any given time.
+        Only one dialog function may be called in a script run, which means
+        that only one dialog can be open at any given time.
 
-    .. |st.experimental_fragment| replace:: ``st.experimental_fragment``
-    .. _st.experimental_fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
+    .. |st.fragment| replace:: ``st.fragment``
+    .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
 
     Parameters
     ----------
@@ -141,7 +181,7 @@ def dialog_decorator(
 
     Examples
     --------
-    The following example demonstrates the basic usage of ``@st.experimental_dialog``.
+    The following example demonstrates the basic usage of ``@st.dialog``.
     In this app, clicking "**A**" or "**B**" will open a modal dialog and prompt you
     to enter a reason for your vote. In the modal dialog, click "**Submit**" to record
     your vote into Session State and rerun the app. This will close the modal dialog
@@ -149,7 +189,7 @@ def dialog_decorator(
 
     >>> import streamlit as st
     >>>
-    >>> @st.experimental_dialog("Cast your vote")
+    >>> @st.dialog("Cast your vote")
     >>> def vote(item):
     >>>     st.write(f"Why is {item} your favorite?")
     >>>     reason = st.text_input("Because...")
@@ -173,13 +213,7 @@ def dialog_decorator(
     """
 
     func_or_title = title
-    if func_or_title is None:
-        # Support passing the params via function decorator
-        def wrapper(f: F) -> F:
-            return _dialog_decorator(non_optional_func=f, title="", width=width)
-
-        return wrapper
-    elif type(func_or_title) is str:
+    if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title
@@ -187,5 +221,47 @@ def dialog_decorator(
 
         return wrapper
 
-    func: F = cast(F, func_or_title)
+    func: F = func_or_title
     return _dialog_decorator(func, "", width=width)
+
+
+@overload
+def experimental_dialog_decorator(
+    title: str, *, width: DialogWidth = "small"
+) -> Callable[[F], F]: ...
+
+
+# 'title' can be a function since `dialog_decorator` is a decorator. We just call it
+# 'title' here though to make the user-doc more friendly as we want the user to pass a
+#  title, not a function. The user is supposed to call it like @st.dialog("my_title"),
+#  which makes 'title' a positional arg, hence this 'trick'. The overload is required to
+#  have a good type hint for the decorated function args.
+@overload
+def experimental_dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
+
+
+@gather_metrics("experimental_dialog")
+def experimental_dialog_decorator(
+    title: F | str, *, width: DialogWidth = "small"
+) -> F | Callable[[F], F]:
+    """Deprecated alias for @st.dialog.
+    See the docstring for the decorator's new name.
+    """
+    func_or_title = title
+    if isinstance(func_or_title, str):
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            title: str = func_or_title
+            return _dialog_decorator(
+                non_optional_func=f,
+                title=title,
+                width=width,
+                should_show_deprecation_warning=True,
+            )
+
+        return wrapper
+
+    func: F = func_or_title
+    return _dialog_decorator(
+        func, "", width=width, should_show_deprecation_warning=True
+    )

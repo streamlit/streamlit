@@ -15,11 +15,14 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
-import { Text as TextProto } from "@streamlit/lib/src/proto"
-import TextElement, { TextProps } from "./TextElement"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
+import { Text as TextProto } from "@streamlit/lib/src/proto"
+
+import TextElement, { TextProps } from "./TextElement"
 
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   element: TextProto.create({
@@ -33,7 +36,11 @@ describe("TextElement element", () => {
   it("renders preformatted text as expected", () => {
     const props = getProps()
     render(<TextElement {...props} />)
+
+    const textElement = screen.getByTestId("stText")
+    expect(textElement).toBeInTheDocument()
     expect(screen.getByText("some plain text")).toBeInTheDocument()
+    expect(textElement).toHaveClass("stText")
   })
 
   it("renders text with help tooltip", async () => {

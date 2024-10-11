@@ -17,20 +17,19 @@
 import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
+import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
-  BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
+  BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
-
-import { Popover as UIPopover, TRIGGER_TYPE, PLACEMENT } from "baseui/popover"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
 
@@ -57,7 +56,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const fluidButtonWidth = element.help ? width : true
 
   return (
-    <div data-testid="stPopover">
+    <div data-testid="stPopover" className="stPopover">
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
@@ -99,25 +98,25 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderBottomRightRadius: theme.radii.xl,
               borderBottomLeftRadius: theme.radii.xl,
 
-              borderLeftWidth: "1px",
-              borderRightWidth: "1px",
-              borderTopWidth: "1px",
-              borderBottomWidth: "1px",
+              borderLeftWidth: theme.sizes.borderWidth,
+              borderRightWidth: theme.sizes.borderWidth,
+              borderTopWidth: theme.sizes.borderWidth,
+              borderBottomWidth: theme.sizes.borderWidth,
 
-              paddingRight: "calc(1.5em - 1px)", // 1px to account for border.
-              paddingLeft: "calc(1.5em - 1px)",
-              paddingBottom: "calc(1.5em - 1px)",
-              paddingTop: "calc(1.5em - 1px)",
+              paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
+              paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+              paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+              paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
 
               borderLeftStyle: "solid",
               borderRightStyle: "solid",
               borderTopStyle: "solid",
               borderBottomStyle: "solid",
 
-              borderLeftColor: theme.colors.fadedText10,
-              borderRightColor: theme.colors.fadedText10,
-              borderTopColor: theme.colors.fadedText10,
-              borderBottomColor: theme.colors.fadedText10,
+              borderLeftColor: theme.colors.borderColor,
+              borderRightColor: theme.colors.borderColor,
+              borderTopColor: theme.colors.borderColor,
+              borderBottomColor: theme.colors.borderColor,
 
               boxShadow: lightBackground
                 ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
@@ -131,28 +130,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         <div>
           <BaseButtonTooltip help={element.help}>
             <BaseButton
+              data-testid="stPopoverButton"
               kind={BaseButtonKind.SECONDARY}
               size={BaseButtonSize.SMALL}
               disabled={empty || element.disabled}
               fluidWidth={element.useContainerWidth ? fluidButtonWidth : false}
-              data-testid="stPopoverButton"
               onClick={() => setOpen(!open)}
             >
-              <StreamlitMarkdown
-                source={element.label}
-                allowHTML={false}
-                isLabel
-                largerLabel
-                disableLinks
-              />
+              <DynamicButtonLabel icon={element.icon} label={element.label} />
               <StyledPopoverButtonIcon>
                 <StyledIcon
                   as={open ? ExpandLess : ExpandMore}
                   color="inherit"
                   aria-hidden="true"
                   size="lg"
-                  margin=""
-                  padding=""
+                  margin={theme.spacing.none}
+                  padding={theme.spacing.none}
                 />
               </StyledPopoverButtonIcon>
             </BaseButton>

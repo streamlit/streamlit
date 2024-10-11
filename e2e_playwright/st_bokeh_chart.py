@@ -45,7 +45,7 @@ with col2:
 x = np.linspace(0, 10, 500)
 y = np.sin(x)
 
-source = ColumnDataSource(data=dict(x=x, y=y))
+source = ColumnDataSource(data={"x": x, "y": y})
 
 plot = figure(y_range=(-10, 10), width=400, height=400)
 
@@ -57,7 +57,7 @@ phase = Slider(start=-6.4, end=6.4, value=0, step=0.1, title="Phase")
 offset = Slider(start=-9, end=9, value=0, step=0.1, title="Offset")
 
 callback = CustomJS(
-    args=dict(source=source, amp=amp, freq=freq, phase=phase, offset=offset),
+    args={"source": source, "amp": amp, "freq": freq, "phase": phase, "offset": offset},
     code="""
     const A = amp.value
     const k = freq.value

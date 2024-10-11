@@ -18,14 +18,34 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    BinaryIO,
+    Final,
+    Literal,
+    TextIO,
+    Union,
+    cast,
+)
 
 from typing_extensions import TypeAlias
 
-from streamlit import runtime, source_util
-from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.errors import StreamlitAPIException
+from streamlit import runtime
+from streamlit.elements.lib.form_utils import current_form_id, is_in_form
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    save_for_app_testing,
+    to_key,
+)
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingPageLabelError,
+    StreamlitPageNotFoundError,
+)
 from streamlit.file_util import get_main_script_directory, normalize_path_join
+from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
@@ -38,9 +58,8 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.type_util import Key, to_key
+from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -48,7 +67,7 @@ if TYPE_CHECKING:
 FORM_DOCS_INFO: Final = """
 
 For more information, refer to the
-[documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form).
+[documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
 DownloadButtonDataType: TypeAlias = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
@@ -75,6 +94,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -84,52 +104,72 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
+
         on_click : callable
             An optional callback invoked when this button is clicked.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the parent container.
+
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -137,8 +177,8 @@ class ButtonMixin:
             True if the button was clicked on the last run of the app,
             False otherwise.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.button("Reset", type="primary")
@@ -149,6 +189,23 @@ class ButtonMixin:
 
         .. output::
            https://doc-buton.streamlit.app/
+           height: 220px
+
+        Although you can add icons to your buttons through Markdown, the
+        ``icon`` parameter is a convenient and consistent alternative.
+
+        >>> import streamlit as st
+        >>>
+        >>> left, middle, right = st.columns(3)
+        >>> if left.button("Plain button", use_container_width=True):
+        ...     left.markdown("You clicked the plain button.")
+        >>> if middle.button("Emoji button", icon="😃", use_container_width=True):
+        ...     middle.markdown("You clicked the emoji button.")
+        >>> if right.button("Material button", icon=":material/mood:", use_container_width=True):
+        ...     right.markdown("You clicked the Material button.")
+
+        .. output::
+           https://doc-button-icons.streamlit.app/
            height: 220px
 
         """
@@ -172,6 +229,7 @@ class ButtonMixin:
             kwargs=kwargs,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -190,6 +248,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -202,70 +261,96 @@ class ButtonMixin:
         user is connected, so it's a good idea to keep file sizes under a
         couple hundred megabytes to conserve memory.
 
+        If you want to prevent your app from rerunning when a user clicks the
+        download button, wrap the download button in a `fragment
+        <https://docs.streamlit.io/develop/concepts/architecture/fragments>`_.
+
         Parameters
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         data : str or bytes or file
             The contents of the file to be downloaded. See example below for
             caching techniques to avoid recomputing this data unnecessarily.
+
         file_name: str
             An optional string to use as the name of the file to be downloaded,
             such as 'my_file.csv'. If not specified, the name will be
             automatically generated.
+
         mime : str or None
             The MIME type of the data. If None, defaults to "text/plain"
             (if data is of type *str* or is a textual *file*) or
             "application/octet-stream" (if data is of type *bytes* or is a
             binary *file*).
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
+
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
+
         on_click : callable
             An optional callback invoked when this button is clicked.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
 
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -314,11 +399,11 @@ class ButtonMixin:
         >>>
         >>> with open("flower.png", "rb") as file:
         ...     btn = st.download_button(
-        ...             label="Download image",
-        ...             data=file,
-        ...             file_name="flower.png",
-        ...             mime="image/png"
-        ...           )
+        ...         label="Download image",
+        ...         data=file,
+        ...         file_name="flower.png",
+        ...         mime="image/png",
+        ...     )
 
         .. output::
            https://doc-download-buton.streamlit.app/
@@ -343,8 +428,9 @@ class ButtonMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
-            disabled=disabled,
             type=type,
+            icon=icon,
+            disabled=disabled,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -357,6 +443,7 @@ class ButtonMixin:
         *,
         help: str | None = None,
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> DeltaGenerator:
@@ -369,44 +456,62 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         url : str
             The url to be opened on user click
+
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
+
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
+
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Example
         -------
@@ -432,13 +537,14 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
         )
 
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str,
+        page: str | StreamlitPage,
         *,
         label: str | None = None,
         icon: str | None = None,
@@ -458,36 +564,29 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str
-            The file path (relative to the main script) of the page to switch to.
-            Alternatively, this can be the URL to an external page (must start
-            with "http://" or "https://").
+        page : str or st.Page
+            The file path (relative to the main script) or an st.Page indicating
+            the page to switch to. Alternatively, this can be the URL to an
+            external page (must start with "http://" or "https://").
+
         label : str
             The label for the page link. Labels are required for external pages.
-            Labels can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
-        icon : str, None
+        icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
             string, the following options are valid:
@@ -495,24 +594,27 @@ class ButtonMixin:
             * A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
 
-            * An icon from the Material Symbols library (outlined style) in the
+            * An icon from the Material Symbols library (rounded style) in the
               format ``":material/icon_name:"`` where "icon_name" is the name
               of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
               Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
         help : str
             An optional tooltip that gets displayed when the link is
             hovered over.
+
         disabled : bool
             An optional boolean, which disables the page link if set to
             ``True``. The default is ``False``.
+
         use_container_width : bool
-            An optional boolean, which makes the link stretch its width to
-            match the parent container. The default is ``True`` for page links
-            in the sidebar, and ``False`` for those in the main app.
+            Whether to expand the link's width to fill its parent container.
+            The default is ``True`` for page links in the sidebar and ``False``
+            for those in the main app.
 
         Example
         -------
@@ -537,8 +639,7 @@ class ButtonMixin:
         navigation menus for your apps!
 
         .. |client.showSidebarNavigation| replace:: ``client.showSidebarNavigation``
-        .. _client.showSidebarNavigation: https://docs.streamlit.io/library\
-            /advanced-features/configuration#client
+        .. _client.showSidebarNavigation: https://docs.streamlit.io/develop/api-reference/configuration/config.toml#client
 
         .. output ::
             https://doc-page-link.streamlit.app/
@@ -568,34 +669,33 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
     ) -> bool:
         key = to_key(key)
 
-        # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
+        check_widget_policies(
+            self.dg,
+            key,
+            on_click,
+            default_value=None,
+            writes_allowed=False,
         )
 
-        check_cache_replay_rules()
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
-        check_callback_rules(self.dg, on_click)
-
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
+            # download_button is not allowed to be used in a form.
+            form_id=None,
             label=label,
+            icon=icon,
             file_name=file_name,
             mime=mime,
-            key=key,
             help=help,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
         )
 
         if is_in_form(self.dg):
@@ -604,7 +704,7 @@ class ButtonMixin:
             )
 
         download_button_proto = DownloadButtonProto()
-        download_button_proto.id = id
+        download_button_proto.id = element_id
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
@@ -617,18 +717,20 @@ class ButtonMixin:
         if help is not None:
             download_button_proto.help = dedent(help)
 
+        if icon is not None:
+            download_button_proto.icon = validate_icon_or_emoji(icon)
+
         serde = ButtonSerde()
 
         button_state = register_widget(
-            "download_button",
-            download_button_proto,
-            user_key=key,
+            download_button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="trigger_value",
         )
 
         self.dg._enqueue("download_button", download_button_proto)
@@ -641,6 +743,7 @@ class ButtonMixin:
         help: str | None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> DeltaGenerator:
@@ -654,11 +757,14 @@ class ButtonMixin:
         if help is not None:
             link_button_proto.help = dedent(help)
 
+        if icon is not None:
+            link_button_proto.icon = validate_icon_or_emoji(icon)
+
         return self.dg._enqueue("link_button", link_button_proto)
 
     def _page_link(
         self,
-        page: str,
+        page: str | StreamlitPage,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
@@ -681,43 +787,56 @@ class ButtonMixin:
         if use_container_width is not None:
             page_link_proto.use_container_width = use_container_width
 
-        # Handle external links:
-        if page.startswith("http://") or page.startswith("https://"):
-            if label is None or label == "":
-                raise StreamlitAPIException(
-                    f"The label param is required for external links used with st.page_link - please provide a label."
-                )
-            else:
-                page_link_proto.page = page
-                page_link_proto.external = True
-                return self.dg._enqueue("page_link", page_link_proto)
+        if isinstance(page, StreamlitPage):
+            page_link_proto.page_script_hash = page._script_hash
+            page_link_proto.page = page.url_path
+            if label is None:
+                page_link_proto.label = page.title
+        else:
+            # Handle external links:
+            if is_url(page):
+                if label is None or label == "":
+                    raise StreamlitMissingPageLabelError()
+                else:
+                    page_link_proto.page = page
+                    page_link_proto.external = True
+                    return self.dg._enqueue("page_link", page_link_proto)
 
-        ctx = get_script_run_ctx()
-        ctx_main_script = ""
-        if ctx:
-            ctx_main_script = ctx.main_script_path
+            ctx = get_script_run_ctx()
+            ctx_main_script = ""
+            all_app_pages = {}
+            if ctx:
+                ctx_main_script = ctx.main_script_path
+                all_app_pages = ctx.pages_manager.get_pages()
 
-        main_script_directory = get_main_script_directory(ctx_main_script)
-        requested_page = os.path.realpath(
-            normalize_path_join(main_script_directory, page)
-        )
-        all_app_pages = source_util.get_pages(ctx_main_script).values()
-
-        # Handle retrieving the page_script_hash & page
-        for page_data in all_app_pages:
-            full_path = page_data["script_path"]
-            page_name = page_data["page_name"]
-            if requested_page == full_path:
-                if label is None:
-                    page_link_proto.label = page_name.replace("_", " ")
-                page_link_proto.page_script_hash = page_data["page_script_hash"]
-                page_link_proto.page = page_name
-                break
-
-        if page_link_proto.page_script_hash == "":
-            raise StreamlitAPIException(
-                f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
+            main_script_directory = get_main_script_directory(ctx_main_script)
+            requested_page = os.path.realpath(
+                normalize_path_join(main_script_directory, page)
             )
+
+            # Handle retrieving the page_script_hash & page
+            for page_data in all_app_pages.values():
+                full_path = page_data["script_path"]
+                page_name = page_data["page_name"]
+                if requested_page == full_path:
+                    if label is None:
+                        page_link_proto.label = page_name.replace("_", " ")
+                    page_link_proto.page_script_hash = page_data["page_script_hash"]
+                    page_link_proto.page = page_name
+                    break
+
+            if page_link_proto.page_script_hash == "":
+                is_mpa_v2 = (
+                    ctx is not None
+                    and ctx.pages_manager is not None
+                    and ctx.pages_manager.mpa_version == 2
+                )
+
+                raise StreamlitPageNotFoundError(
+                    is_mpa_v2=is_mpa_v2,
+                    page=page,
+                    main_script_directory=main_script_directory,
+                )
 
         return self.dg._enqueue("page_link", page_link_proto)
 
@@ -732,34 +851,35 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
     ) -> bool:
         key = to_key(key)
 
-        # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
+        check_widget_policies(
+            self.dg,
+            key,
+            on_click,
+            default_value=None,
+            writes_allowed=False,
+            enable_check_callback_rules=not is_form_submitter,
         )
 
-        if not is_form_submitter:
-            check_callback_rules(self.dg, on_click)
-        check_cache_replay_rules()
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
-
-        id = compute_widget_id(
+        # Only the form submitter button needs a form ID at the moment.
+        form_id = current_form_id(self.dg) if is_form_submitter else ""
+        element_id = compute_and_register_element_id(
             "button",
             user_key=key,
+            # Only the
+            form_id=form_id,
             label=label,
-            key=key,
+            icon=icon,
             help=help,
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -778,11 +898,11 @@ class ButtonMixin:
                 )
 
         button_proto = ButtonProto()
-        button_proto.id = id
+        button_proto.id = element_id
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
-        button_proto.form_id = current_form_id(self.dg)
+        button_proto.form_id = form_id
         button_proto.type = type
         button_proto.use_container_width = use_container_width
         button_proto.disabled = disabled
@@ -790,22 +910,24 @@ class ButtonMixin:
         if help is not None:
             button_proto.help = dedent(help)
 
+        if icon is not None:
+            button_proto.icon = validate_icon_or_emoji(icon)
+
         serde = ButtonSerde()
 
         button_state = register_widget(
-            "button",
-            button_proto,
-            user_key=key,
+            button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="trigger_value",
         )
 
         if ctx:
-            save_for_app_testing(ctx, id, button_state.value)
+            save_for_app_testing(ctx, element_id, button_state.value)
         self.dg._enqueue("button", button_proto)
 
         return button_state.value

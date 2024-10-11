@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import datetime
 import unittest
@@ -27,7 +29,6 @@ import streamlit.components.v1 as components
 from streamlit.connections import SnowparkConnection, SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
-from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -176,7 +177,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
     def test_create_page_profile_message_is_fragment_run(self):
         ctx = get_script_run_ctx()
-        ctx.fragment_ids_this_run = {"some_fragment_id"}
+        ctx.fragment_ids_this_run = ["some_fragment_id"]
 
         forward_msg = metrics_util.create_page_profile_message(
             commands=[
@@ -198,6 +199,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         @metrics_util.gather_metrics("test_function")
         def test_function(param1: int, param2: str, param3: float = 0.1) -> str:
             st.markdown("This command should not be tracked")
+            st.text_input("This command should also not be tracked")
+            st.text("This command should also not be tracked")
             return "foo"
 
         test_function(param1=10, param2="foobar")
@@ -233,7 +236,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 cache_resource_api.ResourceCache.write_result,
                 "_cache_resource_object",
             ),
-            (caching._write_to_cache, "_cache_object"),
             (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
@@ -274,9 +276,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "connection",
             "experimental_connection",
             "spinner",
-            "empty",
             "progress",
-            "get_option",
+            "context",
         }
 
         # Create a list of all public API names in the `st` module (minus

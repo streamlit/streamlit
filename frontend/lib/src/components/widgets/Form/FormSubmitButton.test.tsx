@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 import React from "react"
-import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
 import { enableAllPlugins } from "immer"
 
+import { render } from "@streamlit/lib/src/test_util"
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
-
 import {
   createFormsData,
   FormsData,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
+
 import { FormSubmitButton, Props } from "./FormSubmitButton"
 
 // Required by ImmerJS
@@ -48,16 +48,16 @@ describe("FormSubmitButton", () => {
 
   function getProps(
     props: Partial<Props> = {},
-    useContainerWidth = false,
-    helpText = "mockHelpText"
+    elementProps: Partial<ButtonProto> = {}
   ): Props {
     return {
       element: ButtonProto.create({
         id: "1",
         label: "Submit",
         formId: "mockFormId",
-        help: helpText,
-        useContainerWidth,
+        help: "mockHelpText",
+        useContainerWidth: false,
+        ...elementProps,
       }),
       disabled: false,
       hasInProgressUpload: false,
@@ -78,12 +78,11 @@ describe("FormSubmitButton", () => {
 
     const formSubmitButton = screen.getByTestId("stFormSubmitButton")
 
-    expect(formSubmitButton).toHaveClass("row-widget")
-    expect(formSubmitButton).toHaveClass("stButton")
+    expect(formSubmitButton).toHaveClass("stFormSubmitButton")
     expect(formSubmitButton).toHaveStyle(`width: ${props.width}px`)
   })
 
-  it("renders a label", () => {
+  it("renders a label within the button", () => {
     const props = getProps()
     render(<FormSubmitButton {...props} />)
 
@@ -104,8 +103,8 @@ describe("FormSubmitButton", () => {
     fireEvent.click(formSubmitButton)
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
       props.element.formId,
-      props.element,
-      undefined
+      undefined,
+      props.element
     )
   })
 
@@ -119,8 +118,8 @@ describe("FormSubmitButton", () => {
     fireEvent.click(formSubmitButton)
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
       props.element.formId,
-      props.element,
-      "myFragmentId"
+      "myFragmentId",
+      props.element
     )
   })
 
@@ -180,14 +179,18 @@ describe("FormSubmitButton", () => {
   })
 
   it("passes useContainerWidth property with help correctly", () => {
-    render(<FormSubmitButton {...getProps({}, true)} />)
+    render(<FormSubmitButton {...getProps({}, { useContainerWidth: true })} />)
 
     const formSubmitButton = screen.getByRole("button")
     expect(formSubmitButton).toHaveStyle(`width: ${250}px`)
   })
 
   it("passes useContainerWidth property without help correctly", () => {
-    render(<FormSubmitButton {...getProps({}, true, "")} />)
+    render(
+      <FormSubmitButton
+        {...getProps({}, { useContainerWidth: true, help: "" })}
+      />
+    )
 
     const formSubmitButton = screen.getByRole("button")
     expect(formSubmitButton).toHaveStyle("width: 100%")

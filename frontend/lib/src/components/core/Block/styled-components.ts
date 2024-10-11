@@ -15,7 +15,11 @@
  */
 
 import React from "react"
+
 import styled from "@emotion/styled"
+
+import { StyledCheckbox } from "@streamlit/lib/src/components/widgets/Checkbox/styled-components"
+import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 function translateGapWidth(gap: string, theme: EmotionTheme): string {
@@ -69,22 +73,39 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
     },
 
-    ":is(.empty-html)": {
+    ":is(.stHtml-empty)": {
       display: "none",
     },
 
-    ":has(> .cacheSpinner)": {
-      height: 0,
+    ":has(> .stCacheSpinner)": {
+      height: theme.spacing.none,
       overflow: "visible",
       visibility: "visible",
-      marginBottom: "-1rem",
-      zIndex: 1000,
+      marginBottom: `-${theme.spacing.lg}`,
+      zIndex: theme.zIndices.cacheSpinner,
     },
 
     ":has(> .stPageLink)": {
-      marginTop: "-0.375rem",
-      marginBottom: "-0.375rem",
+      marginTop: `-${theme.spacing.xs}`,
+      marginBottom: `-${theme.spacing.xs}`,
     },
+    // Lower the min height of stacked/grouped checkboxes to have them appear visually
+    // closer together to each other.
+    // To detect & cover all grouped/stacked checkboxes, we apply a complex CSS selector
+    // that selects all checkboxes that are directly followed by another checkbox.
+    // Since the last checkbox in a group isn't followed by another checkbox, we also
+    // need to target the direct sibling (if it is a checkbox) of any of the targeted checkboxes.
+    // Examples:
+    // Smaller width is not applied because single checkbox:
+    // <text-input><checkbox><number-input>
+    // Smaller width is applied to all checkboxes:
+    // <text-input><checkbox><checkbox><checkbox><number-input>
+    // Smaller width only applied to the first two checkboxes:
+    // <text-input><checkbox><checkbox><number-input><checkbox><selectbox>
+    [`&:has(+ & > ${StyledCheckbox}) > ${StyledCheckbox}, &:has(> ${StyledCheckbox}):has(+ & > ${StyledCheckbox}) + & > ${StyledCheckbox}`]:
+      {
+        minHeight: theme.spacing.twoXL,
+      },
 
     ...(isStale && elementType !== "skeleton"
       ? {
@@ -113,10 +134,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 interface StyledColumnProps {
   weight: number
   gap: string
+  verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, gap, theme }) => {
+  ({ weight, gap, theme, verticalAlignment }) => {
+    const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
     const width = `calc(${percentage}% - ${gapWidth})`
@@ -130,6 +153,13 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
+      ...(verticalAlignment === VerticalAlignment.BOTTOM && {
+        marginTop: "auto",
+      }),
+      ...(verticalAlignment === VerticalAlignment.CENTER && {
+        marginTop: "auto",
+        marginBottom: "auto",
+      }),
     }
   }
 )
@@ -167,9 +197,9 @@ export const StyledVerticalBlockBorderWrapper =
   styled.div<StyledVerticalBlockBorderWrapperProps>(
     ({ theme, border, height }) => ({
       ...(border && {
-        border: `1px solid ${theme.colors.fadedText10}`,
-        borderRadius: theme.radii.lg,
-        padding: "calc(1em - 1px)", // 1px to account for border.
+        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+        borderRadius: theme.radii.default,
+        padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
       ...(height && {
         height: `${height}px`,

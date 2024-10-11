@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef, useMemo } from "react"
+import React, { ReactElement, useEffect, useMemo, useRef } from "react"
+
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -31,7 +32,7 @@ export default function Audio({
   width,
   endpoints,
   elementMgr,
-}: AudioProps): ReactElement {
+}: Readonly<AudioProps>): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const { startTime, endTime, loop, autoplay } = element
@@ -88,7 +89,9 @@ export default function Audio({
   // Stop the audio at 'endTime' and handle loop
   useEffect(() => {
     const audioNode = audioRef.current
-    if (!audioNode) return
+    if (!audioNode) {
+      return
+    }
 
     // Flag to avoid calling 'audioNode.pause()' multiple times
     let stoppedByEndTime = false
@@ -120,7 +123,9 @@ export default function Audio({
   // Handle looping the audio
   useEffect(() => {
     const audioNode = audioRef.current
-    if (!audioNode) return
+    if (!audioNode) {
+      return
+    }
 
     // Loop the audio when it has ended
     const handleAudioEnd = (): void => {
@@ -143,13 +148,12 @@ export default function Audio({
 
   return (
     <audio
+      className="stAudio"
       data-testid="stAudio"
-      id="audio"
       ref={audioRef}
       controls
       autoPlay={autoplay && !preventAutoplay}
       src={uri}
-      className="stAudio"
       style={{ width }}
     />
   )

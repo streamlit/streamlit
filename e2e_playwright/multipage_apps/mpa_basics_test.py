@@ -19,6 +19,7 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import click_button
 
 
 def test_loads_main_script_on_initial_page_load(app: Page):
@@ -108,30 +109,35 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     page.goto(f"http://localhost:{app_port}/page_7")
     wait_for_app_loaded(page)
 
-    separator = page.get_by_test_id("stSidebarNavSeparator")
-    svg = separator.locator("svg")
+    view_button = page.get_by_test_id("stSidebarNavViewButton")
 
-    expect(svg).to_be_visible()
+    expect(view_button).to_be_visible()
 
     # Expand the nav
-    svg.click(force=True)
+    view_button.click(force=True)
     # We apply a quick timeout here so that the UI has some time to
     # adjust for the screenshot after the click
     page.wait_for_timeout(250)
+    # move the mouse out of the way to avoid hover effects
+    page.mouse.move(0, 0)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
     # Collapse the nav
-    svg.click(force=True)
+    view_button.click(force=True)
     page.wait_for_timeout(250)
+    # move the mouse out of the way to avoid hover effects
+    page.mouse.move(0, 0)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
 
     # Expand the nav again
-    svg.click(force=True)
+    view_button.click(force=True)
     page.wait_for_timeout(250)
+    # move the mouse out of the way to avoid hover effects
+    page.mouse.move(0, 0)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
@@ -148,14 +154,33 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
     # st.switch_page using relative path & leading /
-    app.get_by_test_id("baseButton-secondary").click()
-    wait_for_app_run(app)
+    click_button(app, "pages/06_page_6.py")
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 6")
 
     # st.switch_page using relative path & leading ./
-    app.get_by_test_id("baseButton-secondary").click()
-    wait_for_app_run(app)
+    click_button(app, "./mpa_basics.py")
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
+
+
+def test_switch_page_preserves_embed_params(page: Page, app_port: int):
+    """Test that st.switch_page only preserves embed params."""
+
+    # Start at main page with embed & other query params
+    page.goto(
+        f"http://localhost:{app_port}/?embed=true&embed_options=light_theme&bar=foo"
+    )
+    wait_for_app_loaded(page, embedded=True)
+    expect(page.get_by_test_id("stJson")).to_contain_text('{"bar":"foo"}')
+
+    # Trigger st.switch_page
+    page.get_by_test_id("stButton").nth(0).locator("button").first.click()
+    wait_for_app_loaded(page, embedded=True)
+
+    # Check that only embed query params persist
+    expect(page).to_have_url(
+        f"http://localhost:{app_port}/page2?embed=true&embed_options=light_theme"
+    )
+    expect(page.get_by_test_id("stJson")).not_to_contain_text('{"bar":"foo"}')
 
 
 def test_switch_page_removes_query_params(page: Page, app_port: int):
@@ -259,11 +284,68 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
 
     # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
     app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
     app.wait_for_timeout(500)
 
     # Collapsed logo
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="collapsed-logo"
+    )
+
+
+def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that small logos display properly in sidebar and main sections"""
+
+    # Go to small logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(9).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
         "href", "https://www.example.com"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="small-sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="small-collapsed-logo"
+    )
+
+
+def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that large logos display properly in sidebar and main sections"""
+
+    # Go to large logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(10).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="large-sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="large-collapsed-logo"
+    )

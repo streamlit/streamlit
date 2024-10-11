@@ -14,6 +14,8 @@
 
 """DeltaGenerator Unittest."""
 
+from __future__ import annotations
+
 import asyncio
 import functools
 import inspect
@@ -32,19 +34,21 @@ import streamlit as st
 import streamlit.delta_generator as delta_generator
 import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
-from streamlit.delta_generator import DeltaGenerator, get_last_dg_added_to_context_stack
-from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.utils import compute_and_register_element_id
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitDuplicateElementKey,
+)
 from streamlit.logger import get_logger
-from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.proto.TextArea_pb2 import TextArea
-from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-from streamlit.runtime.state.common import compute_widget_id
-from streamlit.runtime.state.widgets import _build_duplicate_widget_message
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.streamlit_test import ELEMENT_COMMANDS
 
 
 def identity(x):
@@ -88,87 +92,22 @@ class RunWarningTest(unittest.TestCase):
             for name, _ in inspect.getmembers(DeltaGenerator)
             if not name.startswith("_")
         }
-        self.assertEqual(
-            api,
-            {
-                "add_rows",
-                "altair_chart",
-                "area_chart",
-                "audio",
-                "balloons",
-                "bar_chart",
-                "bokeh_chart",
-                "button",
-                "camera_input",
-                "caption",
-                "chat_input",
-                "chat_message",
-                "checkbox",
-                "code",
-                "color_picker",
-                "columns",
-                "container",
-                "dataframe",
-                "data_editor",
-                "date_input",
-                "dg",
-                "divider",
-                "download_button",
-                "empty",
-                "error",
-                "exception",
-                "expander",
-                "experimental_data_editor",
-                "file_uploader",
-                "form",
-                "form_submit_button",
-                "graphviz_chart",
-                "header",
-                "help",
-                "html",
-                "id",
-                "image",
-                "info",
-                "json",
-                "latex",
-                "line_chart",
-                "link_button",
-                "map",
-                "markdown",
-                "metric",
-                "multiselect",
-                "number_input",
-                "page_link",
-                "plotly_chart",
-                "popover",
-                "progress",
-                "pydeck_chart",
-                "pyplot",
-                "radio",
-                "scatter_chart",
-                "select_slider",
-                "selectbox",
-                "slider",
-                "snow",
-                "subheader",
-                "success",
-                "status",
-                "table",
-                "tabs",
-                "text",
-                "text_area",
-                "text_input",
-                "time_input",
-                "title",
-                "toast",
-                "toggle",
-                "vega_lite_chart",
-                "video",
-                "warning",
-                "write",
-                "write_stream",
-            },
-        )
+        expected_api = ELEMENT_COMMANDS.copy()
+
+        # Remove commands that are only exposed in the top-level namespace (st.*)
+        # and cannot be called on a DeltaGenerator object.
+        expected_api = expected_api - {
+            "spinner",
+            "dialog",
+            "experimental_dialog",
+            "echo",
+            "logo",
+        }
+
+        # Add public commands that only exist in the delta generator:
+        expected_api = expected_api.union({"add_rows", "id", "dg"})
+
+        self.assertEqual(api, expected_api)
 
 
 class DeltaGeneratorTest(DeltaGeneratorTestCase):
@@ -201,6 +140,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         """Multiple widgets with the same generated key should report an error."""
         widgets = {
             "button": lambda key=None: st.button("", key=key),
+            "button_group": lambda key=None: st.feedback("thumbs", key=key),
             "checkbox": lambda key=None: st.checkbox("", key=key),
             "multiselect": lambda key=None: st.multiselect("", options=[1, 2], key=key),
             "radio": lambda key=None: st.radio("", options=[1, 2], key=key),
@@ -213,32 +153,20 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
             "number_input": lambda key=None: st.number_input("", key=key),
         }
 
-        for widget_type, create_widget in widgets.items():
+        for _, create_widget in widgets.items():
             create_widget()
-            with self.assertRaises(DuplicateWidgetID) as ctx:
-                # Test creating a widget with a duplicate auto-generated key
+            with self.assertRaises(StreamlitDuplicateElementId):
+                # Test creating a widget with a duplicate c
                 # raises an exception.
                 create_widget()
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key=None
-                ),
-                str(ctx.exception),
-            )
 
         for widget_type, create_widget in widgets.items():
             # widgets with keys are distinct from the unkeyed ones created above
             create_widget(widget_type)
-            with self.assertRaises(DuplicateWidgetID) as ctx:
-                # Test creating a widget with a duplicate auto-generated key
+            with self.assertRaises(StreamlitDuplicateElementKey):
+                # Test creating a widget with a duplicate key
                 # raises an exception.
                 create_widget(widget_type)
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key=widget_type
-                ),
-                str(ctx.exception),
-            )
 
     def test_duplicate_widget_id_error_when_user_key_specified(self):
         """Multiple widgets with the different generated key, but same user specified
@@ -248,6 +176,9 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         widgets = {
             "button": lambda key=None, label="": st.button(label=label, key=key),
             "checkbox": lambda key=None, label="": st.checkbox(label=label, key=key),
+            "feedback": lambda key=None, label="": st.feedback(
+                options="thumbs", key=key
+            ),
             "multiselect": lambda key=None, label="": st.multiselect(
                 label=label, options=[1, 2], key=key
             ),
@@ -276,29 +207,12 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         for widget_type, create_widget in widgets.items():
             user_key = widget_type
             create_widget(label="LABEL_A", key=user_key)
-            with self.assertRaises(DuplicateWidgetID) as ctx:
+            with self.assertRaises(StreamlitDuplicateElementKey):
                 # We specify different labels for widgets, so auto-generated keys
                 # (widget_ids) will be different.
                 # Test creating a widget with a different auto-generated key but same
                 # user specified key raises an exception.
                 create_widget(label="LABEL_B", key=user_key)
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key=user_key
-                ),
-                str(ctx.exception),
-            )
-
-    def test_get_last_dg_added_to_context_stack(self):
-        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-        self.assertIsNone(last_dg_added_to_context_stack)
-
-        sidebar = st.sidebar
-        with sidebar:
-            last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-            self.assertEqual(sidebar, last_dg_added_to_context_stack)
-        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-        self.assertNotEqual(sidebar, last_dg_added_to_context_stack)
 
 
 class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
@@ -396,18 +310,18 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.fragment_ids_this_run = {"my_fragment_id"}
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
 
         exc = "is not supported"
         with pytest.raises(StreamlitAPIException, match=exc):
-            delta_generator.sidebar_dg._enqueue("text", TextProto())
+            get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
 
     def test_enqueue_can_write_to_container_in_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.fragment_ids_this_run = {"my_fragment_id"}
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
 
-        delta_generator.sidebar_dg.container().write("Hello world")
+        get_dg_singleton_instance().sidebar_dg.container().write("Hello world")
 
         deltas = self.get_all_deltas_from_queue()
         assert [d.fragment_id for d in deltas] == ["my_fragment_id", "my_fragment_id"]
@@ -446,10 +360,10 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
         sum_weights = sum(weights)
         st.columns(weights)
 
-        for i, w in enumerate(weights):
+        for idx, weight in enumerate(weights):
             # Pull the delta from the back of the queue, using negative index
-            delta = self.get_delta_from_queue(i - len(weights))
-            self.assertEqual(delta.add_block.column.weight, w / sum_weights)
+            delta = self.get_delta_from_queue(idx - len(weights))
+            self.assertEqual(delta.add_block.column.weight, weight / sum_weights)
 
     def test_bad_columns_negative_int(self):
         with self.assertRaises(StreamlitAPIException):
@@ -800,63 +714,93 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
 
 class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
     def test_ids_are_equal_when_inputs_are_equal(self):
-        id1 = compute_widget_id(
-            "text_input",
-            label="Label #1",
-            default="Value #1",
-        )
+        with self.assertRaises(StreamlitDuplicateElementId):
+            compute_and_register_element_id(
+                "text_input",
+                label="Label #1",
+                default="Value #1",
+                user_key=None,
+                form_id=None,
+            )
 
-        id2 = compute_widget_id(
-            "text_input",
-            label="Label #1",
-            default="Value #1",
-        )
-        assert id1 == id2
+            compute_and_register_element_id(
+                "text_input",
+                label="Label #1",
+                default="Value #1",
+                user_key=None,
+                form_id=None,
+            )
+
+    def test_duplicated_key_is_raised(self):
+        with self.assertRaises(StreamlitDuplicateElementKey):
+            compute_and_register_element_id(
+                "text_input",
+                label="Label #1",
+                default="Value #1",
+                user_key="some_key1",
+                form_id=None,
+            )
+
+            compute_and_register_element_id(
+                "text_input",
+                label="Label #2",
+                default="Value #1",
+                user_key="some_key1",
+                form_id=None,
+            )
 
     def test_ids_are_diff_when_labels_are_diff(self):
-        id1 = compute_widget_id(
+        id1 = compute_and_register_element_id(
             "text_input",
             label="Label #1",
             default="Value #1",
+            user_key=None,
+            form_id=None,
         )
-        id2 = compute_widget_id(
+        id2 = compute_and_register_element_id(
             "text_input",
             label="Label #2",
             default="Value #1",
+            user_key=None,
+            form_id=None,
         )
 
         assert id1 != id2
 
     def test_ids_are_diff_when_types_are_diff(self):
-        id1 = compute_widget_id(
+        id1 = compute_and_register_element_id(
             "text_input",
             label="Label #1",
             default="Value #1",
+            user_key=None,
+            form_id=None,
         )
-        id2 = compute_widget_id(
+        id2 = compute_and_register_element_id(
             "text_area",
             label="Label #1",
             default="Value #1",
+            user_key=None,
+            form_id=None,
         )
         assert id1 != id2
 
 
 class KeyWidgetIdTests(DeltaGeneratorTestCase):
     def test_ids_are_diff_when_keys_are_diff(self):
-        id1 = compute_widget_id(
+        id1 = compute_and_register_element_id(
             "text_input",
             user_key="some_key1",
             label="Label #1",
             default="Value #1",
-            key="some_key1",
+            form_id=None,
         )
 
-        id2 = compute_widget_id(
+        id2 = compute_and_register_element_id(
             "text_input",
             user_key="some_key2",
             label="Label #1",
             default="Value #1",
-            key="some_key2",
+            form_id=None,
         )
 
         assert id1 != id2

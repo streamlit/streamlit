@@ -44,7 +44,6 @@ For more detailed info, see https://docs.streamlit.io.
 
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
 
-
 import os as _os
 
 # Set Matplotlib backend to avoid a crash.
@@ -66,28 +65,52 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from streamlit.delta_generator import (
-    main_dg as _main_dg,
-    sidebar_dg as _sidebar_dg,
-    event_dg as _event_dg,
-    bottom_dg as _bottom_dg,
+# DeltaGenerator methods:
+# We initialize them here so that it is clear where they are instantiated.
+# Further, it helps us to break circular imports because the DeltaGenerator
+# imports the different elements but some elements also require DeltaGenerator
+# functions such as the dg_stack. Now, elements that require DeltaGenerator functions
+# can import the singleton module.
+from streamlit.delta_generator_singletons import (
+    DeltaGeneratorSingleton as _DeltaGeneratorSingleton,
 )
+from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
+from streamlit.elements.lib.mutable_status_container import (
+    StatusContainer as _StatusContainer,
+)
+from streamlit.elements.lib.dialog import Dialog as _Dialog
+
+# instantiate the DeltaGeneratorSingleton
+_dg_singleton = _DeltaGeneratorSingleton(
+    delta_generator_cls=_DeltaGenerator,
+    status_container_cls=_StatusContainer,
+    dialog_container_cls=_Dialog,
+)
+_main = _dg_singleton._main_dg
+sidebar = _dg_singleton._sidebar_dg
+_event = _dg_singleton._event_dg
+_bottom = _dg_singleton._bottom_dg
+
+
 from streamlit.elements.dialog_decorator import (
-    # rename so that it is available as st.dialog
-    dialog_decorator as experimental_dialog,
+    dialog_decorator as _dialog_decorator,
+    experimental_dialog_decorator as _experimental_dialog_decorator,
 )
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
-    experimental_singleton as _experimental_singleton,
-    experimental_memo as _experimental_memo,
+    cache as _cache,
 )
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
-from streamlit.runtime.fragment import fragment as _fragment
+from streamlit.runtime.fragment import (
+    experimental_fragment as _experimental_fragment,
+    fragment as _fragment,
+)
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
+from streamlit.runtime.context import ContextProxy as _ContextProxy
 from streamlit.runtime.state import (
     SessionStateProxy as _SessionStateProxy,
     QueryParamsProxy as _QueryParamsProxy,
@@ -98,25 +121,28 @@ from streamlit.commands.experimental_query_params import (
     set_query_params as _set_query_params,
 )
 
-# Modules that the user should have access to. These are imported with "as"
-# syntax pass mypy checking with implicit_reexport disabled.
-
 import streamlit.column_config as _column_config
-from streamlit.echo import echo as echo
-from streamlit.runtime.legacy_caching import cache as _cache
+
+# Modules that the user should have access to. These are imported with the "as" syntax
+# and the same name; note that renaming the import with "as" does not make it an
+# explicit export. In this case, you should import it with an underscore to make clear
+# that it is internal and then assign it to a variable with the new intended name.
+# You can check the export behavior by running 'mypy --strict example_app.py', which
+# disables implicit_reexport, where you use the respective command in the example_app.py
+# Streamlit app.
+
+from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
+from streamlit.commands.navigation import navigation as navigation
+from streamlit.navigation.page import Page as Page
 from streamlit.elements.spinner import spinner as spinner
+
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
     rerun as rerun,
-    experimental_rerun as _experimental_rerun,
     switch_page as switch_page,
 )
-
-# We add the metrics tracking for caching here,
-# since the actual cache function calls itself recursively
-cache = _gather_metrics("cache", _cache)
 
 
 def _update_logger() -> None:
@@ -130,14 +156,7 @@ def _update_logger() -> None:
 # in an alternative config.
 _config.on_config_parsed(_update_logger, True)
 
-
 secrets = _secrets_singleton
-
-# DeltaGenerator methods:
-_main = _main_dg
-sidebar = _sidebar_dg
-_event = _event_dg
-_bottom = _bottom_dg
 
 altair_chart = _main.altair_chart
 area_chart = _main.area_chart
@@ -161,6 +180,7 @@ date_input = _main.date_input
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
+feedback = _main.feedback
 pydeck_chart = _main.pydeck_chart
 empty = _main.empty
 error = _main.error
@@ -184,6 +204,7 @@ metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
+pills = _main.pills
 plotly_chart = _main.plotly_chart
 popover = _main.popover
 progress = _main.progress
@@ -211,7 +232,8 @@ write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
 
-# Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
+# Events - Note: these methods cannot be called directly on sidebar
+# (ex: st.sidebar.toast)
 toast = _event.toast
 
 # Config
@@ -225,9 +247,13 @@ session_state = _SessionStateProxy()
 
 query_params = _QueryParamsProxy()
 
+context = _ContextProxy()
+
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+# `st.cache` is deprecated and should be removed soon
+cache = _cache
 
 # Namespaces
 column_config = _column_config
@@ -235,13 +261,17 @@ column_config = _column_config
 # Connection
 connection = _connection
 
+# Fragment and dialog
+dialog = _dialog_decorator
+fragment = _fragment
+
 # Experimental APIs
-experimental_fragment = _fragment
-experimental_memo = _experimental_memo
-experimental_singleton = _experimental_singleton
+experimental_audio_input = _main.experimental_audio_input
+experimental_dialog = _experimental_dialog_decorator
+experimental_fragment = _experimental_fragment
 experimental_user = _UserInfoProxy()
 
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
@@ -257,8 +287,9 @@ experimental_set_query_params = _deprecate_func_name(
     _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
-experimental_rerun = _experimental_rerun
-experimental_data_editor = _main.experimental_data_editor
-experimental_connection = _deprecate_func_name(
-    connection, "experimental_connection", "2024-04-01", name_override="connection"
-)
+
+
+# make it possible to call streamlit.components.v1.html etc. by importing it here
+# import in the very end to avoid partially-initialized module import errors, because
+# streamlit.components.v1 also uses some streamlit imports
+import streamlit.components.v1  # noqa: F401

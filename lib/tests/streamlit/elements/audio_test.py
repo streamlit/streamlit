@@ -14,13 +14,12 @@
 
 """st.audio unit tests"""
 
-import io
 import os
 from io import BytesIO
 
 import numpy as np
+import pytest
 from parameterized import parameterized
-from scipy.io import wavfile
 
 import streamlit as st
 from streamlit.elements.media import (
@@ -40,7 +39,7 @@ class AudioTest(DeltaGeneratorTestCase):
         """Test st.audio using fake audio bytes."""
 
         # Fake audio data: expect the resultant mimetype to be audio default.
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
 
         st.audio(fake_audio_data)
 
@@ -131,7 +130,7 @@ class AudioTest(DeltaGeneratorTestCase):
         """Test st.audio raises streamlit warning when sample_rate parameter provided,
         but data is not a numpy array."""
 
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
         sample_rate = 44100
 
         st.audio(fake_audio_data, sample_rate=sample_rate)
@@ -194,7 +193,7 @@ class AudioTest(DeltaGeneratorTestCase):
     def test_maybe_convert_to_wave_bytes_with_sample_rate(self):
         """Test _maybe_convert_to_wave_bytes works correctly with bytes."""
 
-        fake_audio_data_bytes = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data_bytes = b"\x11\x22\x33\x44\x55\x66"
         sample_rate = 44100
 
         computed_bytes = _maybe_convert_to_wav_bytes(
@@ -211,8 +210,11 @@ class AudioTest(DeltaGeneratorTestCase):
         computed_bytes = _maybe_convert_to_wav_bytes(np_arr, sample_rate=None)
         self.assertTrue(computed_bytes is np_arr)
 
+    @pytest.mark.require_integration
     def test_st_audio_from_file(self):
         """Test st.audio using generated data in a file-like object."""
+        from scipy.io import wavfile
+
         sample_rate = 44100
         frequency = 440
         length = 5
@@ -224,7 +226,7 @@ class AudioTest(DeltaGeneratorTestCase):
 
         wavfile.write("test.wav", sample_rate, y)
 
-        with io.open("test.wav", "rb") as f:
+        with open("test.wav", "rb") as f:
             st.audio(f)
 
         el = self.get_delta_from_queue().new_element
@@ -257,13 +259,13 @@ class AudioTest(DeltaGeneratorTestCase):
     def test_st_audio_other_inputs(self):
         """Test that our other data types don't result in an error."""
         st.audio(b"bytes_data")
-        st.audio("str_data".encode("utf-8"))
+        st.audio(b"str_data")
         st.audio(BytesIO(b"bytesio_data"))
         st.audio(np.array([0, 1, 2, 3]), sample_rate=44100)
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
         st.audio(
             fake_audio_data,
             format="audio/mp3",
@@ -283,7 +285,7 @@ class AudioTest(DeltaGeneratorTestCase):
 
     def test_st_audio_just_data(self):
         """Test st.audio with just data specified."""
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
         st.audio(fake_audio_data)
 
         el = self.get_delta_from_queue().new_element

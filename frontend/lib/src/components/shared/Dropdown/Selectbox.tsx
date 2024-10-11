@@ -15,25 +15,25 @@
  */
 
 import React from "react"
+
 import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
-import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
+import { OnChangeParams, Option, Select as UISelect } from "baseui/select"
 import { withTheme } from "@emotion/react"
 import { hasMatch, score } from "fzy.js"
 import sortBy from "lodash/sortBy"
 
 import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
 import {
-  LabelVisibilityOptions,
   isNullOrUndefined,
+  LabelVisibilityOptions,
 } from "@streamlit/lib/src/util/utils"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 const NO_OPTIONS_MSG = "No options to select."
@@ -181,11 +181,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
     const showKeyboardOnMobile = options.length > 10
 
     return (
-      <div
-        className="row-widget stSelectbox"
-        data-testid="stSelectbox"
-        style={style}
-      >
+      <div className="stSelectbox" data-testid="stSelectbox" style={style}>
         <WidgetLabel
           label={label}
           labelVisibility={labelVisibility}
@@ -214,7 +210,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
           overrides={{
             Root: {
               style: () => ({
-                lineHeight: 1.4,
+                lineHeight: theme.lineHeights.inputWidget,
               }),
             },
             Dropdown: { component: VirtualDropdown },
@@ -239,27 +235,28 @@ export class Selectbox extends React.PureComponent<Props, State> {
             },
             ControlContainer: {
               style: () => ({
+                height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: "1px",
-                borderRightWidth: "1px",
-                borderTopWidth: "1px",
-                borderBottomWidth: "1px",
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
               }),
             },
 
             IconsContainer: {
               style: () => ({
-                paddingRight: ".5rem",
+                paddingRight: theme.spacing.sm,
               }),
             },
 
             ValueContainer: {
               style: () => ({
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: ".5rem",
-                paddingLeft: ".5rem",
-                paddingBottom: ".5rem",
-                paddingTop: ".5rem",
+                paddingRight: theme.spacing.sm,
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
               }),
             },
 
@@ -272,7 +269,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
                     : null,
               },
               style: () => ({
-                lineHeight: 1.4,
+                lineHeight: theme.lineHeights.inputWidget,
               }),
             },
 
@@ -282,7 +279,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: "1px",
+                      marginTop: theme.spacing.px,
                     }),
                   },
                 },
@@ -296,8 +293,8 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Svg: {
                     style: () => ({
-                      width: iconSizes.xl,
-                      height: iconSizes.xl,
+                      width: theme.iconSizes.xl,
+                      height: theme.iconSizes.xl,
                     }),
                   },
                 },

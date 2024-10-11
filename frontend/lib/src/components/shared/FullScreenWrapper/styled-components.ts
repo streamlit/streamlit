@@ -90,7 +90,7 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
           background: theme.colors.bgColor,
           zIndex: theme.zIndices.fullscreenWrapper,
           padding: theme.spacing.md,
-          paddingTop: "2.875rem", // Old header height to avoid addtl cascading visual/snapshot changes
+          paddingTop: theme.sizes.fullScreenHeaderHeight,
           overflow: ["auto", "overlay"],
           display: "flex", // To avoid extra spaces that lead to scrollbars.
           alignItems: "center",

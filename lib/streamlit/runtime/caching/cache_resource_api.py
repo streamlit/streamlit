@@ -19,14 +19,12 @@ from __future__ import annotations
 import math
 import threading
 import types
-from datetime import timedelta
-from typing import Any, Callable, Final, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar, cast, overload
 
 from cachetools import TTLCache
 from typing_extensions import TypeAlias
 
 import streamlit as st
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -39,15 +37,17 @@ from streamlit.runtime.caching.cache_utils import (
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
-    ElementMsgData,
     MsgData,
-    MultiCacheResults,
+    show_widget_replay_deprecation,
 )
-from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from streamlit.runtime.caching.hashing import HashFuncsDict
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -80,7 +80,6 @@ class ResourceCaches(CacheStatsProvider):
         max_entries: int | float | None,
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
-        allow_widgets: bool,
     ) -> ResourceCache:
         """Return the mem cache for the given key.
 
@@ -111,7 +110,6 @@ class ResourceCaches(CacheStatsProvider):
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
                 validate=validate,
-                allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
             return cache
@@ -152,13 +150,11 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         max_entries: int | None,
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
-        allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
     ):
         super().__init__(
             func,
             show_spinner=show_spinner,
-            allow_widgets=allow_widgets,
             hash_funcs=hash_funcs,
         )
         self.max_entries = max_entries
@@ -185,7 +181,6 @@ class CachedResourceFuncInfo(CachedFuncInfo):
             max_entries=self.max_entries,
             ttl=self.ttl,
             validate=self.validate,
-            allow_widgets=self.allow_widgets,
         )
 
 
@@ -194,26 +189,18 @@ class CacheResourceAPI:
     and st.cache_resource.clear().
     """
 
-    def __init__(
-        self, decorator_metric_name: str, deprecation_warning: str | None = None
-    ):
+    def __init__(self, decorator_metric_name: str):
         """Create a CacheResourceAPI instance.
 
         Parameters
         ----------
         decorator_metric_name
-            The metric name to record for decorator usage. `@st.experimental_singleton` is
-            deprecated, but we're still supporting it and tracking its usage separately
-            from `@st.cache_resource`.
-
-        deprecation_warning
-            An optional deprecation warning to show when the API is accessed.
+            The metric name to record for decorator usage.
         """
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
         self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
-        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -222,8 +209,7 @@ class CacheResourceAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -236,8 +222,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,
@@ -282,7 +267,7 @@ class CacheResourceAPI:
         cache with ``st.cache_resource.clear()``.
 
         To cache data, use ``st.cache_data`` instead. Learn more about caching at
-        https://docs.streamlit.io/library/advanced-features/caching.
+        https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------
@@ -322,10 +307,6 @@ class CacheResourceAPI:
 
         experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
-            Support for widgets in cached functions is currently experimental.
-            Setting this parameter to True may lead to excessive memory use since the
-            widget value is treated as an additional input parameter to the cache.
-            We may remove support for this option at any time without notice.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -335,6 +316,12 @@ class CacheResourceAPI:
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
 
+        .. deprecated::
+            The cached widget replay functionality was removed in 1.38. Please
+            remove the ``experimental_allow_widgets`` parameter from your
+            caching decorators. This parameter will be removed in a future
+            version.
+
         Example
         -------
         >>> import streamlit as st
@@ -343,7 +330,7 @@ class CacheResourceAPI:
         ... def get_database_session(url):
         ...     # Create a database session object that points to the URL.
         ...     return session
-        ...
+        >>>
         >>> s1 = get_database_session(SESSION_URL_1)
         >>> # Actually executes the function, since this is the first time it was
         >>> # encountered.
@@ -365,7 +352,7 @@ class CacheResourceAPI:
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
         ...     return connection
-        ...
+        >>>
         >>> s1 = get_database_session(create_sessionmaker(), DATA_URL_1)
         >>> # Actually executes the function, since this is the first time it was
         >>> # encountered.
@@ -383,7 +370,7 @@ class CacheResourceAPI:
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
         ...     return connection
-        ...
+        >>>
         >>> fetch_and_clean_data.clear(_sessionmaker, "https://streamlit.io/")
         >>> # Clear the cached entry for the arguments provided.
         >>>
@@ -417,7 +404,8 @@ class CacheResourceAPI:
         ... def get_person_name(person: Person):
         ...     return person.name
         """
-        self._maybe_show_deprecation_warning()
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_resource")
 
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
@@ -429,7 +417,6 @@ class CacheResourceAPI:
                     max_entries=max_entries,
                     ttl=ttl,
                     validate=validate,
-                    allow_widgets=experimental_allow_widgets,
                     hash_funcs=hash_funcs,
                 )
             )
@@ -441,7 +428,6 @@ class CacheResourceAPI:
                 max_entries=max_entries,
                 ttl=ttl,
                 validate=validate,
-                allow_widgets=experimental_allow_widgets,
                 hash_funcs=hash_funcs,
             )
         )
@@ -449,15 +435,7 @@ class CacheResourceAPI:
     @gather_metrics("clear_resource_caches")
     def clear(self) -> None:
         """Clear all cache_resource caches."""
-        self._maybe_show_deprecation_warning()
         _resource_caches.clear_all()
-
-    def _maybe_show_deprecation_warning(self):
-        """If the API is being accessed with the deprecated `st.experimental_singleton` name,
-        show a deprecation warning.
-        """
-        if self._deprecation_warning is not None:
-            show_deprecation_warning(self._deprecation_warning)
 
 
 class ResourceCache(Cache):
@@ -470,25 +448,23 @@ class ResourceCache(Cache):
         ttl_seconds: float,
         validate: ValidateFunc | None,
         display_name: str,
-        allow_widgets: bool,
     ):
         super().__init__()
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
+        self._mem_cache: TTLCache[str, CachedResult] = TTLCache(
             maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate
-        self.allow_widgets = allow_widgets
 
     @property
     def max_entries(self) -> float:
-        return cast(float, self._mem_cache.maxsize)
+        return self._mem_cache.maxsize
 
     @property
     def ttl_seconds(self) -> float:
-        return cast(float, self._mem_cache.ttl)
+        return self._mem_cache.ttl
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -499,24 +475,11 @@ class ResourceCache(Cache):
                 # key does not exist in cache.
                 raise CacheKeyNotFoundError()
 
-            multi_results: MultiCacheResults = self._mem_cache[key]
-
-            ctx = get_script_run_ctx()
-            if not ctx:
-                # ScriptRunCtx does not exist (we're probably running in "raw" mode).
-                raise CacheKeyNotFoundError()
-
-            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
-            if widget_key not in multi_results.results:
-                # widget_key does not exist in cache (this combination of widgets hasn't been
-                # seen for the value_key yet).
-                raise CacheKeyNotFoundError()
-
-            result = multi_results.results[widget_key]
+            result = self._mem_cache[key]
 
             if self.validate is not None and not self.validate(result.value):
                 # Validate failed: delete the entry and raise an error.
-                del multi_results.results[widget_key]
+                del self._mem_cache[key]
                 raise CacheKeyNotFoundError()
 
             return result
@@ -524,33 +487,11 @@ class ResourceCache(Cache):
     @gather_metrics("_cache_resource_object")
     def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return
-
         main_id = st._main.id
         sidebar_id = st.sidebar.id
-        if self.allow_widgets:
-            widgets = {
-                msg.widget_metadata.widget_id
-                for msg in messages
-                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
-            }
-        else:
-            widgets = set()
 
         with self._mem_cache_lock:
-            try:
-                multi_results = self._mem_cache[key]
-            except KeyError:
-                multi_results = MultiCacheResults(widget_ids=widgets, results={})
-
-            multi_results.widget_ids.update(widgets)
-            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
-
-            result = CachedResult(value, messages, main_id, sidebar_id)
-            multi_results.results[widget_key] = result
-            self._mem_cache[key] = multi_results
+            self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
 
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:

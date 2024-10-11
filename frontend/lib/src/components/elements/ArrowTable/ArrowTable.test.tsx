@@ -15,13 +15,15 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
 
-import { UNICODE, EMPTY } from "@streamlit/lib/src/mocks/arrow"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { ArrowTable, TableProps } from "./ArrowTable"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
+import { EMPTY, UNICODE } from "@streamlit/lib/src/mocks/arrow"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+
+import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({
   element: new Quiver({ data }),
@@ -31,8 +33,10 @@ describe("st._arrow_table", () => {
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
     render(<ArrowTable {...props} />)
+    const tableElement = screen.getByTestId("stTable")
+    expect(tableElement).toBeInTheDocument()
+    expect(tableElement).toHaveClass("stTable")
 
-    expect(screen.getByTestId("stTable")).toBeInTheDocument()
     expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
     expect(
       screen.queryByTestId("stTableStyledEmptyTableCell")

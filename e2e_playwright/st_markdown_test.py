@@ -15,19 +15,27 @@
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expand_sidebar,
+    expect_help_tooltip,
+    get_markdown,
+)
 
 
 def test_different_markdown_elements_in_one_block_displayed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the block containing a mixture of different markdown elements is displayed correctly."""
+    """Test that the block containing a mixture of different markdown elements is
+    displayed correctly."""
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
-    expect(markdown_elements).to_have_count(53)
+    expect(markdown_elements).to_have_count(59)
 
-    # Snapshot one big markdown block containing a variety of elements to reduce number of snapshots
-    multi_markdown_format_container = markdown_elements.nth(14)
+    # Snapshot one big markdown block containing a variety of elements to reduce number
+    # of snapshots
+    multi_markdown_format_container = markdown_elements.nth(12)
     multi_markdown_format_container.scroll_into_view_if_needed()
     assert_snapshot(
         multi_markdown_format_container,
@@ -39,9 +47,7 @@ def test_displays_individual_markdowns(app: Page):
     """Verifies the correct text content of markdown elements."""
 
     # get markdown elements in main app view, not sidebar
-    markdown_elements = app.get_by_test_id("stAppViewBlockContainer").get_by_test_id(
-        "stMarkdown"
-    )
+    markdown_elements = app.get_by_test_id("stMain").get_by_test_id("stMarkdown")
 
     # Assert the text content of each markdown element
     text = [
@@ -51,8 +57,6 @@ def test_displays_individual_markdowns(app: Page):
         "[text]",
         "link",
         "[][]",
-        "Inline math with KaTeX\\KaTeXKATE​X",
-        "ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0",
         "Col1Col2SomeData",
         "Bold text within blue background",
         "Italic text within red background",
@@ -64,10 +68,10 @@ def test_displays_individual_markdowns(app: Page):
         expect(markdown_elements.nth(i)).to_have_text(text[i])
 
     # Check that the style contains the correct background color
-    blue_background = markdown_elements.nth(9).locator("span").first
-    red_background = markdown_elements.nth(10).locator("span").first
-    rainbow_background = markdown_elements.nth(11).locator("span").first
-    green_background = markdown_elements.nth(12).locator("span").first
+    blue_background = markdown_elements.nth(7).locator("span").first
+    red_background = markdown_elements.nth(8).locator("span").first
+    rainbow_background = markdown_elements.nth(9).locator("span").first
+    green_background = markdown_elements.nth(10).locator("span").first
 
     expect(blue_background).to_have_css("background-color", "rgba(28, 131, 225, 0.1)")
     expect(red_background).to_have_css("background-color", "rgba(255, 43, 43, 0.1)")
@@ -132,17 +136,15 @@ def test_match_snapshot_for_headers_in_sidebar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that headers in sidebar are rendered correctly."""
-    # expand the sidebar
-    app.get_by_test_id("collapsedControl").click()
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
+    sidebar = expand_sidebar(app)
     assert_snapshot(sidebar, name="st_markdown-headers_in_sidebar")
 
 
 def test_match_snapshot_for_headers_in_single_markdown_command(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that snapshot of headers joined in a single string and written in a single st.markdown command is correct."""
+    """Test that snapshot of headers joined in a single string and written in a single
+    st.markdown command is correct."""
     container = _get_container_of_text(app, "Headers in single st.markdown command")
     assert_snapshot(container, name="st_markdown-headers_joined_in_single_command")
 
@@ -179,30 +181,67 @@ def test_match_snapshot_for_column_beside_widget(
     assert_snapshot(container, name="st_markdown-headers_beside_widget")
 
 
+def test_match_snapshot_for_headers_bold_text(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the headers with bold markdown syntex is correct."""
+    container = _get_container_of_text(app, "Headers with bold syntax")
+    assert_snapshot(container, name="st_markdown-headers_bold_syntax")
+
+    # H1 defaults to extra bold
+    h1 = app.locator("h1#bold-header1")
+    expect(h1.locator("strong").first).to_have_css("font-weight", "700")
+
+    header_ids = [
+        "h2#bold-header2",
+        "h3#bold-header3",
+        "h4#bold-header4",
+        "h5#bold-header5",
+        "h6#bold-header6",
+    ]
+    for header_id in header_ids:
+        header = app.locator(header_id)
+        expect(header.locator("strong").first).to_have_css("font-weight", "600")
+
+
 def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
     # Get the first element in the main view:
     markdown_with_help = (
-        app.get_by_test_id("stAppViewBlockContainer")
-        .get_by_test_id("stMarkdown")
-        .nth(0)
+        app.get_by_test_id("stMain").get_by_test_id("stMarkdown").nth(0)
     )
-    hover_target = markdown_with_help.get_by_test_id("stTooltipHoverTarget")
-    expect(hover_target).to_be_visible()
-
-    tooltip_content = app.get_by_test_id("stTooltipContent")
-    expect(tooltip_content).not_to_be_attached()
-
-    hover_target.hover()
-
-    expect(tooltip_content).to_be_visible()
-    expect(tooltip_content).to_have_text("This is a help tooltip!")
+    expect_help_tooltip(app, markdown_with_help, "This is a help tooltip!")
 
 
 def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    expect(themed_app.get_by_test_id("stMarkdown").nth(50)).to_contain_text("LATE​X")
-    expect(themed_app.get_by_test_id("stMarkdown").nth(51)).to_contain_text("a + b")
     latex_elements = themed_app.get_by_test_id("stMarkdown")
+    assert_snapshot(latex_elements.nth(55), name="st_latex-latex")
+    expect(themed_app.get_by_test_id("stMarkdown").nth(55)).to_contain_text("LATE​X")
 
-    for i in range(50, 53):
-        assert_snapshot(latex_elements.nth(i), name=f"st_latex-{i}")
+    assert_snapshot(latex_elements.nth(56), name="st_latex-formula")
+
+    expect(themed_app.get_by_test_id("stMarkdown").nth(57)).to_contain_text("a + b")
+    assert_snapshot(latex_elements.nth(57), name="st_latex-sympy")
+
+
+def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that large images in markdown are displayed correctly with max width 100%."""
+    markdown_element = get_markdown(
+        app, "Images in markdown should stay inside the container width"
+    )
+    image_element = markdown_element.locator("img")
+
+    image_element.scroll_into_view_if_needed()
+    expect(image_element).to_be_visible()
+    expect(image_element).to_have_css("max-width", "100%")
+    # Wait for the image to load:
+    app.expect_response("**/streamlit-logo.png")
+    # Add additional timeout to avoid flakiness
+    #  since sometimes the image is not rendered yet
+    app.wait_for_timeout(2000)
+    assert_snapshot(markdown_element, name="st_markdown-with_large_image")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stMarkdown")

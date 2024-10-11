@@ -16,7 +16,9 @@
 
 import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
+
 import { BaseUriParts, buildHttpUri, ForwardMsg } from "@streamlit/lib"
+
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 const MOCK_SERVER_URI = {
@@ -125,16 +127,25 @@ describe("DefaultStreamlitEndpoints", () => {
     })
 
     const appPages = [
-      { pageScriptHash: "main_page_hash", pageName: "streamlit_app" },
-      { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
+      {
+        pageScriptHash: "main_page_hash",
+        pageName: "streamlit app",
+        urlPathname: "streamlit_app",
+        isDefault: true,
+      },
+      {
+        pageScriptHash: "other_page_hash",
+        pageName: "my other page",
+        urlPathname: "my_other_page",
+      },
     ]
 
     it("uses window.location.port", () => {
       window.location.port = "3000"
-      expect(endpoints.buildAppPageURL("", appPages[0], 0)).toBe(
+      expect(endpoints.buildAppPageURL("", appPages[0])).toBe(
         "http://streamlit.mock:3000/mock/base/path/"
       )
-      expect(endpoints.buildAppPageURL("", appPages[1], 1)).toBe(
+      expect(endpoints.buildAppPageURL("", appPages[1])).toBe(
         "http://streamlit.mock:3000/mock/base/path/my_other_page"
       )
     })
@@ -142,10 +153,10 @@ describe("DefaultStreamlitEndpoints", () => {
     it("is built using pageLinkBaseURL if set", () => {
       window.location.port = "3000"
       const pageLinkBaseURL = "https://share.streamlit.io/vdonato/foo/bar"
-      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[0], 0)).toBe(
+      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[0])).toBe(
         "https://share.streamlit.io/vdonato/foo/bar/"
       )
-      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[1], 1)).toBe(
+      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[1])).toBe(
         "https://share.streamlit.io/vdonato/foo/bar/my_other_page"
       )
     })

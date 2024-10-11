@@ -18,7 +18,6 @@ import io
 import random
 from unittest import mock
 
-import cv2
 import numpy as np
 import PIL.Image as Image
 import pytest
@@ -76,9 +75,12 @@ def create_image(size, format="RGB", add_alpha=True):
         image.putalpha(alpha)
 
     if format == "BGR":
-        return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    else:
-        return image
+        # Grab the indices of channel in last dimension
+        np_image = np.array(image)
+        # Swap the channels to convert from RGB to BGR:
+        return np_image[..., ["BGR".index(s) for s in "RGB"]]
+
+    return image
 
 
 def create_gif(size):
@@ -89,7 +91,7 @@ def create_gif(size):
 
     # Make ten frames with the circle of a random size and location
     random.seed(0)
-    for i in range(0, 10):
+    for _ in range(0, 10):
         frame = im.copy()
         draw = ImageDraw.Draw(frame)
         pos = (random.randrange(0, size), random.randrange(0, size))
@@ -450,7 +452,68 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
     def test_st_image_bad_width(self):
         """Test st.image with bad width."""
-        with self.assertRaises(StreamlitAPIException) as ctx:
-            st.image("does/not/exist", width=-1234)
+        st.image(
+            Image.new("RGB", (64, 64), color="red"),
+            use_column_width=False,
+            width=-1234,
+        )
 
-        self.assertTrue("Image width must be positive." in str(ctx.exception))
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.ORIGINAL)
+
+    def test_st_image_use_container_width_default(self):
+        """Test st.image without specifying a use_container_width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MIN_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_true(self):
+        """Test st.image with use_container_width=True."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_container_width=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MAX_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_false(self):
+        """Test st.image with use_container_width=False."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_container_width=False)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MIN_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_true_and_given_width(self):
+        """Test st.image with use_container_width=True and a given width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, width=100, use_container_width=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MAX_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_false_and_given_width(self):
+        """Test st.image with use_container_width=False and a given width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, width=100, use_container_width=False)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, 100)
+
+    def test_st_image_use_container_width_and_use_column_width(self):
+        """Test st.image with use_container_width and use_column_width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.image(img, use_container_width=True, use_column_width=True)
+
+        self.assertTrue(
+            "`use_container_width` and `use_column_width` cannot be set at the same time."
+            in str(e.exception)
+        )

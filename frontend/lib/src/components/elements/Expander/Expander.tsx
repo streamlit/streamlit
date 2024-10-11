@@ -15,16 +15,14 @@
  */
 
 import React, { ReactElement, useEffect, useRef, useState } from "react"
-import {
-  ExpandMore,
-  ExpandLess,
-  Check,
-  ErrorOutline,
-} from "@emotion-icons/material-outlined"
+
+import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
+
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import {
-  StyledSpinnerIcon,
+  DynamicIcon,
   StyledIcon,
+  StyledSpinnerIcon,
 } from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
@@ -33,23 +31,22 @@ import { IconSize, isPresetTheme } from "@streamlit/lib/src/theme"
 
 import {
   BORDER_SIZE,
+  StyledDetails,
+  StyledDetailsPanel,
   StyledExpandableContainer,
   StyledSummary,
   StyledSummaryHeading,
-  StyledDetailsPanel,
-  StyledDetails,
 } from "./styled-components"
 
 export interface ExpanderIconProps {
-  icon: string
+  icon?: string
 }
 
 /**
- * Renders an icon for the expander.
+ * Renders an icon for the expander and optionally a user-defined icon.
  *
  * If the icon is "spinner", it will render a spinner icon.
- * If the icon is "check", it will render a check icon.
- * If the icon is "error", it will render an error icon.
+ * If the icon is a valid, user-defined icon, it will render the user-defined icon.
  * Otherwise, it will render nothing.
  *
  * @param {string} icon - The icon to render.
@@ -61,9 +58,15 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 
   const iconProps = {
     size: "lg" as IconSize,
-    margin: "",
-    padding: "",
+    margin: "0",
+    padding: "0",
   }
+
+  const statusIconTestIds: Record<string, string> = {
+    ":material/check:": "stExpanderIconCheck",
+    ":material/error:": "stExpanderIconError",
+  }
+
   if (icon === "spinner") {
     const usingCustomTheme = !isPresetTheme(activeTheme)
     return (
@@ -73,29 +76,18 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
         {...iconProps}
       />
     )
-  } else if (icon === "check") {
-    return (
-      <StyledIcon
-        as={Check}
-        color={"inherit"}
-        aria-hidden="true"
-        data-testid="stExpanderIconCheck"
-        {...iconProps}
-      />
-    )
-  } else if (icon === "error") {
-    return (
-      <StyledIcon
-        as={ErrorOutline}
-        color={"inherit"}
-        aria-hidden="true"
-        data-testid="stExpanderIconError"
-        {...iconProps}
-      />
-    )
   }
 
-  return <></>
+  return icon ? (
+    <DynamicIcon
+      color="inherit"
+      iconValue={icon}
+      testid={statusIconTestIds[icon] || "stExpanderIcon"}
+      {...iconProps}
+    />
+  ) : (
+    <></>
+  )
 }
 
 export interface ExpanderProps {
@@ -176,7 +168,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       }
     )
 
-    animation.onfinish = () => onAnimationFinish(isOpen)
+    animation.addEventListener("finish", () => onAnimationFinish(isOpen))
     animationRef.current = animation
   }
 
@@ -238,7 +230,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   }
 
   return (
-    <StyledExpandableContainer data-testid="stExpander">
+    <StyledExpandableContainer className="stExpander" data-testid="stExpander">
       <StyledDetails isStale={isStale} ref={detailsRef}>
         <StyledSummary onClick={toggle} empty={empty} ref={summaryRef}>
           <StyledSummaryHeading>

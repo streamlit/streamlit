@@ -15,8 +15,10 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
-import { StyledAppViewMain } from "./styled-components"
+
 import { useScrollToBottom } from "@streamlit/lib"
+
+import { StyledAppViewMain } from "./styled-components"
 
 export interface Props {
   className: string
@@ -37,7 +39,7 @@ export default function ScrollToBottomContainer(props: Props): ReactElement {
       isEmbedded={isEmbedded}
       disableScrolling={disableScrolling}
       ref={scrollContainerRef}
-      data-testid="ScrollToBottomContainer"
+      data-testid="stAppScrollToBottomContainer"
     >
       {children}
     </StyledAppViewMain>

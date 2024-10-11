@@ -14,38 +14,123 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useRef, useState } from "react"
-import { AppContext } from "@streamlit/app/src/components/AppContext"
+import React, {
+  MouseEvent,
+  ReactElement,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react"
+
+import groupBy from "lodash/groupBy"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import {
-  Icon,
-  EmojiIcon,
-  useIsOverflowing,
-  StreamlitEndpoints,
   IAppPage,
+  localStorageAvailable,
+  StreamlitEndpoints,
 } from "@streamlit/lib"
+import { AppContext } from "@streamlit/app/src/components/AppContext"
 
+import NavSection from "./NavSection"
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
-  StyledSidebarNavLink,
-  StyledSidebarLinkText,
-  StyledSidebarNavLinkContainer,
-  StyledSidebarNavSeparatorContainer,
+  StyledSidebarNavSeparator,
+  StyledViewButton,
 } from "./styled-components"
 
 export interface Props {
   endpoints: StreamlitEndpoints
   appPages: IAppPage[]
+  navSections: string[]
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
-  hideParentScrollbar: (newValue: boolean) => void
+  expandSidebarNav: boolean
   onPageChange: (pageName: string) => void
+}
+
+// We make the sidebar nav collapsible when there are more than 12 pages.
+const COLLAPSE_THRESHOLD = 12
+// However, we show the first 10 pages when the sidebar is collapsed.
+const NUM_PAGES_TO_SHOW_WHEN_COLLAPSED = 10
+
+interface NavLinkProps {
+  pageUrl: string
+  page: IAppPage
+  isActive: boolean
+  onClick: (e: MouseEvent) => void
+}
+
+function NavLink({
+  pageUrl,
+  page,
+  isActive,
+  onClick,
+}: NavLinkProps): ReactElement {
+  const pageName = page.pageName as string
+
+  return (
+    <li>
+      <SidebarNavLink
+        isActive={isActive}
+        pageUrl={pageUrl}
+        icon={page.icon}
+        onClick={onClick}
+      >
+        {pageName}
+      </SidebarNavLink>
+    </li>
+  )
+}
+
+function generateNavSections(
+  navSections: string[],
+  appPages: IAppPage[],
+  needsCollapse: boolean,
+  generateNavLink: (page: IAppPage, index: number) => ReactElement
+): ReactNode[] {
+  const contents: ReactNode[] = []
+  const pagesBySectionHeader = groupBy(
+    appPages,
+    page => page.sectionHeader || ""
+  )
+  let currentPageCount = 0
+  navSections.forEach(header => {
+    const sectionPages = pagesBySectionHeader[header] ?? []
+    let viewablePages = sectionPages
+
+    if (needsCollapse) {
+      if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
+        // We cannot even show the section
+        return
+      } else if (
+        currentPageCount + sectionPages.length >
+        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+      ) {
+        // We can partially show the section
+        viewablePages = sectionPages.slice(
+          0,
+          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
+        )
+      }
+    }
+    currentPageCount += viewablePages.length
+
+    contents.push(
+      <NavSection key={header} header={header}>
+        {viewablePages.map(generateNavLink)}
+      </NavSection>
+    )
+  })
+
+  return contents
 }
 
 /** Displays a list of navigable app page links for multi-page apps. */
@@ -53,111 +138,105 @@ const SidebarNav = ({
   endpoints,
   appPages,
   collapseSidebar,
+  expandSidebarNav,
   currentPageScriptHash,
   hasSidebarElements,
-  hideParentScrollbar,
+  navSections,
   onPageChange,
 }: Props): ReactElement | null => {
-  const { pageLinkBaseUrl } = React.useContext(AppContext)
   const [expanded, setExpanded] = useState(false)
-  const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef, expanded)
+  const { pageLinkBaseUrl } = useContext(AppContext)
 
-  const onMouseOver = useCallback(() => {
-    if (isOverflowing) {
-      hideParentScrollbar(true)
+  useEffect(() => {
+    const cachedSidebarNavExpanded =
+      localStorageAvailable() &&
+      window.localStorage.getItem("sidebarNavState") === "expanded"
+
+    if (!expanded && (expandSidebarNav || cachedSidebarNavExpanded)) {
+      setExpanded(true)
     }
-  }, [isOverflowing, hideParentScrollbar])
+  }, [expanded, expandSidebarNav])
 
-  const onMouseOut = useCallback(
-    () => hideParentScrollbar(false),
-    [hideParentScrollbar]
+  const handleViewButtonClick = useCallback(() => {
+    const nextState = !expanded
+    if (localStorageAvailable()) {
+      if (nextState) {
+        localStorage.setItem("sidebarNavState", "expanded")
+      } else {
+        localStorage.removeItem("sidebarNavState")
+      }
+    }
+    setExpanded(nextState)
+  }, [expanded])
+
+  const generateNavLink = useCallback(
+    (page: IAppPage, index: number) => {
+      const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
+      const isActive = page.pageScriptHash === currentPageScriptHash
+
+      return (
+        <NavLink
+          key={`${page.pageName}-${index}`}
+          pageUrl={pageUrl}
+          page={page}
+          isActive={isActive}
+          onClick={e => {
+            e.preventDefault()
+            onPageChange(page.pageScriptHash as string)
+            if (reactDeviceDetect.isMobile) {
+              collapseSidebar()
+            }
+          }}
+        />
+      )
+    },
+    [
+      collapseSidebar,
+      currentPageScriptHash,
+      endpoints,
+      onPageChange,
+      pageLinkBaseUrl,
+    ]
   )
 
-  const toggleExpanded = useCallback(() => {
-    if (!expanded && isOverflowing) {
-      setExpanded(true)
-    } else if (expanded) {
-      setExpanded(false)
-    }
-  }, [expanded, isOverflowing])
-
-  if (appPages.length < 2) {
-    return null
+  let contents: ReactNode[] = []
+  const totalPages = appPages.length
+  const shouldShowViewButton =
+    hasSidebarElements && totalPages > COLLAPSE_THRESHOLD && !expandSidebarNav
+  const needsCollapse = shouldShowViewButton && !expanded
+  if (navSections.length > 0) {
+    // For MPAv2 with headers: renders a NavSection for each header with its respective pages
+    contents = generateNavSections(
+      navSections,
+      appPages,
+      needsCollapse,
+      generateNavLink
+    )
+  } else {
+    const viewablePages = needsCollapse
+      ? appPages.slice(0, NUM_PAGES_TO_SHOW_WHEN_COLLAPSED)
+      : appPages
+    // For MPAv1 / MPAv2 with no section headers, single NavSection with all pages
+    contents = viewablePages.map(generateNavLink)
   }
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
-      <StyledSidebarNavItems
-        ref={navItemsRef}
-        isExpanded={expanded}
-        isOverflowing={isOverflowing}
-        hasSidebarElements={hasSidebarElements}
-        onMouseOver={onMouseOver}
-        onMouseOut={onMouseOut}
-        data-testid="stSidebarNavItems"
-      >
-        {appPages.map((page: IAppPage, pageIndex: number) => {
-          const pageUrl = endpoints.buildAppPageURL(
-            pageLinkBaseUrl,
-            page,
-            pageIndex
-          )
-
-          const pageName = page.pageName as string
-          const tooltipContent = pageName.replace(/_/g, " ")
-          const isActive = page.pageScriptHash === currentPageScriptHash
-
-          return (
-            <li key={pageName}>
-              <StyledSidebarNavLinkContainer>
-                <StyledSidebarNavLink
-                  data-testid="stSidebarNavLink"
-                  isActive={isActive}
-                  href={pageUrl}
-                  onClick={e => {
-                    e.preventDefault()
-                    onPageChange(page.pageScriptHash as string)
-                    if (reactDeviceDetect.isMobile) {
-                      collapseSidebar()
-                    }
-                  }}
-                >
-                  {page.icon && page.icon.length && (
-                    <EmojiIcon size="lg">{page.icon}</EmojiIcon>
-                  )}
-                  <StyledSidebarLinkText isActive={isActive}>
-                    {tooltipContent}
-                  </StyledSidebarLinkText>
-                </StyledSidebarNavLink>
-              </StyledSidebarNavLinkContainer>
-            </li>
-          )
-        })}
+      <StyledSidebarNavItems data-testid="stSidebarNavItems">
+        {contents}
       </StyledSidebarNavItems>
-
-      {hasSidebarElements && (
-        <StyledSidebarNavSeparatorContainer
-          data-testid="stSidebarNavSeparator"
-          isExpanded={expanded}
-          isOverflowing={isOverflowing}
-          onClick={toggleExpanded}
+      {shouldShowViewButton && (
+        <StyledViewButton
+          onClick={handleViewButtonClick}
+          data-testid="stSidebarNavViewButton"
         >
-          {isOverflowing && !expanded && (
-            <Icon
-              content={ExpandMore}
-              size="md"
-              testid="stSidebarNavExpandIcon"
-            />
-          )}
-          {expanded && (
-            <Icon
-              content={ExpandLess}
-              size="md"
-              testid="stSidebarNavCollapseIcon"
-            />
-          )}
-        </StyledSidebarNavSeparatorContainer>
+          {expanded
+            ? "View less"
+            : `View ${totalPages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED} more`}
+        </StyledViewButton>
+      )}
+      {hasSidebarElements && (
+        <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />
       )}
     </StyledSidebarNavContainer>
   )

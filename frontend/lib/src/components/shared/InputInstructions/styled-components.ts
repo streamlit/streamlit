@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
+import styled from "@emotion/styled"
 
 const blink = keyframes`
   50% {
@@ -37,7 +37,7 @@ export const StyledMessage = styled.span<StyledMessageProps>(
             content: '"•"',
             animation: "none",
             color: theme.colors.gray,
-            margin: "0 5px",
+            margin: `0 ${theme.spacing.twoXS}`,
           },
         }
       : {}),

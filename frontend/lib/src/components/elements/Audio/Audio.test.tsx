@@ -15,14 +15,16 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
-import Audio, { AudioProps } from "./Audio"
 import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
+import Audio, { AudioProps } from "./Audio"
 
 describe("Audio Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
@@ -49,7 +51,9 @@ describe("Audio Element", () => {
 
   it("renders without crashing", () => {
     render(<Audio {...getProps()} />)
-    expect(screen.getByTestId("stAudio")).toBeInTheDocument()
+    const audioElement = screen.getByTestId("stAudio")
+    expect(audioElement).toBeInTheDocument()
+    expect(audioElement).toHaveClass("stAudio")
   })
 
   it("has controls", () => {

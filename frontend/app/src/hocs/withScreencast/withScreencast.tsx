@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
+import React, { ComponentType, PureComponent, ReactNode } from "react"
+
+import hoistNonReactStatics from "hoist-non-react-statics"
+
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logWarning } from "@streamlit/lib"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
-import hoistNonReactStatics from "hoist-non-react-statics"
-import React, { PureComponent, ComponentType, ReactNode } from "react"
-
 import {
-  UnsupportedBrowserDialog,
   ScreencastDialog,
+  UnsupportedBrowserDialog,
   VideoRecordedDialog,
 } from "@streamlit/app/src/hocs/withScreencast/components"
 import Countdown from "@streamlit/app/src/components/Countdown"
@@ -120,7 +122,7 @@ function withScreencast<P extends InjectedProps>(
       const { currentState } = this.state
 
       // We should do nothing if the user try to stop recording when it is not started
-      if (currentState === "OFF" || this.recorder == null) {
+      if (currentState === "OFF" || isNullOrUndefined(this.recorder)) {
         return
       }
 
@@ -146,7 +148,7 @@ function withScreencast<P extends InjectedProps>(
     }
 
     private onCountdownEnd = async (): Promise<any> => {
-      if (this.recorder == null) {
+      if (isNullOrUndefined(this.recorder)) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
       }

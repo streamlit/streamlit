@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useMemo, useState } from "react"
-import { useTheme } from "@emotion/react"
-import { SIZE } from "baseui/modal"
+import React, { ReactElement, useEffect, useState } from "react"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import Modal, {
-  ModalHeader,
   ModalBody,
+  ModalHeader,
 } from "@streamlit/lib/src/components/shared/Modal"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
@@ -31,26 +28,12 @@ import { StyledDialogContent } from "./styled-components"
 
 export interface Props {
   element: BlockProto.Dialog
-}
-
-function parseWidthConfig(
-  width: BlockProto.Dialog.DialogWidth,
-  theme: EmotionTheme
-): string {
-  if (width === BlockProto.Dialog.DialogWidth.LARGE) {
-    // This is the same width incl. padding as the AppView container is using 704px (736px (= contentMaxWidth) - 32px padding).
-    // The dialog's total left and right padding is 48px. So the dialog needs a total width of 752px (=704px + 48px).
-    // The used calculation here makes the relation to the app content width more comprehendable than hardcoding.
-    // Note that a Modal has max-width:100%, so it looks good on mobile independent of the calculated size here.
-    const paddingDifferenceDialogAndAppView = theme.spacing.lg // the dialog has 0.5rem more padding left and right => 1rem
-    return `calc(${theme.sizes.contentMaxWidth} + ${paddingDifferenceDialogAndAppView})`
-  }
-
-  return SIZE.default
+  deltaMsgReceivedAt?: number
 }
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   element,
+  deltaMsgReceivedAt,
   children,
 }): ReactElement => {
   const { title, dismissible, width, isOpen: initialIsOpen } = element
@@ -61,21 +44,23 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     if (notNullOrUndefined(initialIsOpen)) {
       setIsOpen(initialIsOpen)
     }
-  }, [initialIsOpen])
 
-  const theme = useTheme()
-  const size: string = useMemo(
-    () =>
-      parseWidthConfig(width ?? BlockProto.Dialog.DialogWidth.SMALL, theme),
-    [width, theme]
-  )
+    // when the deltaMsgReceivedAt changes, we might want to open the dialog again.
+    // since dismissing is a UI-only action, the initialIsOpen prop might not have
+    // changed which would lead to the dialog not opening again.
+  }, [initialIsOpen, deltaMsgReceivedAt])
+
+  // don't use the Modal's isOpen prop as it feels laggy when using it
+  if (!isOpen) {
+    return <></>
+  }
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       closeable={dismissible}
       onClose={() => setIsOpen(false)}
-      size={size}
+      size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>

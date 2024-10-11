@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+import { MouseEvent, ReactNode } from "react"
+
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
-import { MouseEvent, ReactNode } from "react"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface CameraInputButtonProps {
@@ -24,10 +26,6 @@ export interface CameraInputButtonProps {
   disabled?: boolean
   children: ReactNode
   progress?: number | null
-}
-
-export interface StyledCameraInputProps {
-  width: number
 }
 
 enum Size {
@@ -61,14 +59,14 @@ function getSizeStyle(size: Size, theme: EmotionTheme): CSSObject {
 
 type RequiredCameraInputButtonProps = Required<CameraInputButtonProps>
 
-export const StyledCameraInput = styled.div<StyledCameraInputProps>(() => ({
+export const StyledCameraInput = styled.div({
   // This is used to position the "Switch facing mode" button
   // with respect to the webcam block.
   position: "relative",
   overflow: "hidden",
   width: "100%",
   objectFit: "contain",
-}))
+})
 
 export interface StyledBoxProps {
   width: number
@@ -76,7 +74,7 @@ export interface StyledBoxProps {
 
 export const StyledBox = styled.div<StyledBoxProps>(({ theme, width }) => ({
   backgroundColor: theme.colors.secondaryBg,
-  borderRadius: `${theme.radii.lg} ${theme.radii.lg} 0 0`,
+  borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
   width: "100%",
   height: (width * 9) / 16,
   display: "flex",
@@ -95,7 +93,7 @@ export interface StyledImgProps {
 }
 
 export const StyledImg = styled.img<StyledImgProps>(({ theme, opacity }) => ({
-  borderRadius: `${theme.radii.lg} ${theme.radii.lg} 0 0`,
+  borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
   objectFit: "contain",
   opacity,
 }))
@@ -106,31 +104,31 @@ export const StyledLink = styled.a(({ theme }) => ({
   textDecoration: "none",
 }))
 
-export const StyledSpan = styled.span(() => ({
+export const StyledSpan = styled.span({
   display: "flex",
   alignItems: "center",
-}))
+})
 
 export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   position: "absolute",
   top: theme.spacing.lg,
   right: theme.spacing.lg,
-  zIndex: 1,
+  zIndex: theme.zIndices.priority,
   color: theme.colors.fadedText40,
   mixBlendMode: "difference",
   opacity: 0.6,
 }))
 
-export const StyledWebcamWrapper = styled.div(() => ({
+export const StyledWebcamWrapper = styled.div({
   display: "flex",
-}))
+})
 
-export const StyledProgressBar = styled.div(() => ({
+export const StyledProgressBar = styled.div({
   height: "fit-content",
   width: "100%",
   position: "absolute",
   bottom: 0,
-}))
+})
 
 export const StyledCameraInputBaseButton =
   styled.button<RequiredCameraInputButtonProps>(({ theme }) => ({
@@ -140,8 +138,8 @@ export const StyledCameraInputBaseButton =
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.lightenedBg05,
-    border: `1px solid ${theme.colors.fadedText10}`,
-    borderRadius: `0 0 ${theme.radii.lg} ${theme.radii.lg}`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    borderRadius: `0 0 ${theme.radii.default} ${theme.radii.default}`,
     "&:hover": {
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
@@ -160,7 +158,7 @@ export const StyledCameraInputBaseButton =
     },
     fontWeight: theme.fontWeights.normal,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-    margin: 0,
+    margin: theme.spacing.none,
     lineHeight: theme.lineHeights.base,
     color: "inherit",
     width: "100%",

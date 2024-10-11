@@ -19,24 +19,30 @@ from enum import Enum
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
-from streamlit.elements.form import is_in_form
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
+from streamlit.elements.lib.form_utils import is_in_form
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    save_for_app_testing,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import is_emoji, validate_material_icon
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -161,13 +167,13 @@ class ChatMixin:
             * A single-character emoji. For example, you can set ``avatar="🧑‍💻"``
               or ``avatar="🦖"``. Emoji short codes are not supported.
 
-            * An icon from the Material Symbols library (outlined style) in the
+            * An icon from the Material Symbols library (rounded style) in the
               format ``":material/icon_name:"`` where "icon_name" is the name
               of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
               Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
         Returns
@@ -252,7 +258,7 @@ class ChatMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget based on
-            its content. Multiple widgets of the same type may not share the same key.
+            its content. No two widgets may have the same key.
 
         max_chars : int or None
             The maximum number of characters that can be entered. If ``None``
@@ -292,8 +298,9 @@ class ChatMixin:
             height: 350px
 
         The chat input can also be used inline by nesting it inside any layout
-        container (container, columns, tabs, sidebar, etc). Create chat
-        interfaces embedded next to other content or have multiple chat bots!
+        container (container, columns, tabs, sidebar, etc) or fragment. Create
+        chat interfaces embedded next to other content or have multiple
+        chatbots!
 
         >>> import streamlit as st
         >>>
@@ -311,24 +318,22 @@ class ChatMixin:
         default = ""
         key = to_key(key)
 
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
+        check_widget_policies(
+            self.dg,
+            key,
+            on_submit,
+            default_value=default,
+            writes_allowed=False,
         )
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_submit)
-        check_session_state_rules(default_value=default, key=key, writes_allowed=False)
-
         ctx = get_script_run_ctx()
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
-            key=key,
+            # chat_input is not allowed to be used in a form.
+            form_id=None,
             placeholder=placeholder,
             max_chars=max_chars,
-            page=ctx.page_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a chat input inside a form.
@@ -355,7 +360,7 @@ class ChatMixin:
             position = "inline"
 
         chat_input_proto = ChatInputProto()
-        chat_input_proto.id = id
+        chat_input_proto.id = element_id
         chat_input_proto.placeholder = str(placeholder)
 
         if max_chars is not None:
@@ -365,15 +370,14 @@ class ChatMixin:
 
         serde = ChatInputSerde()
         widget_state = register_widget(
-            "chat_input",
-            chat_input_proto,
-            user_key=key,
+            chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_trigger_value",
         )
 
         chat_input_proto.disabled = disabled
@@ -382,14 +386,13 @@ class ChatMixin:
             chat_input_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, widget_state.value)
+            save_for_app_testing(ctx, element_id, widget_state.value)
         if position == "bottom":
-            # We import it here to avoid circular imports.
-            from streamlit import _bottom
-
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
-            _bottom._enqueue("chat_input", chat_input_proto)
+            get_dg_singleton_instance().bottom_dg._enqueue(
+                "chat_input", chat_input_proto
+            )
         else:
             self.dg._enqueue("chat_input", chat_input_proto)
 

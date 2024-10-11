@@ -24,4 +24,5 @@ message Logo {
   string image = 1;
   string link = 2;
   string icon_image = 3;
+  string size = 4;
 }

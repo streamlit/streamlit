@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from streamlit.proto.Delta_pb2 import Delta
 
 
 class ForwardMsgQueue:
@@ -38,7 +40,7 @@ class ForwardMsgQueue:
         # redundant outgoing Deltas (where a newer Delta supersedes
         # an older Delta, with the same delta_path, that's still in the
         # queue).
-        self._delta_index_map: dict[tuple[int, ...], int] = dict()
+        self._delta_index_map: dict[tuple[int, ...], int] = {}
 
     def get_debug(self) -> dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
@@ -79,7 +81,11 @@ class ForwardMsgQueue:
         self._delta_index_map[delta_key] = len(self._queue)
         self._queue.append(msg)
 
-    def clear(self, retain_lifecycle_msgs: bool = False) -> None:
+    def clear(
+        self,
+        retain_lifecycle_msgs: bool = False,
+        fragment_ids_this_run: list[str] | None = None,
+    ) -> None:
         """Clear the queue, potentially retaining lifecycle messages.
 
         The retain_lifecycle_msgs argument exists because in some cases (in particular
@@ -87,22 +93,46 @@ class ForwardMsgQueue:
         to remove certain messages from the queue as doing so may cause the client to
         not hear about important script lifecycle events (such as the script being
         stopped early in order to be rerun).
+
+        If fragment_ids_this_run is provided, delta messages not belonging to any
+        fragment or belonging to a fragment not in fragment_ids_this_run will be
+        preserved to prevent clearing messages unrelated to the running fragments.
         """
+
         if not retain_lifecycle_msgs:
             self._queue = []
         else:
             self._queue = [
-                msg
+                _update_script_finished_message(msg)
                 for msg in self._queue
                 if msg.WhichOneof("type")
                 in {
+                    "new_session",
                     "script_finished",
                     "session_status_changed",
                     "parent_message",
                 }
+                or (
+                    # preserve all messages if this is a fragment rerun and...
+                    fragment_ids_this_run is not None
+                    and (
+                        # the message is not a delta message
+                        # (not associated with a fragment) or...
+                        msg.delta is None
+                        or (
+                            # it is a delta but not associated with any of the passed
+                            # fragments
+                            msg.delta is not None
+                            and (
+                                msg.delta.fragment_id is None
+                                or msg.delta.fragment_id not in fragment_ids_this_run
+                            )
+                        )
+                    )
+                )
             ]
 
-        self._delta_index_map = dict()
+        self._delta_index_map = {}
 
     def flush(self) -> list[ForwardMsg]:
         """Clear the queue and return a list of the messages it contained
@@ -163,3 +193,20 @@ def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta | None:
         return new_delta
 
     return None
+
+
+def _update_script_finished_message(msg: ForwardMsg) -> ForwardMsg:
+    """
+    When we are here, the message queue is cleared from non-lifecycle messages
+    before they were flushed to the browser.
+
+    If there were no non-lifecycle messages in the queue, changing the type here
+    should not matter for the frontend anyways, so we optimistically change the
+    `script_finished` message to `FINISHED_EARLY_FOR_RERUN`. This indicates to
+    the frontend that the previous run was interrupted by a new script start.
+    Otherwise, a `FINISHED_SUCCESSFULLY` message might trigger a reset of widget
+    states on the frontend.
+    """
+    if msg.WhichOneof("type") == "script_finished":
+        msg.script_finished = ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    return msg

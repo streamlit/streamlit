@@ -20,5 +20,9 @@ export const radii = {
   md: "0.25rem",
   lg: "0.5rem",
   xl: "0.75rem",
+  xxl: "1rem",
+  xxxl: "2rem",
   full: "9999px",
+  // This is the default radius used in most elements:
+  default: "0.5rem",
 }

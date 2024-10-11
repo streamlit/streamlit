@@ -15,7 +15,8 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback, useContext } from "react"
-import { StyledBody, StyledAction } from "baseui/card"
+
+import { StyledAction, StyledBody } from "baseui/card"
 
 import { BaseButton, BaseButtonKind, GitInfo, IGitInfo } from "@streamlit/lib"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
@@ -27,10 +28,10 @@ import { AppContext } from "@streamlit/app/src/components/AppContext"
 import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import {
-  STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
-  STREAMLIT_DEPLOY_TUTORIAL_URL,
   DEPLOY_URL,
   STREAMLIT_CLOUD_URL,
+  STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
+  STREAMLIT_DEPLOY_TUTORIAL_URL,
 } from "@streamlit/app/src/urls"
 import {
   DetachedHead,
@@ -42,9 +43,9 @@ import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
 import {
-  StyledSubheader,
   StyledActionsWrapper,
   StyledCardContainer,
+  StyledSubheader,
 } from "./styled-components"
 
 const { GitStates } = GitInfo
@@ -59,9 +60,9 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
     // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
     const deployUrl = new URL(DEPLOY_URL)
 
-    deployUrl.searchParams.set("repository", gitInfo.repository || "")
-    deployUrl.searchParams.set("branch", gitInfo.branch || "")
-    deployUrl.searchParams.set("mainModule", gitInfo.module || "")
+    deployUrl.searchParams.set("repository", gitInfo.repository ?? "")
+    deployUrl.searchParams.set("branch", gitInfo.branch ?? "")
+    deployUrl.searchParams.set("mainModule", gitInfo.module ?? "")
     return deployUrl.toString()
   }
   // If not in git repo, direct them to the Streamlit Cloud page.
@@ -80,7 +81,9 @@ export interface DeployDialogProps {
   metricsMgr: SegmentMetricsManager
 }
 
-export function DeployDialog(props: DeployDialogProps): ReactElement {
+export function DeployDialog(
+  props: Readonly<DeployDialogProps>
+): ReactElement {
   // Get latest git info from AppContext:
   const { gitInfo } = useContext(AppContext)
   const { onClose, metricsMgr } = props
@@ -143,7 +146,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
     <Modal onClose={onClose}>
       <StyledCardContainer>
         <Card>
-          <StyledBody>
+          <StyledBody style={{ flexGrow: 1 }}>
             <img
               src={StreamlitLogo}
               alt={"Streamlit Logo"}
@@ -182,7 +185,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
           </StyledAction>
         </Card>
         <Card>
-          <StyledBody>
+          <StyledBody style={{ flexGrow: 1 }}>
             <img
               src={Rocket}
               alt={"Rocket"}

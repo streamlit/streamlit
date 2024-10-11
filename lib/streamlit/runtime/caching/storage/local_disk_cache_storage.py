@@ -63,7 +63,7 @@ import os
 import shutil
 from typing import Final
 
-from streamlit import util
+from streamlit import errors
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
@@ -164,7 +164,7 @@ class LocalDiskCacheStorage(CacheStorage):
             try:
                 with streamlit_write(path, binary=True) as output:
                     output.write(value)
-            except util.Error as e:
+            except errors.Error as e:
                 _LOGGER.debug(e)
                 # Clean up file so we don't leave zero byte files.
                 try:

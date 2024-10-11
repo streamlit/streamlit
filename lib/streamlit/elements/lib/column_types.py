@@ -317,6 +317,9 @@ def NumberColumn(
         This does not impact the return value. Valid formatters: %d %e %f %g %i %u.
         You can also add prefixes and suffixes, e.g. ``"$ %.2f"`` to show a dollar prefix.
 
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
+
     min_value : int, float, or None
         The minimum value that can be entered.
         If None (default), there will be no minimum.
@@ -448,7 +451,7 @@ def TextColumn(
     >>>             help="Streamlit **widget** commands 🎈",
     >>>             default="st.",
     >>>             max_chars=50,
-    >>>             validate="^st\.[a-z_]+$",
+    >>>             validate=r"^st\.[a-z_]+$",
     >>>         )
     >>>     },
     >>>     hide_index=True,
@@ -541,6 +544,8 @@ def LinkColumn(
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
         function on the underlying dataframe. Note that this makes the app slow,
         doesn't work with editable columns, and might be removed in the future.
+        Text formatting from ``column_config`` always takes precedence over
+        text formatting from ``pandas.Styler``.
 
     Examples
     --------
@@ -571,9 +576,9 @@ def LinkColumn(
     >>>         "apps": st.column_config.LinkColumn(
     >>>             "Trending apps",
     >>>             help="The top trending Streamlit apps",
-    >>>             validate="^https://[a-z]+\\.streamlit\\.app$",
+    >>>             validate=r"^https://[a-z]+\\.streamlit\\.app$",
     >>>             max_chars=100,
-    >>>             display_text="https://(.*?)\\.streamlit\\.app"
+    >>>             display_text=r"https://(.*?)\\.streamlit\\.app"
     >>>         ),
     >>>         "creator": st.column_config.LinkColumn(
     >>>             "App Creator", display_text="Open profile"
@@ -1038,7 +1043,7 @@ def ImageColumn(
     The cell values need to be one of:
 
     * A URL to fetch the image from. This can also be a relative URL of an image
-      deployed via `static file serving <https://docs.streamlit.io/library/advanced-features/static-file-serving>`_.
+      deployed via `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
       Note that you can NOT use an arbitrary local image if it is not available through
       a public URL.
     * A data URL containing an SVG XML like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
@@ -1213,6 +1218,9 @@ def DatetimeColumn(
         `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
         formats. If None (default), uses ``YYYY-MM-DD HH:mm:ss``.
 
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
+
     min_value: datetime.datetime or None
         The minimum datetime that can be entered.
         If None (default), there will be no minimum.
@@ -1332,6 +1340,9 @@ def TimeColumn(
         `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
         formats. If None (default), uses ``HH:mm:ss``.
 
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
+
     min_value: datetime.time or None
         The minimum time that can be entered.
         If None (default), there will be no minimum.
@@ -1445,6 +1456,9 @@ def DateColumn(
         A momentJS format string controlling how times are displayed. See
         `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
         formats. If None (default), uses ``YYYY-MM-DD``.
+
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
 
     min_value: datetime.date or None
         The minimum date that can be entered.

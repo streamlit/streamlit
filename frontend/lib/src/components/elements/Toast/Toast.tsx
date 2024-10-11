@@ -16,29 +16,29 @@
 
 import React, {
   ReactElement,
-  useState,
-  useEffect,
   useCallback,
+  useEffect,
   useMemo,
+  useState,
 } from "react"
+
 import { withTheme } from "@emotion/react"
 import { toaster, ToastOverrides } from "baseui/toast"
 
 import {
-  hasLightBackgroundColor,
   EmotionTheme,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
-
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 import {
-  StyledViewButton,
-  StyledToastWrapper,
   StyledMessageWrapper,
+  StyledToastWrapper,
+  StyledViewButton,
 } from "./styled-components"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 export interface ToastProps {
   theme: EmotionTheme
@@ -53,18 +53,19 @@ function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
     Body: {
       props: {
         "data-testid": "stToast",
+        className: "stToast",
       },
       style: {
         display: "flex",
         flexDirection: "row",
         gap: theme.spacing.md,
-        width: theme.sizes.sidebar,
-        marginTop: "8px",
+        width: theme.sizes.toastWidth,
+        marginTop: theme.spacing.sm,
         // Warnings logged if you use shorthand property here:
-        borderTopLeftRadius: theme.radii.lg,
-        borderTopRightRadius: theme.radii.lg,
-        borderBottomLeftRadius: theme.radii.lg,
-        borderBottomRightRadius: theme.radii.lg,
+        borderTopLeftRadius: theme.radii.default,
+        borderTopRightRadius: theme.radii.default,
+        borderBottomLeftRadius: theme.radii.default,
+        borderBottomRightRadius: theme.radii.default,
         paddingTop: theme.spacing.lg,
         paddingBottom: theme.spacing.lg,
         paddingLeft: theme.spacing.twoXL,
@@ -114,7 +115,12 @@ export function shortenMessage(fullMessage: string): string {
   return fullMessage
 }
 
-export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
+export function Toast({
+  theme,
+  body,
+  icon,
+  width,
+}: Readonly<ToastProps>): ReactElement {
   const displayMessage = shortenMessage(body)
   const shortened = body !== displayMessage
 
@@ -129,33 +135,30 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
 
   const toastContent = useMemo(
     () => (
-      <>
-        <StyledToastWrapper expanded={expanded}>
-          {icon && (
-            <DynamicIcon
-              iconValue={icon}
-              size="xl"
-              testid="stToastDynamicIcon"
-            />
+      <StyledToastWrapper expanded={expanded}>
+        {icon && (
+          <DynamicIcon
+            iconValue={icon}
+            size="xl"
+            testid="stToastDynamicIcon"
+          />
+        )}
+        <StyledMessageWrapper>
+          <StreamlitMarkdown
+            source={expanded ? body : displayMessage}
+            allowHTML={false}
+            isToast
+          />
+          {shortened && (
+            <StyledViewButton
+              data-testid="stToastViewButton"
+              onClick={handleClick}
+            >
+              {expanded ? "view less" : "view more"}
+            </StyledViewButton>
           )}
-          <StyledMessageWrapper>
-            <StreamlitMarkdown
-              source={expanded ? body : displayMessage}
-              allowHTML={false}
-              isToast
-            />
-            {shortened && (
-              <StyledViewButton
-                data-testid="toastViewButton"
-                className="toastViewButton"
-                onClick={handleClick}
-              >
-                {expanded ? "view less" : "view more"}
-              </StyledViewButton>
-            )}
-          </StyledMessageWrapper>
-        </StyledToastWrapper>
-      </>
+        </StyledMessageWrapper>
+      </StyledToastWrapper>
     ),
     [shortened, expanded, body, icon, displayMessage, handleClick]
   )
@@ -163,7 +166,9 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
   useEffect(() => {
     // Handles the error case where st.sidebar.toast is called since
     // baseweb would throw error anyway (no toast container in sidebar)
-    if (theme.inSidebar) return
+    if (theme.inSidebar) {
+      return
+    }
 
     // Uses toaster utility to create toast on mount and generate unique key
     // to reference that toast for update/removal
@@ -197,7 +202,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     <AlertElement
       kind={Kind.ERROR}
       body="Streamlit API Error: `st.toast` cannot be called directly on the sidebar with `st.sidebar.toast`.
-        See our `st.toast` API [docs](https://docs.streamlit.io/library/api-reference/status/st.toast) for more information."
+        See our `st.toast` API [docs](https://docs.streamlit.io/develop/api-reference/status/st.toast) for more information."
       width={width}
     />
   )

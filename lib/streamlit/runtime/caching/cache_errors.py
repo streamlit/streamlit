@@ -14,20 +14,22 @@
 
 from __future__ import annotations
 
-import types
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from streamlit import type_util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 
-CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
+if TYPE_CHECKING:
+    from types import FunctionType
+
+CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/caching"
 
 
 def get_cached_func_name_md(func: Any) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
-        return "`%s()`" % func.__name__
+        return f"`{func.__name__}()`"
     elif hasattr(type(func), "__name__"):
         return f"`{type(func).__name__}`"
     return f"`{type(func)}`"
@@ -47,7 +49,7 @@ class UnhashableParamError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        func: types.FunctionType,
+        func: FunctionType,
         arg_name: str | None,
         arg_value: Any,
         orig_exc: BaseException,
@@ -59,7 +61,7 @@ class UnhashableParamError(StreamlitAPIException):
     @staticmethod
     def _create_message(
         cache_type: CacheType,
-        func: types.FunctionType,
+        func: FunctionType,
         arg_name: str | None,
         arg_value: Any,
     ) -> str:
@@ -96,16 +98,17 @@ class CacheReplayClosureError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        cached_func: types.FunctionType,
+        cached_func: FunctionType,
     ):
         func_name = get_cached_func_name_md(cached_func)
         decorator_name = get_decorator_api_name(cache_type)
 
         msg = (
             f"""
-While running {func_name}, a streamlit element is called on some layout block created outside the function.
-This is incompatible with replaying the cached effect of that element, because the
-the referenced block might not exist when the replay happens.
+While running {func_name}, a streamlit element is called on some layout block
+created outside the function. This is incompatible with replaying the cached
+effect of that element, because the the referenced block might not exist when
+the replay happens.
 
 How to fix this:
 * Move the creation of $THING inside {func_name}.
@@ -118,15 +121,18 @@ How to fix this:
 
 
 class UnserializableReturnValueError(MarkdownFormattedException):
-    def __init__(self, func: types.FunctionType, return_value: types.FunctionType):
+    def __init__(self, func: FunctionType, return_value: FunctionType):
         MarkdownFormattedException.__init__(
             self,
             f"""
-            Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {get_cached_func_name_md(func)}.
-            `st.cache_data` uses [pickle](https://docs.python.org/3/library/pickle.html) to
-            serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.
-            If you want to cache unserializable objects such as database connections or Tensorflow
-            sessions, use `st.cache_resource` instead (see [our docs]({CACHE_DOCS_URL}) for differences).""",
+            Cannot serialize the return value (of type {get_return_value_type(return_value)})
+            in {get_cached_func_name_md(func)}. `st.cache_data` uses
+            [pickle](https://docs.python.org/3/library/pickle.html) to serialize the
+            function's return value and safely store it in the cache
+            without mutating the original object. Please convert the return value to a
+            pickle-serializable type. If you want to cache unserializable objects such
+            as database connections or Tensorflow sessions, use `st.cache_resource`
+            instead (see [our docs]({CACHE_DOCS_URL}) for differences).""",
         )
 
 

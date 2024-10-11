@@ -15,7 +15,11 @@
  */
 
 import React from "react"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+
+import {
+  isNullOrUndefined,
+  LabelVisibilityOptions,
+} from "@streamlit/lib/src/util/utils"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { StyledWidgetLabel } from "./styled-components"
@@ -44,7 +48,7 @@ export function WidgetLabel({
   labelVisibility,
   htmlFor,
 }: LabelProps): React.ReactElement {
-  if (label == null) {
+  if (isNullOrUndefined(label)) {
     return <></>
   }
 

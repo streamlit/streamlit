@@ -16,18 +16,21 @@
 
 import React, {
   ReactElement,
+  ReactNode,
   useContext,
   useEffect,
   useMemo,
   useRef,
-  ReactNode,
 } from "react"
+
+import classNames from "classnames"
 import { useTheme } from "@emotion/react"
+
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
+import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
-  getElementWidgetID,
+  getElementId,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
@@ -39,20 +42,21 @@ import Expander from "@streamlit/lib/src/components/elements/Expander"
 import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 
 import {
+  assignDividerColor,
   BaseBlockProps,
+  convertKeyToClassName,
+  getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
-  assignDividerColor,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
-
 import {
   StyledColumn,
   StyledHorizontalBlock,
   StyledVerticalBlock,
-  StyledVerticalBlockWrapper,
   StyledVerticalBlockBorderWrapper,
   StyledVerticalBlockBorderWrapperProps,
+  StyledVerticalBlockWrapper,
 } from "./styled-components"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
@@ -98,7 +102,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.dialog) {
     return (
-      <Dialog element={node.deltaBlock.dialog as BlockProto.Dialog}>
+      <Dialog
+        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        deltaMsgReceivedAt={node.deltaMsgReceivedAt}
+      >
         {child}
       </Dialog>
     )
@@ -129,7 +136,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.type === "form") {
-    const { formId, clearOnSubmit, border } = node.deltaBlock
+    const { formId, clearOnSubmit, enterToSubmit, border } = node.deltaBlock
       .form as BlockProto.Form
     const submitButtons = props.formsData.submitButtons.get(formId)
     const hasSubmitButton =
@@ -138,6 +145,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       <Form
         formId={formId}
         clearOnSubmit={clearOnSubmit}
+        enterToSubmit={enterToSubmit}
         width={props.width}
         hasSubmitButton={hasSubmitButton}
         scriptRunState={props.scriptRunState}
@@ -165,7 +173,11 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
         gap={node.deltaBlock.column.gap ?? ""}
-        data-testid="column"
+        verticalAlignment={
+          node.deltaBlock.column.verticalAlignment ?? undefined
+        }
+        className="stColumn"
+        data-testid="stColumn"
       >
         {child}
       </StyledColumn>
@@ -193,46 +205,58 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useTheme())
 
+  // Capture all the element ids to avoid rendering the same element twice
+  const elementKeySet = new Set<string>()
+
   return (
     <>
       {props.node.children &&
-        props.node.children.map(
-          (node: AppNode, index: number): ReactElement => {
-            const disableFullscreenMode =
-              libConfig.disableFullscreenMode || props.disableFullscreenMode
+        props.node.children.map((node: AppNode, index: number): ReactNode => {
+          const disableFullscreenMode =
+            libConfig.disableFullscreenMode || props.disableFullscreenMode
 
-            // Base case: render a leaf node.
-            if (node instanceof ElementNode) {
-              // Put node in childProps instead of passing as a node={node} prop in React to
-              // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = {
-                ...props,
-                disableFullscreenMode,
-                node: node as ElementNode,
-              }
-
-              const key = getElementWidgetID(node.element) || index
-              return <ElementNodeRenderer key={key} {...childProps} />
+          // Base case: render a leaf node.
+          if (node instanceof ElementNode) {
+            // Put node in childProps instead of passing as a node={node} prop in React to
+            // guarantee it doesn't get overwritten by {...childProps}.
+            const childProps = {
+              ...props,
+              disableFullscreenMode,
+              node: node as ElementNode,
             }
 
-            // Recursive case: render a block, which can contain other blocks
-            // and elements.
-            if (node instanceof BlockNode) {
-              // Put node in childProps instead of passing as a node={node} prop in React to
-              // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = {
-                ...props,
-                disableFullscreenMode,
-                node: node as BlockNode,
-              }
-
-              return <BlockNodeRenderer key={index} {...childProps} />
+            const key = getElementId(node.element) || index.toString()
+            // Avoid rendering the same element twice. We assume the first one is the one we want
+            // because the page is rendered top to bottom, so a valid widget would be rendered
+            // correctly and we assume the second one is therefore stale (or throw an error).
+            // Also, our setIn logic pushes stale widgets down in the list of elements, so the
+            // most recent one should always come first.
+            if (elementKeySet.has(key)) {
+              return null
             }
 
-            // We don't have any other node types!
-            throw new Error(`Unrecognized AppNode: ${node}`)
+            elementKeySet.add(key)
+
+            return <ElementNodeRenderer key={key} {...childProps} />
           }
-        )}
+
+          // Recursive case: render a block, which can contain other blocks
+          // and elements.
+          if (node instanceof BlockNode) {
+            // Put node in childProps instead of passing as a node={node} prop in React to
+            // guarantee it doesn't get overwritten by {...childProps}.
+            const childProps = {
+              ...props,
+              disableFullscreenMode,
+              node: node as BlockNode,
+            }
+
+            return <BlockNodeRenderer key={index} {...childProps} />
+          }
+
+          // We don't have any other node types!
+          throw new Error(`Unrecognized AppNode: ${node}`)
+        })}
     </>
   )
 }
@@ -320,6 +344,9 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ...props,
     ...{ width },
   }
+  // Extract the user-specified key from the block ID (if provided):
+  const userKey = getKeyFromId(props.node.deltaBlock.id)
+
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
@@ -334,7 +361,14 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       data-test-scroll-behavior="normal"
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
-        <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
+        <StyledVerticalBlock
+          width={width}
+          className={classNames(
+            "stVerticalBlock",
+            convertKeyToClassName(userKey)
+          )}
+          data-testid="stVerticalBlock"
+        >
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>
       </StyledVerticalBlockWrapper>
@@ -349,7 +383,11 @@ const HorizontalBlock = (props: BlockPropsWithWidth): ReactElement => {
   const gap = props.node.deltaBlock.horizontal?.gap ?? ""
 
   return (
-    <StyledHorizontalBlock gap={gap} data-testid="stHorizontalBlock">
+    <StyledHorizontalBlock
+      gap={gap}
+      className="stHorizontalBlock"
+      data-testid="stHorizontalBlock"
+    >
       <ChildRenderer {...props} />
     </StyledHorizontalBlock>
   )

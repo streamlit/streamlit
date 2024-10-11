@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.help unit test."""
+
 import inspect
 import unittest
 from unittest.mock import patch
@@ -145,7 +146,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         """Test a named variable using walrus operator."""
 
         with patch_varname_getter():
-            st.help(myvar := 123)
+            st.help(myvar := 123)  # noqa: F841
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("myvar", ds.name)
@@ -200,7 +201,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         """When the object is a class and no docs are defined,
         we expect docs to be None."""
 
-        class MyClass(object):
+        class MyClass:
             pass
 
         with patch_varname_getter():
@@ -221,7 +222,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         """When the type of the object is type and no docs are defined,
         we expect docs to be None."""
 
-        class MyClass(object):
+        class MyClass:
             pass
 
         with patch_varname_getter():
@@ -239,7 +240,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("", ds.doc_string)
 
     def test_class_members(self):
-        class MyClass(object):
+        class MyClass:
             a = 1
             b = 2
 
@@ -281,7 +282,7 @@ class StHelpTest(DeltaGeneratorTestCase):
             self.assertEqual(ds.members[i].type, expected[3])
 
     def test_instance_members(self):
-        class MyClass(object):
+        class MyClass:
             a = 1
             b = 2
 

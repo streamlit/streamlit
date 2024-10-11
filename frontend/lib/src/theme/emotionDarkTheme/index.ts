@@ -16,6 +16,7 @@
 
 import emotionBaseTheme from "@streamlit/lib/src/theme/emotionBaseTheme"
 import { createEmotionColors } from "@streamlit/lib/src/theme/getColors"
+
 import genericColors from "./themeColors"
 
 export default {

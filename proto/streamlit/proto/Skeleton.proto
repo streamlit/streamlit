@@ -28,6 +28,6 @@ message Skeleton {
   // Skeleton visual style
   SkeletonStyle style = 1;
 
-  // Height in CSS points
+  // Height in pixels
   optional int32 height = 2;
 }

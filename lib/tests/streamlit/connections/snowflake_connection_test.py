@@ -26,7 +26,7 @@ from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
 
 
-@pytest.mark.require_snowflake
+@pytest.mark.require_integration
 class SnowflakeConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
@@ -233,7 +233,7 @@ class SnowflakeConnectionTest(unittest.TestCase):
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             conn.query("SELECT 1;")
 
         # conn._connect should have just been called once when first creating the

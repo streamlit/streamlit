@@ -21,6 +21,7 @@ const stateSetters: Array<any> = []
 jest.mock("react", () => ({
   __esModule: true,
   ...jest.requireActual("react"),
+  useCallback: jest.fn().mockImplementation(cb => cb),
   useEffect: jest.fn().mockImplementation(cb => cb()),
   useState: jest.fn().mockImplementation(() => {
     const setValue = jest.fn()

@@ -17,8 +17,8 @@
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
+
 import { BaseColumnProps, isErrorCell } from "./utils"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 

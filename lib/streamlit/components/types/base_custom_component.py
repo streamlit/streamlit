@@ -16,10 +16,13 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.common import WidgetCallback
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -56,10 +59,17 @@ class BaseCustomComponent(ABC):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
-        return self.create_instance(*args, default=default, key=key, **kwargs)
+        return self.create_instance(
+            *args,
+            default=default,
+            key=key,
+            on_change=on_change,
+            **kwargs,
+        )
 
     @property
     def abspath(self) -> str | None:
@@ -102,6 +112,7 @@ class BaseCustomComponent(ABC):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
@@ -118,6 +129,8 @@ class BaseCustomComponent(ABC):
         key: str or None
             If not None, this is the user key we use to generate the
             component's "widget ID".
+        on_change: WidgetCallback or None
+            An optional callback invoked when the widget's value changes. No arguments are passed to it.
         **kwargs
             Keyword args to pass to the component.
 

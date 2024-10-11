@@ -17,24 +17,26 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React, { PureComponent, ReactElement } from "react"
+
 import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
+
 import {
   AppRoot,
-  VerticalBlock,
   ComponentRegistry,
+  createFormsData,
+  Delta as DeltaProto,
+  Element as ElementProto,
   FileUploadClient,
+  FormsData,
+  ForwardMsgMetadata as ForwardMsgMetadataProto,
+  render,
   ScriptRunState,
   SessionInfo,
   StreamlitEndpoints,
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-  Delta as DeltaProto,
-  Element as ElementProto,
-  ForwardMsgMetadata as ForwardMsgMetadataProto,
   Text as TextProto,
-  render,
+  VerticalBlock,
+  WidgetStateManager,
 } from "@streamlit/lib"
 
 /**
@@ -118,7 +120,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
-        this.widgetMgr.setFormsWithUploads(formIds),
+        this.widgetMgr.setFormsWithUploadsInProgress(formIds),
       requestFileURLs: jest.fn(),
     })
 
@@ -142,7 +144,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 
     // Initialize React state
     this.state = {
-      elements: AppRoot.empty(),
+      elements: AppRoot.empty(""),
       formsData: createFormsData(),
       scriptRunState: ScriptRunState.NOT_RUNNING,
       // ScriptRunID should get a new unique ID every time the

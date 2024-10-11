@@ -14,23 +14,25 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
-from google.protobuf.message import Message
-
-from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_data_api import (
     CACHE_DATA_MESSAGE_REPLAY_CTX,
     CacheDataAPI,
-    _data_caches,
+    get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
-    _resource_caches,
+    get_resource_cache_stats_provider,
 )
-from streamlit.runtime.state.common import WidgetMetadata
+from streamlit.runtime.caching.legacy_cache_api import cache as _cache
+
+if TYPE_CHECKING:
+    from google.protobuf.message import Message
+
+    from streamlit.proto.Block_pb2 import Block
 
 
 def save_element_message(
@@ -70,60 +72,27 @@ def save_block_message(
     )
 
 
-def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
-    """Save a widget's metadata to a thread-local callstack, so the widget
-    can be registered again when that widget is replayed.
-    """
-    CACHE_DATA_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
-    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
-
-
 def save_media_data(image_data: bytes | str, mimetype: str, image_id: str) -> None:
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
 
 
-# Explicitly export public symbols
-from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
-from streamlit.runtime.caching.cache_resource_api import (
-    get_resource_cache_stats_provider,
-)
-
 # Create and export public API singletons.
 cache_data = CacheDataAPI(decorator_metric_name="cache_data")
 cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
-
-# Deprecated singletons
-_MEMO_WARNING = (
-    f"`st.experimental_memo` is deprecated. Please use the new command `st.cache_data` instead, "
-    f"which has the same behavior. More information [in our docs]({CACHE_DOCS_URL})."
-)
-
-experimental_memo = CacheDataAPI(
-    decorator_metric_name="experimental_memo", deprecation_warning=_MEMO_WARNING
-)
-
-_SINGLETON_WARNING = (
-    f"`st.experimental_singleton` is deprecated. Please use the new command `st.cache_resource` instead, "
-    f"which has the same behavior. More information [in our docs]({CACHE_DOCS_URL})."
-)
-
-experimental_singleton = CacheResourceAPI(
-    decorator_metric_name="experimental_singleton",
-    deprecation_warning=_SINGLETON_WARNING,
-)
+# TODO(lukasmasuch): This is the legacy cache API name which is deprecated
+# and it should be removed in the future.
+cache = _cache
 
 
 __all__ = [
+    "cache",
     "CACHE_DOCS_URL",
     "save_element_message",
     "save_block_message",
-    "save_widget_metadata",
     "save_media_data",
     "get_data_cache_stats_provider",
     "get_resource_cache_stats_provider",
     "cache_data",
     "cache_resource",
-    "experimental_memo",
-    "experimental_singleton",
 ]

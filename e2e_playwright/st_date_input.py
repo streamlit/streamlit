@@ -17,7 +17,19 @@ from datetime import date, datetime
 import streamlit as st
 from streamlit import runtime
 
-v1 = st.date_input("Single date", date(1970, 1, 1), min_value=date(1970, 1, 1))
+leading_indent_regular_text_tooltip = """
+This is a regular text block!
+Test1
+Test2
+
+"""
+
+v1 = st.date_input(
+    "Single date",
+    date(1970, 1, 1),
+    min_value=date(1970, 1, 1),
+    help=leading_indent_regular_text_tooltip,
+)
 st.write("Value 1:", v1)
 
 v2 = st.date_input("Single datetime", datetime(2019, 7, 6, 21, 15), help="Help text")

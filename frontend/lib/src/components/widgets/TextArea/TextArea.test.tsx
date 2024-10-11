@@ -15,18 +15,19 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
+import { default as userEvent } from "@testing-library/user-event"
+
 import { render } from "@streamlit/lib/src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
 } from "@streamlit/lib/src/proto"
-
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
-import userEvent from "@testing-library/user-event"
 
 const getProps = (
   elementProps: Partial<TextAreaProto> = {},
@@ -45,6 +46,7 @@ const getProps = (
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+
   ...widgetProps,
 })
 
@@ -223,19 +225,27 @@ describe("TextArea widget", () => {
   it("hides Please enter to apply text when width is smaller than 180px", () => {
     const props = getProps({}, { width: 100 })
     render(<TextArea {...props} />)
+
+    const textArea = screen.getByRole("textbox")
+    fireEvent.focus(textArea)
+
     expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", () => {
     const props = getProps({}, { width: 190 })
     render(<TextArea {...props} />)
+
+    const textArea = screen.getByRole("textbox")
+    fireEvent.focus(textArea)
+
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
@@ -247,7 +257,7 @@ describe("TextArea widget", () => {
     expect(textArea).toHaveValue("TEST")
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textArea).toHaveValue(props.element.default)
@@ -259,6 +269,72 @@ describe("TextArea widget", () => {
       },
       undefined
     )
+  })
+
+  it("shows Input Instructions on dirty state when not in form (by default)", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.getByText("Press ⌘+Enter to apply")).toBeVisible()
+  })
+
+  it("shows Input Instructions if in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
+  })
+
+  // For this scenario https://github.com/streamlit/streamlit/issues/7079
+  it("shows Input Instructions if focused again in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<TextArea {...props} />)
+
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    // Remove focus
+    fireEvent.blur(textArea)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+
+    // Then focus again
+    fireEvent.focus(textArea)
+    expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
+  })
+
+  it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest
+      .spyOn(props.widgetMgr, "allowFormEnterToSubmit")
+      .mockReturnValue(false)
+
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
   it("focuses input when clicking label", async () => {

@@ -20,7 +20,7 @@ import io
 import os
 from pathlib import Path
 
-from streamlit import env_util, util
+from streamlit import env_util, errors
 from streamlit.string_util import is_binary_string
 
 # Configuration and credentials are stored inside the ~/.streamlit folder
@@ -77,7 +77,7 @@ def streamlit_read(path, binary=False):
     """
     filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
-        raise util.Error('Read zero byte file: "%s"' % filename)
+        raise errors.Error(f'Read zero byte file: "{filename}"')
 
     mode = "r"
     if binary:
@@ -109,13 +109,13 @@ def streamlit_write(path, binary=False):
         with open(path, mode) as handle:
             yield handle
     except OSError as e:
-        msg = ["Unable to write file: %s" % os.path.abspath(path)]
+        msg = [f"Unable to write file: {os.path.abspath(path)}"]
         if e.errno == errno.EINVAL and env_util.IS_DARWIN:
             msg.append(
                 "Python is limited to files below 2GB on OSX. "
                 "See https://bugs.python.org/issue24658"
             )
-        raise util.Error("\n".join(msg))
+        raise errors.Error("\n".join(msg))
 
 
 def get_static_dir() -> str:
@@ -136,12 +136,11 @@ def get_streamlit_file_path(*filepath) -> str:
 
     This doesn't guarantee that the file (or its directory) exists.
     """
-    # os.path.expanduser works on OSX, Linux and Windows
-    home = os.path.expanduser("~")
+    home = Path.home()
     if home is None:
         raise RuntimeError("No home directory.")
 
-    return os.path.join(home, CONFIG_FOLDER_NAME, *filepath)
+    return str(home / CONFIG_FOLDER_NAME / Path(*filepath))
 
 
 def get_project_streamlit_file_path(*filepath):
@@ -149,7 +148,7 @@ def get_project_streamlit_file_path(*filepath):
 
     This doesn't guarantee that the file (or its directory) exists.
     """
-    return os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, *filepath)
+    return str(Path.cwd() / CONFIG_FOLDER_NAME / Path(*filepath))
 
 
 def file_is_in_folder_glob(filepath: str, folderpath_glob: str) -> bool:

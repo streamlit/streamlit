@@ -15,9 +15,11 @@
  */
 
 import React, { ReactElement } from "react"
+
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
+
+import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 
 interface Props {
   children: ReactElement
@@ -34,13 +36,13 @@ export function BaseButtonTooltip({
     return children
   }
   return (
-    <div className="stTooltipIcon">
+    <>
       <StyledTooltipNormal>
         <TooltipIcon content={help} placement={placement || Placement.TOP}>
           {children}
         </TooltipIcon>
       </StyledTooltipNormal>
       <StyledTooltipMobile>{children}</StyledTooltipMobile>
-    </div>
+    </>
   )
 }

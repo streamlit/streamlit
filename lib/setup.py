@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.34.0"  # PEP-440
+VERSION = "1.39.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -33,28 +33,26 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
-    "numpy>=1.19.3, <2",
-    "packaging>=16.8, <25",
-    # Lowest version with available wheel for 3.7 + amd64 + linux
-    "pandas>=1.3.0, <3",
+    "numpy>=1.20, <3",
+    "packaging>=20, <25",
+    # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
+    # the index dtype.
+    "pandas>=1.4.0, <3",
     "pillow>=7.1.0, <11",
-    # Python protobuf 4.21 (the first 4.x version) is compatible with protobufs
-    # generated from `protoc` >= 3.20. (`protoc` is installed separately from the Python
-    # protobuf package, so this pin doesn't actually enforce a `protoc` minimum version.
-    # Instead, the `protoc` min version is enforced in our Makefile.)
-    "protobuf>=3.20, <5",
+    # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
+    "protobuf>=3.20, <6",
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
     "pyarrow>=7.0",
     "requests>=2.27, <3",
     "rich>=10.14.0, <14",
-    "tenacity>=8.1.0, <9",
+    "tenacity>=8.1.0, <10",
     "toml>=0.10.1, <2",
     "typing-extensions>=4.3.0, <5",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
-    "watchdog>=2.1.5; platform_system != 'Darwin'",
+    "watchdog>=2.1.5, <6; platform_system != 'Darwin'",
 ]
 
 # We want to exclude some dependencies in our internal Snowpark conda distribution of
@@ -74,7 +72,7 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
 
 EXTRA_REQUIRES = {
     "snowflake": [
-        "snowflake-snowpark-python>=0.9.0; python_version<'3.12'",
+        "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=2.8.0; python_version<'3.12'",
     ]
 }
@@ -89,9 +87,7 @@ class VerifyVersionCommand(install):
         tag = os.getenv("TAG")
 
         if tag != VERSION:
-            info = "Git tag: {0} does not match the version of this app: {1}".format(
-                tag, VERSION
-            )
+            info = f"Git tag: {tag} does not match the version of this app: {VERSION}"
             sys.exit(info)
 
 
@@ -115,7 +111,7 @@ setup(
     project_urls={
         "Source Code": "https://github.com/streamlit/streamlit",
         "Bug Tracker": "https://github.com/streamlit/streamlit/issues",
-        "Release notes": "https://docs.streamlit.io/library/changelog",
+        "Release notes": "https://docs.streamlit.io/develop/quick-reference/changelog",
         "Documentation": "https://docs.streamlit.io/",
         "Community": "https://discuss.streamlit.io/",
         "Twitter": "https://twitter.com/streamlit",

@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export const StyledAppViewContainer = styled.div(() => ({
+export const StyledAppViewContainer = styled.div({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-start",
@@ -33,7 +33,7 @@ export const StyledAppViewContainer = styled.div(() => ({
     // print multiple pages if app is scrollable in Safari
     overflow: "visible",
   },
-}))
+})
 
 export interface StyledAppViewMainProps {
   isEmbedded: boolean
@@ -71,11 +71,18 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
   })
 )
 
-export const StyledStickyBottomContainer = styled.div(() => ({
+export const StyledStickyBottomContainer = styled.div(({ theme }) => ({
   position: "sticky",
   left: 0,
   bottom: 0,
   width: "100%",
+  zIndex: theme.zIndices.bottom,
+
+  // move the bottom container to the end of pages in print-mode so that nothing
+  // (e.g. a floating chat-input) overlays the actual app content
+  "@media print": {
+    position: "static",
+  },
 }))
 
 export const StyledInnerBottomContainer = styled.div(({ theme }) => ({
@@ -87,7 +94,6 @@ export const StyledInnerBottomContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  zIndex: theme.zIndices.bottom,
 }))
 
 export interface StyledAppViewBlockContainerProps {
@@ -118,11 +124,13 @@ export const StyledAppViewBlockContainer =
         (addPaddingForHeader && !showPadding) ||
         (isEmbedded && hasSidebar)
       ) {
-        topEmbedPadding = "3rem"
+        // Use parseFloat vs. calc to allow for JS unit test
+        topEmbedPadding = `${
+          parseFloat(theme.sizes.headerHeight) + parseFloat(theme.spacing.md)
+        }rem`
       }
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
-      const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
 
       // Full screen-enabled elements can overflow the page when the screen
       // size is slightly over the content max width.
@@ -146,9 +154,13 @@ export const StyledAppViewBlockContainer =
         paddingLeft: theme.spacing.lg,
         paddingRight: theme.spacing.lg,
         // Increase side padding, if layout = wide and we're not on mobile
-        "@media (min-width: 576px)": {
-          paddingLeft: wideSidePadding,
-          paddingRight: wideSidePadding,
+        [`@media (min-width: ${theme.breakpoints.sm})`]: {
+          paddingLeft: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
+          paddingRight: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
         },
         paddingTop: topEmbedPadding,
         paddingBottom: bottomEmbedPadding,
@@ -170,10 +182,8 @@ export const StyledSidebarBlockContainer = styled.div(({ theme }) => {
   }
 })
 
-export const StyledEventBlockContainer = styled.div(() => {
-  return {
-    display: "none",
-  }
+export const StyledEventBlockContainer = styled.div({
+  display: "none",
 })
 
 export interface StyledBottomBlockContainerProps {
@@ -184,15 +194,18 @@ export interface StyledBottomBlockContainerProps {
 export const StyledBottomBlockContainer =
   styled.div<StyledBottomBlockContainerProps>(
     ({ isWideMode, showPadding, theme }) => {
-      const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
         width: theme.sizes.full,
         paddingLeft: theme.spacing.lg,
         paddingRight: theme.spacing.lg,
         // Increase side padding, if layout = wide and we're not on mobile
-        "@media (min-width: 576px)": {
-          paddingLeft: wideSidePadding,
-          paddingRight: wideSidePadding,
+        [`@media (min-width: ${theme.breakpoints.sm})`]: {
+          paddingLeft: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
+          paddingRight: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
         },
         paddingTop: theme.spacing.lg,
         paddingBottom: showPadding ? "55px" : theme.spacing.threeXL,
@@ -200,7 +213,7 @@ export const StyledBottomBlockContainer =
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
 
         [`@media print`]: {
-          paddingTop: 0,
+          paddingTop: theme.spacing.none,
         },
       }
     }
@@ -213,7 +226,7 @@ export const StyledAppViewBlockSpacer = styled.div(({ theme }) => {
   }
 })
 
-export const StyledIFrameResizerAnchor = styled.div(() => ({
+export const StyledIFrameResizerAnchor = styled.div(({ theme }) => ({
   position: "relative",
-  bottom: "0",
+  bottom: theme.spacing.none,
 }))

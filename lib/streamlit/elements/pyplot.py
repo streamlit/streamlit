@@ -20,8 +20,7 @@ import io
 from typing import TYPE_CHECKING, Any, cast
 
 import streamlit.elements.image as image_utils
-from streamlit import config
-from streamlit.errors import StreamlitDeprecationWarning
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -45,22 +44,32 @@ class PyplotMixin:
         Parameters
         ----------
         fig : Matplotlib Figure
-            The figure to plot. When this argument isn't specified, this
-            function will render the global figure (but this is deprecated,
-            as described below)
+            The Matplotlib ``Figure`` object to render. See
+            https://matplotlib.org/stable/gallery/index.html for examples.
+
+            .. note::
+                When this argument isn't specified, this function will render the global
+                Matplotlib figure object. However, this feature is deprecated and
+                will be removed in a later version.
 
         clear_figure : bool
             If True, the figure will be cleared after being rendered.
             If False, the figure will not be cleared after being rendered.
-            If left unspecified, we pick a default based on the value of `fig`.
+            If left unspecified, we pick a default based on the value of ``fig``.
 
-            * If `fig` is set, defaults to `False`.
+            * If ``fig`` is set, defaults to ``False``.
 
-            * If `fig` is not set, defaults to `True`. This simulates Jupyter's
+            * If ``fig`` is not set, defaults to ``True``. This simulates Jupyter's
               approach to matplotlib rendering.
 
         use_container_width : bool
-            If True, set the chart width to the column width. Defaults to `True`.
+            Whether to override the figure's native width with the width of
+            the parent container. If ``use_container_width`` is ``True``
+            (default), Streamlit sets the width of the figure to match the
+            width of the parent container. If ``use_container_width`` is
+            ``False``, Streamlit sets the width of the chart to fit its
+            contents according to the plotting library, up to the width of the
+            parent container.
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -81,15 +90,6 @@ class PyplotMixin:
            https://doc-pyplot.streamlit.app/
            height: 630px
 
-        Notes
-        -----
-        .. note::
-           Deprecation warning. After December 1st, 2020, we will remove the ability
-           to specify no arguments in `st.pyplot()`, as that requires the use of
-           Matplotlib's global figure object, which is not thread-safe. So
-           please always pass a figure object as shown in the example section
-           above.
-
         Matplotlib supports several types of "backends". If you're getting an
         error using Matplotlib with Streamlit, try setting your backend to "TkAgg"::
 
@@ -99,8 +99,24 @@ class PyplotMixin:
 
         """
 
-        if not fig and config.get_option("deprecation.showPyplotGlobalUse"):
-            self.dg.exception(PyplotGlobalUseWarning())
+        if not fig:
+            show_deprecation_warning("""
+Calling `st.pyplot()` without providing a figure argument has been deprecated
+and will be removed in a later version as it requires the use of Matplotlib's
+global figure object, which is not thread-safe.
+
+To future-proof this code, you should pass in a figure as shown below:
+
+```python
+fig, ax = plt.subplots()
+ax.scatter([1, 2, 3], [1, 2, 3])
+# other plotting actions...
+st.pyplot(fig)
+```
+
+If you have a specific use case that requires this functionality, please let us
+know via [issue on Github](https://github.com/streamlit/streamlit/issues).
+""")
 
         image_list_proto = ImageListProto()
         marshall(
@@ -128,7 +144,6 @@ def marshall(
     **kwargs: Any,
 ) -> None:
     try:
-        import matplotlib
         import matplotlib.pyplot as plt
 
         plt.ioff()
@@ -176,26 +191,3 @@ def marshall(
     # plt calls will be starting fresh.
     if clear_figure:
         fig.clf()
-
-
-class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
-    def __init__(self) -> None:
-        super().__init__(
-            msg=self._get_message(), config_option="deprecation.showPyplotGlobalUse"
-        )
-
-    def _get_message(self) -> str:
-        return """
-You are calling `st.pyplot()` without any arguments. After December 1st, 2020,
-we will remove the ability to do this as it requires the use of Matplotlib's global
-figure object, which is not thread-safe.
-
-To future-proof this code, you should pass in a figure as shown below:
-
-```python
->>> fig, ax = plt.subplots()
->>> ax.scatter([1, 2, 3], [1, 2, 3])
->>>    ... other plotting actions ...
->>> st.pyplot(fig)
-```
-"""

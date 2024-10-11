@@ -15,9 +15,11 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { act } from "react-dom/test-utils"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
@@ -52,7 +54,7 @@ describe("TimeInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
     expect(timeDisplay).toBeInTheDocument()
   })
@@ -131,7 +133,7 @@ describe("TimeInput widget", () => {
     const widgetLabel = screen.getByTestId("stWidgetLabel")
     expect(widgetLabel).toHaveAttribute("disabled")
 
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     expect(timeDisplay).toHaveAttribute("disabled")
   })
 
@@ -139,7 +141,7 @@ describe("TimeInput widget", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     expect(timeDisplay).toHaveTextContent("12:45")
   })
 
@@ -160,7 +162,7 @@ describe("TimeInput widget", () => {
 
     render(<TimeInput {...props} />)
     // Div containing the selected time as a value prop and as text
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
     // Change the widget value
     if (timeDisplay) {
@@ -186,13 +188,13 @@ describe("TimeInput widget", () => {
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
     render(<TimeInput {...props} />)
     // Div containing the selected time as a value prop and as text
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
     // Change the widget value
     if (timeDisplay) {
@@ -217,7 +219,7 @@ describe("TimeInput widget", () => {
 
     // "Submit" the form
     act(() => {
-      props.widgetMgr.submitForm("form")
+      props.widgetMgr.submitForm("form", undefined)
     })
 
     // Our widget should be reset, and the widgetMgr should be updated

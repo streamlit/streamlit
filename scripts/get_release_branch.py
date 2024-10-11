@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Retrieve the branch name from the release PR"""
+
 import requests
 
 
@@ -39,7 +40,6 @@ def get_release_branch():
 
 
 def main():
-
     print(get_release_branch())
 
 

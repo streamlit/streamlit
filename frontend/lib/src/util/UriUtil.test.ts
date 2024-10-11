@@ -184,7 +184,7 @@ describe("isValidOrigin", () => {
     expect(
       isValidOrigin(
         "http://localhost",
-        // Example of localhost url used by Cypress
+        // Example of localhost url used by e2e test
         "http://localhost:35475"
       )
     ).toBeTruthy()

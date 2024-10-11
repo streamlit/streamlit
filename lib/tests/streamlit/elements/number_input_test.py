@@ -20,8 +20,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
+from streamlit.elements.lib.js_number import JSNumber
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueAboveMaxError,
+)
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
@@ -193,7 +196,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_error_on_unsupported_formatters(self):
         UNSUPPORTED = "pAn"
         for char in UNSUPPORTED:
-            with pytest.raises(StreamlitAPIException) as exc_message:
+            with pytest.raises(StreamlitAPIException):
                 st.number_input("any label", value=3.14, format="%" + char)
 
     def test_error_on_invalid_formats(self):
@@ -204,7 +207,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             "%d%d",
         ]
         for fmt in BAD_FORMATS:
-            with pytest.raises(StreamlitAPIException) as exc_message:
+            with pytest.raises(StreamlitAPIException):
                 st.number_input("any label", value=3.14, format=fmt)
 
     def test_value_out_of_bounds(self):
@@ -280,7 +283,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         self.assertEqual(number_input_proto.default, 0)
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.utils.get_session_state")
+    @patch("streamlit.elements.lib.policies.get_session_state")
     def test_no_warning_with_value_set_in_state(self, patched_get_session_state):
         mock_session_state = MagicMock()
         mock_session_state.is_new_state_value.return_value = True
@@ -320,10 +323,12 @@ class NumberInputTest(DeltaGeneratorTestCase):
         )
 
     def test_should_keep_type_of_return_value_after_rerun(self):
+        # set the initial page script hash
+        self.script_run_ctx.reset(page_script_hash=self.script_run_ctx.page_script_hash)
         # Generate widget id and reset context
         st.number_input("a number", min_value=1, max_value=100, key="number")
         widget_id = self.script_run_ctx.session_state.get_widget_states()[0].id
-        self.script_run_ctx.reset()
+        self.script_run_ctx.reset(page_script_hash=self.script_run_ctx.page_script_hash)
 
         # Set the state of the widgets to the test state
         widget_state = WidgetState()
@@ -367,7 +372,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_should_raise_exception_when_default_gt_max_and_min_is_none(self):
         value = 11
         max_value = 10
-        with pytest.raises(StreamlitAPIException):
+        with self.assertRaises(StreamlitValueAboveMaxError):
             st.number_input("My Label", value=value, max_value=max_value)
 
     def test_shows_cached_widget_replay_warning(self):

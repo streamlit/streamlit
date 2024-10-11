@@ -15,8 +15,10 @@
  */
 
 import React, { ReactElement } from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 
 import VirtualDropdown from "./VirtualDropdown"
@@ -33,7 +35,9 @@ describe("VirtualDropdown element", () => {
   it("renders a StyledEmptyState when it has no children", () => {
     render(<VirtualDropdown />)
 
-    expect(screen.getByTestId("stVirtualDropdownEmpty")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stSelectboxVirtualDropdownEmpty")
+    ).toBeInTheDocument()
   })
 
   it("renders a StyledEmptyState when it has children with no item", () => {
@@ -43,7 +47,9 @@ describe("VirtualDropdown element", () => {
       </VirtualDropdown>
     )
 
-    expect(screen.getByTestId("stVirtualDropdownEmpty")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stSelectboxVirtualDropdownEmpty")
+    ).toBeInTheDocument()
   })
 
   it("renders a FixedSizeList when it has children", () => {
@@ -53,7 +59,9 @@ describe("VirtualDropdown element", () => {
       </VirtualDropdown>
     )
 
-    expect(screen.getByTestId("stVirtualDropdown")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stSelectboxVirtualDropdown")
+    ).toBeInTheDocument()
 
     // each option will have a tooltip attached to it
     expect(screen.getAllByTestId("stTooltipHoverTarget")).toHaveLength(1)

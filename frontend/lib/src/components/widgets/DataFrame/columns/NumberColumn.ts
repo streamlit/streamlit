@@ -18,20 +18,20 @@ import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 import { isIntegerType } from "@streamlit/lib/src/components/widgets/DataFrame/isIntegerType"
 
 import {
   BaseColumn,
   BaseColumnProps,
+  countDecimals,
+  formatNumber,
   getErrorCell,
-  toSafeString,
   mergeColumnParameters,
   toSafeNumber,
-  formatNumber,
-  countDecimals,
+  toSafeString,
   truncateDecimals,
 } from "./utils"
 
@@ -95,6 +95,9 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     style: props.isIndex ? "faded" : "normal",
     allowNegative,
     fixedDecimals,
+    // We don't want to show any thousand separators
+    // in the cell overlay/editor:
+    thousandSeparator: "",
   } as NumberCell
 
   const validateInput = (data?: any): boolean | number => {
@@ -207,6 +210,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         data: cellData,
         displayData,
         isMissingValue: isNullOrUndefined(cellData),
+        // We want to enforce the raw number without formatting when its copied:
+        copyData: isNullOrUndefined(cellData) ? "" : toSafeString(cellData),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {

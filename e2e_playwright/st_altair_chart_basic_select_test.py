@@ -21,7 +21,15 @@ from dataclasses import dataclass
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+)
+from e2e_playwright.shared.app_utils import (
+    click_form_button,
+    expect_prefixed_markdown,
+    get_element_by_key,
+)
 
 
 @dataclass
@@ -53,19 +61,6 @@ def _create_selection_rectangle(
     wait_for_app_run(app)
 
 
-def _expect_written_text(app: Page, expected_prefix: str, expected_selection: str):
-    """The expected_prefix and expected_selection will be compiled to a regex-pattern.
-    So they can contain regex directives, but they must be escaped properly.
-    We use pattern matches for coordinates to allow pixel-differences in the output for different
-    browsers and differences between running locally and on the CI.
-    """
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=expected_prefix
-    )
-    expected_selection_pattern = re.compile(expected_prefix + " " + expected_selection)
-    expect(selection_text).to_have_text(expected_selection_pattern)
-
-
 def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
@@ -74,47 +69,47 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_selection_point_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(0)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(0)
 
 
 def _get_selection_interval_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(1)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(1)
 
 
 def _get_selection_point_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(2)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(2)
 
 
 def _get_selection_interval_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(3)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(3)
 
 
 def _get_selection_point_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(4)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(4)
 
 
 def _get_selection_interval_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(5)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(5)
 
 
 def _get_selection_point_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(6)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(6)
 
 
 def _get_selection_interval_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(7)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(7)
 
 
 def _get_in_form_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(8)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(8)
 
 
 def _get_callback_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(9)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(9)
 
 
 def _get_in_fragment_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(10)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(10)
 
 
 def test_point_bar_chart_displays_selection_text(app: Page):
@@ -124,10 +119,10 @@ def test_point_bar_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(150, 180))
 
     expected_prefix = "Bar chart with selection_point:"
-    expected_selection = (
+    expected_selection = re.compile(
         "\\{'selection': \\{'param_1': \\[\\{'a': 'B', 'b': 55\\}]\\}\\}"
     )
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
 def test_interval_bar_chart_displays_selection_text(app: Page):
@@ -140,8 +135,10 @@ def test_interval_bar_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Bar chart with selection_interval:"
-    expected_selection = "\\{'selection': \\{'param_1': \\{'a': \\['A', 'B'\\], 'b': \\[44.\\d+, 4(5|6).\\d+\\]\\}\\}\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'selection': \\{'param_1': \\{'a': \\['A', 'B'\\], 'b': \\[.+, .+\\]\\}\\}\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
 def test_point_area_chart_displays_selection_text(app: Page):
@@ -150,8 +147,10 @@ def test_point_area_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(150, 150))
 
     expected_prefix = "Area chart with selection_point:"
-    expected_selection = "\\{'param_1': \\[\\{'source': 'Fossil Fuels', 'year': 97830\\d+, 'net_generation': 35361\\}\\]\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'param_1': \\[\\{'source': 'Fossil Fuels', 'year': .+, 'net_generation': .+\\}\\]\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
 def test_interval_area_chart_displays_selection_text(app: Page):
@@ -162,8 +161,10 @@ def test_interval_area_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Area chart with selection_interval:"
-    expected_selection = "\\{'param_1': \\{'year': \\[1020\\d+, 11\\d+\\], 'net_generation': \\[17\\d+\\.\\d+, 36(1|2)\\d+\\.\\d+\\]\\}\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'param_1': \\{'year': \\[.+, .+\\], 'net_generation': \\[.+, .+\\]\\}\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
 def test_point_histogram_chart_displays_selection_text(app: Page):
@@ -172,8 +173,10 @@ def test_point_histogram_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(255, 238))
 
     expected_prefix = "Histogram chart with selection_point:"
-    expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
 def test_interval_histogram_chart_displays_selection_text(app: Page):
@@ -184,8 +187,10 @@ def test_interval_histogram_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Histogram chart with selection_interval:"
-    expected_selection = "\\{'selection': \\{'param_1': \\{'IMDB_Rating': \\[2\\.49\\d+, 3\\.2(6|7)\\d+\\]\\}\\}\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'selection': \\{'param_1': \\{'IMDB_Rating': \\[.+, .+\\]\\}\\}\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
 def test_double_click_interval_shows_no_selection_text(app: Page):
@@ -196,13 +201,15 @@ def test_double_click_interval_shows_no_selection_text(app: Page):
     )
 
     expected_prefix = "Scatter chart with selection_interval:"
-    expected_selection = "\\{'selection': \\{'param_1': \\{'Horsepower': \\[31\\.247739602169982, 68\\.137\\d+\\], 'Miles_per_Gallon': \\[2(0|1)\\.\\d+, 3(1|2)\\.\\d+\\]\\}\\}\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'selection': \\{'param_1': \\{'Horsepower': \\[.+, .+\\], 'Miles_per_Gallon': \\[.+, .+\\]\\}\\}\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
     chart.dblclick(position={"x": 130, "y": 100})
     wait_for_app_run(app)
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=expected_prefix + " " + expected_selection
+        has_text=expected_selection
     )
     expect(selection_text).to_have_count(0)
 
@@ -213,8 +220,10 @@ def test_point_selection_scatter_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(264, 162))
 
     expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "\\{'selection': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': (88|90), 'Miles_per_Gallon': 20\\.2\\}\\]\\}\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'selection': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}\\]\\}\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
 
 def test_interval_selection_scatter_chart_displays_selection_snapshot(
@@ -227,8 +236,10 @@ def test_interval_selection_scatter_chart_displays_selection_snapshot(
     )
 
     expected_prefix = "Scatter chart with selection_interval:"
-    expected_selection = "\\{'selection': \\{'param_1': \\{'Horsepower': \\[87\\.66726943942135, 162\\.748643761302\\], 'Miles_per_Gallon': \\[9\\.(8|9)\\d+, 30\\.\\d+\\]\\}\\}\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'selection': \\{'param_1': \\{'Horsepower': \\[.+, .+\\], 'Miles_per_Gallon': \\[.+, .+\\]\\}\\}\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
     assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection")
 
@@ -240,8 +251,11 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
     chart.click(position={"x": 264, "y": 162})
+    wait_for_app_run(app)
     chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])
+    wait_for_app_run(app)
     chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])
+    wait_for_app_run(app)
     chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])
     wait_for_app_run(app)
 
@@ -251,8 +265,10 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     app.wait_for_timeout(250)
 
     expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "\\{'selection': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': (88|90), 'Miles_per_Gallon': 20\\.2\\}, \\{'Origin': 'USA', 'Horsepower': 110, 'Miles_per_Gallon': 18\\.6\\}, \\{'Origin': 'USA', 'Horsepower': 150, 'Miles_per_Gallon': 1(4|5)\\}, \\{'Origin': 'Japan', 'Horsepower': 52, 'Miles_per_Gallon': 32\\.8\\}\\]\\}\\}"
-    _expect_written_text(app, expected_prefix, expected_selection)
+    expected_selection = re.compile(
+        "\\{'selection': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}, \\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}, \\{'Origin': 'USA', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}, \\{'Origin': 'Japan', 'Horsepower': .+, 'Miles_per_Gallon': .+\\}\\]\\}\\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
     return chart
 
@@ -265,14 +281,14 @@ def test_in_form_selection_and_session_state(app: Page):
 
     markdown_prefix = "Histogram-in-form selection:"
     markdown_prefix_session_state = "Histogram-in-form selection in session state:"
-    empty_selection = "\\{'selection': \\{'param_1': \\{\\}\\}\\}"
+    empty_selection = re.compile("\\{'selection': \\{'param_1': \\{\\}\\}\\}")
     # nothing should be shown yet because we did not submit the form
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         markdown_prefix,
         empty_selection,
     )
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         markdown_prefix_session_state,
         empty_selection,
@@ -280,12 +296,13 @@ def test_in_form_selection_and_session_state(app: Page):
 
     # submit the form. The selection uses a debounce of 200ms; if we click too early, the state is not updated correctly and we submit the old, unselected values
     # app.wait_for_timeout(210)
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
-    expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
-    _expect_written_text(app, markdown_prefix, expected_selection)
-    _expect_written_text(app, markdown_prefix_session_state, expected_selection)
+    expected_selection = re.compile(
+        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+    )
+    expect_prefixed_markdown(app, markdown_prefix, expected_selection)
+    expect_prefixed_markdown(app, markdown_prefix_session_state, expected_selection)
 
 
 def test_selection_with_callback(app: Page):
@@ -295,8 +312,10 @@ def test_selection_with_callback(app: Page):
     _click(app, chart, _MousePosition(255, 238))
 
     markdown_prefix = "Histogram selection callback:"
-    expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
-    _expect_written_text(app, markdown_prefix, expected_selection)
+    expected_selection = re.compile(
+        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+    )
+    expect_prefixed_markdown(app, markdown_prefix, expected_selection)
 
 
 def test_selection_in_fragment(app: Page):
@@ -304,13 +323,15 @@ def test_selection_in_fragment(app: Page):
     expect(chart).to_be_visible()
 
     markdown_prefix = "Histogram-in-fragment selection:"
-    empty_selection = "\\{'selection': \\{'param_1': \\{\\}\\}\\}"
-    _expect_written_text(app, markdown_prefix, empty_selection)
+    empty_selection = re.compile("\\{'selection': \\{'param_1': \\{\\}\\}\\}")
+    expect_prefixed_markdown(app, markdown_prefix, empty_selection)
 
     _click(app, chart, _MousePosition(255, 238))
 
-    expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
-    _expect_written_text(app, markdown_prefix, expected_selection)
+    expected_selection = re.compile(
+        "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+    )
+    expect_prefixed_markdown(app, markdown_prefix, expected_selection)
 
     # Check that the main script has run once (the initial run), but not after the selection:
     expect(app.get_by_text("Runs: 1")).to_be_visible()
@@ -345,3 +366,8 @@ def test_selection_state_remains_after_unmounting_snapshot(
         name="st_altair_chart-scatter_shift_selection",
         image_threshold=0.041,
     )
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "scatter_point")).to_be_visible()

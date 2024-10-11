@@ -26,11 +26,6 @@ if TYPE_CHECKING:
 _ALPHANUMERIC_CHAR_REGEX: Final = re.compile(r"^[a-zA-Z0-9_&\-\. ]+$")
 
 
-def decode_ascii(string: bytes) -> str:
-    """Decodes a string as ascii."""
-    return string.decode("ascii")
-
-
 def clean_text(text: SupportsStr) -> str:
     """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
@@ -52,7 +47,7 @@ def is_emoji(text: str) -> bool:
 
     from streamlit.emojis import ALL_EMOJIS
 
-    return text.replace("\U0000FE0F", "") in ALL_EMOJIS
+    return text.replace("\U0000fe0f", "") in ALL_EMOJIS
 
 
 def is_material_icon(maybe_icon: str) -> bool:
@@ -94,11 +89,15 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
 
     icon_regex = r"^\s*:(.+)\/(.+):\s*$"
     icon_match = re.match(icon_regex, maybe_material_icon)
+    # Since our markdown processing needs to change the `/` to `_` in order to
+    # correctly render the icon, we need to add a zero-width space before the
+    # `/` to avoid this transformation here.
+    invisible_white_space = "\u200b"
 
     if not icon_match:
         raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon}"` is not a valid Material icon. '
-            f"Please use a Material icon shortcode like **`:material/thumb_up:`**"
+            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon. '
+            f"Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**"
         )
 
     pack_name, icon_name = icon_match.groups()
@@ -109,8 +108,8 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         or not is_material_icon(icon_name)
     ):
         raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode like **`:material/thumb_up:`**. "
+            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon.'
+            f" Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**. "
         )
 
     return f":{pack_name}/{icon_name}:"
@@ -200,3 +199,16 @@ def probably_contains_html_tags(s: str) -> bool:
     Note that false positives/negatives are possible, so this function should not be
     used in contexts where complete correctness is required."""
     return bool(_RE_CONTAINS_HTML.search(s))
+
+
+def to_snake_case(camel_case_str: str) -> str:
+    """Converts UpperCamelCase and lowerCamelCase to snake_case.
+
+    Examples
+    --------
+        fooBar -> foo_bar
+        BazBang -> baz_bang
+
+    """
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()

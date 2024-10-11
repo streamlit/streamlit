@@ -15,8 +15,9 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { act, screen, fireEvent } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import {
   ComponentInstance as ComponentInstanceProto,
@@ -144,6 +145,7 @@ describe("ComponentInstance", () => {
     )
     expect(iframe).toHaveAttribute("allow", DEFAULT_IFRAME_FEATURE_POLICY)
     expect(iframe).toHaveAttribute("sandbox", DEFAULT_IFRAME_SANDBOX_POLICY)
+    expect(iframe).toHaveClass("stCustomComponentV1")
   })
 
   it("displays a skeleton initially with a certain height", () => {
@@ -488,7 +490,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      expect(screen.getByTestId("stNotificationContentError")).toBeVisible()
+      expect(screen.getByTestId("stAlertContentError")).toBeVisible()
     })
 
     it("errors on unrecognized special args", () => {

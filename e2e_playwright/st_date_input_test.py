@@ -15,6 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_help_tooltip,
+    get_element_by_key,
+)
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -36,6 +41,17 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     assert_snapshot(date_widgets.nth(11), name="st_date_input-single_date_callback")
     assert_snapshot(date_widgets.nth(12), name="st_date_input-empty_value")
     assert_snapshot(date_widgets.nth(13), name="st_date_input-value_from_state")
+
+
+def test_help_tooltip_works(app: Page):
+    leading_indent_regular_text_tooltip = """
+    This is a regular text block!
+    Test1
+    Test2
+
+    """
+    element_with_help = app.get_by_test_id("stDateInput").nth(0)
+    expect_help_tooltip(app, element_with_help, leading_indent_regular_text_tooltip)
 
 
 def test_date_input_has_correct_initial_values(app: Page):
@@ -83,7 +99,7 @@ def test_handle_value_changes(app: Page):
     """Test that st.date_input has the correct value after typing in a date."""
 
     first_date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
-    first_date_input_field.type("1970/01/02")
+    first_date_input_field.fill("1970/01/02")
     first_date_input_field.blur()
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
@@ -295,3 +311,13 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
         "Value 5: ()",
         use_inner_text=True,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stDateInput")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "date_input_12")).to_be_visible()

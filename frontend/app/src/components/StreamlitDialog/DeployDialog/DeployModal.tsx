@@ -15,8 +15,10 @@
  */
 
 import React, { ReactElement } from "react"
-import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
+
 import { CloseSource } from "baseui/modal/types"
+
+import { Modal, ModalBody, ModalHeader } from "@streamlit/lib"
 
 interface IDeployModalProps {
   children: React.ReactNode
@@ -28,18 +30,7 @@ function DeployModal(
 ): ReactElement {
   const { children, onClose } = props
   return (
-    <Modal
-      isOpen={true}
-      closeable={true}
-      onClose={onClose}
-      overrides={{
-        Dialog: {
-          style: {
-            width: "860px",
-          },
-        },
-      }}
-    >
+    <Modal isOpen={true} closeable={true} onClose={onClose} size="full">
       <ModalHeader>Deploy this app</ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>

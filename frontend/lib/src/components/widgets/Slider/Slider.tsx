@@ -15,28 +15,31 @@
  */
 
 import React from "react"
+
 import pick from "lodash/pick"
 import { StyleProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
+import moment from "moment"
+
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import { Slider as SliderProto } from "@streamlit/lib/src/proto"
 import {
   debounce,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import moment from "moment"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import {
   StyledThumb,
   StyledThumbValue,
@@ -320,8 +323,7 @@ class Slider extends React.PureComponent<Props, State> {
           aria-label={this.props.element.label}
         >
           <StyledThumbValue
-            className="StyledThumbValue"
-            data-testid="stThumbValue"
+            data-testid="stSliderThumbValue"
             disabled={props.$disabled === true}
             ref={this.thumbValueRef[thumbIndex]}
           >
@@ -337,11 +339,17 @@ class Slider extends React.PureComponent<Props, State> {
     const { max, min } = element
 
     return (
-      <StyledTickBar data-testid="stTickBar">
-        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMin">
+      <StyledTickBar data-testid="stSliderTickBar">
+        <StyledTickBarItem
+          disabled={disabled}
+          data-testid="stSliderTickBarMin"
+        >
           {this.formatValue(min)}
         </StyledTickBarItem>
-        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMax">
+        <StyledTickBarItem
+          disabled={disabled}
+          data-testid="stSliderTickBarMax"
+        >
           {this.formatValue(max)}
         </StyledTickBarItem>
       </StyledTickBar>
@@ -409,15 +417,15 @@ class Slider extends React.PureComponent<Props, State> {
             Track: {
               style: {
                 backgroundColor: "none !important",
-                paddingBottom: 0,
-                paddingLeft: 0,
-                paddingRight: 0,
+                paddingBottom: spacing.none,
+                paddingLeft: spacing.none,
+                paddingRight: spacing.none,
                 paddingTop: spacing.twoThirdsSmFont,
               },
             },
             InnerTrack: {
               style: ({ $disabled }: StyleProps) => ({
-                height: "4px",
+                height: spacing.twoXS,
                 ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
               }),
             },

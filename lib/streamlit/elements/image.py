@@ -25,15 +25,17 @@ import io
 import os
 import re
 from enum import IntEnum
-from typing import TYPE_CHECKING, Final, List, Literal, Sequence, Union, cast
+from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
 from streamlit import runtime, url_util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -53,13 +55,15 @@ PILImage: TypeAlias = Union[
     "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
 ]
 AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes]
-ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
+ImageOrImageList: TypeAlias = Union[AtomicImage, Sequence[AtomicImage]]
 UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
+# @see Image.proto
+# @see WidthBehavior on the frontend
 class WidthBehaviour(IntEnum):
     """
     Special values that are recognized by the frontend and allow us to change the
@@ -69,6 +73,8 @@ class WidthBehaviour(IntEnum):
     ORIGINAL = -1
     COLUMN = -2
     AUTO = -3
+    MIN_IMAGE_OR_CONTAINER = -4
+    MAX_IMAGE_OR_CONTAINER = -5
 
 
 WidthBehaviour.ORIGINAL.__doc__ = """Display the image at its original width"""
@@ -93,6 +99,8 @@ class ImageMixin:
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
+        *,
+        use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -119,6 +127,9 @@ class ImageMixin:
             If "always" or True, set the image's width to the column width.
             If "never" or False, set the image's width to its natural size.
             Note: if set, `use_column_width` takes precedence over the `width` parameter.
+        .. deprecated::
+            The `use_column_width` parameter has been deprecated and will be removed in a future release.
+            Please utilize the `use_container_width` parameter instead.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
@@ -136,11 +147,20 @@ class ImageMixin:
             while diagrams should use the PNG format for lossless compression.
             Defaults to "auto" which identifies the compression type based
             on the type and format of the image argument.
+        use_container_width : bool
+            Whether to override the figure's native width with the width of the
+            parent container. If ``use_container_width`` is ``True``, Streamlit
+            sets the width of the figure to match the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the width of the image to its natural width, up to
+            the width of the parent container.
+            Note: if `use_container_width` is set to `True`, it will take
+            precedence over the `width` parameter
 
         Example
         -------
         >>> import streamlit as st
-        >>> st.image('sunrise.jpg', caption='Sunrise by the mountains')
+        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
 
         .. output::
            https://doc-image.streamlit.app/
@@ -148,21 +168,45 @@ class ImageMixin:
 
         """
 
-        if use_column_width == "auto" or (use_column_width is None and width is None):
-            width = WidthBehaviour.AUTO
-        elif use_column_width == "always" or use_column_width == True:
-            width = WidthBehaviour.COLUMN
-        elif width is None:
-            width = WidthBehaviour.ORIGINAL
-        elif width <= 0:
-            raise StreamlitAPIException("Image width must be positive.")
+        if use_container_width is True and use_column_width is not None:
+            raise StreamlitAPIException(
+                "`use_container_width` and `use_column_width` cannot be set at the same time.",
+                "Please utilize `use_container_width` since `use_column_width` is deprecated.",
+            )
+
+        image_width: int = (
+            WidthBehaviour.ORIGINAL if (width is None or width <= 0) else width
+        )
+
+        if use_column_width is not None:
+            show_deprecation_warning(
+                "The `use_column_width` parameter has been deprecated and will be removed "
+                "in a future release. Please utilize the `use_container_width` parameter instead."
+            )
+
+            if use_column_width == "auto":
+                image_width = WidthBehaviour.AUTO
+            elif use_column_width == "always" or use_column_width is True:
+                image_width = WidthBehaviour.COLUMN
+            elif use_column_width == "never" or use_column_width is False:
+                image_width = WidthBehaviour.ORIGINAL
+
+        else:
+            if use_container_width is True:
+                image_width = WidthBehaviour.MAX_IMAGE_OR_CONTAINER
+            elif image_width is not None and image_width > 0:
+                # Use the given width. It will be capped on the frontend if it
+                # exceeds the container width.
+                pass
+            elif use_container_width is False:
+                image_width = WidthBehaviour.MIN_IMAGE_OR_CONTAINER
 
         image_list_proto = ImageListProto()
         marshall_images(
             self.dg._get_delta_path_str(),
             image,
             caption,
-            width,
+            image_width,
             image_list_proto,
             clamp,
             channels,
@@ -177,14 +221,11 @@ class ImageMixin:
 
 
 def _image_may_have_alpha_channel(image: PILImage) -> bool:
-    if image.mode in ("RGBA", "LA", "P"):
-        return True
-    else:
-        return False
+    return image.mode in ("RGBA", "LA", "P")
 
 
 def _image_is_gif(image: PILImage) -> bool:
-    return bool(image.format == "GIF")
+    return image.format == "GIF"
 
 
 def _validate_image_format_string(
@@ -198,13 +239,14 @@ def _validate_image_format_string(
     "GIF" if the image is a GIF, and "JPEG" otherwise.
     """
     format = format.upper()
-    if format == "JPEG" or format == "PNG":
+    if format in {"JPEG", "PNG"}:
         return cast(ImageFormat, format)
 
     # We are forgiving on the spelling of JPEG
     if format == "JPG":
         return "JPEG"
 
+    pil_image: PILImage
     if isinstance(image_data, bytes):
         from PIL import Image
 
@@ -258,16 +300,17 @@ def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:
 
 
 def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
-    if len(array.shape) not in (2, 3):
+    shape: NumpyShape = array.shape
+    if len(shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
-    if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
+    if len(shape) == 3 and shape[-1] not in (1, 3, 4):
         raise StreamlitAPIException(
             "Channel can only be 1, 3, or 4 got %d. Shape is %s"
-            % (array.shape[-1], str(array.shape))
+            % (shape[-1], str(shape))
         )
 
     # If there's only one channel, convert is to x, y
-    if len(array.shape) == 3 and array.shape[-1] == 1:
+    if len(shape) == 3 and shape[-1] == 1:
         array = array[:, :, 0]
 
     return array
@@ -287,7 +330,7 @@ def _ensure_image_size_and_format(
     """
     from PIL import Image
 
-    pil_image = Image.open(io.BytesIO(image_data))
+    pil_image: PILImage = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = pil_image.size
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
@@ -417,7 +460,7 @@ def image_to_url(
         )
 
         if channels == "BGR":
-            if len(image.shape) == 3:
+            if len(cast(NumpyShape, image.shape)) == 3:
                 image = image[:, :, [2, 1, 0]]
             else:
                 raise StreamlitAPIException(
@@ -506,29 +549,27 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
-    if isinstance(image, list):
-        images = image
-    elif isinstance(image, np.ndarray) and len(image.shape) == 4:
+    if isinstance(image, (list, set, tuple)):
+        images = list(image)
+    elif isinstance(image, np.ndarray) and len(cast(NumpyShape, image.shape)) == 4:
         images = _4d_to_list_3d(image)
     else:
-        images = [image]
+        images = [image]  # type: ignore
 
-    if type(caption) is list:
+    if isinstance(caption, list):
         captions: Sequence[str | None] = caption
+    elif isinstance(caption, str):
+        captions = [caption]
+    elif isinstance(caption, np.ndarray) and len(cast(NumpyShape, caption.shape)) == 1:
+        captions = caption.tolist()
+    elif caption is None:
+        captions = [None] * len(images)
     else:
-        if isinstance(caption, str):
-            captions = [caption]
-        # You can pass in a 1-D Numpy array as captions.
-        elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
-            captions = caption.tolist()
-        # If there are no captions then make the captions list the same size
-        # as the images list.
-        elif caption is None:
-            captions = [None] * len(images)
-        else:
-            captions = [str(caption)]
+        captions = [str(caption)]
 
-    assert type(captions) == list, "If image is a list then caption should be as well"
+    assert isinstance(
+        captions, list
+    ), "If image is a list then caption should be as well"
     assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
         len(captions),
         len(images),

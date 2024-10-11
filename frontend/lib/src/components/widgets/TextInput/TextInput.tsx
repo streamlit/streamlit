@@ -15,18 +15,21 @@
  */
 
 import React from "react"
+
 import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
+import { withTheme } from "@emotion/react"
+
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
@@ -34,7 +37,8 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {
@@ -42,6 +46,7 @@ export interface Props {
   element: TextInputProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
   fragmentId?: string
 }
 
@@ -50,6 +55,11 @@ interface State {
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
   dirty: boolean
+
+  /**
+   * Whether the input is currently focused.
+   */
+  focused: boolean
 
   /**
    * The value specified by the user via the UI. If the user didn't touch this
@@ -65,6 +75,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
   public state: State = {
     dirty: false,
+    focused: false,
     value: this.initialValue,
   }
 
@@ -144,7 +155,11 @@ class TextInput extends React.PureComponent<Props, State> {
     if (this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
     }
+
+    this.setState({ focused: false })
   }
+
+  private onFocus = (): void => this.setState({ focused: true })
 
   private onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -179,12 +194,16 @@ class TextInput extends React.PureComponent<Props, State> {
   private onKeyPress = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
+    const { element, widgetMgr, fragmentId } = this.props
+    const { formId } = element
+    const allowFormEnterToSubmit = widgetMgr.allowFormEnterToSubmit(formId)
+
     if (e.key === "Enter") {
       if (this.state.dirty) {
         this.commitWidgetValue({ fromUi: true })
       }
-      if (isInForm(this.props.element)) {
-        this.props.widgetMgr.submitForm(this.props.element.formId)
+      if (allowFormEnterToSubmit) {
+        widgetMgr.submitForm(formId, fragmentId)
       }
     }
   }
@@ -196,20 +215,29 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { dirty, value } = this.state
-    const { element, width, disabled, widgetMgr } = this.props
-    const { placeholder } = element
+    const { dirty, focused, value } = this.state
+    const { element, width, disabled, widgetMgr, theme } = this.props
+    const { placeholder, formId } = element
+
+    // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
+    const allowEnterToSubmit = isInForm({ formId })
+      ? widgetMgr.allowFormEnterToSubmit(formId)
+      : dirty
+
+    // Hide input instructions for small widget sizes.
+    const shouldShowInstructions =
+      focused && width > theme.breakpoints.hideWidgetDetails
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
       widgetMgr,
-      element.formId,
+      formId,
       this.onFormCleared
     )
 
     return (
       <StyledTextInput
-        className="row-widget stTextInput"
+        className="stTextInput"
         data-testid="stTextInput"
         width={width}
       >
@@ -234,6 +262,7 @@ class TextInput extends React.PureComponent<Props, State> {
           value={value ?? ""}
           placeholder={placeholder}
           onBlur={this.onBlur}
+          onFocus={this.onFocus}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
           aria-label={element.label}
@@ -252,35 +281,36 @@ class TextInput extends React.PureComponent<Props, State> {
                 "::placeholder": {
                   opacity: "0.7",
                 },
-                lineHeight: "1.4",
+                lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: ".5rem",
-                paddingLeft: ".5rem",
-                paddingBottom: ".5rem",
-                paddingTop: ".5rem",
+                paddingRight: theme.spacing.sm,
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
               },
             },
             Root: {
               props: {
-                "data-testid": "textInputRootElement",
+                "data-testid": "stTextInputRootElement",
               },
               style: {
+                height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: "1px",
-                borderRightWidth: "1px",
-                borderTopWidth: "1px",
-                borderBottomWidth: "1px",
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
               },
             },
           }}
         />
-        {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {shouldShowInstructions && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}
             maxLength={element.maxChars}
-            inForm={isInForm({ formId: element.formId })}
+            inForm={isInForm({ formId })}
+            allowEnterToSubmit={allowEnterToSubmit}
           />
         )}
       </StyledTextInput>
@@ -288,4 +318,4 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 }
 
-export default TextInput
+export default withTheme(TextInput)

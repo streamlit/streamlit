@@ -15,7 +15,8 @@
  */
 
 import { css, SerializedStyles } from "@emotion/react"
-import { darken, transparentize, readableColor } from "color2k"
+import { darken, readableColor, transparentize } from "color2k"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
@@ -86,30 +87,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     color: ${theme.colors.disabled};
   }
 
-  // VegaLite-specific CSS to style tooltips
-  #vg-tooltip-element {
-    font-family: ${theme.genericFonts.bodyFont};
-    color: ${theme.colors.bodyText};
-    border: 1px solid ${theme.colors.fadedText10};
-    background-color: ${transparentize(theme.colors.bgColor, 0.05)};
-    font-size: ${theme.fontSizes.sm};
-    box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
-    padding: ${theme.spacing.xs} ${theme.spacing.md};
-    border-radius: ${theme.radii.md};
-    z-index: ${theme.zIndices.fullscreenWrapper};
-  }
-
-  #vg-tooltip-element td {
-    border: none;
-  }
-
-  #vg-tooltip-element table tr td.key {
-    color: ${theme.colors.fadedText60};
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   // Embedded Overflow Management
   body.embedded {
     overflow: hidden;
@@ -168,7 +145,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     color: inherit; // 1
     background-color: transparent;
     border: none;
-    border-bottom: 1px solid ${theme.colors.fadedText10};
+    border-bottom: ${theme.sizes.borderWidth} solid ${theme.colors.borderColor};
   }
 
   hr:not([size]) {
@@ -178,7 +155,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h1 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.extrabold};
-    color: ${theme.colors.headingColor};
 
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
@@ -191,7 +167,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h2 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     letter-spacing: -0.005em;
 
     // Use rem so we can remove it when first child, knowing that the
@@ -205,7 +180,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h3 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     letter-spacing: -0.005em;
 
     // Use rem so we can remove it when first child, knowing that the
@@ -219,7 +193,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h4 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     padding: 0.75rem 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -228,7 +201,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h5 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -237,7 +209,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h6 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -312,6 +283,12 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-weight: ${theme.fontWeights.bold};
   }
 
+  // Override h1 font weight to default weight
+  h1 b,
+  h1 strong {
+    font-weight: ${theme.fontWeights.extrabold};
+  }
+
   // Mark
 
   mark {
@@ -380,7 +357,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     margin: 1em 0 1em -1px;
     padding: 0 0 0 1.2em;
     font-size: 1rem;
-    border-left: 1px solid ${theme.colors.lightGray};
+    border-left: ${theme.sizes.borderWidth} solid ${theme.colors.lightGray};
   }
 
   // 1. Remove browser default top margin

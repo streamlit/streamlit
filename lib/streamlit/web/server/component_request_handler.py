@@ -16,13 +16,15 @@ from __future__ import annotations
 
 import mimetypes
 import os
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import tornado.web
 
 import streamlit.web.server.routes
-from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from streamlit.components.types.base_component_registry import BaseComponentRegistry
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -30,6 +32,12 @@ _LOGGER: Final = get_logger(__name__)
 class ComponentRequestHandler(tornado.web.RequestHandler):
     def initialize(self, registry: BaseComponentRegistry):
         self._registry = registry
+
+        # This ensures that common mime-types are robust against
+        # system misconfiguration.
+        mimetypes.add_type("text/html", ".html")
+        mimetypes.add_type("application/javascript", ".js")
+        mimetypes.add_type("text/css", ".css")
 
     def get(self, path: str) -> None:
         parts = path.split("/")
