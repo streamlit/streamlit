@@ -86,27 +86,14 @@ describe("The Maybe component", () => {
       expect(screen.queryByText("old again")).toBeVisible()
 
       rerender(<Outer name={"new name"} enable={false} />)
-
-      expect(innerRenderCount).toBe(1)
-      expect(screen.queryByText("old again")).toBeVisible()
-      expect(screen.queryByText("new name")).not.toBeInTheDocument()
-    })
-
-    it('does not re-render when "enable" is false', () => {
-      const { rerender } = render(<Outer name={"old again"} enable={false} />)
-
-      expect(innerRenderCount).toBe(1)
-      expect(screen.queryByText("old again")).toBeVisible()
-
-      rerender(<Outer name={"old again"} enable={false} />)
-      rerender(<Outer name={"old again"} enable={false} />)
-      rerender(<Outer name={"old again"} enable={false} />)
-      rerender(<Outer name={"old again"} enable={false} />)
+      rerender(<Outer name={"new name"} enable={false} />)
+      rerender(<Outer name={"new name"} enable={false} />)
 
       // Despite rerendering multiple times, the inner component should only
       // render once at the start.
       expect(innerRenderCount).toBe(1)
       expect(screen.queryByText("old again")).toBeVisible()
+      expect(screen.queryByText("new name")).not.toBeInTheDocument()
     })
   })
 })

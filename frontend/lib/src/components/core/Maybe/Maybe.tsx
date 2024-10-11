@@ -21,7 +21,7 @@ interface MaybeProps
   }> {}
 
 const Maybe: React.FC<MaybeProps> = memo(
-  ({ children }) => {
+  function Maybe({ children }) {
     return <>{children}</>
   },
   (prevProps, nextProps) => {
@@ -33,6 +33,5 @@ const Maybe: React.FC<MaybeProps> = memo(
     return !(prevProps.enable || nextProps.enable)
   }
 )
-Maybe.displayName = "Maybe"
 
 export default Maybe
