@@ -38,4 +38,6 @@ export const sizes = {
   largestElementHeight: "4.25rem",
   spinnerSize: "1.375rem",
   spinnerThickness: "3px",
+  // Used for the clear icon used by some Input elements
+  clearIconSize: "1.5em",
 }

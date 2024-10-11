@@ -293,10 +293,9 @@ const Multiselect: FC<Props> = props => {
                     style: {
                       color: theme.colors.darkGray,
                       // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                      padding: "0.125rem",
-                      height: "1.5em",
-                      width: "1.5em",
-
+                      padding: theme.spacing.threeXS,
+                      height: theme.sizes.clearIconSize,
+                      width: theme.sizes.clearIconSize,
                       ":hover": {
                         fill: theme.colors.bodyText,
                       },
