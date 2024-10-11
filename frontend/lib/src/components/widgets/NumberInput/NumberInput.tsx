@@ -435,9 +435,19 @@ export const NumberInput: React.FC<Props> = ({
           aria-label={element.label}
           id={id.current}
           overrides={{
+            ClearIconContainer: {
+              style: {
+                padding: 0,
+              },
+            },
             ClearIcon: {
               props: {
                 overrides: {
+                  Root: {
+                    style: {
+                      padding: 0,
+                    },
+                  },
                   Svg: {
                     style: {
                       color: theme.colors.darkGray,
@@ -476,7 +486,7 @@ export const NumberInput: React.FC<Props> = ({
               }),
             },
             Root: {
-              style: () => ({
+              style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderTopRightRadius: 0,
                 borderBottomRightRadius: 0,
@@ -485,7 +495,7 @@ export const NumberInput: React.FC<Props> = ({
                 borderTopWidth: 0,
                 borderBottomWidth: 0,
                 paddingRight: 0,
-              }),
+              },
             },
           }}
         />
