@@ -176,11 +176,13 @@ function Radio({
               },
               RadioMarkInner: {
                 style: ({ $checked }: { $checked: boolean }) => ({
+                  // If checked, it should fill in 37.5% of the total radio size.
+                  // if not checked, show a border of spacing.threeXS.
                   height: $checked
-                    ? "6px"
+                    ? "37.5%"
                     : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
                   width: $checked
-                    ? "6px"
+                    ? "37.5%"
                     : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
                 }),
               },

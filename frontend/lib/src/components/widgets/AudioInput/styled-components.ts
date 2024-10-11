@@ -74,14 +74,17 @@ export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
   alignItems: "center",
 }))
 
-export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => ({
-  height: 10,
-  opacity: 0.2,
-  width: "100%",
-  backgroundImage: `radial-gradient(${theme.colors.fadedText10} 40%, transparent 40%)`,
-  backgroundSize: "10px 10px",
-  backgroundRepeat: "repeat",
-}))
+export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => {
+  const dotSize = `0.625em`
+  return {
+    opacity: 0.2,
+    width: "100%",
+    height: dotSize,
+    backgroundSize: dotSize,
+    backgroundImage: `radial-gradient(${theme.colors.fadedText10} 40%, transparent 40%)`,
+    backgroundRepeat: "repeat",
+  }
+})
 
 export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
   "& > button": {

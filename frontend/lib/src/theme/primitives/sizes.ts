@@ -35,7 +35,12 @@ export const sizes = {
   headerDecorationHeight: "0.125rem",
   appRunningMen: "1.6rem",
   appStatusMaxWidth: "20rem",
-  largestElementHeight: "4.25rem",
+  largestElementHeight: "2.5rem",
   spinnerSize: "1.375rem",
-  spinnerThickness: "3px",
+  spinnerThickness: "0.2rem",
+  tabHeight: "2.5rem",
+  // Min width used for popover and dialog:
+  minPopupWidth: "20rem",
+  maxTooltipHeight: "18.75rem",
+  chatAvatarSize: "2rem",
 }
