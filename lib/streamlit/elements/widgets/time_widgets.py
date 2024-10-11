@@ -66,7 +66,9 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[
     date, Tuple[()], Tuple[date], Tuple[date, date], None
 ]
-DateTupleReturn: TypeAlias = Union[Tuple[()], Tuple[date], Tuple[date, date], None]
+DateWidgetRangeReturn: TypeAlias = Union[
+    Tuple[()], Tuple[date], Tuple[date, date], None
+]
 
 DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
@@ -553,7 +555,7 @@ class TimeWidgetsMixin:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> DateTupleReturn: ...
+    ) -> DateWidgetRangeReturn: ...
 
     @gather_metrics("date_input")
     def date_input(
