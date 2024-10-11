@@ -55,7 +55,6 @@ import os as _os
 # import of matplotlib could happen.
 _os.environ["MPLBACKEND"] = "Agg"
 
-
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
@@ -90,7 +89,6 @@ _main = _dg_singleton._main_dg
 sidebar = _dg_singleton._sidebar_dg
 _event = _dg_singleton._event_dg
 _bottom = _dg_singleton._bottom_dg
-
 
 from streamlit.elements.dialog_decorator import (
     dialog_decorator as _dialog_decorator,
@@ -161,6 +159,7 @@ secrets = _secrets_singleton
 altair_chart = _main.altair_chart
 area_chart = _main.area_chart
 audio = _main.audio
+audio_input = _main.audio_input
 balloons = _main.balloons
 bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
@@ -287,7 +286,6 @@ experimental_set_query_params = _deprecate_func_name(
     _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
-
 
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
