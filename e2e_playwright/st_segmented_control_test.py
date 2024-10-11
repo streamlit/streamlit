@@ -163,7 +163,7 @@ def test_selection_via_on_change_callback(app: Page):
     get_segment_button(segmented_control, "Sadness").click()
     wait_for_app_run(app)
     expect_markdown(app, "on_change selection: Sadness")
-    expect(segmented_control).to_contain_text("Select an emotion:")
+    expect(segmented_control.get_by_text("Select an emotion:")).to_be_visible()
 
 
 def test_segmented_control_are_disabled_and_label_collapsed(app: Page):
@@ -177,7 +177,7 @@ def test_segmented_control_are_disabled_and_label_collapsed(app: Page):
         "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
     )
     expect_markdown(app, "segmented-control-disabled: None")
-    expect(segmented_control).not_to_contain_text("Select an emotion:")
+    expect(segmented_control.get_by_text("Select an emotion:")).not_to_be_visible()
 
 
 def test_segmented_control_work_in_forms(app: Page):
