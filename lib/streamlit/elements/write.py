@@ -56,7 +56,7 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 
 _LOGGER: Final = get_logger(__name__)
 
-_TEXT_CURSOR: Final = "▕"
+_TEXT_CURSOR: Final = " ▏"
 
 
 class StreamingOutput(List[Any]):
