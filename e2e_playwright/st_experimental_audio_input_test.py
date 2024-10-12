@@ -71,6 +71,20 @@ def test_audio_input_renders(app: Page):
         expect(audio_input_elements.nth(i)).to_be_visible()
 
 
+def test_experimental_audio_input_renders_with_deprecation_warning(app: Page):
+    """Test that the experimental_audio_input component renders with a deprecation warning."""
+    audio_input_warning_elements = app.get_by_test_id("stAlertContainer")
+    count = 7  # Expected number of audio input elements
+
+    # Verify that the expected number of elements is rendered
+    expect(audio_input_warning_elements).to_have_count(count)
+
+    expect(app.get_by_test_id("stAlertContainer").first).to_have_text(
+        """Please replace st.experimental_audio_input with st.audio_input.
+        st.experimental_audio_input will be removed after 2025-01-01."""
+    )
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top-level class 'stAudioInput' is correctly applied."""
     check_top_level_class(app, "stAudioInput")
