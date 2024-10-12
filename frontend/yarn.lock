@@ -7395,13 +7395,6 @@ eslint-config-react-app@^7.0.1:
     eslint-plugin-react-hooks "^4.3.0"
     eslint-plugin-testing-library "^5.0.1"
 
-eslint-detailed-reporter@^0.9.0:
-  version "0.9.0"
-  resolved "https://nexus.int.snowflakecomputing.com/repository/sf_npm_group/eslint-detailed-reporter/-/eslint-detailed-reporter-0.9.0.tgz#3dfa4e0c925955458c17f108397578ec5af1e82c"
-  integrity sha512-b0uM1lsN4xG81TfGAXzSvCom1mLNAjmj4YxH9dLb4U+KieDgYlHr0ZcgIB86I2L9sm4fV3QygUN7w4okS2Jong==
-  dependencies:
-    lodash "^4.17.21"
-
 eslint-import-resolver-node@^0.3.7:
   version "0.3.7"
   resolved "https://registry.yarnpkg.com/eslint-import-resolver-node/-/eslint-import-resolver-node-0.3.7.tgz#83b375187d412324a1963d84fa664377a23eb4d7"
