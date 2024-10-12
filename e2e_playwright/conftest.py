@@ -623,8 +623,19 @@ def assert_snapshot(
         from pixelmatch.contrib.PIL import pixelmatch
 
         # Compare the new screenshot with the screenshot from past runs:
-        img_a = Image.open(BytesIO(img_bytes))
-        img_b = Image.open(snapshot_file_path)
+        orig_img_a = Image.open(BytesIO(img_bytes))
+        orig_img_b = Image.open(snapshot_file_path)
+
+        # Ensure both images have the same size by adding transparent padding
+        max_width = max(orig_img_a.width, orig_img_b.width)
+        max_height = max(orig_img_a.height, orig_img_b.height)
+
+        # Create new images with the maximum dimensions and paste the original images
+        img_a = Image.new("RGBA", (max_width, max_height), (0, 0, 0, 0))
+        img_b = Image.new("RGBA", (max_width, max_height), (0, 0, 0, 0))
+        img_a.paste(orig_img_a, (0, 0))
+        img_b.paste(orig_img_b, (0, 0))
+
         img_diff = Image.new("RGBA", img_a.size)
         try:
             mismatch = pixelmatch(
@@ -657,15 +668,23 @@ def assert_snapshot(
         img_a.save(f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}")
         img_b.save(f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}")
 
-        pytest.fail(
+        test_failure_messages.append(
             f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
-            f" {mismatch/total_pixels * 100:.2f}%)"
+            f" {mismatch/total_pixels * 100:.2f}%). "
+            f"Actual: {img_a.size}, Expected: {img_b.size}"
         )
+        # pytest.fail(
+        #     f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
+        #     f" {mismatch/total_pixels * 100:.2f}%). "
+        #     f"Actual: {img_a.size}, Expected: {img_b.size}"
+        # )
 
     yield compare
 
     if test_failure_messages:
-        pytest.fail("Missing snapshots: \n" + "\n".join(test_failure_messages))
+        pytest.fail(
+            "Missing or mismatching snapshots: \n" + "\n".join(test_failure_messages)
+        )
 
 
 # Public utility methods:
