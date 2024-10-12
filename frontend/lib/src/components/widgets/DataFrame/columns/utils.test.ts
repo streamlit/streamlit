@@ -533,14 +533,15 @@ describe("truncateDecimals", () => {
 
 describe("formatMoment", () => {
   beforeAll(() => {
-    jest.useFakeTimers("modern")
-    jest.setSystemTime(new Date("2022-04-28T00:00:00Z"))
+    const d = new Date("2022-04-28T00:00:00Z")
+    jest.useFakeTimers()
+    jest.setSystemTime(d)
     timezoneMock.register("UTC")
   })
 
   afterAll(() => {
-    jest.useRealTimers()
     timezoneMock.unregister()
+    jest.useRealTimers()
   })
 
   it.each([
@@ -581,8 +582,8 @@ describe("formatMoment", () => {
     ["distance", moment.utc("2022-04-27T23:59:59Z"), "a few seconds ago"],
     ["distance", moment.utc("2022-04-20T00:00:00Z"), "8 days ago"],
     ["distance", moment.utc("2022-05-27T23:59:59Z"), "in a month"],
-    ["relative", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
     // Relative:
+    ["relative", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
     [
       "relative",
       moment.utc("2022-04-24T12:20:30Z"),

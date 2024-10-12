@@ -34,8 +34,6 @@ module.exports = {
     // This will display prettier errors as ESLint errors.
     // Make sure this is always the last configuration in the extends array.
     "plugin:prettier/recommended",
-    // Recommended Jest configuration to enforce good testing practices
-    "plugin:jest/recommended",
     // Uses the recommended rules from React Testing Library:
     "plugin:testing-library/react",
     // Uses the recommended rules from lodash

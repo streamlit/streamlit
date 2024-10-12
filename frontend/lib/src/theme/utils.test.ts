@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { MockInstance } from "vitest"
+
 import { CustomThemeConfig } from "@streamlit/lib/src/proto"
 import { LocalStore } from "@streamlit/lib/src/util/storageUtils"
 import {
@@ -49,11 +51,11 @@ import {
 
 const matchMediaFillers = {
   onchange: null,
-  addListener: jest.fn(), // deprecated
-  removeListener: jest.fn(), // deprecated
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  dispatchEvent: jest.fn(),
+  addListener: vi.fn(), // deprecated
+  removeListener: vi.fn(), // deprecated
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
 }
 
 const windowLocationSearch = (search: string): any => ({
@@ -70,9 +72,9 @@ const windowMatchMedia = (theme: "light" | "dark"): any => ({
   }),
 })
 
-const mockWindow = (...overrides: object[]): jest.SpyInstance => {
+const mockWindow = (...overrides: object[]): MockInstance => {
   const localStorage = window.localStorage
-  const windowSpy = jest.spyOn(window, "window", "get")
+  const windowSpy = vi.spyOn(window, "window", "get")
 
   windowSpy.mockImplementation(() => ({
     localStorage,
@@ -125,7 +127,7 @@ describe("Cached theme helpers", () => {
   // doesn't work. Accessing .__proto__ here isn't too bad of a crime since
   // it's test code.
   const breakLocalStorage = (): void => {
-    jest
+    vi
       // eslint-disable-next-line no-proto
       .spyOn(window.localStorage.__proto__, "setItem")
       .mockImplementation(() => {
@@ -134,7 +136,7 @@ describe("Cached theme helpers", () => {
   }
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
     window.localStorage.clear()
   })
 
@@ -143,7 +145,7 @@ describe("Cached theme helpers", () => {
       breakLocalStorage()
 
       // eslint-disable-next-line no-proto
-      const getItemSpy = jest.spyOn(window.localStorage.__proto__, "getItem")
+      const getItemSpy = vi.spyOn(window.localStorage.__proto__, "getItem")
       expect(getCachedTheme()).toBe(null)
       expect(getItemSpy).not.toHaveBeenCalled()
     })
@@ -193,7 +195,7 @@ describe("Cached theme helpers", () => {
     it("does nothing if localStorage is not available", () => {
       breakLocalStorage()
 
-      const removeItemSpy = jest.spyOn(
+      const removeItemSpy = vi.spyOn(
         // eslint-disable-next-line no-proto
         window.localStorage.__proto__,
         "removeItem"
@@ -203,7 +205,7 @@ describe("Cached theme helpers", () => {
     })
 
     it("removes theme if localStorage", () => {
-      const removeItemSpy = jest.spyOn(
+      const removeItemSpy = vi.spyOn(
         // eslint-disable-next-line no-proto
         window.localStorage.__proto__,
         "removeItem"
@@ -228,7 +230,7 @@ describe("Cached theme helpers", () => {
       breakLocalStorage()
 
       // eslint-disable-next-line no-proto
-      const setItemSpy = jest.spyOn(window.localStorage.__proto__, "setItem")
+      const setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem")
 
       setCachedTheme(darkTheme)
       // This looks a bit funny and is the way it is because the way we know
@@ -389,7 +391,7 @@ describe("createTheme", () => {
 })
 
 describe("getSystemTheme", () => {
-  let windowSpy: jest.SpyInstance
+  let windowSpy: MockInstance
 
   afterEach(() => {
     windowSpy.mockRestore()
@@ -410,7 +412,7 @@ describe("getSystemTheme", () => {
 })
 
 describe("getHostSpecifiedTheme", () => {
-  let windowSpy: jest.SpyInstance
+  let windowSpy: MockInstance
 
   afterEach(() => {
     windowSpy.mockRestore()
@@ -471,7 +473,7 @@ describe("getHostSpecifiedTheme", () => {
 })
 
 describe("getDefaultTheme", () => {
-  let windowSpy: jest.SpyInstance
+  let windowSpy: MockInstance
 
   afterEach(() => {
     windowSpy.mockRestore()
@@ -719,12 +721,12 @@ describe("getWrappedHeadersStyle", () => {
 
 describe("theme overrides", () => {
   beforeEach(async () => {
-    jest.resetModules()
+    vi.resetModules()
     window.__streamlit = undefined
   })
 
   afterEach(() => {
-    jest.resetModules()
+    vi.resetModules()
     window.__streamlit = undefined
   })
 

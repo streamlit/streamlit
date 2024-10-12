@@ -13,28 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import { MockedFunction } from "vitest"
 import { renderHook } from "@testing-library/react-hooks"
 
 import { useScrollToBottom } from "./useScrollToBottom"
 import useStateRef from "./useStateRef"
 
-jest.mock("./useScrollSpy")
-jest.mock("./useScrollAnimation")
-jest.mock("./useStateRef")
+vi.mock("./useScrollSpy")
+vi.mock("./useScrollAnimation")
+vi.mock("./useStateRef")
 
 describe("useScrollToBottom", () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it("should initialize with proper values", () => {
-    const mockedUseStateRef = useStateRef as jest.MockedFunction<
-      typeof useStateRef
-    >
+    const mockedUseStateRef = useStateRef as MockedFunction<typeof useStateRef>
     mockedUseStateRef.mockImplementation(initialValue => [
       initialValue,
-      jest.fn(),
+      vi.fn(),
       { current: initialValue },
     ])
     const { result } = renderHook(() => useScrollToBottom())

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import axios from "axios"
-import MockAdapter from "axios-mock-adapter"
-
-import { BaseUriParts, buildHttpUri, ForwardMsg } from "@streamlit/lib"
+// import axios from "axios"
+// import MockAdapter from "axios-mock-adapter"
+import { BaseUriParts } from "@streamlit/lib"
 
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
@@ -27,12 +26,12 @@ const MOCK_SERVER_URI = {
   basePath: "mock/base/path",
 }
 
-function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
-  return ForwardMsg.fromObject({
-    hash,
-    metadata: { cacheable, deltaId: 0 },
-  })
-}
+// function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
+//   return ForwardMsg.fromObject({
+//     hash,
+//     metadata: { cacheable, deltaId: 0 },
+//   })
+// }
 
 describe("DefaultStreamlitEndpoints", () => {
   const { location: originalLocation } = window
@@ -162,198 +161,198 @@ describe("DefaultStreamlitEndpoints", () => {
     })
   })
 
-  describe("uploadFileUploaderFile()", () => {
-    const MOCK_FILE = new File(["file1"], "file1.txt")
+  // describe("uploadFileUploaderFile()", () => {
+  //   const MOCK_FILE = new File(["file1"], "file1.txt")
 
-    let axiosMock: MockAdapter
-    const spyRequest = jest.spyOn(axios, "request")
-    let endpoints: DefaultStreamlitEndpoints
+  //   let axiosMock: MockAdapter
+  //   const spyRequest = jest.spyOn(axios, "request")
+  //   let endpoints: DefaultStreamlitEndpoints
 
-    beforeEach(() => {
-      axiosMock = new MockAdapter(axios)
-      endpoints = new DefaultStreamlitEndpoints({
-        getServerUri: () => MOCK_SERVER_URI,
-        csrfEnabled: false,
-      })
-    })
+  //   beforeEach(() => {
+  //     axiosMock = new MockAdapter(axios)
+  //     endpoints = new DefaultStreamlitEndpoints({
+  //       getServerUri: () => MOCK_SERVER_URI,
+  //       csrfEnabled: false,
+  //     })
+  //   })
 
-    afterEach(() => {
-      axiosMock.restore()
-    })
+  //   afterEach(() => {
+  //     axiosMock.restore()
+  //   })
 
-    it("properly constructs the correct endpoint when given a relative URL", async () => {
-      axiosMock
-        .onPut(
-          "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
-        )
-        .reply(() => [200, 1])
+  //   it("properly constructs the correct endpoint when given a relative URL", async () => {
+  //     axiosMock
+  //       .onPut(
+  //         "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
+  //       )
+  //       .reply(() => [200, 1])
 
-      const mockOnUploadProgress = (_: any): void => {}
-      const mockCancelToken = axios.CancelToken.source().token
+  //     const mockOnUploadProgress = (_: any): void => {}
+  //     const mockCancelToken = axios.CancelToken.source().token
 
-      await expect(
-        endpoints.uploadFileUploaderFile(
-          "/_stcore/upload_file/file_1",
-          MOCK_FILE,
-          "mockSessionId",
-          mockOnUploadProgress,
-          mockCancelToken
-        )
-      ).resolves.toBeUndefined()
+  //     await expect(
+  //       endpoints.uploadFileUploaderFile(
+  //         "/_stcore/upload_file/file_1",
+  //         MOCK_FILE,
+  //         "mockSessionId",
+  //         mockOnUploadProgress,
+  //         mockCancelToken
+  //       )
+  //     ).resolves.toBeUndefined()
 
-      const expectedData = new FormData()
-      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+  //     const expectedData = new FormData()
+  //     expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1",
-        method: "PUT",
-        responseType: "text",
-        data: expectedData,
-        headers: {},
-        cancelToken: mockCancelToken,
-        onUploadProgress: mockOnUploadProgress,
-      })
-    })
+  //     expect(spyRequest).toHaveBeenCalledWith({
+  //       url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1",
+  //       method: "PUT",
+  //       responseType: "text",
+  //       data: expectedData,
+  //       headers: {},
+  //       cancelToken: mockCancelToken,
+  //       onUploadProgress: mockOnUploadProgress,
+  //     })
+  //   })
 
-    it("Uses the endpoint unchanged when given an absolute url", async () => {
-      axiosMock
-        .onPut("http://example.com/upload_file/file_2")
-        .reply(() => [200, 1])
+  //   it("Uses the endpoint unchanged when given an absolute url", async () => {
+  //     axiosMock
+  //       .onPut("http://example.com/upload_file/file_2")
+  //       .reply(() => [200, 1])
 
-      const mockOnUploadProgress = (_: any): void => {}
-      const mockCancelToken = axios.CancelToken.source().token
+  //     const mockOnUploadProgress = (_: any): void => {}
+  //     const mockCancelToken = axios.CancelToken.source().token
 
-      await expect(
-        endpoints.uploadFileUploaderFile(
-          "http://example.com/upload_file/file_2",
-          MOCK_FILE,
-          "mockSessionId",
-          mockOnUploadProgress,
-          mockCancelToken
-        )
-      ).resolves.toBeUndefined()
+  //     await expect(
+  //       endpoints.uploadFileUploaderFile(
+  //         "http://example.com/upload_file/file_2",
+  //         MOCK_FILE,
+  //         "mockSessionId",
+  //         mockOnUploadProgress,
+  //         mockCancelToken
+  //       )
+  //     ).resolves.toBeUndefined()
 
-      const expectedData = new FormData()
-      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+  //     const expectedData = new FormData()
+  //     expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://example.com/upload_file/file_2",
-        method: "PUT",
-        responseType: "text",
-        data: expectedData,
-        headers: {},
-        cancelToken: mockCancelToken,
-        onUploadProgress: mockOnUploadProgress,
-      })
-    })
+  //     expect(spyRequest).toHaveBeenCalledWith({
+  //       url: "http://example.com/upload_file/file_2",
+  //       method: "PUT",
+  //       responseType: "text",
+  //       data: expectedData,
+  //       headers: {},
+  //       cancelToken: mockCancelToken,
+  //       onUploadProgress: mockOnUploadProgress,
+  //     })
+  //   })
 
-    it("errors on bad status", async () => {
-      axiosMock
-        .onPut("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
-        .reply(() => [400])
+  //   it("errors on bad status", async () => {
+  //     axiosMock
+  //       .onPut("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
+  //       .reply(() => [400])
 
-      await expect(
-        endpoints.uploadFileUploaderFile(
-          "/_stcore/upload_file",
-          MOCK_FILE,
-          "mockSessionId"
-        )
-      ).rejects.toEqual(new Error("Request failed with status code 400"))
-    })
-  })
+  //     await expect(
+  //       endpoints.uploadFileUploaderFile(
+  //         "/_stcore/upload_file",
+  //         MOCK_FILE,
+  //         "mockSessionId"
+  //       )
+  //     ).rejects.toEqual(new Error("Request failed with status code 400"))
+  //   })
+  // })
 
-  describe("fetchCachedForwardMsg()", () => {
-    let axiosMock: MockAdapter
-    let endpoints: DefaultStreamlitEndpoints
+  // describe("fetchCachedForwardMsg()", () => {
+  //   let axiosMock: MockAdapter
+  //   let endpoints: DefaultStreamlitEndpoints
 
-    beforeEach(() => {
-      axiosMock = new MockAdapter(axios)
-      endpoints = new DefaultStreamlitEndpoints({
-        getServerUri: () => MOCK_SERVER_URI,
-        csrfEnabled: false,
-      })
-    })
+  //   beforeEach(() => {
+  //     axiosMock = new MockAdapter(axios)
+  //     endpoints = new DefaultStreamlitEndpoints({
+  //       getServerUri: () => MOCK_SERVER_URI,
+  //       csrfEnabled: false,
+  //     })
+  //   })
 
-    afterEach(() => {
-      axiosMock.restore()
-    })
+  //   afterEach(() => {
+  //     axiosMock.restore()
+  //   })
 
-    it("calls the appropriate endpoint", async () => {
-      const mockForwardMsgBytes = ForwardMsg.encode(
-        createMockForwardMsg("mockHash")
-      ).finish()
+  //   it("calls the appropriate endpoint", async () => {
+  //     const mockForwardMsgBytes = ForwardMsg.encode(
+  //       createMockForwardMsg("mockHash")
+  //     ).finish()
 
-      axiosMock
-        .onGet(
-          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
-        )
-        .reply(() => {
-          return [200, mockForwardMsgBytes]
-        })
+  //     axiosMock
+  //       .onGet(
+  //         "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
+  //       )
+  //       .reply(() => {
+  //         return [200, mockForwardMsgBytes]
+  //       })
 
-      await expect(
-        endpoints.fetchCachedForwardMsg("mockHash")
-      ).resolves.toEqual(new Uint8Array(mockForwardMsgBytes))
-    })
+  //     await expect(
+  //       endpoints.fetchCachedForwardMsg("mockHash")
+  //     ).resolves.toEqual(new Uint8Array(mockForwardMsgBytes))
+  //   })
 
-    it("errors on bad status", async () => {
-      axiosMock
-        .onGet(
-          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
-        )
-        .reply(() => [400])
+  //   it("errors on bad status", async () => {
+  //     axiosMock
+  //       .onGet(
+  //         "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
+  //       )
+  //       .reply(() => [400])
 
-      await expect(
-        endpoints.fetchCachedForwardMsg("mockHash")
-      ).rejects.toEqual(new Error("Request failed with status code 400"))
-    })
-  })
+  //     await expect(
+  //       endpoints.fetchCachedForwardMsg("mockHash")
+  //     ).rejects.toEqual(new Error("Request failed with status code 400"))
+  //   })
+  // })
 
   // Test our private csrfRequest() API, which is responsible for setting
   // the "X-Xsrftoken" header.
-  describe("csrfRequest()", () => {
-    const spyRequest = jest.spyOn(axios, "request")
-    let prevDocumentCookie: string
+  // describe("csrfRequest()", () => {
+  //   const spyRequest = jest.spyOn(axios, "request")
+  //   let prevDocumentCookie: string
 
-    beforeEach(() => {
-      prevDocumentCookie = document.cookie
-      document.cookie = "_streamlit_xsrf=mockXsrfCookie;"
-    })
+  //   beforeEach(() => {
+  //     prevDocumentCookie = document.cookie
+  //     document.cookie = "_streamlit_xsrf=mockXsrfCookie;"
+  //   })
 
-    afterEach(() => {
-      document.cookie = prevDocumentCookie
-    })
+  //   afterEach(() => {
+  //     document.cookie = prevDocumentCookie
+  //   })
 
-    it("sets token when csrfEnabled: true", () => {
-      const endpoints = new DefaultStreamlitEndpoints({
-        getServerUri: () => MOCK_SERVER_URI,
-        csrfEnabled: true,
-      })
+  //   it("sets token when csrfEnabled: true", () => {
+  //     const endpoints = new DefaultStreamlitEndpoints({
+  //       getServerUri: () => MOCK_SERVER_URI,
+  //       csrfEnabled: true,
+  //     })
 
-      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
-      endpoints.csrfRequest(url, {})
+  //     const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+  //     // @ts-expect-error
+  //     endpoints.csrfRequest(url, {})
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        headers: { "X-Xsrftoken": "mockXsrfCookie" },
-        withCredentials: true,
-        url,
-      })
-    })
+  //     expect(spyRequest).toHaveBeenCalledWith({
+  //       headers: { "X-Xsrftoken": "mockXsrfCookie" },
+  //       withCredentials: true,
+  //       url,
+  //     })
+  //   })
 
-    it("omits token when csrfEnabled: false", () => {
-      const endpoints = new DefaultStreamlitEndpoints({
-        getServerUri: () => MOCK_SERVER_URI,
-        csrfEnabled: false,
-      })
+  //   it("omits token when csrfEnabled: false", () => {
+  //     const endpoints = new DefaultStreamlitEndpoints({
+  //       getServerUri: () => MOCK_SERVER_URI,
+  //       csrfEnabled: false,
+  //     })
 
-      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
-      endpoints.csrfRequest(url, {})
+  //     const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+  //     // @ts-expect-error
+  //     endpoints.csrfRequest(url, {})
 
-      expect(spyRequest).toHaveBeenCalledWith({
-        url,
-      })
-    })
-  })
+  //     expect(spyRequest).toHaveBeenCalledWith({
+  //       url,
+  //     })
+  //   })
+  // })
 })

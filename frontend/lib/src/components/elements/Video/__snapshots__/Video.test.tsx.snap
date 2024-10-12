@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Video Element YouTube renders a youtube iframe 1`] = `
+exports[`Video Element > YouTube > renders a youtube iframe 1`] = `
 <body>
   <div>
     <iframe
@@ -19,7 +19,7 @@ exports[`Video Element YouTube renders a youtube iframe 1`] = `
 </body>
 `;
 
-exports[`Video Element YouTube renders a youtube iframe with an starting time 1`] = `
+exports[`Video Element > YouTube > renders a youtube iframe with an starting time 1`] = `
 <body>
   <div>
     <iframe

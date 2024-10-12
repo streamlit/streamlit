@@ -25,14 +25,14 @@ import {
 
 import useDataExporter, { toCsvRow } from "./useDataExporter"
 
-const mockWrite = jest.fn()
-const mockClose = jest.fn()
+const mockWrite = vi.fn()
+const mockClose = vi.fn()
 
 // The native-file-system-adapter is not available in tests, so we need to mock it.
-jest.mock("native-file-system-adapter", () => ({
-  showSaveFilePicker: jest.fn().mockImplementation((_object: any) => {
+vi.mock("native-file-system-adapter", () => ({
+  showSaveFilePicker: vi.fn().mockImplementation((_object: any) => {
     return {
-      createWritable: jest.fn().mockImplementation(() => {
+      createWritable: vi.fn().mockImplementation(() => {
         return {
           write: mockWrite,
           close: mockClose,
@@ -76,7 +76,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
 
 const NUM_ROWS = 5
 
-const getCellContentMock = jest
+const getCellContentMock = vi
   .fn()
   .mockImplementation(([col]: readonly [number]) => {
     const column = MOCK_COLUMNS[col]
@@ -103,7 +103,7 @@ describe("toCsvRow", () => {
 
 describe("useDataExporter hook", () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it("correctly writes data row-by-row to writable", async () => {

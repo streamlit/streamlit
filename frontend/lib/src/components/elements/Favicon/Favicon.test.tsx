@@ -44,7 +44,7 @@ const ACCESSIBILITY_NEW_MATERIAL_ICON_URL =
   "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/accessibility_new/default/24px.svg"
 
 test("is set up with the default favicon", () => {
-  expect(getFaviconHref()).toBe("http://localhost/default.png")
+  expect(getFaviconHref()).toBe("http://localhost:3000/default.png")
 })
 
 describe("Favicon element", () => {

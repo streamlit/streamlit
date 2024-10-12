@@ -63,7 +63,7 @@ export function mockWindowLocation(hostname: string): void {
 
   // @ts-expect-error
   window.location = {
-    assign: jest.fn(),
+    assign: vi.fn(),
     hostname: hostname,
   }
 }
@@ -78,14 +78,14 @@ export const customRenderLibContext = (
 ): RenderResult => {
   const defaultLibContextProps = {
     isFullScreen: false,
-    setFullScreen: jest.fn(),
-    addScriptFinishedHandler: jest.fn(),
-    removeScriptFinishedHandler: jest.fn(),
+    setFullScreen: vi.fn(),
+    addScriptFinishedHandler: vi.fn(),
+    removeScriptFinishedHandler: vi.fn(),
     activeTheme: baseTheme,
-    setTheme: jest.fn(),
+    setTheme: vi.fn(),
     availableThemes: [],
-    addThemes: jest.fn(),
-    onPageChange: jest.fn(),
+    addThemes: vi.fn(),
+    onPageChange: vi.fn(),
     currentPageScriptHash: "",
     libConfig: {},
     fragmentIdsThisRun: [],

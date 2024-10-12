@@ -25,9 +25,9 @@ import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 
 import Button, { Props } from "./Button"
 
-jest.mock("@streamlit/lib/src/WidgetStateManager")
+vi.mock("@streamlit/lib/src/WidgetStateManager")
 
-const sendBackMsg = jest.fn()
+const sendBackMsg = vi.fn()
 
 const getProps = (
   elementProps: Partial<ButtonProto> = {},

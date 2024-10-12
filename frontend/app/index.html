@@ -22,18 +22,39 @@
       name="viewport"
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
-    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
-    <link rel="preload" href="%PUBLIC_URL%/static/media/SourceSansPro-Regular.0d69e5ff5e92ac64a0c9.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="%PUBLIC_URL%/static/media/SourceSansPro-SemiBold.abed79cd0df1827e18cf.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="%PUBLIC_URL%/static/media/SourceSansPro-Bold.118dea98980e20a81ced.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link
+      rel="preload"
+      href="/static/media/SourceSansPro-Regular.DZLUzqI4.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/static/media/SourceSansPro-SemiBold.sKQIyTMz.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/static/media/SourceSansPro-Bold.-6c9oR8J.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
 
     <title>Streamlit</title>
 
     <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
-    <script> window.prerenderReady = false; </script>
+    <script>
+      window.prerenderReady = false
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

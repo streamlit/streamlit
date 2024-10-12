@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable jest/expect-expect */
 import React from "react"
 
 import { act, fireEvent, screen, within } from "@testing-library/react"

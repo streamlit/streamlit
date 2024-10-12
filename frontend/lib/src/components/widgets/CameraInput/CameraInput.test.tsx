@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import "@testing-library/jest-dom"
 
+import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { enableFetchMocks } from "jest-fetch-mock"
+import createFetchMock from "vitest-fetch-mock"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -30,7 +30,8 @@ import {
 
 import CameraInput, { Props } from "./CameraInput"
 
-jest.mock("react-webcam")
+vi.mock("react-webcam")
+const fetchMocker = createFetchMock(vi)
 
 const getProps = (
   elementProps: Partial<CameraInputProto> = {},
@@ -47,15 +48,15 @@ const getProps = (
     width: 0,
     disabled: false,
     widgetMgr: new WidgetStateManager({
-      sendRerunBackMsg: jest.fn(),
-      formsDataChanged: jest.fn(),
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
     }),
     // @ts-expect-error
     uploadClient: {
-      uploadFile: jest.fn().mockImplementation(() => {
+      uploadFile: vi.fn().mockImplementation(() => {
         return Promise.resolve()
       }),
-      fetchFileURLs: jest.fn().mockImplementation((acceptedFiles: File[]) => {
+      fetchFileURLs: vi.fn().mockImplementation((acceptedFiles: File[]) => {
         return Promise.resolve(
           acceptedFiles.map(file => {
             return new FileURLsProto({
@@ -66,17 +67,17 @@ const getProps = (
           })
         )
       }),
-      deleteFile: jest.fn(),
+      deleteFile: vi.fn(),
     },
     ...props,
   }
 }
 
 describe("CameraInput widget", () => {
-  enableFetchMocks()
+  fetchMocker.enableMocks()
   it("renders without crashing", () => {
     const props = getProps()
-    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<CameraInput {...props} />)
     const cameraInput = screen.getByTestId("stCameraInput")
     expect(cameraInput).toBeInTheDocument()

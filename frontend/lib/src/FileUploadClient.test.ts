@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Mock } from "vitest"
+
 import { FileUploadClient } from "./FileUploadClient"
 import { mockSessionInfo } from "./mocks/mocks"
 
@@ -21,26 +23,26 @@ const MOCK_FILE_ID = -111
 const MOCK_FILE = new File(["file1"], "file1.txt")
 
 describe("FileUploadClient Upload", () => {
-  let formsWithPendingRequestsChanged: jest.Mock
-  let requestFileURLs: jest.Mock
-  let uploadFileUploaderFile: jest.Mock
+  let formsWithPendingRequestsChanged: Mock
+  let requestFileURLs: Mock
+  let uploadFileUploaderFile: Mock
   let uploader: FileUploadClient
 
   beforeEach(() => {
-    formsWithPendingRequestsChanged = jest.fn()
-    uploadFileUploaderFile = jest.fn()
-    requestFileURLs = jest.fn()
+    formsWithPendingRequestsChanged = vi.fn()
+    uploadFileUploaderFile = vi.fn()
+    requestFileURLs = vi.fn()
 
     uploader = new FileUploadClient({
       sessionInfo: mockSessionInfo(),
       endpoints: {
-        buildComponentURL: jest.fn(),
-        buildMediaURL: jest.fn(),
-        buildFileUploadURL: jest.fn(),
-        buildAppPageURL: jest.fn(),
+        buildComponentURL: vi.fn(),
+        buildMediaURL: vi.fn(),
+        buildFileUploadURL: vi.fn(),
+        buildAppPageURL: vi.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
-        deleteFileAtURL: jest.fn(),
-        fetchCachedForwardMsg: jest.fn(),
+        deleteFileAtURL: vi.fn(),
+        fetchCachedForwardMsg: vi.fn(),
       },
       formsWithPendingRequestsChanged,
       requestFileURLs,

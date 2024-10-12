@@ -34,9 +34,9 @@ import {
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 
-jest.mock("@streamlit/lib/src/util/Hooks", () => ({
+jest.mock("@streamlit/lib/src/util/Hooks", async () => ({
   __esModule: true,
-  ...jest.requireActual("@streamlit/lib/src/util/Hooks"),
+  ...(await jest.importActual("@streamlit/lib/src/util/Hooks")),
   useIsOverflowing: jest.fn(),
 }))
 

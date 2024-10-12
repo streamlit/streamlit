@@ -32,14 +32,14 @@ import {
   SetIconCallback,
 } from "./AppNavigation"
 
-jest.mock("@streamlit/lib/src/hostComm/HostCommunicationManager", () => {
-  const actualModule = jest.requireActual(
+vi.mock("@streamlit/lib/src/hostComm/HostCommunicationManager", async () => {
+  const actualModule = await vi.importActual<any>(
     "@streamlit/lib/src/hostComm/HostCommunicationManager"
   )
 
-  const MockedClass = jest.fn().mockImplementation((...props) => {
+  const MockedClass = vi.fn().mockImplementation((...props) => {
     const hostCommunicationMgr = new actualModule.default(...props)
-    jest.spyOn(hostCommunicationMgr, "sendMessageToHost")
+    vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
     return hostCommunicationMgr
   })
 
@@ -127,9 +127,9 @@ describe("AppNavigation", () => {
       restartWebsocketConnection: () => {},
       terminateWebsocketConnection: () => {},
     })
-    onUpdatePageUrl = jest.fn()
-    onPageNotFound = jest.fn()
-    onPageIconChange = jest.fn()
+    onUpdatePageUrl = vi.fn()
+    onPageNotFound = vi.fn()
+    onPageIconChange = vi.fn()
     appNavigation = new AppNavigation(
       hostCommunicationMgr,
       onUpdatePageUrl,

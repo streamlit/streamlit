@@ -14,15 +14,5 @@
  * limitations under the License.
  */
 
-// default babel-jest configs
-const babelJest = require("babel-jest").default
-
-module.exports = babelJest.createTransformer({
-  presets: [
-    // use custom transpiler to transpile typescript files to javascript for testing
-    // basically same as babel-preset-react-app
-    ["../lib/scripts/babel-preset-test-env.js"],
-  ],
-  // emotion plugin for transpiling
-  plugins: ["@emotion"],
-})
+/// <reference types="vite/client" />
+/// <reference types="vitest/globals" />

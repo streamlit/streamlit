@@ -1,37 +1,37 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Quiver Add rows Special cases throws an error if DataFrames have different data types 1`] = `
-"
+exports[`Quiver > Add rows > Special cases > throws an error if DataFrames have different data types 1`] = `
+[Error: 
 Unsupported operation. The data passed into \`add_rows()\` must have the same
 index signature as the original data.
 
-In this case, \`add_rows()\` received \`[\\"int64\\"]\`
-but was expecting \`[\\"unicode\\"]\`.
-"
+In this case, \`add_rows()\` received \`["int64"]\`
+but was expecting \`["unicode"]\`.
+]
 `;
 
-exports[`Quiver Add rows Special cases throws an error if DataFrames have different index types 1`] = `
-"
+exports[`Quiver > Add rows > Special cases > throws an error if DataFrames have different index types 1`] = `
+[Error: 
 Unsupported operation. The data passed into \`add_rows()\` must have the same
 index signature as the original data.
 
-In this case, \`add_rows()\` received \`[\\"range\\"]\`
-but was expecting \`[\\"unicode\\"]\`.
-"
+In this case, \`add_rows()\` received \`["range"]\`
+but was expecting \`["unicode"]\`.
+]
 `;
 
-exports[`Quiver Add rows Special cases throws an error if df1 has more columns than df2 1`] = `
-"
+exports[`Quiver > Add rows > Special cases > throws an error if df1 has more columns than df2 1`] = `
+[Error: 
 Unsupported operation. The data passed into \`add_rows()\` must have the same
 data signature as the original data.
 
-In this case, \`add_rows()\` received \`[\\"unicode\\"]\`
-but was expecting \`[\\"unicode\\",\\"unicode\\"]\`.
-"
+In this case, \`add_rows()\` received \`["unicode"]\`
+but was expecting \`["unicode","unicode"]\`.
+]
 `;
 
-exports[`Quiver Add rows Special cases throws an error if one of the DataFrames has Styler 1`] = `
-"
+exports[`Quiver > Add rows > Special cases > throws an error if one of the DataFrames has Styler 1`] = `
+[Error: 
 Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
 
 If you do not need the Styler's styles, try passing the \`.data\` attribute of
@@ -41,11 +41,11 @@ For example:
 \`\`\`
 st.add_rows(my_styler.data)
 \`\`\`
-"
+]
 `;
 
-exports[`Quiver Add rows Special cases throws an error if one of the DataFrames has Styler 2`] = `
-"
+exports[`Quiver > Add rows > Special cases > throws an error if one of the DataFrames has Styler 2`] = `
+[Error: 
 Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
 
 If you do not need the Styler's styles, try passing the \`.data\` attribute of
@@ -55,5 +55,5 @@ For example:
 \`\`\`
 st.add_rows(my_styler.data)
 \`\`\`
-"
+]
 `;

@@ -14,9 +14,5 @@
  * limitations under the License.
  */
 
-const create = require("./create")
-
-// use custom babel-preset-react-app transpiler to transform from typescript to browser compatible js
-module.exports = function (api, opts) {
-  return create(api, Object.assign({ helpers: false }, opts), "test")
-}
+/// <reference types="vite/client" />
+/// <reference types="vitest/globals" />

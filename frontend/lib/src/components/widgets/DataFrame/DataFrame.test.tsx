@@ -25,15 +25,15 @@ import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import "@testing-library/jest-dom"
 
-jest.mock("@glideapps/glide-data-grid", () => ({
-  ...jest.requireActual("@glideapps/glide-data-grid"),
-  DataEditor: jest.fn(props => <div {...props} />),
+vi.mock("@glideapps/glide-data-grid", async () => ({
+  ...(await vi.importActual("@glideapps/glide-data-grid")),
+  DataEditor: vi.fn(props => <div {...props} />),
 }))
 
 // The native-file-system-adapter creates some issues in the test environment
 // so we mock it out. The errors might be related to the missing typescript
 // distribution. But the file picker most likely wouldn't work anyways in jest-dom.
-jest.mock("native-file-system-adapter", () => ({}))
+vi.mock("native-file-system-adapter", () => ({}))
 
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
@@ -53,7 +53,7 @@ const getProps = (
   width: 700,
   disabled: false,
   widgetMgr: {
-    getStringValue: jest.fn(),
+    getStringValue: vi.fn(),
   } as any,
 })
 
@@ -67,16 +67,16 @@ describe("DataFrame widget", () => {
     // TypeError: window.ResizeObserver is not a constructor
     // @ts-expect-error
     delete window.ResizeObserver
-    window.ResizeObserver = jest.fn().mockImplementation(() => ({
-      observe: jest.fn(),
-      unobserve: jest.fn(),
-      disconnect: jest.fn(),
+    window.ResizeObserver = vi.fn().mockImplementation(() => ({
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
     }))
   })
 
   afterEach(() => {
     window.ResizeObserver = ResizeObserver
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   it("renders without crashing", () => {
@@ -123,7 +123,7 @@ describe("DataFrame widget", () => {
 
   it("Touch detection correctly deactivates some features", () => {
     // Set window.matchMedia to simulate a touch device
-    window.matchMedia = jest.fn().mockImplementation(() => ({
+    window.matchMedia = vi.fn().mockImplementation(() => ({
       matches: true,
     }))
 

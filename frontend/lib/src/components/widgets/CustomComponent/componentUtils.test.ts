@@ -15,6 +15,8 @@
  */
 
 import { RefObject } from "react"
+
+import { Mock } from "vitest"
 import "@testing-library/jest-dom"
 
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
@@ -35,30 +37,30 @@ import {
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // Mock our WidgetStateManager
-jest.mock("@streamlit/lib/src/WidgetStateManager")
+vi.mock("@streamlit/lib/src/WidgetStateManager")
 
 describe("test componentUtils", () => {
   describe("createIframeMsgHandler", () => {
     const element = ComponentInstanceProto.create({})
     let widgetMgr: WidgetStateManager
-    let setComponentError: jest.Mock
-    let componentReadyCallback: jest.Mock
-    let frameHeightCallback: jest.Mock
+    let setComponentError: Mock
+    let componentReadyCallback: Mock
+    let frameHeightCallback: Mock
 
     let ref: RefObject<IframeMessageHandlerProps>
     let iframeMessageHandler: (type: string, data: IframeMessage) => void
 
     beforeEach(() => {
       // Clear our class mocks
-      const mockWidgetStateManager = WidgetStateManager as unknown as jest.Mock
+      const mockWidgetStateManager = WidgetStateManager as unknown as Mock
       mockWidgetStateManager.mockClear()
 
-      componentReadyCallback = jest.fn()
-      frameHeightCallback = jest.fn()
-      setComponentError = jest.fn()
+      componentReadyCallback = vi.fn()
+      frameHeightCallback = vi.fn()
+      setComponentError = vi.fn()
       widgetMgr = new WidgetStateManager({
-        sendRerunBackMsg: jest.fn(),
-        formsDataChanged: jest.fn(),
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
       })
       ref = {
         current: {
@@ -134,7 +136,7 @@ describe("test componentUtils", () => {
 
   describe("sendRenderMessage", () => {
     it("should send message to iframe", () => {
-      const handleAction = jest.fn()
+      const handleAction = vi.fn()
 
       const mockIframe: any = {
         contentWindow: {
@@ -167,7 +169,7 @@ describe("test componentUtils", () => {
     })
 
     it("should not send message when iframe is undefined", () => {
-      const handleAction = jest.fn()
+      const handleAction = vi.fn()
 
       const mockIframe: any = undefined
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
@@ -175,7 +177,7 @@ describe("test componentUtils", () => {
     })
 
     it("should not send message when iframe's content window is undefined", () => {
-      const handleAction = jest.fn()
+      const handleAction = vi.fn()
 
       const mockIframe: any = {
         contentWindow: undefined,

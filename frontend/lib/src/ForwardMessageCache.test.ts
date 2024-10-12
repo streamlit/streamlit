@@ -14,25 +14,27 @@
  * limitations under the License.
  */
 
+import { Mock } from "vitest"
+
 import { ForwardMsg } from "./proto"
 import { ForwardMsgCache } from "./ForwardMessageCache"
 
 interface MockCache {
   cache: ForwardMsgCache
   getCachedMessage: (hash: string) => ForwardMsg | undefined
-  mockFetchCachedForwardMsg: jest.Mock
+  mockFetchCachedForwardMsg: Mock
 }
 
 function createCache(): MockCache {
-  const mockFetchCachedForwardMsg = jest.fn()
+  const mockFetchCachedForwardMsg = vi.fn()
 
   const cache = new ForwardMsgCache({
-    buildComponentURL: jest.fn(),
-    buildMediaURL: jest.fn(),
-    buildFileUploadURL: jest.fn(),
-    buildAppPageURL: jest.fn(),
-    uploadFileUploaderFile: jest.fn(),
-    deleteFileAtURL: jest.fn(),
+    buildComponentURL: vi.fn(),
+    buildMediaURL: vi.fn(),
+    buildFileUploadURL: vi.fn(),
+    buildAppPageURL: vi.fn(),
+    uploadFileUploaderFile: vi.fn(),
+    deleteFileAtURL: vi.fn(),
     fetchCachedForwardMsg: mockFetchCachedForwardMsg,
   })
 

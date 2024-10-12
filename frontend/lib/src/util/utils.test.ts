@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { MockInstance } from "vitest"
+
 import {
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
@@ -138,10 +140,10 @@ describe("embedParamValues", () => {
 })
 
 describe("getEmbedUrlParams", () => {
-  let windowSpy: jest.SpyInstance
+  let windowSpy: MockInstance
 
   beforeEach(() => {
-    windowSpy = jest.spyOn(window, "window", "get")
+    windowSpy = vi.spyOn(window, "window", "get")
   })
 
   afterEach(() => {
@@ -213,10 +215,10 @@ describe("getEmbedUrlParams", () => {
 })
 
 describe("isEmbed", () => {
-  let windowSpy: jest.SpyInstance
+  let windowSpy: MockInstance
 
   beforeEach(() => {
-    windowSpy = jest.spyOn(window, "window", "get")
+    windowSpy = vi.spyOn(window, "window", "get")
   })
 
   afterEach(() => {
@@ -402,63 +404,53 @@ describe("isEmbed", () => {
 })
 
 describe("getLoadingScreenType", () => {
-  let windowSpy: jest.SpyInstance
-
-  beforeEach(() => {
-    windowSpy = jest.spyOn(window, "window", "get")
-  })
-
-  afterEach(() => {
-    windowSpy.mockRestore()
-  })
-
   it("should return v2 by default", () => {
-    windowSpy.mockImplementation(() => ({
+    vi.stubGlobal("window", {
       location: {
         search: null,
       },
-    }))
+    })
 
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
   })
 
   it("should give precendence to 'hide'", () => {
-    windowSpy.mockImplementation(() => ({
+    vi.stubGlobal("window", {
       location: {
         search:
           "?embed_options=hide_loading_screen&show_loading_screen_v1&show_loading_screen_v2",
       },
-    }))
+    })
 
     expect(getLoadingScreenType()).toBe(LoadingScreenType.NONE)
   })
 
   it("should support 'hide'", () => {
-    windowSpy.mockImplementation(() => ({
+    vi.stubGlobal("window", {
       location: {
         search: "?embed_options=hide_loading_screen",
       },
-    }))
+    })
 
     expect(getLoadingScreenType()).toBe(LoadingScreenType.NONE)
   })
 
   it("should support 'v1'", () => {
-    windowSpy.mockImplementation(() => ({
+    vi.stubGlobal("window", {
       location: {
         search: "?embed_options=show_loading_screen_v1",
       },
-    }))
+    })
 
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V1)
   })
 
   it("should support 'v2'", () => {
-    windowSpy.mockImplementation(() => ({
+    vi.stubGlobal("window", {
       location: {
         search: "?embed_options=show_loading_screen_v2",
       },
-    }))
+    })
 
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
   })
@@ -474,7 +466,7 @@ describe("getLoadingScreenType", () => {
       delete window.location
       // @ts-expect-error
       window.location = {
-        assign: jest.fn(),
+        assign: vi.fn(),
         search: "foo=bar",
       }
       expect(preserveEmbedQueryParams()).toBe("")
@@ -485,7 +477,7 @@ describe("getLoadingScreenType", () => {
       delete window.location
       // @ts-expect-error
       window.location = {
-        assign: jest.fn(),
+        assign: vi.fn(),
         search: "embed=true&foo=bar",
       }
       expect(preserveEmbedQueryParams()).toBe("embed=true")
@@ -496,7 +488,7 @@ describe("getLoadingScreenType", () => {
       delete window.location
       // @ts-expect-error
       window.location = {
-        assign: jest.fn(),
+        assign: vi.fn(),
         search:
           "embed=true&embed_options=option1&embed_options=option2&foo=bar",
       }

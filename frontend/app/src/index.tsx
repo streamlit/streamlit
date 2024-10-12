@@ -30,6 +30,7 @@ const engine = new Styletron({ prefix: "st-" })
 
 // TODO: Deprecated in React 18 - Need to revise to new API
 // react-18-upgrade
+// eslint-disable-next-line react/no-deprecated
 ReactDOM.render(
   <StyletronProvider value={engine}>
     <ThemedApp />

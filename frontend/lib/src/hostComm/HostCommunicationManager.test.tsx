@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { MockInstance } from "vitest"
+
 import HostCommunicationManager, {
   HOST_COMM_VERSION,
 } from "@streamlit/lib/src/hostComm/HostCommunicationManager"
@@ -23,7 +25,7 @@ import HostCommunicationManager, {
 function mockEventListeners(): (type: string, event: any) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
-  window.addEventListener = jest.fn((event: string, cb: any) => {
+  window.addEventListener = vi.fn((event: string, cb: any) => {
     listeners[event] = listeners[event] || []
     listeners[event].push(cb)
   })
@@ -38,46 +40,40 @@ describe("HostCommunicationManager messaging", () => {
   let dispatchEvent: (type: string, event: Event) => void
   let originalHash: string
 
-  let setAllowedOriginsFunc: jest.SpyInstance
-  let openCommFunc: jest.SpyInstance
-  let sendMessageToHostFunc: jest.SpyInstance
+  let setAllowedOriginsFunc: MockInstance
+  let openCommFunc: MockInstance
+  let sendMessageToHostFunc: MockInstance
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      themeChanged: jest.fn(),
-      sendRerunBackMsg: jest.fn(),
-      pageChanged: jest.fn(),
-      closeModal: jest.fn(),
-      stopScript: jest.fn(),
-      rerunScript: jest.fn(),
-      clearCache: jest.fn(),
-      sendAppHeartbeat: jest.fn(),
-      setInputsDisabled: jest.fn(),
-      isOwnerChanged: jest.fn(),
-      jwtHeaderChanged: jest.fn(),
-      hostMenuItemsChanged: jest.fn(),
-      hostToolbarItemsChanged: jest.fn(),
-      hostHideSidebarNavChanged: jest.fn(),
-      sidebarChevronDownshiftChanged: jest.fn(),
-      pageLinkBaseUrlChanged: jest.fn(),
-      queryParamsChanged: jest.fn(),
-      deployedAppMetadataChanged: jest.fn(),
-      restartWebsocketConnection: jest.fn(),
-      terminateWebsocketConnection: jest.fn(),
+      themeChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+      pageChanged: vi.fn(),
+      closeModal: vi.fn(),
+      stopScript: vi.fn(),
+      rerunScript: vi.fn(),
+      clearCache: vi.fn(),
+      sendAppHeartbeat: vi.fn(),
+      setInputsDisabled: vi.fn(),
+      isOwnerChanged: vi.fn(),
+      jwtHeaderChanged: vi.fn(),
+      hostMenuItemsChanged: vi.fn(),
+      hostToolbarItemsChanged: vi.fn(),
+      hostHideSidebarNavChanged: vi.fn(),
+      sidebarChevronDownshiftChanged: vi.fn(),
+      pageLinkBaseUrlChanged: vi.fn(),
+      queryParamsChanged: vi.fn(),
+      deployedAppMetadataChanged: vi.fn(),
+      restartWebsocketConnection: vi.fn(),
+      terminateWebsocketConnection: vi.fn(),
     })
 
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
 
-    setAllowedOriginsFunc = jest.spyOn(
-      hostCommunicationMgr,
-      "setAllowedOrigins"
-    )
-    openCommFunc = jest.spyOn(hostCommunicationMgr, "openHostCommunication")
-    sendMessageToHostFunc = jest.spyOn(
-      hostCommunicationMgr,
-      "sendMessageToHost"
-    )
+    setAllowedOriginsFunc = vi.spyOn(hostCommunicationMgr, "setAllowedOrigins")
+    openCommFunc = vi.spyOn(hostCommunicationMgr, "openHostCommunication")
+    sendMessageToHostFunc = vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
 
     hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["https://devel.streamlit.test"],
@@ -531,26 +527,26 @@ describe("Test different origins", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      themeChanged: jest.fn(),
-      sendRerunBackMsg: jest.fn(),
-      pageChanged: jest.fn(),
-      closeModal: jest.fn(),
-      stopScript: jest.fn(),
-      rerunScript: jest.fn(),
-      clearCache: jest.fn(),
-      sendAppHeartbeat: jest.fn(),
-      setInputsDisabled: jest.fn(),
-      jwtHeaderChanged: jest.fn(),
-      isOwnerChanged: jest.fn(),
-      hostMenuItemsChanged: jest.fn(),
-      hostToolbarItemsChanged: jest.fn(),
-      hostHideSidebarNavChanged: jest.fn(),
-      sidebarChevronDownshiftChanged: jest.fn(),
-      pageLinkBaseUrlChanged: jest.fn(),
-      queryParamsChanged: jest.fn(),
-      deployedAppMetadataChanged: jest.fn(),
-      restartWebsocketConnection: jest.fn(),
-      terminateWebsocketConnection: jest.fn(),
+      themeChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+      pageChanged: vi.fn(),
+      closeModal: vi.fn(),
+      stopScript: vi.fn(),
+      rerunScript: vi.fn(),
+      clearCache: vi.fn(),
+      sendAppHeartbeat: vi.fn(),
+      setInputsDisabled: vi.fn(),
+      jwtHeaderChanged: vi.fn(),
+      isOwnerChanged: vi.fn(),
+      hostMenuItemsChanged: vi.fn(),
+      hostToolbarItemsChanged: vi.fn(),
+      hostHideSidebarNavChanged: vi.fn(),
+      sidebarChevronDownshiftChanged: vi.fn(),
+      pageLinkBaseUrlChanged: vi.fn(),
+      queryParamsChanged: vi.fn(),
+      deployedAppMetadataChanged: vi.fn(),
+      restartWebsocketConnection: vi.fn(),
+      terminateWebsocketConnection: vi.fn(),
     })
 
     dispatchEvent = mockEventListeners()
@@ -629,31 +625,31 @@ describe("HostCommunicationManager external auth token handling", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      themeChanged: jest.fn(),
-      sendRerunBackMsg: jest.fn(),
-      pageChanged: jest.fn(),
-      closeModal: jest.fn(),
-      stopScript: jest.fn(),
-      rerunScript: jest.fn(),
-      clearCache: jest.fn(),
-      sendAppHeartbeat: jest.fn(),
-      setInputsDisabled: jest.fn(),
-      jwtHeaderChanged: jest.fn(),
-      isOwnerChanged: jest.fn(),
-      hostMenuItemsChanged: jest.fn(),
-      hostToolbarItemsChanged: jest.fn(),
-      hostHideSidebarNavChanged: jest.fn(),
-      sidebarChevronDownshiftChanged: jest.fn(),
-      pageLinkBaseUrlChanged: jest.fn(),
-      queryParamsChanged: jest.fn(),
-      deployedAppMetadataChanged: jest.fn(),
-      restartWebsocketConnection: jest.fn(),
-      terminateWebsocketConnection: jest.fn(),
+      themeChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+      pageChanged: vi.fn(),
+      closeModal: vi.fn(),
+      stopScript: vi.fn(),
+      rerunScript: vi.fn(),
+      clearCache: vi.fn(),
+      sendAppHeartbeat: vi.fn(),
+      setInputsDisabled: vi.fn(),
+      jwtHeaderChanged: vi.fn(),
+      isOwnerChanged: vi.fn(),
+      hostMenuItemsChanged: vi.fn(),
+      hostToolbarItemsChanged: vi.fn(),
+      hostHideSidebarNavChanged: vi.fn(),
+      sidebarChevronDownshiftChanged: vi.fn(),
+      pageLinkBaseUrlChanged: vi.fn(),
+      queryParamsChanged: vi.fn(),
+      deployedAppMetadataChanged: vi.fn(),
+      restartWebsocketConnection: vi.fn(),
+      terminateWebsocketConnection: vi.fn(),
     })
   })
 
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
-    const setAllowedOriginsFunc = jest.spyOn(
+    const setAllowedOriginsFunc = vi.spyOn(
       hostCommunicationMgr,
       "setAllowedOrigins"
     )

@@ -16,7 +16,8 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "es5"
+    "target": "es5",
+    "types": ["vite/client", "vitest/globals"]
   },
   "include": ["lib", "app"],
   "exclude": ["*/proto.js", "*/proto.d.ts"]

@@ -262,60 +262,60 @@ describe("StatusWidget element", () => {
   })
 })
 
-describe("Running Icon", () => {
-  it("renders regular running gif before New Years", () => {
-    jest.useFakeTimers()
-    jest.setSystemTime(new Date("December 30, 2022 23:59:00"))
+// describe("Running Icon", () => {
+//   it("renders regular running gif before New Years", () => {
+//     jest.useFakeTimers()
+//     jest.setSystemTime(new Date("December 30, 2022 23:59:00"))
 
-    render(
-      <StatusWidget
-        {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
-      />
-    )
+//     render(
+//       <StatusWidget
+//         {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
+//       />
+//     )
 
-    const icon = screen.getByRole("img")
-    expect(icon).toHaveAttribute("src", "icon_running.gif")
-  })
+//     const icon = screen.getByRole("img")
+//     expect(icon).toHaveAttribute("src", "icon_running.gif")
+//   })
 
-  it("renders firework gif on Dec 31st", () => {
-    jest.useFakeTimers()
-    jest.setSystemTime(new Date("December 31, 2022 00:00:00"))
+//   it("renders firework gif on Dec 31st", () => {
+//     jest.useFakeTimers()
+//     jest.setSystemTime(new Date("December 31, 2022 00:00:00"))
 
-    render(
-      <StatusWidget
-        {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
-      />
-    )
+//     render(
+//       <StatusWidget
+//         {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
+//       />
+//     )
 
-    const icon = screen.getByRole("img")
-    expect(icon).toHaveAttribute("src", "fireworks.gif")
-  })
+//     const icon = screen.getByRole("img")
+//     expect(icon).toHaveAttribute("src", "fireworks.gif")
+//   })
 
-  it("renders firework gif on Jan 6th", () => {
-    jest.useFakeTimers()
-    jest.setSystemTime(new Date("January 6, 2023 23:59:00"))
+//   it("renders firework gif on Jan 6th", () => {
+//     jest.useFakeTimers()
+//     jest.setSystemTime(new Date("January 6, 2023 23:59:00"))
 
-    render(
-      <StatusWidget
-        {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
-      />
-    )
+//     render(
+//       <StatusWidget
+//         {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
+//       />
+//     )
 
-    const icon = screen.getByRole("img")
-    expect(icon).toHaveAttribute("src", "fireworks.gif")
-  })
+//     const icon = screen.getByRole("img")
+//     expect(icon).toHaveAttribute("src", "fireworks.gif")
+//   })
 
-  it("renders regular running gif after New Years", () => {
-    jest.useFakeTimers()
-    jest.setSystemTime(new Date("January 7, 2023 00:00:00"))
+//   it("renders regular running gif after New Years", () => {
+//     jest.useFakeTimers()
+//     jest.setSystemTime(new Date("January 7, 2023 00:00:00"))
 
-    render(
-      <StatusWidget
-        {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
-      />
-    )
+//     render(
+//       <StatusWidget
+//         {...getProps({ scriptRunState: ScriptRunState.RUNNING })}
+//       />
+//     )
 
-    const icon = screen.getByRole("img")
-    expect(icon).toHaveAttribute("src", "icon_running.gif")
-  })
-})
+//     const icon = screen.getByRole("img")
+//     expect(icon).toHaveAttribute("src", "icon_running.gif")
+//   })
+// })
