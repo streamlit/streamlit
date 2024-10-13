@@ -22,7 +22,7 @@ import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { convertScssRemValueToPixels } from "@streamlit/lib/src/util/utils"
+import { convertRemToPx } from "@streamlit/lib/src/theme/utils"
 
 import {
   StyledFullScreenButton,
@@ -109,8 +109,8 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
     State,
     "fullWidth" | "fullHeight"
   > => {
-    const padding = convertScssRemValueToPixels(this.props.theme.spacing.md)
-    const paddingTop = convertScssRemValueToPixels(
+    const padding = convertRemToPx(this.props.theme.spacing.md)
+    const paddingTop = convertRemToPx(
       this.props.theme.sizes.fullScreenHeaderHeight
     )
 

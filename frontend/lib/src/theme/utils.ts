@@ -728,7 +728,11 @@ export function blend(color: string, background: string | undefined): string {
   return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
 }
 
-// Convert a SCSS rem value to pixels.
+/**
+ * Convert a SCSS rem value to pixels.
+ * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * @returns pixel value of the given rem value
+ */
 export const convertRemToPx = (scssValue: string): number => {
   const remValue = parseFloat(scssValue.replace(/rem$/, ""))
   return (
