@@ -247,6 +247,7 @@ class ButtonGroupMixin:
         options: Literal["thumbs"] = ...,
         *,
         key: Key | None = None,
+        default = int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -258,6 +259,7 @@ class ButtonGroupMixin:
         options: Literal["faces", "stars"] = ...,
         *,
         key: Key | None = None,
+        default = int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -269,6 +271,7 @@ class ButtonGroupMixin:
         options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
         key: Key | None = None,
+        default = int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -298,6 +301,12 @@ class ButtonGroupMixin:
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
+
+        default : int
+            An optional integer to default value on feedback data.
+            It will be used in previous user's value of feedback.
+            The default value is None, If option of feedback is stars, it will
+            have 0~4 values, otherwise will have 0~1 values.
 
         disabled : bool
             An optional boolean, which disables the feedback widget if set
@@ -370,10 +379,21 @@ class ButtonGroupMixin:
             selection_visualization = (
                 ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
             )
+            if default != None and (default < 0 or default > 4):
+                raise StreamlitAPIException(
+                    "The default value in 'stars' is available 0~4 values."
+                    f"The paased default value is {default}"
+                )
+        else:
+            if default != None and (default < 0 or default > 1):
+                raise StreamlitAPIException(
+                    f"The default value in '{options}' is available 0~1 values."
+                    f"The paased default value is {default}"
+                )
 
         sentiment = self._button_group(
             transformed_options,
-            default=None,
+            default=None if default is None else [default],
             key=key,
             selection_mode="single",
             disabled=disabled,
