@@ -220,11 +220,10 @@ export class Selectbox extends React.PureComponent<Props, State> {
                   Svg: {
                     style: {
                       color: theme.colors.darkGray,
-                      // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
-                      // Let's use a scale transform effect to make it bigger.
-                      // The width property only enlarges its bounding box, so it's easier to click.
-                      transform: "scale(1.25)",
-                      width: theme.spacing.twoXL,
+                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
+                      padding: theme.spacing.threeXS,
+                      height: theme.sizes.clearIconSize,
+                      width: theme.sizes.clearIconSize,
                       ":hover": {
                         fill: theme.colors.bodyText,
                       },

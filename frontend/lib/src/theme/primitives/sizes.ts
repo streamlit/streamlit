@@ -43,4 +43,6 @@ export const sizes = {
   minPopupWidth: "20rem",
   maxTooltipHeight: "18.75rem",
   chatAvatarSize: "2rem",
+  // Used for the clear icon used by some Input elements
+  clearIconSize: "1.5em",
 }
