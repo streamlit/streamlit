@@ -78,7 +78,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       labelLimit: 100,
       titlePadding: convertRemToPx(theme.spacing.lg),
       labelPadding: convertRemToPx(theme.spacing.lg),
-      labelSeparation: theme.spacing.twoXS,
+      labelSeparation: convertRemToPx(theme.spacing.twoXS),
       labelOverlap: true,
     },
     legend: {
