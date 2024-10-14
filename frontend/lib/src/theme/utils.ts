@@ -736,6 +736,9 @@ export function blend(color: string, background: string | undefined): string {
 export const convertRemToPx = (scssValue: string): number => {
   const remValue = parseFloat(scssValue.replace(/rem$/, ""))
   return (
+    // TODO(lukasmasuch): We might want to somehow cache this value at some point.
+    // However, I did experimented with the performance of calling this, and
+    // it seems not like a big deal to call it many times.
     remValue * parseFloat(getComputedStyle(document.documentElement).fontSize)
   )
 }
