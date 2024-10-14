@@ -19,7 +19,6 @@ import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import { customRenderLibContext, render } from "@streamlit/lib/src/test_util"
 
 import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
@@ -31,7 +30,6 @@ describe("FullScreenWrapper", () => {
     children: jest.fn(),
     width: 100,
     height: 100,
-    theme: mockTheme.emotion,
     ...props,
   })
 
