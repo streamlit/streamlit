@@ -59,8 +59,7 @@ class SQLConnection(BaseConnection["Engine"]):
     SQLConnection can be specified using ``secrets.toml`` and/or ``**kwargs``.
     Possible connection parameters include:
 
-    - ``url`` or keyword arguments for |sqlalchemy.engine.make_url()|_.
-    - Keyword arguments for |sqlalchemy.engine.URL.create()|_, except
+    - ``url`` or keyword arguments for |sqlalchemy.engine.URL.create()|_, except
       ``drivername``. Use ``dialect`` and ``driver`` instead of ``drivername``.
     - Keyword arguments for |sqlalchemy.create_engine()|_, including custom
       ``connect()`` arguments used by your specific ``dialect`` or ``driver``.
@@ -68,12 +67,11 @@ class SQLConnection(BaseConnection["Engine"]):
       in manual commit (transactional) mode. If this is ``True``, the
       connection operates in autocommit (non-transactional) mode.
 
-    If ``url`` exists as a connection parameter, Streamlit will pass all connection
-    parameters to ``sqlalchemy.engine.make_url()`` to create an instance of
-    ``sqlalchemy.engine.URL``. Otherwise, Streamlit requires (at a minimum)
-    ``dialect``, ``username``, and ``host``. Streamlit will use ``dialect`` and
-    ``driver`` (if defined) to derive ``drivername``, then pass the relevant
-    connection parameters to ``sqlalchemy.engine.URL.create()``.
+    If ``url`` exists as a connection parameter, Streamlit will pass it to
+    ``sqlalchemy.engine.make_url()``. Otherwise, Streamlit requires (at a
+    minimum) ``dialect``, ``username``, and ``host``. Streamlit will use
+    ``dialect`` and ``driver`` (if defined) to derive ``drivername``, then pass
+    the relevant connection parameters to ``sqlalchemy.engine.URL.create()``.
 
     In addition to the default keyword arguments for ``sqlalchemy.create_engine()``,
     your dialect may accept additional keyword arguments. For example, if you
@@ -84,13 +82,13 @@ class SQLConnection(BaseConnection["Engine"]):
     <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_,
     you can pass ``location``.
 
-    SQLConnection provides the ``query()`` convenience method, which can be
-    used to run simple read-only queries with both caching and simple error
+    SQLConnection provides the ``.query()`` convenience method, which can be
+    used to run simple, read-only queries with both caching and simple error
     handling/retries. More complex database interactions can be performed by
     using the ``.session`` property to receive a regular SQLAlchemy Session.
 
     .. Important::
-        `sqlalchemy <https://pypi.org/project/SQLAlchemy/>`_ must be installed
+        `SQLAlchemy <https://pypi.org/project/SQLAlchemy/>`_ must be installed
         in your environment to use this connection.
 
     .. |sqlalchemy.engine.URL.create()| replace:: ``sqlalchemy.engine.URL.create()``

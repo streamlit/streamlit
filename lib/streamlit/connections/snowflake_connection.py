@@ -118,10 +118,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     **Example 3**
 
-    Snowflake's Python driver also supports a `connection configuration file
+    Snowflake's Python connector also supports a `connection configuration file
     <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#label-python-connection-toml>`_,
     ``connections.toml``. For example, if you already have a Snowflake
-    connection configured for Snowflake's Python driver, just pass the
+    connection configured for Snowflake's Python connector, just pass the
     connection name to Streamlit.
 
     ``~/.snowflake/connections.toml``:
@@ -263,8 +263,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> import streamlit as st
         >>>
         >>> conn = st.connection("snowflake")
-        >>> df = conn.query("select * from pet_owners")
+        >>> df = conn.query("SELECT * FROM my_table")
         >>> st.dataframe(df)
+
         """
         from snowflake.connector.errors import ProgrammingError  # type: ignore[import]
         from snowflake.connector.network import (  # type: ignore[import]
@@ -332,11 +333,13 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         chunk_size: int | None = None,
         **kwargs,
     ) -> tuple[bool, int, int]:
-        """Call ``snowflake.connector.pandas_tools.write_pandas()`` with this connection.
+        """Write a ``pandas.DataFrame`` to a table in a Snowflake database.
 
-        This convenience method is simply a thin wrapper around the ``write_pandas``
-        function of the same name from ``snowflake.connector.pandas_tools``. For more
-        information, see the `Snowflake Connector for Python documentation
+        This convenience method is a thin wrapper around
+        ``snowflake.connector.pandas_tools.write_pandas()`` using the
+        underlying connection. The ``conn`` parameter is passed automatically.
+        For more information and additional keyword arguments, see the
+        `Snowflake Connector for Python documentation
         <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#write_pandas>`_.
 
         Parameters
@@ -360,7 +363,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             session.
         chunk_size: int
             Number of elements to insert at a time. By default, the function
-            inserts all elements at once in one chunk.
+            inserts all elements in one chunk.
         **kwargs: Any
             Additional keyword arguments for
             ``snowflake.connector.pandas_tools.write_pandas()``.
@@ -373,6 +376,20 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             1. A boolean value that is ``True`` if the write was successful.
             2. An integer giving the number of chunks of data that were copied.
             3. An integer giving the number of rows that were inserted.
+
+        Example
+        -------
+        The following example uses the database and schema currently in use in
+        the session and copies the data into a table named "my_table."
+
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>>
+        >>> df = pd.DataFrame(
+        ...     {"Name": ["Mary", "John", "Robert"], "Pet": ["dog", "cat", "bird"]}
+        ... )
+        >>> conn = st.connection("snowflake")
+        >>> conn.write_pandas(df, "my_table")
 
         """
         from snowflake.connector.pandas_tools import write_pandas  # type:ignore[import]
@@ -402,6 +419,19 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         snowflake.connector.cursor.SnowflakeCursor
             A cursor object for the connection.
 
+        Example
+        -------
+        The following example uses a cursor to change the database used by the
+        connection.
+
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.connection("snowflake")
+        >>> rows_to_insert = [("Mary", "dog"), ("John", "cat"), ("Robert", "bird")]
+        >>> conn.cursor().executemany(
+        ...     "INSERT INTO mytable (name, pet) VALUES (?, ?)", rows_to_insert
+        ... )
+
         """
         return self._instance.cursor()
 
@@ -419,6 +449,28 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         snowflake.connector.connection.SnowflakeConnection
             The connection object.
 
+        Example
+        -------
+        The following example uses a cursor to submit an asynchronous query,
+        saves the query ID, then periodically checks the query status through
+        the connection before retrieving the results.
+
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> conn = st.connection("snowflake")
+        >>> cur = conn.cursor()
+        >>> cur.execute_async("SELECT * from my_table")
+        >>> query_id = cur.sfqid
+        >>> while True:
+        ...     status = conn.raw_connection.get_query_status(query_id)
+        ...     if conn.raw_connection.is_still_running(status):
+        ...         time.sleep(1)
+        ...     else:
+        ...         break
+        >>> cur.get_results_from_sfqid(query_id)
+        >>> df = cur.fetchall()
+
         """
         return self._instance
 
@@ -435,6 +487,17 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         -------
         snowflake.snowpark.Session
             A new Snowpark Session for this connection.
+
+        Example
+        -------
+        The following example creates a new Snowpark session and uses it to run
+        a query.
+
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.connection("snowflake")
+        >>> session = conn.session()
+        >>> df = session.sql("SELECT * from my_table").collect()
 
         """
         from snowflake.snowpark.context import get_active_session  # type:ignore[import]
