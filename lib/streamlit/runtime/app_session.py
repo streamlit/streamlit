@@ -21,7 +21,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
-from streamlit import config, dataframe_util, runtime
+from streamlit import config, runtime
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
@@ -45,7 +45,6 @@ from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
-    from streamlit.elements.arrow import Data
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.proto.PagesChanged_pb2 import PagesChanged
     from streamlit.runtime.script_data import ScriptData
@@ -303,16 +302,18 @@ class AppSession:
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
             elif msg_type == "fetch_data_chunk":
-                data: Data = self._fragment_storage.get(msg.fetch_data_chunk.action_id)(
-                    msg.fetch_data_chunk.chunk_index
-                )  # type: ignore
-                # TODO: send the next chunk
-                data_df = dataframe_util.convert_anything_to_pandas_df(
-                    data, ensure_copy=False
+                get_data_func = self._fragment_storage.get(
+                    msg.fetch_data_chunk.action_id
                 )
-                arrow_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
-                res = ForwardMsg()
-                res.delta.add_chunk.data = arrow_bytes
+                _LOGGER.debug(f"[DEBUG] get_data_func: {get_data_func}")
+                res = get_data_func(msg.fetch_data_chunk.chunk_index)  # type: ignore
+                # # TODO: send the next chunk
+                # data_df = dataframe_util.convert_anything_to_pandas_df(
+                #     data, ensure_copy=False
+                # )
+                # arrow_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
+                # res = ForwardMsg()
+                # res.delta.add_chunk.data = arrow_bytes
                 self._enqueue_forward_msg(res)
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)

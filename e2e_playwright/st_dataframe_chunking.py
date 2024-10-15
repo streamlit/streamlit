@@ -24,7 +24,7 @@ random.seed(0)
 
 # Generate a random dataframe
 df = pd.DataFrame(
-    np.random.randn(5, 5),
+    np.random.randn(5000, 5),
     columns=("col_%d" % i for i in range(5)),
 )
 

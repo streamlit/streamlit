@@ -530,10 +530,10 @@ class ArrowMixin:
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
         ctx = get_script_run_ctx()
-        if data is type(Callable):
+        if callable(data):
             # TODO: move import
+            from streamlit.runtime.caching.cache_type import CacheType
             from streamlit.runtime.caching.cache_utils import (
-                CacheType,
                 _make_function_key,
             )
 
@@ -541,8 +541,6 @@ class ArrowMixin:
             proto.chunking_metadata.total_rows = total_rows
             action_id = _make_function_key(CacheType.FUNCTION, get_data)
             proto.chunking_metadata.action_id = action_id
-            if ctx:
-                ctx.fragment_storage.set(action_id, get_data)  # type: ignore (Fragment is a Callable that does not expect to have an argument)
             # load the first chunk
             data = get_data(0)
 
@@ -610,7 +608,23 @@ class ArrowMixin:
             self.dg._enqueue("arrow_data_frame", proto)
             return cast(DataframeState, widget_state.value)
         else:
-            return self.dg._enqueue("arrow_data_frame", proto)
+            df_dg = self.dg._enqueue("arrow_data_frame", proto)
+            dg_delta_path: list[int] = (
+                df_dg._active_dg._cursor.delta_path if df_dg._active_dg._cursor else []
+            )
+
+            def _get_data(index: int = 0) -> ForwardMsg:
+                data = get_data(index)
+                arrow_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
+                res = ForwardMsg()
+                res.metadata.delta_path[:] = dg_delta_path
+                res.delta.add_chunk.data.data = arrow_bytes
+                return res
+
+            if ctx and action_id:
+                # Fragment is a Callable that does not expect to have an argument
+                ctx.fragment_storage.set(action_id, _get_data)  # type: ignore
+            return df_dg
 
     @gather_metrics("table")
     def table(self, data: Data = None) -> DeltaGenerator:
