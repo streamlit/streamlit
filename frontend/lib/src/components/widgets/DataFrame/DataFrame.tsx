@@ -274,6 +274,9 @@ function DataFrame({
     []
   )
 
+  // The debounce method doesn't allow dependency inspection. Therefore, we
+  // need to disable the eslint rule for exhaustive-deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const requestDataChunk = React.useCallback(
     debounce(DEBOUNCE_TIME_MS, (chunkIndex: number) => {
       if (
