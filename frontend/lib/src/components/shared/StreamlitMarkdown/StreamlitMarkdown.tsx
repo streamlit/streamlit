@@ -520,7 +520,7 @@ export function RenderedMarkdown({
     // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
     // TODO: Disabling img here prevents the :streamlit: logo from showing up.
     //       Either we allow images here, or we find a workaround.
-    // "img",
+    "img",
     "table",
     "thead",
     "tbody",

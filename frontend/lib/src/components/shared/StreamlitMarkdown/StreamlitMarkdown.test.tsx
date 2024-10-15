@@ -214,6 +214,19 @@ describe("StreamlitMarkdown", () => {
     }
   )
 
+  it("renders streamlit logo in markdown", () => {
+    // TODO: Removed isLabel for now because images in widget labels are disabled.
+    //       But we should probably add this back in once we figured out a solution
+    //       for showing the streamlit logo in widget labels.
+    render(<StreamlitMarkdown source={":streamlit:"} allowHTML={false} />)
+    const image = screen.getByRole("img")
+    expect(image).toHaveAttribute("alt", "Streamlit logo")
+    expect(image).toHaveAttribute(
+      "src",
+      expect.stringContaining("streamlit-mark-color")
+    )
+  })
+
   // Invalid Markdown - images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
   const table = `| Syntax | Description |
   | ----------- | ----------- |
@@ -268,6 +281,8 @@ describe("StreamlitMarkdown", () => {
     }
   )
 
+  // TODO: Potentially also need to touch this test once we figured out how to show
+  //       the streamlit logo in widget labels. 
   it("doesn't render images when isLabel is true", () => {
     const source =
       "![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)"
