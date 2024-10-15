@@ -23,6 +23,7 @@ import {
   GridCell,
   Item as GridCellPosition,
   GridMouseEventArgs,
+  GetRowThemeCallback,
   GridSelection,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
@@ -62,6 +63,7 @@ import {
   useTableSizer,
   useTooltips,
 } from "./hooks"
+import ColumnsMenu from "./ColumnsMenu"
 import {
   BORDER_THRESHOLD,
   MAX_COLUMN_AUTO_WIDTH,
@@ -145,7 +147,23 @@ function DataFrame({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
+  const { theme, headerIcons, tableBorderRadius, bgRowHovered } =
+    useCustomTheme()
+
+  const [hoverRow, setHoverRow] = React.useState<number | undefined>(undefined)
+
+  const getRowThemeOverride = React.useCallback<GetRowThemeCallback>(
+    row => {
+      if (row !== hoverRow) {
+        return undefined
+      }
+      return {
+        bgCell: bgRowHovered,
+        bgCellMedium: bgRowHovered,
+      }
+    },
+    [bgRowHovered, hoverRow]
+  )
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
@@ -217,7 +235,14 @@ function DataFrame({
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
-  const { columns: originalColumns } = useColumnLoader(element, data, disabled)
+  const [columnOrder, setColumnOrder] = React.useState(element.columnOrder)
+
+  const { columns: originalColumns } = useColumnLoader(
+    element,
+    data,
+    disabled,
+    columnOrder
+  )
 
   /**
    * On the first rendering, try to load initial widget state if
@@ -721,6 +746,7 @@ function DataFrame({
             }}
           />
         )}
+        {!isEmptyTable && <ColumnsMenu />}
         {!isLargeTable && !isEmptyTable && (
           <ToolbarAction
             label="Download as CSV"
@@ -814,8 +840,26 @@ function DataFrame({
           rangeSelect={isTouchDevice ? "cell" : "rect"}
           columnSelect={"none"}
           rowSelect={"none"}
+          // isDraggable={"header"}
+          onColumnMoved={(fromIdx, toIdx) => {
+            // Create a shallow copy of the original columns
+            const newColumns = [...originalColumns]
+
+            // Remove the column from its original position
+            const [movedColumn] = newColumns.splice(fromIdx, 1)
+
+            // Insert the column into its new position
+            newColumns.splice(toIdx, 0, movedColumn)
+
+            // Update the column order with the new sequence of column names
+            setColumnOrder(newColumns.map(column => column.name))
+          }}
           // Enable tooltips on hover of a cell or column header:
-          onItemHovered={onItemHovered}
+          onItemHovered={(args: GridMouseEventArgs) => {
+            const [, row] = args.location
+            setHoverRow(args.kind !== "cell" ? undefined : row)
+            onItemHovered?.(args)
+          }}
           // Activate keybindings:
           keybindings={{ downFill: true }}
           // Search needs to be activated manually, to support search
@@ -827,6 +871,7 @@ function DataFrame({
               event.preventDefault()
             }
           }}
+          getRowThemeOverride={getRowThemeOverride}
           showSearch={showSearch}
           onSearchClose={() => {
             setShowSearch(false)
