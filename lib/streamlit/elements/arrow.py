@@ -618,6 +618,7 @@ class ArrowMixin:
                 arrow_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
                 res = ForwardMsg()
                 res.metadata.delta_path[:] = dg_delta_path
+                res.delta.add_chunk.chunk_index = index
                 res.delta.add_chunk.data.data = arrow_bytes
                 return res
 
