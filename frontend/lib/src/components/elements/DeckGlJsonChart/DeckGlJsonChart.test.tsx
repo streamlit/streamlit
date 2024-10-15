@@ -88,6 +88,7 @@ const getProps = (
     mapboxToken: "mapboxToken",
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
+      sendFetchDataChunkMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     }),
     fragmentId: "myFragmentId",
