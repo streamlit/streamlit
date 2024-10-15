@@ -42,7 +42,11 @@ import {
   WidgetInfo,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import {
+  debounce,
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
@@ -186,7 +190,10 @@ function DataFrame({
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(0, dataDimensions.dataRows)
+  const originalNumRows = Math.max(
+    0,
+    element.chunkingMetadata?.totalRows ?? dataDimensions.dataRows
+  )
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
@@ -259,7 +266,18 @@ function DataFrame({
     data,
     originalColumns,
     numRows,
-    editingState
+    editingState,
+    (chunkIndex: number) => {
+      if (
+        notNullOrUndefined(element.chunkingMetadata) &&
+        notNullOrUndefined(element.chunkingMetadata.actionId)
+      ) {
+        widgetMgr.requestDataChunk(
+          element.chunkingMetadata.actionId,
+          chunkIndex
+        )
+      }
+    }
   )
 
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
