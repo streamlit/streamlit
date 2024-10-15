@@ -15,7 +15,7 @@
  */
 
 import camelcase from "camelcase"
-import { getLuminance, transparentize } from "color2k"
+import { getLuminance, parseToRgba, toHex, transparentize } from "color2k"
 import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
 import isObject from "lodash/isObject"
@@ -570,6 +570,12 @@ export function getGray90(theme: EmotionTheme): string {
     : theme.colors.gray10
 }
 
+export function getBlue80(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blue80
+    : theme.colors.blue40
+}
+
 function getBlueArrayAsc(theme: EmotionTheme): string[] {
   const { colors } = theme
   return [
@@ -707,4 +713,17 @@ export function getWrappedHeadersStyle(theme: EmotionTheme): {
 
 function addPxUnit(n: number): string {
   return `${n}px`
+}
+
+export function blend(color: string, background: string | undefined): string {
+  if (background === undefined) return color
+  const [r, g, b, a] = parseToRgba(color)
+  if (a === 1) return color
+  const [br, bg, bb, ba] = parseToRgba(background)
+  const ao = a + ba * (1 - a)
+  // (xaA + xaB·(1−aA))/aR
+  const ro = Math.round((a * r + ba * br * (1 - a)) / ao)
+  const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
+  const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
+  return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
 }

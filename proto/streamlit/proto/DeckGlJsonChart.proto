@@ -28,7 +28,7 @@ message DeckGlJsonChart {
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 4;
 
-  // ID
+  // ID, required for selection events.
   string id = 5;
 
   // The user-configured Mapbox token. If empty, the token id fetched from https://data.streamlit.io/tokens.json
@@ -39,4 +39,16 @@ message DeckGlJsonChart {
 
   // Height in pixels
   uint32 height = 8;
+
+  // If non-empty, treat this instance as a Widget
+  repeated SelectionMode selection_mode = 9;
+
+  // The form ID of the widget, this is required if the chart has selection events
+  string form_id = 10;
+
+  // Available selection modes:
+  enum SelectionMode {
+    SINGLE_OBJECT = 0; // Only one object can be selected at a time.
+    MULTI_OBJECT = 1; // Multiple objects can be selected at a time.
+  }
 }

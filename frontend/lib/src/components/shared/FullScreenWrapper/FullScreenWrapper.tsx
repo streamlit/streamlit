@@ -22,6 +22,7 @@ import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { convertScssRemValueToPixels } from "@streamlit/lib/src/util/utils"
 
 import {
   StyledFullScreenButton,
@@ -104,22 +105,12 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
     this.setState({ expanded: false })
   }
 
-  private convertScssRemValueToPixels = (scssValue: string): number => {
-    const remValue = parseFloat(scssValue)
-    return (
-      remValue *
-      parseFloat(getComputedStyle(document.documentElement).fontSize)
-    )
-  }
-
   private getWindowDimensions = (): Pick<
     State,
     "fullWidth" | "fullHeight"
   > => {
-    const padding = this.convertScssRemValueToPixels(
-      this.props.theme.spacing.md
-    )
-    const paddingTop = this.convertScssRemValueToPixels(
+    const padding = convertScssRemValueToPixels(this.props.theme.spacing.md)
+    const paddingTop = convertScssRemValueToPixels(
       this.props.theme.sizes.fullScreenHeaderHeight
     )
 

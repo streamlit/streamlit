@@ -16,6 +16,7 @@
 
 import React, { ReactElement } from "react"
 
+import createDownloadLinkElement from "@streamlit/lib/src/util/createDownloadLinkElement"
 import { DownloadButton as DownloadButtonProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
   BaseButtonKind,
@@ -41,16 +42,11 @@ export function createDownloadLink(
   url: string,
   enforceDownloadInNewTab: boolean
 ): HTMLAnchorElement {
-  const link = document.createElement("a")
-  const uri = endpoints.buildMediaURL(url)
-  link.setAttribute("href", uri)
-  if (enforceDownloadInNewTab) {
-    link.setAttribute("target", "_blank")
-  } else {
-    link.setAttribute("target", "_self")
-  }
-  link.setAttribute("download", "")
-  return link
+  return createDownloadLinkElement({
+    enforceDownloadInNewTab,
+    url: endpoints.buildMediaURL(url),
+    filename: "",
+  })
 }
 
 function DownloadButton(props: Props): ReactElement {

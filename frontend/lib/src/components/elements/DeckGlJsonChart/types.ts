@@ -14,26 +14,37 @@
  * limitations under the License.
  */
 
-import type { DeckProps } from "@deck.gl/core/typed"
+import type { DeckProps } from "@deck.gl/core"
 
 import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 export type StreamlitDeckProps = DeckProps & {
   mapStyle?: string
 }
 
-export interface DeckGLProps {
-  width: number
-  mapboxToken: string
-  element: DeckGlJsonChartProto
-  isFullScreen?: boolean
+type SerializedLayer = {
+  /** @see https://deck.gl/docs/api-reference/json/conversion-reference */
+  "@@type": string
+  id?: string
+  /** @see https://deck.gl/docs/developer-guide/performance#use-updatetriggers */
+  updateTriggers?: Record<string, unknown[]>
+} & Record<string, unknown>
+
+export type ParsedDeckGlConfig = {
+  layers: SerializedLayer[]
+  mapStyle?: string
+  initialViewState: DeckProps["initialViewState"]
+  views: DeckProps["views"]
 }
 
-export interface PropsWithHeight extends DeckGLProps {
-  height?: number
-  expand?: () => void
-  collapse?: () => void
+export interface DeckGLProps {
+  disabled?: boolean
   disableFullscreenMode?: boolean
+  element: DeckGlJsonChartProto
+  fragmentId: string | undefined
+  mapboxToken: string
+  widgetMgr: WidgetStateManager
 }
 
 export interface DeckObject {
@@ -43,4 +54,14 @@ export interface DeckObject {
   }
   layers: DeckProps["layers"]
   mapStyle?: string | Array<string>
+}
+
+/**
+ * @see PydeckState in the backend for the corresponding Python type.
+ */
+export type DeckGlElementState = {
+  selection: {
+    indices: { [layerId: string]: number[] }
+    objects: { [layerId: string]: unknown[] }
+  }
 }

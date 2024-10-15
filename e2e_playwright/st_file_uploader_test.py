@@ -23,7 +23,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(7)
+    expect(file_uploaders).to_have_count(8)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
@@ -455,3 +455,25 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "single")).to_be_visible()
+
+
+def test_file_uploader_works_with_fragments(app: Page):
+    file_name1 = "form_file1.txt"
+    file_content1 = b"form_file1content"
+
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("File uploader in Fragment: False")).to_be_visible()
+
+    uploader_index = 7
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
+    )
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("File uploader in Fragment: True")).to_be_visible()
+    expect(app.get_by_text("Runs: 1")).to_be_visible()

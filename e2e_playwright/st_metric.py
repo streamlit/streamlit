@@ -45,3 +45,5 @@ with col1:
         value=150.59,
         delta="Very high",
     )
+
+st.metric("Test 9", -4.56, 1.23, help="Test help with code `select * from table`")

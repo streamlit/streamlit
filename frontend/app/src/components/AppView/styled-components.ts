@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export const StyledAppViewContainer = styled.div(() => ({
+export const StyledAppViewContainer = styled.div({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-start",
@@ -33,7 +33,7 @@ export const StyledAppViewContainer = styled.div(() => ({
     // print multiple pages if app is scrollable in Safari
     overflow: "visible",
   },
-}))
+})
 
 export interface StyledAppViewMainProps {
   isEmbedded: boolean
@@ -124,7 +124,10 @@ export const StyledAppViewBlockContainer =
         (addPaddingForHeader && !showPadding) ||
         (isEmbedded && hasSidebar)
       ) {
-        topEmbedPadding = "3rem"
+        // Use parseFloat vs. calc to allow for JS unit test
+        topEmbedPadding = `${
+          parseFloat(theme.sizes.headerHeight) + parseFloat(theme.spacing.md)
+        }rem`
       }
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
@@ -179,10 +182,8 @@ export const StyledSidebarBlockContainer = styled.div(({ theme }) => {
   }
 })
 
-export const StyledEventBlockContainer = styled.div(() => {
-  return {
-    display: "none",
-  }
+export const StyledEventBlockContainer = styled.div({
+  display: "none",
 })
 
 export interface StyledBottomBlockContainerProps {

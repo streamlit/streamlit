@@ -69,6 +69,7 @@ export interface PlotlyWidgetState {
 const MIN_WIDTH = 150
 
 // Custom icon used in the fullscreen expand toolbar button:
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 const FULLSCREEN_EXPAND_ICON = {
   width: 600,
   height: 470,
@@ -76,7 +77,6 @@ const FULLSCREEN_EXPAND_ICON = {
   // https://fontawesome.com/icons/expand?f=classic&s=solid
   path: "M32 32C14.3 32 0 46.3 0 64v96c0 17.7 14.3 32 32 32s32-14.3 32-32V96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM64 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H64V352zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64v64c0 17.7 14.3 32 32 32s32-14.3 32-32V64c0-17.7-14.3-32-32-32H320zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H320c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V352z",
 }
-
 const FULLSCREEN_COLLAPSE_ICON = {
   width: 600,
   height: 470,
@@ -84,6 +84,7 @@ const FULLSCREEN_COLLAPSE_ICON = {
   // https://fontawesome.com/icons/compress?f=classic&s=solid
   path: "M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z",
 }
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 /**
  * Parses an SVG path string into separate x and y coordinates.

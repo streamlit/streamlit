@@ -22,6 +22,7 @@ import classNames from "classnames"
 import {
   Alert as AlertProto,
   Arrow as ArrowProto,
+  AudioInput as AudioInputProto,
   Audio as AudioProto,
   BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
@@ -65,6 +66,7 @@ import {
   Video as VideoProto,
 } from "@streamlit/lib/src/proto"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
+import ElementFullscreenWrapper from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenWrapper"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 // Load (non-lazy) elements.
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
@@ -155,6 +157,10 @@ const Video = React.lazy(
 )
 
 // Lazy-load widgets.
+const AudioInput = React.lazy(
+  () => import("@streamlit/lib/src/components/widgets/AudioInput")
+)
+
 const Button = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/Button")
 )
@@ -314,10 +320,12 @@ const RawElementNodeRenderer = (
 
     case "deckGlJsonChart":
       return (
-        <DeckGlJsonChart
-          element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
-          {...elementProps}
-        />
+        <ElementFullscreenWrapper width={widgetProps.width}>
+          <DeckGlJsonChart
+            element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+            {...widgetProps}
+          />
+        </ElementFullscreenWrapper>
       )
 
     case "docString":
@@ -496,6 +504,20 @@ const RawElementNodeRenderer = (
           {...widgetProps}
         />
       )
+
+    case "audioInput": {
+      const audioInputProto = node.element.audioInput as AudioInputProto
+      widgetProps.disabled = widgetProps.disabled || audioInputProto.disabled
+
+      return (
+        <AudioInput
+          key={audioInputProto.id}
+          uploadClient={props.uploadClient}
+          element={audioInputProto}
+          {...widgetProps}
+        ></AudioInput>
+      )
+    }
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto

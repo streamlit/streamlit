@@ -199,9 +199,13 @@ export const NumberInput: React.FC<Props> = ({
   const canInc = canIncrement(value, step, max)
 
   const inForm = isInForm({ formId: elementFormId })
-  // Allows form submission on Enter & displays Enter instructions
-  const allowFormEnterToSubmit =
-    widgetMgr.allowFormEnterToSubmit(elementFormId)
+  // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
+  const allowEnterToSubmit = inForm
+    ? widgetMgr.allowFormEnterToSubmit(elementFormId)
+    : dirty
+  // Hide input instructions for small widget sizes.
+  const shouldShowInstructions =
+    isFocused && width > theme.breakpoints.hideWidgetDetails
 
   // update the step if the props change
   React.useEffect(() => {
@@ -380,20 +384,12 @@ export const NumberInput: React.FC<Props> = ({
         if (dirty) {
           commitValue({ value, source: { fromUi: true } })
         }
-        if (allowFormEnterToSubmit) {
+        if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }
     },
-    [
-      dirty,
-      value,
-      commitValue,
-      widgetMgr,
-      elementFormId,
-      fragmentId,
-      allowFormEnterToSubmit,
-    ]
+    [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
   )
 
   return (
@@ -439,18 +435,21 @@ export const NumberInput: React.FC<Props> = ({
           aria-label={element.label}
           id={id.current}
           overrides={{
+            ClearIconContainer: {
+              style: {
+                padding: 0,
+              },
+            },
             ClearIcon: {
               props: {
                 overrides: {
                   Svg: {
                     style: {
                       color: theme.colors.darkGray,
-                      // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
-                      // Let's use a scale transform effect to make it bigger.
-                      // The width property only enlarges its bounding box, so it's easier to click.
-                      transform: "scale(1.4)",
-                      width: theme.spacing.twoXL,
-                      marginRight: "-1.25em",
+                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
+                      padding: theme.spacing.threeXS,
+                      height: theme.sizes.clearIconSize,
+                      width: theme.sizes.clearIconSize,
                       ":hover": {
                         fill: theme.colors.bodyText,
                       },
@@ -482,7 +481,7 @@ export const NumberInput: React.FC<Props> = ({
               }),
             },
             Root: {
-              style: () => ({
+              style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderTopRightRadius: 0,
                 borderBottomRightRadius: 0,
@@ -490,7 +489,8 @@ export const NumberInput: React.FC<Props> = ({
                 borderRightWidth: 0,
                 borderTopWidth: 0,
                 borderBottomWidth: 0,
-              }),
+                paddingRight: 0,
+              },
             },
           }}
         />
@@ -524,14 +524,13 @@ export const NumberInput: React.FC<Props> = ({
           </StyledInputControls>
         )}
       </StyledInputContainer>
-      {/* Hide the "Please enter to apply" text in small widget sizes */}
-      {width > theme.breakpoints.hideWidgetDetails && (
+      {shouldShowInstructions && (
         <StyledInstructionsContainer clearable={clearable}>
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}
             inForm={inForm}
-            allowEnterToSubmit={allowFormEnterToSubmit || !inForm}
+            allowEnterToSubmit={allowEnterToSubmit}
           />
         </StyledInstructionsContainer>
       )}

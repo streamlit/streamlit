@@ -108,3 +108,43 @@ st.dataframe(
     ).style.format(lambda url: url.replace("https://", "Website: ") if url else ""),
     column_config={"col_0": st.column_config.LinkColumn()},
 )
+
+st.header("Column config takes prio over Pandas Styler")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "number (formatted)": [1, 2, 3],
+            "url (formatted)": [
+                "https://streamlit.io",
+                "https://docs.streamlit.io",
+                "https://docs.streamlit.io",
+            ],
+            "datetime (formatted)": [
+                pd.Timestamp("2024-01-01"),
+                pd.Timestamp("2024-01-02"),
+                pd.Timestamp("2024-01-03"),
+            ],
+            "text": ["foo", "bar", "foobar"],
+            "number": [1, 2, 3],
+            "url": [
+                "https://streamlit.io",
+                "https://docs.streamlit.io",
+                "https://docs.streamlit.io",
+            ],
+            "datetime": [
+                pd.Timestamp("2024-01-01"),
+                pd.Timestamp("2024-01-02"),
+                pd.Timestamp("2024-01-03"),
+            ],
+        }
+    ).style.format(lambda v: "pd styler"),
+    column_config={
+        "number (formatted)": st.column_config.NumberColumn(format="$%.2f"),
+        "url (formatted)": st.column_config.LinkColumn(display_text="Open"),
+        "datetime (formatted)": st.column_config.DatetimeColumn(format="MMM DD, YYYY"),
+        "number": st.column_config.NumberColumn(),
+        "url": st.column_config.LinkColumn(),
+        "datetime": st.column_config.DatetimeColumn(),
+    },
+    hide_index=True,
+)

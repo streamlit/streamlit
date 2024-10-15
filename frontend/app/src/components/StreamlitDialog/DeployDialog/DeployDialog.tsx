@@ -60,9 +60,9 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
     // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
     const deployUrl = new URL(DEPLOY_URL)
 
-    deployUrl.searchParams.set("repository", gitInfo.repository || "")
-    deployUrl.searchParams.set("branch", gitInfo.branch || "")
-    deployUrl.searchParams.set("mainModule", gitInfo.module || "")
+    deployUrl.searchParams.set("repository", gitInfo.repository ?? "")
+    deployUrl.searchParams.set("branch", gitInfo.branch ?? "")
+    deployUrl.searchParams.set("mainModule", gitInfo.module ?? "")
     return deployUrl.toString()
   }
   // If not in git repo, direct them to the Streamlit Cloud page.
@@ -81,7 +81,9 @@ export interface DeployDialogProps {
   metricsMgr: SegmentMetricsManager
 }
 
-export function DeployDialog(props: DeployDialogProps): ReactElement {
+export function DeployDialog(
+  props: Readonly<DeployDialogProps>
+): ReactElement {
   // Get latest git info from AppContext:
   const { gitInfo } = useContext(AppContext)
   const { onClose, metricsMgr } = props
@@ -144,7 +146,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
     <Modal onClose={onClose}>
       <StyledCardContainer>
         <Card>
-          <StyledBody>
+          <StyledBody style={{ flexGrow: 1 }}>
             <img
               src={StreamlitLogo}
               alt={"Streamlit Logo"}
@@ -183,7 +185,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
           </StyledAction>
         </Card>
         <Card>
-          <StyledBody>
+          <StyledBody style={{ flexGrow: 1 }}>
             <img
               src={Rocket}
               alt={"Rocket"}

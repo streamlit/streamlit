@@ -326,6 +326,29 @@ describe("getColumnFromArrow", () => {
     })
   })
 
+  it("works with multi-index headers", () => {
+    const element = ArrowProto.create({
+      data: MULTI,
+    })
+    const data = new Quiver(element)
+
+    const column = getColumnFromArrow(data, 0)
+    expect(column).toEqual({
+      id: "column-red-0",
+      name: "red",
+      title: "red",
+      isEditable: true,
+      arrowType: {
+        meta: null,
+        numpy_type: "object",
+        pandas_type: "unicode",
+      },
+      isIndex: false,
+      isHidden: false,
+      group: "1",
+    })
+  })
+
   it("adds categorical options to type metadata", () => {
     const element = ArrowProto.create({
       data: CATEGORICAL_COLUMN,
@@ -541,6 +564,51 @@ describe("getCellFromArrow", () => {
     // Call the getCellFromArrow function
     const cell = getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
     expect((cell as any).data.displayDate).toEqual("FOOO")
+  })
+
+  it("doesnt apply display content from styler if format is set", () => {
+    const MOCK_TIME_COLUMN = {
+      ...TimeColumn({
+        id: "1",
+        name: "time_column",
+        title: "Time column",
+        indexNumber: 0,
+        isEditable: false,
+        isHidden: false,
+        isIndex: false,
+        isStretched: false,
+        columnTypeOptions: {
+          format: "YYYY",
+        },
+        arrowType: {
+          pandas_type: "time",
+          numpy_type: "object",
+        },
+      }),
+    }
+
+    // Create a mock arrowCell object with time data
+    const arrowCell = {
+      // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
+      // Our default unit is seconds, so it needs to be adjusted internally
+      content: BigInt(1632950000123000),
+      contentType: null,
+      field: {
+        type: {
+          unit: 2, // Microseconds
+        },
+      },
+      displayContent: "FOOO",
+      cssId: null,
+      cssClass: null,
+      type: "columns",
+    } as object as DataFrameCell
+
+    // Call the getCellFromArrow function
+    const cell = getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
+    // Should use the formatted value from the cell and not the displayContent
+    // from pandas styler
+    expect((cell as any).data.displayDate).toEqual("2021")
   })
 
   it("parses numeric timestamps for time columns into valid Date values", () => {

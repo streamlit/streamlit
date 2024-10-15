@@ -121,10 +121,7 @@ const WebcamComponent = ({
   const theme: EmotionTheme = useTheme()
 
   return (
-    <StyledCameraInput
-      width={debouncedWidth}
-      data-testid="stCameraInputWebcamComponent"
-    >
+    <StyledCameraInput data-testid="stCameraInputWebcamComponent">
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
       !clearPhotoInProgress ? (

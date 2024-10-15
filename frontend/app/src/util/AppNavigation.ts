@@ -229,8 +229,7 @@ export class StrategyV2 {
     const { sections, position, appPages } = navigationMsg
 
     this.appPages = appPages
-    this.hideSidebarNav =
-      position === Navigation.Position.HIDDEN || this.hideSidebarNav === true
+    this.hideSidebarNav = position === Navigation.Position.HIDDEN
 
     const currentPageScriptHash = navigationMsg.pageScriptHash
     const currentPage = appPages.find(

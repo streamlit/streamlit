@@ -598,6 +598,7 @@ export class WebsocketConnection {
 export const StyledBashCode = styled.code({
   "&::before": {
     content: '"$"',
+    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     marginRight: "1ex",
   },
 })

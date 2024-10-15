@@ -19,12 +19,12 @@ import mergeWith from "lodash/mergeWith"
 
 import {
   EmotionTheme,
+  getBlue80,
   getCategoricalColorsArray,
   getDivergingColorsArray,
   getGray30,
   getGray70,
   getSequentialColorsArray,
-  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 
 export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
@@ -92,6 +92,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       labelPadding: theme.spacing.lgPx,
       columnPadding: theme.spacing.smPx,
       rowPadding: theme.spacing.twoXSPx,
+      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       padding: 7,
       symbolStrokeWidth: 4,
     },
@@ -116,9 +117,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
     },
     mark: {
       tooltip: true,
-      ...(hasLightBackgroundColor(theme)
-        ? { color: "#0068C9" }
-        : { color: "#83C9FF" }),
+      color: getBlue80(theme),
     },
     bar: {
       binSpacing: theme.spacing.twoXSPx,

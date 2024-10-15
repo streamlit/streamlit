@@ -39,36 +39,61 @@ class EmptyMixin:
 
         Examples
         --------
-        Overwriting elements in-place using ``with`` notation:
+        Inside a ``with st.empty():`` block, each displayed element will
+        replace the previous one.
 
         >>> import streamlit as st
         >>> import time
         >>>
         >>> with st.empty():
-        ...     for seconds in range(60):
+        ...     for seconds in range(10):
         ...         st.write(f"⏳ {seconds} seconds have passed")
         ...         time.sleep(1)
-        ...     st.write("✔️ 1 minute over!")
+        ...     st.write(":material/check: 10 seconds over!")
+        ... st.button("Rerun")
 
-        Replacing several elements, then clearing them:
+        .. output::
+           https://doc-empty.streamlit.app/
+           height: 220px
+
+        You can use an ``st.empty`` to replace multiple elements in
+        succession. Use ``st.container`` inside ``st.empty`` to display (and
+        later replace) a group of elements.
 
         >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> st.button("Start over")
         >>>
         >>> placeholder = st.empty()
+        >>> placeholder.markdown("Hello")
+        >>> time.sleep(1)
         >>>
-        >>> # Replace the placeholder with some text:
-        >>> placeholder.text("Hello")
+        >>> placeholder.progress(0, "Wait for it...")
+        >>> time.sleep(1)
+        >>> placeholder.progress(50, "Wait for it...")
+        >>> time.sleep(1)
+        >>> placeholder.progress(100, "Wait for it...")
+        >>> time.sleep(1)
         >>>
-        >>> # Replace the text with a chart:
-        >>> placeholder.line_chart({"data": [1, 5, 2, 6]})
-        >>>
-        >>> # Replace the chart with several elements:
         >>> with placeholder.container():
-        ...     st.write("This is one element")
-        ...     st.write("This is another")
+        ...     st.line_chart({"data": [1, 5, 2, 6]})
+        ...     time.sleep(1)
+        ...     st.markdown("3...")
+        ...     time.sleep(1)
+        ...     st.markdown("2...")
+        ...     time.sleep(1)
+        ...     st.markdown("1...")
+        ...     time.sleep(1)
         >>>
-        >>> # Clear all those elements:
+        >>> placeholder.markdown("Poof!")
+        >>> time.sleep(1)
+        >>>
         >>> placeholder.empty()
+
+        .. output::
+           https://doc-empty-placeholder.streamlit.app/
+           height: 600px
 
         """
         empty_proto = EmptyProto()

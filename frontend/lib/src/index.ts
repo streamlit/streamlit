@@ -16,11 +16,7 @@
 
 // These imports are each exported specifically in order to minimize public apis.
 export { AppRoot, BlockNode, ElementNode } from "./AppNode"
-export {
-  IS_DEV_ENV,
-  RERUN_PROMPT_MODAL_DIALOG,
-  WEBSOCKET_PORT_DEV,
-} from "./baseconsts"
+export { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "./baseconsts"
 export { default as VerticalBlock } from "./components/core/Block"
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"

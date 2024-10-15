@@ -204,6 +204,7 @@ metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
+pills = _main.pills
 plotly_chart = _main.plotly_chart
 popover = _main.popover
 progress = _main.progress
@@ -265,6 +266,7 @@ dialog = _dialog_decorator
 fragment = _fragment
 
 # Experimental APIs
+experimental_audio_input = _main.experimental_audio_input
 experimental_dialog = _experimental_dialog_decorator
 experimental_fragment = _experimental_fragment
 experimental_user = _UserInfoProxy()
