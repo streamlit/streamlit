@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Final,
     Hashable,
     Iterable,
@@ -224,7 +225,7 @@ class ArrowMixin:
     @overload
     def dataframe(
         self,
-        data: Data = None,
+        data: Data | tuple[int, Callable[[int], Data]] = None,
         width: int | None = None,
         height: int | None = None,
         *,
@@ -240,7 +241,7 @@ class ArrowMixin:
     @overload
     def dataframe(
         self,
-        data: Data = None,
+        data: Data | tuple[int, Callable[[int], Data]] = None,
         width: int | None = None,
         height: int | None = None,
         *,
@@ -256,7 +257,7 @@ class ArrowMixin:
     @gather_metrics("dataframe")
     def dataframe(
         self,
-        data: Data = None,
+        data: Data | tuple[int, Callable[[int], Data]] = None,
         width: int | None = None,
         height: int | None = None,
         *,
@@ -528,6 +529,23 @@ class ArrowMixin:
 
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
+        ctx = get_script_run_ctx()
+        if data is type(Callable):
+            # TODO: move import
+            from streamlit.runtime.caching.cache_utils import (
+                CacheType,
+                _make_function_key,
+            )
+
+            total_rows, get_data = cast(Callable, data)()
+            proto.chunking_metadata.total_rows = total_rows
+            action_id = _make_function_key(CacheType.FUNCTION, get_data)
+            proto.chunking_metadata.action_id = action_id
+            if ctx:
+                ctx.fragment_storage.set(action_id, get_data)  # type: ignore (Fragment is a Callable that does not expect to have an argument)
+            # load the first chunk
+            data = get_data(0)
+
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
             proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
@@ -566,7 +584,6 @@ class ArrowMixin:
             proto.selection_mode.extend(parse_selection_mode(selection_mode))
             proto.form_id = current_form_id(self.dg)
 
-            ctx = get_script_run_ctx()
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,

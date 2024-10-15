@@ -22,6 +22,7 @@ class CacheType(enum.Enum):
 
     DATA = "DATA"
     RESOURCE = "RESOURCE"
+    FUNCTION = "FUNCTION"
 
 
 def get_decorator_api_name(cache_type: CacheType) -> str:
