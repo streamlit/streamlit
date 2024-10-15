@@ -40,6 +40,7 @@ def test_different_markdown_elements_in_one_block_displayed(
     assert_snapshot(
         multi_markdown_format_container,
         name="st_markdown-many_elements_in_one_block",
+        image_threshold=0.001,
     )
 
 
