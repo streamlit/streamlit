@@ -113,7 +113,6 @@ function useDataLoader(
             }
           } else {
             // Request the data chunk from the backend and return a loading cell.
-            data.addChunk(undefined, chunkIndex)
             requestDataChunk(chunkIndex)
           }
           // Show a loading cell

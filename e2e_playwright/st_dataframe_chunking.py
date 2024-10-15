@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import random
+import time
 
 import numpy as np
 import pandas as pd
@@ -30,10 +31,11 @@ df = pd.DataFrame(
 
 
 def get_data():
-    chunk_size = 100
+    chunk_size = 500
     total_rows = df.shape[0]
 
     def get_chunk(chunk_index: int) -> pd.DataFrame:
+        time.sleep(0.5)
         # Get a chunk of data from the database
         return df.iloc[chunk_index * chunk_size : (chunk_index + 1) * chunk_size]
 
