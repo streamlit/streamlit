@@ -214,11 +214,10 @@ describe("StreamlitMarkdown", () => {
     }
   )
 
-  it("renders streamlit logo in markdown", () => {
-    // TODO: Removed isLabel for now because images in widget labels are disabled.
-    //       But we should probably add this back in once we figured out a solution
-    //       for showing the streamlit logo in widget labels.
-    render(<StreamlitMarkdown source={":streamlit:"} allowHTML={false} />)
+  it("renders streamlit logo in markdown when isLabel is true", () => {
+    render(
+      <StreamlitMarkdown source={":streamlit:"} allowHTML={false} isLabel />
+    )
     const image = screen.getByRole("img")
     expect(image).toHaveAttribute("alt", "Streamlit logo")
     expect(image).toHaveAttribute(
