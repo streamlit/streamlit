@@ -14,24 +14,17 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useState,
-} from "react"
+import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useTheme } from "@emotion/react"
 import uniqueId from "lodash/uniqueId"
 
 import { TextArea as TextAreaProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  useBasicWidgetState,
-  ValueWithSource,
-} from "@streamlit/lib/src/useBasicWidgetState"
+  Source,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
   StyledWidgetLabelHelp,
@@ -43,6 +36,11 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import {
+  useBasicWidgetState,
+  ValueWithSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
   disabled: boolean
@@ -52,15 +50,65 @@ export interface Props {
   fragmentId?: string
 }
 
-function TextArea({
+type TextAreaValue = string | null
+
+const getStateFromWidgetMgr = (
+  widgetMgr: WidgetStateManager,
+  element: TextAreaProto
+): TextAreaValue | undefined => {
+  return widgetMgr.getStringValue(element) ?? element.default ?? null
+}
+
+const getDefaultStateFromProto = (element: TextAreaProto): TextAreaValue => {
+  return element.default ?? null
+}
+
+const getCurrStateFromProto = (element: TextAreaProto): TextAreaValue => {
+  return element.value ?? null
+}
+
+const updateWidgetMgrState = (
+  element: TextAreaProto,
+  widgetMgr: WidgetStateManager,
+  valueWithSource: ValueWithSource<TextAreaValue>,
+  fragmentId?: string
+): void => {
+  widgetMgr.setStringValue(
+    element,
+    valueWithSource.value,
+    { fromUi: valueWithSource.fromUi },
+    fragmentId
+  )
+}
+
+const TextArea: FC<Props> = ({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
-}: Props): ReactElement {
-  const [value, setValueWithSource] = useBasicWidgetState<
-    string | null,
+  width,
+}) => {
+  const id = useRef(uniqueId("text_area_")).current
+
+  const [localValue, setLocalValue] = useState<string | null>(
+    getStateFromWidgetMgr(widgetMgr, element) ?? null
+  )
+  /**
+   * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
+   */
+  const [dirty, setDirty] = useState(false)
+  /**
+   * Whether the area is currently focused.
+   */
+  const [focused, setFocused] = useState(false)
+
+  const onFormCleared = useCallback(() => {
+    setLocalValue(element.default ?? null)
+    setDirty(true)
+  }, [element])
+
+  const [, setValueWithSource] = useBasicWidgetState<
+    TextAreaValue,
     TextAreaProto
   >({
     getStateFromWidgetMgr,
@@ -70,37 +118,81 @@ function TextArea({
     element,
     widgetMgr,
     fragmentId,
+    onFormCleared,
   })
 
-  /**
-   * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
-   */
-  const [dirty, setDirty] = useState(false)
+  const theme: EmotionTheme = useTheme()
 
-  /**
-   * Whether the area is currently focused.
-   */
-  const [focused, setFocused] = useState(false)
+  const commitWidgetValue = useCallback(
+    ({ fromUi }: Source): void => {
+      setValueWithSource({ value: localValue, fromUi })
+      setDirty(false)
+    },
+    [localValue, setValueWithSource]
+  )
 
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  const [uiValue, setUiValue] = useState<string | null>(value)
-
-  useEffect(() => {
-    if (value !== uiValue) {
-      setUiValue(value)
+  const onBlur = useCallback(() => {
+    if (dirty) {
+      commitWidgetValue({ fromUi: true })
     }
-    // Don't include `uiValue` in the deps below or the slider will become
-    // jittery.
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [value])
+    setFocused(false)
+  }, [dirty, commitWidgetValue])
 
-  const theme = useTheme()
-  const [id] = useState(() => uniqueId("text_area_"))
-  const { height, placeholder, formId } = element
+  const onFocus = useCallback(() => {
+    setFocused(true)
+  }, [])
+
+  const onChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      const { value } = e.target
+      const { maxChars } = element
+
+      if (maxChars !== 0 && value.length > maxChars) {
+        return
+      }
+
+      // mark it dirty but don't update its value in the WidgetMgr
+      // This means that individual keypresses won't trigger a script re-run.
+      setLocalValue(value)
+      setDirty(true)
+    },
+    [element]
+  )
+
+  const isEnterKeyPressed = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>
+  ): boolean => {
+    const { keyCode, key } = event
+
+    // Using keyCode as well due to some different behaviors on Windows
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=79407
+    return (
+      (key === "Enter" || keyCode === 13 || keyCode === 10) &&
+      // Do not send the sentence being composed when Enter is typed into the IME.
+      !(event.nativeEvent?.isComposing === true)
+    )
+  }
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+      const { metaKey, ctrlKey } = e
+      const { formId } = element
+      const allowFormEnterToSubmit = widgetMgr.allowFormEnterToSubmit(formId)
+
+      if (isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
+        e.preventDefault()
+
+        commitWidgetValue({ fromUi: true })
+        if (allowFormEnterToSubmit) {
+          widgetMgr.submitForm(formId, fragmentId)
+        }
+      }
+    },
+    [element, widgetMgr, dirty, commitWidgetValue, fragmentId]
+  )
+
   const style = { width }
+  const { height, placeholder, formId } = element
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
   const allowEnterToSubmit = isInForm({ formId })
@@ -110,64 +202,6 @@ function TextArea({
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
     focused && width > theme.breakpoints.hideWidgetDetails
-
-  const onBlur = useCallback((): void => {
-    if (dirty) {
-      setValueWithSource({ value: uiValue, fromUi: true })
-    }
-    setFocused(false)
-  }, [dirty, uiValue])
-
-  const onFocus = useCallback((): void => {
-    setFocused(true)
-  }, [])
-
-  const onChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-      const { value: newValue } = e.target
-      const { maxChars } = element
-
-      if (maxChars !== 0 && newValue.length > maxChars) {
-        return
-      }
-
-      setDirty(true)
-      setUiValue(newValue)
-
-      // We immediately update its widgetValue on text changes in forms
-      // see here for why: https://github.com/streamlit/streamlit/issues/7101
-      // The widgetValue won't be passed to the Python script until the form
-      // is submitted, so this won't cause the script to re-run.
-      if (isInForm(element)) {
-        // Make sure dirty is true so that enter to submit form text shows
-        setValueWithSource({ value: newValue, fromUi: true })
-      }
-      // If the TextInput is *not* part of a form, we mark it dirty but don't
-      // update its value in the WidgetMgr. This means that individual keypresses
-      // won't trigger a script re-run.
-    },
-    [element]
-  )
-
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-      const { metaKey, ctrlKey } = e
-
-      if (isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
-        e.preventDefault()
-
-        setValueWithSource({ value: uiValue, fromUi: true })
-
-        if (widgetMgr.allowFormEnterToSubmit(element.formId)) {
-          widgetMgr.submitForm(element.formId, fragmentId)
-        }
-      }
-    },
-    [uiValue, element, widgetMgr, fragmentId]
-  )
-
-  // Default minHeight is 95px, unless height set lower (can't be < 68px or 4.25rem)
-  const minHeight = height && height < 95 ? `${height}px` : "95px"
 
   return (
     <div className="stTextArea" data-testid="stTextArea" style={style}>
@@ -189,7 +223,7 @@ function TextArea({
         )}
       </WidgetLabel>
       <UITextArea
-        value={uiValue ?? ""}
+        value={localValue ?? ""}
         placeholder={placeholder}
         onBlur={onBlur}
         onFocus={onFocus}
@@ -202,8 +236,10 @@ function TextArea({
           Input: {
             style: {
               lineHeight: theme.lineHeights.inputWidget,
+
+              // The default height of the text area is calculated to perfectly fit 3 lines of text.
               height: height ? `${height}px` : "",
-              minHeight,
+              minHeight: theme.sizes.largestElementHeight,
               resize: "vertical",
               "::placeholder": {
                 opacity: "0.7",
@@ -232,7 +268,7 @@ function TextArea({
       {shouldShowInstructions && (
         <InputInstructions
           dirty={dirty}
-          value={uiValue ?? ""}
+          value={localValue ?? ""}
           maxLength={element.maxChars}
           type={"multiline"}
           inForm={isInForm({ formId })}
@@ -240,49 +276,6 @@ function TextArea({
         />
       )}
     </div>
-  )
-}
-
-function getStateFromWidgetMgr(
-  widgetMgr: WidgetStateManager,
-  element: TextAreaProto
-): string | null {
-  return widgetMgr.getStringValue(element) ?? null
-}
-
-function getDefaultStateFromProto(element: TextAreaProto): string | null {
-  return element.default ?? null
-}
-
-function getCurrStateFromProto(element: TextAreaProto): string | null {
-  return element.value ?? null
-}
-
-function updateWidgetMgrState(
-  element: TextAreaProto,
-  widgetMgr: WidgetStateManager,
-  vws: ValueWithSource<string | null>,
-  fragmentId?: string
-): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
-}
-
-function isEnterKeyPressed(
-  event: React.KeyboardEvent<HTMLTextAreaElement>
-): boolean {
-  const { keyCode, key } = event
-
-  // Using keyCode as well due to some different behaviors on Windows
-  // https://bugs.chromium.org/p/chromium/issues/detail?id=79407
-  return (
-    (key === "Enter" || keyCode === 13 || keyCode === 10) &&
-    // Do not send the sentence being composed when Enter is typed into the IME.
-    !(event.nativeEvent?.isComposing === true)
   )
 }
 

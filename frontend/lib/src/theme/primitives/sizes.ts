@@ -22,6 +22,7 @@ export const sizes = {
   sidebarTopSpace: "6rem",
   toastWidth: "21rem",
   contentMaxWidth: "46rem",
+  maxChartTooltipWidth: "30rem",
   // Used for checkboxes, radio, and toggles:
   checkbox: "1rem",
   borderWidth: "1px",
@@ -37,4 +38,6 @@ export const sizes = {
   largestElementHeight: "4.25rem",
   spinnerSize: "1.375rem",
   spinnerThickness: "3px",
+  // Used for the clear icon used by some Input elements
+  clearIconSize: "1.5em",
 }

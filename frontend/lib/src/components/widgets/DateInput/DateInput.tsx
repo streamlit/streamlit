@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useMemo,
+  useState,
+} from "react"
 
 import moment from "moment"
 import { useTheme } from "@emotion/react"
@@ -99,11 +105,20 @@ function DateInput({
 
   // We need to convert the provided format into a mask supported by the Baseweb datepicker
   // Thereby, we need to replace all letters with 9s which refers to any number.
-  const dateMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
+  // (Using useMemo to avoid recomputing every time for now reason)
+  const dateMask = useMemo(
+    () => element.format.replaceAll(/[a-zA-Z]/g, "9"),
+    [element.format]
+  )
+
   // The Baseweb datepicker supports the date-fns notation for date formatting which is
   // slightly different from the momentJS notation. Therefore, we need to
   // convert the provided format into the date-fns notation:
-  const dateFormat = element.format.replaceAll("Y", "y").replaceAll("D", "d")
+  // (Using useMemo to avoid recomputing every time for now reason)
+  const dateFormat = useMemo(
+    () => element.format.replaceAll("Y", "y").replaceAll("D", "d"),
+    [element.format]
+  )
 
   const handleChange = useCallback(
     ({
@@ -275,6 +290,7 @@ function DateInput({
                     borderRightWidth: theme.sizes.borderWidth,
                     borderTopWidth: theme.sizes.borderWidth,
                     borderBottomWidth: theme.sizes.borderWidth,
+                    paddingRight: theme.spacing.twoXS,
                   },
                 },
                 ClearIcon: {
@@ -283,12 +299,10 @@ function DateInput({
                       Svg: {
                         style: {
                           color: theme.colors.darkGray,
-                          // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
-                          // Let's use a scale transform effect to make it bigger.
-                          // The width property only enlarges its bounding box, so it's easier to click.
-                          transform: "scale(1.41)",
-                          width: theme.spacing.twoXL,
-                          marginRight: "-8px",
+                          // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
+                          padding: theme.spacing.threeXS,
+                          height: theme.sizes.clearIconSize,
+                          width: theme.sizes.clearIconSize,
                           ":hover": {
                             fill: theme.colors.bodyText,
                           },

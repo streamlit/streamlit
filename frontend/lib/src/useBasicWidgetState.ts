@@ -54,6 +54,7 @@ interface BaseArgs<
   element: P
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  onFormCleared?: () => void
 }
 
 export interface UseBasicWidgetClientStateArgs<
@@ -80,6 +81,7 @@ export function useBasicWidgetClientState<
   element,
   widgetMgr,
   fragmentId,
+  onFormCleared,
 }: UseBasicWidgetClientStateArgs<T, P>): [
   T,
   Dispatch<SetStateAction<ValueWithSource<T> | null>>
@@ -124,15 +126,22 @@ export function useBasicWidgetClientState<
    * If we're part of a clear_on_submit form, this will be called when our
    * form is submitted. Restore our default value and update the WidgetManager.
    */
-  const onFormCleared = useCallback((): void => {
+  const handleFormCleared = useCallback((): void => {
     setNextValueWithSource({
       value: getDefaultState(widgetMgr, element),
       fromUi: true,
     })
-  }, [setNextValueWithSource, element, getDefaultState, widgetMgr])
+    onFormCleared?.()
+  }, [
+    setNextValueWithSource,
+    element,
+    getDefaultState,
+    widgetMgr,
+    onFormCleared,
+  ])
 
   // Manage our form-clear event handler.
-  useFormClearHelper({ widgetMgr, element, onFormCleared })
+  useFormClearHelper({ widgetMgr, element, onFormCleared: handleFormCleared })
 
   return [currentValue, setNextValueWithSource]
 }
@@ -167,6 +176,7 @@ export function useBasicWidgetState<
   element,
   widgetMgr,
   fragmentId,
+  onFormCleared,
 }: UseBasicWidgetStateArgs<T, P>): [
   T,
   Dispatch<SetStateAction<ValueWithSource<T> | null>>
@@ -185,6 +195,7 @@ export function useBasicWidgetState<
     element,
     widgetMgr,
     fragmentId,
+    onFormCleared,
   })
 
   // Respond to value changes via session_state. This is also set via an

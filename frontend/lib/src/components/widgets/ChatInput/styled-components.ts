@@ -92,14 +92,14 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
   }
 )
 
-export const StyledSendIconButtonContainer = styled.div(() => ({
+export const StyledSendIconButtonContainer = styled.div({
   display: "flex",
   alignItems: "flex-end",
   height: "100%",
   position: "absolute",
   right: 0,
   pointerEvents: "none",
-}))
+})
 
 export const StyledInputInstructionsContainer = styled.div({
   position: "absolute",

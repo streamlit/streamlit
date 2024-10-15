@@ -63,6 +63,7 @@ function DeployCard(
             marginTop: 0,
             marginLeft: 0,
             marginRight: 0,
+            height: "100%",
           },
         },
         Body: {
@@ -72,6 +73,10 @@ function DeployCard(
             marginTop: 0,
             marginLeft: 0,
             marginRight: 0,
+            height: "100%",
+
+            display: "flex",
+            flexDirection: "column",
 
             [`@media (max-width: ${breakpoints.md})`]: {
               padding: spacing.xl,

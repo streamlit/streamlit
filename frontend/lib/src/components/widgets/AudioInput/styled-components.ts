@@ -54,11 +54,11 @@ export const StyledWaveformTimeCode = styled.span<{
   fontSize: theme.fontSizes.sm,
 }))
 
-export const StyledErrorContainerDiv = styled.div(() => ({
+export const StyledErrorContainerDiv = styled.div({
   width: "100%",
   textAlign: "center",
   overflow: "hidden",
-}))
+})
 
 export const StyledErrorTextSpan = styled.span(({ theme }) => ({
   color: theme.colors.bodyText,
@@ -75,6 +75,7 @@ export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
 }))
 
 export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => ({
+  // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
   height: 10,
   opacity: 0.2,
   width: "100%",

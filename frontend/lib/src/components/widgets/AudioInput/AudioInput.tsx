@@ -25,7 +25,7 @@ import React, {
 import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
-import { Delete } from "@emotion-icons/material-outlined"
+import { Delete, Download } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -36,6 +36,7 @@ import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
 import {
+  convertScssRemValueToPixels,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
@@ -47,6 +48,7 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
+import useDownloadUrl from "@streamlit/lib/src/hooks/useDownloadUrl"
 
 import {
   StyledAudioInputContainerDiv,
@@ -96,6 +98,7 @@ const AudioInput: React.FC<Props> = ({
     widgetMgr,
     id: element.id,
     key: "deleteFileUrl",
+    defaultValue: null,
   })
   const [recordPlugin, setRecordPlugin] = useState<RecordPlugin | null>(null)
   // to eventually show the user the available audio devices
@@ -113,6 +116,7 @@ const AudioInput: React.FC<Props> = ({
     widgetMgr,
     id: element.id,
     key: "recordingUrl",
+    defaultValue: null,
   })
   const [, setRerender] = useState(0)
   const forceRerender = (): void => {
@@ -124,6 +128,7 @@ const AudioInput: React.FC<Props> = ({
     useWidgetManagerElementState<string>({
       widgetMgr,
       id: element.id,
+      formId: element.formId,
       key: "recordingTime",
       defaultValue: STARTING_TIME_STRING,
     })
@@ -257,8 +262,7 @@ const AudioInput: React.FC<Props> = ({
         : theme.colors.primary,
       progressColor: theme.colors.bodyText,
       height:
-        parseFloat(getComputedStyle(document.documentElement).fontSize) *
-          parseFloat(theme.sizes.largestElementHeight.replace("rem", "")) -
+        convertScssRemValueToPixels(theme.sizes.largestElementHeight) -
         2 * WAVEFORM_PADDING,
       barWidth: BAR_WIDTH,
       barGap: BAR_GAP,
@@ -397,6 +401,8 @@ const AudioInput: React.FC<Props> = ({
     })
   }, [recordPlugin, wavesurfer, theme])
 
+  const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
+
   const isRecording = Boolean(recordPlugin?.isRecording())
   const isPlaying = Boolean(wavesurfer?.isPlaying())
 
@@ -432,12 +438,18 @@ const AudioInput: React.FC<Props> = ({
           disableFullscreenMode={true}
           target={StyledWaveformContainerDiv}
         >
+          {recordingUrl && (
+            <ToolbarAction
+              label="Download recording"
+              icon={Download}
+              onClick={() => downloadRecording()}
+            />
+          )}
           {deleteFileUrl && (
             <ToolbarAction
               label="Clear recording"
               icon={Delete}
               onClick={() => handleClear({ updateWidgetManager: true })}
-              data-testid="stAudioInputClearRecordingButton"
             />
           )}
         </Toolbar>

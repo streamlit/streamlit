@@ -56,20 +56,7 @@ export const UploadedFileStatus = ({
   fileInfo,
 }: UploadedFileStatusProps): React.ReactElement | null => {
   if (fileInfo.status.type === "uploading") {
-    return (
-      <ProgressBar
-        value={fileInfo.status.progress}
-        size={Size.SMALL}
-        overrides={{
-          Bar: {
-            style: {
-              marginLeft: 0,
-              marginTop: "4px",
-            },
-          },
-        }}
-      />
-    )
+    return <ProgressBar value={fileInfo.status.progress} size={Size.SMALL} />
   }
 
   if (fileInfo.status.type === "error") {

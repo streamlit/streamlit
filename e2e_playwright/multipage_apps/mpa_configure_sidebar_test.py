@@ -18,6 +18,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 
 @pytest.fixture(scope="module")
@@ -54,6 +55,14 @@ def test_page_links_in_main(
     assert_snapshot(page_links.nth(1), name="page-link-hover")
     # Disabled page
     assert_snapshot(page_links.nth(2), name="page-link-disabled")
+
+
+def test_page_links_use_correct_margin(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that page links use the correct margin."""
+    page_link_container = get_element_by_key(app, "page_link_container")
+    assert_snapshot(page_link_container, name="st_page_link-correct_margin")
 
 
 def test_page_links_in_sidebar(

@@ -277,8 +277,7 @@ export const NumberInput: React.FC<Props> = ({
       commitValue({ value, source: { fromUi: true } })
     }
     setIsFocused(false)
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [dirty])
+  }, [dirty, value, commitValue])
 
   const onFocus = useCallback((): void => {
     setIsFocused(true)
@@ -290,8 +289,7 @@ export const NumberInput: React.FC<Props> = ({
     setValue(value ?? null)
     setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
     commitValue({ value: value ?? null, source: { fromUi: false } })
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [element, step])
+  }, [element, step, commitValue])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   useEffect(() => {
@@ -440,18 +438,21 @@ export const NumberInput: React.FC<Props> = ({
           aria-label={element.label}
           id={id.current}
           overrides={{
+            ClearIconContainer: {
+              style: {
+                padding: 0,
+              },
+            },
             ClearIcon: {
               props: {
                 overrides: {
                   Svg: {
                     style: {
                       color: theme.colors.darkGray,
-                      // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
-                      // Let's use a scale transform effect to make it bigger.
-                      // The width property only enlarges its bounding box, so it's easier to click.
-                      transform: "scale(1.4)",
-                      width: theme.spacing.twoXL,
-                      marginRight: "-1.25em",
+                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
+                      padding: theme.spacing.threeXS,
+                      height: theme.sizes.clearIconSize,
+                      width: theme.sizes.clearIconSize,
                       ":hover": {
                         fill: theme.colors.bodyText,
                       },
@@ -483,7 +484,7 @@ export const NumberInput: React.FC<Props> = ({
               }),
             },
             Root: {
-              style: () => ({
+              style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderTopRightRadius: 0,
                 borderBottomRightRadius: 0,
@@ -491,7 +492,8 @@ export const NumberInput: React.FC<Props> = ({
                 borderRightWidth: 0,
                 borderTopWidth: 0,
                 borderBottomWidth: 0,
-              }),
+                paddingRight: 0,
+              },
             },
           }}
         />

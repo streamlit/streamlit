@@ -84,7 +84,7 @@ export const StyledColorBlock = styled.div<StyledColorBlockProps>(
   })
 )
 
-export const StyledColorValue = styled.div(() => ({
+export const StyledColorValue = styled.div({
   display: "flex",
   alignItems: "center",
-}))
+})

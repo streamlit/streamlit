@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { DeckProps } from "@deck.gl/core/typed"
+import type { DeckProps } from "@deck.gl/core"
 
 import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -39,17 +39,12 @@ export type ParsedDeckGlConfig = {
 }
 
 export interface DeckGLProps {
-  collapse?: () => void
   disabled?: boolean
   disableFullscreenMode?: boolean
   element: DeckGlJsonChartProto
-  expand?: () => void
   fragmentId: string | undefined
-  height?: number
-  isFullScreen?: boolean
   mapboxToken: string
   widgetMgr: WidgetStateManager
-  width: number
 }
 
 export interface DeckObject {

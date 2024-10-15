@@ -353,7 +353,7 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
                             if _iframe_element_attrs.element_id
                             else ""}
                         title="Iframed Streamlit App"
-                        allow="clipboard-write;"
+                        allow="clipboard-write; microphone;"
                         sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
                         width="100%"
                     >
