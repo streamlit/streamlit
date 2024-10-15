@@ -349,6 +349,7 @@ export class ElementNode implements AppNode {
       case "arrowDataFrame": {
         const newQuiver = new Quiver(dataChunk.data as IArrow)
         this.quiverElement.addChunk(newQuiver, dataChunk.chunkIndex)
+        newNode.lazyQuiverElement = this.quiverElement
         break
       }
       default: {

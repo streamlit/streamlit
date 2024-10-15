@@ -106,7 +106,7 @@ function useDataLoader(
             const chunk = data.getChunk(chunkIndex)
             if (notNullOrUndefined(chunk)) {
               const arrowCell = chunk.getCell(
-                originalRow - chunkIndex * data.chunkSize,
+                originalRow - chunkIndex * data.chunkSize + numHeaderRows,
                 originalCol
               )
               return getCellFromArrow(column, arrowCell, data.cssStyles)
