@@ -25,6 +25,11 @@ import "streamlit/proto/NamedDataSet.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
 import "streamlit/proto/Arrow.proto";
 
+message DataChunk {
+  Arrow data = 1;
+  int32 chunk_index = 2;
+}
+
 // A change to an element.
 message Delta {
   oneof type {
@@ -41,7 +46,7 @@ message Delta {
     NamedDataSet add_rows = 5;
     ArrowNamedDataSet arrow_add_rows = 7;
 
-    Arrow add_chunk = 9;
+    DataChunk add_chunk = 9;
   }
 
   string fragment_id = 8;
