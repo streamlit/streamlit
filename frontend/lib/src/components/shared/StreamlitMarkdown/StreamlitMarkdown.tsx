@@ -484,6 +484,7 @@ export function RenderedMarkdown({
                 verticalAlign: "baseline",
                 // The base of the Streamlit logo is curved, so move it down a bit to
                 // make it look aligned with the text.
+                // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
                 marginBottom: "-0.05ex",
               },
             },
