@@ -33,11 +33,12 @@ df = pd.DataFrame(
 
 
 def get_data():
+    chunk_size = 100
     total_rows = df.shape[0]
 
-    def get_chunk(start: int, end: int):
+    def get_chunk(chunk_index: int):
         # Get a chunk of data from the database
-        return df.iloc[start:end]
+        return df.iloc[chunk_index * chunk_size : (chunk_index + 1) * chunk_size]
 
     return total_rows, get_chunk
 
