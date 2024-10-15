@@ -64,6 +64,7 @@ const getProps = (
   width: 0,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
+    sendFetchDataChunkMsg: jest.fn(), 
     formsDataChanged: jest.fn(),
   }),
   height: 0,
