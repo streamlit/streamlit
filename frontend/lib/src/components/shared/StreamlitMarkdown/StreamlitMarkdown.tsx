@@ -517,7 +517,8 @@ export function RenderedMarkdown({
 
   // Sets disallowed markdown for widget labels
   const disallowed = [
-    // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
+    // Restricts table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
+    // Note that images are allowed but have a max height equal to the text height
     "table",
     "thead",
     "tbody",
