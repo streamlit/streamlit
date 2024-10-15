@@ -39,6 +39,8 @@ export enum BaseButtonKind {
   PILLS_ACTIVE = "pillsActive",
   SEGMENTED_CONTROL = "segmented_control",
   SEGMENTED_CONTROL_ACTIVE = "segmented_controlActive",
+  TRIGGERS = "triggers",
+  TRIGGERS_ACTIVE = "triggersActive",
 }
 
 export enum BaseButtonSize {
@@ -371,6 +373,16 @@ export const StyledSegmentedControlButtonActive = styled(
     color: theme.colors.primary,
     zIndex: theme.zIndices.priority,
     "&:hover": {
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
+    },
+  }
+})
+
+export const StyledTriggerButton = styled(
+  StyledButtonGroupBaseButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    "&:active": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },
   }

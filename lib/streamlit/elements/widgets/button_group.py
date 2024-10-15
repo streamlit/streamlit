@@ -49,6 +49,7 @@ from streamlit.elements.lib.utils import (
 from streamlit.elements.widgets.multiselect import MultiSelectSerde
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
@@ -152,9 +153,14 @@ class SingleOrMultiSelectSerde(Generic[T]):
         return self.serde.serialize(cast(Any, value))
 
     def deserialize(
-        self, ui_value: list[int] | None, widget_id: str = ""
+        self, ui_value: list[int] | StringTriggerValueProto | None, widget_id: str = ""
     ) -> list[T] | T | None:
-        return self.serde.deserialize(ui_value, widget_id)
+        value = ui_value
+        if isinstance(ui_value, StringTriggerValueProto):
+            if ui_value is None or not ui_value.HasField("data"):
+                return None
+            value = [int(ui_value.data)]
+        return self.serde.deserialize(value, widget_id)
 
 
 def get_mapped_options(
@@ -576,6 +582,38 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
         )
 
+    @gather_metrics("triggers")
+    def triggers(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> list[V] | V | None:
+        return self._internal_button_group(
+            options,
+            label=label,
+            selection_mode="single",
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="triggers",
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+        )
+
     @gather_metrics("_internal_button_group")
     def _internal_button_group(
         self,
@@ -586,7 +624,7 @@ class ButtonGroupMixin:
         selection_mode: Literal["single", "multiple"] = "single",
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
-        style: Literal["pills", "segmented_control"] = "segmented_control",
+        style: Literal["pills", "segmented_control", "triggers"] = "segmented_control",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -659,7 +697,7 @@ class ButtonGroupMixin:
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
         style: Literal[
-            "borderless", "pills", "segmented_control"
+            "borderless", "pills", "segmented_control", "triggers"
         ] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
@@ -696,9 +734,9 @@ class ButtonGroupMixin:
                 "`selection_mode='single'`."
             )
 
-        if style not in ["borderless", "pills", "segmented_control"]:
+        if style not in ["borderless", "pills", "segmented_control", "triggers"]:
             raise StreamlitAPIException(
-                "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
+                "The style argument must be one of ['borderless', 'pills', 'segmented_control', 'triggers']. "
                 f"The argument passed was '{style}'."
             )
 
