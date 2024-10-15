@@ -53,6 +53,7 @@ import {
   getMarkdownTextColors,
 } from "@streamlit/lib/src/theme"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import streamlitLogo from "@streamlit/lib/src/assets/img/streamlit-logo/streamlit-mark-color.svg"
 
 import {
   StyledHeadingActionElements,
@@ -460,6 +461,40 @@ export function RenderedMarkdown({
     }
   }
 
+  function remarkStreamlitLogo() {
+    return (tree: any) => {
+      function replaceStreamlit(): any {
+        console.log("found streamlit")
+        return {
+          type: "text",
+          value: "",
+          data: {
+            hName: "img",
+            hProperties: {
+              src: streamlitLogo,
+              alt: "Streamlit logo",
+              // style: "height: 0.75em; vertical-align: middle;",
+              style: {
+                display: "inline-block",
+                // Disable selection for copying it as text.
+                // Allowing this leads to copying the alt text,
+                // which can be confusing / unexpected.
+                userSelect: "none",
+                height: "0.75em",
+                verticalAlign: "baseline",
+                // The base of the Streamlit logo is curved, so move it down a bit to
+                // make it look aligned with the text.
+                marginBottom: "-0.05ex",
+              },
+            },
+          },
+        }
+      }
+      findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit]])
+      return tree
+    }
+  }
+
   const plugins = [
     remarkMathPlugin,
     remarkEmoji,
@@ -467,6 +502,7 @@ export function RenderedMarkdown({
     remarkDirective,
     remarkColoring,
     remarkMaterialIcons,
+    remarkStreamlitLogo,
   ]
 
   const rehypePlugins: PluggableList = [
@@ -482,7 +518,9 @@ export function RenderedMarkdown({
   // Sets disallowed markdown for widget labels
   const disallowed = [
     // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-    "img",
+    // TODO: Disabling img here prevents the :streamlit: logo from showing up.
+    //       Either we allow images here, or we find a workaround.
+    //"img",
     "table",
     "thead",
     "tbody",
