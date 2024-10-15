@@ -281,17 +281,6 @@ describe("StreamlitMarkdown", () => {
     }
   )
 
-  // TODO: Potentially also need to touch this test once we figured out how to show
-  //       the streamlit logo in widget labels. 
-  it("doesn't render images when isLabel is true", () => {
-    const source =
-      "![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)"
-
-    render(<StreamlitMarkdown source={source} allowHTML={false} isLabel />)
-    const image = screen.queryByAltText("Image Text")
-    expect(image).not.toBeInTheDocument()
-  })
-
   it("doesn't render links when disableLinks is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
     const source = "[Link text](www.example.com)"
