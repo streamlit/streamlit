@@ -32,19 +32,6 @@ df = pd.DataFrame(
 )
 
 
-def get_data():
-    chunk_size = 100
-    total_rows = df.shape[0]
-
-    def get_chunk(chunk_index: int) -> pd.DataFrame:
-        # Get a chunk of data from the database
-        return df.iloc[chunk_index * chunk_size : (chunk_index + 1) * chunk_size]
-
-    return total_rows, get_chunk
-
-
-st.dataframe(get_data)
-
 st.header("Hide index parameter:")
 st.dataframe(df, hide_index=True)
 st.dataframe(df, hide_index=False)
