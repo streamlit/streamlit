@@ -104,14 +104,19 @@ function useDataLoader(
           const chunkIndex = Math.floor(originalRow / data.chunkSize)
           if (data.hasChunk(chunkIndex)) {
             const chunk = data.getChunk(chunkIndex)
-            const arrowCell = chunk.getCell(
-              originalRow - chunkIndex * data.chunkSize,
-              originalCol
-            )
-            return getCellFromArrow(column, arrowCell, data.cssStyles)
+            if (notNullOrUndefined(chunk)) {
+              const arrowCell = chunk.getCell(
+                originalRow - chunkIndex * data.chunkSize,
+                originalCol
+              )
+              return getCellFromArrow(column, arrowCell, data.cssStyles)
+            }
+          } else {
+            // Request the data chunk from the backend and return a loading cell.
+            data.addChunk(undefined, chunkIndex)
+            requestDataChunk(chunkIndex)
           }
-          // Request the data chunk from the backend and return a loading cell.
-          requestDataChunk(chunkIndex)
+          // Show a loading cell
           return {
             kind: GridCellKind.Loading,
             allowOverlay: false,

@@ -418,7 +418,7 @@ export class Quiver {
 
   // Chunks are stored in a map, with the chunk index as the key.
   // This allows us to add chunks at arbitrary indices.
-  private _chunks: Record<number, Quiver> = {}
+  private _chunks: Record<number, Quiver | undefined> = {}
 
   /** DataFrame's index (matrix of row names). */
   private _index: Index
@@ -1387,7 +1387,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
 
-  public addChunk(chunk: Quiver, chunk_index: number): void {
+  public addChunk(chunk: Quiver | undefined, chunk_index: number): void {
     this._chunks[chunk_index] = chunk
   }
 
@@ -1395,7 +1395,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return chunk_index in this._chunks
   }
 
-  public getChunk(chunk_index: number): Quiver {
+  public getChunk(chunk_index: number): Quiver | undefined {
     return this._chunks[chunk_index]
   }
 
