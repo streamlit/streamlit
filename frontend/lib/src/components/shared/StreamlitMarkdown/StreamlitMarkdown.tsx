@@ -518,9 +518,6 @@ export function RenderedMarkdown({
   // Sets disallowed markdown for widget labels
   const disallowed = [
     // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-    // TODO: Disabling img here prevents the :streamlit: logo from showing up.
-    //       Either we allow images here, or we find a workaround.
-    "img",
     "table",
     "thead",
     "tbody",
