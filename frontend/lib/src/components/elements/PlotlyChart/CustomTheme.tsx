@@ -67,7 +67,7 @@ export function applyStreamlitThemeTemplateLayout(
     legend: {
       title: {
         font: {
-          size: fontSizes.twoSm,
+          size: fontSizes.twoSmPx,
           color: getGray70(theme),
         },
         side: "top",
