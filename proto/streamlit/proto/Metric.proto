@@ -14,30 +14,31 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+ syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "MetricProto";
+ option java_package = "com.snowflake.apps.streamlit";
+ option java_outer_classname = "MetricProto";
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+ import "streamlit/proto/LabelVisibilityMessage.proto";
 
-message Metric {
-  string label = 1;
-  string body = 2;
-  string delta = 3;
-  MetricDirection direction = 4;
-  MetricColor color = 5;
-  string help = 6;
-  LabelVisibilityMessage label_visibility = 7;
+ message Metric {
+   string label = 1;
+   string body = 2;
+   string delta = 3;
+   MetricDirection direction = 4;
+   MetricColor color = 5;
+   string help = 6;
+   LabelVisibilityMessage label_visibility = 7;
+   repeated double sparkline = 8;
 
-  enum MetricColor{
-    RED = 0;
-    GREEN = 1;
-    GRAY = 2;
-  }
-  enum MetricDirection{
-    DOWN = 0;
-    UP = 1;
-    NONE = 2;
-  }
-}
+   enum MetricColor{
+     RED = 0;
+     GREEN = 1;
+     GRAY = 2;
+   }
+   enum MetricDirection{
+     DOWN = 0;
+     UP = 1;
+     NONE = 2;
+   }
+ }

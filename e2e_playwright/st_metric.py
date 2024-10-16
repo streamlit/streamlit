@@ -47,3 +47,10 @@ with col1:
     )
 
 st.metric("Test 9", -4.56, 1.23, help="Test help with code `select * from table`")
+
+st.container(border=True).metric(
+    "Test 10",
+    22912,
+    12,
+    sparkline=[10, 2, 12, 14, 2, 123, 24, 13, 123, 31, 12, 82, 2, 80, 150, 250],
+)
