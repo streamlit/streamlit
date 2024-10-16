@@ -221,13 +221,10 @@ function useColumnLoader(
   element: ArrowProto,
   data: Quiver,
   disabled: boolean,
-  columnOrder: string[]
+  columnOrder: string[],
+  columnConfigMapping: Map<string, any>
 ): ColumnLoaderReturn {
   const theme: EmotionTheme = useTheme()
-
-  const columnConfigMapping = React.useMemo(() => {
-    return getColumnConfig(element.columns)
-  }, [element.columns])
 
   const stretchColumns: boolean =
     element.useContainerWidth ||

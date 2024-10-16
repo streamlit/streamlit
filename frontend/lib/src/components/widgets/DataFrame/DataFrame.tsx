@@ -19,12 +19,13 @@ import React, { ReactElement } from "react"
 import {
   CompactSelection,
   DataEditorRef,
+  GetRowThemeCallback,
   DataEditor as GlideDataEditor,
   GridCell,
   Item as GridCellPosition,
   GridMouseEventArgs,
-  GetRowThemeCallback,
   GridSelection,
+  Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import {
@@ -78,10 +79,12 @@ import {
   toGlideColumn,
 } from "./columns"
 import Tooltip from "./Tooltip"
+import Menu from "./Menu"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
+import { getColumnConfig } from "./hooks/useColumnLoader"
 
 // Debounce time for triggering a widget state update
 // This prevents rapid updates to the widget state.
@@ -182,6 +185,15 @@ function DataFrame({
     []
   )
 
+  const [columnConfigMapping, setColumnConfigMapping] = React.useState<
+    Map<string, any>
+  >(getColumnConfig(element.columns))
+
+  const [showMenu, setShowMenu] = React.useState<{
+    col: number
+    bounds: Rectangle
+  }>()
+
   // Determine if it uses customized scrollbars (webkit browsers):
   // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
   const hasCustomizedScrollbars = React.useMemo<boolean>(
@@ -230,6 +242,10 @@ function DataFrame({
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
+  React.useEffect(() => {
+    setColumnConfigMapping(getColumnConfig(element.columns))
+  }, [element.columns])
+
   const resetEditingState = React.useCallback(() => {
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
@@ -241,7 +257,8 @@ function DataFrame({
     element,
     data,
     disabled,
-    columnOrder
+    columnOrder,
+    columnConfigMapping
   )
 
   /**
@@ -746,7 +763,9 @@ function DataFrame({
             }}
           />
         )}
-        {!isEmptyTable && <ColumnsMenu />}
+        {!isEmptyTable && (
+          <ColumnsMenu columns={columns.map(column => column.name)} />
+        )}
         {!isLargeTable && !isEmptyTable && (
           <ToolbarAction
             label="Download as CSV"
@@ -951,6 +970,12 @@ function DataFrame({
           headerIcons={headerIcons}
           // Add support for user input validation:
           validateCell={validateCell}
+          onHeaderMenuClick={(colIdx, screenPosition) => {
+            setShowMenu({
+              col: colIdx,
+              bounds: screenPosition,
+            })
+          }}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
           // Activate features required for row selection:
@@ -1038,6 +1063,64 @@ function DataFrame({
           content={tooltip.content}
           clearTooltip={clearTooltip}
         ></Tooltip>
+      )}
+      {showMenu && (
+        <Menu
+          top={showMenu.bounds.y + showMenu.bounds.height}
+          left={showMenu.bounds.x + showMenu.bounds.width}
+          menuClosed={() => setShowMenu(undefined)}
+          isPinned={
+            columns.filter(
+              (col: BaseColumn) =>
+                col.name === originalColumns[showMenu.col].name && col.isPinned
+            ).length > 0
+          }
+          unpinColumn={() => {
+            const selectedColumn = originalColumns[showMenu.col]
+            setColumnConfigMapping(prevColumnConfigMapping => {
+              const newColumnConfigMapping = new Map(prevColumnConfigMapping)
+              const existingConfig = newColumnConfigMapping.get(
+                selectedColumn.name
+              )
+              newColumnConfigMapping.set(selectedColumn.name, {
+                ...(existingConfig || {}),
+                pinned: false,
+              })
+              return newColumnConfigMapping
+            })
+          }}
+          hideColumn={() => {
+            // Remove column from column order:
+            const selectedColumn = originalColumns[showMenu.col]
+            setColumnOrder(prevColumnOrder => {
+              if (prevColumnOrder && prevColumnOrder.length > 0) {
+                return prevColumnOrder.filter(
+                  col => col !== selectedColumn.name
+                )
+              }
+              return originalColumns
+                .map(column => column.name)
+                .filter(col => col !== selectedColumn.name)
+            })
+          }}
+          pinColumn={() => {
+            const selectedColumn = originalColumns[showMenu.col]
+            setColumnConfigMapping(prevColumnConfigMapping => {
+              const newColumnConfigMapping = new Map(prevColumnConfigMapping)
+
+              const existingConfig = newColumnConfigMapping.get(
+                selectedColumn.name
+              )
+
+              newColumnConfigMapping.set(selectedColumn.name, {
+                ...(existingConfig || {}),
+                pinned: true,
+              })
+              console.log(newColumnConfigMapping)
+              return newColumnConfigMapping
+            })
+          }}
+        ></Menu>
       )}
     </StyledResizableContainer>
   )

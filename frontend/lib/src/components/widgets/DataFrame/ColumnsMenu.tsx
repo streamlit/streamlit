@@ -19,20 +19,21 @@ import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { Visibility } from "@emotion-icons/material-outlined"
-
 import { List, arrayMove, arrayRemove } from "baseui/dnd-list"
+
 import { ToolbarAction } from "@streamlit/lib/src/components/shared/Toolbar"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
 export interface ColumnsMenuProps {
-  // visibleColumns: string[]
-  // hiddenColumns: string[]
+  columns: string[]
 }
 
-const ColumnsMenu: React.FC<ColumnsMenuProps> = (): ReactElement => {
+const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
+  columns,
+}): ReactElement => {
   const [open, setOpen] = React.useState(false)
 
-  const [items, setItems] = React.useState(["Item 1", "Item 2", "Item 3"])
+  const [items, setItems] = React.useState(columns)
 
   const theme = useTheme()
   const lightBackground = hasLightBackgroundColor(theme)
