@@ -530,6 +530,7 @@ class ArrowMixin:
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
         ctx = get_script_run_ctx()
+        action_id: str | None = None
         if callable(data):
             # TODO: move import
             from streamlit.runtime.caching.cache_type import CacheType
