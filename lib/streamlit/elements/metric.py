@@ -167,7 +167,7 @@ class MetricMixin:
             label_visibility
         )
 
-        if sparkline:
+        if sparkline is not None:
             prepared_sparkline: list[float] = []
             for value in convert_anything_to_list(sparkline):
                 try:
@@ -178,7 +178,8 @@ class MetricMixin:
                         f"value '{str(value)}' is of type {str(type(value))} and  "
                         "cannot be converted to float."
                     ) from ex
-            metric_proto.sparkline.extend(prepared_sparkline)
+                if len(prepared_sparkline) > 0:
+                    metric_proto.sparkline.extend(prepared_sparkline)
         return self.dg._enqueue("metric", metric_proto)
 
     @property
