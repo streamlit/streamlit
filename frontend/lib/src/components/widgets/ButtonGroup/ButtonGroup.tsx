@@ -91,7 +91,10 @@ function syncWithWidgetManager(
   fragmentId?: string
 ): void {
   console.log(valueWithSource.value)
-  if (element.style === ButtonGroupProto.Style.TRIGGERS) {
+  if (
+    element.style === ButtonGroupProto.Style.TRIGGERS &&
+    valueWithSource.value?.length
+  ) {
     widgetMgr.setStringTriggerValue(
       element,
       String(valueWithSource.value),

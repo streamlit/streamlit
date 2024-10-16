@@ -155,11 +155,11 @@ class SingleOrMultiSelectSerde(Generic[T]):
     def deserialize(
         self, ui_value: list[int] | StringTriggerValueProto | None, widget_id: str = ""
     ) -> list[T] | T | None:
-        value = ui_value
-        if isinstance(ui_value, StringTriggerValueProto):
-            if ui_value is None or not ui_value.HasField("data"):
-                return None
+        value: list[int] | None = None
+        if isinstance(ui_value, StringTriggerValueProto) and ui_value.data:
             value = [int(ui_value.data)]
+        elif isinstance(ui_value, list):
+            value = ui_value
         return self.serde.deserialize(value, widget_id)
 
 
@@ -791,7 +791,9 @@ class ButtonGroupMixin:
             deserializer=deserializer,
             serializer=serializer,
             ctx=ctx,
-            value_type="int_array_value",
+            value_type="int_array_value"
+            if style != "triggers"
+            else "string_trigger_value",
         )
 
         if widget_state.value_changed:
