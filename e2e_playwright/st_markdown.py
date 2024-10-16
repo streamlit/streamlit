@@ -63,8 +63,8 @@ $$
 | Some      | :material/description: Data        |
 
 Some text
-- :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
-- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
+- :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow], :primary[primary]
+- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
 - :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
 
 :blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
