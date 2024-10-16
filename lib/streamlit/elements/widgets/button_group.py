@@ -585,9 +585,9 @@ class ButtonGroupMixin:
     @gather_metrics("triggers")
     def triggers(
         self,
-        label: str,
         options: OptionSequence[V],
         *,
+        label: str | None = None,
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
