@@ -20,6 +20,20 @@ export interface StyledResizableContainerProps {
   hasCustomizedScrollbars: boolean
 }
 
+export const StyledMenuListItem = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  paddingTop: theme.spacing.twoXS,
+  paddingBottom: theme.spacing.twoXS,
+  cursor: "pointer",
+  "&:hover": {
+    backgroundColor: theme.colors.secondaryBg,
+  },
+  minWidth: "8rem",
+}))
 /**
  * A resizable data grid container component.
  */

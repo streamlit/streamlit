@@ -220,13 +220,11 @@ export function getColumnType(column: BaseColumnProps): ColumnCreator {
 function useColumnLoader(
   element: ArrowProto,
   data: Quiver,
-  disabled: boolean
+  disabled: boolean,
+  columnOrder: string[],
+  columnConfigMapping: Map<string, any>
 ): ColumnLoaderReturn {
   const theme: EmotionTheme = useTheme()
-
-  const columnConfigMapping = React.useMemo(() => {
-    return getColumnConfig(element.columns)
-  }, [element.columns])
 
   const stretchColumns: boolean =
     element.useContainerWidth ||
@@ -242,7 +240,6 @@ function useColumnLoader(
           ...applyColumnConfig(column, columnConfigMapping),
           isStretched: stretchColumns,
         } as BaseColumnProps
-        console.log("updatedColumn", updatedColumn, columnConfigMapping)
         const ColumnType = getColumnType(updatedColumn)
 
         // Make sure editing is deactivated if the column is read-only, disabled,
@@ -299,9 +296,9 @@ function useColumnLoader(
       }
     })
 
-    if (element.columnOrder && element.columnOrder.length > 0) {
+    if (columnOrder && columnOrder.length > 0) {
       // Reorder non-pinned columns based on the configured column order:
-      element.columnOrder.forEach(columnName => {
+      columnOrder.forEach(columnName => {
         const column = configuredColumns.find(
           column => column.name === columnName
         )
@@ -327,7 +324,7 @@ function useColumnLoader(
     stretchColumns,
     disabled,
     element.editingMode,
-    element.columnOrder,
+    columnOrder,
     theme,
   ])
 

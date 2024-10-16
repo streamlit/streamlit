@@ -233,7 +233,8 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
   return {
     id: column.id,
     title: column.title,
-    hasMenu: false,
+    hasMenu: true,
+    menuIcon: "dots",
     themeOverride: column.themeOverride,
     icon: column.icon,
     group: column.group,

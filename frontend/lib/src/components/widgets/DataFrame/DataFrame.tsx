@@ -19,11 +19,13 @@ import React, { ReactElement } from "react"
 import {
   CompactSelection,
   DataEditorRef,
+  GetRowThemeCallback,
   DataEditor as GlideDataEditor,
   GridCell,
   Item as GridCellPosition,
   GridMouseEventArgs,
   GridSelection,
+  Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import {
@@ -62,6 +64,7 @@ import {
   useTableSizer,
   useTooltips,
 } from "./hooks"
+import ColumnsMenu from "./ColumnsMenu"
 import {
   BORDER_THRESHOLD,
   MAX_COLUMN_AUTO_WIDTH,
@@ -76,10 +79,12 @@ import {
   toGlideColumn,
 } from "./columns"
 import Tooltip from "./Tooltip"
+import Menu from "./Menu"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
+import { getColumnConfig } from "./hooks/useColumnLoader"
 
 // Debounce time for triggering a widget state update
 // This prevents rapid updates to the widget state.
@@ -145,7 +150,23 @@ function DataFrame({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
+  const { theme, headerIcons, tableBorderRadius, bgRowHovered } =
+    useCustomTheme()
+
+  const [hoverRow, setHoverRow] = React.useState<number | undefined>(undefined)
+
+  const getRowThemeOverride = React.useCallback<GetRowThemeCallback>(
+    row => {
+      if (row !== hoverRow) {
+        return undefined
+      }
+      return {
+        bgCell: bgRowHovered,
+        bgCellMedium: bgRowHovered,
+      }
+    },
+    [bgRowHovered, hoverRow]
+  )
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
@@ -163,6 +184,15 @@ function DataFrame({
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
     []
   )
+
+  const [columnConfigMapping, setColumnConfigMapping] = React.useState<
+    Map<string, any>
+  >(getColumnConfig(element.columns))
+
+  const [showMenu, setShowMenu] = React.useState<{
+    col: number
+    bounds: Rectangle
+  }>()
 
   // Determine if it uses customized scrollbars (webkit browsers):
   // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
@@ -212,12 +242,24 @@ function DataFrame({
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
+  React.useEffect(() => {
+    setColumnConfigMapping(getColumnConfig(element.columns))
+  }, [element.columns])
+
   const resetEditingState = React.useCallback(() => {
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
-  const { columns: originalColumns } = useColumnLoader(element, data, disabled)
+  const [columnOrder, setColumnOrder] = React.useState(element.columnOrder)
+
+  const { columns: originalColumns } = useColumnLoader(
+    element,
+    data,
+    disabled,
+    columnOrder,
+    columnConfigMapping
+  )
 
   /**
    * On the first rendering, try to load initial widget state if
@@ -721,6 +763,9 @@ function DataFrame({
             }}
           />
         )}
+        {!isEmptyTable && (
+          <ColumnsMenu columns={columns.map(column => column.name)} />
+        )}
         {!isLargeTable && !isEmptyTable && (
           <ToolbarAction
             label="Download as CSV"
@@ -814,8 +859,26 @@ function DataFrame({
           rangeSelect={isTouchDevice ? "cell" : "rect"}
           columnSelect={"none"}
           rowSelect={"none"}
+          // isDraggable={"header"}
+          onColumnMoved={(fromIdx, toIdx) => {
+            // Create a shallow copy of the original columns
+            const newColumns = [...originalColumns]
+
+            // Remove the column from its original position
+            const [movedColumn] = newColumns.splice(fromIdx, 1)
+
+            // Insert the column into its new position
+            newColumns.splice(toIdx, 0, movedColumn)
+
+            // Update the column order with the new sequence of column names
+            setColumnOrder(newColumns.map(column => column.name))
+          }}
           // Enable tooltips on hover of a cell or column header:
-          onItemHovered={onItemHovered}
+          onItemHovered={(args: GridMouseEventArgs) => {
+            const [, row] = args.location
+            setHoverRow(args.kind !== "cell" ? undefined : row)
+            onItemHovered?.(args)
+          }}
           // Activate keybindings:
           keybindings={{ downFill: true }}
           // Search needs to be activated manually, to support search
@@ -827,6 +890,7 @@ function DataFrame({
               event.preventDefault()
             }
           }}
+          getRowThemeOverride={getRowThemeOverride}
           showSearch={showSearch}
           onSearchClose={() => {
             setShowSearch(false)
@@ -906,6 +970,12 @@ function DataFrame({
           headerIcons={headerIcons}
           // Add support for user input validation:
           validateCell={validateCell}
+          onHeaderMenuClick={(colIdx, screenPosition) => {
+            setShowMenu({
+              col: colIdx,
+              bounds: screenPosition,
+            })
+          }}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
           // Activate features required for row selection:
@@ -993,6 +1063,64 @@ function DataFrame({
           content={tooltip.content}
           clearTooltip={clearTooltip}
         ></Tooltip>
+      )}
+      {showMenu && (
+        <Menu
+          top={showMenu.bounds.y + showMenu.bounds.height}
+          left={showMenu.bounds.x + showMenu.bounds.width}
+          menuClosed={() => setShowMenu(undefined)}
+          isPinned={
+            columns.filter(
+              (col: BaseColumn) =>
+                col.name === originalColumns[showMenu.col].name && col.isPinned
+            ).length > 0
+          }
+          unpinColumn={() => {
+            const selectedColumn = originalColumns[showMenu.col]
+            setColumnConfigMapping(prevColumnConfigMapping => {
+              const newColumnConfigMapping = new Map(prevColumnConfigMapping)
+              const existingConfig = newColumnConfigMapping.get(
+                selectedColumn.name
+              )
+              newColumnConfigMapping.set(selectedColumn.name, {
+                ...(existingConfig || {}),
+                pinned: false,
+              })
+              return newColumnConfigMapping
+            })
+          }}
+          hideColumn={() => {
+            // Remove column from column order:
+            const selectedColumn = originalColumns[showMenu.col]
+            setColumnOrder(prevColumnOrder => {
+              if (prevColumnOrder && prevColumnOrder.length > 0) {
+                return prevColumnOrder.filter(
+                  col => col !== selectedColumn.name
+                )
+              }
+              return originalColumns
+                .map(column => column.name)
+                .filter(col => col !== selectedColumn.name)
+            })
+          }}
+          pinColumn={() => {
+            const selectedColumn = originalColumns[showMenu.col]
+            setColumnConfigMapping(prevColumnConfigMapping => {
+              const newColumnConfigMapping = new Map(prevColumnConfigMapping)
+
+              const existingConfig = newColumnConfigMapping.get(
+                selectedColumn.name
+              )
+
+              newColumnConfigMapping.set(selectedColumn.name, {
+                ...(existingConfig || {}),
+                pinned: true,
+              })
+              console.log(newColumnConfigMapping)
+              return newColumnConfigMapping
+            })
+          }}
+        ></Menu>
       )}
     </StyledResizableContainer>
   )
