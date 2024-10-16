@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
-const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
+import { createContext } from "react"
 
-module.exports = {
-  rules: {
-    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
-    "no-hardcoded-theme-values": noHardcodedThemeValues,
-  },
-}
+import { WindowDimensions } from "./useWindowDimensions"
+
+export const WindowDimensionsContext = createContext<WindowDimensions | null>(
+  null
+)
+WindowDimensionsContext.displayName = "WindowDimensionsContext"

@@ -165,6 +165,7 @@ function Radio({
                   // The text label has a line-height of 1.6
                   // making the font height around 1.6rem
                   // while the radio icon has a height of 1rem.
+                  //eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
                   marginTop: "0.35rem",
                   marginRight: theme.spacing.none,
                   marginLeft: theme.spacing.none,

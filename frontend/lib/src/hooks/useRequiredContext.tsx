@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
-const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
+import { Context, useContext } from "react"
 
-module.exports = {
-  rules: {
-    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
-    "no-hardcoded-theme-values": noHardcodedThemeValues,
-  },
+export const useRequiredContext = <R,>(context: Context<R | null>): R => {
+  const foundContext = useContext(context)
+
+  if (foundContext === null || foundContext === undefined) {
+    throw new Error(
+      `useRequiredContext: ${context.displayName ?? "context"} not found`
+    )
+  }
+
+  return foundContext
 }

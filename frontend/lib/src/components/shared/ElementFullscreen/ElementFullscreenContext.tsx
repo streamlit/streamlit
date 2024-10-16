@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
-const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
+import { createContext } from "react"
 
-module.exports = {
-  rules: {
-    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
-    "no-hardcoded-theme-values": noHardcodedThemeValues,
-  },
+type ElementFullscreenContextShape = {
+  width: number
+  height: number | undefined
+  expanded: boolean
+  expand: () => void
+  collapse: () => void
 }
+
+export const ElementFullscreenContext =
+  createContext<ElementFullscreenContextShape | null>(null)
+ElementFullscreenContext.displayName = "ElementFullscreenContext"

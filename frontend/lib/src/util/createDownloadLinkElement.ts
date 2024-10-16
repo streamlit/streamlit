@@ -14,12 +14,27 @@
  * limitations under the License.
  */
 
-const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
-const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
-
-module.exports = {
-  rules: {
-    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
-    "no-hardcoded-theme-values": noHardcodedThemeValues,
-  },
+interface DownloadLinkElementParameters {
+  enforceDownloadInNewTab: boolean
+  url: string
+  filename: string
 }
+
+const createDownloadLinkElement = ({
+  enforceDownloadInNewTab,
+  url,
+  filename,
+}: DownloadLinkElementParameters): HTMLAnchorElement => {
+  const link = document.createElement("a")
+  link.setAttribute("href", url)
+  if (enforceDownloadInNewTab) {
+    link.setAttribute("target", "_blank")
+  } else {
+    link.setAttribute("target", "_self")
+  }
+  link.setAttribute("download", filename)
+
+  return link
+}
+
+export default createDownloadLinkElement
