@@ -95,6 +95,12 @@ export interface LibContextProps {
    * current script run isn't due to a fragment, this field is falsy.
    */
   fragmentIdsThisRun: Array<string>
+
+  /**
+   * The current locale of the app. Defaults to the browser's locale.
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/language
+   */
+  locale: typeof window.navigator.language
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -110,4 +116,5 @@ export const LibContext = React.createContext<LibContextProps>({
   currentPageScriptHash: "",
   libConfig: {},
   fragmentIdsThisRun: [],
+  locale: window.navigator.language,
 })
