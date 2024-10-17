@@ -504,6 +504,7 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
   const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
   const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
   const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
+  const primary = theme.colors.primary
   return {
     red: red,
     orange: orange,
@@ -513,6 +514,7 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
     violet: violet,
     purple: purple,
     gray: gray,
+    primary: primary,
   }
 }
 
@@ -549,6 +551,7 @@ export function getMarkdownBgColors(theme: EmotionTheme): any {
       theme.colors[lightTheme ? "gray70" : "gray50"],
       lightTheme ? 0.9 : 0.7
     ),
+    primarybg: transparentize(theme.colors.primary, lightTheme ? 0.9 : 0.7),
   }
 }
 
