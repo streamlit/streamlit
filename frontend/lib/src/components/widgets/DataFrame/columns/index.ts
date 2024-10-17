@@ -24,6 +24,7 @@ import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import ImageColumn from "./ImageColumn"
 import LinkColumn from "./LinkColumn"
 import ListColumn from "./ListColumn"
+import MultiSelectColumn from "./MultiSelectColumn"
 import NumberColumn from "./NumberColumn"
 import ObjectColumn from "./ObjectColumn"
 import ProgressColumn from "./ProgressColumn"
@@ -50,6 +51,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     checkbox: CheckboxColumn,
     selectbox: SelectboxColumn,
     list: ListColumn,
+    multiselect: MultiSelectColumn,
     number: NumberColumn,
     link: LinkColumn,
     datetime: DateTimeColumn,
@@ -75,6 +77,7 @@ export {
   LineChartColumn,
   LinkColumn,
   ListColumn,
+  MultiSelectColumn,
   NumberColumn,
   ObjectColumn,
   ProgressColumn,
