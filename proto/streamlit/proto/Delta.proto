@@ -23,6 +23,12 @@ import "streamlit/proto/Block.proto";
 import "streamlit/proto/Element.proto";
 import "streamlit/proto/NamedDataSet.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
+import "streamlit/proto/Arrow.proto";
+
+message DataChunk {
+  Arrow data = 1;
+  int32 chunk_index = 2;
+}
 
 // A change to an element.
 message Delta {
@@ -39,6 +45,8 @@ message Delta {
     // All elements that contain a DataFrame should support add_rows.
     NamedDataSet add_rows = 5;
     ArrowNamedDataSet arrow_add_rows = 7;
+
+    DataChunk add_chunk = 9;
   }
 
   string fragment_id = 8;

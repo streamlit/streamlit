@@ -40,6 +40,7 @@ describe("FormSubmitButton", () => {
     formsData = createFormsData()
     widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
+      sendFetchDataChunkMsg: jest.fn(),
       formsDataChanged: jest.fn(newData => {
         formsData = newData
       }),

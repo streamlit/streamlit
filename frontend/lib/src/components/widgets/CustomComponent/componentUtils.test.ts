@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { RefObject } from "react"
 import "@testing-library/jest-dom"
+import { RefObject } from "react"
 
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import {
@@ -58,6 +58,7 @@ describe("test componentUtils", () => {
       setComponentError = jest.fn()
       widgetMgr = new WidgetStateManager({
         sendRerunBackMsg: jest.fn(),
+        sendFetchDataChunkMsg: jest.fn(),
         formsDataChanged: jest.fn(),
       })
       ref = {

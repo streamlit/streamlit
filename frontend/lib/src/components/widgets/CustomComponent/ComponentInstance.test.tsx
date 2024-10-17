@@ -88,6 +88,7 @@ describe("ComponentInstance", () => {
         widgetMgr={
           new WidgetStateManager({
             sendRerunBackMsg: jest.fn(),
+            sendFetchDataChunkMsg: jest.fn(),
             formsDataChanged: jest.fn(),
           })
         }
@@ -112,6 +113,7 @@ describe("ComponentInstance", () => {
         widgetMgr={
           new WidgetStateManager({
             sendRerunBackMsg: jest.fn(),
+            sendFetchDataChunkMsg: jest.fn(),
             formsDataChanged: jest.fn(),
           })
         }
@@ -133,6 +135,7 @@ describe("ComponentInstance", () => {
         widgetMgr={
           new WidgetStateManager({
             sendRerunBackMsg: jest.fn(),
+            sendFetchDataChunkMsg: jest.fn(),
             formsDataChanged: jest.fn(),
           })
         }
@@ -160,6 +163,7 @@ describe("ComponentInstance", () => {
         widgetMgr={
           new WidgetStateManager({
             sendRerunBackMsg: jest.fn(),
+            sendFetchDataChunkMsg: jest.fn(),
             formsDataChanged: jest.fn(),
           })
         }
@@ -185,6 +189,7 @@ describe("ComponentInstance", () => {
         widgetMgr={
           new WidgetStateManager({
             sendRerunBackMsg: jest.fn(),
+            sendFetchDataChunkMsg: jest.fn(),
             formsDataChanged: jest.fn(),
           })
         }
@@ -210,6 +215,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -246,6 +252,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -284,6 +291,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -311,6 +319,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -361,6 +370,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -393,6 +403,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -416,6 +427,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -448,6 +460,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -471,6 +484,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -509,6 +523,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -531,6 +546,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -565,6 +581,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -626,6 +643,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -695,6 +713,7 @@ describe("ComponentInstance", () => {
           widgetMgr={
             new WidgetStateManager({
               sendRerunBackMsg: jest.fn(),
+              sendFetchDataChunkMsg: jest.fn(),
               formsDataChanged: jest.fn(),
             })
           }
@@ -739,6 +758,7 @@ describe("ComponentInstance", () => {
             widgetMgr={
               new WidgetStateManager({
                 sendRerunBackMsg: jest.fn(),
+                sendFetchDataChunkMsg: jest.fn(),
                 formsDataChanged: jest.fn(),
               })
             }
@@ -798,6 +818,7 @@ describe("ComponentInstance", () => {
             widgetMgr={
               new WidgetStateManager({
                 sendRerunBackMsg: jest.fn(),
+                sendFetchDataChunkMsg: jest.fn(),
                 formsDataChanged: jest.fn(),
               })
             }

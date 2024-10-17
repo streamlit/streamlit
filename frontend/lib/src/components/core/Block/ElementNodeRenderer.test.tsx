@@ -79,6 +79,7 @@ function getProps(
     sessionInfo: sessionInfo,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
+      sendFetchDataChunkMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     }),
     widgetsDisabled: false,
