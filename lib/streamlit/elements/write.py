@@ -23,6 +23,7 @@ from io import StringIO
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncGenerator,
     Callable,
     Final,
     Generator,
@@ -55,7 +56,7 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
 
 _LOGGER: Final = get_logger(__name__)
 
-_TEXT_CURSOR: Final = "▕"
+_TEXT_CURSOR: Final = " ▏"
 
 
 class StreamingOutput(List[Any]):
@@ -65,7 +66,11 @@ class StreamingOutput(List[Any]):
 class WriteMixin:
     @gather_metrics("write_stream")
     def write_stream(
-        self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
+        self,
+        stream: Callable[..., Any]
+        | Generator[Any, Any, Any]
+        | Iterable[Any]
+        | AsyncGenerator[Any, Any],
     ) -> list[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
@@ -159,7 +164,14 @@ class WriteMixin:
                 streamed_response = ""
 
         # Make sure we have a generator and not just a generator function.
-        stream = stream() if inspect.isgeneratorfunction(stream) else stream
+        stream = (
+            stream()
+            if inspect.isgeneratorfunction(stream) or inspect.isasyncgenfunction(stream)
+            else stream
+        )
+
+        if inspect.isasyncgen(stream):
+            stream = type_util.async_generator_to_sync(stream)
 
         try:
             iter(stream)  # type: ignore
