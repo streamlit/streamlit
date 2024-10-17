@@ -126,6 +126,7 @@ export function applyStreamlitThemeTemplateLayout(
       rangeselector: {
         bgcolor: colors.bgColor,
         bordercolor: getGray30(theme),
+        // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
         borderwidth: 1,
         x: 0,
       },

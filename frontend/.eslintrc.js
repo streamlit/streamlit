@@ -199,8 +199,18 @@ module.exports = {
         "newlines-between": "always",
       },
     ],
+    "streamlit-custom/no-hardcoded-theme-values": "error",
     "streamlit-custom/use-strict-null-equality-checks": "error",
   },
+  overrides: [
+    {
+      // allow hardcoded styles in our test files and in the theme definitions
+      files: ["**/*.test.ts", "**/*.test.tsx", "lib/src/theme/**/*"],
+      rules: {
+        "streamlit-custom/no-hardcoded-theme-values": ["off"],
+      },
+    },
+  ],
   settings: {
     react: {
       // Tells eslint-plugin-react to automatically detect

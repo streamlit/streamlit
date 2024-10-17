@@ -168,7 +168,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       }
     )
 
-    animation.onfinish = () => onAnimationFinish(isOpen)
+    animation.addEventListener("finish", () => onAnimationFinish(isOpen))
     animationRef.current = animation
   }
 

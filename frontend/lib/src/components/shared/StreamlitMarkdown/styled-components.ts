@@ -214,10 +214,12 @@ export const StyledDivider = styled.hr<StyledDividerProps>(
   ({ theme, rainbow, color }) => {
     return {
       // Height needs to be !important due to globalStyles.tsx hr height override - line #170
+      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       height: "2px !important",
       marginTop: theme.spacing.sm,
       marginBottom: theme.spacing.none,
       border: "none",
+      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       borderRadius: "3px",
       ...(rainbow ? { background: color } : { backgroundColor: color }),
     }

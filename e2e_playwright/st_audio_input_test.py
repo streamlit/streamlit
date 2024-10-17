@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-from playwright.sync_api import Locator, Page, Route, expect
+from __future__ import annotations
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+import pytest
+from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
+
+from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -53,6 +55,7 @@ def ensure_waveform_rendered(audio_input: Locator):
 
     audio_input.hover()
     expect(audio_input.get_by_role("button", name="Clear recording")).to_be_visible()
+    expect(audio_input.get_by_role("button", name="Download recording")).to_be_visible()
 
 
 def test_audio_input_renders(app: Page):
@@ -134,6 +137,41 @@ def test_audio_input_label_visibility_snapshot(
     assert_snapshot(
         audio_input_no_label_visibility, name="st_audio_input-label_visibility_disabled"
     )
+
+
+def _test_download_audio_file(app: Page, locator: FrameLocator | Locator):
+    audio_input = locator.get_by_test_id("stAudioInput").nth(1)
+    audio_input.get_by_role("button", name="Record").click()
+    app.wait_for_timeout(1500)
+
+    stop_recording(audio_input, app)
+
+    with app.expect_download() as download_info:
+        download_button = audio_input.get_by_role("button", name="Download recording")
+        download_button.click()
+
+    download = download_info.value
+    file_name = download.suggested_filename
+
+    assert file_name == "recording.wav"
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_file_download(app: Page):
+    """Test that the audio input file can be downloaded."""
+    app.context.grant_permissions(["microphone"])
+
+    _test_download_audio_file(app, app.locator("body"))
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_file_download_in_iframe(iframed_app: IframedPage):
+    """Test that the audio input file can be downloaded within an iframe."""
+
+    page: Page = iframed_app.page
+    frame_locator: FrameLocator = iframed_app.open_app(None)
+
+    _test_download_audio_file(page, frame_locator)
 
 
 @pytest.mark.only_browser("chromium")
