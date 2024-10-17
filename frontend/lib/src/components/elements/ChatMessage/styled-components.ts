@@ -19,8 +19,6 @@ import { transparentize } from "color2k"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
-const AVATAR_SIZE = "2rem"
-
 export interface StyledChatMessageContainerProps {
   background: boolean
 }
@@ -72,8 +70,8 @@ export const StyledAvatarBackground = styled.div(({ theme }) => {
     fontSize: theme.fontSizes.md,
     // Ensure the avatar always respects the width/height
     flexShrink: 0,
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
+    width: theme.sizes.chatAvatarSize,
+    height: theme.sizes.chatAvatarSize,
     borderRadius: theme.radii.default,
     alignItems: "center",
     justifyContent: "center",
@@ -89,8 +87,8 @@ export const StyledAvatarIcon = styled.div<StyledAvatarIconProps>(
     const lightTheme = hasLightBackgroundColor(theme)
     return {
       display: "flex",
-      width: AVATAR_SIZE,
-      height: AVATAR_SIZE,
+      width: theme.sizes.chatAvatarSize,
+      height: theme.sizes.chatAvatarSize,
       // Ensure the avatar always respects the width/height
       flexShrink: 0,
       borderRadius: theme.radii.default,
@@ -104,8 +102,8 @@ export const StyledAvatarIcon = styled.div<StyledAvatarIconProps>(
 
 export const StyledAvatarImage = styled.img(({ theme }) => {
   return {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
+    width: theme.sizes.chatAvatarSize,
+    height: theme.sizes.chatAvatarSize,
     // Ensure the avatar always respects the width/height
     flexShrink: 0,
     borderRadius: theme.radii.default,

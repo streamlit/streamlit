@@ -17,6 +17,7 @@
 import merge from "lodash/merge"
 
 import {
+  convertRemToPx,
   EmotionTheme,
   getBlue80,
   getCategoricalColorsArray,
@@ -54,11 +55,11 @@ export function applyStreamlitThemeTemplateLayout(
       subtitleColor: colors.bodyText,
       font: {
         family: genericFonts.headingFont,
-        size: fontSizes.mdPx,
+        size: convertRemToPx(fontSizes.md),
         color: colors.headingColor,
       },
       pad: {
-        l: theme.spacing.twoXSPx,
+        l: convertRemToPx(theme.spacing.twoXS),
       },
       xanchor: "left",
       x: 0,
@@ -73,7 +74,7 @@ export function applyStreamlitThemeTemplateLayout(
       },
       valign: "top",
       bordercolor: colors.transparent,
-      borderwidth: theme.spacing.nonePx,
+      borderwidth: 0,
       font: {
         size: fontSizes.twoSmPx,
         color: getGray90(theme),
@@ -89,7 +90,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: theme.spacing.twoXLPx,
+        standoff: convertRemToPx(theme.spacing.twoXL),
       },
       tickcolor: getGray30(theme),
       tickfont: {
@@ -116,7 +117,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: theme.spacing.xlPx,
+        standoff: convertRemToPx(theme.spacing.xl),
       },
       minor: {
         gridcolor: getGray30(theme),
@@ -132,9 +133,9 @@ export function applyStreamlitThemeTemplateLayout(
       },
     },
     margin: {
-      pad: theme.spacing.smPx,
-      r: theme.spacing.nonePx,
-      l: theme.spacing.nonePx,
+      pad: convertRemToPx(theme.spacing.sm),
+      r: 0,
+      l: 0,
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
@@ -148,7 +149,7 @@ export function applyStreamlitThemeTemplateLayout(
     coloraxis: {
       colorbar: {
         thickness: 16,
-        xpad: theme.spacing.twoXLPx,
+        xpad: convertRemToPx(theme.spacing.twoXL),
         ticklabelposition: "outside",
         outlinecolor: colors.transparent,
         outlinewidth: 8,

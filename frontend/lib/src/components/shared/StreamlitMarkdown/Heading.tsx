@@ -19,7 +19,10 @@ import React, { Fragment, ReactElement } from "react"
 import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
-import { StyledDivider, StyledStreamlitMarkdown } from "./styled-components"
+import {
+  StyledHeaderDivider,
+  StyledStreamlitMarkdown,
+} from "./styled-components"
 import "katex/dist/katex.min.css"
 import {
   HeadingWithActionElements,
@@ -92,7 +95,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
         )}
       </StyledStreamlitMarkdown>
       {divider && (
-        <StyledDivider
+        <StyledHeaderDivider
           data-testid="stHeadingDivider"
           rainbow={divider.includes("linear")}
           color={divider}

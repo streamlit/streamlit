@@ -145,7 +145,8 @@ function DataFrame({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
+  const { theme, headerIcons, tableBorderRadius, tableBorderWidth } =
+    useCustomTheme()
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
@@ -750,7 +751,7 @@ function DataFrame({
         ref={resizableRef}
         defaultSize={resizableSize}
         style={{
-          border: `1px solid ${theme.borderColor}`,
+          border: `${tableBorderWidth} solid ${theme.borderColor}`,
           borderRadius: `${tableBorderRadius}`,
         }}
         minHeight={minHeight}

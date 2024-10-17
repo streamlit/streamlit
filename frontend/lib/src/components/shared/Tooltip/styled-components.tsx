@@ -32,8 +32,8 @@ export const StyledEllipsizedDiv = styled.div({
 export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   boxSizing: "border-box",
   fontSize: `${theme.fontSizes.sm}`,
-  maxWidth: `calc(${theme.sizes.contentMaxWidth} - 4rem)`,
-  maxHeight: "300px",
+  maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2 * ${theme.spacing.threeXL})`,
+  maxHeight: theme.sizes.maxTooltipHeight,
   overflow: ["auto", "overlay"],
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
 
