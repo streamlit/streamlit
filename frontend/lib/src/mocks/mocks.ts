@@ -68,9 +68,6 @@ export function mockEndpoints(
     deleteFileAtURL: jest
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
-    fetchCachedForwardMsg: jest
-      .fn()
-      .mockRejectedValue(new Error("unimplemented mock endpoint")),
     ...overrides,
   }
 }

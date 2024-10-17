@@ -53,7 +53,6 @@ class ActiveSessionInfo:
 
     client: SessionClient
     session: AppSession
-    script_run_count: int = 0
 
 
 @dataclass
@@ -67,7 +66,6 @@ class SessionInfo:
 
     client: SessionClient | None
     session: AppSession
-    script_run_count: int = 0
 
     def is_active(self) -> bool:
         return self.client is not None

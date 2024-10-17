@@ -21,10 +21,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
-from streamlit import config
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.logger import get_logger
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
@@ -33,18 +31,11 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
-from streamlit.runtime.forward_msg_cache import (
-    ForwardMsgCache,
-    create_reference_msg,
-    populate_hash_if_needed,
-)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
-from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
-    ActiveSessionInfo,
     SessionClient,
     SessionClientDisconnectedError,
     SessionManager,
@@ -201,7 +192,6 @@ class Runtime:
 
         # Initialize managers
         self._component_registry = config.component_registry
-        self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
@@ -217,7 +207,6 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
         self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
 
@@ -228,10 +217,6 @@ class Runtime:
     @property
     def component_registry(self) -> BaseComponentRegistry:
         return self._component_registry
-
-    @property
-    def message_cache(self) -> ForwardMsgCache:
-        return self._message_cache
 
     @property
     def uploaded_file_mgr(self) -> UploadedFileManager:
@@ -486,6 +471,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        print("handle_backmsg", msg.rerun_script.cached_messages)
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't handle_backmsg (state={self._state})")
 
@@ -633,7 +619,7 @@ class Runtime:
                         msg_list = active_session_info.session.flush_browser_queue()
                         for msg in msg_list:
                             try:
-                                self._send_message(active_session_info, msg)
+                                active_session_info.client.write_forward_msg(msg)
                             except SessionClientDisconnectedError:
                                 self._session_mgr.disconnect_session(
                                     active_session_info.session.id
@@ -682,65 +668,6 @@ class Runtime:
 Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
             )
-
-    def _send_message(self, session_info: ActiveSessionInfo, msg: ForwardMsg) -> None:
-        """Send a message to a client.
-
-        If the client is likely to have already cached the message, we may
-        instead send a "reference" message that contains only the hash of the
-        message.
-
-        Parameters
-        ----------
-        session_info : ActiveSessionInfo
-            The ActiveSessionInfo associated with websocket
-        msg : ForwardMsg
-            The message to send to the client
-
-        Notes
-        -----
-        Threading: UNSAFE. Must be called on the eventloop thread.
-        """
-        msg.metadata.cacheable = is_cacheable_msg(msg)
-        msg_to_send = msg
-        if msg.metadata.cacheable:
-            populate_hash_if_needed(msg)
-
-            if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.script_run_count
-            ):
-                # This session has probably cached this message. Send
-                # a reference instead.
-                _LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
-                msg_to_send = create_reference_msg(msg)
-
-            # Cache the message so it can be referenced in the future.
-            # If the message is already cached, this will reset its
-            # age.
-            _LOGGER.debug("Caching message (hash=%s)", msg.hash)
-            self._message_cache.add_message(
-                msg, session_info.session, session_info.script_run_count
-            )
-
-        # If this was a `script_finished` message, we increment the
-        # script_run_count for this session, and update the cache
-        if (
-            msg.WhichOneof("type") == "script_finished"
-            and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
-        ):
-            _LOGGER.debug(
-                "Script run finished successfully; "
-                "removing expired entries from MessageCache "
-                "(max_age=%s)",
-                config.get_option("global.maxCachedMessageAge"),
-            )
-            session_info.script_run_count += 1
-            self._message_cache.remove_expired_entries_for_session(
-                session_info.session, session_info.script_run_count
-            )
-
-        # Ship it off!
-        session_info.client.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
         """Callback called by AppSession after the AppSession has enqueued a

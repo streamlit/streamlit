@@ -234,7 +234,7 @@ export class WebsocketConnection {
 
   constructor(props: Args) {
     this.args = props
-    this.cache = new ForwardMsgCache(props.endpoints)
+    this.cache = new ForwardMsgCache()
     this.stepFsm("INITIALIZED")
   }
 
@@ -551,6 +551,10 @@ export class WebsocketConnection {
    */
   public incrementMessageCacheRunCount(maxMessageAge: number): void {
     this.cache.incrementRunCount(maxMessageAge)
+  }
+
+  public getCachedMessageHashes(): string[] {
+    return this.cache.getCachedMessageHashes()
   }
 
   private async handleMessage(data: ArrayBuffer): Promise<void> {

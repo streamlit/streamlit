@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { ForwardMsg } from "./proto"
 import { ForwardMsgCache } from "./ForwardMessageCache"
+import { ForwardMsg } from "./proto"
 
 interface MockCache {
   cache: ForwardMsgCache
@@ -26,15 +26,7 @@ interface MockCache {
 function createCache(): MockCache {
   const mockFetchCachedForwardMsg = jest.fn()
 
-  const cache = new ForwardMsgCache({
-    buildComponentURL: jest.fn(),
-    buildMediaURL: jest.fn(),
-    buildFileUploadURL: jest.fn(),
-    buildAppPageURL: jest.fn(),
-    uploadFileUploaderFile: jest.fn(),
-    deleteFileAtURL: jest.fn(),
-    fetchCachedForwardMsg: mockFetchCachedForwardMsg,
-  })
+  const cache = new ForwardMsgCache()
 
   const getCachedMessage = (hash: string): ForwardMsg | undefined =>
     // @ts-expect-error (accessing internals for testing)
