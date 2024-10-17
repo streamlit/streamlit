@@ -140,7 +140,7 @@ def generate_chart(
     height: int | None = None,
     # Bar & Area charts only:
     stack: bool | ChartStackType | None = None,
-) -> tuple[alt.Chart, AddRowsMetadata]:
+) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
@@ -248,6 +248,24 @@ def generate_chart(
                 color_enc,
             )
         )
+
+    if chart_type in [ChartType.LINE, ChartType.AREA] and x_column is not None:
+        # Create a selection that chooses the nearest point & selects based on x-value
+        nearest = alt.selection_point(
+            nearest=True, on="pointerover", fields=[x_column], empty=False
+        )
+
+        # Draw points on the line, and highlight based on selection
+        points = (
+            chart.mark_point()
+            .encode(opacity=alt.condition(nearest, alt.value(1), alt.value(0)))
+            .add_params(nearest)
+        )
+
+        return alt.layer(chart, points).properties(
+            width=width or 0,
+            height=height or 0,
+        ).interactive(), add_rows_metadata
 
     return chart.interactive(), add_rows_metadata
 
