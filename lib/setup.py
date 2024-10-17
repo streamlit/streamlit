@@ -93,7 +93,7 @@ class VerifyVersionCommand(install):
 
 readme_path = THIS_DIRECTORY / ".." / "README.md"
 if readme_path.exists():
-    long_description = readme_path.read_text()
+    long_description = readme_path.read_text(encoding="utf-8")
 else:
     # In some build environments (specifically in conda), we may not have the README file
     # readily available. In these cases, just let long_description be the empty string.
