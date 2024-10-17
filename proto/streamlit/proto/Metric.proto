@@ -29,6 +29,7 @@ message Metric {
   MetricColor color = 5;
   string help = 6;
   LabelVisibilityMessage label_visibility = 7;
+  repeated double sparkline = 8;
 
   enum MetricColor{
     RED = 0;
