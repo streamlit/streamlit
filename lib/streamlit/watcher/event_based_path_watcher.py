@@ -361,11 +361,6 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         changed_path_info = self._watched_paths.get(abs_changed_path, None)
         if changed_path_info is None:
-            _LOGGER.debug(
-                "Ignoring changed path %s.\nWatched_paths: %s",
-                abs_changed_path,
-                self._watched_paths,
-            )
             return
 
         modification_time = util.path_modification_time(
