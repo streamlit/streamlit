@@ -23,7 +23,7 @@ import {
   SessionInfo,
 } from "@streamlit/lib"
 
-import { SegmentMetricsManager } from "./SegmentMetricsManager"
+import { SegmentMetricsManager } from "./MetricsManager"
 
 const getSegmentMetricsManager = (
   sessionInfo?: SessionInfo
