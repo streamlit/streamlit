@@ -88,7 +88,13 @@ export class MetricsManager {
     gatherUsageStats: boolean
   }): void {
     this.initialized = true
-    this.actuallySendMetrics = gatherUsageStats
+    // Handle if the user or the host has disabled metrics
+    this.actuallySendMetrics = gatherUsageStats && this.metricsUrl !== "off"
+
+    // Trigger fallback to fetch default metrics config if not provided by host
+    if (this.actuallySendMetrics && !this.metricsUrl) {
+      this.requestDefaultMetricsConfig()
+    }
 
     if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
@@ -100,7 +106,7 @@ export class MetricsManager {
   }
 
   public enqueue(evName: string, evData: Record<string, any> = {}): void {
-    if (!this.initialized || !this.sessionInfo.isSet || !this.metricsUrl) {
+    if (!this.initialized || !this.sessionInfo.isSet) {
       this.pendingEvents.push([evName, evData])
       return
     }
@@ -123,16 +129,9 @@ export class MetricsManager {
     this.appHash = appHash
   }
 
-  // Set metrics url if sent by the host_config, otherwise fallback to retrieving the default
+  // Set metrics url if sent by the host_config
   public setMetricsConfig = (metricsUrl = ""): void => {
-    // Don't send metrics if explicitly set to "off"
-    if (metricsUrl === "off") {
-      return
-    } else if (metricsUrl) {
-      this.metricsUrl = metricsUrl
-    } else {
-      this.requestDefaultMetricsConfig()
-    }
+    this.metricsUrl = metricsUrl
   }
 
   // Fallback - Checks if cached in localStorage, otherwise fetches the config from a default URL
