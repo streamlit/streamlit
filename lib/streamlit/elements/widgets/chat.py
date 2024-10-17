@@ -424,7 +424,7 @@ class ChatMixin:
             )
 
         ctx = get_script_run_ctx()
-        # TODO[kajarenc] Maybe add accept_file and file_type to compute_widget_id
+
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
@@ -432,6 +432,8 @@ class ChatMixin:
             form_id=None,
             placeholder=placeholder,
             max_chars=max_chars,
+            accept_file=accept_file,
+            file_type=file_type,
         )
 
         if file_type:
