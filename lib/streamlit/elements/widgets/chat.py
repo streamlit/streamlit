@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, Sequence, cast, overload
 
 from streamlit import runtime
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
@@ -32,7 +32,8 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
-from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
+from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
+from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -42,10 +43,43 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit.string_util import is_emoji, validate_material_icon
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+
+class ChatInputValue:
+    text: str
+    files: list[UploadedFile]
+
+    def __init__(self, text: str, files: list[UploadedFile]):
+        self.text = text
+        self.files = files
+
+    @overload
+    def __getitem__(self, item: Literal["text"]) -> str:
+        pass
+
+    @overload
+    def __getitem__(self, item: Literal["files"]) -> list[UploadedFile]:
+        pass
+
+    def __getitem__(self, item: str) -> str | list[UploadedFile]:
+        try:
+            return getattr(self, item)  # type: ignore[no-any-return]
+        except AttributeError:
+            raise KeyError(f"Invalid key: {item}") from None
+
+
+TYPE_PAIRS = [
+    (".jpg", ".jpeg"),
+    (".mpg", ".mpeg"),
+    (".mp4", ".mpeg4"),
+    (".tif", ".tiff"),
+    (".htm", ".html"),
+]
 
 
 class PresetNames(str, Enum):
@@ -108,18 +142,65 @@ def _process_avatar_input(
             ) from ex
 
 
+def _get_upload_files(
+    files_value: FileUploaderStateProto | None,
+) -> list[UploadedFile]:
+    if files_value is None:
+        return []
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return []
+
+    uploaded_file_info = files_value.uploaded_file_info
+    if len(uploaded_file_info) == 0:
+        return []
+
+    file_recs_list = ctx.uploaded_file_mgr.get_files(
+        session_id=ctx.session_id,
+        file_ids=[f.file_id for f in uploaded_file_info],
+    )
+
+    file_recs = {f.file_id: f for f in file_recs_list}
+
+    collected_files: list[UploadedFile] = []
+
+    for f in uploaded_file_info:
+        maybe_file_rec = file_recs.get(f.file_id)
+        if maybe_file_rec is not None:
+            uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
+            collected_files.append(uploaded_file)
+
+            if hasattr(ctx.uploaded_file_mgr, "remove_file"):
+                ctx.uploaded_file_mgr.remove_file(
+                    session_id=ctx.session_id,
+                    file_id=f.file_id,
+                )
+
+    return collected_files
+
+
 @dataclass
 class ChatInputSerde:
+    accept_files: bool = False
+
     def deserialize(
-        self, ui_value: StringTriggerValueProto | None, widget_id: str = ""
-    ) -> str | None:
+        self,
+        ui_value: ChatInputValueProto | None,
+        widget_id: str = "",
+    ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
+        if not self.accept_files:
+            return ui_value.data
+        else:
+            return ChatInputValue(
+                text=ui_value.data,
+                files=_get_upload_files(ui_value.file_uploader_state),
+            )
 
-        return ui_value.data
-
-    def serialize(self, v: str | None) -> StringTriggerValueProto:
-        return StringTriggerValueProto(data=v)
+    def serialize(self, v: str | None) -> ChatInputValueProto:
+        return ChatInputValueProto(data=v)
 
 
 class ChatMixin:
@@ -241,11 +322,14 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        accept_file: bool | Literal["multiple"] = False,
         disabled: bool = False,
+        file_type: str | Sequence[str] | None = None,
+        # TODO [kajarenc] https://github.com/python/mypy/issues/4020#issuecomment-737600893 check does it relevant here
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-    ) -> str | None:
+    ) -> str | ChatInputValue | None:
         """Display a chat input widget.
 
         Parameters
@@ -264,8 +348,16 @@ class ChatMixin:
             The maximum number of characters that can be entered. If ``None``
             (default), there will be no maximum.
 
+        accept_file : bool | str
+            Whether the chat input should accept files. ``True`` to accept a single
+            file, ``"multiple"`` to accept multiple files.
+
         disabled : bool
             Whether the chat input should be disabled. Defaults to ``False``.
+
+        file_type : str or list[str] or None
+            Array of allowed extensions. ['png', 'jpg']
+            The default is None, which means all extensions are allowed.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
@@ -326,7 +418,13 @@ class ChatMixin:
             writes_allowed=False,
         )
 
+        if accept_file not in {True, False, "multiple"}:
+            raise StreamlitAPIException(
+                "The `accept_file` parameter must be a boolean or 'multiple'."
+            )
+
         ctx = get_script_run_ctx()
+
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
@@ -334,7 +432,28 @@ class ChatMixin:
             form_id=None,
             placeholder=placeholder,
             max_chars=max_chars,
+            accept_file=accept_file,
+            file_type=file_type,
         )
+
+        if file_type:
+            if isinstance(file_type, str):
+                file_type = [file_type]
+
+            # May need a regex or a library to validate file types are valid
+            # extensions.
+            file_type = [
+                file_type_entry if file_type_entry[0] == "." else f".{file_type_entry}"
+                for file_type_entry in file_type
+            ]
+
+            file_type = [t.lower() for t in file_type]
+
+            for x, y in TYPE_PAIRS:
+                if x in file_type and y not in file_type:
+                    file_type.append(y)
+                if y in file_type and x not in file_type:
+                    file_type.append(x)
 
         # It doesn't make sense to create a chat input inside a form.
         # We throw an error to warn the user about this.
@@ -368,8 +487,12 @@ class ChatMixin:
 
         chat_input_proto.default = default
 
-        serde = ChatInputSerde()
-        widget_state = register_widget(
+        chat_input_proto.accept_file = str(accept_file).lower()
+
+        chat_input_proto.file_type[:] = file_type if file_type is not None else []
+
+        serde = ChatInputSerde(accept_files=bool(accept_file))
+        widget_state = register_widget(  # type: ignore[misc]
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
@@ -377,7 +500,7 @@ class ChatMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            value_type="string_trigger_value",
+            value_type="chat_input_value",
         )
 
         chat_input_proto.disabled = disabled

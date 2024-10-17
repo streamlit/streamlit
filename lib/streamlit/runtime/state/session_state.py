@@ -237,6 +237,8 @@ class WStates(MutableMapping[str, Any]):
             widget.file_uploader_state_value.CopyFrom(serialized)
         elif field == "string_trigger_value":
             widget.string_trigger_value.CopyFrom(serialized)
+        elif field == "chat_input_value":
+            widget.chat_input_value.CopyFrom(serialized)
         elif field is not None and serialized is not None:
             # If the field is None, the widget value was cleared
             # by the user and therefore is None. But we cannot
@@ -605,6 +607,8 @@ class SessionState:
                     self._new_widget_state[state_id] = Value(False)
                 elif metadata.value_type == "string_trigger_value":
                     self._new_widget_state[state_id] = Value(None)
+                elif metadata.value_type == "chat_input_value":
+                    self._new_widget_state[state_id] = Value(None)
 
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
@@ -612,6 +616,8 @@ class SessionState:
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
                 elif metadata.value_type == "string_trigger_value":
+                    self._old_state[state_id] = None
+                elif metadata.value_type == "chat_input_value":
                     self._old_state[state_id] = None
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
