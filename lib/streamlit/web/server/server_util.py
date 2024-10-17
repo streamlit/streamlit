@@ -20,12 +20,15 @@ from typing import TYPE_CHECKING, Final, Literal
 from urllib.parse import urljoin
 
 from streamlit import config, net_util, url_util
+from streamlit.runtime.secrets import secrets_singleton
 
 if TYPE_CHECKING:
     from tornado.web import RequestHandler
 
 # The port reserved for internal development.
 DEVELOPMENT_PORT: Final = 3000
+
+AUTH_COOKIE_NAME: Final = "_streamlit_user"
 
 
 def is_url_from_allowed_origins(url: str) -> bool:
@@ -68,6 +71,27 @@ def is_url_from_allowed_origins(url: str) -> bool:
             return True
 
     return False
+
+
+def get_cookie_secret() -> str:
+    """Get the cookie secret.
+
+    If the user has not set a cookie secret, we generate a random one.
+    """
+    cookie_secret: str = config.get_option("server.cookieSecret")
+    if secrets_singleton.load_if_toml_exists():
+        auth_section = secrets_singleton.get("auth")
+        if auth_section:
+            cookie_secret = auth_section.get("cookie_secret", cookie_secret)
+    return cookie_secret
+
+
+def is_xsrf_enabled():
+    csrf_enabled = config.get_option("server.enableXsrfProtection")
+    if not csrf_enabled and secrets_singleton.load_if_toml_exists():
+        auth_section = secrets_singleton.get("auth", None)
+        csrf_enabled = csrf_enabled or auth_section is not None
+    return csrf_enabled
 
 
 def _get_server_address_if_manually_set() -> str | None:
