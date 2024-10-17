@@ -230,6 +230,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 # Default host configuration settings.
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
+                "metricsUrl": "",
             }
         )
         self.set_status(200)
