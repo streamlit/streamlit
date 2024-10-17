@@ -181,7 +181,7 @@ export class MetricsManager {
     // for all of them.
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
-    } else if (this.metricsUrl) {
+    } else {
       this.track(evName, data, {
         context: {
           // Segment automatically attaches the IP address. But we don't use, process,
