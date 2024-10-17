@@ -31,6 +31,8 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
+import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
@@ -56,6 +58,10 @@ interface State {
    */
   isRange: boolean
   isEmpty: boolean
+
+  invalidDate: string | null
+  minDate: Date | null
+  maxDate: Date | null
 }
 
 // Date format for communication (protobuf) support
@@ -81,6 +87,13 @@ class DateInput extends React.PureComponent<Props, State> {
     values: this.initialValue,
     isRange: this.props.element.isRange,
     isEmpty: false,
+    invalidDate: null,
+    minDate: this.props.element.min
+      ? moment(this.props.element.min, DATE_FORMAT).toDate()
+      : null,
+    maxDate: this.props.element.max
+      ? moment(this.props.element.max, DATE_FORMAT).toDate()
+      : null,
   }
 
   get initialValue(): Date[] {
@@ -165,6 +178,9 @@ class DateInput extends React.PureComponent<Props, State> {
   }: {
     date: Date | (Date | null | undefined)[] | null | undefined
   }): void => {
+    // Reset the invalid date state
+    this.setState({ invalidDate: null })
+
     if (date === null || date === undefined) {
       this.setState({
         values: [],
@@ -173,14 +189,26 @@ class DateInput extends React.PureComponent<Props, State> {
       return
     }
 
+    let invalidDate = null
+    const { minDate, maxDate } = this.state
     const values: Date[] = []
     if (Array.isArray(date)) {
-      date.forEach((dt: Date | null | undefined) => {
+      date.forEach((dt: Date | null | undefined, idx: number) => {
         if (dt) {
+          if (idx === 0 && minDate && dt < minDate) {
+            invalidDate = "min"
+          } else if (idx === 1 && maxDate && dt > maxDate) {
+            invalidDate = "max"
+          }
           values.push(dt)
         }
       })
     } else {
+      if (minDate && date < minDate) {
+        invalidDate = "min"
+      } else if (maxDate && date > maxDate) {
+        invalidDate = "max"
+      }
       values.push(date)
     }
 
@@ -188,6 +216,7 @@ class DateInput extends React.PureComponent<Props, State> {
       {
         values,
         isEmpty: !values,
+        invalidDate,
       },
       () => {
         if (!this.state.isEmpty) this.commitWidgetValue({ fromUi: true })
@@ -212,23 +241,51 @@ class DateInput extends React.PureComponent<Props, State> {
     }
   }
 
-  private getMaxDate = (): Date | undefined => {
-    const { element } = this.props
-    const maxDate = element.max
+  private createErrorMessage = (invalidDate: string): string => {
+    const { isRange, minDate, maxDate } = this.state
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ]
+    let errorString = ""
+    const minDateStr =
+      minDate &&
+      `${
+        months[minDate.getMonth()]
+      } ${minDate.getDate()}, ${minDate.getFullYear()}`
+    const maxDateStr =
+      maxDate &&
+      `${
+        months[maxDate.getMonth()]
+      } ${maxDate.getDate()}, ${maxDate.getFullYear()}`
+    const rangeMessage = !isRange && ` between ${minDateStr} and ${maxDateStr}`
 
-    return maxDate && maxDate.length > 0
-      ? moment(maxDate, DATE_FORMAT).toDate()
-      : undefined
+    if (rangeMessage) {
+      errorString = `**Streamlit API Error**: The date you have entered is out of range. Please enter a date ${rangeMessage}.`
+    } else if (invalidDate === "min") {
+      errorString = `**Streamlit API Error**: The min date you have entered is out of range. Please enter a date on or after ${minDateStr}.`
+    } else if (invalidDate === "max") {
+      errorString = `**Streamlit API Error**: The max date you have entered is out of range. Please enter a date on or before ${maxDateStr}.`
+    }
+    return errorString
   }
 
   public render(): React.ReactNode {
     const { width, element, disabled, theme, widgetMgr } = this.props
-    const { values, isRange } = this.state
+    const { values, isRange, invalidDate, minDate, maxDate } = this.state
     const { colors, fontSizes, lineHeights, spacing } = theme
 
     const style = { width }
-    const minDate = moment(element.min, DATE_FORMAT).toDate()
-    const maxDate = this.getMaxDate()
     const clearable = element.default.length === 0 && !disabled
 
     // We need to extract the mask and format (date-fns notation) from the provided format string
@@ -425,6 +482,14 @@ class DateInput extends React.PureComponent<Props, State> {
           range={isRange}
           clearable={clearable}
         />
+        {invalidDate && (
+          <AlertElement
+            kind={Kind.ERROR}
+            body={this.createErrorMessage(invalidDate)}
+            width={width}
+            style={{ marginTop: theme.spacing.lg }}
+          />
+        )}
       </div>
     )
   }
