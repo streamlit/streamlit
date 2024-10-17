@@ -32,3 +32,8 @@ export const STREAMLIT_COMMUNITY_CLOUD_DOCS_URL =
   "https://docs.streamlit.io/deploy/streamlit-community-cloud/get-started"
 export const STREAMLIT_DEPLOY_TUTORIAL_URL =
   "https://docs.streamlit.io/deploy/tutorials"
+
+export const SNOWFLAKE_LEARN_MORE_URL =
+  "https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit"
+
+export const SNOWFLAKE_TRIAL_URL = "https://signup.snowflake.com/"

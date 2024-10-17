@@ -42,8 +42,8 @@ function DeployCard(
             borderRightWidth: sizes.borderWidth,
 
             borderTopStyle: "solid",
-            borderBottomStyle: "solid",
-            borderLeftStyle: "solid",
+            borderBottomStyle: "none",
+            borderLeftStyle: "none",
             borderRightStyle: "solid",
 
             borderTopColor: colors.borderColor,
@@ -51,10 +51,18 @@ function DeployCard(
             borderLeftColor: colors.borderColor,
             borderRightColor: colors.borderColor,
 
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
+            borderTopLeftRadius: radii.none,
+            borderTopRightRadius: radii.none,
+            borderBottomLeftRadius: radii.none,
+            borderBottomRightRadius: radii.none,
+
+            ":last-child": {
+              borderRightStyle: "none",
+              borderBottomRightRadius: radii.xl,
+            },
+            ":first-child": {
+              borderBottomLeftRadius: radii.xl,
+            },
           },
         },
         Contents: {

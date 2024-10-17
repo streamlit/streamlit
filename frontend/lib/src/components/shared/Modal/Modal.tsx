@@ -137,7 +137,7 @@ const ModalButton: FunctionComponent<
 )
 
 export type StreamlitModalProps = Omit<ModalProps, "size"> & {
-  size?: "auto" | "default" | "full"
+  size?: "auto" | "default" | "full" | number
 }
 
 /**
@@ -164,6 +164,8 @@ export function calculateModalSize(
     return `calc(${width} + ${paddingDifferenceDialogAndAppView})`
   } else if (size === "auto") {
     return SIZE.auto
+  } else if (typeof size === "number") {
+    return size
   }
 
   return SIZE.default
