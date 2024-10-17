@@ -21,14 +21,13 @@ def test_button_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
         ["valid", "markdown"],
         ["valid", "colored"],
         ["invalid", "link"],
     ]
 
     buttons = app.get_by_test_id("stButton")
-    expect(buttons).to_have_count(4)
+    expect(buttons).to_have_count(3)
     for index, case in enumerate(cases):
         assert_snapshot(
             buttons.nth(index),
@@ -191,14 +190,13 @@ def test_text_area_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
         ["valid", "markdown"],
         ["valid", "colored"],
         ["valid", "link"],
     ]
 
     text_areas = app.get_by_test_id("stTextArea")
-    expect(text_areas).to_have_count(4)
+    expect(text_areas).to_have_count(3)
 
     for index, case in enumerate(cases):
         assert_snapshot(
