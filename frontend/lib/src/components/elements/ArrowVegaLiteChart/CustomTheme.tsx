@@ -93,6 +93,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       labelPadding: convertRemToPx(theme.spacing.lg),
       columnPadding: convertRemToPx(theme.spacing.sm),
       rowPadding: convertRemToPx(theme.spacing.twoXS),
+      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       padding: 7,
       symbolStrokeWidth: 4,
     },
