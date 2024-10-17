@@ -196,7 +196,7 @@ def _build_proto(
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
-    style: Literal["segment", "pills", "borderless"] = "segment",
+    style: Literal["borderless", "pills", "segmented_control"] = "pills",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
@@ -527,7 +527,73 @@ class ButtonGroupMixin:
             TBD
 
         """
+        return self._internal_button_group(
+            options,
+            label=label,
+            selection_mode=selection_mode,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="pills",
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+        )
 
+    @gather_metrics("segmented_control")
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single", "multiple"] = "single",
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> list[V] | V | None:
+        return self._internal_button_group(
+            options,
+            label=label,
+            selection_mode=selection_mode,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="segmented_control",
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+        )
+
+    @gather_metrics("_internal_button_group")
+    def _internal_button_group(
+        self,
+        options: OptionSequence[V],
+        *,
+        key: Key | None = None,
+        default: Sequence[V] | V | None = None,
+        selection_mode: Literal["single", "multiple"] = "single",
+        disabled: bool = False,
+        format_func: Callable[[Any], str] | None = None,
+        style: Literal["pills", "segmented_control"] = "segmented_control",
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        label: str | None = None,
+        label_visibility: LabelVisibility = "visible",
+        help: str | None = None,
+    ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
@@ -560,88 +626,23 @@ class ButtonGroupMixin:
         serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
             indexable_options, default_values, selection_mode
         )
+
         res = self._button_group(
             indexable_options,
-            key=key,
             default=default_values,
             selection_mode=selection_mode,
             disabled=disabled,
             format_func=_transformed_format_func,
-            serializer=serde.serialize,
-            deserializer=serde.deserialize,
-            on_change=on_change,
-            args=args,
-            kwargs=kwargs,
-            style="pills",
-            label=label,
-            label_visibility=label_visibility,
+            key=key,
             help=help,
-        )
-
-        if selection_mode == "multiple":
-            return res.value
-
-        return res.value
-
-    @gather_metrics("_internal_button_group")
-    def _internal_button_group(
-        self,
-        options: OptionSequence[V],
-        *,
-        key: Key | None = None,
-        default: Sequence[V] | V | None = None,
-        selection_mode: Literal["single", "multiple"] = "single",
-        disabled: bool = False,
-        format_func: Callable[[Any], str] | None = None,
-        style: Literal["segment", "pills"] = "segment",
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-    ) -> list[V] | V | None:
-        def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
-            """If option starts with a material icon or an emoji, we extract it to send
-            it parsed to the frontend."""
-            transformed = format_func(option) if format_func else str(option)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    # we only want to extract material icons because we treat them
-                    # differently than emojis visually
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                        # reassamble the option string without the icon - also
-                        # works if len(transformed_parts) == 1
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # we don't have a valid icon or emoji, so we just pass
-                    pass
-            return ButtonGroupProto.Option(
-                content=transformed,
-                content_icon=icon,
-            )
-
-        indexable_options = convert_to_sequence_and_check_comparable(options)
-        default_values = get_default_indices(indexable_options, default)
-
-        serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
-            indexable_options, default_values, selection_mode
-        )
-
-        res = self._button_group(
-            indexable_options,
-            key=key,
-            default=default_values,
-            selection_mode=selection_mode,
-            disabled=disabled,
-            format_func=_transformed_format_func,
             style=style,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
             on_change=on_change,
             args=args,
             kwargs=kwargs,
+            label=label,
+            label_visibility=label_visibility,
         )
 
         if selection_mode == "multiple":
@@ -657,7 +658,9 @@ class ButtonGroupMixin:
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
-        style: Literal["segment", "pills", "borderless"] = "segment",
+        style: Literal[
+            "borderless", "pills", "segmented_control"
+        ] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
@@ -693,9 +696,9 @@ class ButtonGroupMixin:
                 "`selection_mode='single'`."
             )
 
-        if style not in ["segment", "pills", "borderless"]:
+        if style not in ["borderless", "pills", "segmented_control"]:
             raise StreamlitAPIException(
-                "The style argument must be one of ['segment', 'pills', 'borderless']. "
+                "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
                 f"The argument passed was '{style}'."
             )
 
