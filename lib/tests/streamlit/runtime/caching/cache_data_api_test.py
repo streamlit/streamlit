@@ -661,6 +661,11 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that a warning is shown when a widget is created inside a cached function."""
 
+        if _widget_name == "experimental_audio_input":
+            # The experimental_audio_input element produces also a deprecation warning
+            # which makes this test irrelevant
+            return
+
         @st.cache_data(show_spinner=False)
         def cache_widget():
             widget_producer()
