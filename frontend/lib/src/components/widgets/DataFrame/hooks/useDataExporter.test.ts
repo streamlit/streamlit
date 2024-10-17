@@ -55,6 +55,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: false,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
   }),
   TextColumn({
@@ -69,6 +70,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: false,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
     columnTypeOptions: {},
   }),

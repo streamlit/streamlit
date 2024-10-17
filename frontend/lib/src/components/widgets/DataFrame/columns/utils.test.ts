@@ -52,6 +52,7 @@ const MOCK_TEXT_COLUMN_PROPS = {
   isEditable: false,
   isHidden: false,
   isIndex: false,
+  isPinned: false,
   isStretched: false,
 } as BaseColumnProps
 

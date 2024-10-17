@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react-hooks"
 import { GridCell, NumberCell } from "@glideapps/glide-data-grid"
+import { act, renderHook } from "@testing-library/react-hooks"
 
 import {
   BaseColumn,
@@ -38,6 +38,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: false,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
   }),
   TextColumn({
@@ -52,6 +53,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: false,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
   }),
 ]
