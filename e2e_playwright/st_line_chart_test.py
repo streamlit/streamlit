@@ -53,7 +53,7 @@ def test_multi_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(multi_line_chart).to_be_visible()
 
     multi_line_chart.scroll_into_view_if_needed()
-    multi_line_chart.locator("canvas").hover(position={"x": 100, "y": 100})
+    multi_line_chart.locator("canvas").hover(position={"x": 100, "y": 100}, force=True)
 
     expect(app.locator("#vg-tooltip-element")).to_be_visible()
 
@@ -67,7 +67,7 @@ def test_single_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(single_line_chart).to_be_visible()
 
     single_line_chart.scroll_into_view_if_needed()
-    single_line_chart.locator("canvas").hover(position={"x": 100, "y": 100})
+    single_line_chart.locator("canvas").hover(position={"x": 100, "y": 100}, force=True)
 
     expect(app.locator("#vg-tooltip-element")).to_be_visible()
     assert_snapshot(single_line_chart, name="st_line_chart-single_line_hover")
