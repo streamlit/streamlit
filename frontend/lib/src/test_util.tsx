@@ -94,11 +94,13 @@ export const customRenderLibContext = (
   return reactTestingLibraryRender(component, {
     wrapper: ({ children }) => (
       <ThemeProvider theme={baseTheme.emotion}>
-        <LibContext.Provider
-          value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
-        >
-          {children}
-        </LibContext.Provider>
+        <WindowDimensionsProvider>
+          <LibContext.Provider
+            value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
+          >
+            {children}
+          </LibContext.Provider>
+        </WindowDimensionsProvider>
       </ThemeProvider>
     ),
   })

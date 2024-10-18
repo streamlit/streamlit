@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, PureComponent, ReactNode } from "react"
+import React, { ComponentType, ReactElement } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
@@ -35,38 +35,37 @@ function withFullScreenWrapper<P>(
   WrappedComponent: ComponentType<React.PropsWithChildren<P>>,
   forceDisableFullScreenMode = false
 ): ComponentType<React.PropsWithChildren<WrapperProps<P>>> {
-  class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps<P>> {
-    public static readonly displayName = `withFullScreenWrapper(${
-      WrappedComponent.displayName || WrappedComponent.name
-    })`
+  const ComponentWithFullScreenWrapper = (
+    props: WrapperProps<P>
+  ): ReactElement => {
+    const { width, height, disableFullscreenMode } = props
 
-    public render = (): ReactNode => {
-      const { width, height, disableFullscreenMode } = this.props
-
-      return (
-        <FullScreenWrapper
-          width={width}
-          height={height}
-          disableFullscreenMode={
-            forceDisableFullScreenMode || disableFullscreenMode
-          }
-        >
-          {({ width, height, expanded, expand, collapse }) => (
-            // `(this.props as P)` is required due to a TS bug:
-            // https://github.com/microsoft/TypeScript/issues/28938#issuecomment-450636046
-            <WrappedComponent
-              {...(this.props as P)}
-              width={width}
-              height={height}
-              isFullScreen={expanded}
-              expand={expand}
-              collapse={collapse}
-            />
-          )}
-        </FullScreenWrapper>
-      )
-    }
+    return (
+      <FullScreenWrapper
+        width={width}
+        height={height}
+        disableFullscreenMode={
+          forceDisableFullScreenMode || disableFullscreenMode
+        }
+      >
+        {({ width, height, expanded, expand, collapse }) => (
+          // `(props as P)` is required due to a TS bug:
+          // https://github.com/microsoft/TypeScript/issues/28938#issuecomment-450636046
+          <WrappedComponent
+            {...(props as P)}
+            width={width}
+            height={height}
+            isFullScreen={expanded}
+            expand={expand}
+            collapse={collapse}
+          />
+        )}
+      </FullScreenWrapper>
+    )
   }
+  ComponentWithFullScreenWrapper.displayName = `withFullScreenWrapper(${
+    WrappedComponent.displayName || WrappedComponent.name
+  })`
 
   // Static methods must be copied over
   // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over
