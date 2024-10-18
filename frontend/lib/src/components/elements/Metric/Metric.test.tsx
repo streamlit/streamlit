@@ -34,6 +34,7 @@ const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
     delta: "test",
     ...elementProps,
   }),
+  width: 100,
 })
 
 describe("Metric element", () => {
