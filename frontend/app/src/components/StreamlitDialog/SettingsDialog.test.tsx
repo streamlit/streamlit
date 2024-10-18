@@ -16,7 +16,8 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { screen } from "@testing-library/react"
 
 import "@testing-library/jest-dom"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
@@ -53,13 +54,14 @@ const getProps = (extend?: Partial<Props>): Props => ({
   developerMode: true,
   animateModal: true,
   openThemeCreator: jest.fn(),
-  metricsMgr: new SegmentMetricsManager(mockSessionInfo()),
+  metricsMgr: new SegmentMetricsManager(
+    // @ts-expect-error The mock seems to have a mismatched internal type to what's expected.
+    mockSessionInfo()
+  ),
   ...extend,
 })
 
 describe("SettingsDialog", () => {
-  // Note: You may need to wrap the component in a context provider to pass the context if necessary.
-
   it("renders without crashing", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
@@ -67,35 +69,38 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    expect(screen.getByText("Settings")).toBeInTheDocument()
+    expect(screen.getByText("Settings")).toBeVisible()
   })
 
-  it("should render run on save checkbox", () => {
+  it("should render run on save checkbox", async () => {
+    const user = userEvent.setup()
     const props = getProps({
       allowRunOnSave: true,
     })
     const context = getContext()
     customRenderLibContext(<SettingsDialog {...props} />, context)
-    expect(screen.getByText("Run on save")).toBeInTheDocument()
 
-    screen.getByText("Run on save").click()
+    await user.click(screen.getByText("Run on save"))
 
-    expect(props.onSave).toHaveBeenCalled()
-    // @ts-expect-error
-    expect(props.onSave.mock.calls[0][0].runOnSave).toBe(true)
+    expect(props.onSave).toHaveBeenCalledTimes(1)
+    expect(props.onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ runOnSave: true })
+    )
   })
 
-  it("should render wide mode checkbox", () => {
+  it("should render wide mode checkbox", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     const context = getContext()
     customRenderLibContext(<SettingsDialog {...props} />, context)
-    expect(screen.getByText("Wide mode")).toBeInTheDocument()
+    expect(screen.getByText("Wide mode")).toBeVisible()
 
-    screen.getByText("Wide mode").click()
+    await user.click(screen.getByText("Wide mode"))
 
-    expect(props.onSave).toHaveBeenCalled()
-    // @ts-expect-error
-    expect(props.onSave.mock.calls[0][0].wideMode).toBe(true)
+    expect(props.onSave).toHaveBeenCalledTimes(1)
+    expect(props.onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ wideMode: true })
+    )
   })
 
   it("should render theme selector", () => {
@@ -107,12 +112,13 @@ describe("SettingsDialog", () => {
 
     expect(
       screen.getByText("Choose app theme, colors and fonts")
-    ).toBeInTheDocument()
+    ).toBeVisible()
 
-    expect(screen.getByRole("combobox")).toBeInTheDocument()
+    expect(screen.getByRole("combobox")).toBeVisible()
   })
 
-  it("should show custom theme exists", () => {
+  it("should show custom theme exists", async () => {
+    const user = userEvent.setup()
     const presetThemes = createPresetThemes()
     const availableThemes = [...presetThemes, lightTheme]
     const props = getProps()
@@ -120,11 +126,12 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    fireEvent.click(screen.getByRole("combobox"))
+    await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length + 1)
   })
 
-  it("should show custom theme does not exists", () => {
+  it("should show custom theme does not exists", async () => {
+    const user = userEvent.setup()
     const presetThemes = createPresetThemes()
     const availableThemes = [...presetThemes]
     const props = getProps()
@@ -132,7 +139,7 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    fireEvent.click(screen.getByRole("combobox"))
+    await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
   })
 
@@ -143,20 +150,21 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    expect(screen.getByTestId("edit-theme")).toBeInTheDocument()
-    expect(screen.getByText("Edit active theme")).toBeInTheDocument()
+    expect(screen.getByTestId("edit-theme")).toBeVisible()
+    expect(screen.getByText("Edit active theme")).toBeVisible()
   })
 
-  it("should call openThemeCreator if the button has been clicked", () => {
+  it("should call openThemeCreator if the button has been clicked", async () => {
+    const user = userEvent.setup()
     const availableThemes = [...createPresetThemes()]
     const props = getProps()
     const context = getContext({ availableThemes })
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    expect(screen.getByTestId("edit-theme")).toBeInTheDocument()
-    screen.getByText("Edit active theme").click()
-    expect(props.openThemeCreator).toHaveBeenCalled()
+    expect(screen.getByTestId("edit-theme")).toBeVisible()
+    await user.click(screen.getByText("Edit active theme"))
+    expect(props.openThemeCreator).toHaveBeenCalledTimes(1)
   })
 
   it("should hide the theme creator button if not in developer mode", () => {
