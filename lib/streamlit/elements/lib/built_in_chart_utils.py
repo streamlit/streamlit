@@ -250,7 +250,11 @@ def generate_chart(
             )
         )
 
-    if chart_type in [ChartType.LINE, ChartType.AREA] and x_column is not None:
+    if (
+        chart_type is ChartType.LINE
+        and x_column is not None
+        and type_util.is_altair_version_less_than("5.0.0")
+    ):
         # Create a selection that chooses the nearest point & selects based on x-value
         nearest = alt.selection_point(
             nearest=True,
