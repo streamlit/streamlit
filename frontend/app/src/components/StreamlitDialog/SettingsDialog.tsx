@@ -16,16 +16,18 @@
 
 import React, {
   ChangeEvent,
-  PureComponent,
-  ReactElement,
-  ReactNode,
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
 } from "react"
 
 import {
   BaseButton,
   BaseButtonKind,
   LibContext,
-  LibContextProps,
   Modal,
   ModalBody,
   ModalHeader,
@@ -57,145 +59,139 @@ export interface Props {
   metricsMgr: SegmentMetricsManager
 }
 
+const ThemeCreatorButton: FC<Pick<Props, "openThemeCreator">> = ({
+  openThemeCreator,
+}) => {
+  return (
+    <StyledButtonContainer data-testid="edit-theme">
+      <BaseButton onClick={openThemeCreator} kind={BaseButtonKind.SECONDARY}>
+        Edit active theme
+      </BaseButton>
+    </StyledButtonContainer>
+  )
+}
+
 /**
  * Implements a dialog that is used to configure user settings.
  */
-export class SettingsDialog extends PureComponent<Props, UserSettings> {
-  private activeSettings: UserSettings
+export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
+  isServerConnected,
+  onClose,
+  onSave,
+  settings,
+  allowRunOnSave,
+  developerMode,
+  openThemeCreator,
+  animateModal,
+  metricsMgr,
+}) {
+  const libContext = useContext(LibContext)
+  const activeSettings = useRef(settings)
+  const isFirstRun = useRef(true)
+  const [state, setState] = React.useState<UserSettings>({ ...settings })
 
-  static contextType = LibContext
+  const changeSingleSetting = useCallback(
+    (name: string, value: boolean): void => {
+      setState(state => ({ ...state, [name]: value }))
+    },
+    []
+  )
 
-  context!: React.ContextType<typeof LibContext>
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false
+      return
+    }
 
-  constructor(props: Props) {
-    super(props)
-    // Holds the settings that will be saved when the "save" button is clicked.
-    this.state = { ...this.props.settings }
+    activeSettings.current = state
+    onSave(activeSettings.current)
+  }, [onSave, state])
 
-    // Holds the actual settings that Streamlit is using.
-    this.activeSettings = { ...this.props.settings }
-  }
+  const handleCheckboxChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      changeSingleSetting(e.target.name, e.target.checked)
+    },
+    [changeSingleSetting]
+  )
 
-  private renderThemeCreatorButton = (): ReactElement | false =>
-    this.props.developerMode && (
-      <StyledButtonContainer data-testid="edit-theme">
-        <BaseButton
-          onClick={this.props.openThemeCreator}
-          kind={BaseButtonKind.SECONDARY}
-        >
-          Edit active theme
-        </BaseButton>
-      </StyledButtonContainer>
-    )
+  const handleThemeChange = useCallback(
+    (index: number | null): void => {
+      const newTheme = libContext.availableThemes[index ?? 0]
 
-  public render(): ReactNode {
-    const themeIndex = this.context.availableThemes.findIndex(
-      (theme: ThemeConfig) => theme.name === this.context.activeTheme.name
-    )
+      metricsMgr.enqueue("menuClick", {
+        label: "changeTheme",
+      })
 
-    return (
-      <Modal
-        animate={this.props.animateModal}
-        isOpen
-        onClose={this.handleCancelButtonClick}
-      >
-        <ModalHeader>Settings</ModalHeader>
-        <ModalBody>
-          <StyledDialogBody>
-            {this.props.allowRunOnSave && (
-              <React.Fragment>
-                <StyledFullRow>
-                  <StyledHeader>Development</StyledHeader>
-                  <label>
-                    <StyledCheckbox
-                      disabled={!this.props.isServerConnected}
-                      type="checkbox"
-                      name="runOnSave"
-                      checked={
-                        this.state.runOnSave && this.props.isServerConnected
-                      }
-                      onChange={this.handleCheckboxChange}
-                    />{" "}
-                    Run on save
-                  </label>
-                  <StyledSmall>
-                    Automatically updates the app when the underlying code is
-                    updated.
-                  </StyledSmall>
-                </StyledFullRow>
-              </React.Fragment>
-            )}
+      libContext.setTheme(newTheme)
+    },
+    [libContext, metricsMgr]
+  )
 
-            <StyledFullRow>
-              <StyledHeader>Appearance</StyledHeader>
-              <label>
-                <StyledCheckbox
-                  type="checkbox"
-                  name="wideMode"
-                  checked={this.state.wideMode}
-                  onChange={this.handleCheckboxChange}
-                />{" "}
-                Wide mode
-              </label>
-              <StyledSmall>
-                Turn on to make this app occupy the entire width of the screen
-              </StyledSmall>
-            </StyledFullRow>
+  const themeIndex = libContext.availableThemes.findIndex(
+    (theme: ThemeConfig) => theme.name === libContext.activeTheme.name
+  )
 
-            {this.context.availableThemes.length && (
+  return (
+    <Modal animate={animateModal} isOpen onClose={onClose}>
+      <ModalHeader>Settings</ModalHeader>
+      <ModalBody>
+        <StyledDialogBody>
+          {allowRunOnSave && (
+            <React.Fragment>
               <StyledFullRow>
-                <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
-                <UISelectbox
-                  options={this.context.availableThemes.map(
-                    (theme: ThemeConfig) => theme.name
-                  )}
-                  disabled={false}
-                  onChange={this.handleThemeChange}
-                  value={themeIndex}
-                />
-                {this.renderThemeCreatorButton()}
+                <StyledHeader>Development</StyledHeader>
+                <label>
+                  <StyledCheckbox
+                    disabled={!isServerConnected}
+                    type="checkbox"
+                    name="runOnSave"
+                    checked={state.runOnSave && isServerConnected}
+                    onChange={handleCheckboxChange}
+                  />{" "}
+                  Run on save
+                </label>
+                <StyledSmall>
+                  Automatically updates the app when the underlying code is
+                  updated.
+                </StyledSmall>
               </StyledFullRow>
-            )}
-          </StyledDialogBody>
-        </ModalBody>
-      </Modal>
-    )
-  }
+            </React.Fragment>
+          )}
 
-  public componentDidMount(): void {
-    this.setState({ ...this.activeSettings })
-  }
+          <StyledFullRow>
+            <StyledHeader>Appearance</StyledHeader>
+            <label>
+              <StyledCheckbox
+                type="checkbox"
+                name="wideMode"
+                checked={state.wideMode}
+                onChange={handleCheckboxChange}
+              />{" "}
+              Wide mode
+            </label>
+            <StyledSmall>
+              Turn on to make this app occupy the entire width of the screen
+            </StyledSmall>
+          </StyledFullRow>
 
-  private changeSingleSetting = (name: string, value: boolean): void => {
-    // TypeScript doesn't currently have a good solution for setState with
-    // a dynamic key name:
-    // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/26635
-    this.setState(state => ({ ...state, [name]: value }), this.saveSettings)
-  }
-
-  private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    this.changeSingleSetting(e.target.name, e.target.checked)
-  }
-
-  private handleThemeChange = (index: number | null): void => {
-    const { availableThemes }: LibContextProps = this.context
-    const newTheme = availableThemes[index ?? 0]
-
-    this.props.metricsMgr.enqueue("menuClick", {
-      label: "changeTheme",
-    })
-
-    this.context.setTheme(newTheme)
-  }
-
-  private handleCancelButtonClick = (): void => {
-    // Discard settings from this.state by not saving them in this.settings.
-    // this.settings = {...this.state};
-    this.props.onClose()
-  }
-
-  private saveSettings = (): void => {
-    this.activeSettings = { ...this.state }
-    this.props.onSave(this.activeSettings)
-  }
-}
+          {!!libContext.availableThemes.length && (
+            <StyledFullRow>
+              <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
+              <UISelectbox
+                options={libContext.availableThemes.map(
+                  (theme: ThemeConfig) => theme.name
+                )}
+                disabled={false}
+                onChange={handleThemeChange}
+                value={themeIndex}
+              />
+              {developerMode && (
+                <ThemeCreatorButton openThemeCreator={openThemeCreator} />
+              )}
+            </StyledFullRow>
+          )}
+        </StyledDialogBody>
+      </ModalBody>
+    </Modal>
+  )
+})
