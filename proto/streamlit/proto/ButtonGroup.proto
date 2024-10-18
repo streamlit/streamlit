@@ -56,7 +56,7 @@ message ButtonGroup {
   SelectionVisualization selection_visualization = 9;
 
   enum Style {
-    SEGMENT = 0;
+    SEGMENTED_CONTROL = 0;
     PILLS = 1;
     BORDERLESS = 2;
   }
