@@ -262,12 +262,14 @@ def generate_chart(
 
         # Draw points on the line, and highlight based on selection
         points = (
-            chart.mark_point()
+            chart.mark_point(filled=True, size=65)
             .encode(opacity=alt.condition(nearest, alt.value(1), alt.value(0)))
             .add_params(nearest)
         )
 
-        return alt.layer(chart, points).properties(
+        return alt.layer(chart, points).configure_legend(
+            symbolType="stroke"
+        ).properties(
             width=width or 0,
             height=height or 0,
         ).interactive(), add_rows_metadata

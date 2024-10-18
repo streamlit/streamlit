@@ -451,8 +451,8 @@ def _parse_selection_mode(
     for selection_name in selection_mode:
         if selection_name not in all_selection_params:
             raise StreamlitAPIException(
-                f"Selection parameter '{selection_name}' is not defined in the chart spec. "
-                f"Available selection parameters are: {all_selection_params}."
+                f"Selection parameter '{selection_name}' is not defined in the chart "
+                f"spec. Available selection parameters are: {all_selection_params}."
             )
     return sorted(selection_mode)
 
