@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-import React, {
-  FC,
-  PropsWithChildren,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import React, { FC, PropsWithChildren, useMemo } from "react"
 
 import { useTheme } from "@emotion/react"
 
 import { StyledFullScreenFrame } from "@streamlit/lib/src/components/shared/FullScreenWrapper/styled-components"
 import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+
+import { useFullscreen } from "./useFullscreen"
 
 type ElementFullscreenWrapperProps = PropsWithChildren<{
   height?: number
@@ -42,37 +35,7 @@ const ElementFullscreenWrapper: FC<ElementFullscreenWrapperProps> = ({
   width,
 }) => {
   const theme: EmotionTheme = useTheme()
-  const [expanded, setExpanded] = useState(false)
-  const { fullHeight, fullWidth } = useRequiredContext(WindowDimensionsContext)
-
-  const zoomIn = useCallback(() => {
-    document.body.style.overflow = "hidden"
-    setExpanded(true)
-  }, [])
-
-  const zoomOut = useCallback(() => {
-    document.body.style.overflow = "unset"
-    setExpanded(false)
-  }, [])
-
-  const controlKeys = useCallback(
-    (event: KeyboardEvent) => {
-      // Your logic for handling keydown events
-      if (event.keyCode === 27 && expanded) {
-        // Exit fullscreen
-        zoomOut()
-      }
-    },
-    [zoomOut, expanded]
-  )
-
-  useEffect(() => {
-    document.addEventListener("keydown", controlKeys, false)
-
-    return () => {
-      document.removeEventListener("keydown", controlKeys, false)
-    }
-  }, [controlKeys])
+  const { expanded, fullHeight, fullWidth, zoomIn, zoomOut } = useFullscreen()
 
   const fullscreenContextValue = useMemo(() => {
     return {
