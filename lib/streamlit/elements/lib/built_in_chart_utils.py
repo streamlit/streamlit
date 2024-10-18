@@ -208,16 +208,10 @@ def generate_chart(
     )
 
     # Offset encoding only works for Altair >= 5.0.0
-    is_altair_version_offset_compatible = not type_util.is_altair_version_less_than(
-        "5.0.0"
-    )
+    is_altair_version_5_or_greater = not type_util.is_altair_version_less_than("5.0.0")
     # Set up offset encoding (creates grouped/non-stacked bar charts, so only applicable
     # when stack=False).
-    if (
-        is_altair_version_offset_compatible
-        and stack is False
-        and color_column is not None
-    ):
+    if is_altair_version_5_or_greater and stack is False and color_column is not None:
         x_offset, y_offset = _get_offset_encoding(chart_type, color_column)
         chart = chart.encode(xOffset=x_offset, yOffset=y_offset)
 
@@ -253,7 +247,8 @@ def generate_chart(
     if (
         chart_type is ChartType.LINE
         and x_column is not None
-        and type_util.is_altair_version_less_than("5.0.0")
+        # This is using the new selection API that was added in Altair 5.0.0
+        and is_altair_version_5_or_greater
     ):
         # Create a selection that chooses the nearest point & selects based on x-value
         nearest = alt.selection_point(
