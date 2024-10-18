@@ -52,7 +52,22 @@ def test_multi_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     multi_line_chart = app.get_by_test_id("stVegaLiteChart").nth(1)
     expect(multi_line_chart).to_be_visible()
 
-    multi_line_chart.hover(position={"x": 50, "y": 50})
+    multi_line_chart.scroll_into_view_if_needed()
+    multi_line_chart.locator("canvas").hover(position={"x": 100, "y": 100})
 
-    # Only test a single chart per built-in chart type:
+    expect(app.locator("#vg-tooltip-element")).to_be_visible()
+
     assert_snapshot(multi_line_chart, name="st_line_chart-multi_line_hover")
+
+
+def test_single_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that hovering on a st.line_chart shows chart markers and a tooltip."""
+
+    single_line_chart = app.get_by_test_id("stVegaLiteChart").nth(3)
+    expect(single_line_chart).to_be_visible()
+
+    single_line_chart.scroll_into_view_if_needed()
+    single_line_chart.locator("canvas").hover(position={"x": 100, "y": 100})
+
+    expect(app.locator("#vg-tooltip-element")).to_be_visible()
+    assert_snapshot(single_line_chart, name="st_line_chart-single_line_hover")

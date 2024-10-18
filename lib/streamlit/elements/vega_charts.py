@@ -322,7 +322,9 @@ def _marshall_chart_data(
         proto.data.data = dataframe_util.convert_anything_to_arrow_bytes(data)
 
 
-def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> VegaLiteSpec:
+def _convert_altair_to_vega_lite_spec(
+    altair_chart: alt.Chart | alt.LayerChart,
+) -> VegaLiteSpec:
     """Convert an Altair chart object to a Vega-Lite chart spec."""
     import altair as alt
 
@@ -1784,7 +1786,7 @@ class VegaChartsMixin:
 
     def _altair_chart(
         self,
-        altair_chart: alt.Chart,
+        altair_chart: alt.Chart | alt.LayerChart,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1799,7 +1801,8 @@ class VegaChartsMixin:
 
         if type_util.is_altair_version_less_than("5.0.0") and on_select != "ignore":
             raise StreamlitAPIException(
-                "Streamlit does not support selections with Altair 4.x. Please upgrade to Version 5. "
+                "Streamlit does not support selections with Altair 4.x. Please upgrade "
+                "to Version 5. "
                 "If you would like to use Altair 4.x with selections, please upvote "
                 "this [Github issue](https://github.com/streamlit/streamlit/issues/8516)."
             )
@@ -1835,12 +1838,15 @@ class VegaChartsMixin:
 
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+                f'You set theme="{theme}" while Streamlit charts only support '
+                '"theme=”streamlit” or theme=None to fallback to the default '
+                "library theme."
             )
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
             raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+                f"You have passed {on_select} to `on_select`. But only 'ignore', "
+                "'rerun', or a callable is supported."
             )
 
         key = to_key(key)

@@ -211,7 +211,8 @@ def generate_chart(
     is_altair_version_offset_compatible = not type_util.is_altair_version_less_than(
         "5.0.0"
     )
-    # Set up offset encoding (creates grouped/non-stacked bar charts, so only applicable when stack=False).
+    # Set up offset encoding (creates grouped/non-stacked bar charts, so only applicable
+    # when stack=False).
     if (
         is_altair_version_offset_compatible
         and stack is False
@@ -252,7 +253,11 @@ def generate_chart(
     if chart_type in [ChartType.LINE, ChartType.AREA] and x_column is not None:
         # Create a selection that chooses the nearest point & selects based on x-value
         nearest = alt.selection_point(
-            nearest=True, on="pointerover", fields=[x_column], empty=False
+            nearest=True,
+            on="pointerover",
+            fields=[x_column],
+            empty=False,
+            clear="pointerout",
         )
 
         # Draw points on the line, and highlight based on selection
