@@ -278,7 +278,7 @@ export const StyledPillsButton = styled(
     background: theme.colors.bgColor,
     color: theme.colors.text,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-    borderRadius: theme.radii.xxxl,
+    borderRadius: theme.radii.full,
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,

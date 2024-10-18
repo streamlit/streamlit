@@ -20,7 +20,7 @@ import styled from "@emotion/styled"
 
 const StyledImage = styled.img({
   maxWidth: "100%",
-  maxHeight: "600px",
+  maxHeight: "37.5rem",
   objectFit: "scale-down",
 })
 

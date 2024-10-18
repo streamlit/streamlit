@@ -24,6 +24,7 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 type CustomThemeReturn = {
   theme: Partial<GlideTheme>
   tableBorderRadius: string
+  tableBorderWidth: string
   headerIcons: SpriteMap
 }
 
@@ -94,6 +95,7 @@ function useCustomTheme(): CustomThemeReturn {
   return {
     theme: glideTheme,
     tableBorderRadius: theme.radii.default,
+    tableBorderWidth: theme.sizes.borderWidth,
     // Configure custom SVG icons used in the column header:
     headerIcons,
   }

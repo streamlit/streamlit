@@ -37,7 +37,12 @@ export const sizes = {
   appStatusMaxWidth: "20rem",
   largestElementHeight: "4.25rem",
   spinnerSize: "1.375rem",
-  spinnerThickness: "3px",
+  spinnerThickness: "0.2rem",
+  tabHeight: "2.5rem",
+  // Min width used for popover and dialog:
+  minPopupWidth: "20rem",
+  maxTooltipHeight: "18.75rem",
+  chatAvatarSize: "2rem",
   // Used for the clear icon used by some Input elements
   clearIconSize: "1.5em",
 }

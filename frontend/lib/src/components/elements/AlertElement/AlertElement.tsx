@@ -16,12 +16,15 @@
 
 import React, { ReactElement } from "react"
 
+import { useTheme } from "@emotion/react"
+
 import { Alert as AlertProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { StyledAlertContent } from "./styled-components"
 
@@ -56,9 +59,12 @@ export default function AlertElement({
   kind,
   width,
 }: Readonly<AlertElementProps>): ReactElement {
+  const theme: EmotionTheme = useTheme()
   const markdownWidth = {
-    // Fix issue #6394 - Need to account for 1.25rem padding + 0.5rem gap when icon present
-    width: icon ? `calc(100% - 1.75rem)` : "100%",
+    // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present
+    width: icon
+      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
+      : "100%",
   }
 
   return (

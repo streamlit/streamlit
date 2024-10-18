@@ -102,7 +102,6 @@ function Checkbox({
             style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
               marginBottom: spacing.none,
               marginTop: spacing.none,
-              paddingRight: spacing.twoThirdsSmFont,
               backgroundColor: $isFocusVisible ? colors.darkenedBgMix25 : "",
               display: "flex",
               alignItems: "start",
@@ -155,10 +154,10 @@ function Checkbox({
                 minWidth: `calc(2 * ${sizes.checkbox})`,
                 height: sizes.checkbox,
                 minHeight: sizes.checkbox,
-                borderBottomLeftRadius: theme.radii.lg,
-                borderTopLeftRadius: theme.radii.lg,
-                borderBottomRightRadius: theme.radii.lg,
-                borderTopRightRadius: theme.radii.lg,
+                borderBottomLeftRadius: theme.radii.full,
+                borderTopLeftRadius: theme.radii.full,
+                borderBottomRightRadius: theme.radii.full,
+                borderTopRightRadius: theme.radii.full,
                 backgroundColor,
               }
             },

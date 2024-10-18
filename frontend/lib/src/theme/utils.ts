@@ -207,7 +207,7 @@ export const createEmotionTheme = (
     if (radii.checkboxRadius)
       conditionalOverrides.radii.md = addPxUnit(radii.checkboxRadius)
     if (radii.baseWidgetRadius)
-      conditionalOverrides.radii.lg = addPxUnit(radii.baseWidgetRadius)
+      conditionalOverrides.radii.default = addPxUnit(radii.baseWidgetRadius)
   }
 
   if (fontSizes) {
@@ -726,4 +726,19 @@ export function blend(color: string, background: string | undefined): string {
   const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
   const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
   return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
+}
+
+/**
+ * Convert a SCSS rem value to pixels.
+ * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * @returns pixel value of the given rem value
+ */
+export const convertRemToPx = (scssValue: string): number => {
+  const remValue = parseFloat(scssValue.replace(/rem$/, ""))
+  return (
+    // TODO(lukasmasuch): We might want to somehow cache this value at some point.
+    // However, I did experimented with the performance of calling this, and
+    // it seems not like a big deal to call it many times.
+    remValue * parseFloat(getComputedStyle(document.documentElement).fontSize)
+  )
 }

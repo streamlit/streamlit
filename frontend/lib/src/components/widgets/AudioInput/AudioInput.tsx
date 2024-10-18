@@ -36,12 +36,11 @@ import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
 import {
-  convertScssRemValueToPixels,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { blend } from "@streamlit/lib/src/theme/utils"
+import { blend, convertRemToPx } from "@streamlit/lib/src/theme/utils"
 import { uploadFiles } from "@streamlit/lib/src/util/uploadFiles"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
@@ -262,7 +261,7 @@ const AudioInput: React.FC<Props> = ({
         : theme.colors.primary,
       progressColor: theme.colors.bodyText,
       height:
-        convertScssRemValueToPixels(theme.sizes.largestElementHeight) -
+        convertRemToPx(theme.sizes.largestElementHeight) -
         2 * WAVEFORM_PADDING,
       barWidth: BAR_WIDTH,
       barGap: BAR_GAP,

@@ -566,15 +566,3 @@ export function keysToSnakeCase(
     return acc
   }, {} as Record<string, any>)
 }
-
-/**
- *
- * @param scssValue: a string containing a value in rem units
- * @returns pixel value of the given rem value
- */
-export const convertScssRemValueToPixels = (scssValue: string): number => {
-  const remValue = parseFloat(scssValue)
-  return (
-    remValue * parseFloat(getComputedStyle(document.documentElement).fontSize)
-  )
-}

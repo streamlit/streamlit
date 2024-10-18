@@ -26,9 +26,9 @@ export interface IDeployListElementProps {
 }
 
 function DeployListElement(props: IDeployListElementProps): ReactElement {
-  const { children, extraSpacing } = props
+  const { children } = props
   return (
-    <StyledElement extraSpacing={extraSpacing}>
+    <StyledElement>
       <img src={Checkmark} alt={"Checkmark"} />
       <span>{children}</span>
     </StyledElement>
