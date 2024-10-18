@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { forwardRef, memo, ReactElement, Ref, useMemo } from "react"
+import React, {
+  forwardRef,
+  memo,
+  ReactElement,
+  Ref,
+  useCallback,
+  useMemo,
+} from "react"
 
 import { useTheme } from "@emotion/react"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
@@ -169,7 +176,7 @@ function getButtonKindAndSize(
 
 function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
-  theme: EmotionTheme
+  spacing: EmotionTheme["spacing"]
 ): Record<string, any> {
   const baseStyle = { flexWrap: "wrap", maxWidth: "fit-content" }
 
@@ -177,20 +184,20 @@ function getButtonGroupOverridesStyle(
     case ButtonGroupProto.Style.BORDERLESS:
       return {
         ...baseStyle,
-        columnGap: theme.spacing.threeXS,
-        rowGap: theme.spacing.threeXS,
+        columnGap: spacing.threeXS,
+        rowGap: spacing.threeXS,
       }
     case ButtonGroupProto.Style.PILLS:
       return {
         ...baseStyle,
-        columnGap: theme.spacing.twoXS,
-        rowGap: theme.spacing.twoXS,
+        columnGap: spacing.twoXS,
+        rowGap: spacing.twoXS,
       }
     case ButtonGroupProto.Style.SEGMENTED_CONTROL:
       return {
         ...baseStyle,
-        columnGap: theme.spacing.none,
-        rowGap: theme.spacing.twoXS,
+        columnGap: spacing.none,
+        rowGap: spacing.twoXS,
         // Adding an empty pseudo-element after the last button in the group.
         // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
         "::after": {
@@ -355,7 +362,10 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         }
         overrides={{
           Root: {
-            style: getButtonGroupOverridesStyle(style, theme),
+            style: useCallback(
+              () => getButtonGroupOverridesStyle(style, theme.spacing),
+              [style, theme.spacing]
+            ),
           },
         }}
       >
