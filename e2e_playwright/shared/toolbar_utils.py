@@ -54,7 +54,7 @@ def assert_fullscreen_toolbar_button_interactions(
     # Check that it is visible
     assert_snapshot(
         fullscreen_wrapper,
-        name=f"{filename_prefix if filename_prefix != "" else widget_test_id}-fullscreen_expanded",
+        name=f"{filename_prefix if filename_prefix != '' else widget_test_id}-fullscreen_expanded",
         pixel_threshold=pixel_threshold,
     )
 
@@ -62,6 +62,6 @@ def assert_fullscreen_toolbar_button_interactions(
     fullscreen_toolbar_button.click()
     assert_snapshot(
         fullscreen_wrapper,
-        name=f"{filename_prefix if filename_prefix != "" else widget_test_id}-fullscreen_collapsed",
+        name=f"{filename_prefix if filename_prefix != '' else widget_test_id}-fullscreen_collapsed",
         pixel_threshold=pixel_threshold,
     )

@@ -1,9 +1,9 @@
 {
-    "name": "eslint-plugin-streamlit-custom",
-    "license": "Apache-2.0",
-    "version": "1.0.0",
-    "main": "index.js",
-    "scripts": {
-      "test": "node use-strict-null-equality-checks.test.js"
-    }
+  "name": "eslint-plugin-streamlit-custom",
+  "license": "Apache-2.0",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "node use-strict-null-equality-checks.test.js && node no-hardcoded-theme-values.test.js"
   }
+}

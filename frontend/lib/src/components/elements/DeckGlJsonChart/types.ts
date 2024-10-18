@@ -39,17 +39,12 @@ export type ParsedDeckGlConfig = {
 }
 
 export interface DeckGLProps {
-  collapse?: () => void
   disabled?: boolean
   disableFullscreenMode?: boolean
   element: DeckGlJsonChartProto
-  expand?: () => void
   fragmentId: string | undefined
-  height?: number
-  isFullScreen?: boolean
   mapboxToken: string
   widgetMgr: WidgetStateManager
-  width: number
 }
 
 export interface DeckObject {
