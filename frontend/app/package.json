@@ -74,6 +74,7 @@
     "@types/react-transition-group": "^4.4.5",
     "@types/styletron-engine-atomic": "^1.1.1",
     "@types/styletron-react": "^5.0.3",
+    "@types/ua-parser-js": "^0.7.39",
     "@types/uuid": "^9.0.2",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",

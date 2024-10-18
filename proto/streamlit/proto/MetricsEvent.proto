@@ -34,14 +34,12 @@ message MetricsEvent {
   string context_page_search = 7;
   string context_locale = 8;
   string context_user_agent = 9;
-
   bool dev = 10;
   bool is_hello = 11;
   string machine_id_v3 = 12;
   string report_hash = 13;
   string source = 14;
   string streamlit_version = 15;
-
 
   // Host tracking fields:
   string hosted_at = 16;
@@ -51,10 +49,8 @@ message MetricsEvent {
   string main_module = 20;
   string creator_id = 21;
 
-
   // Menu Click Event field:
   string label = 22;
-
 
   // Page Profile Event fields:
     // Same as PageProfile msg

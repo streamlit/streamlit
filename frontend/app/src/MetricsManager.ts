@@ -99,7 +99,7 @@ export class MetricsManager {
   }): void {
     this.initialized = true
     this.actuallySendMetrics = gatherUsageStats
-    this.anonymousId = this.getAnonymousId()
+    this.getAnonymousId()
 
     if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
@@ -309,7 +309,7 @@ export class MetricsManager {
    * Checks if existing in cookie or localStorage, otherwise generates
    * a new UUID and stores it in both.
    */
-  private getAnonymousId(): string {
+  private getAnonymousId(): void {
     const isLocalStoreAvailable = localStorageAvailable()
     const anonymousIdCookie = getCookie("ajs_anonymous_id")
     const anonymousIdLocalStorage = isLocalStoreAvailable
@@ -337,7 +337,5 @@ export class MetricsManager {
         localStorage.setItem("ajs_anonymous_id", this.anonymousId)
       }
     }
-
-    return this.anonymousId
   }
 }
