@@ -410,7 +410,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["multiple"],
+        selection_mode: Literal["multiple"] = "multiple",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -600,7 +600,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["multiple"],
+        selection_mode: Literal["multiple"] = "multiple",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
@@ -611,6 +611,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> list[V]: ...
+
     @gather_metrics("segmented_control")
     def segmented_control(
         self,
