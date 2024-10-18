@@ -43,3 +43,16 @@ def test_themed_line_chart_rendering(
 
     # Only test a single chart per built-in chart type:
     assert_snapshot(line_chart_elements.nth(1), name="st_line_chart_themed")
+
+
+def test_multi_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that hovering on a st.line_chart shows chart markers on all lines and
+    a tooltip."""
+
+    multi_line_chart = app.get_by_test_id("stVegaLiteChart").nth(1)
+    expect(multi_line_chart).to_be_visible()
+
+    multi_line_chart.hover(position={"x": 50, "y": 50})
+
+    # Only test a single chart per built-in chart type:
+    assert_snapshot(multi_line_chart, name="st_line_chart-multi_line_hover")
