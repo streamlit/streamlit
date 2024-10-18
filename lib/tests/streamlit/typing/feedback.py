@@ -14,13 +14,17 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, Union
 
-from streamlit.elements.widgets.button_group import ButtonGroupMixin
+from typing_extensions import assert_type
 
-feedback = ButtonGroupMixin().feedback
+# Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
+if TYPE_CHECKING:
+    from streamlit.elements.widgets.button_group import ButtonGroupMixin
 
-v1: None | Literal[0, 1] = feedback()
-v2: None | Literal[0, 1] = feedback("thumbs")
-v3: None | Literal[0, 1, 2, 3, 4] = feedback("faces")
-v4: None | Literal[0, 1, 2, 3, 4] = feedback("stars")
+    feedback = ButtonGroupMixin().feedback
+
+    assert_type(feedback(), Union[None, Literal[0, 1]])
+    assert_type(feedback("thumbs"), Union[None, Literal[0, 1]])
+    assert_type(feedback("faces"), Union[None, Literal[0, 1, 2, 3, 4]])
+    assert_type(feedback("stars"), Union[None, Literal[0, 1, 2, 3, 4]])
