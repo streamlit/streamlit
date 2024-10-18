@@ -25,6 +25,7 @@ import without from "lodash/without"
 import {
   AppConfig,
   AppRoot,
+  AuthRedirect,
   AutoRerun,
   BackMsg,
   BaseUriParts,
@@ -711,6 +712,16 @@ export class App extends PureComponent<Props, State> {
           this.handleLogo(logo, msgProto.metadata as ForwardMsgMetadata),
         navigation: (navigation: Navigation) =>
           this.handleNavigation(navigation),
+        authRedirect: (authRedirect: AuthRedirect) => {
+          if (isInChildFrame()) {
+            this.hostCommunicationMgr.sendMessageToSameOriginHost({
+              type: "REDIRECT_TO_URL",
+              url: authRedirect.url,
+            })
+          } else {
+            window.location.href = authRedirect.url
+          }
+        },
       })
     } catch (e) {
       const err = ensureError(e)

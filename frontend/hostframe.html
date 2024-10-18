@@ -41,6 +41,10 @@ Usage:
 <script>
   window.addEventListener("message", event => {
     console.log("Received message event:", event)
+
+    if (event.data.type === "REDIRECT_TO_URL") {
+      window.location.href = event.data.url
+    }
   })
 
   function sendMessage(data) {
