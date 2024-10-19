@@ -107,7 +107,7 @@ types-click==7.1.8
 types-protobuf==5.28.0.20240924
 types-pytz==2024.2.0.20241003
 types-requests==2.32.0.20241016
-types-setuptools==75.2.0.20241018
+types-setuptools==75.2.0.20241019
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
