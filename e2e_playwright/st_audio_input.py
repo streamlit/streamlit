@@ -25,7 +25,7 @@ def render_main_audio_input():
     Renders the main audio input component with a label and help tooltip.
     Displays the recorded audio and a boolean indicating if any audio was captured.
     """
-    audio_input = st.experimental_audio_input(
+    audio_input = st.audio_input(
         label="Audio Input 1", key="the_audio_input", help="This is the help text"
     )
     st.audio(audio_input)  # Display the audio playback if available
@@ -64,22 +64,20 @@ def render_form_audio_input():
     """
     audio_input_from_form = None
     with st.form(key="my_form", clear_on_submit=True):
-        audio_input_from_form = st.experimental_audio_input(label="Audio Input in Form")
+        audio_input_from_form = st.audio_input(label="Audio Input in Form")
         st.form_submit_button("Submit")
 
     st.write("Audio Input in Form:", audio_input_from_form)
 
 
 # Fragment Audio Input Section
-@st.experimental_fragment()
+@st.fragment()
 def test_fragment():
     """
     Defines a fragment that includes an audio input component.
     Displays the captured audio from the fragment.
     """
-    audio_input_from_fragment = st.experimental_audio_input(
-        label="Audio Input in Fragment"
-    )
+    audio_input_from_fragment = st.audio_input(label="Audio Input in Fragment")
     st.write("Audio Input in Fragment:", audio_input_from_fragment)
 
 
@@ -89,10 +87,8 @@ def render_special_audio_inputs():
     Renders various audio inputs with different properties such as
     disabled and hidden label visibility.
     """
-    st.experimental_audio_input(label="Disabled Audio Input", disabled=True)
-    st.experimental_audio_input(
-        label="Hidden Label Audio Input", label_visibility="hidden"
-    )
+    st.audio_input(label="Disabled Audio Input", disabled=True)
+    st.audio_input(label="Hidden Label Audio Input", label_visibility="hidden")
 
 
 # Callback Example
@@ -106,7 +102,7 @@ def render_callback_audio_input():
     Renders an audio input component with an `on_change` callback.
     Displays whether the audio input has changed.
     """
-    st.experimental_audio_input(
+    st.audio_input(
         label="Testing Callback",
         on_change=on_change,
     )
@@ -125,7 +121,7 @@ def render_remount_test():
             time.sleep(1)
             st.write("Another element")
 
-    audio_input_after_sleep = st.experimental_audio_input(
+    audio_input_after_sleep = st.audio_input(
         label="After sleep audio input", key="after_sleep_audio_input"
     )
     st.write("audio_input-after-sleep:", bool(audio_input_after_sleep))
