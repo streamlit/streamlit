@@ -1882,7 +1882,6 @@ class VegaChartsMixin:
 
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
-        print("FOOOOOOOOOOOOOOOOOOO:", vega_lite_proto.spec)
         vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
