@@ -17,7 +17,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { act, fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { default as userEvent } from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -256,10 +256,8 @@ describe("TextArea widget", () => {
     fireEvent.change(textArea, { target: { value: "TEST" } })
     expect(textArea).toHaveValue("TEST")
 
-    act(() => {
-      // "Submit" the form
-      props.widgetMgr.submitForm("form", undefined)
-    })
+    // "Submit" the form
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textArea).toHaveValue(props.element.default)
