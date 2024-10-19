@@ -1221,7 +1221,8 @@ class VegaChartsMixin:
         # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
             raise StreamlitAPIException(
-                "Streamlit does not support non-stacked (grouped) bar charts with Altair 4.x. Please upgrade to Version 5."
+                "Streamlit does not support non-stacked (grouped) bar charts with "
+                "Altair 4.x. Please upgrade to Version 5."
             )
 
         bar_chart_type = (
@@ -1839,7 +1840,7 @@ class VegaChartsMixin:
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support '
-                '"theme=”streamlit” or theme=None to fallback to the default '
+                "theme=”streamlit” or theme=None to fallback to the default "
                 "library theme."
             )
 
@@ -1881,6 +1882,7 @@ class VegaChartsMixin:
 
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
+        print("FOOOOOOOOOOOOOOOOOOO:", vega_lite_proto.spec)
         vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
