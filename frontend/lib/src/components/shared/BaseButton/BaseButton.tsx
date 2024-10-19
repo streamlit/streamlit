@@ -26,7 +26,6 @@ import {
   StyledHeaderButton,
   StyledHeaderNoPaddingButton,
   StyledIconButton,
-  StyledIconButtonActive,
   StyledLinkButton,
   StyledMinimalButton,
   StyledPillsButton,
@@ -35,7 +34,10 @@ import {
   StyledPrimaryFormSubmitButton,
   StyledSecondaryButton,
   StyledSecondaryFormSubmitButton,
+  StyledSegmentedControlButton,
+  StyledSegmentedControlButtonActive,
   StyledTertiaryButton,
+  StyledTriggerButton,
 } from "./styled-components"
 
 function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
@@ -50,14 +52,16 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
     ComponentType = StyledTertiaryButton
   } else if (kind === BaseButtonKind.LINK) {
     ComponentType = StyledLinkButton
-  } else if (kind === BaseButtonKind.SEGMENT) {
+  } else if (kind === BaseButtonKind.ICON) {
     ComponentType = StyledIconButton
-  } else if (kind === BaseButtonKind.SEGMENT_ACTIVE) {
-    ComponentType = StyledIconButtonActive
   } else if (kind === BaseButtonKind.PILLS) {
     ComponentType = StyledPillsButton
   } else if (kind === BaseButtonKind.PILLS_ACTIVE) {
     ComponentType = StyledPillsButtonActive
+  } else if (kind === BaseButtonKind.SEGMENTED_CONTROL) {
+    ComponentType = StyledSegmentedControlButton
+  } else if (kind === BaseButtonKind.SEGMENTED_CONTROL_ACTIVE) {
+    ComponentType = StyledSegmentedControlButtonActive
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
   } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {
@@ -74,6 +78,10 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
     ComponentType = StyledHeaderNoPaddingButton
   } else if (kind === BaseButtonKind.ELEMENT_TOOLBAR) {
     ComponentType = StyledElementToolbarButton
+  } else if (kind === BaseButtonKind.TRIGGERS) {
+    ComponentType = StyledTriggerButton
+  } else if (kind === BaseButtonKind.TRIGGERS_ACTIVE) {
+    ComponentType = StyledTriggerButton
   }
 
   return (
