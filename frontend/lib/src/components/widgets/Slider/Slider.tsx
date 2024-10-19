@@ -416,7 +416,7 @@ class Slider extends React.PureComponent<Props, State> {
                 paddingRight: spacing.none,
                 // Add additional padding to fit the thumb value
                 // which uses a fontSizes.sm.
-                paddingTop: `calc(${fontSizes.sm} * 1.35)`,
+                paddingTop: `calc(${fontSizes.sm} * 1.33)`,
               },
             },
             InnerTrack: {
