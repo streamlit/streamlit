@@ -466,6 +466,7 @@ class ScriptRunner:
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
+                cached_messages=rerun_data.cached_messages,
             )
 
             self.on_event.send(

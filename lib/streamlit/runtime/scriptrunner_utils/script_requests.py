@@ -53,6 +53,7 @@ class RerunData:
     fragment_id_queue: list[str] = field(default_factory=list)
     is_fragment_scoped_rerun: bool = False
     is_auto_rerun: bool = False
+    cached_messages: list[str] = field(default_factory=list)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -228,6 +229,7 @@ class ScriptRequests:
                     page_script_hash=new_data.page_script_hash,
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
+                    cached_messages=new_data.cached_messages,
                     is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
                     is_auto_rerun=new_data.is_auto_rerun,
                 )

@@ -29,4 +29,5 @@ message ClientState {
   string page_name = 4;
   string fragment_id = 5;
   bool is_auto_rerun = 6;
+  repeated string cached_messages = 7;
 }

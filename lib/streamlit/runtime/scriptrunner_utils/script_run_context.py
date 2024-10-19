@@ -37,6 +37,11 @@ from streamlit.errors import (
     StreamlitSetPageConfigMustBeFirstCommandError,
 )
 from streamlit.logger import get_logger
+from streamlit.runtime.forward_msg_cache import (
+    create_reference_msg,
+    populate_hash_if_needed,
+)
+from streamlit.runtime.runtime_util import is_cacheable_msg
 
 if TYPE_CHECKING:
     from streamlit.cursor import RunningCursor
@@ -84,6 +89,7 @@ class ScriptRunContext:
     fragment_storage: FragmentStorage
     pages_manager: PagesManager
 
+    cached_messages: list[str] = field(default_factory=list)
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
     tracked_commands: list[Command] = field(default_factory=list)
@@ -133,6 +139,7 @@ class ScriptRunContext:
         query_string: str = "",
         page_script_hash: str = "",
         fragment_ids_this_run: list[str] | None = None,
+        cached_messages: list[str] | None = None,
     ) -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
@@ -152,6 +159,8 @@ class ScriptRunContext:
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids = set()
         self.has_dialog_opened = False
+        self.cached_messages = cached_messages or []
+
         in_cached_function.set(False)
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
@@ -183,8 +192,17 @@ class ScriptRunContext:
 
         msg.metadata.active_script_hash = self.active_script_hash
 
+        msg.metadata.cacheable = is_cacheable_msg(msg)
+        msg_to_send = msg
+        if msg.metadata.cacheable:
+            message_hash = populate_hash_if_needed(msg)
+
+            if message_hash in self.cached_messages:
+                _LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
+                msg_to_send = create_reference_msg(msg, message_hash)
+
         # Pass the message up to our associated ScriptRunner.
-        self._enqueue(msg)
+        self._enqueue(msg_to_send)
 
     def ensure_single_query_api_used(self):
         if self._experimental_query_params_used and self._production_query_params_used:
