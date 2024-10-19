@@ -110,6 +110,7 @@ function Slider({
     setUiValue(value)
   }, [value])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSetValueWithSource = useCallback(
     debounce(DEBOUNCE_TIME_MS, (value: number[]): void => {
       setValueWithSource({ value, fromUi: true })
@@ -144,6 +145,7 @@ function Slider({
     )
   }, [formattedMinValue, formattedMaxValue, disabled])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const renderThumb = useCallback(
     React.forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
       props: StyleProps,
