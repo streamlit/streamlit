@@ -1312,7 +1312,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        if not is_altair_version_less_than("5.0.0"):
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
             # Line charts in Altair >=5 are layered to better support tooltips.
             chart_spec = chart_spec["layer"][0]
 
