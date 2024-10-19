@@ -66,7 +66,7 @@ export const StyledTickBar = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.none,
   paddingLeft: theme.spacing.none,
   paddingRight: theme.spacing.none,
-  paddingTop: "0.66em",
+  paddingTop: "0.65em",
   justifyContent: "space-between",
   alignItems: "center",
   display: "flex",
