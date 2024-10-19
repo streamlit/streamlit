@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback, useRef, useState } from "react"
+import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useTheme } from "@emotion/react"
@@ -39,7 +39,7 @@ import {
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
@@ -70,7 +70,7 @@ const getCurrStateFromProto = (element: TextAreaProto): TextAreaValue => {
 const updateWidgetMgrState = (
   element: TextAreaProto,
   widgetMgr: WidgetStateManager,
-  valueWithSource: ValueWSource<TextAreaValue>,
+  valueWithSource: ValueWithSource<TextAreaValue>,
   fragmentId?: string
 ): void => {
   widgetMgr.setStringValue(
@@ -107,7 +107,7 @@ const TextArea: FC<Props> = ({
     setDirty(true)
   }, [element])
 
-  const [, setValueWSource] = useBasicWidgetState<
+  const [, setValueWithSource] = useBasicWidgetState<
     TextAreaValue,
     TextAreaProto
   >({
@@ -125,10 +125,10 @@ const TextArea: FC<Props> = ({
 
   const commitWidgetValue = useCallback(
     ({ fromUi }: Source): void => {
-      setValueWSource({ value: localValue, fromUi })
+      setValueWithSource({ value: localValue, fromUi })
       setDirty(false)
     },
-    [localValue, setValueWSource]
+    [localValue, setValueWithSource]
   )
 
   const onBlur = useCallback(() => {
@@ -279,4 +279,4 @@ const TextArea: FC<Props> = ({
   )
 }
 
-export default TextArea
+export default memo(TextArea)

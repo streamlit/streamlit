@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback } from "react"
+import React, { FC, memo, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -22,7 +22,7 @@ import BaseColorPicker from "@streamlit/lib/src/components/shared/BaseColorPicke
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
@@ -61,7 +61,7 @@ const getCurrStateFromProto = (
 const updateWidgetMgrState = (
   element: ColorPickerProto,
   widgetMgr: WidgetStateManager,
-  valueWithSource: ValueWSource<ColorPickerValue>,
+  valueWithSource: ValueWithSource<ColorPickerValue>,
   fragmentId?: string
 ): void => {
   widgetMgr.setStringValue(
@@ -79,7 +79,7 @@ const ColorPicker: FC<Props> = ({
   width,
   fragmentId,
 }) => {
-  const [value, setValueWSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     ColorPickerValue,
     ColorPickerProto
   >({
@@ -94,9 +94,9 @@ const ColorPicker: FC<Props> = ({
 
   const handleColorClose = useCallback(
     (color: string): void => {
-      setValueWSource({ value: color, fromUi: true })
+      setValueWithSource({ value: color, fromUi: true })
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   return (
@@ -114,4 +114,4 @@ const ColorPicker: FC<Props> = ({
   )
 }
 
-export default ColorPicker
+export default memo(ColorPicker)
