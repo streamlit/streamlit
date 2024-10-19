@@ -104,71 +104,6 @@ function Slider({
   const formattedMaxValue = formatValue(element.max, element)
   const thumbAriaLabel = element.label
 
-  // Check the thumb value's alignment vs. slider container
-  useEffect((): void => {
-    const sliderDiv = sliderRef.current ?? null
-    const thumb1Div = thumbRefs[0].current
-    const thumb2Div = thumbRefs[1]?.current
-    const thumb1ValueDiv = thumbValueRefs[0].current
-    const thumb2ValueDiv = thumbValueRefs[1]?.current
-    // Minimum gap between thumb values (in px)
-    const labelGap = 16
-
-    // Handles label alignment over each thumb
-    alignValueOnThumb(sliderDiv, thumb1Div, thumb1ValueDiv)
-    alignValueOnThumb(sliderDiv, thumb2Div, thumb2ValueDiv)
-
-    // Checks & handles label spacing when two thumb values & they overlap
-    if (
-      sliderDiv &&
-      thumb1Div &&
-      thumb2Div &&
-      thumb1ValueDiv &&
-      thumb2ValueDiv
-    ) {
-      const slider = sliderDiv.getBoundingClientRect()
-      const thumb1 = thumb1Div.getBoundingClientRect()
-      const thumb2 = thumb2Div.getBoundingClientRect()
-      const thumb1Value = thumb1ValueDiv.getBoundingClientRect()
-      const thumb2Value = thumb2ValueDiv.getBoundingClientRect()
-
-      // Check if thumb values are overlapping or too close together
-      if (thumb1Value.right + labelGap > thumb2Value.left) {
-        // Check whether to shift 1st thumb value left or 2nd thumb value right
-        const moveLeft =
-          thumb2Value.left - labelGap - thumb1Value.width > slider.left
-
-        if (moveLeft) {
-          thumb1ValueDiv.style.right = `${
-            thumb2Value.width + labelGap - (thumb2.right - thumb1.right)
-          }px`
-        } else {
-          thumb2ValueDiv.style.left = `${
-            thumb1Value.width + labelGap - (thumb2.left - thumb1.left)
-          }px`
-        }
-      }
-    }
-  })
-
-  // Update the thumb numbers via DOM manipulation to avoid a redraw, which
-  // drops the widget's focus state.
-  useEffect(() => {
-    thumbValueRefs.map((ref, i) => {
-      if (!ref.current) {
-        return
-      }
-      ref.current.innerText = formattedValueArr[i]
-    })
-
-    thumbRefs.map((ref, i) => {
-      if (!ref.current) {
-        return
-      }
-      ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
-    })
-  })
-
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
   useEffect(() => {
@@ -207,9 +142,7 @@ function Slider({
         </StyledTickBarItem>
       </StyledTickBar>
     )
-    // Only run this on first render. No real reason, just nicer.
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [])
+  }, [formattedMinValue, formattedMaxValue, disabled])
 
   const renderThumb = useCallback(
     React.forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
@@ -256,16 +189,50 @@ function Slider({
       )
     }),
     // Only run this on first render, to avoid losing the focus state.
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // Then, when the value written about the thumb needs to change, that
+    // happens with the function below instead.
     []
   )
+
+  useEffect(() => {
+    // Update the numbers on the thumb via DOM manipulation to avoid a redraw,
+    // which drops the widget's focus state.
+    thumbValueRefs.map((ref, i) => {
+      if (ref.current) {
+        ref.current.innerText = formattedValueArr[i]
+      }
+    })
+
+    thumbRefs.map((ref, i) => {
+      if (ref.current) {
+        ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
+      }
+    })
+
+    // If, after rendering, if the thumb value's is outside the container (too
+    // far left or too far right), bring it inside. Or if there are two
+    // thumbs and their values overlap, fix that.
+    const sliderDiv = sliderRef.current ?? null
+    const thumb1Div = thumbRefs[0].current
+    const thumb2Div = thumbRefs[1]?.current
+    const thumb1ValueDiv = thumbValueRefs[0].current
+    const thumb2ValueDiv = thumbValueRefs[1]?.current
+
+    fixLabelPositions(
+      sliderDiv,
+      thumb1Div,
+      thumb2Div,
+      thumb1ValueDiv,
+      thumb2ValueDiv
+    )
+  })
 
   const innerTrackStyle = useCallback(
     ({ $disabled }: StyleProps) => ({
       height: spacing.twoXS,
       ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
     }),
-    []
+    [colors, spacing]
   )
 
   return (
@@ -413,27 +380,195 @@ function getValueAsArray(value: number[], element: SliderProto): number[] {
   return value.length > 1 ? [start, end] : [start]
 }
 
-function alignValueOnThumb(
-  slider: HTMLDivElement | null,
-  thumb: HTMLDivElement | null,
-  thumbValue: HTMLDivElement | null
+function fixLabelPositions(
+  sliderDiv: HTMLDivElement | null,
+  thumb1Div: HTMLDivElement | null,
+  thumb2Div: HTMLDivElement | null,
+  thumb1ValueDiv: HTMLDivElement | null,
+  thumb2ValueDiv: HTMLDivElement | null
 ): void {
-  if (!slider || !thumb || !thumbValue) {
+  if (!sliderDiv || !thumb1Div || !thumb1ValueDiv) {
     return
   }
 
-  const sliderPosition = slider.getBoundingClientRect()
-  const thumbPosition = thumb.getBoundingClientRect()
-  const thumbValuePosition = thumbValue.getBoundingClientRect()
+  fixLabelOverflow(sliderDiv, thumb1Div, thumb1ValueDiv)
 
-  const thumbMidpoint = thumbPosition.left + thumbPosition.width / 2
+  if (thumb2Div && thumb2ValueDiv) {
+    fixLabelOverflow(sliderDiv, thumb2Div, thumb2ValueDiv)
+
+    // If two thumbs.
+    fixLabelOverlap(
+      sliderDiv,
+      thumb1Div,
+      thumb2Div,
+      thumb1ValueDiv,
+      thumb2ValueDiv
+    )
+  }
+}
+
+function fixLabelOverflow(
+  slider: HTMLDivElement,
+  thumb: HTMLDivElement,
+  thumbValue: HTMLDivElement
+): void {
+  const sliderRect = slider.getBoundingClientRect()
+  const thumbRect = thumb.getBoundingClientRect()
+  const thumbValueRect = thumbValue.getBoundingClientRect()
+
+  const thumbMidpoint = thumbRect.left + thumbRect.width / 2
   const thumbValueOverflowsLeft =
-    thumbMidpoint - thumbValuePosition.width / 2 < sliderPosition.left
+    thumbMidpoint - thumbValueRect.width / 2 < sliderRect.left
   const thumbValueOverflowsRight =
-    thumbMidpoint + thumbValuePosition.width / 2 > sliderPosition.right
+    thumbMidpoint + thumbValueRect.width / 2 > sliderRect.right
 
   thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
   thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
+}
+
+/**
+ * Goals:
+ * - Keep the thumb values near their respective thumbs.
+ * - Keep thumb values within the bounds of the slider.
+ * - Avoid visual jank while moving the thumbs
+ */
+function fixLabelOverlap(
+  sliderDiv: HTMLDivElement,
+  thumb1Div: HTMLDivElement,
+  thumb2Div: HTMLDivElement,
+  thumb1ValueDiv: HTMLDivElement,
+  thumb2ValueDiv: HTMLDivElement
+): void {
+  const labelGap = 24
+
+  const sliderRect = sliderDiv.getBoundingClientRect()
+  const thumb1Rect = thumb1Div.getBoundingClientRect()
+  const thumb2Rect = thumb2Div.getBoundingClientRect()
+  const thumb1ValueRect = thumb1ValueDiv.getBoundingClientRect()
+  const thumb2ValueRect = thumb2ValueDiv.getBoundingClientRect()
+
+  const sliderMidpoint = sliderRect.left + sliderRect.width / 2
+  const thumb1MidPoint = thumb1Rect.left + thumb1Rect.width / 2
+  const thumb2MidPoint = thumb2Rect.left + thumb2Rect.width / 2
+
+  const centeredThumb1ValueFitsLeft =
+    thumb1MidPoint - thumb1ValueRect.width / 2 >= sliderRect.left
+
+  const centeredThumb2ValueFitsRight =
+    thumb2MidPoint + thumb2ValueRect.width / 2 <= sliderRect.right
+
+  const leftAlignedThumb1ValueFitsLeft =
+    thumb1Rect.left - thumb1ValueRect.width >= sliderRect.left
+
+  const rightAlignedThumb2ValueFitsRight =
+    thumb2Rect.right + thumb2ValueRect.width <= sliderRect.right
+
+  const thumb1ValueOverhang = centeredThumb1ValueFitsLeft
+    ? thumb1ValueRect.width / 2
+    : thumb1ValueRect.width
+
+  const thumb2ValueOverhang = centeredThumb2ValueFitsRight
+    ? thumb2ValueRect.width / 2
+    : thumb2ValueRect.width
+
+  const thumb1ValueInnerEdge = thumb1MidPoint + thumb1ValueOverhang
+  const thumb2ValueInnerEdge = thumb2MidPoint - thumb2ValueOverhang
+  const thumbsAreFarApart =
+    thumb2ValueInnerEdge - thumb1ValueInnerEdge > labelGap
+
+  // If thumbs are far apart, just handle each separately.
+  //
+  // 1. Center values on their thumbs, like this:
+  //
+  //        [thumb1Value]       [thumb1Value]
+  // |--------[thumb1]-------------[thumb2]-------------------|
+  //
+  //
+  // 2. If one of the thumbs is so close to the edge that centering would cause
+  // the value to overflow past the edge, align the value away from the edge.
+  // (This is the normal fixLabelOverflow() behavior)
+  //
+  // For example, let's say thumb1 moved to the left:
+  //
+  //     [thumb1Value]          [thumb2Value]
+  // |---[thumb1]------------------[thumb2]-------------------|
+  //
+  //
+  if (thumbsAreFarApart) {
+    fixLabelOverflow(sliderDiv, thumb1Div, thumb1ValueDiv)
+    fixLabelOverflow(sliderDiv, thumb2Div, thumb2ValueDiv)
+    return
+  }
+
+  // If thumbs are close, try different things...
+
+  // 3. If thumbs are so close that centering would cause values to
+  // overlap, then place the values to the side of their thumbs, away from
+  // the opposing thumbs:
+  //
+  // For example, if starting from case #1 above we moved thumb1 to the
+  // right:
+  //
+  //      [thumb1Value]                    [thumb2Value]
+  // |-----------------[thumb1]----[thumb2]-------------------|
+  //
+  if (leftAlignedThumb1ValueFitsLeft && rightAlignedThumb2ValueFitsRight) {
+    // Align value1 to the left of its thumb.
+    thumb1ValueDiv.style.left = ""
+    thumb1ValueDiv.style.right = `${thumb1Rect.width}px`
+
+    // Align value2 to the right of its thumb.
+    thumb2ValueDiv.style.left = `${thumb2Rect.width}px`
+    thumb2ValueDiv.style.right = ""
+
+    return
+  }
+
+  // 4. If one of the thumbs is so close to the edge that doing the outward
+  // alignment from #3 would cause its value to overflow past the edge, then
+  // try centering the value. And plece the other thumb's value right next to
+  // it, to avoid overlaps.
+  //
+  // For example, if we moved thumb1 and thumb2 to the left by the same
+  // amount:
+  //
+  //    [thumb1Value][thumb2Value]
+  // |----[thumb1]--[thumb2]----------------------------------|
+  //
+  //
+  // 5. If one of the thumbs is so close to the edge that doing the center
+  // alignment from #4 would cause its value to overflow past the edge, then
+  // align it with its thumb, pointing inward. And, like in #4, place the
+  // other thumb's value right next to it to avoid overlaps.
+  //
+  // For example, if we moved thumb1 to the left, and moved thumb2 even more:
+  //
+  //   [thumb1Value][thumb2Value]
+  // |-[thumb1]--[thumb2]-------------------------------------|
+  //
+
+  const jointThumbsAreOnLeftHalf = thumb1MidPoint < sliderMidpoint
+
+  if (jointThumbsAreOnLeftHalf) {
+    fixLabelOverflow(sliderDiv, thumb1Div, thumb1ValueDiv)
+
+    // Make thumb2Value appear to the right of thumb1Value.
+    thumb2ValueDiv.style.left = `${
+      thumb1MidPoint + thumb1ValueOverhang + labelGap - thumb2MidPoint
+    }px`
+    thumb2ValueDiv.style.right = ""
+  } else {
+    fixLabelOverflow(sliderDiv, thumb2Div, thumb2ValueDiv)
+
+    // Make thumb1Value appear to the left of thumb2Value.
+    thumb1ValueDiv.style.left = ""
+    thumb1ValueDiv.style.right = `${-(
+      thumb2MidPoint -
+      thumb2ValueOverhang -
+      labelGap -
+      thumb1MidPoint
+    )}px`
+  }
 }
 
 export default memo(Slider)
