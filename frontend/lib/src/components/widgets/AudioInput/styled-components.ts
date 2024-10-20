@@ -75,6 +75,7 @@ export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
 }))
 
 export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => ({
+  // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
   height: 10,
   opacity: 0.2,
   width: "100%",

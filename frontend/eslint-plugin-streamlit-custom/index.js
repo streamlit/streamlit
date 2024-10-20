@@ -15,9 +15,11 @@
  */
 
 const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
+const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
 
 module.exports = {
   rules: {
     "use-strict-null-equality-checks": useStrictNullEqualityChecks,
+    "no-hardcoded-theme-values": noHardcodedThemeValues,
   },
 }
