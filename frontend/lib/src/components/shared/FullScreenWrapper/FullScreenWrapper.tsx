@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, { FC } from "react"
 
-import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 
 import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { convertScssRemValueToPixels } from "@streamlit/lib/src/util/utils"
+import { useFullscreen } from "@streamlit/lib/src/components/shared/ElementFullscreen/useFullscreen"
 
 import {
   StyledFullScreenButton,
@@ -37,7 +34,7 @@ export type Size = {
   collapse: () => void
 }
 
-/*
+/**
  * Function responsible for rendering children.
  * This function should implement the following signature:
  * ({ height, width }) => PropTypes.element
@@ -46,131 +43,58 @@ export interface FullScreenWrapperProps {
   children: (props: Size) => React.ReactNode
   width: number
   height?: number
-  theme: EmotionTheme
   disableFullscreenMode?: boolean
 }
 
-interface State {
-  expanded: boolean
-  fullWidth: number
-  fullHeight: number
-}
-
-/*
+/**
+ * @deprecated Utilize `ElementFullscreenWrapper` instead
+ *
  * A component that draws a button on the top right of the
  * wrapper element. OnClick, change the element container
  * to fixed and cover all screen, updating wrapped element height and width
  */
-class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
-  public context!: React.ContextType<typeof LibContext>
+const FullScreenWrapper: FC<FullScreenWrapperProps> = ({
+  children,
+  width,
+  height,
+  disableFullscreenMode,
+}) => {
+  const { expanded, fullHeight, fullWidth, zoomIn, zoomOut } = useFullscreen()
 
-  public static contextType = LibContext
+  let buttonImage = FullscreenEnter
+  let buttonOnClick = zoomIn
+  let buttonTitle = "View fullscreen"
 
-  public constructor(props: FullScreenWrapperProps) {
-    super(props)
-    this.state = {
-      expanded: false,
-      ...this.getWindowDimensions(),
-    }
+  if (expanded) {
+    buttonImage = FullscreenExit
+    buttonOnClick = zoomOut
+    buttonTitle = "Exit fullscreen"
   }
 
-  public componentDidMount(): void {
-    window.addEventListener("resize", this.updateWindowDimensions)
-    document.addEventListener("keydown", this.controlKeys, false)
-  }
-
-  public componentWillUnmount(): void {
-    window.removeEventListener("resize", this.updateWindowDimensions)
-    document.removeEventListener("keydown", this.controlKeys, false)
-  }
-
-  private controlKeys = (event: any): void => {
-    const { expanded } = this.state
-
-    if (event.keyCode === 27 && expanded) {
-      // Exit fullscreen
-      this.zoomOut()
-    }
-  }
-
-  private zoomIn = (): void => {
-    document.body.style.overflow = "hidden"
-    this.context.setFullScreen(true)
-    this.setState({ expanded: true })
-  }
-
-  private zoomOut = (): void => {
-    document.body.style.overflow = "unset"
-    this.context.setFullScreen(false)
-    this.setState({ expanded: false })
-  }
-
-  private getWindowDimensions = (): Pick<
-    State,
-    "fullWidth" | "fullHeight"
-  > => {
-    const padding = convertScssRemValueToPixels(this.props.theme.spacing.md)
-    const paddingTop = convertScssRemValueToPixels(
-      this.props.theme.sizes.fullScreenHeaderHeight
-    )
-
-    return {
-      fullWidth: window.innerWidth - padding * 2, // Left and right
-      fullHeight: window.innerHeight - (padding + paddingTop), // Bottom and Top
-    }
-  }
-
-  private updateWindowDimensions = (): void => {
-    this.setState(this.getWindowDimensions())
-  }
-
-  public render(): JSX.Element {
-    const { expanded, fullWidth, fullHeight } = this.state
-    const { children, width, height, disableFullscreenMode } = this.props
-
-    let buttonImage = FullscreenEnter
-    let buttonOnClick = this.zoomIn
-    let buttonTitle = "View fullscreen"
-
-    if (expanded) {
-      buttonImage = FullscreenExit
-      buttonOnClick = this.zoomOut
-      buttonTitle = "Exit fullscreen"
-    }
-
-    return (
-      <StyledFullScreenFrame
-        isExpanded={expanded}
-        data-testid="stFullScreenFrame"
-      >
-        {!disableFullscreenMode && (
-          <StyledFullScreenButton
-            data-testid="StyledFullScreenButton"
-            onClick={buttonOnClick}
-            title={buttonTitle}
-            isExpanded={expanded}
-          >
-            <Icon content={buttonImage} />
-          </StyledFullScreenButton>
-        )}
-        {expanded
-          ? children({
-              width: fullWidth,
-              height: fullHeight,
-              expanded,
-              expand: this.zoomIn,
-              collapse: this.zoomOut,
-            })
-          : children({
-              width,
-              height,
-              expanded,
-              expand: this.zoomIn,
-              collapse: this.zoomOut,
-            })}
-      </StyledFullScreenFrame>
-    )
-  }
+  return (
+    <StyledFullScreenFrame
+      isExpanded={expanded}
+      data-testid="stFullScreenFrame"
+    >
+      {!disableFullscreenMode && (
+        <StyledFullScreenButton
+          data-testid="StyledFullScreenButton"
+          onClick={buttonOnClick}
+          title={buttonTitle}
+          isExpanded={expanded}
+        >
+          <Icon content={buttonImage} />
+        </StyledFullScreenButton>
+      )}
+      {children({
+        width: expanded ? fullWidth : width,
+        height: expanded ? fullHeight : height,
+        expanded,
+        expand: zoomIn,
+        collapse: zoomOut,
+      })}
+    </StyledFullScreenFrame>
+  )
 }
 
-export default withTheme(FullScreenWrapper)
+export default FullScreenWrapper
