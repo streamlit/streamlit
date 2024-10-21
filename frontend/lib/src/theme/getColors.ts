@@ -96,23 +96,6 @@ export const createEmotionColors = (genericColors: {
     ...genericColors,
     ...derivedColors,
 
-    // Alerts
-    alertErrorBorderColor: genericColors.dangerBg,
-    alertErrorBackgroundColor: genericColors.dangerBg,
-    alertErrorTextColor: genericColors.danger,
-
-    alertInfoBorderColor: genericColors.infoBg,
-    alertInfoBackgroundColor: genericColors.infoBg,
-    alertInfoTextColor: genericColors.info,
-
-    alertSuccessBorderColor: genericColors.successBg,
-    alertSuccessBackgroundColor: genericColors.successBg,
-    alertSuccessTextColor: genericColors.success,
-
-    alertWarningBorderColor: genericColors.warningBg,
-    alertWarningBackgroundColor: genericColors.warningBg,
-    alertWarningTextColor: genericColors.warning,
-
     codeTextColor: genericColors.green80,
     codeHighlightColor: derivedColors.bgMix,
 
