@@ -78,7 +78,7 @@ export const StyledElement = styled.div<StyledElementProps>(
     },
     "& > svg": {
       position: "absolute",
-      marginTop: theme.spacing.twoXS,
+      marginTop: theme.spacing.xs,
       color: theme.colors.gray70,
     },
   })

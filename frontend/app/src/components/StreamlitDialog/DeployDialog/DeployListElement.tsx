@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 import { Info } from "@emotion-icons/material-outlined"
 
 import Checkmark from "@streamlit/app/src/assets/svg/checkmark.svg"
+import { Icon } from "@streamlit/lib"
 
 import { StyledElement } from "./styled-components"
 
@@ -33,7 +34,7 @@ function DeployListElement(props: IDeployListElementProps): ReactElement {
   return (
     <StyledElement extraSpacing={extraSpacing}>
       {infoIcon ? (
-        <Info height={16} width={16} />
+        <Icon content={Info} />
       ) : (
         <img src={Checkmark} alt={"Checkmark"} />
       )}
