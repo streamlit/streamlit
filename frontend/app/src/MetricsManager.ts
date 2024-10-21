@@ -20,9 +20,14 @@ import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
   DeployedAppMetadata,
   IS_DEV_ENV,
+  localStorageAvailable,
   logAlways,
+  logError,
   SessionInfo,
 } from "@streamlit/lib"
+
+// Default metrics config fetched when none provided by host config endpoint
+export const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/metrics.json"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -53,6 +58,11 @@ export class MetricsManager {
   private actuallySendMetrics = false
 
   /**
+   * The URL to which metrics are sent.
+   */
+  private metricsUrl: string | undefined = undefined
+
+  /**
    * Queue of metrics events that were enqueued before this MetricsManager was
    * initialized.
    */
@@ -78,7 +88,19 @@ export class MetricsManager {
     gatherUsageStats: boolean
   }): void {
     this.initialized = true
-    this.actuallySendMetrics = gatherUsageStats
+    // Handle if the user or the host has disabled metrics
+    this.actuallySendMetrics = gatherUsageStats && this.metricsUrl !== "off"
+
+    // Trigger fallback to fetch default metrics config if not provided by host
+    if (this.actuallySendMetrics && !this.metricsUrl) {
+      this.requestDefaultMetricsConfig()
+    }
+
+    // If metricsUrl still undefined, deactivate metrics
+    if (!this.metricsUrl) {
+      logError("Undefined metrics config")
+      this.actuallySendMetrics = false
+    }
 
     if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
@@ -111,6 +133,38 @@ export class MetricsManager {
   // so they will not include the appHash.
   public setAppHash = (appHash: string): void => {
     this.appHash = appHash
+  }
+
+  // Set metrics url if sent by the host_config
+  public setMetricsConfig = (metricsUrl = ""): void => {
+    this.metricsUrl = metricsUrl
+  }
+
+  // Fallback - Checks if cached in localStorage, otherwise fetches the config from a default URL
+  private async requestDefaultMetricsConfig(): Promise<any> {
+    const isLocalStoreAvailable = localStorageAvailable()
+
+    if (isLocalStoreAvailable) {
+      const cachedConfig = localStorage.getItem("stMetricsConfig")
+      if (cachedConfig) {
+        this.metricsUrl = cachedConfig
+        return
+      }
+    }
+
+    const response = await fetch(DEFAULT_METRICS_CONFIG, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!response.ok) {
+      this.metricsUrl = undefined
+      logError("Failed to fetch metrics config: ", response.status)
+    } else {
+      const data = await response.json()
+      this.metricsUrl = data.url ?? undefined
+      if (isLocalStoreAvailable && this.metricsUrl) {
+        localStorage.setItem("stMetricsConfig", this.metricsUrl)
+      }
+    }
   }
 
   // The schema of metrics events (including key names and value types) should
