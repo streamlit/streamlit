@@ -54,7 +54,9 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
 
 
 # This test could be flaky because https://github.com/plotly/plotly.js/issues/6898
+# Only run on chromium.
 @pytest.mark.flaky(reruns=3)
+@pytest.mark.only_browser("chromium")
 def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
