@@ -53,6 +53,8 @@ with st.expander("`st.code` usage", expanded=True):
 with st.expander("`st.markdown` code usage", expanded=True):
     st.markdown("```python\n" + code + "\n```")
     st.markdown("```python\n" + code + "\n```")
+    st.markdown("[a link with `code`](https://streamlit.io)")
+
 
 long_string = "Testing line wrapping: " + "foo bar baz " * 10 + "{EOL}"
 

@@ -15,7 +15,7 @@
  */
 
 import { css, SerializedStyles } from "@emotion/react"
-import { darken, readableColor, transparentize } from "color2k"
+import { darken, transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
@@ -51,36 +51,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     border: none;
     padding: 0;
     margin: 0;
-  }
-
-  code {
-    padding: 0.2em 0.4em;
-    margin: 0;
-    border-radius: ${theme.radii.md};
-    background: ${theme.colors.codeHighlightColor};
-    color: ${theme.colors.codeTextColor};
-  }
-
-  pre {
-    margin: 0 0 1rem 0;
-    background: ${theme.colors.codeHighlightColor};
-    border-radius: ${theme.radii.md};
-    padding: 1rem;
-
-    code {
-      background: transparent;
-      border: 0;
-      display: inline;
-      font-size: ${theme.fontSizes.sm};
-      line-height: inherit;
-      margin: 0;
-      padding: 0;
-      white-space: pre;
-      word-break: normal;
-      word-wrap: normal;
-      overflow-x: auto;
-      color: ${theme.colors.codeTextColor};
-    }
   }
 
   .disabled {
@@ -358,37 +328,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     padding: 0 0 0 1.2em;
     font-size: 1rem;
     border-left: ${theme.sizes.borderWidth} solid ${theme.colors.lightGray};
-  }
-
-  // 1. Remove browser default top margin
-  // 2. Reset browser default of 1em to use rems
-  // 3. Don't allow content to break outside
-  // 4. Disable auto-hiding scrollbar in legacy Edge to avoid overlap,
-  //    making it impossible to interact with the content
-
-  pre {
-    display: block;
-    margin-top: 0; // 1
-    margin-bottom: 1rem; // 2
-    overflow: auto; // 3
-    color: ${readableColor(theme.colors.bgColor)};
-    -ms-overflow-style: scrollbar; // 4
-
-    // Account for some code outputs that place code tags in pre tags
-    code {
-      color: inherit;
-      word-break: normal;
-    }
-  }
-
-  code {
-    color: ${theme.colors.codeTextColor};
-    word-wrap: break-word;
-
-    // Streamline the style when inside anchors to avoid broken underline and more
-    a > & {
-      color: inherit;
-    }
   }
 
   kbd {
