@@ -15,6 +15,7 @@
  */
 
 export * from "./baseui"
+export * from "./getColors"
 export * from "./globalStyles"
 export * from "./themeConfigs"
 export * from "./types"

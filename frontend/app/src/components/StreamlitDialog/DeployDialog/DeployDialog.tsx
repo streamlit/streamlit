@@ -153,11 +153,9 @@ export function DeployDialog(
               data-testid={"stDeployDialogCommunityCloudIcon"}
             />
             <StyledSubheader>Streamlit Community Cloud</StyledSubheader>
-            <ListElement extraSpacing={true}>For the community</ListElement>
-            <ListElement extraSpacing={true}>
-              Deploy unlimited public apps for free
-            </ListElement>
-            <ListElement extraSpacing={true}>
+            <ListElement>For the community</ListElement>
+            <ListElement>Deploy unlimited public apps for free</ListElement>
+            <ListElement>
               Apps are discoverable through the Streamlit gallery and search
               engines
             </ListElement>

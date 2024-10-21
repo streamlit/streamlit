@@ -30,10 +30,6 @@ export const StyledSubheader = styled.div(({ theme }) => ({
   },
 }))
 
-interface StyledElementProps {
-  extraSpacing?: boolean
-}
-
 export const StyledCardContainer = styled.div(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
@@ -44,25 +40,23 @@ export const StyledCardContainer = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledElement = styled.div<StyledElementProps>(
-  ({ theme, extraSpacing }) => ({
-    display: "inline-flex",
-    marginTop: extraSpacing ? "9px" : theme.spacing.smPx,
+export const StyledElement = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  marginTop: theme.spacing.sm,
 
-    "& > span": {
-      // We do not want to change the font for this based on theme.
-      fontFamily: theme.fonts.sansSerif,
-      fontWeight: theme.fontWeights.normal,
-      fontSize: theme.fontSizes.md,
-      marginLeft: theme.spacing.twoXL,
-      color: theme.colors.gray70,
-    },
-    "& > img": {
-      position: "absolute",
-      marginTop: theme.spacing.sm,
-    },
-  })
-)
+  "& > span": {
+    // We do not want to change the font for this based on theme.
+    fontFamily: theme.fonts.sansSerif,
+    fontWeight: theme.fontWeights.normal,
+    fontSize: theme.fontSizes.md,
+    marginLeft: theme.spacing.twoXL,
+    color: theme.colors.gray70,
+  },
+  "& > img": {
+    position: "absolute",
+    marginTop: theme.spacing.sm,
+  },
+}))
 
 export const StyledActionsWrapper = styled.div(({ theme }) => ({
   display: "flex",

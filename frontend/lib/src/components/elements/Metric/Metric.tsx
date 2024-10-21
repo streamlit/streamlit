@@ -50,14 +50,14 @@ export default function Metric({
 
   switch (element.color) {
     case MetricColor.RED:
-      color = colors.red
+      color = colors.metricNegativeDeltaColor
       break
     case MetricColor.GREEN:
-      color = colors.green
+      color = colors.metricPositiveDeltaColor
       break
     // this must be grey
     default:
-      color = colors.fadedText60
+      color = colors.metricNeutralDeltaColor
       break
   }
 
