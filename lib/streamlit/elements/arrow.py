@@ -64,13 +64,20 @@ if TYPE_CHECKING:
 
 
 SelectionMode: TypeAlias = Literal[
-    "single-row", "multi-row", "single-column", "multi-column"
+    "single-row",
+    "multi-row",
+    "single-column",
+    "multi-column",
+    "single-cell",
+    "multi-cell",
 ]
 _SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row",
     "multi-row",
     "single-column",
     "multi-column",
+    "single-cell",
+    "multi-cell",
 }
 
 
@@ -207,6 +214,22 @@ def parse_selection_mode(
             "Only one of `single-column` or `multi-column` can be selected as selection mode."
         )
 
+    if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
+        raise StreamlitAPIException(
+            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        )
+
+    is_cell_mode_chosen = bool(
+        selection_mode_set.intersection({"single-cell", "multi-cell"})
+    )
+    is_rc_mode_chosen = bool(
+        selection_mode_set.difference({"single-cell", "multi-cell"})
+    )
+    if is_cell_mode_chosen and is_rc_mode_chosen:
+        raise StreamlitAPIException(
+            "Row or column selection modes cannot be enabled alongside cell selection modes."
+        )
+
     parsed_selection_modes = []
     for selection_mode in selection_mode_set:
         if selection_mode == "single-row":
@@ -217,6 +240,10 @@ def parse_selection_mode(
             parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
         elif selection_mode == "multi-column":
             parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+        elif selection_mode == "single-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_CELL)
+        elif selection_mode == "multi-cell":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_CELL)
     return set(parsed_selection_modes)
 
 
@@ -402,8 +429,8 @@ class ArrowMixin:
               In this case, ``st.dataframe`` will return the selection data
               as a dictionary.
 
-        selection_mode : "single-row", "multi-row", single-column", \
-            "multi-column", or Iterable of these
+        selection_mode : "single-row", "multi-row", "single-column", \
+            "multi-column", "single-cell", "multi-cell", or Iterable of these
             The types of selections Streamlit should allow. This can be one of
             the following:
 
@@ -411,8 +438,12 @@ class ArrowMixin:
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
+            - "multi-cell": Multiple cells can be selected at a time.
+            - "single-cell": Only one cell can be selected at a time.
             - An ``Iterable`` of the above options: The table will allow
-              selection based on the modes specified.
+              selection based on the modes specified. However, if cell
+              selection modes are enabled, row and column selection modes
+              must not be.
 
             When column selections are enabled, column sorting is disabled.
 
