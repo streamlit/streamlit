@@ -15,16 +15,17 @@
  */
 
 import { CustomThemeConfig } from "@streamlit/lib/src/proto"
-import { LocalStore } from "@streamlit/lib/src/util/storageUtils"
 import {
   baseTheme,
   createAutoTheme,
   darkTheme,
   lightTheme,
 } from "@streamlit/lib/src/theme/index"
-import { ThemeConfig } from "@streamlit/lib/src/theme/types"
 import { fonts } from "@streamlit/lib/src/theme/primitives/typography"
+import { ThemeConfig } from "@streamlit/lib/src/theme/types"
+import { LocalStore } from "@streamlit/lib/src/util/storageUtils"
 
+import { hasLightBackgroundColor } from "./getColors"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
@@ -39,7 +40,6 @@ import {
   getHostSpecifiedTheme,
   getSystemTheme,
   getWrappedHeadersStyle,
-  hasLightBackgroundColor,
   isColor,
   isPresetTheme,
   removeCachedTheme,

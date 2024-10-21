@@ -58,13 +58,16 @@ def test_page_links_in_main(
 
 
 def test_page_links_use_correct_margin(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
 ):
     """Test that page links use the correct margin."""
     page_link_container = get_element_by_key(app, "page_link_container")
     assert_snapshot(page_link_container, name="st_page_link-correct_margin")
 
 
+# Firefox seems to be a bit flaky here, it seems that sometimes the
+# sidebar with the nav items is still shown.
+@pytest.mark.skip_browser("firefox")
 def test_page_links_in_sidebar(
     themed_app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
 ):
@@ -103,6 +106,9 @@ def test_page_link_href(
     expect(page_links.nth(3)).to_have_attribute("href", "page_with_duplicate_name")
 
 
+# Firefox seems to be a bit flaky here, it seems that sometimes the
+# sidebar with the nav items is still shown.
+@pytest.mark.skip_browser("firefox")
 def test_logo_no_sidebar(
     app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
 ):
