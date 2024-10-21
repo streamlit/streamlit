@@ -137,7 +137,7 @@ const ModalButton: FunctionComponent<
 )
 
 export type StreamlitModalProps = Omit<ModalProps, "size"> & {
-  size?: "auto" | "default" | "full" | number
+  size?: "auto" | "default" | "full"
 }
 
 /**
@@ -164,8 +164,6 @@ export function calculateModalSize(
     return `calc(${width} + ${paddingDifferenceDialogAndAppView})`
   } else if (size === "auto") {
     return SIZE.auto
-  } else if (typeof size === "number") {
-    return size
   }
 
   return SIZE.default
@@ -211,7 +209,7 @@ function Modal(props: StreamlitModalProps): ReactElement {
   const modalSize: ModalProps["size"] = calculateModalSize(
     props.size,
     sizes.contentMaxWidth,
-    spacing.lg
+    spacing.tenXL
   )
   const mergedOverrides = merge(defaultOverrides, props.overrides)
   const overridenProps = { ...props, size: modalSize }

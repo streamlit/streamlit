@@ -50,8 +50,4 @@ describe("calculateModalSize", () => {
     const size = calculateModalSize("full", "100px", "100px")
     expect(size).toBe("calc(100px + 100px)")
   })
-  it("returns the fixed size when the size is number", () => {
-    const size = calculateModalSize(1008)
-    expect(size).toBe(1008)
-  })
 })

@@ -60,7 +60,7 @@ function DeployModal(
 ): ReactElement {
   const { children, onClose } = props
   return (
-    <Modal isOpen={true} closeable={true} onClose={onClose} size={964}>
+    <Modal isOpen={true} closeable={true} onClose={onClose} size="full">
       <ModalHeader>Deploy this app using...</ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>
