@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useEffect, useRef } from "react"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
@@ -37,8 +37,25 @@ export default function Markdown({
   element,
 }: Readonly<MarkdownProps>): ReactElement {
   const styleProp = { width }
+  const markdownRef = useRef<HTMLDivElement>(null)
+
+  const applyCenterAlignment = () => {
+    if (markdownRef.current) {
+      const emotionDivs = markdownRef.current.querySelectorAll('.st-emotion-cache');
+
+      emotionDivs.forEach((div) => {
+        div.style.display = 'flex';
+        div.style.justifyContent = 'center';
+      });
+    }
+  };
+
+  useEffect(() => {
+    applyCenterAlignment();
+  }, [element.body]);
+
   return (
-    <div className="stMarkdown" data-testid="stMarkdown" style={styleProp}>
+    <div className="stMarkdown" data-testid="stMarkdown" style={styleProp} ref={markdownRef}>
       {element.help ? (
         <StyledLabelHelpWrapper>
           <StreamlitMarkdown
