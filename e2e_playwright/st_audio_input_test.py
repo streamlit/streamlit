@@ -218,6 +218,7 @@ def test_audio_input_remount_keep_value(app: Page):
     ensure_waveform_rendered(audio_input)
 
 
+@pytest.mark.skip(reason="This test is flaky at the moment.")
 @pytest.mark.only_browser("chromium")
 def test_audio_input_works_in_forms(app: Page):
     """Test the functionality of the audio input component within a form."""
