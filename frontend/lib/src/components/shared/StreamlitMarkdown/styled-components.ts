@@ -69,7 +69,7 @@ export const StyledStreamlitMarkdown =
           // than the content area.
           maxWidth: "100%",
           // In labels, widgets should never be taller than the text.
-          maxHeight: isLabel ? "1em" : "auto",
+          maxHeight: isLabel ? "1em" : undefined,
         },
 
         li: {

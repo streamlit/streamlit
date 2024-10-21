@@ -464,7 +464,6 @@ export function RenderedMarkdown({
   function remarkStreamlitLogo() {
     return (tree: any) => {
       function replaceStreamlit(): any {
-        console.log("found streamlit")
         return {
           type: "text",
           value: "",
@@ -473,7 +472,6 @@ export function RenderedMarkdown({
             hProperties: {
               src: streamlitLogo,
               alt: "Streamlit logo",
-              // style: "height: 0.75em; vertical-align: middle;",
               style: {
                 display: "inline-block",
                 // Disable selection for copying it as text.
