@@ -110,6 +110,9 @@ class RuntimeConfig:
     # True if the command used to start Streamlit was `streamlit hello`.
     is_hello: bool = False
 
+    # Custom path to watch for changes.
+    custom_watch_path: str | None = None
+
     # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code
     # creating a new Streamlit Runtime to configure the FragmentStorage instances
     # created by each new AppSession. We choose not to do this for now to avoid adding
