@@ -209,7 +209,7 @@ function Modal(props: StreamlitModalProps): ReactElement {
   const modalSize: ModalProps["size"] = calculateModalSize(
     props.size,
     sizes.contentMaxWidth,
-    spacing.tenXL
+    spacing.lg
   )
   const mergedOverrides = merge(defaultOverrides, props.overrides)
   const overridenProps = { ...props, size: modalSize }
