@@ -51,10 +51,10 @@ function DeployCard(
             borderLeftColor: colors.borderColor,
             borderRightColor: colors.borderColor,
 
-            borderTopLeftRadius: radii.none,
-            borderTopRightRadius: radii.none,
-            borderBottomLeftRadius: radii.none,
-            borderBottomRightRadius: radii.none,
+            borderTopLeftRadius: "none",
+            borderTopRightRadius: "none",
+            borderBottomLeftRadius: "none",
+            borderBottomRightRadius: "none",
 
             ":last-child": {
               borderRightStyle: "none",
