@@ -35,7 +35,6 @@ export default {
   inSidebar: false,
   breakpoints,
   colors: createEmotionColors(genericColors),
-  genericColors,
   fonts,
   fontSizes,
   fontWeights,

@@ -195,7 +195,7 @@ function Modal(props: StreamlitModalProps): ReactElement {
         borderTopRightRadius: radii.xxl,
         borderTopLeftRadius: radii.xxl,
         // make sure the modal is not too small on mobile
-        minWidth: "20rem",
+        minWidth: sizes.minPopupWidth,
       },
     },
     Close: {
