@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { readableColor } from "color2k"
 
 const codeLink = {
   // Streamline the style when inside anchors to avoid broken underline and more
