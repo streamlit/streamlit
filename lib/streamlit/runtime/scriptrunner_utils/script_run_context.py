@@ -98,6 +98,7 @@ class ScriptRunContext:
     current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: set[str] = field(default_factory=set)
+    action_ids: set[str] = field(default_factory=set)
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
@@ -151,6 +152,7 @@ class ScriptRunContext:
         self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids = set()
+        self.action_ids = set()
         self.has_dialog_opened = False
         in_cached_function.set(False)
 

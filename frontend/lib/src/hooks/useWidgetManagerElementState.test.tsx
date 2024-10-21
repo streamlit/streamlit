@@ -33,6 +33,7 @@ describe("useWidgetManagerElementState hook", () => {
   it("should initialize correctly with initial state", () => {
     const widgetMgr = new WidgetStateManager({
       formsDataChanged: jest.fn(),
+      sendFetchDataChunkMsg: jest.fn(),
       sendRerunBackMsg: jest.fn(),
     })
 
@@ -55,6 +56,7 @@ describe("useWidgetManagerElementState hook", () => {
   it("should set state correctly", () => {
     const widgetMgr = new WidgetStateManager({
       formsDataChanged: jest.fn(),
+      sendFetchDataChunkMsg: jest.fn(),
       sendRerunBackMsg: jest.fn(),
     })
 
@@ -88,6 +90,7 @@ describe("useWidgetManagerElementState hook", () => {
     const widgetMgr = new WidgetStateManager({
       formsDataChanged: jest.fn(),
       sendRerunBackMsg: jest.fn(),
+      sendFetchDataChunkMsg: jest.fn(),
     })
 
     const TestComponent: FC = () => {

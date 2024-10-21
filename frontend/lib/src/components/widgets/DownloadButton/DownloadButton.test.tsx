@@ -43,6 +43,7 @@ const getProps = (
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
+    sendFetchDataChunkMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
   endpoints: mockEndpoints(),

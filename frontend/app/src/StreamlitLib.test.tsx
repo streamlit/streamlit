@@ -109,6 +109,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     // Initialize managers
     this.widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: this.sendRerunBackMsg,
+      sendFetchDataChunkMsg: jest.fn(),
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 

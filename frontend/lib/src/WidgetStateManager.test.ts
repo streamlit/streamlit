@@ -84,6 +84,7 @@ describe("Widget State Manager", () => {
     })
     widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: sendBackMsg,
+      sendFetchDataChunkMsg: jest.fn(),
       formsDataChanged: onFormsDataChanged,
     })
   })
@@ -1112,6 +1113,7 @@ describe("WidgetStateDict", () => {
   it("supplies WidgetStates with for active widgets based on input", () => {
     const widgetStateManager = new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
+      sendFetchDataChunkMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     })
 
