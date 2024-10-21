@@ -57,8 +57,8 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
     return {
       border: "none",
       backgroundColor: theme.colors.transparent,
-      borderTopRightRadius: extended ? theme.radii.none : theme.radii.default,
-      borderTopLeftRadius: extended ? theme.radii.default : theme.radii.none,
+      borderTopRightRadius: extended ? "0" : theme.radii.default,
+      borderTopLeftRadius: extended ? theme.radii.default : "0",
       borderBottomRightRadius: theme.radii.default,
       display: "inline-flex",
       alignItems: "center",
@@ -101,8 +101,10 @@ export const StyledSendIconButtonContainer = styled.div({
   pointerEvents: "none",
 })
 
-export const StyledInputInstructionsContainer = styled.div({
+export const StyledInputInstructionsContainer = styled.div(({ theme }) => ({
   position: "absolute",
   bottom: "0px",
-  right: "3rem",
-})
+  // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
+  // and some additional margin between the icon and the text (spacing.sm).
+  right: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
+}))

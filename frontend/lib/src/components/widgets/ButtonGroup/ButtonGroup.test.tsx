@@ -134,7 +134,7 @@ describe("ButtonGroup widget", () => {
     const props = getProps({
       default: [],
       options: options,
-      style: ButtonGroupProto.Style.SEGMENT,
+      style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
     })
     render(<ButtonGroup {...props} />)
 
@@ -143,14 +143,14 @@ describe("ButtonGroup widget", () => {
     expect(buttons).toHaveLength(options.length)
 
     let button = buttons[0]
-    expect(button).toHaveAttribute("kind", "icon")
+    expect(button).toHaveAttribute("kind", "segmented_control")
     let text = within(button).getByTestId("stMarkdownContainer")
     expect(text.textContent).toContain(materialIconNames[0])
     let icon = within(button).getByTestId("stIconEmoji")
     expect(icon.textContent).toContain("🔥")
 
     button = buttons[1]
-    expect(button).toHaveAttribute("kind", "icon")
+    expect(button).toHaveAttribute("kind", "segmented_control")
     text = within(button).getByTestId("stMarkdownContainer")
     expect(text.textContent).toContain(materialIconNames[1])
     icon = within(button).getByTestId("stIconMaterial")
@@ -330,7 +330,7 @@ describe("ButtonGroup widget", () => {
       )
     })
 
-    it("renders correct button style", () => {
+    it("renders correct pills button style", () => {
       const props = getProps({
         default: [],
         options: options,
@@ -342,6 +342,21 @@ describe("ButtonGroup widget", () => {
       expect(buttons).toHaveLength(options.length)
       buttons.forEach(button => {
         expect(button).toHaveAttribute("kind", "pills")
+      })
+    })
+
+    it("renders correct segmented control button style", () => {
+      const props = getProps({
+        default: [],
+        options: options,
+        style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
+      })
+      render(<ButtonGroup {...props} />)
+
+      const buttons = getButtonGroupButtons()
+      expect(buttons).toHaveLength(options.length)
+      buttons.forEach(button => {
+        expect(button).toHaveAttribute("kind", "segmented_control")
       })
     })
 
@@ -482,12 +497,12 @@ describe("ButtonGroup widget", () => {
       const props = getProps({
         default: [],
         options: materialIconOnlyOptions,
-        style: ButtonGroupProto.Style.SEGMENT,
+        style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
       })
       render(<ButtonGroup {...props} />)
       const buttons = getButtonGroupButtons()
       buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "icon")
+        expect(button).toHaveAttribute("kind", "segmented_control")
         const icon = within(button).getByTestId("stIconMaterial")
         expect(icon.textContent).toContain(materialIconNames[index])
         expect(icon).toHaveStyle("width: 1rem")
@@ -582,5 +597,21 @@ describe("ButtonGroup getContentElement", () => {
     expect(children[1]).toBe("")
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
+  })
+
+  it("tests element with content, icon and non-borderless-style", () => {
+    const { element, kind, size } = getContentElement(
+      "foo",
+      "bar",
+      ButtonGroupProto.Style.PILLS
+    )
+
+    expect(element.type).toBe(React.Fragment)
+    const { children } = element.props
+    expect(children).toHaveLength(2)
+    expect(children[0].type).toBe(DynamicIcon)
+    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(kind).toBe(BaseButtonKind.PILLS)
+    expect(size).toBe(BaseButtonSize.MEDIUM)
   })
 })

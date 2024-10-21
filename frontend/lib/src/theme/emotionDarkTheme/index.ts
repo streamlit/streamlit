@@ -22,10 +22,6 @@ import genericColors from "./themeColors"
 export default {
   ...emotionBaseTheme,
   inSidebar: false,
-  genericColors: {
-    ...emotionBaseTheme.genericColors,
-    ...genericColors,
-  },
   colors: createEmotionColors({
     ...emotionBaseTheme.colors,
     ...genericColors,
