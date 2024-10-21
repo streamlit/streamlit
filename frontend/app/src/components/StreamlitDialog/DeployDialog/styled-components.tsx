@@ -46,7 +46,7 @@ export const StyledSubheader = styled.div(({ theme }) => ({
 
 export const StyledCardContainer = styled.div(({ theme }) => ({
   display: "grid",
-  maxWidth: `calc(1.2 * ${theme.sizes.contentMaxWidth})`,
+  maxWidth: `calc(1.25 * ${theme.sizes.contentMaxWidth})`,
   gridTemplateColumns: "1fr 1fr 1fr",
   gridGap: theme.spacing.none,
 
