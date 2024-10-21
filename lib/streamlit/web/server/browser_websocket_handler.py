@@ -39,6 +39,29 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 
+def _get_user_info_from_request(
+    request: tornado.web.HTTPServerRequest,
+) -> dict[str, str | None]:
+    # Extract user info from the X-Streamlit-User header
+    if header_content := request.headers.get("X-Streamlit-User"):
+        try:
+            payload = base64.b64decode(header_content)
+            user_obj = json.loads(payload)
+            email = user_obj["email"]
+            is_public_cloud_app = user_obj["isPublicCloudApp"]
+        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
+            return {"email": "test@example.com"}
+        return {"email": None if is_public_cloud_app else email}
+    if header_content := request.headers.get("X-Goog-Iap-Jwt-Assertion"):
+        try:
+            payload = base64.b64decode(header_content.split(".")[1])
+            user_obj = json.loads(payload)
+            return {"email": user_obj["email"]}
+        except (IndexError, KeyError, binascii.Error, json.decoder.JSONDecodeError):
+            return {"email": None}
+    return {"email": "test@example.com"}
+
+
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     """Handles a WebSocket connection from the browser"""
 
@@ -91,21 +114,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         return None
 
     def open(self, *args, **kwargs) -> Awaitable[None] | None:
-        # Extract user info from the X-Streamlit-User header
-        is_public_cloud_app = False
-
-        try:
-            header_content = self.request.headers["X-Streamlit-User"]
-            payload = base64.b64decode(header_content)
-            user_obj = json.loads(payload)
-            email = user_obj["email"]
-            is_public_cloud_app = user_obj["isPublicCloudApp"]
-        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
-            email = "test@example.com"
-
-        user_info: dict[str, str | None] = {
-            "email": None if is_public_cloud_app else email
-        }
+        user_info: dict[str, str | None] = _get_user_info_from_request(self.request)
 
         existing_session_id = None
         try:
