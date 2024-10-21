@@ -16,6 +16,8 @@
 
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
+import { EmotionTheme } from "./types"
+
 export type DerivedColors = {
   linkText: string
   fadedText05: string
@@ -85,6 +87,10 @@ export const computeDerivedColors = (
   }
 }
 
+export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
+  return getLuminance(theme.colors.bgColor) > 0.5
+}
+
 export const createEmotionColors = (genericColors: {
   [key: string]: string
 }): { [key: string]: string } => {
@@ -93,27 +99,15 @@ export const createEmotionColors = (genericColors: {
     ...genericColors,
     ...derivedColors,
 
-    // Alerts
-    alertErrorBorderColor: genericColors.dangerBg,
-    alertErrorBackgroundColor: genericColors.dangerBg,
-    alertErrorTextColor: genericColors.danger,
-
-    alertInfoBorderColor: genericColors.infoBg,
-    alertInfoBackgroundColor: genericColors.infoBg,
-    alertInfoTextColor: genericColors.info,
-
-    alertSuccessBorderColor: genericColors.successBg,
-    alertSuccessBackgroundColor: genericColors.successBg,
-    alertSuccessTextColor: genericColors.success,
-
-    alertWarningBorderColor: genericColors.warningBg,
-    alertWarningBackgroundColor: genericColors.warningBg,
-    alertWarningTextColor: genericColors.warning,
-
     codeTextColor: genericColors.green80,
     codeHighlightColor: derivedColors.bgMix,
 
+    metricPositiveDeltaColor: genericColors.green,
+    metricNegativeDeltaColor: genericColors.red,
+    metricNeutralDeltaColor: derivedColors.fadedText60,
+
     docStringModuleText: genericColors.bodyText,
+    docStringTypeText: genericColors.green70,
     docStringContainerBackground: transparentize(
       genericColors.secondaryBg,
       0.6
@@ -121,4 +115,200 @@ export const createEmotionColors = (genericColors: {
 
     headingColor: genericColors.bodyText,
   }
+}
+
+export function getDividerColors(theme: EmotionTheme): any {
+  const lightTheme = hasLightBackgroundColor(theme)
+  const blue = lightTheme ? theme.colors.blue60 : theme.colors.blue90
+  const green = lightTheme ? theme.colors.green60 : theme.colors.green90
+  const orange = lightTheme ? theme.colors.orange60 : theme.colors.orange90
+  const red = lightTheme ? theme.colors.red60 : theme.colors.red90
+  const violet = lightTheme ? theme.colors.purple60 : theme.colors.purple80
+  const gray = lightTheme ? theme.colors.gray40 : theme.colors.gray70
+
+  return {
+    blue: blue,
+    green: green,
+    orange: orange,
+    red: red,
+    violet: violet,
+    gray: gray,
+    grey: gray,
+    rainbow: `linear-gradient(to right, ${red}, ${orange}, ${green}, ${blue}, ${violet})`,
+  }
+}
+
+export function getMarkdownTextColors(theme: EmotionTheme): any {
+  const lightTheme = hasLightBackgroundColor(theme)
+  const red = lightTheme ? theme.colors.red80 : theme.colors.red70
+  const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
+  const yellow = lightTheme ? theme.colors.yellow100 : theme.colors.yellow40
+  const green = lightTheme ? theme.colors.green90 : theme.colors.green60
+  const blue = lightTheme ? theme.colors.blue80 : theme.colors.blue50
+  const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
+  const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
+  const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
+  return {
+    red: red,
+    orange: orange,
+    yellow: yellow,
+    green: green,
+    blue: blue,
+    violet: violet,
+    purple: purple,
+    gray: gray,
+  }
+}
+
+export function getMarkdownBgColors(theme: EmotionTheme): any {
+  const lightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    redbg: transparentize(
+      theme.colors[lightTheme ? "red80" : "red60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    orangebg: transparentize(theme.colors.yellow70, lightTheme ? 0.9 : 0.7),
+    yellowbg: transparentize(
+      theme.colors[lightTheme ? "yellow70" : "yellow50"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    greenbg: transparentize(
+      theme.colors[lightTheme ? "green70" : "green60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    bluebg: transparentize(
+      theme.colors[lightTheme ? "blue70" : "blue60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    violetbg: transparentize(
+      theme.colors[lightTheme ? "purple70" : "purple60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    purplebg: transparentize(
+      theme.colors[lightTheme ? "purple90" : "purple80"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    graybg: transparentize(
+      theme.colors[lightTheme ? "gray70" : "gray50"],
+      lightTheme ? 0.9 : 0.7
+    ),
+  }
+}
+
+export function getGray70(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray70
+    : theme.colors.gray30
+}
+
+export function getGray30(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray30
+    : theme.colors.gray85
+}
+
+export function getGray90(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray90
+    : theme.colors.gray10
+}
+
+export function getBlue80(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blue80
+    : theme.colors.blue40
+}
+function getBlueArrayAsc(theme: EmotionTheme): string[] {
+  const { colors } = theme
+  return [
+    colors.blue10,
+    colors.blue20,
+    colors.blue30,
+    colors.blue40,
+    colors.blue50,
+    colors.blue60,
+    colors.blue70,
+    colors.blue80,
+    colors.blue90,
+    colors.blue100,
+  ]
+}
+function getBlueArrayDesc(theme: EmotionTheme): string[] {
+  const { colors } = theme
+  return [
+    colors.blue100,
+    colors.blue90,
+    colors.blue80,
+    colors.blue70,
+    colors.blue60,
+    colors.blue50,
+    colors.blue40,
+    colors.blue30,
+    colors.blue20,
+    colors.blue10,
+  ]
+}
+
+export function getSequentialColorsArray(theme: EmotionTheme): string[] {
+  return hasLightBackgroundColor(theme)
+    ? getBlueArrayAsc(theme)
+    : getBlueArrayDesc(theme)
+}
+
+export function getDivergingColorsArray(theme: EmotionTheme): string[] {
+  const { colors } = theme
+  return [
+    colors.red100,
+    colors.red90,
+    colors.red70,
+    colors.red50,
+    colors.red30,
+    colors.blue30,
+    colors.blue50,
+    colors.blue70,
+    colors.blue90,
+    colors.blue100,
+  ]
+}
+
+export function getCategoricalColorsArray(theme: EmotionTheme): string[] {
+  const { colors } = theme
+  return hasLightBackgroundColor(theme)
+    ? [
+        colors.blue80,
+        colors.blue40,
+        colors.red80,
+        colors.red40,
+        colors.blueGreen80,
+        colors.green40,
+        colors.orange80,
+        colors.orange50,
+        colors.purple80,
+        colors.gray40,
+      ]
+    : [
+        colors.blue40,
+        colors.blue80,
+        colors.red40,
+        colors.red80,
+        colors.green40,
+        colors.blueGreen80,
+        colors.orange50,
+        colors.orange80,
+        colors.purple80,
+        colors.gray40,
+      ]
+}
+
+export function getDecreasingRed(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.red80
+    : theme.colors.red40
+}
+
+export function getIncreasingGreen(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blueGreen80
+    : theme.colors.green40
 }
