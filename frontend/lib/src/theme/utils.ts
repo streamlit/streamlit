@@ -234,7 +234,6 @@ export const createEmotionTheme = (
   return {
     ...baseThemeConfig.emotion,
     colors: createEmotionColors(newGenericColors),
-    genericColors: newGenericColors,
     genericFonts: {
       ...genericFonts,
       ...(parsedFont && {
@@ -272,7 +271,7 @@ export type ExportedTheme = {
 } & DerivedColors
 
 export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
-  const { genericColors } = theme
+  const { colors } = theme
   const themeInput = toThemeInput(theme)
 
   // At this point, we know that all of the fields of themeInput are populated
@@ -287,7 +286,7 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
     base: bgColorToBaseString(themeInput.backgroundColor),
     font: fontEnumToString(themeInput.font) as string,
 
-    ...computeDerivedColors(genericColors),
+    ...computeDerivedColors(colors),
   }
 }
 
