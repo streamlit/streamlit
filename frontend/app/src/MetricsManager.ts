@@ -104,12 +104,12 @@ export class MetricsManager {
     // Trigger fallback to fetch default metrics config if not provided by host
     if (this.actuallySendMetrics && !this.metricsUrl) {
       this.requestDefaultMetricsConfig()
-    }
 
-    // If metricsUrl still undefined, deactivate metrics
-    if (!this.metricsUrl) {
-      logError("Undefined metrics config")
-      this.actuallySendMetrics = false
+      // If metricsUrl still undefined, deactivate metrics
+      if (!this.metricsUrl) {
+        logError("Undefined metrics config")
+        this.actuallySendMetrics = false
+      }
     }
 
     if (this.actuallySendMetrics) {

@@ -17,10 +17,14 @@
 // Disable Typescript checking, since mm.track has private scope
 // @ts-nocheck
 
+import UAParser from "ua-parser-js"
+
 import {
+  MetricsEvent,
   mockSessionInfo,
   mockSessionInfoProps,
   SessionInfo,
+  setCookie,
 } from "@streamlit/lib"
 
 import { DEFAULT_METRICS_CONFIG, MetricsManager } from "./MetricsManager"
@@ -54,8 +58,67 @@ global.AbortSignal = {
   timeout: jest.fn(),
 }
 
+const DEFAULT_EVENT_DATA = {
+  reportHash: "Not initialized",
+  dev: false,
+  source: "browser",
+  streamlitVersion: "mockStreamlitVersion",
+  isHello: false,
+  machineIdV3: "mockInstallationIdV3",
+  contextPageUrl: window.location.href,
+  contextPageTitle: document.title,
+  contextPagePath: window.location.pathname,
+  contextPageReferrer: document.referrer,
+  contextPageSearch: window.location.search,
+  contextLocale: window.navigator.userLanguage || window.navigator.language,
+  contextUserAgent: window.navigator.userAgent,
+}
+
+const UPDATE_EVENT_DATA = {
+  ...DEFAULT_EVENT_DATA,
+  reportHash: "mockAppHash",
+}
+
+// Checks generic metric event fields
+const checkDefaultEventData = (
+  generatedProto: MetricsEvent,
+  afterUpdateReport = true
+): void => {
+  const expectedData = afterUpdateReport
+    ? UPDATE_EVENT_DATA
+    : DEFAULT_EVENT_DATA
+  // Check general metrics fields
+  expect(generatedProto.anonymousId).toHaveLength(36)
+  expect(generatedProto.reportHash).toEqual(expectedData.reportHash)
+  expect(generatedProto.dev).toEqual(expectedData.dev)
+  expect(generatedProto.source).toEqual(expectedData.source)
+  expect(generatedProto.streamlitVersion).toEqual(
+    expectedData.streamlitVersion
+  )
+  expect(generatedProto.isHello).toEqual(expectedData.isHello)
+  expect(generatedProto.machineIdV3).toEqual(expectedData.machineIdV3)
+  // Context Data Fields
+  expect(generatedProto.contextPageUrl).toEqual(expectedData.contextPageUrl)
+  expect(generatedProto.contextPageTitle).toEqual(
+    expectedData.contextPageTitle
+  )
+  expect(generatedProto.contextPagePath).toEqual(expectedData.contextPagePath)
+  expect(generatedProto.contextPageReferrer).toEqual(
+    expectedData.contextPageReferrer
+  )
+  expect(generatedProto.contextPageSearch).toEqual(
+    expectedData.contextPageSearch
+  )
+  expect(generatedProto.contextLocale).toEqual(expectedData.contextLocale)
+  expect(generatedProto.contextUserAgent).toEqual(
+    expectedData.contextUserAgent
+  )
+}
+
 afterEach(() => {
   window.analytics = undefined
+  window.localStorage.clear()
+  setCookie("ajs_anonymous_id")
 })
 
 test("does not track while uninitialized", () => {
@@ -135,6 +198,140 @@ describe("initialize", () => {
     expect(window.analytics.invoked).toBe(true)
     expect(window.analytics.methods).toHaveLength(20)
     expect(window.analytics.load).toBeDefined()
+  })
+})
+
+describe("metrics helpers", () => {
+  const RESULT = new UAParser().getResult()
+
+  const PAGE_PROFILE_DATA = {
+    commands: [],
+    execTime: 50,
+    prepTime: 50,
+    config: {},
+    uncaughtException: [],
+    attributions: ["streamlit_extras"],
+    timezone: "('UTC', 'UTC')",
+    headless: false,
+    isFragmentRun: false,
+    os: RESULT.os.name || "Unknown",
+    appId: "mockAppId",
+    numPages: 1,
+    sessionId: "mockSessionId",
+    pythonVersion: "7.7.7",
+    pageScriptHash: "mockPageScriptHash",
+    activeTheme: "Use system setting",
+    totalLoadTime: 100,
+    browserName: RESULT.browser.name || "Unknown",
+    browserVersion: RESULT.browser.version || "Unknown",
+    deviceType: RESULT.device.type || "Unknown",
+  }
+  test("buildEventProto populates expected fields - viewReport", () => {
+    const mm = getMetricsManager()
+    mm.initialize({ gatherUsageStats: true })
+    const viewReportProto = mm.buildEventProto("viewReport")
+
+    expect(viewReportProto.event).toEqual("viewReport")
+    checkDefaultEventData(viewReportProto, false)
+  })
+
+  test("buildEventProto populates expected fields - updateReport", () => {
+    const mm = getMetricsManager()
+    mm.initialize({ gatherUsageStats: true })
+    mm.setAppHash("mockAppHash")
+    const updateReportProto = mm.buildEventProto("updateReport")
+
+    expect(updateReportProto.event).toEqual("updateReport")
+    checkDefaultEventData(updateReportProto)
+  })
+
+  test("buildEventProto populates expected fields - pageProfile", () => {
+    const mm = getMetricsManager()
+    mm.initialize({ gatherUsageStats: true })
+    mm.setAppHash("mockAppHash")
+    const pageProfileProto = mm.buildEventProto(
+      "pageProfile",
+      PAGE_PROFILE_DATA
+    )
+
+    expect(pageProfileProto.event).toEqual("pageProfile")
+    checkDefaultEventData(pageProfileProto)
+    // Additional Page Profile Event Fields
+    expect(pageProfileProto.commands).toEqual(PAGE_PROFILE_DATA.commands)
+    expect(pageProfileProto.execTime).toEqual(PAGE_PROFILE_DATA.execTime)
+    expect(pageProfileProto.prepTime).toEqual(PAGE_PROFILE_DATA.prepTime)
+    expect(pageProfileProto.config).toEqual(PAGE_PROFILE_DATA.config)
+    expect(pageProfileProto.uncaughtException).toEqual(
+      PAGE_PROFILE_DATA.uncaughtException
+    )
+    expect(pageProfileProto.attributions).toEqual(
+      PAGE_PROFILE_DATA.attributions
+    )
+    expect(pageProfileProto.timezone).toEqual(PAGE_PROFILE_DATA.timezone)
+    expect(pageProfileProto.headless).toEqual(PAGE_PROFILE_DATA.headless)
+    expect(pageProfileProto.isFragmentRun).toEqual(
+      PAGE_PROFILE_DATA.isFragmentRun
+    )
+    expect(pageProfileProto.os).toEqual(PAGE_PROFILE_DATA.os)
+    expect(pageProfileProto.appId).toEqual(PAGE_PROFILE_DATA.appId)
+    expect(pageProfileProto.numPages).toEqual(PAGE_PROFILE_DATA.numPages)
+    expect(pageProfileProto.sessionId).toEqual(PAGE_PROFILE_DATA.sessionId)
+    expect(pageProfileProto.pythonVersion).toEqual(
+      PAGE_PROFILE_DATA.pythonVersion
+    )
+    expect(pageProfileProto.pageScriptHash).toEqual(
+      PAGE_PROFILE_DATA.pageScriptHash
+    )
+    expect(pageProfileProto.activeTheme).toEqual(PAGE_PROFILE_DATA.activeTheme)
+    expect(pageProfileProto.totalLoadTime).toEqual(
+      PAGE_PROFILE_DATA.totalLoadTime
+    )
+    expect(pageProfileProto.browserName).toEqual(PAGE_PROFILE_DATA.browserName)
+    expect(pageProfileProto.browserVersion).toEqual(
+      PAGE_PROFILE_DATA.browserVersion
+    )
+    expect(pageProfileProto.deviceType).toEqual(PAGE_PROFILE_DATA.deviceType)
+  })
+
+  test("buildEventProto populates expected fields - menuClick", () => {
+    const mm = getMetricsManager()
+    mm.initialize({ gatherUsageStats: true })
+    mm.setAppHash("mockAppHash")
+    const menuClickProto = mm.buildEventProto("menuClick", {
+      label: "mockLabel",
+    })
+    expect(menuClickProto.event).toEqual("menuClick")
+    checkDefaultEventData(menuClickProto)
+    // Additional Menu Click Event Fields
+    expect(menuClickProto.label).toEqual("mockLabel")
+  })
+
+  test("getAnonymousId is called on initialization, saves uuid to this.anonymousId", () => {
+    const mm = getMetricsManager()
+    expect(mm.anonymousId).toBe("")
+    mm.initialize({ gatherUsageStats: true })
+    expect(mm.anonymousId).toHaveLength(36)
+  })
+
+  test("getAnonymousId checks for cached anonymousId in cookie and localStorage", () => {
+    expect(localStorage.getItem("ajs_anonymous_id")).toBeNull()
+    expect(document.cookie).not.toContain("ajs_anonymous_id")
+
+    const setCookieSpy = jest.spyOn(document, "cookie", "set")
+    const getCookieSpy = jest.spyOn(document, "cookie", "get")
+    // eslint-disable-next-line no-proto
+    const getItemSpy = jest.spyOn(window.localStorage.__proto__, "getItem")
+    const setItemSpy = jest.spyOn(window.localStorage.__proto__, "setItem")
+    const mm = getMetricsManager()
+    mm.initialize({ gatherUsageStats: true })
+
+    expect(getItemSpy).toBeCalledWith("ajs_anonymous_id")
+    expect(getCookieSpy).toHaveBeenCalled()
+    expect(setCookieSpy).toHaveBeenCalled()
+    expect(setItemSpy).toHaveBeenCalled()
+    expect(mm.anonymousId).toHaveLength(36)
+    expect(localStorage.getItem("ajs_anonymous_id")).toHaveLength(36)
+    expect(document.cookie).toContain("ajs_anonymous_id")
   })
 })
 
