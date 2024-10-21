@@ -240,6 +240,11 @@ def test_audio_input_works_in_forms(app: Page):
     # Verify the form state has not changed yet
     expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
 
+    # TODO(lukasmasuch): This is a workaround to prevent flakiness.
+    # The issue seems to be that the file hasn't fully uploaded yet when
+    # it gets cleared by clicking the submit button.
+    app.wait_for_timeout(2000)
+
     # Submit the form and verify the state update
     click_form_button(app, "Submit")
     wait_for_app_run(app)
