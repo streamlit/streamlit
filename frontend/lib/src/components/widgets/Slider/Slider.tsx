@@ -83,7 +83,7 @@ function Slider({
     fragmentId,
   })
 
-  // We tie the UI to `uiValue` rather than `value` becase `value` only updates
+  // We tie the UI to `uiValue` rather than `value` because `value` only updates
   // every DEBOUNCE_TIME_MS. If we tied the UI to `value` then the UI would only
   // update every DEBOUNCE_TIME_MS as well. So this keeps the UI smooth.
   const [uiValue, setUiValue] = useState(value)
