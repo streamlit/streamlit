@@ -62,6 +62,8 @@ export interface BaseColumnProps {
   readonly isHidden: boolean
   // If `True`, the column is a table index:
   readonly isIndex: boolean
+  // If `True`, the column is pinned/frozen:
+  readonly isPinned: boolean
   // If `True`, the column is a stretched:
   readonly isStretched: boolean
   // If `True`, a value is required before the cell or row can be submitted:

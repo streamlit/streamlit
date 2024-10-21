@@ -165,6 +165,7 @@ describe("EditingState class", () => {
       isRequired: true,
       isHidden: false,
       isIndex: false,
+      isPinned: false,
       isStretched: false,
     } as BaseColumnProps
 
@@ -216,6 +217,7 @@ describe("EditingState class", () => {
       isEditable: false,
       isHidden: false,
       isIndex: false,
+      isPinned: false,
       isStretched: false,
     } as BaseColumnProps
 
@@ -272,6 +274,7 @@ describe("EditingState class", () => {
       isRequired: false,
       isHidden: false,
       isIndex: false,
+      isPinned: false,
       isStretched: false,
     } as BaseColumnProps
 
@@ -318,6 +321,7 @@ describe("EditingState class", () => {
       isRequired: false,
       isHidden: false,
       isIndex: false,
+      isPinned: false,
       isStretched: false,
     } as BaseColumnProps
 

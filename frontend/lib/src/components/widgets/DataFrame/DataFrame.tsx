@@ -582,12 +582,11 @@ function DataFrame({
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
-  // The index columns are always at the beginning of the table,
-  // so we can just count them to determine the number of columns
-  // that should be frozen.
+  // All pinned columns are expected to be moved to the beginning
+  // in useColumnLoader. So we can just count all pinned columns here.
   const freezeColumns = isEmptyTable
     ? 0
-    : columns.filter((col: BaseColumn) => col.isIndex).length
+    : columns.filter((col: BaseColumn) => col.isPinned).length
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {

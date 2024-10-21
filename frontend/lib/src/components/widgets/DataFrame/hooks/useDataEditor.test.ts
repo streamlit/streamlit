@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { renderHook } from "@testing-library/react-hooks"
 import {
   CompactSelection,
   GridSelection,
   TextCell,
 } from "@glideapps/glide-data-grid"
+import { renderHook } from "@testing-library/react-hooks"
 
 import {
   BaseColumn,
@@ -44,6 +44,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: true,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
   }),
   TextColumn({
@@ -58,6 +59,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: true,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
     defaultValue: "foo",
     columnTypeOptions: {
