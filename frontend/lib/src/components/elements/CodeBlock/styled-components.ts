@@ -56,6 +56,8 @@ export const StyledPre = styled.pre(({ theme }) => ({
   overflow: "auto",
   // Add padding
   padding: theme.spacing.lg,
+  // Add padding to the right to account for the copy button
+  paddingRight: theme.iconSizes.threeXL,
 
   code: {
     background: "transparent",
