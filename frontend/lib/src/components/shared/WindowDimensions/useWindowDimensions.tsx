@@ -18,7 +18,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { useTheme } from "@emotion/react"
 
-import { convertScssRemValueToPixels } from "@streamlit/lib/src/util/utils"
+import { convertRemToPx } from "@streamlit/lib/src/theme/utils"
 
 export type WindowDimensions = {
   fullWidth: number
@@ -33,10 +33,8 @@ export const useWindowDimensions = (): WindowDimensions => {
   })
 
   const getWindowDimensions = useCallback((): WindowDimensions => {
-    const padding = convertScssRemValueToPixels(theme.spacing.md)
-    const paddingTop = convertScssRemValueToPixels(
-      theme.sizes.fullScreenHeaderHeight
-    )
+    const padding = convertRemToPx(theme.spacing.md)
+    const paddingTop = convertRemToPx(theme.sizes.fullScreenHeaderHeight)
 
     return {
       fullWidth: window.innerWidth - padding * 2, // Left and right

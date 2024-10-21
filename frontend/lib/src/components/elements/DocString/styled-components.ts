@@ -27,7 +27,7 @@ export const StyledDocName = styled.span(({ theme }) => ({
 }))
 
 export const StyledDocType = styled.span(({ theme }) => ({
-  color: theme.colors.green70,
+  color: theme.colors.docStringTypeText,
 }))
 
 export const StyledDocValue = styled.span()

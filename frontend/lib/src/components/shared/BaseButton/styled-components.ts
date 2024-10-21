@@ -316,7 +316,7 @@ export const StyledPillsButton = styled(
   StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    borderRadius: theme.radii.xxxl,
+    borderRadius: theme.radii.full,
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
     gap: theme.spacing.xs,
   }
@@ -342,7 +342,7 @@ export const StyledSegmentedControlButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
-    borderRadius: theme.radii.none,
+    borderRadius: "0",
     flex: "1 0 fit-content",
     maxWidth: "100%",
     marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
