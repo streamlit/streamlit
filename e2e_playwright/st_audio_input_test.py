@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
 def stop_recording(audio_input: Locator, app: Page):
     """Stop recording audio and wait for the recording to complete."""
     audio_input.get_by_role("button", name="Stop recording").click()
-    app.wait_for_timeout(10000)  # ci seems to be very slow so adding wait here
+    app.wait_for_timeout(5000)  # ci seems to be very slow so adding wait here
 
 
 def ensure_waveform_is_not_rendered(audio_input: Locator):
