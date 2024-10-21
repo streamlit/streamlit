@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
 def stop_recording(audio_input: Locator, app: Page):
     """Stop recording audio and wait for the recording to complete."""
     audio_input.get_by_role("button", name="Stop recording").click()
-    app.wait_for_timeout(5000)  # ci seems to be very slow so adding wait here
+    app.wait_for_timeout(10000)  # ci seems to be very slow so adding wait here
 
 
 def ensure_waveform_is_not_rendered(audio_input: Locator):
@@ -239,11 +239,6 @@ def test_audio_input_works_in_forms(app: Page):
 
     # Verify the form state has not changed yet
     expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
-
-    # TODO(lukasmasuch): This is a workaround to prevent flakiness.
-    # The issue seems to be that the file hasn't fully uploaded yet when
-    # it gets cleared by clicking the submit button.
-    app.wait_for_timeout(2000)
 
     # Submit the form and verify the state update
     click_form_button(app, "Submit")
