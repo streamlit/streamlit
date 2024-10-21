@@ -58,7 +58,7 @@ def test_page_links_in_main(
 
 
 def test_page_links_use_correct_margin(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
 ):
     """Test that page links use the correct margin."""
     page_link_container = get_element_by_key(app, "page_link_container")
