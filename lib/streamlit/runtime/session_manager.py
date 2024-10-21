@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Protocol, cast
+from typing import TYPE_CHECKING, Callable, cast
 
 if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -30,7 +30,7 @@ class SessionClientDisconnectedError(Exception):
     """Raised by operations on a disconnected SessionClient."""
 
 
-class SessionClient(Protocol):
+class SessionClient(ABC):
     """Interface for sending data to a session's client."""
 
     @abstractmethod
@@ -89,7 +89,7 @@ class SessionStorageError(Exception):
     """
 
 
-class SessionStorage(Protocol):
+class SessionStorage(ABC):
     @abstractmethod
     def get(self, session_id: str) -> SessionInfo | None:
         """Return the SessionInfo corresponding to session_id, or None if one does not
@@ -168,7 +168,7 @@ class SessionStorage(Protocol):
         raise NotImplementedError
 
 
-class SessionManager(Protocol):
+class SessionManager(ABC):
     """SessionManagers are responsible for encapsulating all session lifecycle behavior
     that the Streamlit Runtime may care about.
 

@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Protocol
 
 
 class MediaFileKind(Enum):
@@ -39,7 +38,7 @@ class MediaFileStorageError(Exception):
     """
 
 
-class MediaFileStorage(Protocol):
+class MediaFileStorage(ABC):
     @abstractmethod
     def load_and_get_id(
         self,

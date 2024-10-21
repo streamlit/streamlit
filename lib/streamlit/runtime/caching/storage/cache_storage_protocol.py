@@ -55,9 +55,9 @@ entries for a single `@st.cache_data` decorated function.
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Literal
 
 
 class CacheStorageError(Exception):
@@ -111,7 +111,7 @@ class CacheStorageContext:
     persist: Literal["disk"] | None = None
 
 
-class CacheStorage(Protocol):
+class CacheStorage(ABC):
     """Cache storage protocol, that should be implemented by the concrete cache storages.
     Used to store cached values for a single `@st.cache_data` decorated function
     serialized as bytes.
@@ -159,7 +159,7 @@ class CacheStorage(Protocol):
         pass
 
 
-class CacheStorageManager(Protocol):
+class CacheStorageManager(ABC):
     """Cache storage manager protocol, that should be implemented by the concrete
     cache storage managers.
 

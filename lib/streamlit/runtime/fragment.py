@@ -17,10 +17,10 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import inspect
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -45,7 +45,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
 
 
-class FragmentStorage(Protocol):
+class FragmentStorage(ABC):
     """A key-value store for Fragments. Used to implement the @st.fragment decorator.
 
     We intentionally define this as its own protocol despite how generic it appears to
