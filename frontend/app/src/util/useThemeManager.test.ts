@@ -170,7 +170,7 @@ describe("useThemeManager", () => {
     const updatedTheme: ThemeConfig = themeManager2.activeTheme
 
     expect(updatedTheme.name).toBe(CUSTOM_THEME_NAME)
-    expect(updatedTheme.emotion.genericColors.primary).toBe(
+    expect(updatedTheme.emotion.colors.primary).toBe(
       mockCustomThemeConfig.primaryColor
     )
 
