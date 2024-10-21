@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import itertools
-from abc import abstractmethod
-from typing import TYPE_CHECKING, NamedTuple, Protocol, runtime_checkable
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
     from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
@@ -82,8 +82,7 @@ def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
     return result
 
 
-@runtime_checkable
-class CacheStatsProvider(Protocol):
+class CacheStatsProvider(ABC):
     @abstractmethod
     def get_stats(self) -> list[CacheStat]:
         raise NotImplementedError

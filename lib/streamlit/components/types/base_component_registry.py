@@ -14,14 +14,14 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
-from typing import TYPE_CHECKING, Protocol
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from streamlit.components.types.base_custom_component import BaseCustomComponent
 
 
-class BaseComponentRegistry(Protocol):
+class BaseComponentRegistry(ABC):
     """Interface for ComponentRegistries."""
 
     @abstractmethod
