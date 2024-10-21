@@ -75,7 +75,7 @@ export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
 }))
 
 export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => {
-  const dotSize = `0.625em`
+  const dotSize = "0.625em"
   return {
     opacity: 0.2,
     width: "100%",
