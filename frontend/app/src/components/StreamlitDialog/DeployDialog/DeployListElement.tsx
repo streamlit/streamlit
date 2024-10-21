@@ -30,9 +30,9 @@ export interface IDeployListElementProps {
 }
 
 function DeployListElement(props: IDeployListElementProps): ReactElement {
-  const { children, extraSpacing, infoIcon } = props
+  const { children, infoIcon } = props
   return (
-    <StyledElement extraSpacing={extraSpacing}>
+    <StyledElement>
       {infoIcon ? (
         <Icon content={Info} />
       ) : (

@@ -158,12 +158,8 @@ export function DeployDialog(
             />
             <StyledHeader>Streamlit Community Cloud</StyledHeader>
             <StyledSubheader>For community, always free</StyledSubheader>
-            <ListElement extraSpacing={true}>
-              For personal hobbies and learning
-            </ListElement>
-            <ListElement extraSpacing={true}>
-              Deploy unlimited public apps
-            </ListElement>
+            <ListElement>For personal hobbies and learning</ListElement>
+            <ListElement>Deploy unlimited public apps</ListElement>
             <ListElement>
               Explore and learn from Streamlit’s community and popular apps
             </ListElement>

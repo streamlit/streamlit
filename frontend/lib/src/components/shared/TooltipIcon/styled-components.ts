@@ -24,7 +24,7 @@ export const StyledTooltipIconWrapper =
   styled.div<StyledTooltipIconWrapperProps>(({ isLatex, theme }) => ({
     display: "flex",
     alignItems: "center",
-    marginTop: isLatex ? theme.spacing.mdPx : "0",
+    marginTop: isLatex ? theme.spacing.md : "0",
 
     "& .stTooltipHoverTarget > svg": {
       stroke: theme.colors.fadedText60,
