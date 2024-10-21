@@ -63,6 +63,12 @@ function DeployCard(
             ":first-child": {
               borderBottomLeftRadius: radii.xl,
             },
+
+            [`@media (max-width: ${breakpoints.md})`]: {
+              ":last-child": {
+                borderBottomLeftRadius: radii.xl,
+              },
+            },
           },
         },
         Contents: {
