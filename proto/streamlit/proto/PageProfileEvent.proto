@@ -1,0 +1,51 @@
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "PageProfileEventProto";
+
+import "streamlit/proto/PageProfile.proto";
+
+// The Page Profile Event extends Page Profile Msg
+// with addtl info from the FE to send for our metrics
+message PageProfileEvent {
+
+  // Same fields as PageProfile msg
+  repeated Command commands = 1;
+  int64 exec_time = 2;
+  int64 prep_time = 3;
+  repeated string config = 5;
+  string uncaught_exception = 6;
+  repeated string attributions = 7;
+  string os = 8;
+  string timezone = 9;
+  bool headless = 10;
+  bool is_fragment_run = 11;
+
+  // Extra fields for page profile metrics event
+  string app_id = 12;
+  int64 numPages = 13;
+  string session_id  = 14;
+  string python_version = 15;
+  string page_script_hash = 16;
+  string active_theme = 17;
+  int64 total_load_time = 18;
+  string browser_name = 19;
+  string browser_version = 20;
+  string device_type = 21;
+}

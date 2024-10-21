@@ -33,7 +33,7 @@ import {
   PageConfig,
 } from "@streamlit/lib"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
   StyledCoreItem,
@@ -86,7 +86,7 @@ export interface Props {
 
   toolbarMode: Config.ToolbarMode
 
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -113,7 +113,7 @@ export interface SubMenuProps {
   menuItems: any[]
   closeMenu: () => void
   isDevMenu: boolean
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 }
 
 // BaseWeb provides a very basic list item (or option) for its dropdown
@@ -130,7 +130,7 @@ export interface SubMenuProps {
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
   StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 ): any {
   const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (

@@ -22,7 +22,7 @@ import {
   IGuestToHostMessage,
   IToolbarItem,
 } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
   StyledActionButtonContainer,
@@ -63,7 +63,7 @@ export function ActionButton({
 export interface ToolbarActionsProps {
   sendMessageToHost: (message: IGuestToHostMessage) => void
   hostToolbarItems: IToolbarItem[]
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 }
 
 function ToolbarActions({
