@@ -96,6 +96,12 @@ export class MetricsManager {
       this.requestDefaultMetricsConfig()
     }
 
+    // If metricsUrl still undefined, deactivate metrics
+    if (!this.metricsUrl) {
+      logError("Undefined metrics config")
+      this.actuallySendMetrics = false
+    }
+
     if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
       initializeSegment()
