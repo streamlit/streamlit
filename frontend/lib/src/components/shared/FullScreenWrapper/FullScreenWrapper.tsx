@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import React, { FC, memo } from "react"
 
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 
@@ -97,4 +97,4 @@ const FullScreenWrapper: FC<FullScreenWrapperProps> = ({
   )
 }
 
-export default FullScreenWrapper
+export default memo(FullScreenWrapper)

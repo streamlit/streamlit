@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback, useMemo } from "react"
+import React, { FC, memo, useCallback, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
@@ -378,4 +378,4 @@ const Multiselect: FC<Props> = props => {
   )
 }
 
-export default Multiselect
+export default memo(Multiselect)
