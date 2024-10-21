@@ -17,7 +17,6 @@
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
 import { EmotionTheme } from "./types"
-import { hasLightBackgroundColor } from "./utils"
 
 export type DerivedColors = {
   linkText: string
@@ -86,6 +85,10 @@ export const computeDerivedColors = (
     borderColor,
     borderColorLight,
   }
+}
+
+export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
+  return getLuminance(theme.colors.bgColor) > 0.5
 }
 
 export const createEmotionColors = (genericColors: {

@@ -468,10 +468,6 @@ export function computeSpacingStyle(
     .join(" ")
 }
 
-export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
-  return getLuminance(theme.colors.bgColor) > 0.5
-}
-
 /**
  * Return a @emotion/styled-like css dictionary to update the styles of headers, such as h1, h2, ...
  * Used for st.title, st.header, ... that are wrapped in the Sidebar or Dialogs.
