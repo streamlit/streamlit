@@ -528,7 +528,7 @@ function fixLabelOverlap(
 
   // 4. If one of the thumbs is so close to the edge that doing the outward
   // alignment from #3 would cause its value to overflow past the edge, then
-  // try centering the value. And plece the other thumb's value right next to
+  // try centering the value. And place the other thumb's value right next to
   // it, to avoid overlaps.
   //
   // For example, if we moved thumb1 and thumb2 to the left by the same
