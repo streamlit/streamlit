@@ -153,7 +153,7 @@ export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
-  const { genericColors, genericFonts } = baseThemeConfig.emotion
+  const { colors, genericFonts } = baseThemeConfig.emotion
   const { font, radii, fontSizes, ...customColors } = themeInput
 
   const parsedFont = fontEnumToString(font)
@@ -185,7 +185,7 @@ export const createEmotionTheme = (
     widgetBorderColor,
   } = parsedColors
 
-  const newGenericColors = { ...genericColors }
+  const newGenericColors = { ...colors }
 
   if (primary) newGenericColors.primary = primary
   if (bodyText) newGenericColors.bodyText = bodyText
