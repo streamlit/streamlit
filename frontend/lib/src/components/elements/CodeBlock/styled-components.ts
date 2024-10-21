@@ -44,7 +44,7 @@ export const StyledCode = styled.code(({ theme }) => ({
 export const StyledPre = styled.pre(({ theme }) => ({
   background: theme.colors.codeHighlightColor,
   borderRadius: theme.radii.default,
-  color: readableColor(theme.colors.bgColor),
+  color: theme.colors.bodyText,
   display: "block",
   // Remove browser default top margin
   margin: 0,
