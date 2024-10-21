@@ -68,6 +68,8 @@ export const StyledStreamlitMarkdown =
           // Images in markdown should never be wider
           // than the content area.
           maxWidth: "100%",
+          // In labels, widgets should never be taller than the text.
+          maxHeight: isLabel ? "1em" : undefined,
         },
 
         li: {

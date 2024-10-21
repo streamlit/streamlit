@@ -214,6 +214,18 @@ describe("StreamlitMarkdown", () => {
     }
   )
 
+  it("renders streamlit logo in markdown when isLabel is true", () => {
+    render(
+      <StreamlitMarkdown source={":streamlit:"} allowHTML={false} isLabel />
+    )
+    const image = screen.getByRole("img")
+    expect(image).toHaveAttribute("alt", "Streamlit logo")
+    expect(image).toHaveAttribute(
+      "src",
+      expect.stringContaining("streamlit-mark-color")
+    )
+  })
+
   // Invalid Markdown - images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
   const table = `| Syntax | Description |
   | ----------- | ----------- |
@@ -267,15 +279,6 @@ describe("StreamlitMarkdown", () => {
       cleanup()
     }
   )
-
-  it("doesn't render images when isLabel is true", () => {
-    const source =
-      "![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)"
-
-    render(<StreamlitMarkdown source={source} allowHTML={false} isLabel />)
-    const image = screen.queryByAltText("Image Text")
-    expect(image).not.toBeInTheDocument()
-  })
 
   it("doesn't render links when disableLinks is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
