@@ -211,7 +211,7 @@ function Slider({
       }
     })
 
-    // If, after rendering, if the thumb value's is outside the container (too
+    // If, after rendering, the thumb value's is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
     const sliderDiv = sliderRef.current ?? null
