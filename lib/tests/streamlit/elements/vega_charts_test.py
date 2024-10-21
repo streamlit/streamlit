@@ -855,6 +855,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
 
         chart_spec = json.loads(proto.spec)
+
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
 
         pd.testing.assert_frame_equal(
@@ -877,6 +878,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
 
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
@@ -906,6 +912,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
         self.assertEqual(
@@ -933,6 +945,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(
             chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
@@ -963,6 +981,12 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(
             chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
@@ -991,9 +1015,15 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["width"], 640)
         self.assertEqual(chart_spec["height"], 480)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
+        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
         self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
 
@@ -1016,6 +1046,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
 
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
@@ -1040,6 +1075,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
 
         self.assertEqual(chart_spec["encoding"]["color"]["value"], "#f00")
 
@@ -1114,6 +1154,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
             chart_spec = json.loads(proto.spec)
 
+            if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+                # Line charts are layered as default to support better tooltips.
+                # Extract the actual line mark from the layer.
+                chart_spec = chart_spec["layer"][0]
+
             self.assertEqual(chart_spec["encoding"]["color"]["field"], color_column)
 
             # Manually-specified colors should not have a legend
@@ -1147,6 +1192,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts are layered as default to support better tooltips.
+            # Extract the actual line mark from the layer.
+            chart_spec = chart_spec["layer"][0]
+
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
 
         # Color should be set to the melted column name.
@@ -1177,6 +1227,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if not is_altair_version_less_than("5.0.0"):
+            # Line charts in Altair >=5 are layered to better support tooltips.
+            chart_spec = chart_spec["layer"][0]
 
         # Color should be set to the melted column name.
         self.assertEqual(getattr(chart_spec["encoding"], "color", None), None)
@@ -1222,6 +1276,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
+        if not is_altair_version_less_than("5.0.0"):
+            # Line charts in Altair >=5 are layered to better support tooltips.
+            chart_spec = chart_spec["layer"][0]
+
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
         self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
 
@@ -1254,6 +1312,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
+        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+            # Line charts in Altair >=5 are layered to better support tooltips.
+            chart_spec = chart_spec["layer"][0]
+
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["type"], "ordinal")
         self.assertEqual(chart_spec["encoding"]["x"]["sort"], ["c", "b", "a"])
@@ -1274,6 +1336,11 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
+
+        if not is_altair_version_less_than("5.0.0"):
+            # Line charts in Altair >=5 are layered to better support tooltips.
+            chart_spec = chart_spec["layer"][0]
+
         self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
 
         self.assert_output_df_is_correct_and_input_is_untouched(
