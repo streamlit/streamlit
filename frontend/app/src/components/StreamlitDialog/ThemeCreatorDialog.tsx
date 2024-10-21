@@ -40,6 +40,7 @@ import {
   toThemeInput,
   UISelectbox,
 } from "@streamlit/lib"
+import { StyledCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 
 import {
   StyledBackButton,
@@ -302,8 +303,8 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
             <StyledSmall>
               To save your changes, copy your custom theme into the clipboard
               and paste it into the
-              <code>[theme]</code> section of your{" "}
-              <code>.streamlit/config.toml</code> file.
+              <StyledCode>[theme]</StyledCode> section of your{" "}
+              <StyledCode>.streamlit/config.toml</StyledCode> file.
             </StyledSmall>
           </StyledFullRow>
 
