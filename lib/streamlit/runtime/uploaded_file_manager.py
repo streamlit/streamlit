@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import io
 from abc import abstractmethod
-from typing import TYPE_CHECKING, NamedTuple, Protocol, Sequence
+from typing import TYPE_CHECKING, NamedTuple, Sequence
 
 from streamlit import util
 from streamlit.runtime.stats import CacheStatsProvider
@@ -83,7 +83,7 @@ class UploadedFile(io.BytesIO):
         return util.repr_(self)
 
 
-class UploadedFileManager(CacheStatsProvider, Protocol):
+class UploadedFileManager(CacheStatsProvider):
     """UploadedFileManager protocol, that should be implemented by the concrete
     uploaded file managers.
 
