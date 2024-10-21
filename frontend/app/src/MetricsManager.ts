@@ -251,14 +251,14 @@ export class MetricsManager {
     const eventProto = new MetricsEvent({
       event: evName,
       anonymousId: this.anonymousId,
-      ...this.getContextData(),
-      dev: IS_DEV_ENV,
-      isHello: this.sessionInfo.isHello,
+      ...this.getHostTrackingData(),
       ...this.getInstallationData(),
       reportHash: this.appHash,
+      dev: IS_DEV_ENV,
       source: "browser",
       streamlitVersion: this.sessionInfo.current.streamlitVersion,
-      ...this.getHostTrackingData(),
+      isHello: this.sessionInfo.isHello,
+      ...this.getContextData(),
     })
 
     if (evName === "menuClick") {
