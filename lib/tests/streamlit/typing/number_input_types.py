@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Union
 from typing_extensions import assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
-# Note: Due to https://mypy.readthedocs.io/en/latest/duck_type_compatibility.html, mypy wil not detect
+# Note: Due to https://mypy.readthedocs.io/en/latest/duck_type_compatibility.html, mypy will not detect
 # an <int> value being assigned to a <float> variable. There's nothing we can do about this, apparently.
 if TYPE_CHECKING:
     from streamlit.elements.widgets.number_input import NumberInputMixin

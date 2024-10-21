@@ -15,11 +15,13 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
+
+MAP_ELEMENT_COUNT = 5
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
@@ -28,10 +30,11 @@ def test_st_map_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     maps = themed_app.get_by_test_id("stDeckGlJsonChart")
-    expect(maps).to_have_count(5)
+    expect(maps).to_have_count(MAP_ELEMENT_COUNT, timeout=15000)
 
-    # wait for mapbox to load
-    wait_for_app_run(themed_app, 15000)
+    # The map assets can take more time to load, add an extra timeout
+    # to prevent flakiness.
+    themed_app.wait_for_timeout(10000)
 
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
@@ -83,6 +86,11 @@ def test_st_map_has_consistent_visuals(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
+    # Wait for map to be loaded:
+    expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_count(
+        MAP_ELEMENT_COUNT, timeout=15000
+    )
+
     check_top_level_class(app, "stDeckGlJsonChart")
 
 
@@ -93,8 +101,12 @@ def test_st_map_clicking_on_fullscreen_toolbar_button(
 ):
     """Test that clicking on fullscreen toolbar button expands the map into fullscreen."""
 
-    # wait for mapbox to load
-    wait_for_app_run(app, 15000)
+    expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_count(
+        MAP_ELEMENT_COUNT, timeout=15000
+    )
+    # The map assets can take more time to load, add an extra timeout
+    # to prevent flakiness.
+    app.wait_for_timeout(10000)
 
     assert_fullscreen_toolbar_button_interactions(
         app,
