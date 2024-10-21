@@ -64,6 +64,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     contentAlignment: props.contentAlignment,
     readonly: !props.isEditable,
     style: props.isIndex ? "faded" : "normal",
+    allowWrapping: true,
   } as TextCell
 
   const validateInput = (data?: any): boolean | string => {

@@ -64,10 +64,10 @@ import {
 } from "./hooks"
 import {
   BORDER_THRESHOLD,
+  HEADER_HEIGHT,
   MAX_COLUMN_AUTO_WIDTH,
   MAX_COLUMN_WIDTH,
   MIN_COLUMN_WIDTH,
-  ROW_HEIGHT,
 } from "./hooks/useTableSizer"
 import {
   BaseColumn,
@@ -532,6 +532,7 @@ function DataFrame({
     maxHeight,
     minWidth,
     maxWidth,
+    rowHeight,
     resizableSize,
     setResizableSize,
   } = useTableSizer(
@@ -769,8 +770,8 @@ function DataFrame({
           bottomLeft: false,
           topLeft: false,
         }}
-        grid={[1, ROW_HEIGHT]}
-        snapGap={ROW_HEIGHT / 3}
+        grid={[1, rowHeight]}
+        snapGap={rowHeight / 3}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             setResizableSize({
@@ -796,8 +797,8 @@ function DataFrame({
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
-          rowHeight={ROW_HEIGHT}
-          headerHeight={ROW_HEIGHT}
+          rowHeight={rowHeight}
+          headerHeight={HEADER_HEIGHT}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={isTouchDevice ? undefined : onColumnResize}
           // Configure resize indicator to only show on the header:
