@@ -214,6 +214,7 @@ radio = _main.radio
 scatter_chart = _main.scatter_chart
 selectbox = _main.selectbox
 select_slider = _main.select_slider
+segmented_control = _main.segmented_control
 slider = _main.slider
 snow = _main.snow
 subheader = _main.subheader

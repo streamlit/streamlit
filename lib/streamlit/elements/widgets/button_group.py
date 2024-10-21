@@ -196,7 +196,7 @@ def _build_proto(
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
-    style: Literal["segment", "pills", "borderless"] = "segment",
+    style: Literal["borderless", "pills", "segmented_control"] = "pills",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
@@ -387,6 +387,40 @@ class ButtonGroupMixin:
         )
         return sentiment.value
 
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"],
+        default: V | None = None,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> V | None: ...
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multiple"] = "multiple",
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
         self,
@@ -527,7 +561,231 @@ class ButtonGroupMixin:
             TBD
 
         """
+        return self._internal_button_group(
+            options,
+            label=label,
+            selection_mode=selection_mode,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="pills",
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+        )
 
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"],
+        default: V | None = None,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> V | None: ...
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multiple"] = "multiple",
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> list[V]: ...
+
+    @gather_metrics("segmented_control")
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single", "multiple"] = "single",
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> list[V] | V | None:
+        r"""Display a segmented control widget.
+
+        A segmented control widget is a linear set of segments where each of the passed
+        ``options`` functions as a button.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this widget is for.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
+
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        selection_mode: "single" or "multiple"
+            The selection mode for the widget. If "single", only one option can be
+            selected. If "multiple", multiple options can be selected.
+
+        options: Iterable of V
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
+
+        default: Iterable of V, V, or None
+            List of default value or a single value. If the ``selection_mode``
+            is "single", only a single value is allowed to be passed.
+
+        format_func : function
+            Function to modify the display of the options. It receives
+            the raw option as an argument and should output the label to be
+            shown for that option. This has no impact on the return value of
+            the command.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+
+        help : str
+            An optional tooltip that gets displayed next to the multiselect.
+
+        on_change : callable
+            An optional callback invoked when this feedback widget's value
+            changes.
+
+        args : tuple
+            An optional tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        disabled : bool
+            An optional boolean, which disables the widget if set
+            to True. The default is False. This argument can only be supplied
+            by keyword.
+
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible".
+
+        Returns
+        -------
+        list of V or V or None
+            A list of selected options or an empty list if the ``selection_mode`` is
+            "multiple".
+            If the "selection_mode" is "single", the return value is the selected option
+            or None.
+
+        Examples
+        --------
+        Display a segmented control widget with multi select, and show the option:
+
+        >>> import streamlit as st
+        >>>
+        >>> options = ["North", "East", "South", "West"]
+        >>> selection = st.segmented_control(label="Directions",
+                                options, selection_mode="multiple")
+        >>> st.markdown(f"You selected options: '{selection}'.")
+
+        .. output ::
+            TBD
+
+
+        Display a segmented control widget that renders icons-only:
+
+        >>> import streamlit as st
+        >>>
+        >>> option_to_icon_map = {
+        >>>     0: ":material/add:",
+        >>>     1: ":material/zoom_in:",
+        >>>     2: ":material/zoom_out:",
+        >>>     3: ":material/zoom_out_map:",
+        >>> }
+        >>> selection = st.segmented_control(
+        >>>     "Icon-only segmented control",
+        >>>     options=option_to_icon_map.keys(),
+        >>>     format_func=lambda option: option_to_icon_map[option],
+        >>>     selection_mode="single",
+        >>> )
+        >>> st.write(f"Single selection: {selection}")
+
+        .. output ::
+            TBD
+
+        """
+        return self._internal_button_group(
+            options,
+            label=label,
+            selection_mode=selection_mode,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="segmented_control",
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+        )
+
+    @gather_metrics("_internal_button_group")
+    def _internal_button_group(
+        self,
+        options: OptionSequence[V],
+        *,
+        key: Key | None = None,
+        default: Sequence[V] | V | None = None,
+        selection_mode: Literal["single", "multiple"] = "single",
+        disabled: bool = False,
+        format_func: Callable[[Any], str] | None = None,
+        style: Literal["pills", "segmented_control"] = "segmented_control",
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        label: str | None = None,
+        label_visibility: LabelVisibility = "visible",
+        help: str | None = None,
+    ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
@@ -560,88 +818,23 @@ class ButtonGroupMixin:
         serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
             indexable_options, default_values, selection_mode
         )
+
         res = self._button_group(
             indexable_options,
-            key=key,
             default=default_values,
             selection_mode=selection_mode,
             disabled=disabled,
             format_func=_transformed_format_func,
-            serializer=serde.serialize,
-            deserializer=serde.deserialize,
-            on_change=on_change,
-            args=args,
-            kwargs=kwargs,
-            style="pills",
-            label=label,
-            label_visibility=label_visibility,
+            key=key,
             help=help,
-        )
-
-        if selection_mode == "multiple":
-            return res.value
-
-        return res.value
-
-    @gather_metrics("_internal_button_group")
-    def _internal_button_group(
-        self,
-        options: OptionSequence[V],
-        *,
-        key: Key | None = None,
-        default: Sequence[V] | V | None = None,
-        selection_mode: Literal["single", "multiple"] = "single",
-        disabled: bool = False,
-        format_func: Callable[[Any], str] | None = None,
-        style: Literal["segment", "pills"] = "segment",
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-    ) -> list[V] | V | None:
-        def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
-            """If option starts with a material icon or an emoji, we extract it to send
-            it parsed to the frontend."""
-            transformed = format_func(option) if format_func else str(option)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    # we only want to extract material icons because we treat them
-                    # differently than emojis visually
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                        # reassamble the option string without the icon - also
-                        # works if len(transformed_parts) == 1
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # we don't have a valid icon or emoji, so we just pass
-                    pass
-            return ButtonGroupProto.Option(
-                content=transformed,
-                content_icon=icon,
-            )
-
-        indexable_options = convert_to_sequence_and_check_comparable(options)
-        default_values = get_default_indices(indexable_options, default)
-
-        serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
-            indexable_options, default_values, selection_mode
-        )
-
-        res = self._button_group(
-            indexable_options,
-            key=key,
-            default=default_values,
-            selection_mode=selection_mode,
-            disabled=disabled,
-            format_func=_transformed_format_func,
             style=style,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
             on_change=on_change,
             args=args,
             kwargs=kwargs,
+            label=label,
+            label_visibility=label_visibility,
         )
 
         if selection_mode == "multiple":
@@ -657,7 +850,9 @@ class ButtonGroupMixin:
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
-        style: Literal["segment", "pills", "borderless"] = "segment",
+        style: Literal[
+            "borderless", "pills", "segmented_control"
+        ] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
@@ -693,9 +888,9 @@ class ButtonGroupMixin:
                 "`selection_mode='single'`."
             )
 
-        if style not in ["segment", "pills", "borderless"]:
+        if style not in ["borderless", "pills", "segmented_control"]:
             raise StreamlitAPIException(
-                "The style argument must be one of ['segment', 'pills', 'borderless']. "
+                "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
                 f"The argument passed was '{style}'."
             )
 

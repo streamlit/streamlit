@@ -55,6 +55,10 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
     ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
+    (
+        "segmented_control",
+        lambda: st.segmented_control("Some segments", ["a", "b", "c"]),
+    ),
     ("toggle", lambda: st.toggle("Toggle me")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
