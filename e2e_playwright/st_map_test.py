@@ -87,8 +87,9 @@ def test_st_map_has_consistent_visuals(
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     # Wait for map to be loaded:
-    maps = app.get_by_test_id("stDeckGlJsonChart")
-    expect(maps).to_be_visible(timeout=15000)
+    expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_count(
+        MAP_ELEMENT_COUNT, timeout=15000
+    )
 
     check_top_level_class(app, "stDeckGlJsonChart")
 
