@@ -43,6 +43,7 @@ import {
 import {
   isDarkThemeInQueryParams,
   isLightThemeInQueryParams,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
 import { createBaseUiTheme } from "./createThemeUtil"
@@ -154,7 +155,8 @@ export const createEmotionTheme = (
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts } = baseThemeConfig.emotion
-  const { font, radii, fontSizes, ...customColors } = themeInput
+  const { font, radii, roundness, linkColor, fontSizes, ...customColors } =
+    themeInput
 
   const parsedFont = fontEnumToString(font)
 
@@ -197,7 +199,25 @@ export const createEmotionTheme = (
   if (skeletonBackgroundColor)
     newGenericColors.skeletonBackgroundColor = skeletonBackgroundColor
 
+  if (linkColor) {
+    console.log("linkColor", linkColor)
+    newGenericColors.linkText = linkColor
+  }
+
   const conditionalOverrides: any = {}
+
+  if (notNullOrUndefined(roundness)) {
+    conditionalOverrides.radii = {
+      ...baseThemeConfig.emotion.radii,
+    }
+
+    // Normalize the roundness to be between 0 and 1.5rem.
+    const baseRadii = Math.max(0, Math.min(roundness, 1)) * 1.5
+    conditionalOverrides.radii.default = addRemUnit(baseRadii)
+    conditionalOverrides.radii.md = addRemUnit(baseRadii * 0.5)
+    conditionalOverrides.radii.xl = addRemUnit(baseRadii * 1.5)
+    conditionalOverrides.radii.xxl = addRemUnit(baseRadii * 2)
+  }
 
   if (radii) {
     conditionalOverrides.radii = {
@@ -231,6 +251,7 @@ export const createEmotionTheme = (
     }
   }
 
+  console.log("conditionalOverrides", conditionalOverrides)
   return {
     ...baseThemeConfig.emotion,
     colors: createEmotionColors(newGenericColors),
@@ -285,7 +306,6 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
 
     base: bgColorToBaseString(themeInput.backgroundColor),
     font: fontEnumToString(themeInput.font) as string,
-
     ...computeDerivedColors(colors),
   }
 }
@@ -335,7 +355,7 @@ export const createTheme = (
   )
 
   const emotion = createEmotionTheme(themeInput, startingTheme)
-
+  console.log("emotion", emotion)
   return {
     ...startingTheme,
     name: themeName,
@@ -384,7 +404,7 @@ const deleteOldCachedThemes = (): void => {
   }
 }
 
-export const setCachedTheme = (themeConfig: ThemeConfig): void => {
+export const setCachedTheme = (_themeConfig: ThemeConfig): void => {
   if (!localStorageAvailable()) {
     return
   }
@@ -396,17 +416,17 @@ export const setCachedTheme = (themeConfig: ThemeConfig): void => {
     return
   }
 
-  const cachedTheme: CachedTheme = {
-    name: themeConfig.name,
-    ...(!isPresetTheme(themeConfig) && {
-      themeInput: toThemeInput(themeConfig.emotion),
-    }),
-  }
+  // const cachedTheme: CachedTheme = {
+  //   name: themeConfig.name,
+  //   ...(!isPresetTheme(themeConfig) && {
+  //     themeInput: toThemeInput(themeConfig.emotion),
+  //   }),
+  // }
 
-  window.localStorage.setItem(
-    LocalStore.ACTIVE_THEME,
-    JSON.stringify(cachedTheme)
-  )
+  // window.localStorage.setItem(
+  //   LocalStore.ACTIVE_THEME,
+  //   JSON.stringify(cachedTheme)
+  // )
 }
 
 export const removeCachedTheme = (): void => {
@@ -510,6 +530,10 @@ export function getWrappedHeadersStyle(theme: EmotionTheme): {
 
 function addPxUnit(n: number): string {
   return `${n}px`
+}
+
+function addRemUnit(n: number): string {
+  return `${n}rem`
 }
 
 export function blend(color: string, background: string | undefined): string {

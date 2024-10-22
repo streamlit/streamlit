@@ -892,6 +892,10 @@ def _populate_config_msg(msg: Config) -> None:
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
+
+    if config.get_option("client.hideTopDecoration") is True:
+        msg.hide_top_decoration = True
+
     msg.toolbar_mode = _get_toolbar_mode()
 
 

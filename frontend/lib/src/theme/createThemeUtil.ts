@@ -111,7 +111,8 @@ export const createThemeOverrides = (
       buttonBorderRadiusMini: radii.md, // Unused today.
       buttonBorderRadius: radii.default,
       /** Checkbox */
-      checkboxBorderRadius: radii.md,
+      // 0.35rem is the maximum size to still recognize it as a checkbox.
+      checkboxBorderRadius: `min(${radii.md}, 0.35rem)`,
       /** Input, Select, Textarea */
       inputBorderRadiusMini: radii.md, // Unused today.
       inputBorderRadius: radii.default,

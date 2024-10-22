@@ -506,6 +506,16 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.hideTopDecoration",
+    description="""
+        Controls whether to hide the top decoration in the app.
+    """,
+    default_val=False,
+    type_=bool,
+    scriptable=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
@@ -979,6 +989,43 @@ _create_option(
     description="""
         Font family for all text in the app, except code blocks. One of "sans serif",
         "serif", or "monospace".
+    """,
+)
+
+_create_option(
+    "theme.roundness",
+    description="""
+        The roundness of the corners for most UI elements. Can be between 0 and 1,
+        where 0 is no-roundness and 1 is maximum roundness.
+    """,
+    type_=float,
+)
+
+_create_option(
+    "theme.linkColor",
+    description="""
+        The color of links in the app.
+    """,
+)
+
+_create_option(
+    "theme.bodyFont",
+    description="""
+        The font family for the body text in the app.
+    """,
+)
+
+_create_option(
+    "theme.codeFont",
+    description="""
+        The font family for code (monospace) in the app.
+    """,
+)
+
+_create_option(
+    "theme.headingFont",
+    description="""
+        The font family for headings in the app.
     """,
 )
 

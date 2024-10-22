@@ -19,7 +19,6 @@ import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 import { EmotionTheme } from "./types"
 
 export type DerivedColors = {
-  linkText: string
   fadedText05: string
   fadedText10: string
   fadedText20: string
@@ -43,12 +42,6 @@ export const computeDerivedColors = (
 
   const hasLightBg = getLuminance(bgColor) > 0.5
 
-  // Always keep links blue, but brighten them up a bit on dark backgrounds so
-  // they're easier to read.
-  const linkText = hasLightBg
-    ? genericColors.blue
-    : lighten(genericColors.blue, 0.2)
-
   const fadedText05 = transparentize(bodyText, 0.9) // Mostly used for very faint 1px lines.
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
@@ -69,7 +62,6 @@ export const computeDerivedColors = (
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
   return {
-    linkText,
     fadedText05,
     fadedText10,
     fadedText20,
