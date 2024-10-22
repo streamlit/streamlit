@@ -178,6 +178,8 @@ export const createEmotionTheme = (
   const {
     secondaryBackgroundColor: secondaryBg,
     backgroundColor: bgColor,
+    sidebarBackgroundColor: sidebarBackgroundColor,
+    sidebarSecondaryBackgroundColor: sidebarSecondaryBackgroundColor,
     primaryColor: primary,
     textColor: bodyText,
     skeletonBackgroundColor,
@@ -191,6 +193,11 @@ export const createEmotionTheme = (
   if (bodyText) newGenericColors.bodyText = bodyText
   if (secondaryBg) newGenericColors.secondaryBg = secondaryBg
   if (bgColor) newGenericColors.bgColor = bgColor
+  if (sidebarBackgroundColor)
+    newGenericColors.sidebarBackgroundColor = sidebarBackgroundColor
+  if (sidebarSecondaryBackgroundColor)
+    newGenericColors.sidebarSecondaryBackgroundColor =
+      sidebarSecondaryBackgroundColor
   if (widgetBackgroundColor)
     newGenericColors.widgetBackgroundColor = widgetBackgroundColor
   if (widgetBorderColor) newGenericColors.widgetBorderColor = widgetBorderColor

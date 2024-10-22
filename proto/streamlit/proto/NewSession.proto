@@ -159,6 +159,8 @@ message CustomThemeConfig {
   repeated FontFace font_faces = 15;
   FontSizes font_sizes = 16;
   string skeleton_background_color = 17;
+  string sidebar_secondary_background_color = 18;
+  string sidebar_background_color = 19;
 }
 
 message FontFace {

@@ -982,6 +982,20 @@ _create_option(
     """,
 )
 
+_create_option(
+    "theme.sidebarBackgroundColor",
+    description="""
+        Primary background color of the sidebar
+    """,
+)
+
+_create_option(
+    "theme.sidebarSecondaryBackgroundColor",
+    description="""
+        Secondary background color of the sidebar
+    """,
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")
