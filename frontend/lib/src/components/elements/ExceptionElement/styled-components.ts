@@ -40,4 +40,5 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   backgroundColor: theme.colors.transparent,
   overflowX: "auto",
+  margin: `0 0 ${theme.spacing.lg} 0`,
 }))

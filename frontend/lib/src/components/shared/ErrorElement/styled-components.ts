@@ -23,4 +23,5 @@ export const StyledPreError = styled.pre(({ theme }) => ({
   color: "inherit",
   fontSize: theme.fontSizes.sm,
   overflowX: "auto",
+  margin: `0 0 ${theme.spacing.lg} 0`,
 }))
