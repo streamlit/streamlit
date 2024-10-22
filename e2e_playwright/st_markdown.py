@@ -67,6 +67,7 @@ Some text
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
 - :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
 - :streamlit: Markdown can contain the Streamlit logo
+- <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
 
 
 :blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
