@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
 
 import streamlit as st
 
@@ -94,16 +95,28 @@ def page_config_with_emoji_symbol():
 st.button("Page Config With Emoji Symbol", on_click=page_config_with_emoji_symbol)
 
 
-def page_config_with_local_icon():
+def page_config_with_local_icon_str():
     ICON_PATH = os.path.join(TEST_ASSETS_DIR, "favicon.ico")
 
     st.set_page_config(
-        page_title="With Local Icon",
+        page_title="With Local Icon Str",
         page_icon=ICON_PATH,
     )
 
 
-st.button("Page Config With Local Icon", on_click=page_config_with_local_icon)
+st.button("Page Config With Local Icon Str", on_click=page_config_with_local_icon_str)
+
+
+def page_config_with_local_icon_path():
+    ICON_PATH = Path(os.path.join(TEST_ASSETS_DIR, "favicon.ico"))
+
+    st.set_page_config(
+        page_title="With Local Icon Path",
+        page_icon=ICON_PATH,
+    )
+
+
+st.button("Page Config With Local Icon Path", on_click=page_config_with_local_icon_path)
 
 
 def page_config_with_material_icon():
