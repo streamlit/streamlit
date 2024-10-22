@@ -27,6 +27,7 @@ import { useTheme } from "@emotion/react"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { DateInput as DateInputProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
@@ -91,8 +92,7 @@ function DateInput({
 
   const [isEmpty, setIsEmpty] = useState(false)
 
-  const theme = useTheme()
-  const { colors, fontSizes, lineHeights, spacing } = theme
+  const { colors, fontSizes, lineHeights, spacing, sizes } = useTheme()
 
   const style = { width }
   const minDate = moment(element.min, DATE_FORMAT).toDate()
@@ -126,7 +126,7 @@ function DateInput({
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
-      if (date === null || date === undefined) {
+      if (isNullOrUndefined(date)) {
         setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
         return
@@ -194,7 +194,7 @@ function DateInput({
               overrides: {
                 Body: {
                   style: {
-                    border: `${theme.sizes.borderWidth} solid ${colors.borderColor}`,
+                    border: `${sizes.borderWidth} solid ${colors.borderColor}`,
                   },
                 },
               },
@@ -203,10 +203,10 @@ function DateInput({
           CalendarContainer: {
             style: {
               fontSize: fontSizes.sm,
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.sm,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
+              paddingRight: spacing.sm,
+              paddingLeft: spacing.sm,
+              paddingBottom: spacing.sm,
+              paddingTop: spacing.sm,
             },
           },
           Week: {
@@ -286,11 +286,11 @@ function DateInput({
                 Root: {
                   style: {
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: theme.sizes.borderWidth,
-                    borderRightWidth: theme.sizes.borderWidth,
-                    borderTopWidth: theme.sizes.borderWidth,
-                    borderBottomWidth: theme.sizes.borderWidth,
-                    paddingRight: theme.spacing.twoXS,
+                    borderLeftWidth: sizes.borderWidth,
+                    borderRightWidth: sizes.borderWidth,
+                    borderTopWidth: sizes.borderWidth,
+                    borderBottomWidth: sizes.borderWidth,
+                    paddingRight: spacing.twoXS,
                   },
                 },
                 ClearIcon: {
@@ -298,13 +298,13 @@ function DateInput({
                     overrides: {
                       Svg: {
                         style: {
-                          color: theme.colors.darkGray,
+                          color: colors.darkGray,
                           // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                          padding: theme.spacing.threeXS,
-                          height: theme.sizes.clearIconSize,
-                          width: theme.sizes.clearIconSize,
+                          padding: spacing.threeXS,
+                          height: sizes.clearIconSize,
+                          width: sizes.clearIconSize,
                           ":hover": {
-                            fill: theme.colors.bodyText,
+                            fill: colors.bodyText,
                           },
                         },
                       },
