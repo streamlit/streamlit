@@ -34,14 +34,14 @@ if TYPE_CHECKING:
         Union[int, None],
     )
     assert_type(
-        segmented_control("foo", options, selection_mode="multiple"),
+        segmented_control("foo", options, selection_mode="multi"),
         list[int],
     )
     assert_type(
-        segmented_control("foo", options, selection_mode="multiple", default=1),
+        segmented_control("foo", options, selection_mode="multi", default=1),
         list[int],
     )
     assert_type(
-        segmented_control("foo", options, selection_mode="multiple", default=[1]),
+        segmented_control("foo", options, selection_mode="multi", default=[1]),
         list[int],
     )
