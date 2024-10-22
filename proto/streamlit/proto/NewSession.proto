@@ -166,6 +166,7 @@ message CustomThemeConfig {
   optional string link_color = 19;
   string heading_font = 20;
   optional float spacing = 21;
+  optional string border_color = 22;
 }
 
 message FontFace {

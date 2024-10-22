@@ -30,9 +30,6 @@ export type DerivedColors = {
   darkenedBgMix25: string
   darkenedBgMix15: string
   lightenedBg05: string
-
-  borderColor: string
-  borderColorLight: string
 }
 
 export const computeDerivedColors = (
@@ -47,9 +44,6 @@ export const computeDerivedColors = (
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
-
-  const borderColor = fadedText10
-  const borderColorLight = fadedText05
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix100 = hasLightBg
@@ -73,9 +67,6 @@ export const computeDerivedColors = (
     darkenedBgMix25,
     darkenedBgMix15,
     lightenedBg05,
-
-    borderColor,
-    borderColorLight,
   }
 }
 
@@ -97,6 +88,9 @@ export const createEmotionColors = (genericColors: {
     metricPositiveDeltaColor: genericColors.green,
     metricNegativeDeltaColor: genericColors.red,
     metricNeutralDeltaColor: derivedColors.fadedText60,
+
+    borderColor: derivedColors.fadedText10,
+    borderColorLight: derivedColors.fadedText05,
 
     docStringModuleText: genericColors.bodyText,
     docStringTypeText: genericColors.green70,

@@ -165,6 +165,7 @@ export const createEmotionTheme = (
     ...customColors
   } = themeInput
 
+  // TODO(lukasmasuch) check this since it might never return undefined
   const parsedFont = fontEnumToString(font)
 
   const parsedColors = Object.entries(customColors).reduce(
@@ -192,6 +193,7 @@ export const createEmotionTheme = (
     skeletonBackgroundColor,
     widgetBackgroundColor,
     widgetBorderColor,
+    borderColor,
   } = parsedColors
 
   const newGenericColors = { ...colors }
@@ -207,11 +209,16 @@ export const createEmotionTheme = (
     newGenericColors.skeletonBackgroundColor = skeletonBackgroundColor
 
   if (linkColor) {
-    console.log("linkColor", linkColor)
     newGenericColors.linkText = linkColor
   }
 
   const conditionalOverrides: any = {}
+
+  conditionalOverrides.colors = createEmotionColors(newGenericColors)
+
+  if (borderColor) {
+    conditionalOverrides.colors.borderColor = borderColor
+  }
 
   if (notNullOrUndefined(roundedness)) {
     conditionalOverrides.radii = {
@@ -338,15 +345,18 @@ export const createEmotionTheme = (
     }
   }
 
+  console.log("parsedFont", parsedFont)
+
   console.log("conditionalOverrides", conditionalOverrides)
   return {
     ...baseThemeConfig.emotion,
-    colors: createEmotionColors(newGenericColors),
     genericFonts: {
       ...genericFonts,
       ...(parsedFont && {
         bodyFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
-        headingFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
+        headingFont: themeInput.headingFont
+          ? themeInput.headingFont
+          : parsedFont,
         codeFont: themeInput.codeFont
           ? themeInput.codeFont
           : genericFonts.codeFont,

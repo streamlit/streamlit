@@ -1035,6 +1035,13 @@ _create_option(
 )
 
 _create_option(
+    "theme.borderColor",
+    description="""
+        The color of the border around elements.
+    """,
+)
+
+_create_option(
     "theme.spacing",
     description="""""",
     type_=float,
