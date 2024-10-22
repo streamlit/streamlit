@@ -22,4 +22,5 @@ export const StyledPreError = styled.pre(({ theme }) => ({
   wordWrap: "break-word",
   color: "inherit",
   fontSize: theme.fontSizes.sm,
+  overflowX: "auto",
 }))

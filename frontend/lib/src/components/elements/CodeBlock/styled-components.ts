@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { Theme } from "@emotion/react"
 
 const codeLink = {
   // Streamline the style when inside anchors to avoid broken underline and more
@@ -23,7 +24,7 @@ const codeLink = {
   },
 }
 
-export const StyledCode = styled.code(({ theme }) => ({
+export const StyledInlineCode = styled.code(({ theme }) => ({
   padding: "0.2em 0.4em",
   wordWrap: "break-word",
   margin: 0,
@@ -32,6 +33,26 @@ export const StyledCode = styled.code(({ theme }) => ({
   color: theme.colors.codeTextColor,
 
   ...codeLink,
+}))
+
+const codeBlockStyle = (theme: Theme): React.CSSProperties => ({
+  background: "transparent",
+  border: 0,
+  color: "inherit",
+  display: "inline",
+  fontSize: theme.fontSizes.sm,
+  lineHeight: "inherit",
+  margin: 0,
+  overflowX: "auto",
+  padding: 0,
+  whiteSpace: "pre",
+  wordBreak: "normal",
+  wordWrap: "normal",
+  ...codeLink,
+})
+
+export const StyledCode = styled.code(({ theme }) => ({
+  ...codeBlockStyle(theme),
 }))
 
 /*
@@ -58,21 +79,7 @@ export const StyledPre = styled.pre(({ theme }) => ({
   // Add padding to the right to account for the copy button
   paddingRight: theme.iconSizes.threeXL,
 
-  code: {
-    background: "transparent",
-    border: 0,
-    color: "inherit",
-    display: "inline",
-    fontSize: theme.fontSizes.sm,
-    lineHeight: "inherit",
-    margin: 0,
-    overflowX: "auto",
-    padding: 0,
-    whiteSpace: "pre",
-    wordBreak: "normal",
-    wordWrap: "normal",
-    ...codeLink,
-  },
+  code: { ...codeBlockStyle(theme) },
 
   // The token can consist of many lines, e.g. a triple-quote string, so
   // we need to make sure that the color is not overwritten.

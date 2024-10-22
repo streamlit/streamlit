@@ -39,8 +39,5 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   color: "inherit",
   fontSize: theme.fontSizes.sm,
   backgroundColor: theme.colors.transparent,
-
-  code: {
-    color: "inherit",
-  },
+  overflowX: "auto",
 }))
