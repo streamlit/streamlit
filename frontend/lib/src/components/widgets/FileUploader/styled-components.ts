@@ -78,7 +78,6 @@ export const StyledChatUploadedFiles = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.tight,
   paddingTop: theme.spacing.md,
   paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.md,
 }))
 
 export const StyledUploadedFilesList = styled.ul(({ theme }) => ({
