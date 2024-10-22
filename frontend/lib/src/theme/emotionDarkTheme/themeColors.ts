@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
+import { lighten, transparentize } from "color2k"
 
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
 
@@ -37,4 +37,5 @@ export default {
   dangerBg: transparentize(colors.red60, 0.8),
   primary: colors.red70,
   disabled: colors.gray70,
+  linkText: lighten(colors.blue80, 0.2),
 }

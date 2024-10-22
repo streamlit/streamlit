@@ -892,11 +892,15 @@ def _populate_config_msg(msg: Config) -> None:
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
+
+    if config.get_option("client.hideTopDecoration") is True:
+        msg.hide_top_decoration = True
+
     msg.toolbar_mode = _get_toolbar_mode()
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
-    enum_encoded_options = {"base", "font"}
+    enum_encoded_options = {"base", "font", "fontSize"}
     theme_opts = config.get_options_for_section("theme")
 
     if not any(theme_opts.values()):
@@ -906,6 +910,9 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
         if option_name not in enum_encoded_options and option_val is not None:
             setattr(msg, to_snake_case(option_name), option_val)
 
+    base_font_size = theme_opts["fontSize"]
+    if base_font_size is not None:
+        msg.font_sizes.base_font_size = int(base_font_size)
     # NOTE: If unset, base and font will default to the protobuf enum zero
     # values, which are BaseTheme.LIGHT and FontFamily.SANS_SERIF,
     # respectively. This is why we both don't handle the cases explicitly and

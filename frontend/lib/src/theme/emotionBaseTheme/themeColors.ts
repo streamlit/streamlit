@@ -41,6 +41,8 @@ const requiredThemeColors = {
   blue: colors.blue80,
   green: colors.green80,
   yellow: colors.yellow80,
+
+  linkText: colors.blue80,
 }
 
 interface OptionalThemeColors {
