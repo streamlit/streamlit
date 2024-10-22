@@ -90,6 +90,7 @@ interface CreateDropHandlerParams {
   addFiles: (files: UploadFileInfo[]) => void
   getNextLocalFileId: () => number
   deleteExistingFiles: () => void
+  onUploadComplete: () => void
 }
 
 const createDropHandler =
@@ -100,6 +101,7 @@ const createDropHandler =
     addFiles,
     getNextLocalFileId,
     deleteExistingFiles,
+    onUploadComplete,
   }: CreateDropHandlerParams) =>
   (acceptedFiles: File[], rejectedFiles: FileRejection[]): void => {
     // If this is a single-file uploader and multiple files were dropped,
@@ -157,6 +159,8 @@ const createDropHandler =
       })
       addFiles(rejectedInfos)
     }
+
+    onUploadComplete()
   }
 
 interface CreateUploadFileParams {
@@ -401,6 +405,11 @@ function ChatInput({
     getNextLocalFileId,
     deleteExistingFiles: () => {
       files.forEach(f => deleteFile(f.id))
+    },
+    onUploadComplete: () => {
+      if (chatInputRef.current) {
+        chatInputRef.current.focus()
+      }
     },
   })
 
