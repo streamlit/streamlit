@@ -24,7 +24,11 @@ import { WindowDimensionsProvider } from "@streamlit/lib/src/components/shared/W
 import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
 
-const ThemedApp = (): JSX.Element => {
+export interface ThemedAppProps {
+  stExecTimestamp: number
+}
+
+const ThemedApp = ({ stExecTimestamp }: ThemedAppProps): JSX.Element => {
   const [themeManager, fontFaces] = useThemeManager()
   const { activeTheme } = themeManager
   const hasCustomFonts =
@@ -36,7 +40,10 @@ const ThemedApp = (): JSX.Element => {
         {/* The data grid requires one root level portal element for rendering cell overlays */}
         <PortalProvider>
           {hasCustomFonts && <FontFaceDeclaration fontFaces={fontFaces} />}
-          <AppWithScreencast theme={themeManager} />
+          <AppWithScreencast
+            theme={themeManager}
+            stExecTimestamp={stExecTimestamp}
+          />
         </PortalProvider>
       </WindowDimensionsProvider>
     </RootStyleProvider>
