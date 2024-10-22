@@ -40,10 +40,12 @@ export type CachedTheme = {
 }
 
 type IconSizes = typeof emotionBaseTheme.iconSizes
-type ThemeSpacings = typeof emotionBaseTheme.spacing
 type ThemeColors = typeof emotionBaseTheme.colors
+export type ThemeSizings = typeof emotionBaseTheme.sizes
+export type ThemeSpacings = typeof emotionBaseTheme.spacing
 
 export type IconSize = keyof IconSizes
 export type ThemeColor = Extract<keyof ThemeColors, string>
+export type ThemeSizing = keyof ThemeSizings
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"

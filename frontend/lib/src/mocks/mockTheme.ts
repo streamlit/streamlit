@@ -20,8 +20,8 @@ import { lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
 
 import { ThemeConfig } from "@streamlit/lib/src/theme"
-import { createEmotionColors } from "@streamlit/lib/src/theme/getColors"
 import { createBaseUiTheme } from "@streamlit/lib/src/theme/createThemeUtil"
+import { createEmotionColors } from "@streamlit/lib/src/theme/getColors"
 import {
   breakpoints,
   colors,
@@ -30,7 +30,6 @@ import {
   fontWeights,
   genericFonts,
   iconSizes,
-  letterSpacings,
   lineHeights,
   radii,
   sizes,
@@ -81,14 +80,12 @@ const emotionMockTheme = {
   inSidebar: false,
   breakpoints,
   colors: createEmotionColors(genericColors),
-  genericColors,
   fonts,
   fontSizes,
   fontWeights,
   genericFonts,
   iconSizes,
   lineHeights,
-  letterSpacings,
   radii,
   sizes,
   spacing,

@@ -29,6 +29,10 @@ export const CAMERA_PERMISSION_URL =
   "https://docs.streamlit.io/knowledge-base/using-streamlit/enable-camera"
 
 export const STREAMLIT_COMMUNITY_CLOUD_DOCS_URL =
-  "https://docs.streamlit.io/deploy/streamlit-community-cloud/get-started"
+  "https://share.streamlit.io/cloud-getting-started"
 export const STREAMLIT_DEPLOY_TUTORIAL_URL =
-  "https://docs.streamlit.io/deploy/tutorials"
+  "https://share.streamlit.io/deployment-tutorial"
+
+export const SNOWFLAKE_LEARN_MORE_URL = "https://share.streamlit.io/sis-about"
+
+export const SNOWFLAKE_TRIAL_URL = "https://share.streamlit.io/snowflake-trial"

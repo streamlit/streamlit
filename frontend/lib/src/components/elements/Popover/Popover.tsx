@@ -89,9 +89,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               minWidth: element.useContainerWidth
                 ? // If use_container_width==True, we use the container width as minimum:
                   `${Math.max(width, 160)}px` // 10rem ~= 160px
-                : "20rem",
+                : theme.sizes.minPopupWidth,
               [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                maxWidth: `calc(100% - 2rem)`,
+                maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
               },
               borderTopLeftRadius: theme.radii.xl,
               borderTopRightRadius: theme.radii.xl,
@@ -144,8 +144,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                   color="inherit"
                   aria-hidden="true"
                   size="lg"
-                  margin=""
-                  padding=""
+                  margin={theme.spacing.none}
+                  padding={theme.spacing.none}
                 />
               </StyledPopoverButtonIcon>
             </BaseButton>

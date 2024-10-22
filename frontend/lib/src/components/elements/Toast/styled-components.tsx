@@ -23,7 +23,7 @@ export const StyledViewButton = styled.button(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: "none",
   boxShadow: "none",
-  padding: "0px",
+  padding: theme.spacing.none,
   "&:hover, &:active, &:focus": {
     border: "none",
     outline: "none",

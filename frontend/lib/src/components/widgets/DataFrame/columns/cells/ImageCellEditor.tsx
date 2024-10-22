@@ -18,11 +18,11 @@ import React from "react"
 import { ImageEditorType } from "@glideapps/glide-data-grid"
 import styled from "@emotion/styled"
 
-const StyledImage = styled.img(() => ({
+const StyledImage = styled.img({
   maxWidth: "100%",
-  maxHeight: "600px",
+  maxHeight: "37.5rem",
   objectFit: "scale-down",
-}))
+})
 
 export const ImageCellEditor: ImageEditorType = ({ urls }) => {
   const imageData = urls && urls.length > 0 ? urls[0] : ""

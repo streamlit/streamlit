@@ -16,20 +16,28 @@
 
 import React, { ReactElement } from "react"
 
+import { Info } from "@emotion-icons/material-outlined"
+
 import Checkmark from "@streamlit/app/src/assets/svg/checkmark.svg"
+import { Icon } from "@streamlit/lib"
 
 import { StyledElement } from "./styled-components"
 
 export interface IDeployListElementProps {
   children?: React.ReactNode
   extraSpacing?: boolean
+  infoIcon?: boolean
 }
 
 function DeployListElement(props: IDeployListElementProps): ReactElement {
-  const { children, extraSpacing } = props
+  const { children, infoIcon } = props
   return (
-    <StyledElement extraSpacing={extraSpacing}>
-      <img src={Checkmark} alt={"Checkmark"} />
+    <StyledElement>
+      {infoIcon ? (
+        <Icon content={Info} />
+      ) : (
+        <img src={Checkmark} alt={"Checkmark"} />
+      )}
       <span>{children}</span>
     </StyledElement>
   )

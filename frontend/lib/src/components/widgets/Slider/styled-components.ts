@@ -51,22 +51,22 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
   ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.codeFont,
     fontSize: theme.fontSizes.sm,
-    paddingBottom: theme.spacing.twoThirdsSmFont,
     color: disabled ? theme.colors.gray : theme.colors.primary,
-    top: "-22px",
+    top: "-1.6em",
     position: "absolute",
     whiteSpace: "nowrap",
     backgroundColor: theme.colors.transparent,
     lineHeight: theme.lineHeights.base,
-    fontWeight: "normal",
+    fontWeight: theme.fontWeights.normal,
   })
 )
 
 export const StyledTickBar = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
   paddingBottom: theme.spacing.none,
   paddingLeft: theme.spacing.none,
   paddingRight: theme.spacing.none,
-  paddingTop: theme.spacing.twoThirdsSmFont,
+  paddingTop: "0.65em",
   justifyContent: "space-between",
   alignItems: "center",
   display: "flex",
@@ -75,8 +75,7 @@ export const StyledTickBar = styled.div(({ theme }) => ({
 export const StyledTickBarItem = styled.div<StyledSliderProps>(
   ({ disabled, theme }) => ({
     lineHeight: theme.lineHeights.base,
-    fontWeight: "normal",
-    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.normal,
     fontFamily: theme.genericFonts.codeFont,
     color: disabled ? theme.colors.fadedText40 : "inherit",
   })

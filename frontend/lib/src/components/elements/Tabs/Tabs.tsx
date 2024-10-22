@@ -85,7 +85,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.children.length])
 
-  const TAB_HEIGHT = "2.5rem"
+  const TAB_HEIGHT = theme.sizes.tabHeight
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
   return (
     <StyledTabContainer
@@ -231,7 +231,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                     ...(isOverflowing && isLast
                       ? {
                           // Add minimal required padding to hide the overscroll gradient
-                          paddingRight: "0.6rem",
+                          // This is calculated based on the width of the gradient (spacing.lg)
+                          paddingRight: `calc(${theme.spacing.lg} * 0.6)`,
                         }
                       : {}),
                     ...(!isStale && isStaleTab

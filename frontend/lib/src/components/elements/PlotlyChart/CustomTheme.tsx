@@ -17,7 +17,9 @@
 import merge from "lodash/merge"
 
 import {
+  convertRemToPx,
   EmotionTheme,
+  getBlue80,
   getCategoricalColorsArray,
   getDecreasingRed,
   getDivergingColorsArray,
@@ -26,7 +28,6 @@ import {
   getGray90,
   getIncreasingGreen,
   getSequentialColorsArray,
-  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { logError } from "@streamlit/lib/src/util/log"
@@ -54,11 +55,11 @@ export function applyStreamlitThemeTemplateLayout(
       subtitleColor: colors.bodyText,
       font: {
         family: genericFonts.headingFont,
-        size: fontSizes.mdPx,
+        size: convertRemToPx(fontSizes.md),
         color: colors.headingColor,
       },
       pad: {
-        l: theme.spacing.twoXSPx,
+        l: convertRemToPx(theme.spacing.twoXS),
       },
       xanchor: "left",
       x: 0,
@@ -73,7 +74,7 @@ export function applyStreamlitThemeTemplateLayout(
       },
       valign: "top",
       bordercolor: colors.transparent,
-      borderwidth: theme.spacing.nonePx,
+      borderwidth: 0,
       font: {
         size: fontSizes.twoSmPx,
         color: getGray90(theme),
@@ -89,7 +90,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: theme.spacing.twoXLPx,
+        standoff: convertRemToPx(theme.spacing.twoXL),
       },
       tickcolor: getGray30(theme),
       tickfont: {
@@ -116,7 +117,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: theme.spacing.xlPx,
+        standoff: convertRemToPx(theme.spacing.xl),
       },
       minor: {
         gridcolor: getGray30(theme),
@@ -126,14 +127,15 @@ export function applyStreamlitThemeTemplateLayout(
       rangeselector: {
         bgcolor: colors.bgColor,
         bordercolor: getGray30(theme),
+        // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
         borderwidth: 1,
         x: 0,
       },
     },
     margin: {
-      pad: theme.spacing.smPx,
-      r: theme.spacing.nonePx,
-      l: theme.spacing.nonePx,
+      pad: convertRemToPx(theme.spacing.sm),
+      r: 0,
+      l: 0,
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
@@ -147,7 +149,7 @@ export function applyStreamlitThemeTemplateLayout(
     coloraxis: {
       colorbar: {
         thickness: 16,
-        xpad: theme.spacing.twoXLPx,
+        xpad: convertRemToPx(theme.spacing.twoXL),
         ticklabelposition: "outside",
         outlinecolor: colors.transparent,
         outlinewidth: 8,
@@ -372,10 +374,7 @@ function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
 
   spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
   spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
-  spec = spec.replaceAll(
-    TOTAL,
-    hasLightBackgroundColor(theme) ? theme.colors.blue80 : theme.colors.blue40
-  )
+  spec = spec.replaceAll(TOTAL, getBlue80(theme))
 
   spec = spec.replaceAll(GRAY_30, getGray30(theme))
   spec = spec.replaceAll(GRAY_70, getGray70(theme))

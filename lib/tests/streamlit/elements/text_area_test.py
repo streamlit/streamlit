@@ -82,6 +82,16 @@ class TextAreaTest(DeltaGeneratorTestCase):
         self.assertEqual(c.default, "")
         self.assertEqual(c.height, 300)
 
+    def test_invalid_height(self):
+        """Test that it raises an error when passed an invalid height"""
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.text_area("the label", "", height=50)
+
+        self.assertEqual(
+            str(e.exception),
+            "Invalid height 50px for `st.text_area` - must be at least 68 pixels.",
+        )
+
     def test_placeholder(self):
         """Test that it can be called with placeholder"""
         st.text_area("the label", "", placeholder="testing")

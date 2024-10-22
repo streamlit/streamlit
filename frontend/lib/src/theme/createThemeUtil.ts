@@ -182,14 +182,14 @@ export const createThemeOverrides = (
 
       modalCloseColor: colors.bodyText,
 
-      notificationInfoBackground: colors.alertInfoBackgroundColor,
-      notificationInfoText: colors.alertInfoTextColor,
-      notificationPositiveBackground: colors.alertSuccessBackgroundColor,
-      notificationPositiveText: colors.alertSuccessTextColor,
-      notificationWarningBackground: colors.alertWarningBackgroundColor,
-      notificationWarningText: colors.alertWarningTextColor,
-      notificationNegativeBackground: colors.alertErrorBackgroundColor,
-      notificationNegativeText: colors.alertErrorTextColor,
+      notificationInfoBackground: colors.infoBg,
+      notificationInfoText: colors.info,
+      notificationPositiveBackground: colors.successBg,
+      notificationPositiveText: colors.success,
+      notificationWarningBackground: colors.warningBg,
+      notificationWarningText: colors.warning,
+      notificationNegativeBackground: colors.dangerBg,
+      notificationNegativeText: colors.danger,
       progressbarTrackFill: widgetBackgroundColor,
 
       // mono100 overrides

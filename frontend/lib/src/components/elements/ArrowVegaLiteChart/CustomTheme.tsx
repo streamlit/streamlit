@@ -18,13 +18,14 @@ import merge from "lodash/merge"
 import mergeWith from "lodash/mergeWith"
 
 import {
+  convertRemToPx,
   EmotionTheme,
+  getBlue80,
   getCategoricalColorsArray,
   getDivergingColorsArray,
   getGray30,
   getGray70,
   getSequentialColorsArray,
-  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 
 export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
@@ -43,7 +44,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       color: theme.colors.headingColor,
       titleFontStyle: "normal",
       fontWeight: theme.fontWeights.bold,
-      fontSize: theme.fontSizes.smPx + 2,
+      fontSize: theme.fontSizes.mdPx,
       orient: "top",
       offset: 26,
     },
@@ -75,9 +76,9 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       labelFlushOffset: 1,
       labelBound: false,
       labelLimit: 100,
-      titlePadding: theme.spacing.lgPx,
-      labelPadding: theme.spacing.lgPx,
-      labelSeparation: theme.spacing.twoXSPx,
+      titlePadding: convertRemToPx(theme.spacing.lg),
+      labelPadding: convertRemToPx(theme.spacing.lg),
+      labelSeparation: convertRemToPx(theme.spacing.twoXS),
       labelOverlap: true,
     },
     legend: {
@@ -89,9 +90,10 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       titleFontStyle: "normal",
       titleColor: getGray70(theme),
       titlePadding: 5,
-      labelPadding: theme.spacing.lgPx,
-      columnPadding: theme.spacing.smPx,
-      rowPadding: theme.spacing.twoXSPx,
+      labelPadding: convertRemToPx(theme.spacing.lg),
+      columnPadding: convertRemToPx(theme.spacing.sm),
+      rowPadding: convertRemToPx(theme.spacing.twoXS),
+      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       padding: 7,
       symbolStrokeWidth: 4,
     },
@@ -116,12 +118,10 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
     },
     mark: {
       tooltip: true,
-      ...(hasLightBackgroundColor(theme)
-        ? { color: "#0068C9" }
-        : { color: "#83C9FF" }),
+      color: getBlue80(theme),
     },
     bar: {
-      binSpacing: theme.spacing.twoXSPx,
+      binSpacing: convertRemToPx(theme.spacing.twoXS),
       discreteBandSize: { band: 0.85 },
     },
     axisDiscrete: {

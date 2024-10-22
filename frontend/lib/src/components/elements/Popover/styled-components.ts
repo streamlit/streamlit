@@ -17,8 +17,8 @@
 import styled from "@emotion/styled"
 
 export const StyledPopoverButtonIcon = styled.div(({ theme }) => ({
-  marginLeft: theme.spacing.threeXSPx,
-  // This is a hacky way to offset the 5px "padding" of the expansion svg
+  marginLeft: theme.spacing.threeXS,
+  // This is a hacky way to offset the "padding" of the expansion svg
   // icon. Reason is that we want to use the same padding to the right side
   // as the text on the left side. The alternative would be to overwrite the
   // right padding of the button, which would also be hacky and involve slightly
@@ -26,5 +26,6 @@ export const StyledPopoverButtonIcon = styled.div(({ theme }) => ({
   // If the padding of the icon changes, this value needs to be adjusted.
   // Also, if we want to apply the same adjustment for other elements, we should
   // consider putting this into a theme variable or creating a shared styled component.
-  marginRight: "-5px",
+  // The SVG icon we are using seems to have an internal padding of around 25%.
+  marginRight: `calc(-${theme.iconSizes.lg} * 0.25)`,
 }))

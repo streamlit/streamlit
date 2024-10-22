@@ -270,10 +270,13 @@ def load_config_options(flag_options: dict[str, Any]) -> None:
         A dict of config options where the keys are the CLI flag version of the
         config option names.
     """
+    # We want to filter out two things: values that are None, and values that
+    # are empty tuples. The latter is a special case that indicates that the
+    # no values were provided, and the config should reset to the default
     options_from_flags = {
         name.replace("_", "."): val
         for name, val in flag_options.items()
-        if val is not None
+        if val is not None and val != ()
     }
 
     # Force a reparse of config files (if they exist). The result is cached
