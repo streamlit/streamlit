@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Html_pb2 import Html as HtmlProto
@@ -45,7 +46,7 @@ class HtmlMixin:
 
         Parameters
         ----------
-        body : str
+        body : str, Path
             The HTML code to insert, or path to an HTML code file which is
             loaded and inserted.
 
@@ -67,6 +68,11 @@ class HtmlMixin:
 
         """
         html_proto = HtmlProto()
+
+        # Convert Path to string if necessary
+        if isinstance(body, Path):
+            body = str(body)
+
         # Check if the body is a file path
         if os.path.isfile(body):
             with open(body, encoding="utf-8") as f:

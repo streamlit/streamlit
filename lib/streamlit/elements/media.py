@@ -33,6 +33,7 @@ from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import NumpyShape
+from pathlib import Path
 
 if TYPE_CHECKING:
     from typing import Any
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
 
 
 MediaData: TypeAlias = Union[
-    str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
+    str, Path, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
 ]
 
 SubtitleData: TypeAlias = Union[
@@ -78,8 +79,8 @@ class MediaMixin:
 
         Parameters
         ----------
-        data : str, bytes, BytesIO, numpy.ndarray, or file
-            Raw audio data, filename, or a URL pointing to the file to load.
+        data : str, Path, bytes, BytesIO, numpy.ndarray, or file
+            Raw audio data, filename (str or Path object), or a URL pointing to the file to load.
             Raw data formats must include all necessary file headers to match the file
             format specified via ``format``.
             If ``data`` is a numpy array, it must either be a 1D array of the waveform
@@ -212,8 +213,8 @@ class MediaMixin:
 
         Parameters
         ----------
-        data : str, bytes, io.BytesIO, numpy.ndarray, or file
-            Raw video data, filename, or URL pointing to a video to load.
+        data : str, Path, bytes, io.BytesIO, numpy.ndarray, or file
+            Raw video data, filename (str or Path object), or URL pointing to a video to load.
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
@@ -467,7 +468,7 @@ def marshall_video(
     ----------
     coordinates : str
     proto : the proto to fill. Must have a string field called "data".
-    data : str, bytes, BytesIO, numpy.ndarray, or file opened with
+    data : str, Path, bytes, BytesIO, numpy.ndarray, or file opened with
            io.open().
         Raw video data or a string with a URL pointing to the video
         to load. Includes support for YouTube URLs.
@@ -520,6 +521,9 @@ def marshall_video(
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
 
+    if isinstance(data, Path):
+        data = str(data)  # Convert Path to string
+
     if isinstance(data, str) and url_util.is_url(
         data, allowed_schemas=("http", "https", "data")
     ):
@@ -532,7 +536,6 @@ def marshall_video(
                 )
         else:
             proto.url = data
-
     else:
         _marshall_av_media(coordinates, proto, data, mimetype)
 
@@ -711,7 +714,7 @@ def marshall_audio(
     ----------
     coordinates : str
     proto : The proto to fill. Must have a string field called "url".
-    data : str, bytes, BytesIO, numpy.ndarray, or file opened with
+    data : str, Path, bytes, BytesIO, numpy.ndarray, or file opened with
             io.open()
         Raw audio data or a string with a URL pointing to the file to load.
         If passing the raw data, this must include headers and any other bytes
@@ -740,11 +743,13 @@ def marshall_audio(
         proto.end_time = end_time
     proto.loop = loop
 
+    if isinstance(data, Path):
+        data = str(data)  # Convert Path to string
+
     if isinstance(data, str) and url_util.is_url(
         data, allowed_schemas=("http", "https", "data")
     ):
         proto.url = data
-
     else:
         data = _maybe_convert_to_wav_bytes(data, sample_rate)
         _marshall_av_media(coordinates, proto, data, mimetype)
@@ -763,3 +768,4 @@ def marshall_audio(
             loop=loop,
             autoplay=autoplay,
         )
+

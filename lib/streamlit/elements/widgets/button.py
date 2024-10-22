@@ -30,6 +30,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
+from pathlib import Path
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
@@ -544,7 +545,7 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str | StreamlitPage,
+        page: str | Path | StreamlitPage,
         *,
         label: str | None = None,
         icon: str | None = None,
@@ -564,7 +565,7 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str or st.Page
+        page : str, Path, or st.Page
             The file path (relative to the main script) or an st.Page indicating
             the page to switch to. Alternatively, this can be the URL to an
             external page (must start with "http://" or "https://").
@@ -764,7 +765,7 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        page: str | StreamlitPage,
+        page: str | Path | StreamlitPage,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
@@ -793,6 +794,10 @@ class ButtonMixin:
             if label is None:
                 page_link_proto.label = page.title
         else:
+            # Convert Path to string if necessary
+            if isinstance(page, Path):
+                page = str(page)
+
             # Handle external links:
             if is_url(page):
                 if label is None or label == "":
