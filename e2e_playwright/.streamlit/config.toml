@@ -9,12 +9,14 @@ linkColor = "#1BD760"
 fontSize = 14
 bodyFont = '"Signika", sans-serif'
 headingFont = '"Playwrite", cursive'
+sidebarTextColor = "black"
+sidebarBackgroundColor = "white"
+sidebarSecondaryBackgroundColor = "gray"
 # borderColor = "#1BD760"
 
 # see: https://fonts.googleapis.com/css2?family=Inter:wght@400
 [[theme.fontFaces]]
 url = "https://fonts.gstatic.com/s/playwritegbs/v5/oPWW_kFkk-s1Xclhmlemy7jsNR5ybH6ezg.woff2"
-weight = 600
 family = "Playwrite"
 style = "normal"
 

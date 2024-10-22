@@ -55,6 +55,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       top: adjustTop ? theme.sizes.headerDecorationHeight : theme.spacing.none,
       backgroundColor: theme.colors.bgColor,
       zIndex: theme.zIndices.header + 1,
+      color: theme.colors.bodyText,
 
       minWidth,
       maxWidth,

@@ -11,6 +11,8 @@ import streamlit as st
 
 st.set_page_config("Mega tester app", "🎈", initial_sidebar_state="collapsed")
 
+st.sidebar.text_input("sidebarTextColor", value="black")
+st.sidebar.success("sidebarSecondaryBackgroundColor")
 
 # st.html("app_styles.html")
 st.logo(
