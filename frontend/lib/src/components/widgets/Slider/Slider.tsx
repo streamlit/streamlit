@@ -83,7 +83,7 @@ function Slider({
     fragmentId,
   })
 
-  // We tie the UI to `uiValue` rather than `value` becase `value` only updates
+  // We tie the UI to `uiValue` rather than `value` because `value` only updates
   // every DEBOUNCE_TIME_MS. If we tied the UI to `value` then the UI would only
   // update every DEBOUNCE_TIME_MS as well. So this keeps the UI smooth.
   const [uiValue, setUiValue] = useState(value)
@@ -211,7 +211,7 @@ function Slider({
       }
     })
 
-    // If, after rendering, if the thumb value's is outside the container (too
+    // If, after rendering, the thumb value's is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
     const sliderDiv = sliderRef.current ?? null
@@ -524,7 +524,7 @@ function fixLabelOverlap(
 
   // 4. If one of the thumbs is so close to the edge that doing the outward
   // alignment from #3 would cause its value to overflow past the edge, then
-  // try centering the value. And plece the other thumb's value right next to
+  // try centering the value. And place the other thumb's value right next to
   // it, to avoid overlaps.
   //
   // For example, if we moved thumb1 and thumb2 to the left by the same
