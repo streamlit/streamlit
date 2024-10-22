@@ -187,12 +187,23 @@ export const createEmotionTheme = (
   const {
     secondaryBackgroundColor: secondaryBg,
     backgroundColor: bgColor,
+    sidebarTextColor: sidebarTextColor,
+    sidebarBackgroundColor: sidebarBackgroundColor,
+    sidebarSecondaryBackgroundColor: sidebarSecondaryBackgroundColor,
     primaryColor: primary,
     textColor: bodyText,
     skeletonBackgroundColor,
     widgetBackgroundColor,
     widgetBorderColor,
   } = parsedColors
+  console.log(
+    "DEBUG parsedColors",
+    primary,
+    bodyText,
+    sidebarTextColor,
+    sidebarBackgroundColor,
+    sidebarSecondaryBackgroundColor
+  )
 
   const newGenericColors = { ...colors }
 
@@ -200,6 +211,12 @@ export const createEmotionTheme = (
   if (bodyText) newGenericColors.bodyText = bodyText
   if (secondaryBg) newGenericColors.secondaryBg = secondaryBg
   if (bgColor) newGenericColors.bgColor = bgColor
+  if (sidebarTextColor) newGenericColors.sidebarTextColor = sidebarTextColor
+  if (sidebarBackgroundColor)
+    newGenericColors.sidebarBackgroundColor = sidebarBackgroundColor
+  if (sidebarSecondaryBackgroundColor)
+    newGenericColors.sidebarSecondaryBackgroundColor =
+      sidebarSecondaryBackgroundColor
   if (widgetBackgroundColor)
     newGenericColors.widgetBackgroundColor = widgetBackgroundColor
   if (widgetBorderColor) newGenericColors.widgetBorderColor = widgetBorderColor
@@ -413,6 +430,7 @@ export const createTheme = (
   baseThemeConfig?: ThemeConfig,
   inSidebar = false
 ): ThemeConfig => {
+  console.log("DEBUG", themeInput, baseThemeConfig)
   if (baseThemeConfig) {
     themeInput = completeThemeInput(themeInput, baseThemeConfig)
   } else if (themeInput.base === CustomThemeConfig.BaseTheme.DARK) {
