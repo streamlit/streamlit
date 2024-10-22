@@ -155,6 +155,7 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
+  hideTopDecoration: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   appPages: IAppPage[]
@@ -295,6 +296,7 @@ export class App extends PureComponent<Props, State> {
       // of the config option are received simultaneously), but we set it to
       // true as well for consistency.
       hideTopBar: true,
+      hideTopDecoration: true,
       hideSidebarNav: true,
       expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
@@ -1006,6 +1008,7 @@ export class App extends PureComponent<Props, State> {
       this.setState({
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
+        hideTopDecoration: config.hideTopDecoration,
         toolbarMode: config.toolbarMode,
         latestRunTime: performance.now(),
         mainScriptHash,
@@ -1142,6 +1145,7 @@ export class App extends PureComponent<Props, State> {
 
     if (themeInput) {
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+      console.log("customTheme", customTheme)
       // For now, users can only add one custom theme.
       this.props.theme.addThemes([customTheme])
 
@@ -1864,6 +1868,7 @@ export class App extends PureComponent<Props, State> {
       scriptRunState,
       userSettings,
       hideTopBar,
+      hideTopDecoration,
       hideSidebarNav,
       expandSidebarNav,
       currentPageScriptHash,
@@ -1911,7 +1916,8 @@ export class App extends PureComponent<Props, State> {
           showPadding: !isEmbed() || isPaddingDisplayed(),
           disableScrolling: isScrollingHidden(),
           showToolbar: !isEmbed() || isToolbarDisplayed(),
-          showColoredLine: !isEmbed() || isColoredLineDisplayed(),
+          showColoredLine:
+            !hideTopDecoration && (!isEmbed() || isColoredLineDisplayed()),
           // host communication manager elements
           pageLinkBaseUrl,
           sidebarChevronDownshift,

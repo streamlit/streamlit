@@ -125,6 +125,9 @@ message Config {
   }
   ToolbarMode toolbar_mode = 8;
 
+  // See config option "client.hideTopDecoration".
+  bool hide_top_decoration = 9;
+
   reserved 1;
 }
 
@@ -159,6 +162,10 @@ message CustomThemeConfig {
   repeated FontFace font_faces = 15;
   FontSizes font_sizes = 16;
   string skeleton_background_color = 17;
+  optional float roundedness = 18;
+  optional string link_color = 19;
+  string heading_font = 20;
+  optional float spacing = 21;
 }
 
 message FontFace {
