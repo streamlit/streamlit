@@ -494,6 +494,47 @@ export function RenderedMarkdown({
     }
   }
 
+  function remarkTypographicalSymbols() {
+    return (tree: any) => {
+      visit(tree, (node, index, parent) => {
+        if (
+          parent &&
+          (parent.type === "link" || parent.type === "linkReference")
+        ) {
+          // Don't replace symbols in links.
+          // Note that remark extensions are not applied in code blocks and latex
+          // formulas, so we don't need to worry about them here.
+          return
+        }
+
+        if (node.type === "text" && node.value) {
+          // Only replace symbols wrapped in spaces, so it's a bit safer in case the
+          // symbols are used as part of a word or longer string of symbols.
+          const replacements = [
+            [/(^|\s)<->(\s|$)/g, "$1↔$2"],
+            [/(^|\s)->(\s|$)/g, "$1→$2"],
+            [/(^|\s)<-(\s|$)/g, "$1←$2"],
+            [/(^|\s)--(\s|$)/g, "$1—$2"],
+            [/(^|\s)>=(\s|$)/g, "$1≥$2"],
+            [/(^|\s)<=(\s|$)/g, "$1≤$2"],
+            [/(^|\s)~=(\s|$)/g, "$1≈$2"],
+          ]
+
+          let newValue = node.value
+          for (const [pattern, replacement] of replacements) {
+            newValue = newValue.replace(pattern, replacement as string)
+          }
+
+          if (newValue !== node.value) {
+            node.value = newValue
+          }
+        }
+      })
+
+      return tree
+    }
+  }
+
   const plugins = [
     remarkMathPlugin,
     remarkEmoji,
@@ -502,6 +543,7 @@ export function RenderedMarkdown({
     remarkColoring,
     remarkMaterialIcons,
     remarkStreamlitLogo,
+    remarkTypographicalSymbols,
   ]
 
   const rehypePlugins: PluggableList = [
