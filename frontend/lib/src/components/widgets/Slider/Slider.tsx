@@ -268,16 +268,10 @@ function Slider({
         onChange={handleChange}
         disabled={disabled}
         overrides={{
-          Root: {
-            style: {
-              paddingTop: spacing.twoThirdsSmFont,
-            },
-          },
           Thumb: renderThumb,
           Tick: {
             style: {
               fontFamily: fonts.monospace,
-              fontSize: fontSizes.sm,
             },
           },
           Track: {
@@ -286,7 +280,9 @@ function Slider({
               paddingBottom: spacing.none,
               paddingLeft: spacing.none,
               paddingRight: spacing.none,
-              paddingTop: spacing.twoThirdsSmFont,
+              // Add additional padding to fit the thumb value
+              // which uses a fontSizes.sm.
+              paddingTop: `calc(${fontSizes.sm} * 1.35)`,
             },
           },
           InnerTrack: {

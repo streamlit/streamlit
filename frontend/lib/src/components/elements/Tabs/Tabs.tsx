@@ -85,7 +85,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.children.length])
 
-  const TAB_HEIGHT = "2.5rem"
+  const TAB_HEIGHT = theme.sizes.tabHeight
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
   return (
     <StyledTabContainer

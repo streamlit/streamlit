@@ -30,7 +30,7 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: theme.lineHeights.normal,
+  lineHeight: "normal",
   verticalAlign: "middle",
 
   // Styles to truncate the text inside the StyledStreamlitMarkdown div.
