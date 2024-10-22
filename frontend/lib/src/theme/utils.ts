@@ -155,8 +155,15 @@ export const createEmotionTheme = (
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts } = baseThemeConfig.emotion
-  const { font, radii, roundness, linkColor, fontSizes, ...customColors } =
-    themeInput
+  const {
+    font,
+    radii,
+    roundedness,
+    spacing,
+    linkColor,
+    fontSizes,
+    ...customColors
+  } = themeInput
 
   const parsedFont = fontEnumToString(font)
 
@@ -206,17 +213,49 @@ export const createEmotionTheme = (
 
   const conditionalOverrides: any = {}
 
-  if (notNullOrUndefined(roundness)) {
+  if (notNullOrUndefined(roundedness)) {
     conditionalOverrides.radii = {
       ...baseThemeConfig.emotion.radii,
     }
 
-    // Normalize the roundness to be between 0 and 1.5rem.
-    const baseRadii = Math.max(0, Math.min(roundness, 1)) * 1.5
+    // Normalize the roundedness to be between 0 and 1.5rem.
+    const baseRadii = Math.max(0, Math.min(roundedness, 1)) * 1.5
     conditionalOverrides.radii.default = addRemUnit(baseRadii)
     conditionalOverrides.radii.md = addRemUnit(baseRadii * 0.5)
     conditionalOverrides.radii.xl = addRemUnit(baseRadii * 1.5)
     conditionalOverrides.radii.xxl = addRemUnit(baseRadii * 2)
+  }
+
+  if (notNullOrUndefined(spacing)) {
+    conditionalOverrides.spacing = {
+      ...baseThemeConfig.emotion.spacing,
+    }
+
+    // threeXS: "0.125rem",
+    // twoXS: "0.25rem",
+    // xs: "0.375rem",
+    // sm: "0.5rem",
+    // md: "0.75rem",
+    // lg: "1rem",
+    // xl: "1.25rem",
+    // twoXL: "1.5rem",
+    // threeXL: "2rem",
+    // fourXL: "4rem",
+
+    // Normalize the spacing to be between 0.5 and 2rem
+    const baseSpacing = 0.5 + Math.max(0, Math.min(spacing, 1)) * 1.5
+
+    conditionalOverrides.spacing.threeXS = addRemUnit(baseSpacing * 0.125)
+    conditionalOverrides.spacing.twoXS = addRemUnit(baseSpacing * 0.25)
+    conditionalOverrides.spacing.xs = addRemUnit(baseSpacing * 0.375)
+    conditionalOverrides.spacing.sm = addRemUnit(baseSpacing * 0.5)
+    conditionalOverrides.spacing.md = addRemUnit(baseSpacing * 0.75)
+    conditionalOverrides.spacing.lg = addRemUnit(baseSpacing)
+    conditionalOverrides.spacing.xl = addRemUnit(baseSpacing * 1.25)
+    conditionalOverrides.spacing.twoXL = addRemUnit(baseSpacing * 1.5)
+    conditionalOverrides.spacing.threeXL = addRemUnit(baseSpacing * 2)
+
+    console.log("spacing", conditionalOverrides)
   }
 
   if (radii) {
@@ -231,8 +270,61 @@ export const createEmotionTheme = (
   }
 
   if (fontSizes) {
+    //     const fontSizeTwoSmall = 12
+    // const fontSizeSmall = 14
+    // const fontSizeMedium = 16
+
+    // export const fontSizes = {
+    // twoSm: `${fontSizeTwoSmall}px`, // Use px to force sm to be a round number.
+    // sm: `${fontSizeSmall}px`, // Use px to force sm to be a round number.
+    // md: "1rem",
+    // mdLg: "1.125rem",
+    // lg: "1.25rem",
+    // xl: "1.5rem",
+    // twoXL: "1.75rem",
+    // threeXL: "2.25rem",
+    // fourXL: "2.75rem",
+
+    // twoSmPx: fontSizeTwoSmall, // twoSm but as a number, in pixels
+    // smPx: fontSizeSmall, // sm but as a number, in pixels
+    // mdPx: fontSizeMedium, // med but as a number, in pixels
+
     conditionalOverrides.fontSizes = {
       ...baseThemeConfig.emotion.fontSizes,
+    }
+
+    if (fontSizes.baseFontSize) {
+      conditionalOverrides.fontSizes.twoSm = addPxUnit(
+        fontSizes.baseFontSize * 0.75
+      )
+      conditionalOverrides.fontSizes.twoSmPx = fontSizes.baseFontSize * 0.75
+
+      conditionalOverrides.fontSizes.sm = addPxUnit(
+        fontSizes.baseFontSize * 0.875
+      )
+      conditionalOverrides.fontSizes.smPx = fontSizes.baseFontSize * 0.875
+
+      conditionalOverrides.fontSizes.md = addPxUnit(fontSizes.baseFontSize)
+      conditionalOverrides.fontSizes.mdPx = fontSizes.baseFontSize
+
+      conditionalOverrides.fontSizes.mdLg = addPxUnit(
+        fontSizes.baseFontSize * 1.125
+      )
+      conditionalOverrides.fontSizes.lg = addPxUnit(
+        fontSizes.baseFontSize * 1.25
+      )
+      conditionalOverrides.fontSizes.xl = addPxUnit(
+        fontSizes.baseFontSize * 1.5
+      )
+      conditionalOverrides.fontSizes.twoXL = addPxUnit(
+        fontSizes.baseFontSize * 1.75
+      )
+      conditionalOverrides.fontSizes.threeXL = addPxUnit(
+        fontSizes.baseFontSize * 2.25
+      )
+      conditionalOverrides.fontSizes.fourXL = addPxUnit(
+        fontSizes.baseFontSize * 2.75
+      )
     }
 
     if (fontSizes.tinyFontSize) {
@@ -243,11 +335,6 @@ export const createEmotionTheme = (
     if (fontSizes.smallFontSize) {
       conditionalOverrides.fontSizes.sm = addPxUnit(fontSizes.smallFontSize)
       conditionalOverrides.fontSizes.smPx = fontSizes.smallFontSize
-    }
-
-    if (fontSizes.baseFontSize) {
-      conditionalOverrides.fontSizes.md = addPxUnit(fontSizes.baseFontSize)
-      conditionalOverrides.fontSizes.mdPx = fontSizes.baseFontSize
     }
   }
 

@@ -993,7 +993,7 @@ _create_option(
 )
 
 _create_option(
-    "theme.roundness",
+    "theme.roundedness",
     description="""
         The roundness of the corners for most UI elements. Can be between 0 and 1,
         where 0 is no-roundness and 1 is maximum roundness.
@@ -1027,6 +1027,20 @@ _create_option(
     description="""
         The font family for headings in the app.
     """,
+)
+
+_create_option(
+    "theme.spacing",
+    description="""""",
+    type_=float,
+)
+
+_create_option(
+    "theme.fontSize",
+    description="""
+        The base font size in pixels.
+    """,
+    type_=int,
 )
 
 # Config Section: Secrets #
