@@ -93,11 +93,17 @@ def test_fullscreen_button_exists(app: Page):
     expect(app.get_by_test_id("StyledFullScreenButton").first).to_be_attached()
 
 
-def test_image_from_file(app: Page, assert_snapshot: ImageCompareFunction):
-    gif_image = get_image(app, "Image from jpg file.").locator("img")
-    expect(gif_image).to_have_css("width", "200px")
-    expect(gif_image).to_have_attribute("src", re.compile(r"^.*\.jpg$"))
-    assert_snapshot(gif_image, name="st_image-image_from_file")
+def test_image_from_file_str(app: Page, assert_snapshot: ImageCompareFunction):
+    image = get_image(app, "Image from jpg file (str).").locator("img")
+    expect(image).to_have_css("width", "200px")
+    expect(image).to_have_attribute("src", re.compile(r"^.*\.jpg$"))
+    assert_snapshot(image, name="st_image-image_from_file_str")
+
+def test_image_from_file_path(app: Page, assert_snapshot: ImageCompareFunction):
+    image = get_image(app, "Image from jpg file (Path).").locator("img")
+    expect(image).to_have_css("width", "200px")
+    expect(image).to_have_attribute("src", re.compile(r"^.*\.jpg$"))
+    assert_snapshot(image, name="st_image-image_from_file_path")
 
 
 def test_gif_image(app: Page, assert_snapshot: ImageCompareFunction):

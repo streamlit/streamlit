@@ -14,6 +14,7 @@
 
 import io
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -160,10 +161,11 @@ st.image(
     caption="Yellow Green Rectangle with x 100 and width 300.",
 )
 
-st.header("Image from file")
+st.header("Image from file (str and Path)")
 
 CAT_IMAGE = os.path.join(TEST_ASSETS_DIR, "cat.jpg")
-st.image(CAT_IMAGE, caption="Image from jpg file.", width=200)
+st.image(CAT_IMAGE, caption="Image from jpg file (str).", width=200)
+st.image(Path(CAT_IMAGE), caption="Image from jpg file (Path).", width=200)
 
 st.header("channels parameter")
 

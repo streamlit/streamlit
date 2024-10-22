@@ -14,8 +14,11 @@
 
 """Unit tests for st.image and other image.py utility code."""
 
+from __future__ import annotations
+
 import io
 import random
+from pathlib import Path
 from unittest import mock
 
 import numpy as np
@@ -250,16 +253,21 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("foo.png", "image/png", False),
+            (Path("foo.png"), "image/png", False),
             ("path/to/foo.jpg", "image/jpeg", False),
+            (Path("path/to/foo.jpg"), "image/jpeg", False),
             ("path/to/foo.gif", "image/gif", False),
+            (Path("path/to/foo.gif"), "image/gif", False),
             ("foo.unknown_extension", "application/octet-stream", False),
+            (Path("foo.unknown_extension"), "application/octet-stream", False),
             ("foo", "application/octet-stream", False),
+            (Path("foo"), "application/octet-stream", False),
             ("https://foo.png", "image/png", True),
             ("https://foo.gif", "image/gif", True),
         ]
     )
     def test_image_to_url_adds_filenames_to_media_file_mgr(
-        self, input_string: str, expected_mimetype: str, is_url: bool
+        self, input_string: str | Path, expected_mimetype: str, is_url: bool
     ):
         """if `image_to_url` is unable to open an image passed by name, it
         still passes the filename to MediaFileManager. (MediaFileManager may have a
@@ -287,10 +295,15 @@ class ImageProtoTest(DeltaGeneratorTestCase):
                 self.assertEqual(input_string, result)
                 mock_mfm_add.assert_not_called()
             else:
-                # Other strings should be passed to MediaFileManager.add
+                # Other strings and Path objects should be passed to MediaFileManager.add
                 self.assertEqual("https://mockoutputurl.com", result)
+                expected_input = (
+                    str(input_string)
+                    if isinstance(input_string, Path)
+                    else input_string
+                )
                 mock_mfm_add.assert_called_once_with(
-                    input_string, expected_mimetype, "mock_image_id"
+                    expected_input, expected_mimetype, "mock_image_id"
                 )
 
     @parameterized.expand(
