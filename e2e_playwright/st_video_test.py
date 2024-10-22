@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
 )
 
-VIDEO_ELEMENTS_COUNT = 11
+VIDEO_ELEMENTS_COUNT = 12
 
 
 # Chromium miss codecs required to play that mp3 videos
@@ -50,7 +50,7 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
         image_threshold=0.09,
     )
     assert_snapshot(
-        video_elements.nth(3),
+        video_elements.nth(4),
         name="video_element_with_subtitles",
         image_threshold=0.09,
     )
@@ -65,9 +65,9 @@ def test_video_rendering_webp(app: Page, assert_snapshot: ImageCompareFunction):
     # Wait for the video to load
     app.wait_for_timeout(2000)
 
-    expect(video_elements.nth(4)).to_be_visible()
+    expect(video_elements.nth(5)).to_be_visible()
     assert_snapshot(
-        video_elements.nth(4),
+        video_elements.nth(5),
         name="video_element_webm_with_subtitles",
         image_threshold=0.09,
     )
@@ -107,8 +107,8 @@ def test_handles_changes_in_start_time(
 @pytest.mark.parametrize(
     "nth_element",
     [
-        pytest.param(5, marks=pytest.mark.skip_browser("webkit")),
-        pytest.param(6, marks=pytest.mark.skip_browser("chromium")),
+        pytest.param(6, marks=pytest.mark.skip_browser("webkit")),
+        pytest.param(7, marks=pytest.mark.skip_browser("chromium")),
     ],
 )
 def test_video_end_time(app: Page, nth_element: int):
@@ -130,8 +130,8 @@ def test_video_end_time(app: Page, nth_element: int):
 @pytest.mark.parametrize(
     "nth_element",
     [
-        pytest.param(7, marks=pytest.mark.skip_browser("webkit")),
-        pytest.param(8, marks=pytest.mark.skip_browser("chromium")),
+        pytest.param(8, marks=pytest.mark.skip_browser("webkit")),
+        pytest.param(9, marks=pytest.mark.skip_browser("chromium")),
     ],
 )
 def test_video_end_time_loop(app: Page, nth_element: int):
@@ -159,7 +159,7 @@ def test_video_autoplay(app: Page):
     video_elements = app.get_by_test_id("stVideo")
     expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    video_element = video_elements.nth(9)
+    video_element = video_elements.nth(10)
     expect(video_element).to_be_visible()
     video_element.scroll_into_view_if_needed()
     expect(video_element).to_have_js_property("paused", True)
@@ -178,9 +178,9 @@ def test_video_muted_autoplay(app: Page):
     video_elements = app.get_by_test_id("stVideo")
     expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    expect(video_elements.nth(10)).to_be_visible()
+    expect(video_elements.nth(11)).to_be_visible()
 
-    video_element = video_elements.nth(10)
+    video_element = video_elements.nth(11)
     video_element.scroll_into_view_if_needed()
 
     # To prevent flakiness, we wait for the video to load and start playing
@@ -196,7 +196,7 @@ def test_video_remount_no_autoplay(app: Page):
     video_elements = app.get_by_test_id("stVideo")
     expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    video_element = video_elements.nth(9)
+    video_element = video_elements.nth(10)
 
     expect(video_element).to_be_visible()
     expect(video_element).to_have_js_property("paused", True)

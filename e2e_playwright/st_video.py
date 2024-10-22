@@ -14,6 +14,7 @@
 
 import time
 from os.path import abspath, dirname, join
+from pathlib import Path
 
 import requests
 
@@ -38,6 +39,7 @@ st.video(url, start_time=int(timestamp))
 
 # Test local file with video
 st.video(MP4_VIDEO_PATH, start_time=17)
+st.video(Path(MP4_VIDEO_PATH), start_time=17)
 
 # Test subtitle with video
 st.video(
