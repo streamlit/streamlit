@@ -27,12 +27,22 @@ import { AppContext } from "@streamlit/app/src/components/AppContext"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
+  console.log(
+    "DEBUG: createSidebarTheme",
+    theme,
+    theme.emotion.colors.sidebarTextColor ?? theme.emotion.colors.bodyText
+  )
   return createTheme(
     "Sidebar",
     {
-      secondaryBackgroundColor: theme.emotion.colors.bgColor,
-      backgroundColor: theme.emotion.colors.secondaryBg,
-
+      secondaryBackgroundColor:
+        theme.emotion.colors.sidebarSecondaryBackgroundColor ??
+        theme.emotion.colors.bgColor,
+      backgroundColor:
+        theme.emotion.colors.sidebarBackgroundColor ??
+        theme.emotion.colors.secondaryBg,
+      textColor:
+        theme.emotion.colors.sidebarTextColor ?? theme.emotion.colors.bodyText,
       // Explictly pass these props to the sidebar theming as well.
       // This ensures custom fonts passed through postMessage propagate to the sidebar as well.
       bodyFont: theme.emotion.genericFonts.bodyFont,
@@ -52,6 +62,7 @@ const ThemedSidebar = ({
     React.useContext(AppContext)
   const { activeTheme } = React.useContext(LibContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
+  console.log("DEBUG: ThemedSidebar", sidebarTheme)
 
   return (
     <ThemeProvider

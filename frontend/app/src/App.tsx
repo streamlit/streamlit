@@ -1135,6 +1135,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   processThemeInput(themeInput: CustomThemeConfig): void {
+    console.log("DEBUG: processThemeInput", themeInput)
     const themeHash = this.createThemeHash(themeInput)
     if (themeHash === this.state.themeHash) {
       return

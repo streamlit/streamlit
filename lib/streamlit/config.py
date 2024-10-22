@@ -1010,7 +1010,7 @@ _create_option(
     "theme.linkColor",
     description="""
         The color of links in the app.
-    """,
+""",
 )
 
 _create_option(
@@ -1053,6 +1053,27 @@ _create_option(
         The base font size in pixels.
     """,
     type_=int,
+)
+
+_create_option(
+    "theme.sidebarTextColor",
+    description="""
+        Text color of sidebar
+    """,
+)
+
+_create_option(
+    "theme.sidebarBackgroundColor",
+    description="""
+        Primary background color of the sidebar
+    """,
+)
+
+_create_option(
+    "theme.sidebarSecondaryBackgroundColor",
+    description="""
+        Secondary background color of the sidebar
+    """,
 )
 
 # Config Section: Secrets #

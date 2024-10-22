@@ -20,4 +20,5 @@ export const StyledText = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   whiteSpace: "pre-line",
   workdbreak: "break-word",
+  color: theme.colors.bodyText,
 }))
