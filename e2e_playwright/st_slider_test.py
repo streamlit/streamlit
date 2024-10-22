@@ -36,6 +36,11 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(st_sliders.nth(9), name="st_slider-label_collapsed")
     assert_snapshot(st_sliders.nth(10), name="st_slider-labels_overlap_slider")
     assert_snapshot(st_sliders.nth(15), name="st_slider-time_value")
+    assert_snapshot(st_sliders.nth(16), name="st_slider-overlap_left")
+    assert_snapshot(st_sliders.nth(17), name="st_slider-overlap_near_left")
+    assert_snapshot(st_sliders.nth(18), name="st_slider-overlap_right")
+    assert_snapshot(st_sliders.nth(19), name="st_slider-overlap_near_right")
+    assert_snapshot(st_sliders.nth(20), name="st_slider-overlap_near_center")
 
 
 def test_help_tooltip_works(app: Page):
