@@ -993,6 +993,11 @@ _create_option(
 )
 
 _create_option(
+    "theme.fontFaces",
+    description="""Font faces""",
+)
+
+_create_option(
     "theme.roundedness",
     description="""
         The roundness of the corners for most UI elements. Can be between 0 and 1,
