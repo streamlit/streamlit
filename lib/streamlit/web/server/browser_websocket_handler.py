@@ -60,6 +60,18 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         if is_xsrf_enabled():
             _ = self.xsrf_token
 
+    def get_signed_cookie(
+        self,
+        name: str,
+        value: str | None = None,
+        max_age_days: float = 31,
+        min_version: int | None = None,
+    ) -> bytes | None:
+        try:
+            return super().get_signed_cookie(name, value, max_age_days, min_version)
+        except AttributeError:
+            return super().get_secure_cookie(name, value, max_age_days, min_version)
+
     def check_origin(self, origin: str) -> bool:
         """Set up CORS."""
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
