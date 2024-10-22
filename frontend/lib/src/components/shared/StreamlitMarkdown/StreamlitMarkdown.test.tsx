@@ -226,6 +226,38 @@ describe("StreamlitMarkdown", () => {
     )
   })
 
+  // Typographical symbol replacements
+  const symbolReplacementCases = [
+    { input: "a -> b", tag: "p", expected: "a → b" },
+    { input: "a <- b", tag: "p", expected: "a ← b" },
+    { input: "a <-> b", tag: "p", expected: "a ↔ b" },
+    { input: "a -- b", tag: "p", expected: "a — b" },
+    { input: "a >= b", tag: "p", expected: "a ≥ b" },
+    { input: "a <= b", tag: "p", expected: "a ≤ b" },
+    { input: "a ~= b", tag: "p", expected: "a ≈ b" },
+    {
+      input: "[Link ->](https://example.com/arrow->)",
+      tag: "a",
+      expected: "Link ->",
+    },
+    { input: "`Code ->`", tag: "code", expected: "Code ->" },
+  ]
+
+  test.each(symbolReplacementCases)(
+    "replaces symbols with nicer typographical symbols - $input",
+    ({ input, tag, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+
+      const expectedTag = markdownText.nodeName.toLowerCase()
+      expect(expectedTag).toEqual(tag)
+
+      // Removes rendered StreamlitMarkdown component before next case run
+      cleanup()
+    }
+  )
+
   // Invalid Markdown - images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
   const table = `| Syntax | Description |
   | ----------- | ----------- |
