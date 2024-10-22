@@ -982,6 +982,13 @@ _create_option(
     """,
 )
 
+_create_option("theme.bodyFont")
+
+_create_option(
+    "theme.fontFaces",
+    description="""Font faces""",
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")

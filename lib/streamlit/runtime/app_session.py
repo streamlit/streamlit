@@ -20,6 +20,8 @@ import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Final
 
+from google.protobuf.json_format import ParseDict
+
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime
 from streamlit.logger import get_logger
@@ -30,6 +32,7 @@ from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import (
     Config,
     CustomThemeConfig,
+    FontFace,
     NewSession,
     UserInfo,
 )
@@ -896,7 +899,7 @@ def _populate_config_msg(msg: Config) -> None:
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
-    enum_encoded_options = {"base", "font"}
+    enum_encoded_options = {"base", "font", "fontFaces"}
     theme_opts = config.get_options_for_section("theme")
 
     if not any(theme_opts.values()):
@@ -940,6 +943,11 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
             )
         else:
             msg.font = font_map[font]
+
+    fontFaces = theme_opts["fontFaces"]
+    if fontFaces is not None:
+        for fontFace in fontFaces:
+            msg.font_faces.append(ParseDict(fontFace, FontFace()))
 
 
 def _populate_user_info_msg(msg: UserInfo) -> None:
