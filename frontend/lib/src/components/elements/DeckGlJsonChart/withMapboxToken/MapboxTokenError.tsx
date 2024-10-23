@@ -17,6 +17,7 @@
 import React, { ReactElement } from "react"
 
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
+import { StyledInlineCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 
 import {
   MapboxTokenFetchingError,
@@ -42,8 +43,9 @@ const MapboxTokenError = ({
         message={
           <>
             <p>
-              To use <code>st.{deltaType}</code> or <code>st.map</code> you
-              need to set up a Mapbox access token.
+              To use <StyledInlineCode>st.{deltaType}</StyledInlineCode> or{" "}
+              <StyledInlineCode>st.map</StyledInlineCode> you need to set up a
+              Mapbox access token.
             </p>
 
             <p>
@@ -54,9 +56,9 @@ const MapboxTokenError = ({
 
             <p>
               Once you have a token, just set it using the Streamlit config
-              option <code>mapbox.token</code> and don't forget to restart your
-              Streamlit server at this point if it's still running, then reload
-              this tab.
+              option <StyledInlineCode>mapbox.token</StyledInlineCode> and
+              don't forget to restart your Streamlit server at this point if
+              it's still running, then reload this tab.
             </p>
 
             <p>

@@ -19,6 +19,7 @@ import React, { Fragment } from "react"
 import styled from "@emotion/styled"
 import axios from "axios"
 
+import { StyledPre } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
@@ -658,9 +659,9 @@ export function doInitPings(
             Is Streamlit still running? If you accidentally stopped Streamlit,
             just restart it in your terminal:
           </p>
-          <pre>
+          <StyledPre>
             <StyledBashCode>streamlit run yourscript.py</StyledBashCode>
-          </pre>
+          </StyledPre>
         </Fragment>
       )
     } else {

@@ -402,7 +402,7 @@ class ArrowMixin:
               In this case, ``st.dataframe`` will return the selection data
               as a dictionary.
 
-        selection_mode : "single-row", "multi-row", single-column", \
+        selection_mode : "single-row", "multi-row", "single-column", \
             "multi-column", or Iterable of these
             The types of selections Streamlit should allow. This can be one of
             the following:
