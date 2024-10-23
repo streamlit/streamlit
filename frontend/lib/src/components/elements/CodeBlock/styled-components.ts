@@ -31,6 +31,9 @@ export const StyledInlineCode = styled.code(({ theme }) => ({
   borderRadius: theme.radii.md,
   background: theme.colors.codeHighlightColor,
   color: theme.colors.codeTextColor,
+  fontFamily: theme.genericFonts.codeFont,
+  // Use em here so that it works correctly within captions
+  fontSize: "0.75em",
 
   ...codeLink,
 }))
