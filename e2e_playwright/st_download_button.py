@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Construct test assets path relative to this script file to
-# allow its execution with different working directories.
 from pathlib import Path
 from random import random
 
 import streamlit as st
 from streamlit import runtime
 
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
 TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
 

@@ -161,8 +161,8 @@ st.image(
 st.header("Image from file (str and Path)")
 
 CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
-st.image(CAT_IMAGE, caption="Image from jpg file (str).", width=200)
-st.image(Path(CAT_IMAGE), caption="Image from jpg file (Path).", width=200)
+st.image(str(CAT_IMAGE), caption="Image from jpg file (str).", width=200)
+st.image(CAT_IMAGE, caption="Image from jpg file (Path).", width=200)
 
 st.header("channels parameter")
 
