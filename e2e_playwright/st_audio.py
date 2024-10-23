@@ -22,9 +22,7 @@ import streamlit as st
 
 # Construct test assets path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "test_assets"
-)
+TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
 st.header("Audio from bytes")
 url1 = "https://www.w3schools.com/html/horse.ogg"
@@ -37,7 +35,7 @@ st.audio(url2, start_time=10, end_time=13)
 st.audio(url2, start_time=15, end_time=19, loop=True)
 
 st.header("Audio from mp3 file (str and Path)")
-CAT_AUDIO = os.path.join(TEST_ASSETS_DIR, "cat-purr.mp3")
+CAT_AUDIO = TEST_ASSETS_DIR / "cat-purr.mp3"
 st.audio(CAT_AUDIO)
 st.audio(Path(CAT_AUDIO))
 

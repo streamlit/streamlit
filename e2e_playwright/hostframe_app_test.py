@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 from typing import Final
 
 from playwright.sync_api import FrameLocator, Locator, Route, expect
@@ -31,12 +31,8 @@ from e2e_playwright.shared.app_utils import (
     register_connection_status_observer,
 )
 
-TEST_ASSETS_DIR: Final[str] = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "test_assets"
-)
-
-with open(os.path.join(TEST_ASSETS_DIR, "hostframe.html")) as f:
-    HOSTFRAME_TEST_HTML: Final[str] = f.read()
+TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
+HOSTFRAME_TEST_HTML: Final[str] = (TEST_ASSETS_DIR / "hostframe.html").read_text()
 
 
 def _load_html_and_get_locators(

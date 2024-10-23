@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from pathlib import Path
 
 import streamlit as st
 
 # Construct test assets path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "test_assets"
-)
+TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
 st.sidebar.button("Sidebar!")
 st.markdown("Main!")
@@ -96,11 +93,11 @@ st.button("Page Config With Emoji Symbol", on_click=page_config_with_emoji_symbo
 
 
 def page_config_with_local_icon_str():
-    ICON_PATH = os.path.join(TEST_ASSETS_DIR, "favicon.ico")
+    ICON_PATH = TEST_ASSETS_DIR / "favicon.ico"
 
     st.set_page_config(
         page_title="With Local Icon Str",
-        page_icon=ICON_PATH,
+        page_icon=str(ICON_PATH),
     )
 
 
@@ -108,7 +105,7 @@ st.button("Page Config With Local Icon Str", on_click=page_config_with_local_ico
 
 
 def page_config_with_local_icon_path():
-    ICON_PATH = Path(os.path.join(TEST_ASSETS_DIR, "favicon.ico"))
+    ICON_PATH = TEST_ASSETS_DIR / "favicon.ico"
 
     st.set_page_config(
         page_title="With Local Icon Path",

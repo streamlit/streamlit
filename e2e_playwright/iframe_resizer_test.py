@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Callable, Final
 
 from playwright.sync_api import FrameLocator, Locator, expect
@@ -25,16 +24,17 @@ from e2e_playwright.shared.app_utils import wait_for_app_run
 if TYPE_CHECKING:
     from e2e_playwright.conftest import IframedPage, ImageCompareFunction
 
-TEST_ASSETS_DIR: Final[str] = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "test_assets"
-)
+from pathlib import Path
+
+TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
 
 # we read the iframeResizer script from the assets file and inject the content within a
 # <script>{content}</script> tag to the iframe. I wasn't able to load the script from a
 # url in the playwright, which is why we do it inline (I also didn't spend a ton of time
 # so it might easily be possible).
-with open(os.path.join(TEST_ASSETS_DIR, "iframerResizer.min.js")) as f:
-    IFRAME_RESIZER_SCRIPT: Final[str] = f.read()
+IFRAME_RESIZER_SCRIPT: Final[str] = (
+    TEST_ASSETS_DIR / "iframerResizer.min.js"
+).read_text()
 
 
 def _open_with_resize_script(
