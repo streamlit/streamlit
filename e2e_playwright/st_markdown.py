@@ -157,7 +157,7 @@ with st.container():
 
 "---"
 
-with st.container("latex_elements"):
+with st.container(key="latex_elements"):
     st.latex(r"\LaTeX")
 
     st.latex(
@@ -184,7 +184,7 @@ st.markdown(
     "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
 )
 
-st.container("mixed_markdown").markdown(
+st.container(key="mixed_markdown").markdown(
     r"""
 Many different markdown formats in one block:
 
