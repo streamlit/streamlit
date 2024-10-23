@@ -34,7 +34,7 @@ message MetricsEvent {
   string streamlit_version = 7;
   bool is_hello = 8;
 
-    // Host tracking fields:
+  // Host tracking fields:
   string hosted_at = 9;
   string owner = 10;
   string repo = 11;
@@ -42,7 +42,7 @@ message MetricsEvent {
   string main_module = 13;
   string creator_id = 14;
 
-    // Context fields:
+  // Context fields:
   string context_page_url = 15;
   string context_page_title = 16;
   string context_page_path = 17;
@@ -57,7 +57,7 @@ message MetricsEvent {
 
 
   // Page Profile Event fields:
-    // Same as PageProfile msg
+  // Same as PageProfile msg
   repeated Command commands = 23;
   int64 exec_time = 24;
   int64 prep_time = 25;
@@ -69,7 +69,7 @@ message MetricsEvent {
   bool headless = 31;
   bool is_fragment_run = 32;
 
-    // Addtl for page profile metrics
+  // Addtl for page profile metrics
   string app_id = 33;
   int64 numPages = 34;
   string session_id = 35;

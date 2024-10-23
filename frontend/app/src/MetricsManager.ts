@@ -300,9 +300,7 @@ export class MetricsManager {
       contextPagePath: window.location.pathname,
       contextPageReferrer: document.referrer,
       contextPageSearch: window.location.search,
-      contextLocale:
-        // @ts-expect-error
-        window.navigator.userLanguage || window.navigator.language,
+      contextLocale: window.navigator.language,
       contextUserAgent: window.navigator.userAgent,
     }
   }
@@ -316,10 +314,12 @@ export class MetricsManager {
     // If metrics disabled, anonymous ID unnecessary
     if (!this.actuallySendMetrics) return
 
+    const anonymousIdKey = "ajs_anonymous_id"
     const isLocalStoreAvailable = localStorageAvailable()
-    const anonymousIdCookie = getCookie("ajs_anonymous_id")
+
+    const anonymousIdCookie = getCookie(anonymousIdKey)
     const anonymousIdLocalStorage = isLocalStoreAvailable
-      ? localStorage.getItem("ajs_anonymous_id")
+      ? localStorage.getItem(anonymousIdKey)
       : null
 
     const expiration = new Date()
@@ -328,16 +328,16 @@ export class MetricsManager {
     if (anonymousIdCookie) {
       this.anonymousId = anonymousIdCookie
       if (isLocalStoreAvailable) {
-        localStorage.setItem("ajs_anonymous_id", anonymousIdCookie)
+        localStorage.setItem(anonymousIdKey, anonymousIdCookie)
       }
     } else if (anonymousIdLocalStorage) {
       this.anonymousId = anonymousIdLocalStorage
-      setCookie("ajs_anonymous_id", anonymousIdLocalStorage, expiration)
+      setCookie(anonymousIdKey, anonymousIdLocalStorage, expiration)
     } else {
       this.anonymousId = uuidv4()
-      setCookie("ajs_anonymous_id", this.anonymousId, expiration)
+      setCookie(anonymousIdKey, this.anonymousId, expiration)
       if (isLocalStoreAvailable) {
-        localStorage.setItem("ajs_anonymous_id", this.anonymousId)
+        localStorage.setItem(anonymousIdKey, this.anonymousId)
       }
     }
   }
