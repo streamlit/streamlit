@@ -44,11 +44,12 @@ st.download_button(
     mime="application/vnd.rar",
 )
 
-st.download_button(
-    "Download image file",
-    data=CAT_IMAGE,
-    file_name="cat.jpg",
-)
+with open(CAT_IMAGE, "rb") as f:
+    st.download_button(
+        "Download image file",
+        data=f,
+        file_name="cat.jpg",
+    )
 
 st.download_button(
     "Download button with use_container_width=True",
