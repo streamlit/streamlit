@@ -28,7 +28,11 @@ import {
   StreamlitMarkdown,
 } from "@streamlit/lib"
 import { STREAMLIT_HOME_URL } from "@streamlit/app/src/urls"
-import { StyledInlineCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
+import {
+  StyledCode,
+  StyledInlineCode,
+  StyledPre,
+} from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 
 import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
 import ThemeCreatorDialog, {
@@ -231,11 +235,11 @@ function scriptCompileErrorDialog(
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <div>
-          <pre>
-            <StyledInlineCode>
+          <StyledPre>
+            <StyledCode>
               {props.exception ? props.exception.message : "No message"}
-            </StyledInlineCode>
-          </pre>
+            </StyledCode>
+          </StyledPre>
         </div>
       </ModalBody>
       <ModalFooter>
