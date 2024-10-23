@@ -77,10 +77,10 @@ class SQLConnection(BaseConnection["Engine"]):
     your dialect may accept additional keyword arguments. For example, if you
     use ``dialect="snowflake"`` with `Snowflake SQLAlchemy
     <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_,
-    you can pass ``private_key`` to use key pair authentication. If you use
-    ``dialect="bigquery"`` with `Google BigQuery
+    you can pass a value for ``private_key`` to use key-pair authentication. If
+    you use ``dialect="bigquery"`` with `Google BigQuery
     <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_,
-    you can pass ``location``.
+    you can pass a value for ``location``.
 
     SQLConnection provides the ``.query()`` convenience method, which can be
     used to run simple, read-only queries with both caching and simple error
@@ -100,11 +100,23 @@ class SQLConnection(BaseConnection["Engine"]):
 
     Example
     -------
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.sql]
+    >>> dialect = "xxx"
+    >>> host = "xxx"
+    >>> username = "xxx"
+    >>> password = "xxx"
+
+    Your app code:
+
     >>> import streamlit as st
     >>>
     >>> conn = st.connection("sql")
-    >>> df = conn.query("select * from pet_owners")
+    >>> df = conn.query("SELECT * FROM pet_owners")
     >>> st.dataframe(df)
+
     """
 
     def _connect(self, autocommit: bool = False, **kwargs) -> Engine:
@@ -164,15 +176,15 @@ class SQLConnection(BaseConnection["Engine"]):
     ) -> DataFrame:
         """Run a read-only query.
 
-        This method implements both query result caching (with caching behavior
-        identical to that of using ``@st.cache_data``) as well as simple error handling/retries.
+        This method implements query result caching and simple error
+        handling/retries. The caching behavior is identical to that of using
+        ``@st.cache_data``.
 
         .. note::
             Queries that are run without a specified ttl are cached indefinitely.
 
-        Aside from the ``ttl`` kwarg, all kwargs passed to this function are passed down
-        to |pandas.read_sql|_
-        and have the behavior described in the pandas documentation.
+        All keyword arguments passed to this function are passed down to
+        |pandas.read_sql|_, except ``ttl``.
 
         .. |pandas.read_sql| replace:: ``pandas.read_sql``
         .. _pandas.read_sql: https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html
@@ -216,7 +228,7 @@ class SQLConnection(BaseConnection["Engine"]):
         >>>
         >>> conn = st.connection("sql")
         >>> df = conn.query(
-        ...     "select * from pet_owners where owner = :owner",
+        ...     "SELECT * FROM pet_owners WHERE owner = :owner",
         ...     ttl=3600,
         ...     params={"owner": "barbara"},
         ... )
@@ -283,12 +295,17 @@ class SQLConnection(BaseConnection["Engine"]):
 
     def connect(self) -> SQLAlchemyConnection:
         """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new\
-        ``sqlalchemy.engine.Connection`` object.
+        connection object.
 
         Calling this method is equivalent to calling ``self._instance.connect()``.
 
         NOTE: This method should not be confused with the internal ``_connect`` method used
         to implement a Streamlit Connection.
+
+        Returns
+        -------
+        sqlalchemy.engine.Connection
+            A new SQLAlchemy connection object.
         """
         return self._instance.connect()
 

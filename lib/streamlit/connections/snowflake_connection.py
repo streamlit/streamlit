@@ -54,9 +54,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
     for local development.
 
-    SnowflakeConnection supports direct SQL querying with ``.query()``, access
-    to the underlying Snowflake Connector object with ``.raw_connection``, and
-    other convenience functions. For more information, see the class methods.
+    SnowflakeConnection includes several convenience methods. For example, you
+    can directly execute a SQL query with ``.query()`` or access the underlying
+    Snowflake Connector object with ``.raw_connection``.
 
     .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
     .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
@@ -72,8 +72,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         Account identifiers must be of the form ``<orgname>-<account_name>``
         where ``<orgname>`` is the name of your Snowflake organization and
         ``<account_name>`` is the unique name of your account within your
-        organization. This is not the dot-separated identifier used in SQL
-        queries. For more information, see `Account identifiers
+        organization. This is dash-separated, not dot-separated like when used
+        in SQL queries. For more information, see `Account identifiers
         <https://docs.snowflake.com/en/user-guide/admin-account-identifier>`_.
 
     Examples
@@ -118,10 +118,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     **Example 3**
 
-    Snowflake's Python connector also supports a `connection configuration file
+    Snowflake's Python Connector also supports a `connection configuration file
     <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#label-python-connection-toml>`_,
     ``connections.toml``. For example, if you already have a Snowflake
-    connection configured for Snowflake's Python connector, just pass the
+    connection configured for Snowflake's Python Connector, just pass the
     connection name to Streamlit.
 
     ``~/.snowflake/connections.toml``:
@@ -221,9 +221,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     ) -> DataFrame:
         """Run a read-only SQL query.
 
-        This method implements both query result caching (with caching behavior
-        identical to that of using ``@st.cache_data``) as well as simple error
-        handling/retries.
+        This method implements query result caching and simple error
+        handling/retries. The caching behavior is identical to that of using
+        ``@st.cache_data``.
 
         .. note::
             Queries that are run without a specified ``ttl`` are cached
@@ -260,6 +260,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         Example
         -------
+
         >>> import streamlit as st
         >>>
         >>> conn = st.connection("snowflake")
@@ -421,12 +422,16 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         Example
         -------
-        The following example uses a cursor to change the database used by the
-        connection.
+        The following example uses a cursor to insert multiple rows into a
+        table. The ``qmark`` parameter style is specified as an optional
+        keyword argument. Alternatively, the parameter style can be declared in
+        your connection configuration file. For more information, see the
+        `Snowflake Connector for Python documentation
+        <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example#using-qmark-or-numeric-binding>`_.
 
         >>> import streamlit as st
         >>>
-        >>> conn = st.connection("snowflake")
+        >>> conn = st.connection("snowflake", "paramstyle"="qmark")
         >>> rows_to_insert = [("Mary", "dog"), ("John", "cat"), ("Robert", "bird")]
         >>> conn.cursor().executemany(
         ...     "INSERT INTO mytable (name, pet) VALUES (?, ?)", rows_to_insert
@@ -475,7 +480,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         return self._instance
 
     def session(self) -> Session:
-        """Create a new Snowpark Session from this connection.
+        """Create a new Snowpark session from this connection.
 
         For information on how to use Snowpark sessions, see the
         `Snowpark developer guide
@@ -486,7 +491,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         Returns
         -------
         snowflake.snowpark.Session
-            A new Snowpark Session for this connection.
+            A new Snowpark session for this connection.
 
         Example
         -------

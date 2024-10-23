@@ -214,7 +214,7 @@ def connection_factory(
     Configuration options, credentials, and secrets for connections are
     combined from the following sources:
 
-    - The kwargs passed to this command.
+    - The keyword arguments passed to this command.
     - The app's ``secrets.toml`` files.
     - Any connection-specific configuration files.
 
@@ -265,11 +265,11 @@ def connection_factory(
         The maximum number of seconds to keep results in the cache.
         If this is ``None`` (default), cached results do not expire with time.
     **kwargs : any
-        Connection-specific kwargs that are passed to the connection's
-        ``_connect()`` method in addition to the kwargs read from
-        ``secrets.toml``. If the same kwarg is passed to ``st.connection`` and
-        included in ``secrets.toml``, the kwarg in ``st.connection`` takes
-        precedence. To learn more, see the specific connection's documentation.
+        Connection-specific keyword arguments that are passed to the
+        connection's ``._connect()`` method. ``**kwargs`` are typically
+        combined with (and take precendence over) key-value pairs in
+        ``secrets.toml``. To learn more, see the specific connection's
+        documentation.
 
     Returns
     -------
@@ -330,11 +330,11 @@ def connection_factory(
 
     **Example 3**
 
-    Passing the full module path to the connection class that you want to use
-    can be useful, especially when working with a custom connection. Although
-    this is not the typical way to create first party connections, the
-    following example creates the same type of connection as one with
-    ``type="sql"``. Note that ``type`` is a string path.
+    Passing the full module path to the connection class can be useful,
+    especially when working with a custom connection. Although this is not the
+    typical way to create first party connections, the following example
+    creates the same type of connection as one with ``type="sql"``. Note that
+    ``type`` is a string path.
 
     ``.streamlit/secrets.toml``:
 
@@ -350,10 +350,10 @@ def connection_factory(
 
     **Example 4**
 
-    You can pass the connection class to use directly to this function. Doing
-    so allows static type checking tools such as ``mypy`` to infer the exact
-    return type of ``st.connection``. The following example creates the same
-    connection as in Example 3.
+    You can pass the connection class directly to the ``st.connection``
+    command. Doing so allows static type checking tools such as ``mypy`` to
+    infer the exact return type of ``st.connection``. The following example
+    creates the same connection as in Example 3.
 
     ``.streamlit/secrets.toml``:
 
