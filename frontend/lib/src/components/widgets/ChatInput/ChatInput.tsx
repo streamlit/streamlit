@@ -23,14 +23,22 @@ import React, {
 } from "react"
 
 import axios from "axios"
-
 import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
+import { AttachFile } from "@emotion-icons/material-outlined"
+import { isNullOrUndefined } from "src/util/utils"
+import { set } from "lodash"
+import { FileRejection, useDropzone } from "react-dropzone"
+import zip from "lodash/zip"
 
 import {
   ChatInput as ChatInputProto,
+  FileUploaderState as FileUploaderStateProto,
+  FileURLs as FileURLsProto,
   IChatInputValue,
+  IFileURLs,
+  UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import {
   WidgetInfo,
@@ -39,13 +47,17 @@ import {
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
-import { useDropzone } from "react-dropzone"
-import { FileRejection } from "react-dropzone"
-import zip from "lodash/zip"
-
 import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
+import {
+  UploadedStatus,
+  UploadFileInfo,
+} from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+
+import UploadedFiles from "../FileUploader/UploadedFiles"
+
 import {
   StyledChatInput,
   StyledChatInputContainer,
@@ -54,25 +66,6 @@ import {
   StyledSendIconButtonContainer,
   StyledVerticalDivider,
 } from "./styled-components"
-
-import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
-
-import {
-  UploadedStatus,
-  UploadFileInfo,
-  UploadingStatus,
-} from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
-
-import {
-  FileUploader as FileUploaderProto,
-  FileUploaderState as FileUploaderStateProto,
-  FileURLs as FileURLsProto,
-  IFileURLs,
-  UploadedFileInfo as UploadedFileInfoProto,
-} from "@streamlit/lib/src/proto"
-import { set } from "lodash"
-import UploadedFiles from "../FileUploader/UploadedFiles"
-import { AttachFile } from "@emotion-icons/material-outlined"
 
 export interface Props {
   disabled: boolean
@@ -284,7 +277,7 @@ function ChatInput({
     id: number,
     fileInfo: UploadFileInfo,
     currentFiles: UploadFileInfo[]
-  ) => {
+  ): UploadFileInfo[] => {
     return currentFiles.map(f => (f.id === id ? fileInfo : f))
   }
 
@@ -298,7 +291,7 @@ function ChatInput({
   const deleteFile = (fileId: number): void => {
     setFiles(files => {
       const file = getFile(fileId, files)
-      if (file == null) {
+      if (isNullOrUndefined(file)) {
         return files
       }
 
@@ -335,7 +328,7 @@ function ChatInput({
   }
 
   const counterRef = useRef(0)
-  const getNextLocalFileId = () => {
+  const getNextLocalFileId = (): number => {
     return counterRef.current++
   }
 
@@ -356,7 +349,7 @@ function ChatInput({
           const file = getFile(fileId, files)
           console.log("THE FILE: ", file)
 
-          if (file == null || file.status.type !== "uploading") {
+          if (isNullOrUndefined(file) || file.status.type !== "uploading") {
             return files
           }
           const newProgress = Math.round((e.loaded * 100) / e.total)
@@ -382,7 +375,10 @@ function ChatInput({
           console.log("FILE URL: ", fileUrls)
 
           const curFile = getFile(id, files)
-          if (curFile == null || curFile.status.type !== "uploading") {
+          if (
+            isNullOrUndefined(curFile) ||
+            curFile.status.type !== "uploading"
+          ) {
             // The file may have been canceled right before the upload
             // completed. In this case, we just bail.
             console.log("JUST BEFORE BAD RETURN :( ")
@@ -506,11 +502,11 @@ function ChatInput({
       setValue(val)
       setDirty(isDirty(val, files))
     }
-  }, [element])
+  }, [element, files])
 
   useEffect(() => {
     setDirty(isDirty(value, files))
-  }, [files])
+  }, [files, value])
 
   useEffect(() => {
     if (chatInputRef.current) {
