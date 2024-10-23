@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from os.path import abspath, dirname, join
+from pathlib import Path
+
 import streamlit as st
+
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
+TEST_ASSETS_DIR = join(dirname(abspath(__file__)), "test_assets")
 
 # Test that we can render HTML with in-line styles
 st.html(
@@ -58,3 +65,10 @@ st.html(
     """
 )
 st.write("After tag")
+
+# Test that we can load HTML files from str paths
+HTML_PATH = Path(TEST_ASSETS_DIR) / "test_div.html"
+st.html(str(HTML_PATH))
+
+# Test that we can load HTML files from Path objects
+st.html(HTML_PATH)
