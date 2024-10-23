@@ -17,6 +17,7 @@ from __future__ import annotations
 import io
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -30,7 +31,6 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from pathlib import Path
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
