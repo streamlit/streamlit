@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
 import { Theme } from "@emotion/react"
+import styled from "@emotion/styled"
 
 const codeLink = {
   // Streamline the style when inside anchors to avoid broken underline and more
@@ -65,6 +65,7 @@ export const StyledPre = styled.pre(({ theme }) => ({
   background: theme.colors.codeHighlightColor,
   borderRadius: theme.radii.default,
   color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.twoSm,
   display: "block",
   // Remove browser default top margin
   margin: 0,

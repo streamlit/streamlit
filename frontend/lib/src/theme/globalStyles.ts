@@ -259,30 +259,17 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-weight: ${theme.fontWeights.extrabold};
   }
 
+  // Small
+
+  small {
+    font-size: ${theme.fontSizes.sm};
+  }
+
   // Mark
 
   mark {
     padding: 0.2em;
     background-color: ${theme.colors.secondaryBg};
-  }
-
-  // Sub and Sup
-  //
-  // Prevent sub and sup elements from affecting the line height in
-  // all browsers.
-
-  sub,
-  sup {
-    position: relative;
-    line-height: 0;
-    vertical-align: baseline;
-  }
-
-  sub {
-    bottom: -0.25em;
-  }
-  sup {
-    top: -0.5em;
   }
 
   // Links
@@ -314,6 +301,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   pre,
   code,
   kbd {
+    font-size: 1em;
     font-family: ${theme.genericFonts.codeFont};
   }
 
