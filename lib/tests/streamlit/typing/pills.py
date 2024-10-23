@@ -34,14 +34,14 @@ if TYPE_CHECKING:
         Union[int, None],
     )
     assert_type(
-        pills("foo", options, selection_mode="multiple"),
+        pills("foo", options, selection_mode="multi"),
         list[int],
     )
     assert_type(
-        pills("foo", options, selection_mode="multiple", default=1),
+        pills("foo", options, selection_mode="multi", default=1),
         list[int],
     )
     assert_type(
-        pills("foo", options, selection_mode="multiple", default=[1]),
+        pills("foo", options, selection_mode="multi", default=[1]),
         list[int],
     )

@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
+import { StyledCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 
 import { StyledPreError } from "./styled-components"
 
@@ -50,7 +51,7 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
       {message}
       {stack ? (
         <StyledPreError data-testid="stErrorElementStack">
-          <code>{cleanedStack}</code>
+          <StyledCode>{cleanedStack}</StyledCode>
         </StyledPreError>
       ) : null}
     </AlertContainer>

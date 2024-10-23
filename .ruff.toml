@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # In addition to the standard set of exclusions, omit all tests:
-extend-exclude = ["lib/streamlit/proto", "lib/streamlit/emojis.py"]
+extend-exclude = ["lib/streamlit/proto", "lib/streamlit/emojis.py", "e2e_playwright/compilation_error_dialog.py"]
 include = [
   "lib/**/*.py",
   "lib/**/*.pyi",
@@ -64,7 +64,7 @@ ignore = [
 exclude = [
   "lib/streamlit/vendor/**",
   "scripts/**",
-  ".github/**",
+  ".github/**"
 ]
 
 [lint.per-file-ignores]
