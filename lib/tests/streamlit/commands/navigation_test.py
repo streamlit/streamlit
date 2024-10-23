@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -35,6 +36,12 @@ class NavigationTest(DeltaGeneratorTestCase):
     def test_single_page(self):
         """Test that a single page is returned"""
         single_page = st.Page("page1.py")
+        page = st.navigation([single_page])
+        assert page == single_page
+
+    def test_single_page_with_path(self):
+        """Test that a single page is returned with a Path object"""
+        single_page = st.Page(Path("page1.py"))
         page = st.navigation([single_page])
         assert page == single_page
 

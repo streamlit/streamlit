@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
 import time
+from pathlib import Path
 
 from PIL import Image
 
 import streamlit as st
 
-parent_directory = pathlib.Path(__file__).parent.parent / "multipage_apps"
+parent_directory = Path(__file__).parent.parent / "multipage_apps"
 small_logo = Image.open(str(parent_directory / "small-streamlit.png"))
 
 logo = Image.open(str(parent_directory / "full-streamlit.png"))
@@ -36,7 +36,7 @@ set_default = bool(st.query_params.get("default", False))
 page2 = st.Page("page_2.py")
 page3 = st.Page("page_3.py", title="Different Title")
 page4 = st.Page("🦒_page_4.py")
-page5 = st.Page("page_5.py", icon=":material/settings:")
+page5 = st.Page(Path("page_5.py"), icon=":material/settings:")
 page6 = st.Page("page_6_slow_page.py", title="slow page")
 
 
