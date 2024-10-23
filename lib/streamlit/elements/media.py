@@ -43,7 +43,14 @@ if TYPE_CHECKING:
 
 
 MediaData: TypeAlias = Union[
-    str, Path, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
+    str,
+    Path,
+    bytes,
+    io.BytesIO,
+    io.RawIOBase,
+    io.BufferedReader,
+    "npt.NDArray[Any]",
+    None,
 ]
 
 SubtitleData: TypeAlias = Union[
@@ -769,4 +776,3 @@ def marshall_audio(
             loop=loop,
             autoplay=autoplay,
         )
-
