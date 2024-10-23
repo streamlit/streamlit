@@ -22,6 +22,7 @@ import AlertContainer, {
 } from "@streamlit/lib/src/components/shared/AlertContainer"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Exception as ExceptionProto } from "@streamlit/lib/src/proto"
+import { StyledCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 
 import {
   StyledMessageType,
@@ -83,13 +84,13 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
     <>
       <StyledStackTraceTitle>Traceback:</StyledStackTraceTitle>
       <StyledStackTrace>
-        <code>
+        <StyledCode>
           {stackTrace.map((row: string, index: number) => (
             <StyledStackTraceRow key={index} data-testid="stExceptionTraceRow">
               {row}
             </StyledStackTraceRow>
           ))}
-        </code>
+        </StyledCode>
       </StyledStackTrace>
     </>
   )

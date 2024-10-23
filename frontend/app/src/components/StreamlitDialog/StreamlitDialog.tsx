@@ -28,6 +28,11 @@ import {
   StreamlitMarkdown,
 } from "@streamlit/lib"
 import { STREAMLIT_HOME_URL } from "@streamlit/app/src/urls"
+import {
+  StyledCode,
+  StyledInlineCode,
+  StyledPre,
+} from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 
 import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
 import ThemeCreatorDialog, {
@@ -195,7 +200,8 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
           </div>
           <div>
             This will remove all cached entries from functions using{" "}
-            <code>@st.cache_data</code> and <code>@st.cache_resource</code>.
+            <StyledInlineCode>@st.cache_data</StyledInlineCode> and{" "}
+            <StyledInlineCode>@st.cache_resource</StyledInlineCode>.
           </div>
         </ModalBody>
         <ModalFooter>
@@ -229,11 +235,11 @@ function scriptCompileErrorDialog(
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <div>
-          <pre>
-            <code>
+          <StyledPre>
+            <StyledCode>
               {props.exception ? props.exception.message : "No message"}
-            </code>
-          </pre>
+            </StyledCode>
+          </StyledPre>
         </div>
       </ModalBody>
       <ModalFooter>
