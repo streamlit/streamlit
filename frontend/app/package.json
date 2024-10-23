@@ -52,7 +52,8 @@
     "sass": "^1.58.0",
     "styletron-engine-atomic": "^1.5.0",
     "styletron-react": "^6.1.0",
-    "typed-signals": "^2.5.0"
+    "typed-signals": "^2.5.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.7",
@@ -73,6 +74,8 @@
     "@types/react-transition-group": "^4.4.5",
     "@types/styletron-engine-atomic": "^1.1.1",
     "@types/styletron-react": "^5.0.3",
+    "@types/ua-parser-js": "^0.7.39",
+    "@types/uuid": "^9.0.2",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",
     "axios-mock-adapter": "^1.21.2",

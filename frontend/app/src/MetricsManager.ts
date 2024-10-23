@@ -15,15 +15,19 @@
  */
 
 import pick from "lodash/pick"
+import { v4 as uuidv4 } from "uuid"
 
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
   DeployedAppMetadata,
+  getCookie,
   IS_DEV_ENV,
   localStorageAvailable,
   logAlways,
   logError,
+  MetricsEvent,
   SessionInfo,
+  setCookie,
 } from "@streamlit/lib"
 
 // Default metrics config fetched when none provided by host config endpoint
@@ -63,6 +67,11 @@ export class MetricsManager {
   private metricsUrl: string | undefined = undefined
 
   /**
+   * The anonymous ID of the user.
+   */
+  private anonymousId = ""
+
+  /**
    * Queue of metrics events that were enqueued before this MetricsManager was
    * initialized.
    */
@@ -90,16 +99,17 @@ export class MetricsManager {
     this.initialized = true
     // Handle if the user or the host has disabled metrics
     this.actuallySendMetrics = gatherUsageStats && this.metricsUrl !== "off"
+    this.getAnonymousId()
 
     // Trigger fallback to fetch default metrics config if not provided by host
     if (this.actuallySendMetrics && !this.metricsUrl) {
       this.requestDefaultMetricsConfig()
-    }
 
-    // If metricsUrl still undefined, deactivate metrics
-    if (!this.metricsUrl) {
-      logError("Undefined metrics config")
-      this.actuallySendMetrics = false
+      // If metricsUrl still undefined, deactivate metrics
+      if (!this.metricsUrl) {
+        logError("Undefined metrics config")
+        this.actuallySendMetrics = false
+      }
     }
 
     if (this.actuallySendMetrics) {
@@ -207,12 +217,57 @@ export class MetricsManager {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private track(
+  private async track(
     evName: string,
     data: Record<string, unknown>,
     context: Record<string, unknown>
-  ): void {
+  ): Promise<void> {
+    // Send the event to Segment
     analytics.track(evName, data, context)
+
+    // Send the event to the metrics URL
+    const eventJson = this.buildEventProto(evName, data).toJSON()
+
+    // @ts-expect-error - send func calls track & checks metricsUrl defined
+    const request = new Request(this.metricsUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(eventJson),
+    })
+    await fetch(request)
+  }
+
+  public setMetadata(metadata: DeployedAppMetadata): void {
+    this.metadata = metadata
+  }
+
+  // Helper to build the event proto
+  private buildEventProto(
+    evName: string,
+    data: Record<string, unknown>
+  ): MetricsEvent {
+    const eventProto = new MetricsEvent({
+      event: evName,
+      anonymousId: this.anonymousId,
+      ...this.getHostTrackingData(),
+      ...this.getInstallationData(),
+      reportHash: this.appHash,
+      dev: IS_DEV_ENV,
+      source: "browser",
+      streamlitVersion: this.sessionInfo.current.streamlitVersion,
+      isHello: this.sessionInfo.isHello,
+      ...this.getContextData(),
+    })
+
+    if (evName === "menuClick") {
+      eventProto.label = data.label as string
+    } else if (evName === "pageProfile") {
+      return new MetricsEvent({ ...eventProto, ...data })
+    }
+
+    return eventProto
   }
 
   // Get the installation IDs from the session
@@ -220,10 +275,6 @@ export class MetricsManager {
     return {
       machineIdV3: this.sessionInfo.current.installationIdV3,
     }
-  }
-
-  public setMetadata(metadata: DeployedAppMetadata): void {
-    this.metadata = metadata
   }
 
   // Use the tracking data injected by the host of the app if included.
@@ -239,5 +290,55 @@ export class MetricsManager {
       ])
     }
     return {}
+  }
+
+  // Get context data for events
+  private getContextData(): Record<string, unknown> {
+    return {
+      contextPageUrl: window.location.href,
+      contextPageTitle: document.title,
+      contextPagePath: window.location.pathname,
+      contextPageReferrer: document.referrer,
+      contextPageSearch: window.location.search,
+      contextLocale: window.navigator.language,
+      contextUserAgent: window.navigator.userAgent,
+    }
+  }
+
+  /**
+   * Get/Create user's anonymous ID
+   * Checks if existing in cookie or localStorage, otherwise generates
+   * a new UUID and stores it in both.
+   */
+  private getAnonymousId(): void {
+    // If metrics disabled, anonymous ID unnecessary
+    if (!this.actuallySendMetrics) return
+
+    const anonymousIdKey = "ajs_anonymous_id"
+    const isLocalStoreAvailable = localStorageAvailable()
+
+    const anonymousIdCookie = getCookie(anonymousIdKey)
+    const anonymousIdLocalStorage = isLocalStoreAvailable
+      ? localStorage.getItem(anonymousIdKey)
+      : null
+
+    const expiration = new Date()
+    expiration.setFullYear(new Date().getFullYear() + 1)
+
+    if (anonymousIdCookie) {
+      this.anonymousId = anonymousIdCookie
+      if (isLocalStoreAvailable) {
+        localStorage.setItem(anonymousIdKey, anonymousIdCookie)
+      }
+    } else if (anonymousIdLocalStorage) {
+      this.anonymousId = anonymousIdLocalStorage
+      setCookie(anonymousIdKey, anonymousIdLocalStorage, expiration)
+    } else {
+      this.anonymousId = uuidv4()
+      setCookie(anonymousIdKey, this.anonymousId, expiration)
+      if (isLocalStoreAvailable) {
+        localStorage.setItem(anonymousIdKey, this.anonymousId)
+      }
+    }
   }
 }
