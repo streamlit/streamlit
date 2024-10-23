@@ -30,8 +30,6 @@ import Button, {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 
 import { StyledToolbar, StyledToolbarWrapper } from "./styled-components"
 
@@ -109,37 +107,27 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   target,
   disableFullscreenMode,
 }): ReactElement => {
-  const {
-    expanded: isFullScreenDefault,
-    expand,
-    collapse,
-  } = useRequiredContext(ElementFullscreenContext)
-
-  const finalOnExpand = onExpand || expand
-  const finalOnCollapse = onCollapse || collapse
-  const finalIsFullScreen = isFullScreen ?? isFullScreenDefault
-
   return (
     <StyledToolbarWrapper
       className="stElementToolbar"
       data-testid="stElementToolbar"
-      locked={locked || finalIsFullScreen}
+      locked={locked || isFullScreen}
       target={target}
     >
       <StyledToolbar>
         {children}
-        {finalOnExpand && !disableFullscreenMode && !finalIsFullScreen && (
+        {onExpand && !disableFullscreenMode && !isFullScreen && (
           <ToolbarAction
             label="Fullscreen"
             icon={Fullscreen}
-            onClick={() => finalOnExpand()}
+            onClick={() => onExpand()}
           />
         )}
-        {finalOnCollapse && !disableFullscreenMode && finalIsFullScreen && (
+        {onCollapse && !disableFullscreenMode && isFullScreen && (
           <ToolbarAction
             label="Close fullscreen"
             icon={FullscreenExit}
-            onClick={() => finalOnCollapse()}
+            onClick={() => onCollapse()}
           />
         )}
       </StyledToolbar>

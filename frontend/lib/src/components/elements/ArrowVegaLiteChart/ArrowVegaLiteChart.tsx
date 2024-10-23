@@ -89,6 +89,8 @@ export interface PropsWithFullScreenAndTheme extends Props {
   height?: number
   theme: EmotionTheme
   isFullScreen: boolean
+  expand: () => void
+  collapse: () => void
 }
 
 interface State {
@@ -603,7 +605,12 @@ export class ArrowVegaLiteChart extends PureComponent<
         height={this.props.height}
         useContainerWidth={this.props.element.useContainerWidth}
       >
-        <Toolbar target={StyledChartWrapper}></Toolbar>
+        <Toolbar
+          target={StyledChartWrapper}
+          isFullScreen={this.props.isFullScreen}
+          onExpand={this.props.expand}
+          onCollapse={this.props.collapse}
+        ></Toolbar>
         <Global styles={StyledVegaLiteChartTooltips} />
         <StyledVegaLiteChartContainer
           data-testid="stVegaLiteChart"
@@ -625,6 +632,8 @@ const ArrowVegaLiteChartWrapper = (props: Props): React.ReactElement => {
     expanded: isFullScreen,
     width,
     height,
+    expand,
+    collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
   return (
@@ -634,6 +643,8 @@ const ArrowVegaLiteChartWrapper = (props: Props): React.ReactElement => {
       {...props}
       height={height}
       width={isFullScreen ? width : props.width}
+      expand={expand}
+      collapse={collapse}
     />
   )
 }
