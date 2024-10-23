@@ -15,16 +15,11 @@
  */
 
 import { css, SerializedStyles } from "@emotion/react"
-import { darken, transparentize } from "color2k"
+import { transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
-  a,
-  a:visited {
-    color: ${theme.colors.primary};
-  }
-
   // Override the base font-size value here.
   // This overrides the value set in reboot.scss.
   html {
@@ -39,12 +34,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
-  }
-
-  a:hover,
-  a:active {
-    color: ${theme.colors.primary};
-    text-decoration: underline;
   }
 
   iframe {
@@ -259,75 +248,12 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-weight: ${theme.fontWeights.extrabold};
   }
 
-  // Mark
-
-  mark {
-    padding: 0.2em;
-    background-color: ${theme.colors.secondaryBg};
-  }
-
-  // Sub and Sup
-  //
-  // Prevent sub and sup elements from affecting the line height in
-  // all browsers.
-
-  sub,
-  sup {
-    position: relative;
-    line-height: 0;
-    vertical-align: baseline;
-  }
-
-  sub {
-    bottom: -0.25em;
-  }
-  sup {
-    top: -0.5em;
-  }
-
-  // Links
-
-  a {
-    color: ${theme.colors.primary};
-    text-decoration: underline;
-
-    &:hover {
-      color: ${darken(theme.colors.primary, 0.15)};
-    }
-  }
-
-  // And undo these styles for placeholder links/named anchors (without href).
-  // It would be more straightforward to just use a[href] in previous block, but that
-  // causes specificity issues in many other styles that are too complex to fix.
-  // See https://github.com/twbs/bootstrap/issues/19402
-
-  a:not([href]):not([class]) {
-    &,
-    &:hover {
-      color: inherit;
-      text-decoration: none;
-    }
-  }
-
   // Code
 
   pre,
   code,
   kbd {
     font-family: ${theme.genericFonts.codeFont};
-  }
-
-  samp {
-    font-family: ${theme.genericFonts.codeFont};
-  }
-
-  // Blockquote
-  samp,
-  blockquote {
-    margin: 1em 0 1em -1px;
-    padding: 0 0 0 1.2em;
-    font-size: 1rem;
-    border-left: ${theme.sizes.borderWidth} solid ${theme.colors.lightGray};
   }
 
   kbd {
@@ -339,14 +265,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
       padding: 0;
       font-weight: ${theme.fontWeights.bold};
     }
-  }
-
-  // Figures
-  //
-  // Apply a consistent margin strategy (matches our type styles).
-
-  figure {
-    margin: 0 0 1rem;
   }
 
   // Images and content
@@ -482,45 +400,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     border-style: none;
   }
 
-  // 1. Textareas should really only resize vertically so they don't break their (horizontal) containers.
-
-  textarea {
-    resize: vertical; // 1
-  }
-
-  // 1. Browsers set a default min-width: min-content; on fieldsets,
-  //    unlike e.g. <div>s, which have min-width: 0; by default.
-  //    So we reset that to ensure fieldsets behave more like a standard block element.
-  //    See https://github.com/twbs/bootstrap/issues/12359
-  //    and https://html.spec.whatwg.org/multipage/#the-fieldset-and-legend-elements
-  // 2. Reset the default outline behavior of fieldsets so they don't affect page layout.
-
-  fieldset {
-    min-width: 0; // 1
-    padding: 0; // 2
-    margin: 0; // 2
-    border: 0; // 2
-  }
-
-  // 1. By using float: left, the legend will behave like a block element.
-  //    This way the border of a fieldset wraps around the legend if present.
-  // 2. Correct the text wrapping in Edge.
-  // 3. Fix wrapping bug.
-  //    See https://github.com/twbs/bootstrap/issues/29712
-
-  legend {
-    float: left; // 1
-    width: 100%;
-    padding: 0;
-    margin-bottom: ${theme.spacing.sm};
-    line-height: inherit;
-    white-space: normal; // 2
-
-    + * {
-      clear: left; // 3
-    }
-  }
-
   // Fix height of inputs with a type of datetime-local, date, month, week, or time
   // See https://github.com/twbs/bootstrap/issues/18842
 
@@ -575,12 +454,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     display: inline-block;
   }
 
-  // Remove border from iframe
-
-  iframe {
-    border: 0;
-  }
-
   // Summary
   //
   // 1. Add the correct display in all browsers
@@ -588,14 +461,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   summary {
     display: list-item; // 1
     cursor: pointer;
-  }
-
-  // Progress
-  //
-  // Add the correct vertical alignment in Chrome, Firefox, and Opera.
-
-  progress {
-    vertical-align: baseline;
   }
 
   // Hidden attribute
