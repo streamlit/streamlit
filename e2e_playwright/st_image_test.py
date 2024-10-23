@@ -57,9 +57,13 @@ def test_image_formats(app: Page):
         get_image(app, "Transparent Black Square.").locator("img")
     ).to_have_attribute("src", re.compile(r"^.*\.png$"))
 
-    expect(get_image(app, "Image from jpg file.").locator("img")).to_have_attribute(
-        "src", re.compile(r"^.*\.jpg$")
-    )
+    expect(
+        get_image(app, "Image from jpg file (str).").locator("img")
+    ).to_have_attribute("src", re.compile(r"^.*\.jpg$"))
+
+    expect(
+        get_image(app, "Image from jpg file (Path).").locator("img")
+    ).to_have_attribute("src", re.compile(r"^.*\.jpg$"))
 
     # GIF:
     expect(get_image(app, "Black Circle as GIF.").locator("img")).to_have_attribute(
