@@ -395,10 +395,13 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     padding: 0.2rem 0.4rem;
     color: ${theme.colors.codeTextColor};
     background-color: ${theme.colors.codeHighlightColor};
+    font-size: ${theme.fontSizes.sm};
+    border-radius: ${theme.radii.md};
 
     kbd {
       padding: 0;
       font-weight: ${theme.fontWeights.bold};
+      font-size: 1em;
     }
   }
 
@@ -487,6 +490,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     margin: 0; // 1
     font-family: inherit;
     line-height: inherit;
+    font-size: inherit;
   }
 
   // Show the overflow in Edge
@@ -574,6 +578,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     width: 100%;
     padding: 0;
     margin-bottom: ${theme.spacing.sm};
+    font-size: inherit;
     line-height: inherit;
     white-space: normal; // 2
 
