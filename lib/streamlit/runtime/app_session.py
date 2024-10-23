@@ -355,15 +355,14 @@ class AppSession:
             return
 
         if client_state:
-            fragment_id = client_state.fragment_id
-
             rerun_data = RerunData(
-                client_state.query_string,
-                client_state.widget_states,
-                client_state.page_script_hash,
-                client_state.page_name,
-                fragment_id=fragment_id if fragment_id else None,
+                query_string=client_state.query_string,
+                widget_states=client_state.widget_states,
+                page_script_hash=client_state.page_script_hash,
+                page_name=client_state.page_name,
+                fragment_id=client_state.fragment_id or None,
                 is_auto_rerun=client_state.is_auto_rerun,
+                cached_messages=list(client_state.cached_messages),
             )
         else:
             rerun_data = RerunData()

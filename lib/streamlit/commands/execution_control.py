@@ -132,6 +132,7 @@ def rerun(  # type: ignore[misc]
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
+        cached_messages = ctx.cached_messages
 
         ctx.script_requests.request_rerun(
             RerunData(
@@ -139,6 +140,7 @@ def rerun(  # type: ignore[misc]
                 page_script_hash=page_script_hash,
                 fragment_id_queue=_new_fragment_id_queue(ctx, scope),
                 is_fragment_scoped_rerun=scope == "fragment",
+                cached_messages=cached_messages,
             )
         )
         # Force a yield point so the runner can do the rerun
@@ -220,6 +222,7 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
         RerunData(
             query_string=ctx.query_string,
             page_script_hash=page_script_hash,
+            cached_messages=ctx.cached_messages,
         )
     )
     # Force a yield point so the runner can do the rerun

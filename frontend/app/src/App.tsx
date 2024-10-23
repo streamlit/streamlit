@@ -1532,6 +1532,9 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash = ""
     }
 
+    const cachedMessages =
+      this.connectionManager?.getCachedMessageHashes() ?? []
+
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -1541,6 +1544,7 @@ export class App extends PureComponent<Props, State> {
           pageName,
           fragmentId,
           isAutoRerun,
+          cachedMessages,
         },
       })
     )

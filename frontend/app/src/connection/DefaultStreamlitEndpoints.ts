@@ -16,7 +16,6 @@
 
 import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
 
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseUriParts,
   buildHttpUri,
@@ -25,6 +24,7 @@ import {
   JWTHeader,
   StreamlitEndpoints,
 } from "@streamlit/lib"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 interface Props {
   getServerUri: () => BaseUriParts | undefined
@@ -34,7 +34,6 @@ interface Props {
 const MEDIA_ENDPOINT = "/media"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
-const FORWARD_MSG_CACHE_ENDPOINT = "/_stcore/message"
 
 /** Default Streamlit server implementation of the StreamlitEndpoints interface. */
 export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
@@ -146,20 +145,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       method: "DELETE",
       data: { sessionId },
     }).then(() => undefined) // If the request succeeds, we don't care about the response body
-  }
-
-  public async fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {
-    const serverURI = this.requireServerUri()
-    const rsp = await axios.request({
-      url: buildHttpUri(
-        serverURI,
-        `${FORWARD_MSG_CACHE_ENDPOINT}?hash=${hash}`
-      ),
-      method: "GET",
-      responseType: "arraybuffer",
-    })
-
-    return new Uint8Array(rsp.data)
   }
 
   /**
