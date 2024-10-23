@@ -25,7 +25,7 @@ import React, {
 import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
-import { Delete, Download } from "@emotion-icons/material-outlined"
+import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -436,8 +436,8 @@ const AudioInput: React.FC<Props> = ({
         >
           {recordingUrl && (
             <ToolbarAction
-              label="Download recording"
-              icon={Download}
+              label="Download as WAV"
+              icon={FileDownload}
               onClick={() => downloadRecording()}
             />
           )}
