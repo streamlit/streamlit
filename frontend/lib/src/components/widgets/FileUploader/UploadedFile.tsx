@@ -33,6 +33,7 @@ import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import { FileSize, getSizeDisplay } from "@streamlit/lib/src/util/FileHelper"
 
 import {
+  StyledChatUploadedFileData,
   StyledErrorMessage,
   StyledFileError,
   StyledFileErrorIcon,
@@ -46,6 +47,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 export interface Props {
   fileInfo: UploadFileInfo
   onDelete: (id: number) => void
+  surface?: "chat" | null
 }
 
 export interface UploadedFileStatusProps {
@@ -79,25 +81,45 @@ export const UploadedFileStatus = ({
   return null
 }
 
-const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
+const UploadedFile = ({
+  fileInfo,
+  onDelete,
+  surface,
+}: Props): React.ReactElement => {
   return (
     <StyledUploadedFile
       className="stFileUploaderFile"
       data-testid="stFileUploaderFile"
     >
       <StyledFileIcon>
-        <Icon content={InsertDriveFile} size="twoXL" />
+        <Icon
+          content={InsertDriveFile}
+          size={surface === "chat" ? "base" : "twoXL"}
+        />
       </StyledFileIcon>
-      <StyledUploadedFileData className="stFileUploaderFileData">
-        <StyledUploadedFileName
-          className="stFileUploaderFileName"
-          data-testid="stFileUploaderFileName"
-          title={fileInfo.name}
-        >
-          {fileInfo.name}
-        </StyledUploadedFileName>
-        <UploadedFileStatus fileInfo={fileInfo} />
-      </StyledUploadedFileData>
+      {surface === "chat" ? (
+        <StyledChatUploadedFileData className="stFileUploaderFileData">
+          <StyledUploadedFileName
+            className="stFileUploaderFileName"
+            data-testid="stFileUploaderFileName"
+            title={fileInfo.name}
+          >
+            {fileInfo.name}
+          </StyledUploadedFileName>
+          <UploadedFileStatus fileInfo={fileInfo} />
+        </StyledChatUploadedFileData>
+      ) : (
+        <StyledUploadedFileData className="stFileUploaderFileData">
+          <StyledUploadedFileName
+            className="stFileUploaderFileName"
+            data-testid="stFileUploaderFileName"
+            title={fileInfo.name}
+          >
+            {fileInfo.name}
+          </StyledUploadedFileName>
+          <UploadedFileStatus fileInfo={fileInfo} />
+        </StyledUploadedFileData>
+      )}
       <div data-testid="stFileUploaderDeleteBtn">
         <BaseButton
           onClick={() => onDelete(fileInfo.id)}

@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 import withPagination, { PaginationProps } from "./withPagination"
 import UploadedFile from "./UploadedFile"
 import {
+  StyledChatUploadedFiles,
   StyledUploadedFiles,
   StyledUploadedFilesList,
   StyledUploadedFilesListItem,
@@ -29,14 +30,23 @@ export interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
   style?: React.CSSProperties
+  surface?: "chat" | null
 }
 
-const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
+const UploadedFileList = ({
+  items,
+  onDelete,
+  surface,
+}: Props): ReactElement => {
   return (
     <StyledUploadedFilesList>
       {items.map(file => (
         <StyledUploadedFilesListItem key={file.id}>
-          <UploadedFile fileInfo={file} onDelete={onDelete} />
+          <UploadedFile
+            fileInfo={file}
+            onDelete={onDelete}
+            surface={surface}
+          />
         </StyledUploadedFilesListItem>
       ))}
     </StyledUploadedFilesList>
@@ -45,9 +55,14 @@ const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
 
 export const PaginatedFiles = withPagination(UploadedFileList)
 
-const UploadedFiles = (props: Props & PaginationProps): ReactElement => (
-  <StyledUploadedFiles style={props.style ?? {}}>
-    <PaginatedFiles {...props} />
-  </StyledUploadedFiles>
-)
+const UploadedFiles = (props: Props & PaginationProps): ReactElement =>
+  props.surface === "chat" ? (
+    <StyledChatUploadedFiles>
+      <PaginatedFiles {...props} />
+    </StyledChatUploadedFiles>
+  ) : (
+    <StyledUploadedFiles>
+      <PaginatedFiles {...props} />
+    </StyledUploadedFiles>
+  )
 export default UploadedFiles
