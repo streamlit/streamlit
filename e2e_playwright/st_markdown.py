@@ -186,7 +186,7 @@ st.markdown(
 
 st.container(key="mixed_markdown").markdown(
     r"""
-Many different markdown formats in one block:
+Many different `markdown formats` in one block:
 
 Inline math with $\KaTeX$
 
