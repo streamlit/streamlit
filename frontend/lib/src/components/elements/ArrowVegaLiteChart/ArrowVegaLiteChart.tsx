@@ -89,8 +89,8 @@ export interface PropsWithFullScreenAndTheme extends Props {
   height?: number
   theme: EmotionTheme
   isFullScreen: boolean
-  expand: () => void
-  collapse: () => void
+  expand?: () => void
+  collapse?: () => void
 }
 
 interface State {
