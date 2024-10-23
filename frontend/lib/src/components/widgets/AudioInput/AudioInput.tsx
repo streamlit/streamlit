@@ -25,7 +25,7 @@ import React, {
 import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
-import { Delete, Download } from "@emotion-icons/material-outlined"
+import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -36,12 +36,11 @@ import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
 import {
-  convertScssRemValueToPixels,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { blend } from "@streamlit/lib/src/theme/utils"
+import { blend, convertRemToPx } from "@streamlit/lib/src/theme/utils"
 import { uploadFiles } from "@streamlit/lib/src/util/uploadFiles"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
@@ -258,11 +257,11 @@ const AudioInput: React.FC<Props> = ({
     const ws = WaveSurfer.create({
       container: waveSurferRef.current,
       waveColor: recordingUrl
-        ? blend(theme.colors.fadedText40, theme.genericColors.secondaryBg)
+        ? blend(theme.colors.fadedText40, theme.colors.secondaryBg)
         : theme.colors.primary,
       progressColor: theme.colors.bodyText,
       height:
-        convertScssRemValueToPixels(theme.sizes.largestElementHeight) -
+        convertRemToPx(theme.sizes.largestElementHeight) -
         2 * WAVEFORM_PADDING,
       barWidth: BAR_WIDTH,
       barGap: BAR_GAP,
@@ -312,7 +311,7 @@ const AudioInput: React.FC<Props> = ({
     if (!isEqual(previousTheme, theme)) {
       wavesurfer?.setOptions({
         waveColor: recordingUrl
-          ? blend(theme.colors.fadedText40, theme.genericColors.secondaryBg)
+          ? blend(theme.colors.fadedText40, theme.colors.secondaryBg)
           : theme.colors.primary,
         progressColor: theme.colors.bodyText,
       })
@@ -394,10 +393,7 @@ const AudioInput: React.FC<Props> = ({
       // have the same opacity which makes it impossible to darken it enough to match designs.
       // We fix this by blending the colors to figure out what the resulting color should be at
       // full opacity, and we usee that color to set the waveColor.
-      waveColor: blend(
-        theme.colors.fadedText40,
-        theme.genericColors.secondaryBg
-      ),
+      waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
     })
   }, [recordPlugin, wavesurfer, theme])
 
@@ -440,8 +436,8 @@ const AudioInput: React.FC<Props> = ({
         >
           {recordingUrl && (
             <ToolbarAction
-              label="Download recording"
-              icon={Download}
+              label="Download as WAV"
+              icon={FileDownload}
               onClick={() => downloadRecording()}
             />
           )}

@@ -1606,10 +1606,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   openThemeCreatorDialog = (): void => {
+    this.metricsMgr.enqueue("menuClick", {
+      label: "editTheme",
+    })
     const newDialog: DialogProps = {
       type: DialogType.THEME_CREATOR,
       backToSettings: this.settingsCallback,
       onClose: this.closeDialog,
+      metricsMgr: this.metricsMgr,
     }
     this.openDialog(newDialog)
   }

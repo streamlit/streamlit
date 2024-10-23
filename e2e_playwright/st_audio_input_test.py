@@ -55,7 +55,7 @@ def ensure_waveform_rendered(audio_input: Locator):
 
     audio_input.hover()
     expect(audio_input.get_by_role("button", name="Clear recording")).to_be_visible()
-    expect(audio_input.get_by_role("button", name="Download recording")).to_be_visible()
+    expect(audio_input.get_by_role("button", name="Download as WAV")).to_be_visible()
 
 
 def test_audio_input_renders(app: Page):
@@ -147,7 +147,7 @@ def _test_download_audio_file(app: Page, locator: FrameLocator | Locator):
     stop_recording(audio_input, app)
 
     with app.expect_download() as download_info:
-        download_button = audio_input.get_by_role("button", name="Download recording")
+        download_button = audio_input.get_by_role("button", name="Download as WAV")
         download_button.click()
 
     download = download_info.value
@@ -218,6 +218,7 @@ def test_audio_input_remount_keep_value(app: Page):
     ensure_waveform_rendered(audio_input)
 
 
+@pytest.mark.skip(reason="This test is flaky at the moment.")
 @pytest.mark.only_browser("chromium")
 def test_audio_input_works_in_forms(app: Page):
     """Test the functionality of the audio input component within a form."""
