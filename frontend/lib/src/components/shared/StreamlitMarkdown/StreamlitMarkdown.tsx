@@ -44,6 +44,7 @@ import { findAndReplace } from "mdast-util-find-and-replace"
 import xxhash from "xxhashjs"
 
 import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+import { StyledInlineCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
@@ -320,9 +321,9 @@ export const CustomCodeTag: FunctionComponent<
       {codeText}
     </StreamlitSyntaxHighlighter>
   ) : (
-    <code className={className} {...omit(props, "node")}>
+    <StyledInlineCode className={className} {...omit(props, "node")}>
       {children}
-    </code>
+    </StyledInlineCode>
   )
 }
 
