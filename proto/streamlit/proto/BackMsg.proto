@@ -22,6 +22,11 @@ option java_outer_classname = "BackMsgProto";
 import "streamlit/proto/ClientState.proto";
 import "streamlit/proto/Common.proto";
 
+message FetchDataChunk {
+  string action_id = 1;
+  uint32 chunk_index = 2;
+}
+
 // A message from the browser to the server.
 message BackMsg {
   oneof type {
@@ -73,6 +78,9 @@ message BackMsg {
 
     // Sends an app heartbeat message through the websocket
     bool app_heartbeat = 17;
+
+    // Requests that the server fetch a chunk of data
+    FetchDataChunk fetch_data_chunk = 18;
   }
 
   // An ID used to associate this BackMsg with the corresponding ForwardMsgs

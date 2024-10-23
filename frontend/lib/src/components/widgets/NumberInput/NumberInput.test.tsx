@@ -48,6 +48,7 @@ const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
+    sendFetchDataChunkMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
 })

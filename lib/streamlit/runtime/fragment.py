@@ -84,6 +84,9 @@ class FragmentStorage(Protocol):
         """Return whether the given key is present in this FragmentStorage."""
         raise NotImplementedError
 
+    def get_all(self) -> dict:
+        raise NotImplementedError
+
 
 # NOTE: Ideally, we'd like to add a MemoryFragmentStorageStatProvider implementation to
 # keep track of memory usage due to fragments, but doing something like this ends up
@@ -103,14 +106,15 @@ class MemoryFragmentStorage(FragmentStorage):
     # Weirdly, we have to define this above the `set` method, or mypy gets it confused
     # with the `set` type of `new_fragments_ids`.
     def clear(self, new_fragment_ids: set[str] | None = None) -> None:
-        if new_fragment_ids is None:
-            new_fragment_ids = set()
+        # if new_fragment_ids is None:
+        #     new_fragment_ids = set()
 
-        fragment_ids = list(self._fragments.keys())
+        # fragment_ids = list(self._fragments.keys())
 
-        for fid in fragment_ids:
-            if fid not in new_fragment_ids:
-                del self._fragments[fid]
+        # for fid in fragment_ids:
+        #     if fid not in new_fragment_ids:
+        #         del self._fragments[fid]
+        pass
 
     def get(self, key: str) -> Fragment:
         try:
@@ -129,6 +133,9 @@ class MemoryFragmentStorage(FragmentStorage):
 
     def contains(self, key: str) -> bool:
         return key in self._fragments
+
+    def get_all(self) -> dict:
+        return self._fragments
 
 
 def _fragment(

@@ -16,7 +16,12 @@
 
 import React from "react"
 
-import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
+import {
+  DataEditorProps,
+  GridCell,
+  GridCellKind,
+  LoadingCell,
+} from "@glideapps/glide-data-grid"
 
 import { getCellFromArrow } from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
 import {
@@ -43,7 +48,8 @@ function useDataLoader(
   data: Quiver,
   columns: BaseColumn[],
   numRows: number,
-  editingState: React.MutableRefObject<EditingState>
+  editingState: React.MutableRefObject<EditingState>,
+  requestDataChunk: (chunkIndex: number) => void
 ): DataLoaderReturn {
   // data.columns refers to the header rows (not sure about why it is named this way)
   const numHeaderRows = data.columns.length
@@ -87,6 +93,38 @@ function useDataLoader(
       }
 
       try {
+        if (notNullOrUndefined(data.chunkSize)) {
+          const rowIndex = originalRow + numHeaderRows
+          if (rowIndex < data.chunkSize) {
+            // Use the initial chunk
+            const arrowCell = data.getCell(rowIndex, originalCol)
+            return getCellFromArrow(column, arrowCell, data.cssStyles)
+          }
+
+          const chunkIndex = Math.floor(originalRow / data.chunkSize)
+          if (data.hasChunk(chunkIndex)) {
+            const chunk = data.getChunk(chunkIndex)
+            if (notNullOrUndefined(chunk)) {
+              const arrowCell = chunk.getCell(
+                originalRow - chunkIndex * data.chunkSize + numHeaderRows,
+                originalCol
+              )
+              return getCellFromArrow(column, arrowCell, data.cssStyles)
+            }
+          } else {
+            // Request the data chunk from the backend and return a loading cell.
+            requestDataChunk(chunkIndex)
+          }
+          // Show a loading cell
+          return {
+            kind: GridCellKind.Loading,
+            allowOverlay: false,
+            skeletonHeight: 20,
+            skeletonWidth: 100,
+            skeletonWidthVariability: 30,
+          } as LoadingCell
+        }
+
         // We skip all header rows to get to to the actual data rows.
         // in th Arrow data.
         const arrowCell = data.getCell(
@@ -101,7 +139,7 @@ function useDataLoader(
         )
       }
     },
-    [columns, numRows, data, editingState, numHeaderRows]
+    [columns, numRows, data, editingState, numHeaderRows, requestDataChunk]
   )
 
   return {

@@ -31,18 +31,18 @@ import {
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import range from "lodash/range"
+import trimEnd from "lodash/trimEnd"
 import unzip from "lodash/unzip"
 import zip from "lodash/zip"
-import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
+import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
+import { logWarning } from "@streamlit/lib/src/util/log"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
-import { logWarning } from "@streamlit/lib/src/util/log"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -416,6 +416,10 @@ export class Quiver {
    */
   [immerable] = true
 
+  // Chunks are stored in a map, with the chunk index as the key.
+  // This allows us to add chunks at arbitrary indices.
+  private _chunks: Record<number, Quiver | undefined> = {}
+
   /** DataFrame's index (matrix of row names). */
   private _index: Index
 
@@ -436,6 +440,8 @@ export class Quiver {
 
   /** [optional] DataFrame's Styler data. This will be defined if the user styled the dataframe. */
   private readonly _styler?: Styler
+
+  private _chunkSize: number | undefined
 
   constructor(element: IArrow) {
     const table = tableFromIPC(element.data)
@@ -461,6 +467,12 @@ export class Quiver {
     this._fields = fields
     this._styler = styler
     this._indexNames = indexNames
+
+    if (notNullOrUndefined(element.chunkingMetadata)) {
+      // Set the chunk size to the number of data rows of the
+      // chunk in the initial Arrow message.
+      this._chunkSize = this.dimensions.dataRows
+    }
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
@@ -1208,6 +1220,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return this._styler?.caption || undefined
   }
 
+  public get chunkSize(): number | undefined {
+    return this._chunkSize
+  }
+
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
     const headerColumns = this._index.length || this.types.index.length || 1
@@ -1369,6 +1385,18 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   public getDataValue(rowIndex: number, columnIndex: number): any {
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
+  }
+
+  public addChunk(chunk: Quiver | undefined, chunk_index: number): void {
+    this._chunks[chunk_index] = chunk
+  }
+
+  public hasChunk(chunk_index: number): boolean {
+    return chunk_index in this._chunks
+  }
+
+  public getChunk(chunk_index: number): Quiver | undefined {
+    return this._chunks[chunk_index]
   }
 
   /**

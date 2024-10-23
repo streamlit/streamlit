@@ -36,6 +36,7 @@ describe("Form", () => {
       enterToSubmit: true,
       widgetMgr: new WidgetStateManager({
         sendRerunBackMsg: jest.fn(),
+        sendFetchDataChunkMsg: jest.fn(),
         formsDataChanged: jest.fn(),
       }),
       border: false,

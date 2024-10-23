@@ -94,6 +94,7 @@ const getWidgetMgr = (): WidgetStateManager => {
   const formsDataChanged = jest.fn()
   return new WidgetStateManager({
     sendRerunBackMsg,
+    sendFetchDataChunkMsg: jest.fn(),
     formsDataChanged,
   })
 }
