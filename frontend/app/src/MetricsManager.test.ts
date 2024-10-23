@@ -41,6 +41,7 @@ const getMetricsManager = (
   mm.setMetricsConfig(metricsConfig)
   mm.track = jest.fn()
   mm.identify = jest.fn()
+  mm.postMessageEvent = jest.fn()
   return mm
 }
 
@@ -333,6 +334,19 @@ describe("metrics helpers", () => {
     expect(localStorage.getItem("ajs_anonymous_id")).toHaveLength(36)
     expect(document.cookie).toContain("ajs_anonymous_id")
   })
+})
+
+test("sends events via postMessage when config set", () => {
+  const mm = getMetricsManager(undefined, "postMessage")
+  mm.initialize({ gatherUsageStats: true })
+
+  mm.enqueue("ev1", { data1: 11 })
+  mm.enqueue("ev2", { data2: 12 })
+  mm.enqueue("ev3", { data3: 13 })
+
+  expect(mm.track.mock.calls.length).toBe(0)
+  expect(mm.actuallySendMetrics).toBe(true)
+  expect(mm.postMessageEvent.mock.calls.length).toBe(3)
 })
 
 test("enqueues events before initialization", () => {
