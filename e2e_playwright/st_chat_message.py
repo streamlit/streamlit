@@ -12,21 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from PIL import Image
 
 import streamlit as st
 
+TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 np.random.seed(0)
-
 
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
     columns=("col_%d" % i for i in range(5)),
 )
-
 
 with st.chat_message("user"):
     st.write("Hello…")
@@ -78,6 +79,11 @@ st.chat_message("assistant", avatar=image2).write("Blue local image")
 st.chat_message("assistant", avatar=image2).write(
     "Another message with the same blue avatar."
 )
+
+# Test avatar using local image
+CAT_IMAGE_PATH = TEST_ASSETS_DIR / "cat.jpg"
+st.chat_message("user", avatar=str(CAT_IMAGE_PATH)).write("Cat avatar using str path")
+st.chat_message("user", avatar=CAT_IMAGE_PATH).write("Cat avatar using Path")
 
 with st.chat_message("user", avatar=":material/airline_seat_recline_extra:"):
     st.write("Hello from USER, non-emoji icon.")
