@@ -224,8 +224,9 @@ export const StyledVegaLiteChartContainer =
 export const StyledChartWrapper = styled.div<{
   width: number
   height?: number
-}>(({ width, height }) => ({
+  useContainerWidth: boolean
+}>(({ width, height, useContainerWidth }) => ({
   position: "relative",
-  height,
-  width,
+  height: useContainerWidth ? height : "fit-content",
+  width: useContainerWidth ? width : "fit-content",
 }))

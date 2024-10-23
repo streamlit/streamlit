@@ -600,7 +600,11 @@ export class ArrowVegaLiteChart extends PureComponent<
     // To style the Vega tooltip, we need to apply global styles since
     // the tooltip element is drawn outside of this component.
     return (
-      <StyledChartWrapper width={this.props.width} height={this.props.height}>
+      <StyledChartWrapper
+        width={this.props.width}
+        height={this.props.height}
+        useContainerWidth={this.props.element.useContainerWidth}
+      >
         <Toolbar target={StyledChartWrapper}></Toolbar>
         <Global styles={StyledVegaLiteChartTooltips} />
         <StyledVegaLiteChartContainer
@@ -631,7 +635,7 @@ const ArrowVegaLiteChartWrapper = (props: Props): React.ReactElement => {
       isFullScreen={isFullScreen}
       {...props}
       height={height}
-      width={width}
+      width={isFullScreen ? width : props.width}
     />
   )
 }
