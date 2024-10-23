@@ -33,7 +33,6 @@ from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import NumpyShape
-from pathlib import Path
 
 if TYPE_CHECKING:
     from typing import Any
@@ -44,7 +43,14 @@ if TYPE_CHECKING:
 
 
 MediaData: TypeAlias = Union[
-    str, Path, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
+    str,
+    Path,
+    bytes,
+    io.BytesIO,
+    io.RawIOBase,
+    io.BufferedReader,
+    "npt.NDArray[Any]",
+    None,
 ]
 
 SubtitleData: TypeAlias = Union[
@@ -768,4 +774,3 @@ def marshall_audio(
             loop=loop,
             autoplay=autoplay,
         )
-

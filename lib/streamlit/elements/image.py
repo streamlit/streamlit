@@ -25,6 +25,7 @@ import io
 import os
 import re
 from enum import IntEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
@@ -36,7 +37,6 @@ from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import NumpyShape
-from pathlib import Path
 
 if TYPE_CHECKING:
     from typing import Any
@@ -55,7 +55,9 @@ MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 PILImage: TypeAlias = Union[
     "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
 ]
-AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes, Path]
+AtomicImage: TypeAlias = Union[
+    PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes, Path
+]
 ImageOrImageList: TypeAlias = Union[AtomicImage, Sequence[AtomicImage]]
 UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]

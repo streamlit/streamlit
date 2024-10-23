@@ -119,6 +119,7 @@ def test_page_icon_with_local_icon_str(app: Page):
     )
     expect_no_exception(app)
 
+
 def test_page_icon_with_local_icon(app: Page):
     click_button(app, "Page Config With Local Icon Path")
     expect(app).to_have_title("With Local Icon Path")

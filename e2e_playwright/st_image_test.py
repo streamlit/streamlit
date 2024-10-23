@@ -99,6 +99,7 @@ def test_image_from_file_str(app: Page, assert_snapshot: ImageCompareFunction):
     expect(image).to_have_attribute("src", re.compile(r"^.*\.jpg$"))
     assert_snapshot(image, name="st_image-image_from_file_str")
 
+
 def test_image_from_file_path(app: Page, assert_snapshot: ImageCompareFunction):
     image = get_image(app, "Image from jpg file (Path).").locator("img")
     expect(image).to_have_css("width", "200px")
