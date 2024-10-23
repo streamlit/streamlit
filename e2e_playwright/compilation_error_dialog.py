@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import streamlit as st
 
 # some invalid syntax so that we trigger the compilation error dialog
