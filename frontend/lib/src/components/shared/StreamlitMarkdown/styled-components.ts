@@ -16,7 +16,6 @@
 
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
-import { darken } from "color2k"
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
@@ -36,9 +35,6 @@ function sharedMarkdownStyle(theme: Theme): any {
     a: {
       color: theme.colors.linkText,
       textDecoration: "underline",
-      "&:hover": {
-        color: darken(theme.colors.linkText, 0.15),
-      },
     },
   }
 }
