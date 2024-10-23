@@ -19,12 +19,12 @@ from PIL import Image
 
 import streamlit as st
 
-parent_directory = Path(__file__).parent.parent / "multipage_apps"
-small_logo = Image.open(str(parent_directory / "small-streamlit.png"))
+PARENT_DIR = Path(__file__).parent.parent / "multipage_apps"
+SMALL_LOGO = Image.open(str(PARENT_DIR / "small-streamlit.png"))
 
-logo = Image.open(str(parent_directory / "full-streamlit.png"))
+LOGO = Image.open(str(PARENT_DIR / "full-streamlit.png"))
 
-st.logo(logo, link="https://www.example.com", icon_image=small_logo)
+st.logo(LOGO, link="https://www.example.com", icon_image=SMALL_LOGO)
 
 st.header("Main Page")
 x = st.slider("x")
