@@ -220,3 +220,12 @@ export const StyledVegaLiteChartContainer =
       },
     })
   )
+
+export const StyledChartWrapper = styled.div<{
+  width: number
+  height?: number
+}>(({ width, height }) => ({
+  position: "relative",
+  height,
+  width,
+}))
