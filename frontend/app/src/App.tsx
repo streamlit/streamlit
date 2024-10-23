@@ -132,7 +132,7 @@ import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 export interface Props {
   screenCast: ScreenCastHOC
   theme: ThemeManager
-  stExecTimestamp: number
+  streamlitExecutionStartedAt: number
 }
 
 interface State {
@@ -324,7 +324,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.hostCommunicationMgr = new HostCommunicationManager({
-      stExecTimestamp: props.stExecTimestamp,
+      streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
       sendRerunBackMsg: this.sendRerunBackMsg,
       closeModal: this.closeDialog,
       stopScript: this.stopScript,

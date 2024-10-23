@@ -44,7 +44,7 @@ describe("HostCommunicationManager messaging", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      stExecTimestamp: 100,
+      streamlitExecutionStartedAt: 100,
       themeChanged: jest.fn(),
       sendRerunBackMsg: jest.fn(),
       pageChanged: jest.fn(),
@@ -540,7 +540,7 @@ describe("Test different origins", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      stExecTimestamp: 100,
+      streamlitExecutionStartedAt: 100,
       themeChanged: jest.fn(),
       sendRerunBackMsg: jest.fn(),
       pageChanged: jest.fn(),
@@ -639,7 +639,7 @@ describe("HostCommunicationManager external auth token handling", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      stExecTimestamp: 100,
+      streamlitExecutionStartedAt: 100,
       themeChanged: jest.fn(),
       sendRerunBackMsg: jest.fn(),
       pageChanged: jest.fn(),

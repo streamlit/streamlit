@@ -35,7 +35,7 @@ const engine = new Styletron({ prefix: "st-" })
 // react-18-upgrade
 ReactDOM.render(
   <StyletronProvider value={engine}>
-    <ThemedApp stExecTimestamp={streamlitExecutionStartedAt} />
+    <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
   </StyletronProvider>,
   document.getElementById("root")
 )

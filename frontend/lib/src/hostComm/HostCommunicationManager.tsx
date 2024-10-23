@@ -32,7 +32,7 @@ import {
 export const HOST_COMM_VERSION = 1
 
 export interface HostCommunicationProps {
-  readonly stExecTimestamp: number
+  readonly streamlitExecutionStartedAt: number
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
     pageScriptHash?: string
@@ -93,7 +93,7 @@ export default class HostCommunicationManager {
     window.addEventListener("message", this.receiveHostMessage)
     this.sendMessageToHost({
       type: "GUEST_READY",
-      streamlitExecutionStartedAt: this.props.stExecTimestamp,
+      streamlitExecutionStartedAt: this.props.streamlitExecutionStartedAt,
       guestReadyAt: Date.now(),
     })
   }

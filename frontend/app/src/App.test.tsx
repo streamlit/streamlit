@@ -223,7 +223,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     addThemes: jest.fn(),
     setImportedTheme: jest.fn(),
   },
-  stExecTimestamp: 100,
+  streamlitExecutionStartedAt: 100,
   ...extend,
 })
 

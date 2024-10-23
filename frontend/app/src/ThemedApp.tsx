@@ -25,10 +25,12 @@ import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
 
 export interface ThemedAppProps {
-  stExecTimestamp: number
+  streamlitExecutionStartedAt: number
 }
 
-const ThemedApp = ({ stExecTimestamp }: ThemedAppProps): JSX.Element => {
+const ThemedApp = ({
+  streamlitExecutionStartedAt,
+}: ThemedAppProps): JSX.Element => {
   const [themeManager, fontFaces] = useThemeManager()
   const { activeTheme } = themeManager
   const hasCustomFonts =
@@ -42,7 +44,7 @@ const ThemedApp = ({ stExecTimestamp }: ThemedAppProps): JSX.Element => {
           {hasCustomFonts && <FontFaceDeclaration fontFaces={fontFaces} />}
           <AppWithScreencast
             theme={themeManager}
-            stExecTimestamp={stExecTimestamp}
+            streamlitExecutionStartedAt={streamlitExecutionStartedAt}
           />
         </PortalProvider>
       </WindowDimensionsProvider>
