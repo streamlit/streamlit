@@ -416,3 +416,72 @@ st.data_editor(
         ),
     },
 )
+
+
+st.header("Multi select column:")
+
+data_df = pd.DataFrame(
+    {
+        "category": [
+            ["exploration", "visualization"],
+            ["llm", "visualization"],
+            ["finance"],
+            ["geography"],
+        ],
+        "tags": [["statistics"], ["ai", "bots"], ["stocks", "crypto"], None],
+    }
+)
+
+st.data_editor(
+    data_df,
+    column_config={
+        "category": st.column_config.MultiselectColumn(
+            "App Categories",
+            help="The categories of the app",
+            options=[
+                {"value": "exploration", "label": "Exploration", "color": "#ffc38a"},
+                {"value": "llm", "label": "LLM", "color": "#ebfdea"},
+                {"value": "geography", "label": "Geography", "color": "#19747E"},
+                {
+                    "value": "visualization",
+                    "label": "Visualization",
+                    "color": "#FFE8D6",
+                },
+                {"value": "finance", "label": "Finance", "color": "#90E0EF"},
+            ],
+        ),
+        "tags": st.column_config.ListColumn(
+            "Tags",
+            help="Tags related to this app app",
+        ),
+    },
+    hide_index=True,
+)
+
+st.header("Multi select column:")
+
+result = st.data_editor(
+    pd.DataFrame(
+        {
+            "col_0": [[1, 2], [2, 3, 4], [], None],
+            "col_1": [["a", "B"], ["c", "d", "e"], [], None],
+            "col_2": [None, None, None, None],
+            "col_3": ["a,b", "c,d,e", "", None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.MultiselectColumn(
+            "Multi select column",
+            width="medium",
+            help="This is a list column",
+        ),
+        "col_1": st.column_config.MultiselectColumn(
+            options=["a", "B", "c", "d", "e"], default=["a", "B"], disabled=True
+        ),
+        "col_2": st.column_config.ListColumn(),
+        "col_3": st.column_config.ListColumn(),
+    },
+    key="multi_select_2",
+    num_rows="dynamic",
+)
+st.dataframe(result)

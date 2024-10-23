@@ -171,14 +171,14 @@ class DataEditorSerde:
 
 
 def _parse_value(
-    value: str | int | float | bool | None,
+    value: str | int | float | bool | list[str] | None,
     column_data_kind: ColumnDataKind,
 ) -> Any:
     """Convert a value to the correct type.
 
     Parameters
     ----------
-    value : str | int | float | bool | None
+    value : str | int | float | bool | list[str] | None
         The value to convert.
 
     column_data_kind : ColumnDataKind
@@ -409,7 +409,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
             pd.Index,
             pd.DatetimeIndex,
             # Categorical index doesn't work since arrow
-            # does serialize the options:
+            # does not serialize the options:
             # pd.CategoricalIndex,
             # Interval type isn't editable currently:
             # pd.IntervalIndex,
@@ -609,7 +609,7 @@ class DataEditorMixin:
                   precedence over text and number formatting from ``pandas.Styler``.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
-                  ``complex``, ``list``, ``tuple``, ``bytes``, ``bytearray``,
+                  ``complex``, ``tuple``, ``bytes``, ``bytearray``,
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.
