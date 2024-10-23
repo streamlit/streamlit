@@ -26,5 +26,5 @@ def test_compilation_error_dialog(
     dialog = page.get_by_role("dialog")
     expect(dialog).to_be_visible(timeout=10000)
     # make sure that the close-x button is not focused
-    dialog.blur()
+    dialog.blur(timeout=0)
     assert_snapshot(dialog, name="compilation_error-dialog")

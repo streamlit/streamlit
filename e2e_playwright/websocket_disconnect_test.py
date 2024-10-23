@@ -68,5 +68,5 @@ def test_disconnected_states(app: Page, assert_snapshot: ImageCompareFunction):
     # the dialog might need a moment to appear after shutting down the runtime
     expect(dialog).to_be_visible(timeout=20000)
     # make sure that the close-x button is not focused
-    dialog.click(position={"x": 0, "y": 0}, no_wait_after=True, force=True)
+    dialog.blur(timeout=0)
     assert_snapshot(dialog, name="websocket_connection-disconnected_dialog")
