@@ -41,6 +41,7 @@ import {
   UISelectbox,
 } from "@streamlit/lib"
 import { StyledInlineCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
   StyledBackButton,
@@ -188,6 +189,7 @@ export const toMinimalToml = (
 export interface Props {
   backToSettings: (animateModal: boolean) => void
   onClose: () => void
+  metricsMgr: SegmentMetricsManager
 }
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
@@ -213,6 +215,9 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
   const config = toMinimalToml(themeInput)
 
   const copyConfig = (): void => {
+    props.metricsMgr.enqueue("menuClick", {
+      label: "copyThemeToClipboard",
+    })
     navigator.clipboard.writeText(config)
     updateCopied(true)
   }
