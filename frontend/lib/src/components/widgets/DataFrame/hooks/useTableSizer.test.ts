@@ -20,7 +20,8 @@ import { TEN_BY_TEN, UNICODE, VERY_TALL } from "@streamlit/lib/src/mocks/arrow"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 import useTableSizer, {
-  calculateMaxHeight,
+  BORDER_THRESHOLD,
+  DEFAULT_ROW_HEIGHT,
   MIN_TABLE_WIDTH,
 } from "./useTableSizer"
 
@@ -110,7 +111,7 @@ describe("useTableSizer hook", () => {
     expect(result.current.resizableSize.height).toEqual(TABLE_HEIGHT)
     // +1 rows for header row
     expect(result.current.maxHeight).toEqual(
-      calculateMaxHeight(NUMBER_OF_ROWS + 1)
+      NUMBER_OF_ROWS + 1 * DEFAULT_ROW_HEIGHT + BORDER_THRESHOLD
     )
   })
 
@@ -133,7 +134,7 @@ describe("useTableSizer hook", () => {
     expect(result.current.resizableSize.height).toEqual(TABLE_HEIGHT)
     // +1 rows for header row + 1 for group row
     expect(result.current.maxHeight).toEqual(
-      calculateMaxHeight(NUMBER_OF_ROWS + 2)
+      NUMBER_OF_ROWS + 2 * DEFAULT_ROW_HEIGHT + BORDER_THRESHOLD
     )
   })
 
@@ -239,7 +240,7 @@ describe("useTableSizer hook", () => {
     expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
     // +1 rows for header row
     expect(result.current.maxHeight).toEqual(
-      calculateMaxHeight(NUMBER_OF_ROWS + 1)
+      NUMBER_OF_ROWS + 1 * DEFAULT_ROW_HEIGHT + BORDER_THRESHOLD
     )
   })
 })

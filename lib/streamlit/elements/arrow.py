@@ -235,6 +235,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        row_height: int | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -251,6 +252,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        row_height: int | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -267,6 +269,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        row_height: int | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -522,6 +525,9 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
+
+        if row_height:
+            proto.row_height = row_height
 
         if column_order:
             proto.column_order[:] = column_order
