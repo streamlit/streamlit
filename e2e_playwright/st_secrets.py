@@ -26,13 +26,13 @@ if runtime.exists():
     TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
     ALT_SECRETS_FILE = TEST_ASSETS_DIR / "alt_secrets.toml"
     ALT_SECRETS_FILE2 = TEST_ASSETS_DIR / "alt_secrets2.toml"
-    config.set_option("secrets.files", [ALT_SECRETS_FILE])
+    config.set_option("secrets.files", [str(ALT_SECRETS_FILE)])
     st.secrets._secrets = None
 
     st.write("Alt Secret: ", st.secrets["fake"]["FAKE_SECRET"])
     st.write("Alt Secret From File 2 visible: ", "other-fake" in st.secrets)
 
-    config.set_option("secrets.files", [ALT_SECRETS_FILE, ALT_SECRETS_FILE2])
+    config.set_option("secrets.files", [str(ALT_SECRETS_FILE), str(ALT_SECRETS_FILE2)])
     st.secrets._secrets = None
 
     st.write("Alt Secret (Multiple): ", st.secrets["fake"]["FAKE_SECRET"])
