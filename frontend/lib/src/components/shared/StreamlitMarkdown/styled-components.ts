@@ -82,6 +82,12 @@ export const StyledStreamlitMarkdown =
           fontSize: theme.fontSizes.md,
         },
 
+        blockquote: {
+          margin: "1em 0 1em 0",
+          padding: "0 0 0 1.2em",
+          borderLeft: `${theme.sizes.borderWidth} solid ${theme.colors.lightGray}`,
+        },
+
         table: {
           // Add some space below the markdown tables
           marginBottom: theme.spacing.lg,
