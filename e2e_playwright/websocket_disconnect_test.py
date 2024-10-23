@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_disconnecting_disables_widgets_correctly(app: Page):
+def test_disconnected_states(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_test_id("stButton").locator("button")).not_to_have_attribute(
         "disabled", ""
     )
@@ -60,12 +60,13 @@ def test_disconnecting_disables_widgets_correctly(app: Page):
 
     expect(app.get_by_test_id("stMarkdown").first).to_contain_text("Value 1: 25")
 
-
-def test_disconnected_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
-    expect(app.get_by_test_id("stConnectionStatus")).not_to_be_visible()
-    app.evaluate("window.streamlitDebug.shutdownRuntime()")
-    expect(app.get_by_test_id("stConnectionStatus")).to_contain_text("Connecting")
+    # After some time the disconnected dialog will appear.
+    # It would be nicer to have this in a separate function, but we can't do that easily
+    # because the runtime is shutdown for all test functions. We would need to start the
+    # runtime again somehow or move this to a separate file.
     dialog = app.get_by_role("dialog")
     # the dialog might need a moment to appear after shutting down the runtime
     expect(dialog).to_be_visible(timeout=20000)
+    # make sure that the close-x button is not focused
+    dialog.click(position={"x": 0, "y": 0}, no_wait_after=True)
     assert_snapshot(dialog, name="websocket_connection-disconnected_dialog")
