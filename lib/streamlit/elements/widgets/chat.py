@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
+from streamlit.elements.image import WidthBehaviour, image_to_url
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
@@ -46,6 +46,7 @@ from streamlit.string_util import is_emoji, validate_material_icon
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.image import AtomicImage
 
 
 class PresetNames(str, Enum):
