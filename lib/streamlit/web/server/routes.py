@@ -230,8 +230,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 # Default host configuration settings.
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
-                # TODO: Set back to empty string when finished testing
-                "metricsUrl": "postMessage",
+                "metricsUrl": "",
             }
         )
         self.set_status(200)
