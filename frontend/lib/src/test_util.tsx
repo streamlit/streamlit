@@ -69,6 +69,22 @@ export function mockWindowLocation(hostname: string): void {
   }
 }
 
+export const DEFAULT_LIB_CONTEXT_PROPS: LibContextProps = {
+  isFullScreen: false,
+  setFullScreen: jest.fn(),
+  addScriptFinishedHandler: jest.fn(),
+  removeScriptFinishedHandler: jest.fn(),
+  activeTheme: baseTheme,
+  setTheme: jest.fn(),
+  availableThemes: [],
+  addThemes: jest.fn(),
+  onPageChange: jest.fn(),
+  currentPageScriptHash: "",
+  libConfig: {},
+  fragmentIdsThisRun: [],
+  locale: "en-US",
+}
+
 /**
  * Use react-testing-library to render a ReactElement. The element will be
  * wrapped in our LibContext.Provider.
@@ -77,27 +93,15 @@ export const customRenderLibContext = (
   component: ReactElement,
   overrideLibContextProps: Partial<LibContextProps>
 ): RenderResult => {
-  const defaultLibContextProps = {
-    isFullScreen: false,
-    setFullScreen: jest.fn(),
-    addScriptFinishedHandler: jest.fn(),
-    removeScriptFinishedHandler: jest.fn(),
-    activeTheme: baseTheme,
-    setTheme: jest.fn(),
-    availableThemes: [],
-    addThemes: jest.fn(),
-    onPageChange: jest.fn(),
-    currentPageScriptHash: "",
-    libConfig: {},
-    fragmentIdsThisRun: [],
-  }
-
   return reactTestingLibraryRender(component, {
     wrapper: ({ children }) => (
       <ThemeProvider theme={baseTheme.emotion}>
         <WindowDimensionsProvider>
           <LibContext.Provider
-            value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
+            value={{
+              ...DEFAULT_LIB_CONTEXT_PROPS,
+              ...overrideLibContextProps,
+            }}
           >
             {children}
           </LibContext.Provider>
