@@ -35,8 +35,8 @@ st.audio(url2, start_time=15, end_time=19, loop=True)
 
 st.header("Audio from mp3 file (str and Path)")
 CAT_AUDIO = TEST_ASSETS_DIR / "cat-purr.mp3"
+st.audio(str(CAT_AUDIO))
 st.audio(CAT_AUDIO)
-st.audio(Path(CAT_AUDIO))
 
 st.header("Autoplay)")
 autoplay = st.checkbox("Autoplay", value=False)
