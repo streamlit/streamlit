@@ -11,7 +11,7 @@ bodyFont = '"Signika", sans-serif'
 headingFont = '"Playwrite", cursive'
 sidebarTextColor = "black"
 sidebarBackgroundColor = "white"
-sidebarSecondaryBackgroundColor = "gray"
+sidebarSecondaryBackgroundColor = "#f0f2f6"
 # borderColor = "#1BD760"
 
 # see: https://fonts.googleapis.com/css2?family=Inter:wght@400

@@ -18,6 +18,7 @@ import React, { ReactElement } from "react"
 
 import {
   createTheme,
+  CustomThemeConfig,
   LibContext,
   ThemeConfig,
   ThemeProvider,
@@ -35,6 +36,8 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
   return createTheme(
     "Sidebar",
     {
+      ...theme.themeInput,
+      base: CustomThemeConfig.BaseTheme.LIGHT,
       secondaryBackgroundColor:
         theme.emotion.colors.sidebarSecondaryBackgroundColor ??
         theme.emotion.colors.bgColor,
@@ -48,7 +51,7 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
       bodyFont: theme.emotion.genericFonts.bodyFont,
       codeFont: theme.emotion.genericFonts.codeFont,
     },
-    theme,
+    undefined,
     // inSidebar
     true
   )

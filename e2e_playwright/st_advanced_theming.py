@@ -14,11 +14,14 @@ st.set_page_config("Mega tester app", "🎈", initial_sidebar_state="collapsed")
 st.sidebar.text_input("sidebarTextColor", value="black")
 st.sidebar.success("sidebarSecondaryBackgroundColor")
 
+
 # st.html("app_styles.html")
 st.logo(
     "https://upload.wikimedia.org/wikipedia/commons/2/26/Spotify_logo_with_text.svg",
     size="medium",
 )
+
+st = st.sidebar
 st.title("🎈 Mega tester app")
 
 st.write(
@@ -38,8 +41,8 @@ st.header("hello from st.header")
 st.subheader("hello from st.subheader")
 st.caption("hello from st.caption")
 st.code("# hello from st.code\na = 1234")
-with st.echo():
-    st.write("hello from st.echo")
+# with st.echo():
+#     st.write("hello from st.echo")
 st.text("hello from st.text")
 st.latex(r"\int a x^2 \,dx")
 st.divider()
@@ -88,28 +91,28 @@ data_df = pd.DataFrame(
     }
 )
 
-st.data_editor(
-    data_df,
-    column_config={
-        "column": st.column_config.Column("Column", help="A column tooltip"),
-        "text": st.column_config.TextColumn("TextColumn"),
-        "number": st.column_config.NumberColumn("NumberColumn"),
-        "checkbox": st.column_config.CheckboxColumn("CheckboxColumn"),
-        "selectbox": st.column_config.SelectboxColumn(
-            "SelectboxColumn", options=["foo", "bar", "baz"]
-        ),
-        "datetime": st.column_config.DatetimeColumn("DatetimeColumn"),
-        "date": st.column_config.DateColumn("DateColumn"),
-        "time": st.column_config.TimeColumn("TimeColumn"),
-        "list": st.column_config.ListColumn("ListColumn"),
-        "link": st.column_config.LinkColumn("LinkColumn"),
-        "image": st.column_config.ImageColumn("ImageColumn"),
-        "area_chart": st.column_config.AreaChartColumn("AreaChartColumn"),
-        "line_chart": st.column_config.LineChartColumn("LineChartColumn"),
-        "bar_chart": st.column_config.BarChartColumn("BarChartColumn"),
-        "progress": st.column_config.ProgressColumn("ProgressColumn"),
-    },
-)
+# st.data_editor(
+#     data_df,
+#     column_config={
+#         "column": st.column_config.Column("Column", help="A column tooltip"),
+#         "text": st.column_config.TextColumn("TextColumn"),
+#         "number": st.column_config.NumberColumn("NumberColumn"),
+#         "checkbox": st.column_config.CheckboxColumn("CheckboxColumn"),
+#         "selectbox": st.column_config.SelectboxColumn(
+#             "SelectboxColumn", options=["foo", "bar", "baz"]
+#         ),
+#         "datetime": st.column_config.DatetimeColumn("DatetimeColumn"),
+#         "date": st.column_config.DateColumn("DateColumn"),
+#         "time": st.column_config.TimeColumn("TimeColumn"),
+#         "list": st.column_config.ListColumn("ListColumn"),
+#         "link": st.column_config.LinkColumn("LinkColumn"),
+#         "image": st.column_config.ImageColumn("ImageColumn"),
+#         "area_chart": st.column_config.AreaChartColumn("AreaChartColumn"),
+#         "line_chart": st.column_config.LineChartColumn("LineChartColumn"),
+#         "bar_chart": st.column_config.BarChartColumn("BarChartColumn"),
+#         "progress": st.column_config.ProgressColumn("ProgressColumn"),
+#     },
+# )
 
 "st.table"
 st.table(data.iloc[0:5])
@@ -333,15 +336,15 @@ st.container(height=150).write(
 )
 
 
-@st.dialog("Test dialog")
-def dialog():
-    st.write("Hello there!")
-    if st.button("Close"):
-        st.rerun()
+# @st.dialog("Test dialog")
+# def dialog():
+#     st.write("Hello there!")
+#     if st.button("Close"):
+#         st.rerun()
 
 
-if st.button("Open st.dialog"):
-    dialog()
+# if st.button("Open st.dialog"):
+#     dialog()
 
 a = st.empty()
 a.write("st.empty")
@@ -352,7 +355,7 @@ with st.expander("st.expander"):
 with st.popover("st.popover"):
     st.write("works!")
 
-st.sidebar.write("st.sidebar")
+# st.sidebar.write("st.sidebar")
 
 "st.tabs"
 tab_a, tab_b = st.tabs(["tab 1", "tab 2"])
@@ -424,13 +427,13 @@ st.exception(RuntimeError("st.exception"))
 "st.fragment"
 
 
-@st.fragment
-def my_fragment():
-    if st.button("Wait 1s inside the fragment"):
-        time.sleep(1)
+# @st.fragment
+# def my_fragment():
+#     if st.button("Wait 1s inside the fragment"):
+#         time.sleep(1)
 
 
-my_fragment()
+# my_fragment()
 
 if st.button("st.rerun()"):
     st.rerun()
@@ -439,11 +442,11 @@ if st.button("st.stop()"):
     st.stop()
     st.write("if you see this, st.stop does not work")
 
-with st.form(key="tester"):
-    "st.form"
-    text_tester = st.text_input("Your text")
-    st.form_submit_button("Submit")
-st.write("Your text is:", text_tester)
+# with st.form(key="tester"):
+#     "st.form"
+#     text_tester = st.text_input("Your text")
+#     st.form_submit_button("Submit")
+# st.write("Your text is:", text_tester)
 
 
 st.write("## Utilities")
@@ -453,10 +456,10 @@ st.help(st.write)
 
 st.write("## State Management")
 
-"st.session_state"
-if "foo" not in st.session_state:
-    st.session_state["foo"] = "bar"
-st.write(st.session_state)
+# "st.session_state"
+# if "foo" not in st.session_state:
+#     st.session_state["foo"] = "bar"
+# st.write(st.session_state)
 
 if st.button("Add st.query_params"):
     st.query_params["foo"] = "bar"
