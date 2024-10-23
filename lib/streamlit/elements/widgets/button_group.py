@@ -86,7 +86,7 @@ _STAR_ICON: Final = ":material/star:"
 # in base64 format and send it over the wire as an image.
 _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
-SelectionMode: TypeAlias = Literal["single", "multiple"]
+SelectionMode: TypeAlias = Literal["single", "multi"]
 
 
 class SingleSelectSerde(Generic[T]):
@@ -137,7 +137,7 @@ class SingleOrMultiSelectSerde(Generic[T]):
         self,
         options: Sequence[T],
         default_values: list[int],
-        type: Literal["single", "multiple"],
+        type: Literal["single", "multi"],
     ):
         self.options = options
         self.default_values = default_values
@@ -227,9 +227,9 @@ def _build_proto(
 
 def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode):
     """Check if the selection_mode value is valid or raise exception otherwise."""
-    if selection_mode not in ["single", "multiple"]:
+    if selection_mode not in ["single", "multi"]:
         raise StreamlitAPIException(
-            "The selection_mode argument must be one of ['single', 'multiple']. "
+            "The selection_mode argument must be one of ['single', 'multi']. "
             f"The argument passed was '{selection_mode}'."
         )
 
@@ -410,7 +410,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["multiple"] = "multiple",
+        selection_mode: Literal["multi"] = "multi",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -427,7 +427,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["single", "multiple"] = "single",
+        selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -466,9 +466,9 @@ class ButtonGroupMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        selection_mode: "single" or "multiple"
+        selection_mode: "single" or "multi"
             The selection mode for the widget. If "single", only one option can be
-            selected. If "multiple", multiple options can be selected.
+            selected. If "multi", multiple options can be selected.
 
         options: Iterable of V
             Labels for the select options in an ``Iterable``. This can be a
@@ -520,7 +520,7 @@ class ButtonGroupMixin:
         -------
         list of V or V or None
             A list of selected options or an empty list if the ``selection_mode`` is
-            "multiple".
+            "multi".
             If the "selection_mode" is "single", the return value is the selected option
             or None.
 
@@ -532,7 +532,7 @@ class ButtonGroupMixin:
         >>>
         >>> options = ["one", "two", "three", "four", "five"]
         >>> selection = st.pills(label="Numbered pills",
-                                options, selection_mode="multiple")
+                                options, selection_mode="multi")
         >>> st.markdown(f"You selected option: '{selection}'.")
 
         .. output ::
@@ -600,7 +600,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["multiple"] = "multiple",
+        selection_mode: Literal["multi"] = "multi",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
@@ -618,7 +618,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["single", "multiple"] = "single",
+        selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
@@ -657,9 +657,9 @@ class ButtonGroupMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        selection_mode: "single" or "multiple"
+        selection_mode: "single" or "multi"
             The selection mode for the widget. If "single", only one option can be
-            selected. If "multiple", multiple options can be selected.
+            selected. If "multi", multiple options can be selected.
 
         options: Iterable of V
             Labels for the select options in an ``Iterable``. This can be a
@@ -711,7 +711,7 @@ class ButtonGroupMixin:
         -------
         list of V or V or None
             A list of selected options or an empty list if the ``selection_mode`` is
-            "multiple".
+            "multi".
             If the "selection_mode" is "single", the return value is the selected option
             or None.
 
@@ -723,7 +723,7 @@ class ButtonGroupMixin:
         >>>
         >>> options = ["North", "East", "South", "West"]
         >>> selection = st.segmented_control(label="Directions",
-                                options, selection_mode="multiple")
+                                options, selection_mode="multi")
         >>> st.markdown(f"You selected options: '{selection}'.")
 
         .. output ::
@@ -775,7 +775,7 @@ class ButtonGroupMixin:
         *,
         key: Key | None = None,
         default: Sequence[V] | V | None = None,
-        selection_mode: Literal["single", "multiple"] = "single",
+        selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
         style: Literal["pills", "segmented_control"] = "segmented_control",
@@ -837,7 +837,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
         )
 
-        if selection_mode == "multiple":
+        if selection_mode == "multi":
             return res.value
 
         return res.value

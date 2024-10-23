@@ -37,7 +37,7 @@ E2E_DIR = "e2e_playwright"
 
 # the hostframe_app.py script does not work because without a script_context
 # the navigation function will raise an exception when trying some non-existing page properties.
-EXCLUDED_FILENAMES: Set[str] = set(["hostframe_app.py"])
+EXCLUDED_FILENAMES: Set[str] = set(["compilation_error_dialog.py", "hostframe_app.py"])
 
 # Since there is not DISPLAY set (and since Streamlit is not actually running
 # and fixing Matplotlib in these tests), we set the MPL backend to something
