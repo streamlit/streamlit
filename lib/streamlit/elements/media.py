@@ -43,14 +43,7 @@ if TYPE_CHECKING:
 
 
 MediaData: TypeAlias = Union[
-    str,
-    Path,
-    bytes,
-    io.BytesIO,
-    io.RawIOBase,
-    io.BufferedReader,
-    "npt.NDArray[Any]",
-    None,
+    str, Path, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
 ]
 
 SubtitleData: TypeAlias = Union[
@@ -428,6 +421,8 @@ def _marshall_av_media(
     if isinstance(data, (str, bytes)):
         # Pass strings and bytes through unchanged
         data_or_filename = data
+    elif isinstance(data, Path):
+        data_or_filename = str(data)
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data_or_filename = data.getvalue()
@@ -774,3 +769,4 @@ def marshall_audio(
             loop=loop,
             autoplay=autoplay,
         )
+

@@ -30,7 +30,7 @@ class HtmlMixin:
     @gather_metrics("html")
     def html(
         self,
-        body: str,
+        body: str | Path,
     ) -> DeltaGenerator:
         """Insert HTML into your app.
 
