@@ -62,9 +62,9 @@ class ImageMixin:
     def image(
         self,
         image: ImageOrImageList,
-        caption: Optional[Union[str, List[str]]] = None,
-        width: Optional[Union[int, WidthBehavior]] = None,
-        use_column_width: Optional[Union[bool, str]] = None,
+        caption: Optional[str | List[str]] = None,
+        width: Optional[int | WidthBehavior] = None,
+        use_column_width: Optional[bool | str] = None,
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
