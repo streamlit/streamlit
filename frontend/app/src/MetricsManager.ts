@@ -214,6 +214,8 @@ export class MetricsManager {
       this.postMessageEvent(evName, data)
     } else {
       this.track(evName, data, {
+        // Ensure both systems send same anonymousId - manually set Segment's anonymousId
+        anonymousId: this.anonymousId,
         context: {
           // Segment automatically attaches the IP address. But we don't use, process,
           // or store IP addresses for our telemetry. To make this more explicit, we
