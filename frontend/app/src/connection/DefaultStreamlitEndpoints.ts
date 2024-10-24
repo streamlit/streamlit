@@ -66,8 +66,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   }
 
   public setFileUploadCliendConfig(payload: FileUploadClientConfig): void {
-    console.log("YO YO YO")
-    console.log(payload)
     const { prefix, headers } = payload
     this.fileUploadClientConfig = {
       prefix,
