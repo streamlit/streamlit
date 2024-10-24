@@ -20,7 +20,6 @@ import re
 from enum import IntEnum
 from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
-import numpy as np
 from typing_extensions import TypeAlias
 
 from streamlit import runtime, url_util
@@ -205,6 +204,8 @@ def _ensure_image_size_and_format(
 
 
 def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
+    import numpy as np
+
     data = image
     if issubclass(image.dtype.type, np.floating):
         if clamp:
@@ -236,6 +237,7 @@ def image_to_url(
     (When running in "raw" mode, we won't actually load data into the
     MediaFileManager, and we'll return an empty URL.)
     """
+    import numpy as np
     from PIL import Image, ImageFile
 
     image_data: bytes
@@ -391,6 +393,7 @@ def marshall_images(
         Defaults to 'auto' which identifies the compression type based
         on the type and format of the image argument.
     """
+    import numpy as np
 
     channels = cast(Channels, channels.upper())
 
