@@ -23,13 +23,16 @@ import { render } from "@streamlit/lib/src/test_util"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
-import { ArrowVegaLiteChart, PropsWithFullScreen } from "./ArrowVegaLiteChart"
+import {
+  ArrowVegaLiteChart,
+  PropsWithFullScreenAndTheme,
+} from "./ArrowVegaLiteChart"
 import { VegaLiteChartElement } from "./arrowUtils"
 
 const getProps = (
   elementProps: Partial<VegaLiteChartElement> = {},
-  props: Partial<PropsWithFullScreen> = {}
-): PropsWithFullScreen => ({
+  props: Partial<PropsWithFullScreenAndTheme> = {}
+): PropsWithFullScreenAndTheme => ({
   element: {
     data: null,
     id: "1",
