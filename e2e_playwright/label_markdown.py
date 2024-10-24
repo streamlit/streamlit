@@ -16,7 +16,7 @@ import datetime
 
 import streamlit as st
 
-valid_label = ":material/check_circle: :streamlit: ![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297) **Bold Text** *Italicized* ~Strikethough~ `Code Block` 🐶 :joy: <- -> <-> -- >= <= ~="
+valid_label = ":material/check_circle: :streamlit: ![Image Text](app/static/cat.jpg) **Bold Text** *Italicized* ~Strikethough~ `Code Block` 🐶 :joy: <- -> <-> -- >= <= ~="
 
 color_label = (
     "Colored Text - :red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]"
