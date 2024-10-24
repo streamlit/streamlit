@@ -64,7 +64,10 @@ export const StyledErrorTextSpan = styled.span(({ theme }) => ({
   color: theme.colors.bodyText,
 }))
 
-export const StyledNoMicInputLearnMoreLink = styled.a()
+export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({
+  color: theme.colors.linkText,
+  textDecoration: "underline",
+}))
 
 // Placeholder
 export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({

@@ -34,6 +34,7 @@ function sharedMarkdownStyle(theme: Theme): any {
   return {
     a: {
       color: theme.colors.linkText,
+      textDecoration: "underline",
     },
   }
 }
@@ -79,6 +80,12 @@ export const StyledStreamlitMarkdown =
           margin: "0.2em 0 0.2em 1.2em",
           padding: "0 0 0 0.6em",
           fontSize: theme.fontSizes.md,
+        },
+
+        blockquote: {
+          margin: "1em 0 1em 0",
+          padding: "0 0 0 1.2em",
+          borderLeft: `${theme.sizes.borderWidth} solid ${theme.colors.lightGray}`,
         },
 
         table: {

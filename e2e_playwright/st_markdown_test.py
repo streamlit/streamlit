@@ -19,6 +19,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expand_sidebar,
     expect_help_tooltip,
+    get_element_by_key,
     get_markdown,
 )
 
@@ -29,16 +30,17 @@ def test_different_markdown_elements_in_one_block_displayed(
     """Test that the block containing a mixture of different markdown elements is
     displayed correctly."""
 
-    markdown_elements = themed_app.get_by_test_id("stMarkdown")
+    mixed_markdown_element = (
+        get_element_by_key(themed_app, "mixed_markdown")
+        .get_by_test_id("stMarkdown")
+        .first
+    )
 
-    expect(markdown_elements).to_have_count(59)
+    expect(mixed_markdown_element).to_be_visible()
+    mixed_markdown_element.scroll_into_view_if_needed()
 
-    # Snapshot one big markdown block containing a variety of elements to reduce number
-    # of snapshots
-    multi_markdown_format_container = markdown_elements.nth(12)
-    multi_markdown_format_container.scroll_into_view_if_needed()
     assert_snapshot(
-        multi_markdown_format_container,
+        mixed_markdown_element,
         name="st_markdown-many_elements_in_one_block",
         image_threshold=0.001,
     )
@@ -215,14 +217,18 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    latex_elements = themed_app.get_by_test_id("stMarkdown")
-    assert_snapshot(latex_elements.nth(55), name="st_latex-latex")
-    expect(themed_app.get_by_test_id("stMarkdown").nth(55)).to_contain_text("LATE​X")
+    latex_elements = get_element_by_key(themed_app, "latex_elements").get_by_test_id(
+        "stMarkdown"
+    )
+    expect(latex_elements).to_have_count(3)
 
-    assert_snapshot(latex_elements.nth(56), name="st_latex-formula")
+    assert_snapshot(latex_elements.nth(0), name="st_latex-latex")
+    expect(latex_elements.nth(0)).to_contain_text("LATE​X")
 
-    expect(themed_app.get_by_test_id("stMarkdown").nth(57)).to_contain_text("a + b")
-    assert_snapshot(latex_elements.nth(57), name="st_latex-sympy")
+    assert_snapshot(latex_elements.nth(1), name="st_latex-formula")
+
+    expect(latex_elements.nth(2)).to_contain_text("a + b")
+    assert_snapshot(latex_elements.nth(2), name="st_latex-sympy")
 
 
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):

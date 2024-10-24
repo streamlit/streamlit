@@ -46,39 +46,6 @@ st.markdown(
     ":green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]"
 )
 
-st.markdown(
-    r"""
-Many different markdown formats in one block:
-
-Inline math with $\KaTeX$
-
-$$
-ax^2 + bx + c = 0
-$$
-
-## :material/home: :streamlit: Some header
-
-| Col1      | Col2        |
-| --------- | ----------- |
-| Some      | :material/description: :streamlit: Data        |
-
-Some text
-- :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
-- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
-- :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
-- :streamlit: Markdown can contain the Streamlit logo
-- <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
-
-
-:blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
-
-:rainbow-background[[Link](http://example.com) within rainbow background], :green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]
-
-:violet-background[This is a repeating multiline string that wraps within purple background. This is a repeating multiline string that wraps within purple background.]
-
-"""
-)
-
 
 # Headers in markdown tests (originally from the typography-test suite).
 
@@ -190,28 +157,61 @@ with st.container():
 
 "---"
 
-st.latex(r"\LaTeX")
+with st.container(key="latex_elements"):
+    st.latex(r"\LaTeX")
 
-st.latex(
-    r"""
-    a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
-    \sum_{k=0}^{n-1} ar^k =
-    a \left(\frac{1-r^{n}}{1-r}\right)
-    """,
-    help="This is example tooltip displayed on latex.",
-)
+    st.latex(
+        r"""
+        a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
+        \sum_{k=0}^{n-1} ar^k =
+        a \left(\frac{1-r^{n}}{1-r}\right)
+        """,
+        help="This is example tooltip displayed on latex.",
+    )
 
-try:
-    import sympy
+    try:
+        import sympy
 
-    a, b = sympy.symbols("a b")
-    out = a + b
-except Exception:
-    out = "a + b"
+        a, b = sympy.symbols("a b")
+        out = a + b
+    except Exception:
+        out = "a + b"
 
-st.latex(out)
+    st.latex(out)
 
 
 st.markdown(
     "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
+)
+
+st.container(key="mixed_markdown").markdown(
+    r"""
+Many different `markdown formats` in one block:
+
+Inline math with $\KaTeX$
+
+$$
+ax^2 + bx + c = 0
+$$
+
+> This is a blockquote
+
+### :material/home: :streamlit: Some header
+
+| Col1      | Col2        |
+| --------- | ----------- |
+| Some      | :material/description: :streamlit: Data        |
+
+- :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
+- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
+- :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
+- :streamlit: Markdown can contain the Streamlit logo
+- <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
+
+
+:blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
+:rainbow-background[[Link](http://example.com) within rainbow background], :green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]
+
+:violet-background[This is a repeating multiline string that wraps within purple background. This is a repeating multiline string that wraps within purple background.]
+"""
 )
