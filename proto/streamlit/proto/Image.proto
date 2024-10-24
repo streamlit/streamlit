@@ -36,7 +36,7 @@ message Image {
 message ImageList {
   repeated Image imgs = 1;
 
-  // @see WidthBehaviour on the backend
+  // @see WidthBehavior on the backend
   // @see WidthBehavior on the frontend
   // The width of each image.
   // >0 sets the image width explicitly
