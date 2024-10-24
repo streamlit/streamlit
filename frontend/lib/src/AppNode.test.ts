@@ -15,8 +15,8 @@
  */
 
 import { Writer } from "protobufjs"
-import { vectorFromArray } from "apache-arrow"
 
+import { arrayFromVector } from "@streamlit/lib/src/test_util"
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
@@ -104,7 +104,7 @@ describe("ElementNode.quiverElement", () => {
     const node = arrowTable()
     const q = node.quiverElement
 
-    expect(q.index).toEqual([vectorFromArray(["i1", "i2"])])
+    expect(arrayFromVector(q.index)).toEqual([["i1", "i2"]])
     expect(q.columns).toEqual([["c1", "c2"]])
     expect(q.data.toArray().map(a => a?.toArray())).toEqual([
       ["foo", "1"],
@@ -137,7 +137,7 @@ describe("ElementNode.quiverElement", () => {
     const node = arrowDataFrame()
     const q = node.quiverElement
 
-    expect(q.index).toEqual([vectorFromArray(["i1", "i2"])])
+    expect(arrayFromVector(q.index)).toEqual([["i1", "i2"]])
     expect(q.columns).toEqual([["c1", "c2"]])
     expect(q.data.toArray().map(a => a?.toArray())).toEqual([
       ["foo", "1"],
@@ -209,7 +209,7 @@ describe("ElementNode.vegaLiteChartElement", () => {
     expect(element.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
 
     // data
-    expect(element.data?.index).toEqual([vectorFromArray(["i1", "i2"])])
+    expect(arrayFromVector(element.data?.index)).toEqual([["i1", "i2"]])
     expect(element.data?.columns).toEqual([["c1", "c2"]])
     expect(element.data?.data.toArray().map(a => a?.toArray())).toEqual([
       ["foo", "1"],
@@ -277,8 +277,8 @@ describe("ElementNode.vegaLiteChartElement", () => {
     expect(element.datasets[0].name).toEqual(
       MOCK_VEGA_LITE_CHART.datasets[0].name
     )
-    expect(element.datasets[0].data.index).toEqual([
-      vectorFromArray(["i1", "i2"]),
+    expect(arrayFromVector(element.datasets[0].data.index)).toEqual([
+      ["i1", "i2"],
     ])
     expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
     expect(
@@ -366,7 +366,7 @@ describe("ElementNode.arrowAddRows", () => {
       const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SCRIPT_RUN_ID)
       const q = newNode.quiverElement
 
-      expect(q.index).toEqual([vectorFromArray(["i1", "i2", "i1", "i2"])])
+      expect(arrayFromVector(q.index)).toEqual([["i1", "i2", "i1", "i2"]])
       expect(q.columns).toEqual([["c1", "c2"]])
       expect(q.data.toArray().map(a => a?.toArray())).toEqual([
         ["foo", "1"],
@@ -413,7 +413,7 @@ describe("ElementNode.arrowAddRows", () => {
       const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SCRIPT_RUN_ID)
       const q = newNode.quiverElement
 
-      expect(q.index).toEqual([vectorFromArray(["i1", "i2", "i1", "i2"])])
+      expect(arrayFromVector(q.index)).toEqual([["i1", "i2", "i1", "i2"]])
       expect(q.columns).toEqual([["c1", "c2"]])
       expect(q.data.toArray().map(a => a?.toArray())).toEqual([
         ["foo", "1"],
@@ -481,8 +481,8 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.datasets[0].data.index).toEqual([
-          vectorFromArray(["i1", "i2", "i1", "i2"]),
+        expect(arrayFromVector(element.datasets[0].data.index)).toEqual([
+          ["i1", "i2", "i1", "i2"],
         ])
         expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
         expect(
@@ -523,8 +523,8 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.datasets[0].data.index).toEqual([
-          vectorFromArray(["i1", "i2", "i1", "i2"]),
+        expect(arrayFromVector(element.datasets[0].data.index)).toEqual([
+          ["i1", "i2", "i1", "i2"],
         ])
         expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
         expect(
@@ -563,8 +563,8 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data?.index).toEqual([
-          vectorFromArray(["i1", "i2", "i1", "i2"]),
+        expect(arrayFromVector(element.data?.index)).toEqual([
+          ["i1", "i2", "i1", "i2"],
         ])
         expect(element.data?.columns).toEqual([["c1", "c2"]])
         expect(element.data?.data.toArray().map(a => a?.toArray())).toEqual([
@@ -606,7 +606,7 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data?.index).toEqual([vectorFromArray(["i1", "i2"])])
+        expect(arrayFromVector(element.data?.index)).toEqual([["i1", "i2"]])
         expect(element.data?.columns).toEqual([["c1", "c2"]])
         expect(element.data?.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
@@ -640,7 +640,7 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data?.index).toEqual([vectorFromArray(["i1", "i2"])])
+        expect(arrayFromVector(element.data?.index)).toEqual([["i1", "i2"]])
         expect(element.data?.columns).toEqual([["c1", "c2"]])
         expect(element.data?.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
@@ -679,8 +679,8 @@ describe("ElementNode.arrowAddRows", () => {
         )
         const element = newNode.vegaLiteChartElement
 
-        expect(element.datasets[0].data.index).toEqual([
-          vectorFromArray(["i1", "i2", "i1", "i2"]),
+        expect(arrayFromVector(element.datasets[0].data.index)).toEqual([
+          ["i1", "i2", "i1", "i2"],
         ])
         expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
         expect(
@@ -722,8 +722,8 @@ describe("ElementNode.arrowAddRows", () => {
         )
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data?.index).toEqual([
-          vectorFromArray(["i1", "i2", "i1", "i2"]),
+        expect(arrayFromVector(element.data?.index)).toEqual([
+          ["i1", "i2", "i1", "i2"],
         ])
         expect(element.data?.columns).toEqual([["c1", "c2"]])
         expect(element.data?.data.toArray().map(a => a?.toArray())).toEqual([
@@ -763,7 +763,7 @@ describe("ElementNode.arrowAddRows", () => {
         )
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data?.index).toEqual([vectorFromArray(["i1", "i2"])])
+        expect(arrayFromVector(element.data?.index)).toEqual([["i1", "i2"]])
         expect(element.data?.columns).toEqual([["c1", "c2"]])
         expect(element.data?.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
@@ -814,6 +814,11 @@ describe("AppRoot.empty", () => {
   })
 
   it("creates empty tree except for a skeleton", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "",
+      },
+    }))
     const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
     // The linter is misfiring here. We're not accessing a DOM node.
@@ -826,6 +831,11 @@ describe("AppRoot.empty", () => {
   })
 
   it("sets the main script hash and active script hash", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "",
+      },
+    }))
     const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
     expect(empty.mainScriptHash).toBe(FAKE_SCRIPT_HASH)
@@ -899,6 +909,11 @@ describe("AppRoot.empty", () => {
   })
 
   it("passes logo to new Root if empty is called with logo", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "",
+      },
+    }))
     const logo = LogoProto.create({
       image:
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
