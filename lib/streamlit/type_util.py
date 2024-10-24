@@ -25,7 +25,9 @@ from enum import EnumMeta
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncGenerator,
     Final,
+    Generator,
     Iterable,
     Literal,
     NamedTuple,
@@ -417,3 +419,29 @@ def is_version_less_than(v1: str, v2: str) -> bool:
     from packaging import version
 
     return version.parse(v1) < version.parse(v2)
+
+
+def async_generator_to_sync(
+    async_gen: AsyncGenerator[Any, Any],
+) -> Generator[Any, Any, Any]:
+    """Convert an async generator to a synchronous generator."""
+    import asyncio
+
+    close_loop = False
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No event loop is running; safe to create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        close_loop = True
+
+    try:
+        while True:
+            yield loop.run_until_complete(async_gen.__anext__())
+    except StopAsyncIteration:
+        pass
+    finally:
+        if close_loop:
+            loop.close()
+            asyncio.set_event_loop(None)
