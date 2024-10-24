@@ -125,7 +125,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h1 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.extrabold};
-
+    font-size: 2.75rem;
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
     padding: 1.25rem 0 1rem 0;
@@ -137,6 +137,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h2 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
+    font-size: 2.25rem;
     letter-spacing: -0.005em;
 
     // Use rem so we can remove it when first child, knowing that the
@@ -150,6 +151,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h3 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
+    font-size: 1.75rem;
     letter-spacing: -0.005em;
 
     // Use rem so we can remove it when first child, knowing that the
@@ -163,6 +165,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h4 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
+    font-size: 1.5rem;
     padding: 0.75rem 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -171,6 +174,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h5 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
+    font-size: 1.25rem;
     padding: 0 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -179,6 +183,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h6 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
+    font-size: 1rem;
     padding: 0 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -259,30 +264,17 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-weight: ${theme.fontWeights.extrabold};
   }
 
+  // Small
+
+  small {
+    font-size: ${theme.fontSizes.sm};
+  }
+
   // Mark
 
   mark {
     padding: 0.2em;
     background-color: ${theme.colors.secondaryBg};
-  }
-
-  // Sub and Sup
-  //
-  // Prevent sub and sup elements from affecting the line height in
-  // all browsers.
-
-  sub,
-  sup {
-    position: relative;
-    line-height: 0;
-    vertical-align: baseline;
-  }
-
-  sub {
-    bottom: -0.25em;
-  }
-  sup {
-    top: -0.5em;
   }
 
   // Links
@@ -314,6 +306,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   pre,
   code,
   kbd {
+    font-size: 1em;
     font-family: ${theme.genericFonts.codeFont};
   }
 
@@ -334,10 +327,13 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     padding: 0.2rem 0.4rem;
     color: ${theme.colors.codeTextColor};
     background-color: ${theme.colors.codeHighlightColor};
+    font-size: ${theme.fontSizes.sm};
+    border-radius: ${theme.radii.md};
 
     kbd {
       padding: 0;
       font-weight: ${theme.fontWeights.bold};
+      font-size: 1em;
     }
   }
 
@@ -426,6 +422,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     margin: 0; // 1
     font-family: inherit;
     line-height: inherit;
+    font-size: inherit;
   }
 
   // Show the overflow in Edge
@@ -513,6 +510,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     width: 100%;
     padding: 0;
     margin-bottom: ${theme.spacing.sm};
+    font-size: inherit;
     line-height: inherit;
     white-space: normal; // 2
 
