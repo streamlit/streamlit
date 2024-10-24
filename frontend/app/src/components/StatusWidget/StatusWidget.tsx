@@ -113,6 +113,11 @@ interface State {
    * shown, even if they'd otherwise be minimized.
    */
   promptHovered: boolean
+
+  /**
+   * True if the running man animation should be displayed after an initial delay.
+   */
+  showRunningMan: boolean
 }
 
 interface ConnectionStateUI {
@@ -128,6 +133,9 @@ const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000
 // and then unhovered on it.
 const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 
+// Delay time for displaying running man animation.
+const RUNNING_MAN_DISPLAY_DELAY_TIME_MS = 500
+
 /**
  * Displays various script- and connection-related info: our WebSocket
  * connection status, the run-state of our script, and other transient events.
@@ -140,6 +148,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
   private readonly minimizePromptTimer = new Timer()
 
+  private readonly showRunningManTimer = new Timer()
+
   constructor(props: StatusWidgetProps) {
     super(props)
 
@@ -148,6 +158,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       promptMinimized: false,
       scriptChangedOnDisk: false,
       promptHovered: false,
+      showRunningMan: false,
     }
   }
 
@@ -186,6 +197,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     }
 
     this.minimizePromptTimer.cancel()
+    this.showRunningManTimer.cancel()
 
     window.removeEventListener("scroll", this.handleScroll)
   }
@@ -210,6 +222,12 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         this.setState({ promptMinimized: true })
       }, timeout)
     }
+  }
+
+  private showRunningManAfterInitialDelay(delay: number): void {
+    this.showRunningManTimer.setTimeout(() => {
+      this.setState({ showRunningMan: true })
+    }, delay)
   }
 
   private static shouldMinimize(): boolean {
@@ -276,11 +294,23 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         // In the latter case, the server should get around to actually
         // re-running the script in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
+        const params = new URLSearchParams(document.location.search)
+        const delay = params.get("delay")
+        if (delay !== null) {
+          this.showRunningManAfterInitialDelay(parseInt(delay))
+        } else {
+          this.showRunningManAfterInitialDelay(
+            RUNNING_MAN_DISPLAY_DELAY_TIME_MS
+          )
+        }
         return this.renderScriptIsRunning()
       }
       if (this.state.scriptChangedOnDisk) {
         return this.renderRerunScriptPrompt()
       }
+    }
+    if (this.props.scriptRunState === ScriptRunState.NOT_RUNNING) {
+      this.setState({ showRunningMan: false })
     }
 
     return this.renderConnectionStatus()
@@ -347,7 +377,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       />
     )
 
-    return (
+    return this.state.showRunningMan ? (
       <StyledAppStatus>
         {minimized ? (
           <Tooltip
@@ -367,6 +397,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         </StyledAppStatusLabel>
         {stopButton}
       </StyledAppStatus>
+    ) : (
+      <></>
     )
   }
 
