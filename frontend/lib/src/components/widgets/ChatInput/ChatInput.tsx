@@ -27,11 +27,10 @@ import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { AttachFile } from "@emotion-icons/material-outlined"
-import { isNullOrUndefined } from "src/util/utils"
-import { set } from "lodash"
 import { FileRejection, useDropzone } from "react-dropzone"
 import zip from "lodash/zip"
 
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   ChatInput as ChatInputProto,
   FileUploaderState as FileUploaderStateProto,
