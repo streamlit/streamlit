@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.lib.form_utils import is_in_form
+from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
@@ -96,7 +96,7 @@ def _process_avatar_input(
         try:
             return AvatarType.IMAGE, image_to_url(
                 avatar,
-                width=WidthBehaviour.ORIGINAL,
+                width=WidthBehavior.ORIGINAL,
                 clamp=False,
                 channels="RGB",
                 output_format="auto",

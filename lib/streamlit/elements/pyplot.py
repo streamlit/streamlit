@@ -19,8 +19,8 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, cast
 
-import streamlit.elements.image as image_utils
 from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib.image_utils import WidthBehavior, marshall_images
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -172,11 +172,9 @@ def marshall(
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
     image_width = (
-        image_utils.WidthBehaviour.COLUMN
-        if use_container_width
-        else image_utils.WidthBehaviour.ORIGINAL
+        WidthBehavior.COLUMN if use_container_width else WidthBehavior.ORIGINAL
     )
-    image_utils.marshall_images(
+    marshall_images(
         coordinates=coordinates,
         image=image,
         caption=None,
