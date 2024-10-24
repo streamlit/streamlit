@@ -55,11 +55,21 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       top: adjustTop ? theme.sizes.headerDecorationHeight : theme.spacing.none,
       backgroundColor: theme.colors.bgColor,
       zIndex: theme.zIndices.header + 1,
+      // Since the sidebar can have a different theme (+ background)
+      // we need to explicitly set the font color and color scheme
+      // here again so that it is used for all sidebar elements
+      color: theme.colors.bodyText,
+      colorScheme: hasLightBackgroundColor(theme) ? "light" : "dark",
 
       minWidth,
       maxWidth,
       transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
       transition: "transform 300ms, min-width 300ms, max-width 300ms",
+
+      boxShadow:
+        theme.alwaysShowSidebarShadow && !isCollapsed
+          ? `-2rem 0 2rem 2rem #00000029`
+          : undefined,
 
       "&:focus": {
         outline: "none",

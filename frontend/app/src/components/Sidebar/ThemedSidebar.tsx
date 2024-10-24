@@ -18,6 +18,7 @@ import React, { ReactElement } from "react"
 
 import {
   createTheme,
+  CustomThemeConfig,
   LibContext,
   ThemeConfig,
   ThemeProvider,
@@ -30,15 +31,22 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
   return createTheme(
     "Sidebar",
     {
-      secondaryBackgroundColor: theme.emotion.colors.bgColor,
-      backgroundColor: theme.emotion.colors.secondaryBg,
-
+      ...theme.themeInput,
+      base: CustomThemeConfig.BaseTheme.LIGHT,
+      secondaryBackgroundColor:
+        theme.emotion.colors.sidebarSecondaryBackgroundColor ??
+        theme.emotion.colors.bgColor,
+      backgroundColor:
+        theme.emotion.colors.sidebarBackgroundColor ??
+        theme.emotion.colors.secondaryBg,
+      textColor:
+        theme.emotion.colors.sidebarTextColor ?? theme.emotion.colors.bodyText,
       // Explictly pass these props to the sidebar theming as well.
       // This ensures custom fonts passed through postMessage propagate to the sidebar as well.
       bodyFont: theme.emotion.genericFonts.bodyFont,
       codeFont: theme.emotion.genericFonts.codeFont,
     },
-    theme,
+    undefined,
     // inSidebar
     true
   )

@@ -21,6 +21,8 @@ import { hasLightBackgroundColor } from "@streamlit/lib"
 export const StyledApp = styled.div(({ theme }) => {
   const lightBackground = hasLightBackgroundColor(theme)
 
+  console.log("DEBUG: StyledApp", theme.colors.bgColor, theme.colors.bodyText)
+
   return {
     position: "absolute",
     background: theme.colors.bgColor,

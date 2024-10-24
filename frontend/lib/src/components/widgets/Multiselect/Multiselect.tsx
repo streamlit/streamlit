@@ -97,6 +97,7 @@ const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, width, fragmentId } = props
 
   const theme: EmotionTheme = useTheme()
+  console.log("theme", theme.radii)
   const [value, setValueWSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto

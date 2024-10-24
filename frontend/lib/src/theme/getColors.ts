@@ -19,7 +19,6 @@ import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 import { EmotionTheme } from "./types"
 
 export type DerivedColors = {
-  linkText: string
   fadedText05: string
   fadedText10: string
   fadedText20: string
@@ -31,9 +30,6 @@ export type DerivedColors = {
   darkenedBgMix25: string
   darkenedBgMix15: string
   lightenedBg05: string
-
-  borderColor: string
-  borderColorLight: string
 }
 
 export const computeDerivedColors = (
@@ -43,20 +39,11 @@ export const computeDerivedColors = (
 
   const hasLightBg = getLuminance(bgColor) > 0.5
 
-  // Always keep links blue, but brighten them up a bit on dark backgrounds so
-  // they're easier to read.
-  const linkText = hasLightBg
-    ? genericColors.blue
-    : lighten(genericColors.blue, 0.2)
-
   const fadedText05 = transparentize(bodyText, 0.9) // Mostly used for very faint 1px lines.
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
-
-  const borderColor = fadedText10
-  const borderColorLight = fadedText05
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix100 = hasLightBg
@@ -69,7 +56,6 @@ export const computeDerivedColors = (
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
   return {
-    linkText,
     fadedText05,
     fadedText10,
     fadedText20,
@@ -81,9 +67,6 @@ export const computeDerivedColors = (
     darkenedBgMix25,
     darkenedBgMix15,
     lightenedBg05,
-
-    borderColor,
-    borderColorLight,
   }
 }
 
@@ -105,6 +88,9 @@ export const createEmotionColors = (genericColors: {
     metricPositiveDeltaColor: genericColors.green,
     metricNegativeDeltaColor: genericColors.red,
     metricNeutralDeltaColor: derivedColors.fadedText60,
+
+    borderColor: derivedColors.fadedText10,
+    borderColorLight: derivedColors.fadedText05,
 
     docStringModuleText: genericColors.bodyText,
     docStringTypeText: genericColors.green70,

@@ -17,7 +17,7 @@
 import React, { PureComponent, ReactElement, ReactNode } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import { withTheme } from "@emotion/react"
+import { Theme, withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
 import {
@@ -29,6 +29,7 @@ import {
   isColoredLineDisplayed,
   isEmbed,
   IsSidebarContext,
+  LibContext,
   localStorageAvailable,
   Logo,
   PageConfig,
@@ -80,6 +81,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   private mediumBreakpointPx: number
 
   static readonly minWidth = "336"
+
+  static contextType = LibContext
 
   public static calculateMaxBreakpoint(value: string): number {
     // We subtract a margin of 0.02 to use as a max-width
@@ -291,6 +294,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     // If header decoration visible, move sidebar down so decoration doesn't go below it
     const sidebarAdjust = !isEmbedded && this.headerDecorationVisible()
 
+    const { activeTheme } = this.context as any
     // The tabindex is required to support scrolling by arrow keys.
     return (
       <>
@@ -299,7 +303,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           data-testid="stSidebarCollapsedControl"
         >
           {this.renderLogo(true)}
-          <StyledOpenSidebarButton>
+          <StyledOpenSidebarButton theme={activeTheme.emotion}>
             <BaseButton
               kind={BaseButtonKind.HEADER_NO_PADDING}
               onClick={this.toggleCollapse}

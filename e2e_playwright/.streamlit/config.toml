@@ -1,0 +1,35 @@
+[theme]
+base = "dark"
+primaryColor="#1BD760"
+backgroundColor="#181818"
+secondaryBackgroundColor="#2C2C2C"
+textColor="#FFFFFF"
+roundedness = 0.2
+linkColor = "#1BD760"
+fontSize = 14
+bodyFont = 'Signika'
+headingFont = 'Playwrite'
+sidebarTextColor = "#000000"
+sidebarBackgroundColor = "#FFFFFF"
+sidebarSecondaryBackgroundColor = "#f0f2f6"
+sidebarShadow = true
+# borderColor = "#1BD760"
+
+# see: https://fonts.googleapis.com/css2?family=Inter:wght@400
+[[theme.fontFaces]]
+url = "https://fonts.gstatic.com/s/playwritegbs/v5/oPWW_kFkk-s1Xclhmlemy7jsNR5ybH6ezg.woff2"
+family = "Playwrite"
+style = "normal"
+
+[[theme.fontFaces]]
+url = "https://fonts.gstatic.com/s/signika/v25/vEFO2_JTCgwQ5ejvMV0Ox_Kg1UwJ0tKfX6bBjM7-f7e0.woff2"
+weight = 200
+family = "Signika"
+style = "normal"
+
+[client]
+hideTopDecoration = true
+# toolbarMode = "minimal"
+
+[ui]
+hideTopBar = true
