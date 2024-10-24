@@ -248,7 +248,6 @@ export function DeployDialog(
             <ListElement>
               Set up and maintain your own authentication, resources, and costs
             </ListElement>
-            <ListElement infoIcon={true}>No guaranteed support</ListElement>
           </StyledBody>
           <StyledAction>
             <StyledActionsWrapper>

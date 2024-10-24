@@ -71,11 +71,6 @@ export const StyledElement = styled.div(({ theme }) => ({
     position: "absolute",
     marginTop: theme.spacing.sm,
   },
-  "& > svg": {
-    position: "absolute",
-    marginTop: theme.spacing.xs,
-    color: theme.colors.gray70,
-  },
 }))
 
 export const StyledActionsWrapper = styled.div(({ theme }) => ({

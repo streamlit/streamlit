@@ -57,7 +57,7 @@ selection = st.segmented_control(
         "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝, yes, long long long long text",
     ],
     key="segmented_control_multi_selection",
-    selection_mode="multiple",
+    selection_mode="multi",
     default=default,
     help="You can choose multiple options",
 )
@@ -132,7 +132,7 @@ with st.form(key="my_form", clear_on_submit=True):
         "Select an emotion:",
         ["Joy", "Sadness", "Anger", "Disgust"],
         key="segmented_control_in_form",
-        selection_mode="multiple",
+        selection_mode="multi",
     )
     st.form_submit_button("Submit")
 st.write(

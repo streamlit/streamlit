@@ -40,6 +40,8 @@ import {
   toThemeInput,
   UISelectbox,
 } from "@streamlit/lib"
+import { StyledInlineCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
   StyledBackButton,
@@ -187,6 +189,7 @@ export const toMinimalToml = (
 export interface Props {
   backToSettings: (animateModal: boolean) => void
   onClose: () => void
+  metricsMgr: SegmentMetricsManager
 }
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
@@ -212,6 +215,9 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
   const config = toMinimalToml(themeInput)
 
   const copyConfig = (): void => {
+    props.metricsMgr.enqueue("menuClick", {
+      label: "copyThemeToClipboard",
+    })
     navigator.clipboard.writeText(config)
     updateCopied(true)
   }
@@ -302,8 +308,8 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
             <StyledSmall>
               To save your changes, copy your custom theme into the clipboard
               and paste it into the
-              <code>[theme]</code> section of your{" "}
-              <code>.streamlit/config.toml</code> file.
+              <StyledInlineCode>[theme]</StyledInlineCode> section of your{" "}
+              <StyledInlineCode>.streamlit/config.toml</StyledInlineCode> file.
             </StyledSmall>
           </StyledFullRow>
 
