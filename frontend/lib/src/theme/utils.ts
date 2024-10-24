@@ -198,14 +198,6 @@ export const createEmotionTheme = (
     widgetBorderColor,
     borderColor,
   } = parsedColors
-  console.log(
-    "DEBUG parsedColors",
-    primary,
-    bodyText,
-    sidebarTextColor,
-    sidebarBackgroundColor,
-    sidebarSecondaryBackgroundColor
-  )
 
   const newGenericColors = { ...colors }
 
@@ -281,8 +273,6 @@ export const createEmotionTheme = (
     conditionalOverrides.spacing.xl = addRemUnit(baseSpacing * 1.25)
     conditionalOverrides.spacing.twoXL = addRemUnit(baseSpacing * 1.5)
     conditionalOverrides.spacing.threeXL = addRemUnit(baseSpacing * 2)
-
-    console.log("spacing", conditionalOverrides)
   }
 
   if (radii) {
@@ -365,9 +355,6 @@ export const createEmotionTheme = (
     }
   }
 
-  console.log("parsedFont", parsedFont)
-
-  console.log("conditionalOverrides", conditionalOverrides)
   return {
     ...baseThemeConfig.emotion,
     genericFonts: {
@@ -443,7 +430,6 @@ export const createTheme = (
   baseThemeConfig?: ThemeConfig,
   inSidebar = false
 ): ThemeConfig => {
-  console.log("DEBUG", themeInput, baseThemeConfig)
   let completedThemeInput: CustomThemeConfig
   if (baseThemeConfig) {
     completedThemeInput = completeThemeInput(themeInput, baseThemeConfig)
@@ -474,7 +460,6 @@ export const createTheme = (
   )
 
   const emotion = createEmotionTheme(completedThemeInput, startingTheme)
-  console.log("emotion", emotion)
   return {
     ...startingTheme,
     name: themeName,

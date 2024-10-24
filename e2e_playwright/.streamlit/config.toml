@@ -7,10 +7,10 @@ textColor="#FFFFFF"
 roundedness = 0.2
 linkColor = "#1BD760"
 fontSize = 14
-bodyFont = '"Signika", sans-serif'
-headingFont = '"Playwrite", cursive'
-sidebarTextColor = "black"
-sidebarBackgroundColor = "white"
+bodyFont = 'Signika'
+headingFont = 'Playwrite'
+sidebarTextColor = "#000000"
+sidebarBackgroundColor = "#FFFFFF"
 sidebarSecondaryBackgroundColor = "#f0f2f6"
 sidebarShadow = true
 # borderColor = "#1BD760"
@@ -29,7 +29,7 @@ style = "normal"
 
 [client]
 hideTopDecoration = true
-toolbarMode = "minimal"
+# toolbarMode = "minimal"
 
 [ui]
 hideTopBar = true

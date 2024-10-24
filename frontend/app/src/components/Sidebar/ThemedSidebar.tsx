@@ -28,11 +28,6 @@ import { AppContext } from "@streamlit/app/src/components/AppContext"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
-  console.log(
-    "DEBUG: createSidebarTheme",
-    theme,
-    theme.emotion.colors.sidebarTextColor ?? theme.emotion.colors.bodyText
-  )
   return createTheme(
     "Sidebar",
     {
@@ -65,7 +60,6 @@ const ThemedSidebar = ({
     React.useContext(AppContext)
   const { activeTheme } = React.useContext(LibContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
-  console.log("DEBUG: ThemedSidebar", sidebarTheme)
 
   return (
     <ThemeProvider

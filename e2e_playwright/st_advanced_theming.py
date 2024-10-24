@@ -8,12 +8,151 @@ import plotly.express as px
 import pydeck as pdk
 
 import streamlit as st
+from streamlit.config import get_option, set_option
 
 st.set_page_config("Mega tester app", "🎈", initial_sidebar_state="collapsed")
 
-st.sidebar.text_input("sidebarTextColor", value="black")
-st.sidebar.success("sidebarSecondaryBackgroundColor")
+st.sidebar.header("Hello Sidebar")
 
+st.sidebar.text_input("text input")
+st.sidebar.success("Wohooo")
+
+
+with st.popover("Theme Editor"):
+    with st.form("theme_editor", border=False):
+        base_theme = st.selectbox(
+            "Base theme",
+            options=["light", "dark"],
+            index=["light", "dark"].index(get_option("theme.base") or "dark"),
+        )
+
+        roundedness = st.slider(
+            "Roundedness",
+            value=get_option("theme.roundedness") or 0.25,
+            min_value=0.0,
+            max_value=1.0,
+        )
+        font_size = st.slider(
+            "Font size",
+            value=get_option("theme.fontSize") or 14,
+            min_value=6,
+            max_value=25,
+        )
+
+        st.divider()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            primary_color = st.color_picker(
+                "Primary color",
+                value=get_option("theme.primaryColor") or "#1BD760",
+            )
+            background_color = st.color_picker(
+                "Background color",
+                value=get_option("theme.backgroundColor") or "#181818",
+            )
+            secondary_background_color = st.color_picker(
+                "Secondary background color",
+                value=get_option("theme.secondaryBackgroundColor") or "#2C2C2C",
+            )
+        with col2:
+            text_color = st.color_picker(
+                "Text color",
+                value=get_option("theme.textColor") or "#FFFFFF",
+            )
+            link_color = st.color_picker(
+                "Link color",
+                value=get_option("theme.linkColor") or "#1BD760",
+            )
+
+        st.divider()
+        show_sidebar_shadow = st.checkbox(
+            "Show sidebar shadow", get_option("theme.sidebarShadow") or False
+        )
+        col1, col2 = st.columns(2)
+        with col1:
+            sidebar_background_color = st.color_picker(
+                "Sidebar background color",
+                value=get_option("theme.sidebarBackgroundColor") or "#FFFFFF",
+            )
+            sidebar_secondary_background_color = st.color_picker(
+                "Sidebar secondary background color",
+                value=get_option("theme.sidebarSecondaryBackgroundColor") or "#f0f2f6",
+            )
+        with col2:
+            sidebar_text_color = st.color_picker(
+                "Sidebar text color",
+                value=get_option("theme.sidebarTextColor") or "#000000",
+            )
+
+        st.divider()
+        fonts = [
+            "Signika",
+            "Playwrite",
+            "Source Sans Pro",
+            "Source Code Pro",
+            "Source Serif Pro",
+            "sans-serif",
+            "monospace",
+            "serif",
+            "cursive",
+        ]
+        body_font = st.selectbox(
+            "Body font",
+            options=fonts,
+            index=fonts.index(get_option("theme.bodyFont") or "Signika"),
+        )
+
+        heading_font = st.selectbox(
+            "Heading font",
+            options=fonts,
+            index=fonts.index(get_option("theme.headingFont") or "Playwrite"),
+        )
+
+        code_font = st.selectbox(
+            "Code font",
+            options=fonts,
+            index=fonts.index(get_option("theme.codeFont") or "Source Code Pro"),
+        )
+
+        st.divider()
+
+        toolbar_mode = st.selectbox(
+            "Toolbar mode",
+            options=["auto", "developer", "viewer", "minimal"],
+            index=["auto", "developer", "viewer", "minimal"].index(
+                get_option("client.toolbarMode") or "minimal"
+            ),
+        )
+        hide_top_decoration = st.checkbox(
+            "Hide top decoration", get_option("client.hideTopDecoration") or True
+        )
+        hide_top_bar = st.checkbox("Hide top bar", get_option("ui.hideTopBar") or True)
+
+        if st.form_submit_button("Apply theme", use_container_width=True):
+            set_option("theme.sidebarShadow", show_sidebar_shadow)
+            set_option("theme.fontSize", font_size)
+            set_option("theme.roundedness", roundedness)
+
+            set_option("theme.base", base_theme)
+            set_option("theme.primaryColor", primary_color)
+            set_option("theme.backgroundColor", background_color)
+            set_option("theme.secondaryBackgroundColor", secondary_background_color)
+            set_option("theme.textColor", text_color)
+            set_option("theme.sidebarTextColor", sidebar_text_color)
+            set_option("theme.linkColor", link_color)
+            set_option("theme.sidebarBackgroundColor", sidebar_background_color)
+            set_option(
+                "theme.sidebarSecondaryBackgroundColor",
+                sidebar_secondary_background_color,
+            )
+            set_option("client.toolbarMode", toolbar_mode)
+            set_option("client.hideTopDecoration", hide_top_decoration)
+            set_option("ui.hideTopBar", hide_top_bar)
+            set_option("theme.bodyFont", body_font)
+            set_option("theme.headingFont", heading_font)
+            set_option("theme.codeFont", code_font)
+            st.rerun()
 
 # st.html("app_styles.html")
 st.logo(
@@ -21,7 +160,7 @@ st.logo(
     size="medium",
 )
 
-st = st.sidebar
+
 st.title("🎈 Mega tester app")
 
 st.write(
@@ -91,28 +230,28 @@ data_df = pd.DataFrame(
     }
 )
 
-# st.data_editor(
-#     data_df,
-#     column_config={
-#         "column": st.column_config.Column("Column", help="A column tooltip"),
-#         "text": st.column_config.TextColumn("TextColumn"),
-#         "number": st.column_config.NumberColumn("NumberColumn"),
-#         "checkbox": st.column_config.CheckboxColumn("CheckboxColumn"),
-#         "selectbox": st.column_config.SelectboxColumn(
-#             "SelectboxColumn", options=["foo", "bar", "baz"]
-#         ),
-#         "datetime": st.column_config.DatetimeColumn("DatetimeColumn"),
-#         "date": st.column_config.DateColumn("DateColumn"),
-#         "time": st.column_config.TimeColumn("TimeColumn"),
-#         "list": st.column_config.ListColumn("ListColumn"),
-#         "link": st.column_config.LinkColumn("LinkColumn"),
-#         "image": st.column_config.ImageColumn("ImageColumn"),
-#         "area_chart": st.column_config.AreaChartColumn("AreaChartColumn"),
-#         "line_chart": st.column_config.LineChartColumn("LineChartColumn"),
-#         "bar_chart": st.column_config.BarChartColumn("BarChartColumn"),
-#         "progress": st.column_config.ProgressColumn("ProgressColumn"),
-#     },
-# )
+st.data_editor(
+    data_df,
+    column_config={
+        "column": st.column_config.Column("Column", help="A column tooltip"),
+        "text": st.column_config.TextColumn("TextColumn"),
+        "number": st.column_config.NumberColumn("NumberColumn"),
+        "checkbox": st.column_config.CheckboxColumn("CheckboxColumn"),
+        "selectbox": st.column_config.SelectboxColumn(
+            "SelectboxColumn", options=["foo", "bar", "baz"]
+        ),
+        "datetime": st.column_config.DatetimeColumn("DatetimeColumn"),
+        "date": st.column_config.DateColumn("DateColumn"),
+        "time": st.column_config.TimeColumn("TimeColumn"),
+        "list": st.column_config.ListColumn("ListColumn"),
+        "link": st.column_config.LinkColumn("LinkColumn"),
+        "image": st.column_config.ImageColumn("ImageColumn"),
+        "area_chart": st.column_config.AreaChartColumn("AreaChartColumn"),
+        "line_chart": st.column_config.LineChartColumn("LineChartColumn"),
+        "bar_chart": st.column_config.BarChartColumn("BarChartColumn"),
+        "progress": st.column_config.ProgressColumn("ProgressColumn"),
+    },
+)
 
 "st.table"
 st.table(data.iloc[0:5])
@@ -336,15 +475,15 @@ st.container(height=150).write(
 )
 
 
-# @st.dialog("Test dialog")
-# def dialog():
-#     st.write("Hello there!")
-#     if st.button("Close"):
-#         st.rerun()
+@st.dialog("Test dialog")
+def dialog():
+    st.write("Hello there!")
+    if st.button("Close"):
+        st.rerun()
 
 
-# if st.button("Open st.dialog"):
-#     dialog()
+if st.button("Open st.dialog"):
+    dialog()
 
 a = st.empty()
 a.write("st.empty")
@@ -355,7 +494,6 @@ with st.expander("st.expander"):
 with st.popover("st.popover"):
     st.write("works!")
 
-# st.sidebar.write("st.sidebar")
 
 "st.tabs"
 tab_a, tab_b = st.tabs(["tab 1", "tab 2"])
@@ -427,13 +565,13 @@ st.exception(RuntimeError("st.exception"))
 "st.fragment"
 
 
-# @st.fragment
-# def my_fragment():
-#     if st.button("Wait 1s inside the fragment"):
-#         time.sleep(1)
+@st.fragment
+def my_fragment():
+    if st.button("Wait 1s inside the fragment"):
+        time.sleep(1)
 
 
-# my_fragment()
+my_fragment()
 
 if st.button("st.rerun()"):
     st.rerun()
@@ -442,11 +580,11 @@ if st.button("st.stop()"):
     st.stop()
     st.write("if you see this, st.stop does not work")
 
-# with st.form(key="tester"):
-#     "st.form"
-#     text_tester = st.text_input("Your text")
-#     st.form_submit_button("Submit")
-# st.write("Your text is:", text_tester)
+with st.form(key="tester"):
+    "st.form"
+    text_tester = st.text_input("Your text")
+    st.form_submit_button("Submit")
+st.write("Your text is:", text_tester)
 
 
 st.write("## Utilities")
@@ -456,10 +594,10 @@ st.help(st.write)
 
 st.write("## State Management")
 
-# "st.session_state"
-# if "foo" not in st.session_state:
-#     st.session_state["foo"] = "bar"
-# st.write(st.session_state)
+"st.session_state"
+if "foo" not in st.session_state:
+    st.session_state["foo"] = "bar"
+st.write(st.session_state)
 
 if st.button("Add st.query_params"):
     st.query_params["foo"] = "bar"
