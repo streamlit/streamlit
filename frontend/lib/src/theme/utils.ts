@@ -232,6 +232,9 @@ export const createEmotionTheme = (
   const conditionalOverrides: any = {}
 
   conditionalOverrides.colors = createEmotionColors(newGenericColors)
+  if (notNullOrUndefined(themeInput.sidebarShadow)) {
+    conditionalOverrides.alwaysShowSidebarShadow = themeInput.sidebarShadow
+  }
 
   if (borderColor) {
     conditionalOverrides.colors.borderColor = borderColor

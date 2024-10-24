@@ -1076,6 +1076,15 @@ _create_option(
     """,
 )
 
+_create_option(
+    "theme.sidebarShadow",
+    description="""
+    Whether to always show the shadow of the sidebar (True) or only when the sidebar
+    overlaps the main area (False).
+    """,
+    type_=bool,
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")
