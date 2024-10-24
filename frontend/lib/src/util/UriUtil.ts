@@ -118,7 +118,7 @@ export function buildHttpUri(
   return `${protocol}://${host}:${port}/${fullPath}`
 }
 
-function makePath(basePath: string, subPath: string): string {
+export function makePath(basePath: string, subPath: string): string {
   basePath = basePath.replace(FINAL_SLASH_RE, "").replace(INITIAL_SLASH_RE, "")
   subPath = subPath.replace(FINAL_SLASH_RE, "").replace(INITIAL_SLASH_RE, "")
 

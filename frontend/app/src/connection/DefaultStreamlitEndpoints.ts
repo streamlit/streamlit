@@ -20,7 +20,9 @@ import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseUriParts,
   buildHttpUri,
+  makePath,
   getCookie,
+  FileUploadClientConfig,
   IAppPage,
   JWTHeader,
   StreamlitEndpoints,
@@ -45,6 +47,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   private cachedServerUri?: BaseUriParts
 
   private jwtHeader?: JWTHeader
+  private fileUploadClientConfig?: FileUploadClientConfig
 
   public constructor(props: Props) {
     this.getServerUri = props.getServerUri
@@ -60,6 +63,16 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
   public setJWTHeader(jwtHeader: JWTHeader): void {
     this.jwtHeader = jwtHeader
+  }
+
+  public setFileUploadCliendConfig(payload: FileUploadClientConfig): void {
+    console.log("YO YO YO")
+    console.log(payload)
+    const { prefix, headers } = payload
+    this.fileUploadClientConfig = {
+      prefix,
+      headers,
+    }
   }
 
   /**
@@ -81,6 +94,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    * the URL alone.
    */
   public buildFileUploadURL(url: string): string {
+    if (this.fileUploadClientConfig) {
+      return makePath(this.fileUploadClientConfig.prefix, url)
+    }
+
     return url.startsWith(UPLOAD_FILE_ENDPOINT)
       ? buildHttpUri(this.requireServerUri(), url)
       : url
@@ -120,9 +137,16 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const form = new FormData()
     form.append(file.name, file)
 
-    const headers: Record<string, string> = {}
+    let headers: Record<string, string> = {}
     if (this.jwtHeader !== undefined) {
       headers[this.jwtHeader.jwtHeaderName] = this.jwtHeader.jwtHeaderValue
+    }
+
+    if (this.fileUploadClientConfig) {
+      headers = {
+        ...headers,
+        ...this.fileUploadClientConfig.headers,
+      }
     }
 
     return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {

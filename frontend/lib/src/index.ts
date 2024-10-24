@@ -72,7 +72,11 @@ export * from "./proto"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
-export type { JWTHeader, StreamlitEndpoints } from "./StreamlitEndpoints"
+export type {
+  JWTHeader,
+  StreamlitEndpoints,
+  FileUploadClientConfig,
+} from "./StreamlitEndpoints"
 export { mockWindowLocation, render } from "./test_util"
 export {
   AUTO_THEME_NAME,
@@ -103,7 +107,12 @@ export { logAlways, logError, logMessage, logWarning } from "./util/log"
 export { default as Resolver } from "./util/Resolver"
 export { LocalStore, localStorageAvailable } from "./util/storageUtils"
 export { Timer } from "./util/Timer"
-export { buildHttpUri, buildWsUri, getPossibleBaseUris } from "./util/UriUtil"
+export {
+  buildHttpUri,
+  buildWsUri,
+  getPossibleBaseUris,
+  makePath,
+} from "./util/UriUtil"
 export type { BaseUriParts } from "./util/UriUtil"
 export {
   extractPageNameFromPathName,

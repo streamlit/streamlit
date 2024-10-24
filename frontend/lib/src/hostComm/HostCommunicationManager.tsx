@@ -52,6 +52,10 @@ export interface HostCommunicationProps {
     jwtHeaderName: string
     jwtHeaderValue: string
   }) => void
+  readonly fileUploadClientConfigChanged: (payload: {
+    prefix: string
+    headers: Record<string, string>
+  }) => void
   readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
   readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
   readonly hostHideSidebarNavChanged: (hideSidebarNav: boolean) => void
@@ -208,6 +212,14 @@ export default class HostCommunicationManager {
       if (message.jwtHeaderName !== undefined) {
         this.props.jwtHeaderChanged(message)
       }
+    }
+
+    if (message.type === "SET_FILE_UPLOAD_CLIENT_CONFIG") {
+      const { prefix, headers } = message
+      this.props.fileUploadClientConfigChanged({
+        prefix,
+        headers,
+      })
     }
 
     if (message.type === "SET_IS_OWNER") {
