@@ -21,15 +21,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.lib.image_utils import (
-    AtomicImage,
     Channels,
     ImageFormatOrAuto,
+    ImageOrImageList,
     WidthBehavior,
     marshall_images,
 )
@@ -38,23 +38,8 @@ from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from typing import Any
-
-    import numpy.typing as npt
-    from PIL import GifImagePlugin, Image, ImageFile
-
     from streamlit.delta_generator import DeltaGenerator
 
-# This constant is related to the frontend maximum content width specified
-# in App.jsx main container
-# 730 is the max width of element-container in the frontend, and 2x is for high
-# DPI.
-MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
-
-PILImage: TypeAlias = Union[
-    "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
-]
-ImageOrImageList: TypeAlias = Union[AtomicImage, Sequence[AtomicImage]]
 UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 
 
@@ -75,6 +60,7 @@ class ImageMixin:
         use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Display an image or list of images.
+
         Parameters
         ----------
         image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
@@ -127,13 +113,16 @@ class ImageMixin:
             the width of the parent container.
             Note: if `use_container_width` is set to `True`, it will take
             precedence over the `width` parameter
+
         Example
         -------
         >>> import streamlit as st
         >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
+
         .. output::
            https://doc-image.streamlit.app/
            height: 710px
+
         """
 
         if use_container_width is True and use_column_width is not None:
@@ -186,7 +175,3 @@ class ImageMixin:
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-
-def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:
-    return [array[i, :, :, :] for i in range(0, array.shape[0])]
