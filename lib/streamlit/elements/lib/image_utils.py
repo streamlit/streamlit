@@ -21,7 +21,6 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 import numpy as np
-from PIL import Image, ImageFile
 from typing_extensions import TypeAlias
 
 from streamlit import runtime, url_util
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     import numpy.typing as npt
-    from PIL import GifImagePlugin
+    from PIL import GifImagePlugin, Image, ImageFile
 
 PILImage: TypeAlias = Union[
     "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
