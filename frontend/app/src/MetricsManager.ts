@@ -16,6 +16,7 @@
 
 import pick from "lodash/pick"
 import { v4 as uuidv4 } from "uuid"
+import { IGuestToHostMessage } from "lib/src/hostComm/types"
 
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
@@ -67,9 +68,9 @@ export class MetricsManager {
   private metricsUrl: string | undefined = undefined
 
   /**
-   * Function to send a message to the host.
+   * Function to send a message to the host via postMessage communication
    */
-  private sendMessageToHost: (message: any) => void = () => {}
+  private sendMessageToHost: (message: IGuestToHostMessage) => void = () => {}
 
   /**
    * The anonymous ID of the user.
@@ -101,7 +102,7 @@ export class MetricsManager {
     sendMessageToHost,
   }: {
     gatherUsageStats: boolean
-    sendMessageToHost: (message: any) => void
+    sendMessageToHost: (message: IGuestToHostMessage) => void
   }): void {
     this.initialized = true
     this.sendMessageToHost = sendMessageToHost

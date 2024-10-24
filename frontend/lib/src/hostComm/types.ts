@@ -131,11 +131,6 @@ export type IHostToGuestMessage = {
   | {
       type: "TERMINATE_WEBSOCKET_CONNECTION"
     }
-  | {
-      type: "METRICS_EVENT"
-      eventName: string
-      data: MetricsEvent
-    }
 )
 
 export type IGuestToHostMessage =
@@ -198,6 +193,11 @@ export type IGuestToHostMessage =
     }
   | {
       type: "WEBSOCKET_CONNECTED"
+    }
+  | {
+      type: "METRICS_EVENT"
+      eventName: string
+      data: MetricsEvent
     }
 
 export type VersionedMessage<Message> = {
