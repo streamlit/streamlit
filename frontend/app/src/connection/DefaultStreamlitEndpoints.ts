@@ -20,11 +20,11 @@ import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseUriParts,
   buildHttpUri,
-  makePath,
-  getCookie,
   FileUploadClientConfig,
+  getCookie,
   IAppPage,
   JWTHeader,
+  makePath,
   StreamlitEndpoints,
 } from "@streamlit/lib"
 
@@ -47,6 +47,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   private cachedServerUri?: BaseUriParts
 
   private jwtHeader?: JWTHeader
+
   private fileUploadClientConfig?: FileUploadClientConfig
 
   public constructor(props: Props) {
