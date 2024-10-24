@@ -16,14 +16,17 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hmac
 import json
 from typing import TYPE_CHECKING, Any, Awaitable, Final
+from urllib.parse import urlparse
 
 import tornado.concurrent
 import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
+from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler
 
 from streamlit import config
@@ -31,7 +34,11 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.server_util import is_url_from_allowed_origins
+from streamlit.web.server.server_util import (
+    AUTH_COOKIE_NAME,
+    is_url_from_allowed_origins,
+    is_xsrf_enabled,
+)
 
 if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -50,12 +57,51 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         # need to read the self.xsrf_token manually to set the cookie as a side
         # effect. See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
-        if config.get_option("server.enableXsrfProtection"):
+        if is_xsrf_enabled():
             _ = self.xsrf_token
+
+    def get_signed_cookie(
+        self,
+        name: str,
+        value: str | None = None,
+        max_age_days: float = 31,
+        min_version: int | None = None,
+    ) -> bytes | None:
+        try:
+            return super().get_signed_cookie(name, value, max_age_days, min_version)
+        except AttributeError:
+            return super().get_secure_cookie(name, value, max_age_days, min_version)
 
     def check_origin(self, origin: str) -> bool:
         """Set up CORS."""
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
+
+    def _validate_xsrf_token(self, supplied_token: str) -> bool:
+        _, token, _ = self._decode_xsrf_token(supplied_token)
+        _, expected_token, _ = self._get_raw_xsrf_token()
+
+        decoded_token = utf8(token)
+        decoded_expected_token = utf8(expected_token)
+
+        if not decoded_token or not decoded_expected_token:
+            return False
+        return hmac.compare_digest(decoded_token, decoded_expected_token)
+
+    def _parse_user_cookie(self, raw_cookie_value: bytes, email) -> dict[str, Any]:
+        cookie_value = json.loads(raw_cookie_value)
+        user_info = {}
+
+        cookie_value_origin = cookie_value.get("origin", None)
+        parsed_origin_from_header = urlparse(self.request.headers["Origin"])
+        expected_origin_value = (
+            parsed_origin_from_header.scheme + "://" + parsed_origin_from_header.netloc
+        )
+        if cookie_value_origin == expected_origin_value:
+            user_info["email"] = cookie_value.get("email", email)
+            del cookie_value["origin"]
+            user_info["userinfo"] = cookie_value
+
+        return user_info
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Send a ForwardMsg to the browser."""
@@ -113,6 +159,13 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 p.strip()
                 for p in self.request.headers["Sec-Websocket-Protocol"].split(",")
             ]
+
+            raw_cookie_value = self.get_signed_cookie(AUTH_COOKIE_NAME)
+            if is_xsrf_enabled() and raw_cookie_value:
+                csrf_protocol_value = ws_protocols[1]
+
+                if self._validate_xsrf_token(csrf_protocol_value):
+                    user_info.update(self._parse_user_cookie(raw_cookie_value, email))
 
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above

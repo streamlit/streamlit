@@ -43,6 +43,11 @@ from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
+from streamlit.web.server.oauth_authlib_routes import (
+    AuthCallbackHandler,
+    AuthLoginHandler,
+    LogoutHandler,
+)
 from streamlit.web.server.routes import (
     AddSlashHandler,
     HealthHandler,
@@ -51,7 +56,12 @@ from streamlit.web.server.routes import (
     RemoveSlashHandler,
     StaticFileHandler,
 )
-from streamlit.web.server.server_util import DEVELOPMENT_PORT, make_url_path_regex
+from streamlit.web.server.server_util import (
+    DEVELOPMENT_PORT,
+    get_cookie_secret,
+    is_xsrf_enabled,
+    make_url_path_regex,
+)
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
@@ -94,6 +104,10 @@ HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
     r"(?:script-health-check|_stcore/script-health-check)"
 )
+
+OAUTH2_CALLBACK_ENDPOINT: Final = "/oauth2callback"
+AUTH_LOGIN_ENDPOINT: Final = "/auth/login"
+AUTH_LOGOUT_ENDPOINT: Final = "/auth/logout"
 
 
 class RetriesExceeded(Exception):
@@ -290,6 +304,18 @@ class Server:
 
         routes: list[Any] = [
             (
+                make_url_path_regex(base, OAUTH2_CALLBACK_ENDPOINT),
+                AuthCallbackHandler,
+            ),
+            (
+                make_url_path_regex(base, AUTH_LOGIN_ENDPOINT),
+                AuthLoginHandler,
+            ),
+            (
+                make_url_path_regex(base, AUTH_LOGOUT_ENDPOINT),
+                LogoutHandler,
+            ),
+            (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,
                 {"runtime": self._runtime},
@@ -395,8 +421,8 @@ class Server:
 
         return tornado.web.Application(
             routes,
-            cookie_secret=config.get_option("server.cookieSecret"),
-            xsrf_cookies=config.get_option("server.enableXsrfProtection"),
+            cookie_secret=get_cookie_secret(),
+            xsrf_cookies=is_xsrf_enabled(),
             # Set the websocket message size. The default value is too low.
             websocket_max_message_size=get_max_message_size_bytes(),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
