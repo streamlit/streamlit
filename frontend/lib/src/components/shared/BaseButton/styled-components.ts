@@ -41,6 +41,8 @@ export enum BaseButtonKind {
   SEGMENTED_CONTROL_ACTIVE = "segmented_controlActive",
   TRIGGERS = "triggers",
   TRIGGERS_ACTIVE = "triggersActive",
+  SEGMENTED_CONTROL = "segmented_control",
+  SEGMENTED_CONTROL_ACTIVE = "segmented_controlActive",
 }
 
 export enum BaseButtonSize {
@@ -318,7 +320,7 @@ export const StyledPillsButton = styled(
   StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    borderRadius: theme.radii.xxxl,
+    borderRadius: theme.radii.full,
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
     gap: theme.spacing.xs,
   }
@@ -344,7 +346,7 @@ export const StyledSegmentedControlButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
-    borderRadius: theme.radii.none,
+    borderRadius: "0",
     flex: "1 0 fit-content",
     maxWidth: "100%",
     marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
@@ -373,16 +375,6 @@ export const StyledSegmentedControlButtonActive = styled(
     color: theme.colors.primary,
     zIndex: theme.zIndices.priority,
     "&:hover": {
-      backgroundColor: transparentize(theme.colors.primary, 0.8),
-    },
-  }
-})
-
-export const StyledTriggerButton = styled(
-  StyledButtonGroupBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => {
-  return {
-    "&:active": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },
   }

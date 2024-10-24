@@ -34,6 +34,7 @@ import {
   StyledBashCode,
   WebsocketConnection,
 } from "@streamlit/app/src/connection/WebsocketConnection"
+import { StyledPre } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
   allowedOrigins: ["list", "of", "allowed", "origins"],
@@ -280,9 +281,9 @@ describe("doInitPings", () => {
           Is Streamlit still running? If you accidentally stopped Streamlit,
           just restart it in your terminal:
         </p>
-        <pre>
+        <StyledPre>
           <StyledBashCode>streamlit run yourscript.py</StyledBashCode>
-        </pre>
+        </StyledPre>
       </Fragment>
     )
 

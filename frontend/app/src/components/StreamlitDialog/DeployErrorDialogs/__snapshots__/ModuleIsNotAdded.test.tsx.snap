@@ -4,9 +4,9 @@ exports[`DeployErrorDialog - ModuleIsNotAdded should render without crashing 1`]
 Object {
   "body": <StyledParagraph>
     The app’s main file 
-    <code>
+    <StyledInlineCode>
       module
-    </code>
+    </StyledInlineCode>
      has not been pushed to GitHub. Please add it to continue.
   </StyledParagraph>,
   "title": "Unable to deploy",

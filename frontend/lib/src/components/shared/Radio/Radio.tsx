@@ -165,6 +165,7 @@ function Radio({
                   // The text label has a line-height of 1.6
                   // making the font height around 1.6rem
                   // while the radio icon has a height of 1rem.
+                  //eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
                   marginTop: "0.35rem",
                   marginRight: theme.spacing.none,
                   marginLeft: theme.spacing.none,
@@ -176,11 +177,13 @@ function Radio({
               },
               RadioMarkInner: {
                 style: ({ $checked }: { $checked: boolean }) => ({
+                  // If checked, it should fill 37.5% of the total radio size.
+                  // if not checked, show a border of spacing.threeXS.
                   height: $checked
-                    ? "6px"
+                    ? "37.5%"
                     : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
                   width: $checked
-                    ? "6px"
+                    ? "37.5%"
                     : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
                 }),
               },

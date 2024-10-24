@@ -29,12 +29,13 @@ import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
+import { assertNever } from "@streamlit/lib/src/util/assertNever"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
-import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
-import { assertNever } from "@streamlit/lib/src/util/assertNever"
+import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
+import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
 
 import withMapboxToken from "./withMapboxToken"
 import {
@@ -54,20 +55,21 @@ const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const {
-    collapse,
     disabled,
     disableFullscreenMode,
     element,
-    expand,
     fragmentId,
-    height: propsHeight,
-    isFullScreen,
     mapboxToken: propsMapboxToken,
     widgetMgr,
-    width: propsWidth,
   } = props
   const { mapboxToken: elementMapboxToken } = element
   const theme: EmotionTheme = useTheme()
+  const {
+    expanded: isFullScreen,
+    expand,
+    collapse,
+  } = useRequiredContext(ElementFullscreenContext)
+
   const {
     createTooltip,
     data: selection,
@@ -83,12 +85,9 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   } = useDeckGl({
     element,
     fragmentId,
-    height: propsHeight,
-    isFullScreen,
     isLightTheme: hasLightBackgroundColor(theme),
     theme,
     widgetMgr,
-    width: propsWidth,
   })
 
   const [isInitialized, setIsInitialized] = useState(false)
@@ -267,6 +266,4 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   )
 }
 
-export default withMapboxToken("st.pydeck_chart")(
-  withFullScreenWrapper(DeckGlJsonChart, true)
-)
+export default withMapboxToken("st.pydeck_chart")(DeckGlJsonChart)

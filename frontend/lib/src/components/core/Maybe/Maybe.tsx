@@ -13,28 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React, { memo, PropsWithChildren } from "react"
 
-import React, { ReactNode } from "react"
+interface MaybeProps
+  extends PropsWithChildren<{
+    enable: boolean
+  }> {}
 
-export interface MaybeProps {
-  enable: boolean
-  children?: ReactNode
-}
-
-export interface State {}
-
-class Maybe extends React.Component<MaybeProps, State> {
-  // eslint-disable-next-line class-methods-use-this
-  public shouldComponentUpdate(nextProps: Readonly<MaybeProps>): boolean {
-    // We have our component update if either props.enable or nextProps.enable
-    // is true to ensure that we rerender in the case that an Element is
-    // removed by replacing it with an empty one (so goes from enabled->disabled).
-    return this.props.enable || nextProps.enable
+const Maybe: React.FC<MaybeProps> = memo(
+  function Maybe({ children }) {
+    return <>{children}</>
+  },
+  (prevProps, nextProps) => {
+    // If either prevProps.enable OR nextProps.enable is true, we want to update
+    // the component. In order to do so, we return false to indicate that props
+    // are not the same. This ensures that we rerender in the case that an
+    // Element is removed by replacing it with an empty one (so goes from
+    // enabled->disabled).
+    return !(prevProps.enable || nextProps.enable)
   }
-
-  public render(): React.ReactNode {
-    return this.props.children
-  }
-}
+)
 
 export default Maybe

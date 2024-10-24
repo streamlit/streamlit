@@ -18,6 +18,7 @@ import React from "react"
 
 import { DataEditorProps } from "@glideapps/glide-data-grid"
 
+import createDownloadLinkElement from "@streamlit/lib/src/util/createDownloadLinkElement"
 import {
   BaseColumn,
   toSafeString,
@@ -184,18 +185,15 @@ function useDataExporter(
           type: "text/csv;charset=utf-8;",
         })
         const url = URL.createObjectURL(blob)
-        const link = document.createElement("a")
-        // Open the download link in a new tab to ensure that this is working in embedded
-        // setups that limit the URL that an iframe can navigate to (e.g. via CSP)
-        if (enforceDownloadInNewTab) {
-          link.setAttribute("target", "_blank")
-        } else {
-          link.setAttribute("target", "_self")
-        }
+
+        const link = createDownloadLinkElement({
+          enforceDownloadInNewTab,
+          url,
+          filename: suggestedName,
+        })
 
         link.style.display = "none"
-        link.href = url
-        link.download = suggestedName
+
         document.body.appendChild(link) // Required for FF
         link.click()
         document.body.removeChild(link) // Clean up

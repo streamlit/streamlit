@@ -16,6 +16,8 @@
 
 import React from "react"
 
+import { StyledInlineCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
+
 import { IDeployErrorDialog } from "./types"
 import { StyledParagraph } from "./styled-components"
 
@@ -24,8 +26,8 @@ function ModuleIsNotAdded(module: string): IDeployErrorDialog {
     title: "Unable to deploy",
     body: (
       <StyledParagraph>
-        The app’s main file <code>{module}</code> has not been pushed to
-        GitHub. Please add it to continue.
+        The app’s main file <StyledInlineCode>{module}</StyledInlineCode> has
+        not been pushed to GitHub. Please add it to continue.
       </StyledParagraph>
     ),
   }

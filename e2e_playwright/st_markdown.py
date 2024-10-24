@@ -56,16 +56,19 @@ $$
 ax^2 + bx + c = 0
 $$
 
-## :material/home: Some header
+## :material/home: :streamlit: Some header
 
 | Col1      | Col2        |
 | --------- | ----------- |
-| Some      | :material/description: Data        |
+| Some      | :material/description: :streamlit: Data        |
 
 Some text
 - :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
 - :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
+- :streamlit: Markdown can contain the Streamlit logo
+- <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
+
 
 :blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
 

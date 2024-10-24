@@ -16,6 +16,7 @@
 
 module.exports = {
   meta: {
+    name: "use-strict-null-equality-checks",
     type: "suggestion",
     docs: {
       description: "Disallow == null and != null comparisons",

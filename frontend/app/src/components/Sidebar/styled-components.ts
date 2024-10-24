@@ -21,7 +21,7 @@ import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Ma
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,
-} from "@streamlit/lib/src/theme/utils"
+} from "@streamlit/lib/src/theme"
 
 // Check for custom text color & handle colors in SidebarNav accordingly
 const conditionalCustomColor = (
