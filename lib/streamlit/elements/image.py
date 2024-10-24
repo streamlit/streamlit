@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, List, Literal, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -33,6 +33,7 @@ from streamlit.elements.lib.image_utils import (
     WidthBehavior,
     marshall_images,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -62,15 +63,18 @@ class ImageMixin:
     def image(
         self,
         image: ImageOrImageList,
-        caption: Optional[str | List[str]] = None,
-        width: Optional[int | WidthBehavior] = None,
-        use_column_width: Optional[bool | str] = None,
+        # TODO: Narrow type of caption, dependent on type of image,
+        #  by way of overload
+        caption: str | list[str] | None = None,
+        width: int | None = None,
+        use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
+        *,
+        use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Display an image or list of images.
-
         Parameters
         ----------
         image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
@@ -123,17 +127,24 @@ class ImageMixin:
             the width of the parent container.
             Note: if `use_container_width` is set to `True`, it will take
             precedence over the `width` parameter
-
         Example
         -------
         >>> import streamlit as st
         >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
-
         .. output::
            https://doc-image.streamlit.app/
            height: 710px
-
         """
+
+        if use_container_width is True and use_column_width is not None:
+            raise StreamlitAPIException(
+                "`use_container_width` and `use_column_width` cannot be set at the same time.",
+                "Please utilize `use_container_width` since `use_column_width` is deprecated.",
+            )
+
+        image_width: int = (
+            WidthBehavior.ORIGINAL if (width is None or width <= 0) else width
+        )
 
         if use_column_width is not None:
             show_deprecation_warning(
@@ -141,12 +152,29 @@ class ImageMixin:
                 "in a future release. Please utilize the `use_container_width` parameter instead."
             )
 
+            if use_column_width == "auto":
+                image_width = WidthBehavior.AUTO
+            elif use_column_width == "always" or use_column_width is True:
+                image_width = WidthBehavior.COLUMN
+            elif use_column_width == "never" or use_column_width is False:
+                image_width = WidthBehavior.ORIGINAL
+
+        else:
+            if use_container_width is True:
+                image_width = WidthBehavior.MAX_IMAGE_OR_CONTAINER
+            elif image_width is not None and image_width > 0:
+                # Use the given width. It will be capped on the frontend if it
+                # exceeds the container width.
+                pass
+            elif use_container_width is False:
+                image_width = WidthBehavior.MIN_IMAGE_OR_CONTAINER
+
         image_list_proto = ImageListProto()
         marshall_images(
-            self.dg._get_coordinates(),
+            self.dg._get_delta_path_str(),
             image,
             caption,
-            width,
+            image_width,
             image_list_proto,
             clamp,
             channels,
