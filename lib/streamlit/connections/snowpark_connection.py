@@ -123,7 +123,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         >>> import streamlit as st
         >>>
         >>> conn = st.connection("snowpark")
-        >>> df = conn.query("select * from pet_owners")
+        >>> df = conn.query("SELECT * FROM pet_owners")
         >>> st.dataframe(df)
         """
         from snowflake.snowpark.exceptions import (  # type:ignore[import]

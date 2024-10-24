@@ -98,8 +98,15 @@ class SQLConnection(BaseConnection["Engine"]):
     .. |sqlalchemy.create_engine()| replace:: ``sqlalchemy.create_engine()``
     .. _sqlalchemy.create_engine(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine
 
-    Example
-    -------
+    Examples
+    --------
+
+    **Example 1**
+
+    You can configure your SQL connection using Streamlit's
+    `Secrets management <https://docs.streamlit.io/develop/concepts/connections/secrets-management>`_.
+    If you do not specify ``url``, you must declare ``dialect``, ``host``, and
+    ``username``. The following example also includes ``password``.
 
     ``.streamlit/secrets.toml``:
 
@@ -114,6 +121,38 @@ class SQLConnection(BaseConnection["Engine"]):
     >>> import streamlit as st
     >>>
     >>> conn = st.connection("sql")
+    >>> df = conn.query("SELECT * FROM pet_owners")
+    >>> st.dataframe(df)
+
+    **Example 2**
+
+    You can configure your SQL connection with keyword arguments (with or
+    without ``secrets.toml``). For example, if you use Microsoft Entra ID with
+    a Microsoft Azure SQL server, you can set up a quick local connection for
+    development using `interactive authentication
+    <https://learn.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver16#new-andor-modified-dsn-and-connection-string-keywords>`_.
+
+    This example requires the `Microsoft ODBC Driver for SQL Server
+    <https://learn.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server?view=sql-server-ver16>_
+    for _Windows_ in addition to the ``sqlalchemy`` and ``pyodbc`` packages for
+    Python.
+
+    >>> import streamlit as st
+    >>>
+    >>> conn = st.connection(
+    ...     "sql",
+    ...     dialect="mssql",
+    ...     driver="pyodbc",
+    ...     host="xxx.database.windows.net",
+    ...     database="xxx",
+    ...     username="xxx",
+    ...     query={
+    ...         "driver": "ODBC Driver 18 for SQL Server",
+    ...         "authentication": "ActiveDirectoryInteractive",
+    ...         "encrypt": "yes",
+    ...     },
+    ... )
+    >>>
     >>> df = conn.query("SELECT * FROM pet_owners")
     >>> st.dataframe(df)
 

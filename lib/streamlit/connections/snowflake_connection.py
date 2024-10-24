@@ -465,7 +465,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>>
         >>> conn = st.connection("snowflake")
         >>> cur = conn.cursor()
-        >>> cur.execute_async("SELECT * from my_table")
+        >>> cur.execute_async("SELECT * FROM my_table")
         >>> query_id = cur.sfqid
         >>> while True:
         ...     status = conn.raw_connection.get_query_status(query_id)
@@ -502,7 +502,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>>
         >>> conn = st.connection("snowflake")
         >>> session = conn.session()
-        >>> df = session.sql("SELECT * from my_table").collect()
+        >>> df = session.sql("SELECT * FROM my_table").collect()
 
         """
         from snowflake.snowpark.context import get_active_session  # type:ignore[import]
