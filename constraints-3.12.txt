@@ -22,7 +22,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.115.3
+hypothesis==6.115.5
 identify==2.6.1
 idna==3.10
 importlib_metadata==8.5.0
@@ -110,7 +110,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
-uv==0.4.25
+uv==0.4.26
 vega-datasets==0.9.0
 virtualenv==20.27.0
 watchdog==5.0.3
