@@ -4,7 +4,7 @@ import io
 import os
 import re
 from enum import IntEnum
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal, Sequence, Union
 
 import numpy as np
 from PIL import Image, ImageFile
@@ -12,7 +12,9 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime, url_util
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -34,6 +36,10 @@ Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
+MAXIMUM_CONTENT_WIDTH: int = 2 * 730
+
+ImageOrImageList = Union[AtomicImage, Sequence[AtomicImage]]
+
 
 class WidthBehavior(IntEnum):
     ORIGINAL = -1
@@ -50,8 +56,6 @@ WidthBehavior.COLUMN.__doc__ = (
 WidthBehavior.AUTO.__doc__ = """Display the image at its original width, unless it
 would exceed the width of its column in which case clamp it to
 its column width"""
-
-MAXIMUM_CONTENT_WIDTH: int = 2 * 730
 
 
 def _image_may_have_alpha_channel(
@@ -250,3 +254,45 @@ def image_to_url(
         return url
     else:
         return ""
+
+
+def marshall_images(
+    coordinates: str,
+    image: AtomicImage | Sequence[AtomicImage],
+    caption: str | npt.NDArray[Any] | Sequence[str] | None,
+    width: int | WidthBehavior,
+    proto_imgs: ImageListProto,
+    clamp: bool,
+    channels: Channels = "RGB",
+    output_format: ImageFormatOrAuto = "auto",
+) -> None:
+    if isinstance(image, (list, tuple)):
+        images = image
+    else:
+        images = [image]
+
+    if isinstance(caption, (list, tuple)):
+        captions = caption
+    else:
+        if isinstance(caption, str) or caption is None:
+            captions = [caption] * len(images)
+        else:
+            captions = caption
+
+    assert len(images) == len(captions), "Cannot pair %d images with %d captions" % (
+        len(images),
+        len(captions),
+    )
+
+    for image, caption in zip(images, captions):
+        proto_img = proto_imgs.imgs.add()
+        proto_img.caption = str(caption or "")
+        proto_img.width = int(width)
+
+        if isinstance(image, NumpyShape):
+            image = np.asarray(image)
+
+        image_id = "%s-%d" % (coordinates, id(image))
+        proto_img.url = image_to_url(
+            image, width, clamp, channels, output_format, image_id
+        )
