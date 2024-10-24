@@ -23,6 +23,11 @@ export type JWTHeader = {
   jwtHeaderValue: string
 }
 
+export type FileUploadClientConfig = {
+  prefix: string
+  headers: Record<string, string>
+}
+
 /** Exposes non-websocket endpoints used by the frontend. */
 export interface StreamlitEndpoints {
   /**
@@ -102,4 +107,9 @@ export interface StreamlitEndpoints {
    * @param jwtHeader the object that contains jwtHeaderName and jwtHeaderValue
    */
   setJWTHeader?(jwtHeader: JWTHeader): void
+
+  /**
+   * setFileUploadCliendConfig.
+   */
+  setFileUploadCliendConfig?(payload: FileUploadClientConfig): void
 }
