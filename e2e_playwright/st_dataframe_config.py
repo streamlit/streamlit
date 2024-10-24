@@ -511,7 +511,11 @@ st.dataframe(
             "J",
             "K",
         ],
-    )
+    ),
+    column_config={
+        "H": st.column_config.Column(pinned=True),
+        "B": st.column_config.Column(pinned=True),
+    },
 )
 
 st.subheader("Hierarchical headers")

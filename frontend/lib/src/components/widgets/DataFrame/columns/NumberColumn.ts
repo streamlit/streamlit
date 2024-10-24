@@ -16,12 +16,12 @@
 
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
+import { isIntegerType } from "@streamlit/lib/src/components/widgets/DataFrame/isIntegerType"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { isIntegerType } from "@streamlit/lib/src/components/widgets/DataFrame/isIntegerType"
 
 import {
   BaseColumn,
@@ -92,7 +92,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment || "right",
-    style: props.isIndex ? "faded" : "normal",
+    style: props.isPinned ? "faded" : "normal",
     allowNegative,
     fixedDecimals,
     // We don't want to show any thousand separators

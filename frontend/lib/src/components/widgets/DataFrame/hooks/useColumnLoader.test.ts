@@ -16,9 +16,6 @@
 
 import { renderHook } from "@testing-library/react-hooks"
 
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
-import { UNICODE } from "@streamlit/lib/src/mocks/arrow"
 import {
   BaseColumn,
   CheckboxColumn,
@@ -29,6 +26,9 @@ import {
   SelectboxColumn,
   TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { UNICODE } from "@streamlit/lib/src/mocks/arrow"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 import useColumnLoader, {
   applyColumnConfig,
@@ -53,6 +53,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: false,
     isHidden: false,
     isIndex: true,
+    isPinned: true,
     isStretched: false,
   }),
   NumberColumn({
@@ -67,6 +68,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: false,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
   }),
   TextColumn({
@@ -81,6 +83,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: false,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
   }),
 ]
@@ -242,6 +245,7 @@ describe("getColumnType", () => {
         isEditable: false,
         isHidden: false,
         isIndex: false,
+        isPinned: false,
         isStretched: false,
         columnTypeOptions: {
           type: typeName,

@@ -17,8 +17,8 @@
 import { GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
-import { BaseColumnProps, isErrorCell } from "./utils"
 import ProgressColumn, { ProgressColumnParams } from "./ProgressColumn"
+import { BaseColumnProps, isErrorCell } from "./utils"
 
 const PROGRESS_COLUMN_TEMPLATE = {
   id: "1",
@@ -28,6 +28,7 @@ const PROGRESS_COLUMN_TEMPLATE = {
   isEditable: false,
   isHidden: false,
   isIndex: false,
+  isPinned: false,
   isStretched: false,
   arrowType: {
     // The arrow type of the underlying data is

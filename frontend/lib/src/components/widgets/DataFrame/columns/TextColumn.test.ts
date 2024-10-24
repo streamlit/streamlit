@@ -18,8 +18,8 @@
 
 import { GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 
-import { isErrorCell } from "./utils"
 import TextColumn from "./TextColumn"
+import { isErrorCell } from "./utils"
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "1",
@@ -29,6 +29,7 @@ const MOCK_TEXT_COLUMN_PROPS = {
   isEditable: false,
   isHidden: false,
   isIndex: false,
+  isPinned: false,
   isStretched: false,
   arrowType: {
     // The arrow type of the underlying data is

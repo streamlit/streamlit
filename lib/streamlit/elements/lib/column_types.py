@@ -156,6 +156,10 @@ class ColumnConfig(TypedDict, total=False):
         Whether edited cells in the column need to have a value. If True, an edited cell
         can only be submitted if it has a value other than None. Defaults to False.
 
+    pinned: bool or None
+        Whether the column is pinned. A pinned column will not scroll horizontally
+        when the user scrolls the table. Defaults to False.
+
     default: str, bool, int, float, or None
         Specifies the default value in this column when a new row is added by the user.
 
@@ -172,6 +176,7 @@ class ColumnConfig(TypedDict, total=False):
     hidden: bool | None
     disabled: bool | None
     required: bool | None
+    pinned: bool | None
     default: str | bool | int | float | None
     alignment: Literal["left", "center", "right"] | None
     type_config: (
@@ -201,6 +206,7 @@ def Column(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
 ) -> ColumnConfig:
     """Configure a generic column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -264,7 +270,12 @@ def Column(
         height: 300px
     """
     return ColumnConfig(
-        label=label, width=width, help=help, disabled=disabled, required=required
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        pinned=pinned,
     )
 
 
@@ -276,6 +287,7 @@ def NumberColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: int | float | None = None,
     format: str | None = None,
     min_value: int | float | None = None,
@@ -370,6 +382,7 @@ def NumberColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=default,
         type_config=NumberColumnConfig(
             type="number",
@@ -389,6 +402,7 @@ def TextColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -468,6 +482,7 @@ def TextColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=default,
         type_config=TextColumnConfig(
             type="text", max_chars=max_chars, validate=validate
@@ -483,6 +498,7 @@ def LinkColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
@@ -598,6 +614,7 @@ def LinkColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=default,
         type_config=LinkColumnConfig(
             type="link",
@@ -616,6 +633,7 @@ def CheckboxColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: bool | None = None,
 ) -> ColumnConfig:
     """Configure a checkbox column in ``st.dataframe`` or ``st.data_editor``.
@@ -685,6 +703,7 @@ def CheckboxColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=default,
         type_config=CheckboxColumnConfig(type="checkbox"),
     )
@@ -698,6 +717,7 @@ def SelectboxColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: str | int | float | None = None,
     options: Iterable[str | int | float] | None = None,
 ) -> ColumnConfig:
@@ -782,6 +802,7 @@ def SelectboxColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=default,
         type_config=SelectboxColumnConfig(
             type="selectbox", options=list(options) if options is not None else None
@@ -795,6 +816,7 @@ def BarChartColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
 ) -> ColumnConfig:
@@ -865,6 +887,7 @@ def BarChartColumn(
         label=label,
         width=width,
         help=help,
+        pinned=pinned,
         type_config=BarChartColumnConfig(type="bar_chart", y_min=y_min, y_max=y_max),
     )
 
@@ -875,6 +898,7 @@ def LineChartColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
 ) -> ColumnConfig:
@@ -946,6 +970,7 @@ def LineChartColumn(
         label=label,
         width=width,
         help=help,
+        pinned=pinned,
         type_config=LineChartColumnConfig(type="line_chart", y_min=y_min, y_max=y_max),
     )
 
@@ -956,6 +981,7 @@ def AreaChartColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
 ) -> ColumnConfig:
@@ -1027,6 +1053,7 @@ def AreaChartColumn(
         label=label,
         width=width,
         help=help,
+        pinned=pinned,
         type_config=AreaChartColumnConfig(type="area_chart", y_min=y_min, y_max=y_max),
     )
 
@@ -1037,6 +1064,7 @@ def ImageColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    pinned: bool | None = None,
 ):
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1098,7 +1126,11 @@ def ImageColumn(
         height: 300px
     """
     return ColumnConfig(
-        label=label, width=width, help=help, type_config=ImageColumnConfig(type="image")
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        type_config=ImageColumnConfig(type="image"),
     )
 
 
@@ -1108,6 +1140,7 @@ def ListColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    pinned: bool | None = None,
 ):
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1163,7 +1196,11 @@ def ListColumn(
         height: 300px
     """
     return ColumnConfig(
-        label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        type_config=ListColumnConfig(type="list"),
     )
 
 
@@ -1175,6 +1212,7 @@ def DatetimeColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: datetime.datetime | None = None,
     format: str | None = None,
     min_value: datetime.datetime | None = None,
@@ -1279,6 +1317,7 @@ def DatetimeColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=None if default is None else default.isoformat(),
         type_config=DatetimeColumnConfig(
             type="datetime",
@@ -1299,6 +1338,7 @@ def TimeColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: datetime.time | None = None,
     format: str | None = None,
     min_value: datetime.time | None = None,
@@ -1397,6 +1437,7 @@ def TimeColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=None if default is None else default.isoformat(),
         type_config=TimeColumnConfig(
             type="time",
@@ -1416,6 +1457,7 @@ def DateColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
+    pinned: bool | None = None,
     default: datetime.date | None = None,
     format: str | None = None,
     min_value: datetime.date | None = None,
@@ -1513,6 +1555,7 @@ def DateColumn(
         help=help,
         disabled=disabled,
         required=required,
+        pinned=pinned,
         default=None if default is None else default.isoformat(),
         type_config=DateColumnConfig(
             type="date",
@@ -1530,6 +1573,7 @@ def ProgressColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    pinned: bool | None = None,
     format: str | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
@@ -1602,6 +1646,7 @@ def ProgressColumn(
         label=label,
         width=width,
         help=help,
+        pinned=pinned,
         type_config=ProgressColumnConfig(
             type="progress",
             format=format,
