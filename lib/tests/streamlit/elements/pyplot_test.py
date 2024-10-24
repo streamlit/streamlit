@@ -24,7 +24,7 @@ import numpy as np
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements import image
+from streamlit.elements.lib.image_utils import WidthBehavior
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -101,7 +101,7 @@ class PyplotTest(DeltaGeneratorTestCase):
                 fig_clf.assert_not_called()
 
     @parameterized.expand(
-        [(True, image.WidthBehaviour.COLUMN), (False, image.WidthBehaviour.ORIGINAL)]
+        [(True, WidthBehavior.COLUMN), (False, WidthBehavior.ORIGINAL)]
     )
     def test_st_pyplot_use_container_width(
         self, use_container_width: bool, image_width: int

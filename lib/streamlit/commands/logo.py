@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Literal
 
 from streamlit import url_util
-from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
+from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -132,7 +132,7 @@ def logo(
     try:
         image_url = image_to_url(
             image,
-            width=WidthBehaviour.AUTO,
+            width=WidthBehavior.AUTO,
             clamp=False,
             channels="RGB",
             output_format="auto",
@@ -155,7 +155,7 @@ def logo(
         try:
             icon_image_url = image_to_url(
                 icon_image,
-                width=WidthBehaviour.AUTO,
+                width=WidthBehavior.AUTO,
                 clamp=False,
                 channels="RGB",
                 output_format="auto",
