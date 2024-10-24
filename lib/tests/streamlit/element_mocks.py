@@ -41,7 +41,6 @@ H3_HEX_DATA = [
 ]
 df = pd.DataFrame(H3_HEX_DATA)
 
-
 WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # buttons
     ("button", lambda: st.button("Click me")),
@@ -56,6 +55,10 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
     ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
+    (
+        "segmented_control",
+        lambda: st.segmented_control("Some segments", ["a", "b", "c"]),
+    ),
     ("toggle", lambda: st.toggle("Toggle me")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
@@ -63,6 +66,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # other widgets
     ("color_picker", lambda: st.color_picker("Pick a color")),
     # media manager
+    ("audio_input", lambda: st.audio_input("Record me")),
     ("experimental_audio_input", lambda: st.experimental_audio_input("Record me")),
     ("camera_input", lambda: st.camera_input("Take a picture")),
     ("file_uploader", lambda: st.file_uploader("Upload me")),

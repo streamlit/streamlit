@@ -402,16 +402,10 @@ class Slider extends React.PureComponent<Props, State> {
           onChange={this.handleChange}
           disabled={disabled}
           overrides={{
-            Root: {
-              style: {
-                paddingTop: spacing.twoThirdsSmFont,
-              },
-            },
             Thumb: this.renderThumb,
             Tick: {
               style: {
                 fontFamily: fonts.monospace,
-                fontSize: fontSizes.sm,
               },
             },
             Track: {
@@ -420,7 +414,9 @@ class Slider extends React.PureComponent<Props, State> {
                 paddingBottom: spacing.none,
                 paddingLeft: spacing.none,
                 paddingRight: spacing.none,
-                paddingTop: spacing.twoThirdsSmFont,
+                // Add additional padding to fit the thumb value
+                // which uses a fontSizes.sm.
+                paddingTop: `calc(${fontSizes.sm} * 1.35)`,
               },
             },
             InnerTrack: {

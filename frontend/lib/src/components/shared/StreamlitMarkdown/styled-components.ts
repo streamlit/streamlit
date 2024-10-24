@@ -68,6 +68,8 @@ export const StyledStreamlitMarkdown =
           // Images in markdown should never be wider
           // than the content area.
           maxWidth: "100%",
+          // In labels, widgets should never be taller than the text.
+          maxHeight: isLabel ? "1em" : undefined,
         },
 
         li: {
@@ -210,17 +212,15 @@ export interface StyledDividerProps {
   color: string
 }
 
-export const StyledDivider = styled.hr<StyledDividerProps>(
+export const StyledHeaderDivider = styled.hr<StyledDividerProps>(
   ({ theme, rainbow, color }) => {
     return {
       // Height needs to be !important due to globalStyles.tsx hr height override - line #170
-      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-      height: "2px !important",
+      height: `${theme.spacing.threeXS} !important`,
       marginTop: theme.spacing.sm,
       marginBottom: theme.spacing.none,
       border: "none",
-      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-      borderRadius: "3px",
+      borderRadius: theme.radii.full,
       ...(rainbow ? { background: color } : { backgroundColor: color }),
     }
   }

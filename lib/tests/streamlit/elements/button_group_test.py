@@ -121,14 +121,14 @@ class TestSingleSelectSerde:
 
 
 class TestSingleOrMultiSelectSerde:
-    @parameterized.expand([("single",), ("multiple",)])
+    @parameterized.expand([("single",), ("multi",)])
     def test_serialize(self, selection_mode: SelectionMode):
         option_indices = [5, 6, 7]
         serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
         res = serde.serialize(6)
         assert res == [1]
 
-    @parameterized.expand([("single",), ("multiple",)])
+    @parameterized.expand([("single",), ("multi",)])
     def test_serialize_raise_option_does_not_exist(self, selection_mode: SelectionMode):
         option_indices = [5, 6, 7]
         serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
@@ -136,7 +136,7 @@ class TestSingleOrMultiSelectSerde:
         with pytest.raises(StreamlitAPIException):
             serde.serialize(8)
 
-    @parameterized.expand([("single", 6), ("multiple", [6])])
+    @parameterized.expand([("single", 6), ("multi", [6])])
     def test_deserialize(
         self, selection_mode: SelectionMode, expected: int | list[int]
     ):
@@ -145,7 +145,7 @@ class TestSingleOrMultiSelectSerde:
         res = serde.deserialize([1], "")
         assert res == expected
 
-    @parameterized.expand([("single", 7), ("multiple", [7])])
+    @parameterized.expand([("single", 7), ("multi", [7])])
     def test_deserialize_with_default_value(
         self, selection_mode: SelectionMode, expected: list[int] | int
     ):
@@ -154,7 +154,7 @@ class TestSingleOrMultiSelectSerde:
         res = serde.deserialize(None, "")
         assert res == expected
 
-    @parameterized.expand([("single",), ("multiple",)])
+    @parameterized.expand([("single",), ("multi",)])
     def test_deserialize_raise_indexerror(self, selection_mode: SelectionMode):
         option_indices = [5, 6, 7]
         serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
@@ -208,17 +208,20 @@ def get_command_matrix(
     [
         (st.pills, "foo", ("a", "b")),
         (st.pills, "bar", ("c", "d")),
-        (st._interal_button_group, "foo", ("a", "b")),
-        (st._interal_button_group, "bar", ("c", "d"))
+        (st.segmented_control, "foo", ("a", "b")),
+        (st.segmented_control, "bar", ("c", "d")),
+        (_interal_button_group, "foo", ("a", "b")),
+        (_interal_button_group, "bar", ("c", "d")),
     ]
 
-    The pills and _internal_button_group are wrapped in a lambda to pass default
+    The pills, segmented_control, and _internal_button_group are wrapped in a lambda to pass default
     arguments that are not shared between them.
     """
     matrix = []
 
     commands: list[Callable[..., Any]] = [
         lambda *args, **kwargs: st.pills("label", *args, **kwargs),
+        lambda *args, **kwargs: st.segmented_control("label", *args, **kwargs),
         lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
             st._main, *args, **kwargs
         ),
@@ -268,7 +271,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 None,
                 ["a", "b", "c"],
                 "content",
-                ButtonGroupProto.Style.SEGMENT,
+                ButtonGroupProto.Style.SEGMENTED_CONTROL,
                 False,
             ),
         ]
@@ -336,7 +339,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             (
                 st.pills,
                 ("label", ["a", "b", "c"]),
-                {"default": "b", "selection_mode": "multiple"},
+                {"default": "b", "selection_mode": "multi"},
                 ["b"],
             ),
             (
@@ -344,7 +347,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                     st._main, *args, **kwargs
                 ),
                 (["a", "b", "c"],),
-                {"default": "b", "selection_mode": "multiple"},
+                {"default": "b", "selection_mode": "multi"},
                 ["b"],
             ),
         ]
@@ -467,7 +470,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         expected_defaults: list[int],
     ):
         """Test that it supports different types of options and works with defaults."""
-        command(options, default=defaults, selection_mode="multiple")
+        command(options, default=defaults, selection_mode="multi")
 
         c = self.get_delta_from_queue().new_element.button_group
         assert [option.content for option in c.options] == proto_options
@@ -492,7 +495,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         if callable(defaults):
             defaults = defaults()
 
-        command(["Coffee", "Tea", "Water"], default=defaults, selection_mode="multiple")
+        command(["Coffee", "Tea", "Water"], default=defaults, selection_mode="multi")
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default[:] == expected
@@ -508,7 +511,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         command(
             ["Coffee", "Tea", "Water"],
             default=defaults,
-            selection_mode="multiple",
+            selection_mode="multi",
         )
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default[:] == expected
@@ -735,7 +738,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exception:
             command(["a", "b"], selection_mode="foo")
         assert (
-            "The selection_mode argument must be one of ['single', 'multiple']. "
+            "The selection_mode argument must be one of ['single', 'multi']. "
             "The argument passed was 'foo'." == str(exception.value)
         )
 
@@ -752,7 +755,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         self, command: Callable[..., None]
     ):
         st.session_state.command_key = ["stars"]
-        val = command(["thumbs", "stars"], key="command_key", selection_mode="multiple")
+        val = command(["thumbs", "stars"], key="command_key", selection_mode="multi")
         assert val == ["stars"]
 
     def test_invalid_style(self):
@@ -763,6 +766,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 st._main, ["a", "b", "c"], style="foo"
             )
         assert (
-            "The style argument must be one of ['segment', 'pills', 'borderless']. "
+            "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
             "The argument passed was 'foo'." == str(exception.value)
         )
