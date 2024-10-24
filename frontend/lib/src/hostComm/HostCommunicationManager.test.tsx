@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { MockInstance } from "vitest"
+
 import HostCommunicationManager, {
   HOST_COMM_VERSION,
 } from "@streamlit/lib/src/hostComm/HostCommunicationManager"
@@ -23,7 +25,7 @@ import HostCommunicationManager, {
 function mockEventListeners(): (type: string, event: any) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
-  window.addEventListener = jest.fn((event: string, cb: any) => {
+  window.addEventListener = vi.fn((event: string, cb: any) => {
     listeners[event] = listeners[event] || []
     listeners[event].push(cb)
   })
@@ -38,9 +40,9 @@ describe("HostCommunicationManager messaging", () => {
   let dispatchEvent: (type: string, event: Event) => void
   let originalHash: string
 
-  let setAllowedOriginsFunc: jest.SpyInstance
-  let openCommFunc: jest.SpyInstance
-  let sendMessageToHostFunc: jest.SpyInstance
+  let setAllowedOriginsFunc: MockInstance
+  let openCommFunc: MockInstance
+  let sendMessageToHostFunc: MockInstance
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
@@ -69,15 +71,9 @@ describe("HostCommunicationManager messaging", () => {
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
 
-    setAllowedOriginsFunc = jest.spyOn(
-      hostCommunicationMgr,
-      "setAllowedOrigins"
-    )
-    openCommFunc = jest.spyOn(hostCommunicationMgr, "openHostCommunication")
-    sendMessageToHostFunc = jest.spyOn(
-      hostCommunicationMgr,
-      "sendMessageToHost"
-    )
+    setAllowedOriginsFunc = vi.spyOn(hostCommunicationMgr, "setAllowedOrigins")
+    openCommFunc = vi.spyOn(hostCommunicationMgr, "openHostCommunication")
+    sendMessageToHostFunc = vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
 
     hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["https://devel.streamlit.test"],
@@ -653,7 +649,7 @@ describe("HostCommunicationManager external auth token handling", () => {
   })
 
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
-    const setAllowedOriginsFunc = jest.spyOn(
+    const setAllowedOriginsFunc = vi.spyOn(
       hostCommunicationMgr,
       "setAllowedOrigins"
     )

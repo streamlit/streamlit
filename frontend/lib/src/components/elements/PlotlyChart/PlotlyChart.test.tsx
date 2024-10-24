@@ -28,7 +28,7 @@ import {
   sendEmptySelection,
 } from "./PlotlyChart"
 
-jest.mock("./CustomTheme", () => ({
+vi.mock("./CustomTheme", () => ({
   replaceTemporaryColors: jest.fn().mockReturnValue("{}"),
   applyStreamlitTheme: jest.fn(),
   layoutWithThemeDefaults: jest.fn().mockReturnValue({}),
@@ -101,7 +101,7 @@ const getWidgetMgr = (): WidgetStateManager => {
 describe("sendEmptySelection", () => {
   it("sends a rerun msg if widget_state is empty", () => {
     const widgetMgr = getWidgetMgr()
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     sendEmptySelection(
       widgetMgr,
@@ -114,7 +114,7 @@ describe("sendEmptySelection", () => {
 
   it("does not send a rerun msg if widget_state is empty", () => {
     const widgetMgr = getWidgetMgr()
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     const plotlyProto = { id: "plotly_chart" } as PlotlyChartProto
 
@@ -145,7 +145,7 @@ describe("handleSelection", () => {
 
   it("should return early if no event is provided", () => {
     const widgetMgr = getWidgetMgr()
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     // @ts-expect-error
     handleSelection(undefined, widgetMgr, proto, mockFragmentId)
@@ -156,7 +156,7 @@ describe("handleSelection", () => {
     const event = { points: undefined, selections: undefined } as any
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     handleSelection(event, widgetMgr, proto, mockFragmentId)
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
@@ -170,7 +170,7 @@ describe("handleSelection", () => {
     } as any
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     handleSelection(event, widgetMgr, proto, mockFragmentId)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
@@ -197,7 +197,7 @@ describe("handleSelection", () => {
     } as any
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     handleSelection(event, widgetMgr, proto, undefined)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
@@ -216,7 +216,7 @@ describe("handleSelection", () => {
     } as any
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     handleSelection(event, widgetMgr, proto, mockFragmentId)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
@@ -235,7 +235,7 @@ describe("handleSelection", () => {
     } as any
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     handleSelection(
       event,
@@ -263,7 +263,7 @@ describe("handleSelection", () => {
     } as any
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     handleSelection(
       event,
@@ -282,7 +282,7 @@ describe("handleSelection", () => {
     } as any
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
 
     widgetMgr.setStringValue(
       proto,
@@ -321,7 +321,7 @@ describe("handleSelection", () => {
 
     const widgetMgr = getWidgetMgr()
 
-    jest.spyOn(widgetMgr, "setStringValue")
+    vi.spyOn(widgetMgr, "setStringValue")
     handleSelection(
       boxEvent,
       widgetMgr,

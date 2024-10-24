@@ -55,20 +55,20 @@ export function mockEndpoints(
     buildComponentURL: jest.fn(),
     buildMediaURL: jest.fn(),
     buildFileUploadURL: jest.fn(),
-    buildAppPageURL: jest
+    buildAppPageURL: vi
       .fn()
       .mockImplementation(
         (pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
           return `http://mock/app/page/${page.pageName}.${pageIndex}`
         }
       ),
-    uploadFileUploaderFile: jest
+    uploadFileUploaderFile: vi
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
-    deleteFileAtURL: jest
+    deleteFileAtURL: vi
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
-    fetchCachedForwardMsg: jest
+    fetchCachedForwardMsg: vi
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
     ...overrides,

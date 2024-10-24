@@ -26,8 +26,8 @@ import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 
 import DownloadButton, { createDownloadLink, Props } from "./DownloadButton"
 
-jest.mock("@streamlit/lib/src/WidgetStateManager")
-jest.mock("@streamlit/lib/src/StreamlitEndpoints")
+vi.mock("@streamlit/lib/src/WidgetStateManager")
+vi.mock("@streamlit/lib/src/StreamlitEndpoints")
 
 const getProps = (
   elementProps: Partial<DownloadButtonProto> = {},

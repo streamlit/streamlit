@@ -262,6 +262,7 @@ describe("Opened ThemeCreatorDialog", () => {
       addThemes: mockAddThemes,
     })
 
+    expect(screen.queryByText("Copied to clipboard")).not.toBeInTheDocument()
     const copyBtn = screen.getByRole("button", {
       name: "Copy theme to clipboard",
     })

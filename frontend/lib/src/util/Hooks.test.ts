@@ -18,9 +18,9 @@ import { useIsOverflowing } from "./Hooks"
 
 const stateSetters: Array<any> = []
 
-jest.mock("react", () => ({
+vi.mock("react", async () => ({
   __esModule: true,
-  ...jest.requireActual("react"),
+  ...(await vi.importActual("react")),
   useCallback: jest.fn().mockImplementation(cb => cb),
   useEffect: jest.fn().mockImplementation(cb => cb()),
   useState: jest.fn().mockImplementation(() => {

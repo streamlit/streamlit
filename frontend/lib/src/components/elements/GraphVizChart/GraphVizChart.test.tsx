@@ -16,6 +16,7 @@
 
 import React from "react"
 
+import { Mock } from "vitest"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
@@ -26,7 +27,7 @@ import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
 
 import { GraphVizChart, GraphVizChartProps } from "./GraphVizChart"
 
-jest.mock("d3-graphviz", () => ({
+vi.mock("d3-graphviz", () => ({
   graphviz: jest.fn().mockReturnValue({
     zoom: () => ({
       fit: () => ({
@@ -41,7 +42,7 @@ jest.mock("d3-graphviz", () => ({
     }),
   }),
 }))
-jest.mock("@streamlit/lib/src/util/log", () => ({
+vi.mock("@streamlit/lib/src/util/log", () => ({
   logError: jest.fn(),
   logMessage: jest.fn(),
 }))
@@ -92,7 +93,7 @@ describe("GraphVizChart Element", () => {
     })
 
     // Modify the graphviz mock to use the mockRenderDot
-    ;(graphviz as jest.Mock).mockReturnValue({
+    ;(graphviz as Mock).mockReturnValue({
       zoom: () => ({
         fit: () => ({
           scale: () => ({

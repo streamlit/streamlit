@@ -28,9 +28,10 @@ export const WWW_PORT_DEV = 3000
 export const WEBSOCKET_PORT_DEV = 8501
 
 /**
- * True when in development mode.
+ * True when in development mode. We disable if we are testing to ensure
+ * production conditions.
  */
-export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV
+export const IS_DEV_ENV = import.meta.env.MODE === "development"
 
 /**
  * Parameters for our fetch() requests.

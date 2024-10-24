@@ -1,14 +1,14 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`DeployErrorDialog - ModuleIsNotAdded should render without crashing 1`] = `
-Object {
-  "body": <StyledParagraph>
+exports[`DeployErrorDialog - ModuleIsNotAdded > should render without crashing 1`] = `
+{
+  "body": <Styled(p)>
     The app’s main file 
-    <StyledInlineCode>
+    <Styled(code)>
       module
-    </StyledInlineCode>
+    </Styled(code)>
      has not been pushed to GitHub. Please add it to continue.
-  </StyledParagraph>,
+  </Styled(p)>,
   "title": "Unable to deploy",
 }
 `;

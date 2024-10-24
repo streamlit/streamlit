@@ -23,9 +23,9 @@ import { render } from "@streamlit/lib/src/test_util"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
 
-import { BokehChartProps } from "./BokehChart"
+import { BokehChart, BokehChartProps } from "./BokehChart"
 
-jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm", () => ({
+vi.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm", () => ({
   // needed to parse correctly
   __esModule: true,
   default: {
@@ -38,10 +38,7 @@ jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm", () => ({
   },
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { BokehChart } = require("./BokehChart")
-
-const mockBokehEmbed = jest.mocked(Bokeh)
+const mockBokehEmbed = vi.mocked(Bokeh)
 
 // Serialized BokehChart data for testing purposes
 const MOCK_FIGURE = {

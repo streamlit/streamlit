@@ -1,7 +1,7 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`DeployErrorDialog - DetachedHead should render without crashing 1`] = `
-Object {
+exports[`DeployErrorDialog - DetachedHead > should render without crashing 1`] = `
+{
   "body": <React.Fragment>
     <p>
       This Git tree is in a detached HEAD state.

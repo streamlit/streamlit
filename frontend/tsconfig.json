@@ -17,6 +17,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es5",
+    "types": ["vite/client", "vitest/globals"]
   },
   "include": ["lib", "app"],
   "exclude": ["*/proto.js", "*/proto.d.ts", "eslint-plugin-streamlit-custom"]

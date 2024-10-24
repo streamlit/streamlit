@@ -32,14 +32,14 @@ import {
   SetIconCallback,
 } from "./AppNavigation"
 
-jest.mock("@streamlit/lib/src/hostComm/HostCommunicationManager", () => {
-  const actualModule = jest.requireActual(
+vi.mock("@streamlit/lib/src/hostComm/HostCommunicationManager", async () => {
+  const actualModule = await vi.importActual<any>(
     "@streamlit/lib/src/hostComm/HostCommunicationManager"
   )
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
     const hostCommunicationMgr = new actualModule.default(...props)
-    jest.spyOn(hostCommunicationMgr, "sendMessageToHost")
+    vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
     return hostCommunicationMgr
   })
 

@@ -1,4 +1,27 @@
 {
-  "extends": "../tsconfig.dev.json",
-  "include": ["src/*", "../lib/src/declarations.d.ts"]
+  "include": ["src/*", "../lib/src/declarations.d.ts"],
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es6",
+    "types": ["vite/client", "vitest/globals"],
+    "paths": {
+      "@streamlit/lib": ["../lib/src"],
+      "@streamlit/app": ["./src"]
+    }
+  }
 }

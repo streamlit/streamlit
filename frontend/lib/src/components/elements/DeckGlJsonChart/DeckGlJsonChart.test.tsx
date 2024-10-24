@@ -19,7 +19,7 @@ import React, { FC } from "react"
 import JSON5 from "json5"
 import { act, screen } from "@testing-library/react"
 import { PickingInfo } from "@deck.gl/core"
-import userEvent from "@testing-library/user-event"
+import { default as userEvent } from "@testing-library/user-event"
 
 import {
   render,

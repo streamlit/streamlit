@@ -262,7 +262,7 @@ protobuf: check-protoc
 		echo ; \
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
-			--path=proto -t static-module --wrap es6 \
+			--path ../proto -t static-module --wrap es6 \
 	) > ./lib/src/proto.js
 
 	@# Typescript type declarations for our generated protobufs
@@ -287,7 +287,7 @@ react-build:
 .PHONY: frontend-fast
 # Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
 frontend-fast:
-	cd frontend/ ; yarn run buildFast
+	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
