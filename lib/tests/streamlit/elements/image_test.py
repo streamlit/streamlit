@@ -25,10 +25,10 @@ from parameterized import parameterized
 from PIL import ImageDraw
 
 import streamlit as st
-import streamlit.elements.image as image
 from streamlit.elements.lib.image_utils import (
     AtomicImage,
     WidthBehavior,
+    _image_may_have_alpha_channel,
     _np_array_to_bytes,
     _PIL_to_bytes,
     image_to_url,
@@ -379,7 +379,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @parameterized.expand([("P", True), ("RGBA", True), ("LA", True), ("RGB", False)])
     def test_image_may_have_alpha_channel(self, format: str, expected_alpha: bool):
         img = Image.new(format, (1, 1))
-        self.assertEqual(image._image_may_have_alpha_channel(img), expected_alpha)
+        self.assertEqual(_image_may_have_alpha_channel(img), expected_alpha)
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
