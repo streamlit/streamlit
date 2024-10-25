@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
 import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
@@ -483,6 +483,34 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lsw.on_file_changed(SCRIPT_PATH)
 
         self.assertEqual(saved_filepath, SCRIPT_PATH)
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    @patch("os.walk")
+    @patch("os.path.isfile")
+    def test_custom_watch_path(self, mock_isfile, mock_walk, mock_path_watcher):
+        custom_watch_path = "/custom/watch/path"
+        config.set_option("server.customWatchPath", custom_watch_path)
+
+        mock_isfile.return_value = True
+        mock_walk.return_value = [
+            ("/custom/watch/path", [], ["file1.py", "file2.py"]),
+        ]
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
+
+        # Check if the custom watch path was added to watched pages
+        self.assertIn(custom_watch_path, lsw._watched_pages)
+
+        # Check if PathWatcher was called for each file in the custom watch path
+        expected_calls = [
+            call("/custom/watch/path/file1.py", lsw.on_file_changed),
+            call("/custom/watch/path/file2.py", lsw.on_file_changed),
+        ]
+        mock_path_watcher.assert_has_calls(expected_calls, any_order=True)
+
+        # Clean up
+        config.set_option("server.customWatchPath", None)
 
 
 def test_get_module_paths_outputs_abs_paths():

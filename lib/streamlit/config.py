@@ -580,6 +580,16 @@ _create_option(
 
 _create_section("server", "Settings for the Streamlit server")
 
+
+_create_option(
+    "server.customWatchPath",
+    description="""
+        Custom path to watch for changes.
+    """,
+    default_val=None,
+    type_=str,
+)
+
 _create_option(
     "server.folderWatchBlacklist",
     description="""
