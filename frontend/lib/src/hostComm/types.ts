@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { IAppPage, ICustomThemeConfig } from "@streamlit/lib/src/proto"
+import {
+  IAppPage,
+  ICustomThemeConfig,
+  MetricsEvent,
+} from "@streamlit/lib/src/proto"
 import { ExportedTheme } from "@streamlit/lib/src/theme"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 import { LibConfig } from "@streamlit/lib/src/components/core/LibContext"
@@ -132,6 +136,8 @@ export type IHostToGuestMessage = {
 export type IGuestToHostMessage =
   | {
       type: "GUEST_READY"
+      streamlitExecutionStartedAt: number
+      guestReadyAt: number
     }
   | {
       type: "MENU_ITEM_CALLBACK"
@@ -188,6 +194,11 @@ export type IGuestToHostMessage =
   | {
       type: "WEBSOCKET_CONNECTED"
     }
+  | {
+      type: "METRICS_EVENT"
+      eventName: string
+      data: MetricsEvent
+    }
 
 export type VersionedMessage<Message> = {
   stCommVersion: number
@@ -221,9 +232,18 @@ export type AppConfig = {
   enableCustomParentMessages?: boolean
 }
 
+export type MetricsConfig = {
+  /**
+   * URL to send metrics data to via POST request.
+   * Setting to "postMessage" sends metrics events via postMessage to host.
+   * Setting to "off" disables metrics collection.
+   */
+  metricsUrl?: string | "postMessage" | "off"
+}
+
 /**
  * The response structure of the `_stcore/host-config` endpoint.
  * This combines streamlit-lib specific configuration options with
  * streamlit-app specific options (e.g. allowed message origins).
  */
-export type IHostConfigResponse = LibConfig & AppConfig
+export type IHostConfigResponse = LibConfig & AppConfig & MetricsConfig

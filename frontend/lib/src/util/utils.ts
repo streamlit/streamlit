@@ -343,6 +343,7 @@ export function setCookie(
   const expirationStr: string = expirationDate
     ? `expires=${expirationDate.toUTCString()};`
     : ""
+  console.log("Setting cookie", `${name}=${value};${expirationStr}path=/`)
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 

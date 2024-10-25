@@ -28,7 +28,7 @@ import {
   mockSessionInfo,
   toThemeInput,
 } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 
 import ThemeCreatorDialog, {
@@ -44,7 +44,7 @@ const getProps = (
 ): ThemeCreatorDialogProps => ({
   backToSettings: jest.fn(),
   onClose: jest.fn(),
-  metricsMgr: new SegmentMetricsManager(mockSessionInfo()),
+  metricsMgr: new MetricsManager(mockSessionInfo()),
   ...props,
 })
 

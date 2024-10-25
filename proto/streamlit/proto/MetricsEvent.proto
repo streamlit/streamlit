@@ -1,0 +1,85 @@
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "MetricsEventProto";
+
+import "streamlit/proto/PageProfile.proto";
+
+// Metrics events:
+message MetricsEvent {
+
+  // Common Event Fields:
+  string event = 1;
+  string anonymous_id = 2;
+  string machine_id_v3 = 3;
+  string report_hash = 4;
+  bool dev = 5;
+  string source = 6;
+  string streamlit_version = 7;
+  bool is_hello = 8;
+
+  // Host tracking fields:
+  string hosted_at = 9;
+  string owner = 10;
+  string repo = 11;
+  string branch = 12;
+  string main_module = 13;
+  string creator_id = 14;
+
+  // Context fields:
+  string context_page_url = 15;
+  string context_page_title = 16;
+  string context_page_path = 17;
+  string context_page_referrer = 18;
+  string context_page_search = 19;
+  string context_locale = 20;
+  string context_user_agent = 21;
+
+
+  // Menu Click Event field:
+  string label = 22;
+
+
+  // Page Profile Event fields:
+  // Same as PageProfile msg
+  repeated Command commands = 23;
+  int64 exec_time = 24;
+  int64 prep_time = 25;
+  repeated string config = 26;
+  string uncaught_exception = 27;
+  repeated string attributions = 28;
+  string os = 29;
+  string timezone = 30;
+  bool headless = 31;
+  bool is_fragment_run = 32;
+
+  // Addtl for page profile metrics
+  string app_id = 33;
+  int64 numPages = 34;
+  string session_id = 35;
+  string python_version = 36;
+  string page_script_hash = 37;
+  string active_theme = 38;
+  int64 total_load_time = 39;
+  string browser_name = 40;
+  string browser_version = 41;
+  string device_type = 42;
+
+  // Next ID: 43
+}
