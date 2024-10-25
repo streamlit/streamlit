@@ -16,13 +16,27 @@
 
 import styled from "@emotion/styled"
 
-export const StyledSubheader = styled.div(({ theme }) => ({
+export const StyledHeader = styled.div(({ theme }) => ({
   // We do not want to change the font for this based on theme.
   fontFamily: theme.fonts.sansSerif,
   fontWeight: theme.fontWeights.bold,
   fontSize: theme.fontSizes.lg,
   color: theme.colors.grey90,
   marginTop: theme.spacing.twoXL,
+  marginBottom: theme.spacing.twoXS,
+
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    marginTop: theme.spacing.md,
+  },
+}))
+
+export const StyledSubheader = styled.div(({ theme }) => ({
+  // We do not want to change the font for this based on theme.
+  fontFamily: theme.fonts.sansSerif,
+  fontWeight: theme.fontWeights.normal,
+  fontSize: theme.fontSizes.md,
+  color: theme.colors.grey90,
+  marginTop: theme.spacing.twoXS,
   marginBottom: theme.spacing.md,
 
   [`@media (max-width: ${theme.breakpoints.md})`]: {
@@ -30,39 +44,34 @@ export const StyledSubheader = styled.div(({ theme }) => ({
   },
 }))
 
-interface StyledElementProps {
-  extraSpacing?: boolean
-}
-
 export const StyledCardContainer = styled.div(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gridGap: theme.spacing.twoXL,
+  maxWidth: `calc(1.25 * ${theme.sizes.contentMaxWidth})`,
+  gridTemplateColumns: "1fr 1fr 1fr",
+  gridGap: theme.spacing.none,
 
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     gridTemplateColumns: "1fr",
   },
 }))
 
-export const StyledElement = styled.div<StyledElementProps>(
-  ({ theme, extraSpacing }) => ({
-    display: "inline-flex",
-    marginTop: extraSpacing ? "9px" : theme.spacing.smPx,
+export const StyledElement = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  marginTop: theme.spacing.sm,
 
-    "& > span": {
-      // We do not want to change the font for this based on theme.
-      fontFamily: theme.fonts.sansSerif,
-      fontWeight: theme.fontWeights.normal,
-      fontSize: theme.fontSizes.md,
-      marginLeft: theme.spacing.twoXL,
-      color: theme.colors.gray70,
-    },
-    "& > img": {
-      position: "absolute",
-      marginTop: theme.spacing.sm,
-    },
-  })
-)
+  "& > span": {
+    // We do not want to change the font for this based on theme.
+    fontFamily: theme.fonts.sansSerif,
+    fontWeight: theme.fontWeights.normal,
+    fontSize: theme.fontSizes.md,
+    marginLeft: theme.spacing.twoXL,
+    color: theme.colors.gray70,
+  },
+  "& > img": {
+    position: "absolute",
+    marginTop: theme.spacing.sm,
+  },
+}))
 
 export const StyledActionsWrapper = styled.div(({ theme }) => ({
   display: "flex",

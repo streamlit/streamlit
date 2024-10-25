@@ -21,8 +21,10 @@ import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "@streamlit/lib/src/components/shared/Tooltip/styled-components"
-import { hasLightBackgroundColor } from "@streamlit/lib/src/theme/utils"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import {
+  EmotionTheme,
+  hasLightBackgroundColor,
+} from "@streamlit/lib/src/theme"
 
 export interface TooltipProps {
   // The top position of the tooltip.
@@ -58,7 +60,7 @@ function Tooltip({
 }: TooltipProps): ReactElement {
   const [open, setOpen] = React.useState(true)
   const theme: EmotionTheme = useTheme()
-  const { colors, fontSizes, radii } = theme
+  const { colors, fontSizes, radii, fontWeights } = theme
 
   const closeTooltip = React.useCallback((): void => {
     setOpen(false)
@@ -109,7 +111,7 @@ function Tooltip({
               : colors.secondaryBg,
             color: colors.bodyText,
             fontSize: fontSizes.sm,
-            fontWeight: "normal",
+            fontWeight: fontWeights.normal,
             // See the long comment about `borderRadius`. The same applies here
             // to `padding`.
             paddingTop: "0 !important",

@@ -29,7 +29,6 @@ from streamlit.elements.lib.utils import (
     _compute_element_id,
     compute_and_register_element_id,
 )
-from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
@@ -540,8 +539,20 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": ButtonGroupMixin._pills(
-                    st._main, "some_label", options, disabled=disabled
+                style="": st.pills("some_label", options, disabled=disabled),
+                "button_group",
+            ),
+            (
+                # define a lambda that matches the signature of what button_group is
+                # passing to compute_and_register_element_id, because st.feedback does
+                # not take a label and its arguments are different.
+                lambda key,
+                options,
+                disabled=False,
+                default=[],
+                click_mode=0,
+                style="": st.segmented_control(
+                    "some_label", options, disabled=disabled
                 ),
                 "button_group",
             ),

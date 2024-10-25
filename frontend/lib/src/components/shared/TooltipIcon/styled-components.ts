@@ -24,7 +24,7 @@ export const StyledTooltipIconWrapper =
   styled.div<StyledTooltipIconWrapperProps>(({ isLatex, theme }) => ({
     display: "flex",
     alignItems: "center",
-    marginTop: isLatex ? theme.spacing.mdPx : "0",
+    marginTop: isLatex ? theme.spacing.md : "0",
 
     "& .stTooltipHoverTarget > svg": {
       stroke: theme.colors.fadedText60,
@@ -32,13 +32,13 @@ export const StyledTooltipIconWrapper =
     },
   }))
 
-export const StyledLabelHelpWrapper = styled.div(() => ({
+export const StyledLabelHelpWrapper = styled.div({
   display: "flex",
   visibility: "visible",
   verticalAlign: "middle",
   flexDirection: "row",
   alignItems: "center",
-}))
+})
 
 export const StyledLabelHelpInline = styled.label(({ theme }) => ({
   marginLeft: theme.spacing.xs,

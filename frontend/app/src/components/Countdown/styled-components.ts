@@ -43,6 +43,5 @@ export const StyledCountdown = styled.div(({ theme }) => ({
   opacity: "0.8",
   textShadow: `1px 1px 10px ${theme.colors.darkGray}`,
   transition: "opacity 0.3s ease-in-out",
-  fontFamily: 'Helvetica, Calibri, Roboto, "Open Sans", Arial, sans-serif',
   animation: `${screencastCounterAnimation} 1s`,
 }))

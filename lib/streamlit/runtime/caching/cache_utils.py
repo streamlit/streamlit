@@ -174,7 +174,14 @@ class BoundCachedFunc:
         return f"<BoundCachedFunc: {self._cached_func._info.func} of {self._instance}>"
 
     def clear(self, *args, **kwargs):
-        self._cached_func.clear(self._instance, *args, **kwargs)
+        if args or kwargs:
+            # The instance is required as first parameter to allow
+            # args to be correctly resolved to the parameter names:
+            self._cached_func.clear(self._instance, *args, **kwargs)
+        else:
+            # if no args/kwargs are specified, we just want to clear the
+            # entire cache of this method:
+            self._cached_func.clear()
 
 
 class CachedFunc:

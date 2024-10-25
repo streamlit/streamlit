@@ -18,7 +18,7 @@ import React from "react"
 
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { default as userEvent } from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/src/test_util"
 import {
@@ -26,7 +26,6 @@ import {
   TextArea as TextAreaProto,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import TextArea, { Props } from "./TextArea"
 
@@ -43,7 +42,6 @@ const getProps = (
   }),
   width: 300,
   disabled: false,
-  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),

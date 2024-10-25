@@ -39,11 +39,11 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   })
 )
 
-export const StyledFileDropzoneInstructions = styled.div(() => ({
+export const StyledFileDropzoneInstructions = styled.div({
   marginRight: "auto",
   alignItems: "center",
   display: "flex",
-}))
+})
 
 export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
   ({ theme }) => ({

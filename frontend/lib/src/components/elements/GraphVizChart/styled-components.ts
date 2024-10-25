@@ -26,8 +26,8 @@ export const StyledGraphVizChart = styled.div<StyledGraphVizChartProps>(
       fontFamily: theme.genericFonts.bodyFont,
       // Font sizes inside the SVG element are getting huge for some reason.
       // Hacking together a number by eyeballing it:
-      // 12px in the SVG looks like 1rem outside, so 9.6px ~= 0.8rem.
-      fontSize: "9.6px",
+      // 12px in the SVG looks like 1rem outside.
+      fontSize: `calc(${theme.fontSizes.twoSm} * 0.8)`,
     },
 
     // Ensure SVG is allowed the full width/height in full screen mode

@@ -16,9 +16,9 @@
 
 import styled from "@emotion/styled"
 
-export const StyledFormSubmitContent = styled.div(() => ({
+export const StyledFormSubmitContent = styled.div({
   display: "flex",
-}))
+})
 
 export interface StyledFormProps {
   border: boolean

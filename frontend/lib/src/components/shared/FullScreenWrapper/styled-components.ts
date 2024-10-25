@@ -43,7 +43,9 @@ export const StyledFullScreenButton =
       justifyContent: "center",
 
       zIndex: theme.zIndices.sidebar + 1,
+      //eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       height: "2.5rem",
+      //eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       width: "2.5rem",
       transition: "opacity 300ms 150ms, transform 300ms 150ms",
       border: "none",

@@ -21,7 +21,7 @@ import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Ma
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,
-} from "@streamlit/lib/src/theme/utils"
+} from "@streamlit/lib/src/theme"
 
 // Check for custom text color & handle colors in SidebarNav accordingly
 const conditionalCustomColor = (
@@ -84,9 +84,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
   }
 )
 
-export const StyledSidebarNavContainer = styled.div(() => ({
+export const StyledSidebarNavContainer = styled.div({
   position: "relative",
-}))
+})
 
 export const StyledSidebarNavItems = styled.ul(({ theme }) => {
   return {
@@ -96,10 +96,10 @@ export const StyledSidebarNavItems = styled.ul(({ theme }) => {
   }
 })
 
-export const StyledSidebarNavLinkContainer = styled.div(() => ({
+export const StyledSidebarNavLinkContainer = styled.div({
   display: "flex",
   flexDirection: "column",
-}))
+})
 
 export interface StyledSidebarNavLinkProps {
   isActive: boolean
@@ -374,7 +374,7 @@ export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.bold,
     color,
-    lineHeight: theme.lineHeights.table,
+    lineHeight: theme.lineHeights.small,
     paddingRight: theme.spacing.sm,
     marginLeft: theme.spacing.twoXL,
     marginRight: theme.spacing.twoXL,

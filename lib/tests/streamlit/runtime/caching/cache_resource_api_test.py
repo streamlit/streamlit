@@ -193,7 +193,7 @@ If you think this is actually a Streamlit bug, please
         foo.clear(1)
         assert foo(1) == 2
 
-    def test_cached_st_method_clear_args(self):
+    def test_cached_class_method_clear_args(self):
         self.x = 0
 
         class ExampleClass:
@@ -216,6 +216,30 @@ If you think this is actually a Streamlit bug, please
         # calling foo.clear(1) should clear the cache for the argument 1,
         # therefore calling foo(1) should return the new value 2
         example_instance.foo.clear(1)
+        assert example_instance.foo(1) == 2
+
+        # Try the same with a keyword argument:
+        example_instance.foo.clear(y=1)
+        assert example_instance.foo(1) == 3
+
+    def test_cached_class_method_clear(self):
+        self.x = 0
+
+        class ExampleClass:
+            @st.cache_resource()
+            def foo(_self, y):
+                self.x += y
+                return self.x
+
+        example_instance = ExampleClass()
+        # Calling method foo produces the side effect of incrementing self.x
+        # and returning it as the result.
+
+        # calling foo(1) should return 1
+        assert example_instance.foo(1) == 1
+        example_instance.foo.clear()
+        # calling foo.clear() should clear all cached values:
+        # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
 
 
@@ -345,6 +369,11 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
         self, _widget_name: str, widget_producer: ELEMENT_PRODUCER
     ):
         """Test that a warning is shown when a widget is created inside a cached function."""
+
+        if _widget_name == "experimental_audio_input":
+            # The experimental_audio_input element produces also a deprecation warning
+            # which makes this test irrelevant
+            return
 
         @st.cache_resource(show_spinner=False)
         def cache_widget():

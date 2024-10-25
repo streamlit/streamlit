@@ -19,6 +19,7 @@ import React, { Fragment } from "react"
 import styled from "@emotion/styled"
 import axios from "axios"
 
+import { StyledPre } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
@@ -598,6 +599,7 @@ export class WebsocketConnection {
 export const StyledBashCode = styled.code({
   "&::before": {
     content: '"$"',
+    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     marginRight: "1ex",
   },
 })
@@ -657,9 +659,9 @@ export function doInitPings(
             Is Streamlit still running? If you accidentally stopped Streamlit,
             just restart it in your terminal:
           </p>
-          <pre>
+          <StyledPre>
             <StyledBashCode>streamlit run yourscript.py</StyledBashCode>
-          </pre>
+          </StyledPre>
         </Fragment>
       )
     } else {

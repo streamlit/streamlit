@@ -40,32 +40,57 @@ class CodeMixin:
         Parameters
         ----------
         body : str
-            The string to display as code.
+            The string to display as code or monospace text.
 
         language : str or None
             The language that the code is written in, for syntax highlighting.
-            If ``None``, the code will be unstyled. Defaults to ``"python"``.
+            This defaults to ``"python"``. If this is ``None``, the code will
+            be plain, monospace text.
 
-            For a list of available ``language`` values, see:
-
-            https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
+            For a list of available ``language`` values, see
+            `react-syntax-highlighter
+            <https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD>`_
+            on GitHub.
 
         line_numbers : bool
             An optional boolean indicating whether to show line numbers to the
-            left of the code block. Defaults to ``False``.
+            left of the code block. This defaults to ``False``.
 
         wrap_lines : bool
-            An optional boolean indicating whether to wrap lines. Defaults
+            An optional boolean indicating whether to wrap lines. This defaults
             to ``False``.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> code = '''def hello():
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language="python")
 
+        .. output ::
+            https://doc-code.streamlit.app/
+            height: 220px
+
+        >>> import streamlit as st
+        >>> code = '''Is it a crown or boat?
+        ...                         ii
+        ...                       iiiiii
+        ... WWw                 .iiiiiiii.                ...:
+        ...  WWWWWWw          .iiiiiiiiiiii.         ........
+        ...   WWWWWWWWWWw    iiiiiiiiiiiiiiii    ...........
+        ...    WWWWWWWWWWWWWWwiiiiiiiiiiiiiiiii............
+        ...     WWWWWWWWWWWWWWWWWWwiiiiiiiiiiiiii.........
+        ...      WWWWWWWWWWWWWWWWWWWWWWwiiiiiiiiii.......
+        ...       WWWWWWWWWWWWWWWWWWWWWWWWWWwiiiiiii....
+        ...        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwiiii.
+        ...           -MMMWWWWWWWWWWWWWWWWWWWWWWMMM-
+        ... '''
+        >>> st.code(code, language=None)
+
+        .. output ::
+            https://doc-code-ascii.streamlit.app/
+            height: 380px
         """
         code_proto = CodeProto()
         code_proto.code_text = clean_text(body)

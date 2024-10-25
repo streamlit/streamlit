@@ -14,20 +14,24 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { FC } from "react"
 
 import JSON5 from "json5"
 import { act, screen } from "@testing-library/react"
-import { renderHook } from "@testing-library/react-hooks"
-import { PickingInfo } from "@deck.gl/core/typed"
+import { PickingInfo } from "@deck.gl/core"
+import userEvent from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
+import {
+  render,
+  renderHook,
+} from "@streamlit/lib/src/components/shared/ElementFullscreen/testUtils"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 import "@testing-library/jest-dom"
 
-import { DeckGlJsonChart } from "./DeckGlJsonChart"
 import type { DeckGLProps } from "./types"
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
 
@@ -81,10 +85,7 @@ const getProps = (
       json: JSON.stringify(json),
       ...elementProps,
     }),
-    width: 0,
     mapboxToken: "mapboxToken",
-    height: undefined,
-    isFullScreen: false,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),
@@ -103,17 +104,6 @@ const getUseDeckGlProps = (
     theme: mockTheme.emotion,
   }
 }
-
-describe("DeckGlJsonChart element", () => {
-  it("renders without crashing", () => {
-    const props = getProps()
-
-    render(<DeckGlJsonChart {...props} />)
-
-    const deckGlJsonChart = screen.getByTestId("stDeckGlJsonChart")
-    expect(deckGlJsonChart).toBeVisible()
-  })
-})
 
 describe("#useDeckGl", () => {
   it("should merge client and server changes in viewState", () => {
@@ -274,10 +264,6 @@ describe("#useDeckGl", () => {
         newProps: getUseDeckGlProps(undefined, { zoom: 19 }),
       },
       {
-        description: "should call JSON5.parse when FullScreen state changes",
-        newProps: { isFullScreen: true },
-      },
-      {
         description: "should call JSON5.parse when theme state changes",
         newProps: { isLightTheme: true },
       },
@@ -292,6 +278,23 @@ describe("#useDeckGl", () => {
       expect(JSON5.parse).toHaveBeenCalledTimes(1)
 
       rerender({ ...initialProps, ...newProps })
+
+      expect(JSON5.parse).toHaveBeenCalledTimes(2)
+    })
+
+    it("should call JSON5.parse when isFullScreen changes", async () => {
+      const MyComponent: FC<UseDeckGlProps> = props => {
+        useDeckGl(props)
+        const { expand } = useRequiredContext(ElementFullscreenContext)
+
+        return <button onClick={expand}>Expand</button>
+      }
+
+      render(<MyComponent {...getUseDeckGlProps()} />)
+
+      expect(JSON5.parse).toHaveBeenCalledTimes(1)
+
+      await userEvent.click(screen.getByText("Expand"))
 
       expect(JSON5.parse).toHaveBeenCalledTimes(2)
     })

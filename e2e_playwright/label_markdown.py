@@ -16,15 +16,13 @@ import datetime
 
 import streamlit as st
 
-valid_label = ":material/check_circle: **Bold Text** *Italicized* ~Strikethough~ `Code Block` 🐶 :joy:"
+valid_label = ":material/check_circle: :streamlit: ![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297) **Bold Text** *Italicized* ~Strikethough~ `Code Block` 🐶 :joy: <- -> <-> -- >= <= ~="
 
 color_label = (
     "Colored Text - :red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]"
 )
 
 link_label = "Label Link - [Streamlit](https://streamlit.io)"
-
-image = "Image ![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)"
 
 table = """
 | Syntax | Description |
@@ -60,12 +58,11 @@ Horizontal Rule:
 
 """
 
-# Invalid Markdown: images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
+# Invalid Markdown: table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
 with st.container():
     st.subheader(
-        "❌ Entirely Disallowed - Images, Table Elements, Headings, Lists, Blockquotes, Horizontal Rules"
+        "❌ Entirely Disallowed - Table Elements, Headings, Lists, Blockquotes, Horizontal Rules"
     )
-    st.button(image)
     st.checkbox(table)
     st.radio(heading_1, ["Option 1", "Option 2", "Option 3"])
     st.selectbox(heading_2, ["Option 1", "Option 2", "Option 3"])
@@ -74,7 +71,6 @@ with st.container():
     st.select_slider(task_list, ["Blue", "Purple", "Green"])
     st.text_input(blockquote)
     st.number_input(horizontal_rule)
-    st.text_area(image)
     st.date_input(table, datetime.date(2000, 3, 7))
     st.time_input(heading_1, datetime.time(8, 45))
     st.file_uploader(heading_2)
@@ -85,10 +81,10 @@ with st.container():
     tabA, tabB = st.tabs([blockquote, horizontal_rule])
 
 
-# Bold, italics, strikethrough, code, & shortcodes/emojis - allowed in all
+# Bold, italics, strikethrough, code, & shortcodes/emojis/streamlit logo, images - allowed in all
 with st.container():
     st.subheader(
-        "✅ Entirely Allowed - Bold, Italics, Strikethrough, Code, Shortcodes/Emojis"
+        "✅ Entirely Allowed - Bold, Italics, Strikethrough, Code, Shortcodes/Emojis, Streamlit logo, Images"
     )
     st.button(valid_label)
     st.checkbox(valid_label)
