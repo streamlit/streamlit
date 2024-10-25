@@ -89,7 +89,8 @@ class SQLConnection(BaseConnection["Engine"]):
 
     .. Important::
         `SQLAlchemy <https://pypi.org/project/SQLAlchemy/>`_ must be installed
-        in your environment to use this connection.
+        in your environment to use this connection. You must also install your
+        driver, such as ``pyodbc`` or ``psycopg2``.
 
     .. |sqlalchemy.engine.URL.create()| replace:: ``sqlalchemy.engine.URL.create()``
     .. _sqlalchemy.engine.URL.create(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create
@@ -105,8 +106,26 @@ class SQLConnection(BaseConnection["Engine"]):
 
     You can configure your SQL connection using Streamlit's
     `Secrets management <https://docs.streamlit.io/develop/concepts/connections/secrets-management>`_.
-    If you do not specify ``url``, you must declare ``dialect``, ``host``, and
-    ``username``. The following example also includes ``password``.
+    The following example specifies a SQL connection URL.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.sql]
+    >>> url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>>
+    >>> conn = st.connection("sql")
+    >>> df = conn.query("SELECT * FROM pet_owners")
+    >>> st.dataframe(df)
+
+    **Example 2**
+
+    If you do not specify ``url``, you must at least specify ``dialect``,
+    ``host``, and ``username`` instead. The following example also includes
+    ``password``.
 
     ``.streamlit/secrets.toml``:
 
@@ -124,17 +143,17 @@ class SQLConnection(BaseConnection["Engine"]):
     >>> df = conn.query("SELECT * FROM pet_owners")
     >>> st.dataframe(df)
 
-    **Example 2**
+    **Example 3**
 
     You can configure your SQL connection with keyword arguments (with or
     without ``secrets.toml``). For example, if you use Microsoft Entra ID with
-    a Microsoft Azure SQL server, you can set up a quick local connection for
+    a Microsoft Azure SQL server, you can quickly set up a local connection for
     development using `interactive authentication
     <https://learn.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver16#new-andor-modified-dsn-and-connection-string-keywords>`_.
 
     This example requires the `Microsoft ODBC Driver for SQL Server
-    <https://learn.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server?view=sql-server-ver16>_
-    for _Windows_ in addition to the ``sqlalchemy`` and ``pyodbc`` packages for
+    <https://learn.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server?view=sql-server-ver16>`_
+    for *Windows* in addition to the ``sqlalchemy`` and ``pyodbc`` packages for
     Python.
 
     >>> import streamlit as st
@@ -353,6 +372,11 @@ class SQLConnection(BaseConnection["Engine"]):
         """The underlying SQLAlchemy Engine.
 
         This is equivalent to accessing ``self._instance``.
+
+        Returns
+        -------
+        sqlalchemy.engine.base.Engine
+            The underlying SQLAlchemy Engine.
         """
         return self._instance
 
@@ -361,6 +385,11 @@ class SQLConnection(BaseConnection["Engine"]):
         """The name of the driver used by the underlying SQLAlchemy Engine.
 
         This is equivalent to accessing ``self._instance.driver``.
+
+        Returns
+        -------
+        str
+            The name of the driver. For example, ``"pyodbc"`` or ``"psycopg2"``.
         """
         return cast(str, self._instance.driver)
 
@@ -375,6 +404,11 @@ class SQLConnection(BaseConnection["Engine"]):
         single integer column ``val``. The `SQLAlchemy
         <https://docs.sqlalchemy.org/en/20/orm/session_basics.html>`_ docs also contain
         much more information on the usage of sessions.
+
+        Returns
+        -------
+        sqlalchemy.orm.Session
+            A SQLAlchemy Session.
 
         Example
         -------

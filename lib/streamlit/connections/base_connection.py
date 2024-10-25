@@ -154,6 +154,10 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         reinitializing it. Note that some connection methods may already use ``reset()``
         in their error handling code.
 
+        Returns
+        -------
+        None
+
         Example
         -------
         >>> import streamlit as st

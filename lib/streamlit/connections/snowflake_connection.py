@@ -81,7 +81,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     **Example 1**
 
-    You can configure ``st.connection("snowflake")`` using Streamlit's
+    You can configure your Snowflake connection using Streamlit's
     `Secrets management <https://docs.streamlit.io/develop/concepts/connections/secrets-management>`_.
     For example, if you have MFA enabled on your account, you can connect using
     `key-pair authentication <https://docs.snowflake.com/en/user-guide/key-pair-auth>`_.
