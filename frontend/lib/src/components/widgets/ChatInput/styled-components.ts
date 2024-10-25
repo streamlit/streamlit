@@ -107,11 +107,13 @@ export const StyledSendIconButtonContainer = styled.div({
   pointerEvents: "none",
 })
 
-export const StyledInputInstructionsContainer = styled.div({
+export const StyledInputInstructionsContainer = styled.div(({ theme }) => ({
   position: "absolute",
   bottom: "0px",
-  right: "3rem",
-})
+  // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
+  // and some additional margin between the icon and the text (spacing.sm).
+  right: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
+}))
 
 export interface StyledVerticalDividerProps {
   color?: string
@@ -120,7 +122,7 @@ export interface StyledVerticalDividerProps {
 export const StyledVerticalDivider = styled.div<StyledVerticalDividerProps>(
   ({ theme, color }) => {
     return {
-      height: "1.125rem",
+      height: theme.spacing.xl,
       width: theme.sizes.borderWidth,
       marginRight: theme.spacing.xs,
       backgroundColor: color ?? theme.colors.fadedText20,
