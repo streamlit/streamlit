@@ -25,6 +25,7 @@ import io
 import os
 import re
 from enum import IntEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
@@ -54,7 +55,9 @@ MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 PILImage: TypeAlias = Union[
     "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
 ]
-AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes]
+AtomicImage: TypeAlias = Union[
+    PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes, Path
+]
 ImageOrImageList: TypeAlias = Union[AtomicImage, Sequence[AtomicImage]]
 UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]
@@ -106,12 +109,12 @@ class ImageMixin:
 
         Parameters
         ----------
-        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, or [str]
+        image : numpy.ndarray, [numpy.ndarray], BytesIO, str, [str], Path, [Path]
             Monochrome image of shape (w,h) or (w,h,1)
             OR a color image of shape (w,h,3)
             OR an RGBA image of shape (w,h,4)
             OR a URL to fetch the image from
-            OR a path of a local image file
+            OR a path of a local image file (str or Path object)
             OR an SVG XML string like `<svg xmlns=...</svg>`
             OR a list of one of the above, to display multiple images.
         caption : str or list of str
@@ -393,6 +396,10 @@ def image_to_url(
     from PIL import Image, ImageFile
 
     image_data: bytes
+
+    # Convert Path to string if necessary
+    if isinstance(image, Path):
+        image = str(image)
 
     # Strings
     if isinstance(image, str):

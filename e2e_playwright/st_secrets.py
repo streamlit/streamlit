@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+from pathlib import Path
 from typing import Final
 
 import streamlit as st
@@ -23,18 +23,16 @@ if runtime.exists():
     st.write("Secret: ", st.secrets["fake"]["FAKE_SECRET"])
 
     # We are hacking here, but we are setting the secrets file to a different file to determine if it works
-    TEST_ASSETS_DIR: Final[str] = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "test_assets"
-    )
-    alt_secrets_file1 = os.path.join(TEST_ASSETS_DIR, "alt_secrets.toml")
-    alt_secrets_file2 = os.path.join(TEST_ASSETS_DIR, "alt_secrets2.toml")
-    config.set_option("secrets.files", [alt_secrets_file1])
+    TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
+    ALT_SECRETS_FILE = TEST_ASSETS_DIR / "alt_secrets.toml"
+    ALT_SECRETS_FILE2 = TEST_ASSETS_DIR / "alt_secrets2.toml"
+    config.set_option("secrets.files", [str(ALT_SECRETS_FILE)])
     st.secrets._secrets = None
 
     st.write("Alt Secret: ", st.secrets["fake"]["FAKE_SECRET"])
     st.write("Alt Secret From File 2 visible: ", "other-fake" in st.secrets)
 
-    config.set_option("secrets.files", [alt_secrets_file1, alt_secrets_file2])
+    config.set_option("secrets.files", [str(ALT_SECRETS_FILE), str(ALT_SECRETS_FILE2)])
     st.secrets._secrets = None
 
     st.write("Alt Secret (Multiple): ", st.secrets["fake"]["FAKE_SECRET"])

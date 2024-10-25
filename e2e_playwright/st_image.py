@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import io
-import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -27,9 +27,7 @@ if TYPE_CHECKING:
 
 # Construct test assets path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "test_assets"
-)
+TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
@@ -160,10 +158,11 @@ st.image(
     caption="Yellow Green Rectangle with x 100 and width 300.",
 )
 
-st.header("Image from file")
+st.header("Image from file (str and Path)")
 
-CAT_IMAGE = os.path.join(TEST_ASSETS_DIR, "cat.jpg")
-st.image(CAT_IMAGE, caption="Image from jpg file.", width=200)
+CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
+st.image(str(CAT_IMAGE), caption="Image from jpg file (str).", width=200)
+st.image(CAT_IMAGE, caption="Image from jpg file (Path).", width=200)
 
 st.header("channels parameter")
 

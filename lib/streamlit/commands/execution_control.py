@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 from itertools import dropwhile
+from pathlib import Path
 from typing import Literal, NoReturn
 
 import streamlit as st
@@ -146,7 +147,7 @@ def rerun(  # type: ignore[misc]
 
 
 @gather_metrics("switch_page")
-def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
+def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
@@ -157,7 +158,7 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
 
     Parameters
     ----------
-    page: str or st.Page
+    page: str, Path, or st.Page
         The file path (relative to the main script) or an st.Page indicating
         the page to switch to.
 
@@ -197,6 +198,10 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
     if isinstance(page, StreamlitPage):
         page_script_hash = page._script_hash
     else:
+        # Convert Path to string if necessary
+        if isinstance(page, Path):
+            page = str(page)
+
         main_script_directory = get_main_script_directory(ctx.main_script_path)
         requested_page = os.path.realpath(
             normalize_path_join(main_script_directory, page)
