@@ -17,7 +17,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -25,7 +25,6 @@ import {
   DateInput as DateInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import DateInput, { Props } from "./DateInput"
 
@@ -47,7 +46,6 @@ const getProps = (
   }),
   width: 0,
   disabled: false,
-  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
@@ -196,39 +194,68 @@ describe("DateInput widget", () => {
   })
 
   it("has a minDate", () => {
-    // The fireEvent.change will modify the input's value unconditionally. This is because
-    // the underlying input element doesn't possess a 'min' attribute.
-    let dateInputRef: any
-    const props = getProps()
-    render(
-      <DateInput
-        // @ts-expect-error
-        ref={ref => {
-          dateInputRef = ref
-        }}
-        {...props}
-      />
-    )
-    expect(dateInputRef.props.element.min).toStrictEqual(originalDate)
-    expect(dateInputRef.props.element.max).toBe("")
+    const props = getProps({})
+
+    render(<DateInput {...props} />)
+
+    const dateInput = screen.getByTestId("stDateInputField")
+
+    fireEvent.focus(dateInput)
+
+    expect(
+      screen.getByLabelText("Not available. Monday, January 19th 1970.")
+    ).toBeTruthy()
+    expect(
+      screen.getByLabelText(
+        "Selected. Tuesday, January 20th 1970. It's available."
+      )
+    ).toBeTruthy()
+  })
+
+  it("has a minDate if passed", () => {
+    const props = getProps({
+      min: "2020/01/05",
+      // Choose default so min is in the default page when the widget is opened.
+      default: ["2020/01/15"],
+    })
+
+    render(<DateInput {...props} />)
+
+    const dateInput = screen.getByTestId("stDateInputField")
+
+    fireEvent.focus(dateInput)
+
+    expect(
+      screen.getByLabelText("Not available. Saturday, January 4th 2020.")
+    ).toBeTruthy()
+
+    expect(
+      screen.getByLabelText("Choose Sunday, January 5th 2020. It's available.")
+    ).toBeTruthy()
   })
 
   it("has a maxDate if it is passed", () => {
-    // The fireEvent.change will modify the input's value unconditionally. This is because
-    // the underlying input element doesn't possess a 'max' attribute.
-    let dateInputRef: any
-    const props = getProps({ max: "2030/02/06" })
-    render(
-      <DateInput
-        // @ts-expect-error
-        ref={ref => {
-          dateInputRef = ref
-        }}
-        {...props}
-      />
-    )
-    expect(dateInputRef.props.element.max).toStrictEqual("2030/02/06")
-    expect(dateInputRef.props.element.min).toBe(originalDate)
+    const props = getProps({
+      max: "2020/01/25",
+      // Choose default so min is in the default page when the widget is opened.
+      default: ["2020/01/15"],
+    })
+
+    render(<DateInput {...props} />)
+
+    const dateInput = screen.getByTestId("stDateInputField")
+
+    fireEvent.focus(dateInput)
+
+    expect(
+      screen.getByLabelText(
+        "Choose Saturday, January 25th 2020. It's available."
+      )
+    ).toBeTruthy()
+
+    expect(
+      screen.getByLabelText("Not available. Sunday, January 26th 2020.")
+    ).toBeTruthy()
   })
 
   it("resets its value when form is cleared", () => {
@@ -255,8 +282,10 @@ describe("DateInput widget", () => {
       undefined
     )
 
-    // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    act(() => {
+      // "Submit" the form
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(dateInput).toHaveValue(fullOriginalDate)

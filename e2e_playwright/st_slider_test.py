@@ -28,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_sliders).to_have_count(16)
+    expect(st_sliders).to_have_count(21)
 
     assert_snapshot(st_sliders.nth(4), name="st_slider-regular_with_format")
     assert_snapshot(st_sliders.nth(7), name="st_slider-disabled")
@@ -36,6 +36,11 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(st_sliders.nth(9), name="st_slider-label_collapsed")
     assert_snapshot(st_sliders.nth(10), name="st_slider-labels_overlap_slider")
     assert_snapshot(st_sliders.nth(15), name="st_slider-time_value")
+    assert_snapshot(st_sliders.nth(16), name="st_slider-overlap_left")
+    assert_snapshot(st_sliders.nth(17), name="st_slider-overlap_near_left")
+    assert_snapshot(st_sliders.nth(18), name="st_slider-overlap_right")
+    assert_snapshot(st_sliders.nth(19), name="st_slider-overlap_near_right")
+    assert_snapshot(st_sliders.nth(20), name="st_slider-overlap_near_center")
 
 
 def test_help_tooltip_works(app: Page):

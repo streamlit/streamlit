@@ -47,7 +47,7 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
@@ -90,7 +90,7 @@ function getSingleSelection(currentSelection: number[]): number {
 function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
-  valueWithSource: ValueWSource<ButtonGroupValue>,
+  valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId?: string
 ): void {
   widgetMgr.setIntArrayValue(
@@ -291,7 +291,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   } = element
   const theme: EmotionTheme = useTheme()
 
-  const [value, setValueWSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
     ButtonGroupProto
   >({
@@ -309,7 +309,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     index: number
   ): void => {
     const newSelected = handleSelection(clickMode, index, value)
-    setValueWSource({ value: newSelected, fromUi: true })
+    setValueWithSource({ value: newSelected, fromUi: true })
   }
 
   let mode = undefined

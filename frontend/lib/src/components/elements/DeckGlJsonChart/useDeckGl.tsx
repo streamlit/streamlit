@@ -27,7 +27,7 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import {
   useBasicWidgetClientState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
@@ -56,7 +56,7 @@ type UseDeckGlShape = {
   onViewStateChange: (params: ViewStateChangeParameters) => void
   selectionMode: DeckGlJsonChartProto.SelectionMode | undefined
   setSelection: React.Dispatch<
-    React.SetStateAction<ValueWSource<DeckGlElementState> | null>
+    React.SetStateAction<ValueWithSource<DeckGlElementState> | null>
   >
   viewState: Record<string, unknown>
   width: number | string
@@ -139,7 +139,7 @@ function getStateFromWidgetMgr(
 function updateWidgetMgrState(
   element: DeckGlJsonChartProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<DeckGlElementState>,
+  vws: ValueWithSource<DeckGlElementState>,
   fragmentId?: string
 ): void {
   if (!element.id) {

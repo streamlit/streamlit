@@ -58,6 +58,9 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
     backgroundColor: theme.colors.transparent,
     lineHeight: theme.lineHeights.base,
     fontWeight: theme.fontWeights.normal,
+    // If values are clickable, it's hard to move the right thumb when they're
+    // very close. So make them unclickable:
+    pointerEvents: "none",
   })
 )
 
