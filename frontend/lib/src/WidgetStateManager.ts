@@ -24,8 +24,10 @@ import {
 } from "@streamlit/lib/src/util/utils"
 
 import {
+  ChatInputValue,
   DoubleArray,
   IArrowTable,
+  IChatInputValue,
   IFileUploaderState,
   SInt64Array,
   StringArray,
@@ -33,8 +35,6 @@ import {
   Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
-  ChatInputValue,
-  IChatInputValue,
 } from "./proto"
 
 export interface Source {
@@ -314,6 +314,7 @@ export class WidgetStateManager {
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
     this.deleteWidgetState(widget.id)
   }
+
   /**
    * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.

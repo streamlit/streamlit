@@ -54,8 +54,7 @@ import {
   UploadFileInfo,
 } from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
-
-import UploadedFiles from "../FileUploader/UploadedFiles"
+import UploadedFiles from "@streamlit/lib/src/components/widgets/FileUploader/UploadedFiles"
 
 import {
   StyledChatInput,
@@ -259,7 +258,7 @@ function ChatInput({
 
   // const filesRef = useRef<UploadFileInfo[]>([]) // TODO [kajarnec] refactor this to use only state
   const [files, setFiles] = useState<UploadFileInfo[]>([])
-  const addFiles = (filesToAdd: UploadFileInfo[]) => {
+  const addFiles = (filesToAdd: UploadFileInfo[]): void => {
     setFiles(currentFiles => [...currentFiles, ...filesToAdd])
     // filesRef.current = [...filesRef.current, ...filesToAdd]
   }
@@ -447,7 +446,7 @@ function ChatInput({
       chatInputRef.current.focus()
     }
 
-    if (!dirty || disabled) {
+    if (!dirty || element.disabled) {
       return
     }
 
