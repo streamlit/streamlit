@@ -24,6 +24,8 @@ import React, {
   useState,
 } from "react"
 
+import { DisabledIcon } from "./styled-components"
+
 import groupBy from "lodash/groupBy"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
@@ -54,6 +56,7 @@ export interface Props {
   hasSidebarElements: boolean
   expandSidebarNav: boolean
   onPageChange: (pageName: string) => void
+  isConnected: boolean
 }
 
 // We make the sidebar nav collapsible when there are more than 12 pages.
@@ -223,7 +226,11 @@ const SidebarNav = ({
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems data-testid="stSidebarNavItems">
-        {contents}
+        {isConnected ? (
+          contents
+        ) : (
+          <DisabledIcon>🚫</DisabledIcon>
+        )}
       </StyledSidebarNavItems>
       {shouldShowViewButton && (
         <StyledViewButton
