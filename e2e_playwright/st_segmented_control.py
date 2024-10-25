@@ -135,12 +135,12 @@ with st.form(key="my_form", clear_on_submit=True):
         selection_mode="multi",
     )
     st.form_submit_button("Submit")
-st.write(
-    "segmented-control-in-form:",
-    str(st.session_state.segmented_control_in_form)
-    if "segmented_control_in_form" in st.session_state
-    else None,
-)
+    st.write(
+        "segmented-control-in-form:",
+        str(st.session_state.segmented_control_in_form)
+        if "segmented_control_in_form" in st.session_state
+        else None,
+    )
 
 
 st.header("Segmented Control in fragment", anchor="segmented-control-in-fragment")

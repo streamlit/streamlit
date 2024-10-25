@@ -69,6 +69,7 @@ function handleMultiSelection(
 
 function handleSelection(
   mode: ButtonGroupProto.ClickMode,
+  style: ButtonGroupProto.Style,
   index: number,
   currentSelection?: number[]
 ): number[] {
@@ -77,7 +78,10 @@ function handleSelection(
   }
 
   // unselect if item is already selected
-  return currentSelection?.includes(index) ? [] : [index]
+  return style !== ButtonGroupProto.Style.TRIGGERS &&
+    currentSelection?.includes(index)
+    ? []
+    : [index]
 }
 
 function getSingleSelection(currentSelection: number[]): number {
@@ -93,12 +97,25 @@ function syncWithWidgetManager(
   valueWithSource: ValueWSource<ButtonGroupValue>,
   fragmentId?: string
 ): void {
-  widgetMgr.setIntArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  console.log(valueWithSource.value)
+  if (
+    element.style === ButtonGroupProto.Style.TRIGGERS &&
+    valueWithSource.value?.length
+  ) {
+    widgetMgr.setStringTriggerValue(
+      element,
+      String(valueWithSource.value),
+      { fromUi: valueWithSource.fromUi },
+      fragmentId
+    )
+  } else {
+    widgetMgr.setIntArrayValue(
+      element,
+      valueWithSource.value,
+      { fromUi: valueWithSource.fromUi },
+      fragmentId
+    )
+  }
 }
 
 export function getContentElement(
@@ -106,12 +123,20 @@ export function getContentElement(
   icon?: string,
   style?: ButtonGroupProto.Style
 ): { element: ReactElement; kind: BaseButtonKind; size: BaseButtonSize } {
-  const kind =
-    style === ButtonGroupProto.Style.PILLS
-      ? BaseButtonKind.PILLS
-      : style === ButtonGroupProto.Style.BORDERLESS
-      ? BaseButtonKind.BORDERLESS_ICON
-      : BaseButtonKind.SEGMENTED_CONTROL
+  let kind = BaseButtonKind.BORDERLESS_ICON
+  switch (style) {
+    case ButtonGroupProto.Style.PILLS:
+      kind = BaseButtonKind.PILLS
+      break
+    case ButtonGroupProto.Style.BORDERLESS:
+      kind = BaseButtonKind.BORDERLESS_ICON
+      break
+    case ButtonGroupProto.Style.SEGMENTED_CONTROL:
+      kind = BaseButtonKind.SEGMENTED_CONTROL
+      break
+    case ButtonGroupProto.Style.TRIGGERS:
+      kind = BaseButtonKind.TRIGGERS
+  }
   const size =
     style === ButtonGroupProto.Style.BORDERLESS
       ? BaseButtonSize.XSMALL
@@ -176,28 +201,27 @@ function getButtonKindAndSize(
 
 function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
-  spacing: EmotionTheme["spacing"]
+  theme: EmotionTheme
 ): Record<string, any> {
-  const baseStyle = { flexWrap: "wrap", maxWidth: "fit-content" }
+  const baseStyle = {
+    flexWrap: "wrap",
+    maxWidth: "fit-content",
+    columnGap: theme.spacing.threeXS,
+    rowGap: theme.spacing.threeXS,
+  }
 
   switch (style) {
-    case ButtonGroupProto.Style.BORDERLESS:
-      return {
-        ...baseStyle,
-        columnGap: spacing.threeXS,
-        rowGap: spacing.threeXS,
-      }
     case ButtonGroupProto.Style.PILLS:
       return {
         ...baseStyle,
-        columnGap: spacing.twoXS,
-        rowGap: spacing.twoXS,
+        columnGap: theme.spacing.twoXS,
+        rowGap: theme.spacing.twoXS,
       }
     case ButtonGroupProto.Style.SEGMENTED_CONTROL:
       return {
         ...baseStyle,
-        columnGap: spacing.none,
-        rowGap: spacing.twoXS,
+        columnGap: theme.spacing.none,
+        rowGap: theme.spacing.twoXS,
         // Adding an empty pseudo-element after the last button in the group.
         // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
         "::after": {
@@ -308,7 +332,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     _event: React.SyntheticEvent<HTMLButtonElement>,
     index: number
   ): void => {
-    const newSelected = handleSelection(clickMode, index, value)
+    const newSelected = handleSelection(clickMode, style, index, value)
     setValueWSource({ value: newSelected, fromUi: true })
   }
 

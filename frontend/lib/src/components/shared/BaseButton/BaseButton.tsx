@@ -37,6 +37,7 @@ import {
   StyledSegmentedControlButton,
   StyledSegmentedControlButtonActive,
   StyledTertiaryButton,
+  StyledTriggerButton,
 } from "./styled-components"
 
 function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
@@ -77,6 +78,10 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
     ComponentType = StyledHeaderNoPaddingButton
   } else if (kind === BaseButtonKind.ELEMENT_TOOLBAR) {
     ComponentType = StyledElementToolbarButton
+  } else if (kind === BaseButtonKind.TRIGGERS) {
+    ComponentType = StyledTriggerButton
+  } else if (kind === BaseButtonKind.TRIGGERS_ACTIVE) {
+    ComponentType = StyledTriggerButton
   }
 
   return (
