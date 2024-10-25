@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback, useRef, useState } from "react"
+import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useTheme } from "@emotion/react"
@@ -279,4 +279,4 @@ const TextArea: FC<Props> = ({
   )
 }
 
-export default TextArea
+export default memo(TextArea)

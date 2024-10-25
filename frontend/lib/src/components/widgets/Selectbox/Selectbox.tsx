@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback } from "react"
+import React, { FC, memo, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -118,4 +118,4 @@ const Selectbox: FC<Props> = ({
   )
 }
 
-export default Selectbox
+export default memo(Selectbox)

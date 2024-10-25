@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback } from "react"
+import React, { FC, memo, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -114,4 +114,4 @@ const ColorPicker: FC<Props> = ({
   )
 }
 
-export default ColorPicker
+export default memo(ColorPicker)
