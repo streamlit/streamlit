@@ -239,6 +239,9 @@ export class MetricsManager {
     data: Record<string, unknown>,
     context: Record<string, unknown>
   ): Promise<void> {
+    console.log("====")
+    console.log("Tracking event: ", evName, this.anonymousId)
+
     // Send the event to Segment
     analytics.track(evName, data, context)
 
@@ -351,20 +354,29 @@ export class MetricsManager {
     const expiration = new Date()
     expiration.setFullYear(new Date().getFullYear() + 1)
 
+    console.log(anonymousIdKey, anonymousIdCookie, anonymousIdLocalStorage)
+
     if (anonymousIdCookie) {
+      console.log("== Found anonymous ID in cookie:", anonymousIdCookie)
       this.anonymousId = anonymousIdCookie
       if (isLocalStoreAvailable) {
         localStorage.setItem(anonymousIdKey, anonymousIdCookie)
       }
     } else if (anonymousIdLocalStorage) {
+      console.log(
+        "== Found anonymous ID in localStorage:",
+        anonymousIdLocalStorage
+      )
       this.anonymousId = anonymousIdLocalStorage
       setCookie(anonymousIdKey, anonymousIdLocalStorage, expiration)
     } else {
       this.anonymousId = uuidv4()
+      console.log("== Generating new anonymous ID", this.anonymousId)
       setCookie(anonymousIdKey, this.anonymousId, expiration)
       if (isLocalStoreAvailable) {
         localStorage.setItem(anonymousIdKey, this.anonymousId)
       }
     }
+    console.log("== Anonymous ID:", this.anonymousId)
   }
 }
