@@ -77,7 +77,7 @@ FILES_WITH_PYTHON_DEPENDENCIES = [
     "lib/setup.py",
 ]
 # +1 to make range inclusive.
-ALL_PYTHON_VERSIONS = [f"3.{d}" for d in range(8, 12 + 1)]
+ALL_PYTHON_VERSIONS = [f"3.{d}" for d in range(9, 13 + 1)]
 PYTHON_MIN_VERSION = ALL_PYTHON_VERSIONS[0]
 PYTHON_MAX_VERSION = ALL_PYTHON_VERSIONS[-1]
 
