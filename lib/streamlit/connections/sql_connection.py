@@ -52,35 +52,129 @@ _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
 class SQLConnection(BaseConnection["Engine"]):
-    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.connection("<name>", type="sql")``.
+    """A connection to a SQL database using a SQLAlchemy Engine.
 
-    SQLConnection provides the ``query()`` convenience method, which can be used to
-    run simple read-only queries with both caching and simple error handling/retries.
-    More complex DB interactions can be performed by using the ``.session`` property
-    to receive a regular SQLAlchemy Session.
+    Initialize this connection object using ``st.connection("sql")`` or
+    ``st.connection("<name>", type="sql")``. Connection parameters for a
+    SQLConnection can be specified using ``secrets.toml`` and/or ``**kwargs``.
+    Possible connection parameters include:
 
-    SQLConnections should always be created using ``st.connection()``, **not**
-    initialized directly. Connection parameters for a SQLConnection can be specified
-    using either ``st.secrets`` or ``**kwargs``. Some frequently used parameters include:
+    - ``url`` or keyword arguments for |sqlalchemy.engine.URL.create()|_, except
+      ``drivername``. Use ``dialect`` and ``driver`` instead of ``drivername``.
+    - Keyword arguments for |sqlalchemy.create_engine()|_, including custom
+      ``connect()`` arguments used by your specific ``dialect`` or ``driver``.
+    - ``autocommit``. If this is ``False`` (default), the connection operates
+      in manual commit (transactional) mode. If this is ``True``, the
+      connection operates in autocommit (non-transactional) mode.
 
-    - **url** or arguments for `sqlalchemy.engine.URL.create()
-      <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
-      Most commonly it includes a dialect, host, database, username and password.
+    If ``url`` exists as a connection parameter, Streamlit will pass it to
+    ``sqlalchemy.engine.make_url()``. Otherwise, Streamlit requires (at a
+    minimum) ``dialect``, ``username``, and ``host``. Streamlit will use
+    ``dialect`` and ``driver`` (if defined) to derive ``drivername``, then pass
+    the relevant connection parameters to ``sqlalchemy.engine.URL.create()``.
 
-    - **create_engine_kwargs** can be passed via ``st.secrets``, such as for
-      `snowflake-sqlalchemy <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_
-      or `Google BigQuery <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_.
-      These can also be passed directly as ``**kwargs`` to connection().
+    In addition to the default keyword arguments for ``sqlalchemy.create_engine()``,
+    your dialect may accept additional keyword arguments. For example, if you
+    use ``dialect="snowflake"`` with `Snowflake SQLAlchemy
+    <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_,
+    you can pass a value for ``private_key`` to use key-pair authentication. If
+    you use ``dialect="bigquery"`` with `Google BigQuery
+    <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_,
+    you can pass a value for ``location``.
 
-    - **autocommit=True** to run with isolation level ``AUTOCOMMIT``. Default is False.
+    SQLConnection provides the ``.query()`` convenience method, which can be
+    used to run simple, read-only queries with both caching and simple error
+    handling/retries. More complex database interactions can be performed by
+    using the ``.session`` property to receive a regular SQLAlchemy Session.
 
-    Example
-    -------
+    .. Important::
+        `SQLAlchemy <https://pypi.org/project/SQLAlchemy/>`_ must be installed
+        in your environment to use this connection. You must also install your
+        driver, such as ``pyodbc`` or ``psycopg2``.
+
+    .. |sqlalchemy.engine.URL.create()| replace:: ``sqlalchemy.engine.URL.create()``
+    .. _sqlalchemy.engine.URL.create(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create
+    .. |sqlalchemy.engine.make_url()| replace:: ``sqlalchemy.engine.make_url()``
+    .. _sqlalchemy.engine.make_url(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.make_url
+    .. |sqlalchemy.create_engine()| replace:: ``sqlalchemy.create_engine()``
+    .. _sqlalchemy.create_engine(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine
+
+    Examples
+    --------
+
+    **Example 1**
+
+    You can configure your SQL connection using Streamlit's
+    `Secrets management <https://docs.streamlit.io/develop/concepts/connections/secrets-management>`_.
+    The following example specifies a SQL connection URL.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.sql]
+    >>> url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
+
+    Your app code:
+
     >>> import streamlit as st
     >>>
     >>> conn = st.connection("sql")
-    >>> df = conn.query("select * from pet_owners")
+    >>> df = conn.query("SELECT * FROM pet_owners")
     >>> st.dataframe(df)
+
+    **Example 2**
+
+    If you do not specify ``url``, you must at least specify ``dialect``,
+    ``host``, and ``username`` instead. The following example also includes
+    ``password``.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.sql]
+    >>> dialect = "xxx"
+    >>> host = "xxx"
+    >>> username = "xxx"
+    >>> password = "xxx"
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>>
+    >>> conn = st.connection("sql")
+    >>> df = conn.query("SELECT * FROM pet_owners")
+    >>> st.dataframe(df)
+
+    **Example 3**
+
+    You can configure your SQL connection with keyword arguments (with or
+    without ``secrets.toml``). For example, if you use Microsoft Entra ID with
+    a Microsoft Azure SQL server, you can quickly set up a local connection for
+    development using `interactive authentication
+    <https://learn.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory?view=sql-server-ver16#new-andor-modified-dsn-and-connection-string-keywords>`_.
+
+    This example requires the `Microsoft ODBC Driver for SQL Server
+    <https://learn.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server?view=sql-server-ver16>`_
+    for *Windows* in addition to the ``sqlalchemy`` and ``pyodbc`` packages for
+    Python.
+
+    >>> import streamlit as st
+    >>>
+    >>> conn = st.connection(
+    ...     "sql",
+    ...     dialect="mssql",
+    ...     driver="pyodbc",
+    ...     host="xxx.database.windows.net",
+    ...     database="xxx",
+    ...     username="xxx",
+    ...     query={
+    ...         "driver": "ODBC Driver 18 for SQL Server",
+    ...         "authentication": "ActiveDirectoryInteractive",
+    ...         "encrypt": "yes",
+    ...     },
+    ... )
+    >>>
+    >>> df = conn.query("SELECT * FROM pet_owners")
+    >>> st.dataframe(df)
+
     """
 
     def _connect(self, autocommit: bool = False, **kwargs) -> Engine:
@@ -140,15 +234,15 @@ class SQLConnection(BaseConnection["Engine"]):
     ) -> DataFrame:
         """Run a read-only query.
 
-        This method implements both query result caching (with caching behavior
-        identical to that of using ``@st.cache_data``) as well as simple error handling/retries.
+        This method implements query result caching and simple error
+        handling/retries. The caching behavior is identical to that of using
+        ``@st.cache_data``.
 
         .. note::
             Queries that are run without a specified ttl are cached indefinitely.
 
-        Aside from the ``ttl`` kwarg, all kwargs passed to this function are passed down
-        to |pandas.read_sql|_
-        and have the behavior described in the pandas documentation.
+        All keyword arguments passed to this function are passed down to
+        |pandas.read_sql|_, except ``ttl``.
 
         .. |pandas.read_sql| replace:: ``pandas.read_sql``
         .. _pandas.read_sql: https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html
@@ -192,7 +286,7 @@ class SQLConnection(BaseConnection["Engine"]):
         >>>
         >>> conn = st.connection("sql")
         >>> df = conn.query(
-        ...     "select * from pet_owners where owner = :owner",
+        ...     "SELECT * FROM pet_owners WHERE owner = :owner",
         ...     ttl=3600,
         ...     params={"owner": "barbara"},
         ... )
@@ -259,12 +353,17 @@ class SQLConnection(BaseConnection["Engine"]):
 
     def connect(self) -> SQLAlchemyConnection:
         """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new\
-        ``sqlalchemy.engine.Connection`` object.
+        connection object.
 
         Calling this method is equivalent to calling ``self._instance.connect()``.
 
         NOTE: This method should not be confused with the internal ``_connect`` method used
         to implement a Streamlit Connection.
+
+        Returns
+        -------
+        sqlalchemy.engine.Connection
+            A new SQLAlchemy connection object.
         """
         return self._instance.connect()
 
@@ -273,6 +372,11 @@ class SQLConnection(BaseConnection["Engine"]):
         """The underlying SQLAlchemy Engine.
 
         This is equivalent to accessing ``self._instance``.
+
+        Returns
+        -------
+        sqlalchemy.engine.base.Engine
+            The underlying SQLAlchemy Engine.
         """
         return self._instance
 
@@ -281,6 +385,11 @@ class SQLConnection(BaseConnection["Engine"]):
         """The name of the driver used by the underlying SQLAlchemy Engine.
 
         This is equivalent to accessing ``self._instance.driver``.
+
+        Returns
+        -------
+        str
+            The name of the driver. For example, ``"pyodbc"`` or ``"psycopg2"``.
         """
         return cast(str, self._instance.driver)
 
@@ -295,6 +404,11 @@ class SQLConnection(BaseConnection["Engine"]):
         single integer column ``val``. The `SQLAlchemy
         <https://docs.sqlalchemy.org/en/20/orm/session_basics.html>`_ docs also contain
         much more information on the usage of sessions.
+
+        Returns
+        -------
+        sqlalchemy.orm.Session
+            A SQLAlchemy Session.
 
         Example
         -------
