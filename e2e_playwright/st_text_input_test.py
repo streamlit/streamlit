@@ -97,6 +97,7 @@ def test_text_input_limits_input_via_max_chars(app: Page):
     text_input_field = app.get_by_test_id("stTextInput").nth(9).locator("input").first
     # Try typing in char by char:
     text_input_field.clear()
+    expect(text_input_field).to_have_value("")
     text_input_field.type("12345678")
     text_input_field.press("Enter")
 
