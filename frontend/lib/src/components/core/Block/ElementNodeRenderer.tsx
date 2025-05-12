@@ -708,7 +708,7 @@ const ElementNodeRenderer = (
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
 
-  // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
+  // TODO: It would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
 
