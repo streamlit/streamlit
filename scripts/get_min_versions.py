@@ -46,9 +46,7 @@ def get_min_version(specifier_set: SpecifierSet) -> str | None:
     for spec in specifier_set:
         if spec.operator in (">=", ">", "=="):
             version = str(spec.version)
-            if min_version is None:
-                min_version = version
-            elif version < min_version:
+            if min_version is None or version < min_version:
                 min_version = version
     return min_version
 
@@ -61,10 +59,7 @@ def is_required_dependency(requirement_str: str) -> bool:
         return False
 
     # Skip if it's a development dependency
-    if requirement_str.startswith("dev-"):
-        return False
-
-    return True
+    return not requirement_str.startswith("dev-")
 
 
 # Try to find streamlit or streamlit-nightly package

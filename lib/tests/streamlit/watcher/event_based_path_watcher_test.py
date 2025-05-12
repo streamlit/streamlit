@@ -363,8 +363,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         # "Modify" our file
         modify_mock_file()
 
-        assert 1 == cb1.call_count
-        assert 1 == cb2.call_count
+        assert cb1.call_count == 1
+        assert cb2.call_count == 1
 
         # Close watcher1. Only watcher2's callback should be called after this.
         watcher1.close()
@@ -372,8 +372,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         # Modify our file again
         modify_mock_file()
 
-        assert 1 == cb1.call_count
-        assert 2 == cb2.call_count
+        assert cb1.call_count == 1
+        assert cb2.call_count == 2
 
         watcher2.close()
 
@@ -382,5 +382,5 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         # Both watchers are now closed, so their callback counts
         # should not have increased.
-        assert 1 == cb1.call_count
-        assert 2 == cb2.call_count
+        assert cb1.call_count == 1
+        assert cb2.call_count == 2

@@ -14,8 +14,11 @@
 
 """st.secrets unit tests."""
 
+# ruff: noqa: SIM112
+
 from __future__ import annotations
 
+import contextlib
 import os
 import tempfile
 import threading
@@ -287,10 +290,8 @@ class MultipleSecretsFilesTest(unittest.TestCase):
 
         # close the file descriptors (which is required on windows before removing the file)
         for fd in (self._fd1, self._fd2):
-            try:
+            with contextlib.suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
 
         os.remove(self._path1)
         os.remove(self._path2)

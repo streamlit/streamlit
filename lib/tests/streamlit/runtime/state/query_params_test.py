@@ -84,7 +84,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params["test"] = ""
         assert self.query_params["test"] == ""
         message = self.get_message_from_queue(0)
-        assert "foo=bar&two=x&two=y&test=" == message.page_info_changed.query_string
+        assert message.page_info_changed.query_string == "foo=bar&two=x&two=y&test="
 
     def test__setitem__adds_list_value(self):
         self.query_params["test"] = ["test", "test2"]
@@ -228,7 +228,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params.clear()
         assert len(self.query_params) == 0
         message = self.get_message_from_queue(0)
-        assert "" == message.page_info_changed.query_string
+        assert message.page_info_changed.query_string == ""
 
     def test_clear_doesnt_remove_embed_query_params(self):
         self.query_params._query_params = {

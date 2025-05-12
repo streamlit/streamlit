@@ -187,10 +187,7 @@ _OBJ_MEM_ADDRESS: Final = re.compile(
 
 def is_mem_address_str(string: str) -> bool:
     """Returns True if the string looks like <foo blarg at 0x15ee6f9a0>."""
-    if _OBJ_MEM_ADDRESS.match(string):
-        return True
-
-    return False
+    return bool(_OBJ_MEM_ADDRESS.match(string))
 
 
 def to_snake_case(camel_case_str: str) -> str:

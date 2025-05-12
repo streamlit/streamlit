@@ -656,7 +656,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 self._assert_num_deltas(scriptrunner, 2)
                 self.assertEqual(elts[1].WhichOneof("type"), "exception")
                 exc_msg = elts[1].exception.message
-                self.assertTrue(_GENERIC_UNCAUGHT_EXCEPTION_TEXT == exc_msg)
+                self.assertTrue(exc_msg == _GENERIC_UNCAUGHT_EXCEPTION_TEXT)
 
     @pytest.mark.slow
     def test_stop_script(self):

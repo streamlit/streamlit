@@ -136,10 +136,11 @@ If you think this is actually a Streamlit bug, please
         elif self.cache_type is CacheType.DATA:
             decorator_name = "@st.cache_data"
 
-        if hasattr(self.hash_func, "__name__"):
-            hash_func_name = f"`{self.hash_func.__name__}()`"
-        else:
-            hash_func_name = "a function"
+        hash_func_name = (
+            f"`{self.hash_func.__name__}()`"
+            if hasattr(self.hash_func, "__name__")
+            else "a function"
+        )
 
         return {
             "orig_exception_desc": str(orig_exc),
@@ -313,9 +314,8 @@ class _CacheFuncHasher:
         key = (tname, _key(obj))
 
         # Memoize if possible.
-        if key[1] is not NoResult:
-            if key in self._hashes:
-                return self._hashes[key]
+        if key[1] is not NoResult and key in self._hashes:
+            return self._hashes[key]
 
         # Break recursive cycles.
         if obj in hash_stacks.current:
@@ -362,7 +362,7 @@ class _CacheFuncHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        if isinstance(obj, bytes) or isinstance(obj, bytearray):
+        if isinstance(obj, (bytes, bytearray)):
             return obj
 
         if type_util.get_fqn_type(obj) in self._hash_funcs:

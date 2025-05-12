@@ -90,9 +90,7 @@ with st.form("form"):
     st.text_area("text area 14 (value from form)", key="text_area_14")
     st.form_submit_button("submit")
 
-form_value = (
-    st.session_state["text_area_14"] if "text_area_14" in st.session_state else None
-)
+form_value = st.session_state.get("text_area_14", None)
 st.write("text area 14 (value from form) - value: ", form_value)
 
 st.text_area(

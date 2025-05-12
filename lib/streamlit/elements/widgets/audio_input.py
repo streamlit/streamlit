@@ -79,10 +79,7 @@ class AudioInputSerde:
         self, ui_value: FileUploaderStateProto | None
     ) -> SomeUploadedAudioFile:
         upload_files = _get_upload_files(ui_value)
-        if len(upload_files) == 0:
-            return_value = None
-        else:
-            return_value = upload_files[0]
+        return_value = None if len(upload_files) == 0 else upload_files[0]
         if return_value is not None and not isinstance(return_value, DeletedFile):
             enforce_filename_restriction(return_value.name, [".wav"])
         return return_value

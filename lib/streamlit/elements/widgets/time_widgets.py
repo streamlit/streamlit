@@ -517,10 +517,7 @@ class TimeWidgetsMixin:
         validate_width(width)
 
         parsed_time: time | None
-        if value is None:
-            parsed_time = None
-        else:
-            parsed_time = _convert_timelike_to_time(value)
+        parsed_time = None if value is None else _convert_timelike_to_time(value)
 
         element_id = compute_and_register_element_id(
             "time_input",

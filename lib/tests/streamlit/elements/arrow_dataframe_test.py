@@ -275,9 +275,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with self.assertRaises(StreamlitAPIException):
-            with st.form("form"):
-                st.dataframe(df, on_select=lambda: None)
+        with self.assertRaises(StreamlitAPIException), st.form("form"):
+            st.dataframe(df, on_select=lambda: None)
 
     def test_selectable_df_throws_exception_with_modified_sessions_state(self):
         """Test that an exception is thrown if the session state is modified."""

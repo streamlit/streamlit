@@ -56,9 +56,11 @@ class FileUtilTest(unittest.TestCase):
     def test_streamlit_read_zero_bytes(self):
         """Test streamlitfile_util.streamlit_read."""
         self.os_stat.return_value.st_size = 0
-        with pytest.raises(errors.Error) as e:
-            with file_util.streamlit_read(FILENAME) as file_input:
-                file_input.read()
+        with (
+            pytest.raises(errors.Error) as e,
+            file_util.streamlit_read(FILENAME) as file_input,
+        ):
+            file_input.read()
         self.assertEqual(str(e.value), 'Read zero byte file: "/some/cache/file"')
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)

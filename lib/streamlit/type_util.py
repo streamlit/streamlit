@@ -262,16 +262,13 @@ def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
+    if any(k not in ["config", "data", "frames", "layout"] for k in obj):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
         return True
 
-    if any(_is_list_of_plotly_objs(v) for v in obj.values()):
-        return True
-
-    return False
+    return bool(any(_is_list_of_plotly_objs(v) for v in obj.values()))
 
 
 def is_delta_generator(obj: object) -> TypeGuard[DeltaGenerator]:

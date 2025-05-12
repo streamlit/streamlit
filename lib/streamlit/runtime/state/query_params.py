@@ -47,9 +47,7 @@ class QueryParams(MutableMapping[str, str]):
         self._ensure_single_query_api_used()
 
         return iter(
-            key
-            for key in self._query_params.keys()
-            if key not in EMBED_QUERY_PARAMS_KEYS
+            key for key in self._query_params if key not in EMBED_QUERY_PARAMS_KEYS
         )
 
     def __getitem__(self, key: str) -> str:
@@ -116,7 +114,7 @@ class QueryParams(MutableMapping[str, str]):
         # to ensure only one one ForwardMsg is sent.
         self._ensure_single_query_api_used()
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
-            for key in other.keys():
+            for key in other.keys():  # noqa: SIM118
                 self.__set_item_internal(key, other[key])
         else:
             for key, value in other:

@@ -499,9 +499,8 @@ def _run_fragment_writes_to_nested_outside_container_app2(
     def _some_method():
         st.write("Hello")
         # this is forbidden
-        with outside_container:
-            with st.container():
-                element_producer()
+        with outside_container, st.container():
+            element_producer()
 
     _some_method()
 
@@ -550,9 +549,8 @@ def _run_fragment_writes_to_nested_inside_container_app(
         inside_container = st.container()
 
         st.write("Hello")
-        with st.container():
-            with inside_container:
-                element_producer()
+        with st.container(), inside_container:
+            element_producer()
 
     _some_method()
 

@@ -571,11 +571,10 @@ class ChatMixin:
         # We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
-        if runtime.exists():
-            if is_in_form(self.dg):
-                raise StreamlitAPIException(
-                    "`st.chat_input()` can't be used in a `st.form()`."
-                )
+        if runtime.exists() and is_in_form(self.dg):
+            raise StreamlitAPIException(
+                "`st.chat_input()` can't be used in a `st.form()`."
+            )
 
         # Determine the position of the chat input:
         # Use bottom position if chat input is within the main container

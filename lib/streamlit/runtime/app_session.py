@@ -905,7 +905,7 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
         Config.ToolbarMode, config_value.upper()
     )
     if enum_value is None:
-        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())
+        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())  # noqa: SIM118
         raise ValueError(
             f"Config {config_key!r} expects to have one of "
             f"the following values: {allowed_values}. "

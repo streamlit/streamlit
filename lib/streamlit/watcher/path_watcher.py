@@ -177,9 +177,6 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
         from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
 
         return EventBasedPathWatcher
-    elif watcher_type == "auto":
+    if watcher_type in {"auto", "poll"}:
         return PollingPathWatcher
-    elif watcher_type == "poll":
-        return PollingPathWatcher
-    else:
-        return NoOpPathWatcher
+    return NoOpPathWatcher

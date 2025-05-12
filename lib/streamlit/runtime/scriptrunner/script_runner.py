@@ -139,7 +139,7 @@ def _mpa_v1(main_script_path: str) -> None:
             for page in pages
             if page.name.endswith(".py")
             and not page.name.startswith(".")
-            and not page.name == "__init__.py"
+            and page.name != "__init__.py"
         ],
         key=page_sort_key,
     )

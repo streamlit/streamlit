@@ -123,7 +123,7 @@ def _extract_key_query_params(
         item.lower()
         for sublist in [
             [value.lower() for value in query_params[key]]
-            for key in query_params.keys()
+            for key in query_params
             if key.lower() == param_key and query_params.get(key)
         ]
         for item in sublist

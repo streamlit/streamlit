@@ -29,10 +29,11 @@ from streamlit.logger import get_logger
 _LOGGER: Final = get_logger(__name__)
 
 
-if env_util.IS_WINDOWS:
-    _CONFIG_FILE_PATH = r"%userprofile%/.streamlit/config.toml"
-else:
-    _CONFIG_FILE_PATH = "~/.streamlit/config.toml"
+_CONFIG_FILE_PATH = (
+    r"%userprofile%/.streamlit/config.toml"
+    if env_util.IS_WINDOWS
+    else "~/.streamlit/config.toml"
+)
 
 
 class _Activation(NamedTuple):

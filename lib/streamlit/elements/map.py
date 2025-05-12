@@ -399,10 +399,7 @@ def _get_value_and_col_name(
     else:
         col_name = None
 
-        if value_or_name is None:
-            pydeck_arg = default_value
-        else:
-            pydeck_arg = value_or_name
+        pydeck_arg = default_value if value_or_name is None else value_or_name
 
     return pydeck_arg, col_name
 
@@ -462,10 +459,7 @@ def _get_viewport_details(
     range_lat = abs(max_lat - min_lat)
 
     if zoom is None:
-        if range_lon > range_lat:
-            longitude_distance = range_lon
-        else:
-            longitude_distance = range_lat
+        longitude_distance = max(range_lat, range_lon)
         zoom = _get_zoom_level(longitude_distance)
 
     return zoom, center_lat, center_lon

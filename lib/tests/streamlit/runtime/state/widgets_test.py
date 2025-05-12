@@ -345,7 +345,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
     def signature_to_expected_kwargs(self, sig):
         kwargs = {
             kwarg: ANY
-            for kwarg in sig.parameters.keys()
+            for kwarg in sig.parameters
             if kwarg not in EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION
         }
 
@@ -589,10 +589,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         )
         assert widget_metadata_arg.value_type in get_args(ValueFieldName)
         # test that the value_type also maps to a protobuf field
-        assert (
-            widget_metadata_arg.value_type
-            in WidgetState.DESCRIPTOR.fields_by_name.keys()
-        )
+        assert widget_metadata_arg.value_type in WidgetState.DESCRIPTOR.fields_by_name
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

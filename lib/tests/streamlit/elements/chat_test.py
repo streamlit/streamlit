@@ -47,9 +47,8 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_nesting_is_allowed(self):
         """Test that it is allowed to be nested."""
-        with st.chat_message("user"):
-            with st.chat_message("assistant"):
-                st.write("hello")
+        with st.chat_message("user"), st.chat_message("assistant"):
+            st.write("hello")
 
     @parameterized.expand(
         [

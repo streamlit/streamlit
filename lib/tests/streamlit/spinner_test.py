@@ -39,13 +39,12 @@ class SpinnerTest(DeltaGeneratorTestCase):
         """Test st.spinner in st.chat_message resets to empty container block."""
         import streamlit as st
 
-        with st.chat_message("user"):
-            with spinner("some text"):
-                # Without the timeout, the spinner is sometimes not available
-                time.sleep(0.7)
-                el = self.get_delta_from_queue().new_element
-                self.assertEqual(el.spinner.text, "some text")
-                self.assertFalse(el.spinner.cache)
+        with st.chat_message("user"), spinner("some text"):
+            # Without the timeout, the spinner is sometimes not available
+            time.sleep(0.7)
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.spinner.text, "some text")
+            self.assertFalse(el.spinner.cache)
         # Check that the element gets reset to an empty container block:
         last_delta = self.get_delta_from_queue()
         self.assertTrue(last_delta.HasField("add_block"))

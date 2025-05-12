@@ -449,10 +449,7 @@ def _get_value(obj, var_name):
     sig = _get_signature(name_obj) or ""
 
     if name:
-        if module:
-            obj_value = f"{module}.{name}{sig}"
-        else:
-            obj_value = f"{name}{sig}"
+        obj_value = f"{module}.{name}{sig}" if module else f"{name}{sig}"
 
     if obj_value == var_name:
         # No need to repeat the same info.

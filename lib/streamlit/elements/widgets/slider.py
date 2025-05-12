@@ -708,10 +708,9 @@ class SliderMixin:
                 f"But were: {list(map(type, value))}"
             )
 
-        if len(value) == 0:
-            data_type = SliderProto.INT
-        else:
-            data_type = value_to_generic_type(value[0])
+        data_type = (
+            SliderProto.INT if len(value) == 0 else value_to_generic_type(value[0])
+        )
 
         datetime_min = time.min
         datetime_max = time.max

@@ -777,7 +777,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_server_headless(self):
         orig_display = None
-        if "DISPLAY" in os.environ.keys():
+        if "DISPLAY" in os.environ:
             orig_display = os.environ["DISPLAY"]
             del os.environ["DISPLAY"]
 

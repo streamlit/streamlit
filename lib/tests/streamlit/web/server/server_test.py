@@ -295,15 +295,17 @@ class PortRotateAHundredTest(unittest.TestCase):
         app = mock.MagicMock()
 
         RetriesExceededError = streamlit.web.server.server.RetriesExceededError
-        with pytest.raises(RetriesExceededError) as pytest_wrapped_e:
-            with patch(
+        with (
+            pytest.raises(RetriesExceededError) as pytest_wrapped_e,
+            patch(
                 "streamlit.web.server.server.HTTPServer",
                 return_value=self.get_httpserver(),
-            ) as mock_server:
-                start_listening(app)
-                self.assertEqual(pytest_wrapped_e.type, SystemExit)
-                self.assertEqual(pytest_wrapped_e.value.code, errno.EADDRINUSE)
-                self.assertEqual(mock_server.listen.call_count, MAX_PORT_SEARCH_RETRIES)
+            ) as mock_server,
+        ):
+            start_listening(app)
+            self.assertEqual(pytest_wrapped_e.type, SystemExit)
+            self.assertEqual(pytest_wrapped_e.value.code, errno.EADDRINUSE)
+            self.assertEqual(mock_server.listen.call_count, MAX_PORT_SEARCH_RETRIES)
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -328,18 +330,20 @@ class PortRotateOneTest(unittest.TestCase):
         app = mock.MagicMock()
 
         patched_server_port_is_manually_set.return_value = False
-        with pytest.raises(RetriesExceededError):
-            with patch(
+        with (
+            pytest.raises(RetriesExceededError),
+            patch(
                 "streamlit.web.server.server.HTTPServer",
                 return_value=self.get_httpserver(),
-            ):
-                start_listening(app)
+            ),
+        ):
+            start_listening(app)
 
-                PortRotateOneTest.which_port.assert_called_with(8502)
+            PortRotateOneTest.which_port.assert_called_with(8502)
 
-                patched__set_option.assert_called_with(
-                    "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
-                )
+            patched__set_option.assert_called_with(
+                "server.port", 8501, config.ConfigOption.STREAMLIT_DEFINITION
+            )
 
 
 class SslServerTest(unittest.TestCase):

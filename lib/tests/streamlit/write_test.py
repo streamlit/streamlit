@@ -630,9 +630,6 @@ def make_is_type_mock(true_type_matchers):
         if type(type_matchers) is not tuple:
             type_matchers = (type_matchers,)
 
-        for type_matcher in type_matchers:
-            if type_matcher in true_type_matchers:
-                return True
-        return False
+        return any(type_matcher in true_type_matchers for type_matcher in type_matchers)
 
     return new_is_type

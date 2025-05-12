@@ -151,17 +151,17 @@ class CliTest(unittest.TestCase):
         with (
             patch("streamlit.url_util.is_url", return_value=False),
             patch("os.path.exists", return_value=True),
+            patch("streamlit.web.cli._main_run") as mock_main_run,
         ):
-            with patch("streamlit.web.cli._main_run") as mock_main_run:
-                result = self.runner.invoke(
-                    cli,
-                    [
-                        "run",
-                        "some script.py",
-                        "argument with space",
-                        "argument with another space",
-                    ],
-                )
+            result = self.runner.invoke(
+                cli,
+                [
+                    "run",
+                    "some script.py",
+                    "argument with space",
+                    "argument with another space",
+                ],
+            )
         mock_main_run.assert_called_once()
         positional_args = mock_main_run.call_args[0]
         self.assertEqual(positional_args[0], "some script.py")

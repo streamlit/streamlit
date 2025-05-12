@@ -563,7 +563,7 @@ class ArrowMixin:
         if use_container_width is None:
             # If use_container_width was not explicitly set by the user, we set
             # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = True if width is None else False
+            use_container_width = width is None
 
         proto.use_container_width = use_container_width
 

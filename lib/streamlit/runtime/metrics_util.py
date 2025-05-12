@@ -487,7 +487,7 @@ def create_page_profile_message(
     # Collect all config options that have been manually set
     config_options: set[str] = set()
     if config._config_options:
-        for option_name in config._config_options.keys():
+        for option_name in config._config_options:
             if not config.is_manually_set(option_name):
                 # We only care about manually defined options
                 continue

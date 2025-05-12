@@ -456,10 +456,7 @@ class PydeckMixin:
 
         ctx = get_script_run_ctx()
 
-        if pydeck_obj is None:
-            spec = json.dumps(EMPTY_MAP)
-        else:
-            spec = pydeck_obj.to_json()
+        spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
         pydeck_proto.json = spec
         pydeck_proto.use_container_width = use_container_width

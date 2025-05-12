@@ -66,7 +66,7 @@ def show_config(
     def append_setting(text):
         out.append(cli_util.style_for_cli(text, fg="green"))
 
-    for section in section_descriptions.keys():
+    for section in section_descriptions:
         # We inject a fake config section used for unit tests that we exclude here as
         # its options are often missing required properties, which confuses the code
         # below.

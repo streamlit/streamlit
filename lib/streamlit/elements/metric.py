@@ -223,13 +223,13 @@ def _parse_label(label: str) -> str:
 def _parse_value(value: Value) -> str:
     if value is None:
         return "—"
-    if isinstance(value, int) or isinstance(value, float) or isinstance(value, str):
+    if isinstance(value, (int, float, str)):
         return str(value)
-    elif hasattr(value, "item"):
+    if hasattr(value, "item"):
         # Add support for numpy values (e.g. int16, float64, etc.)
         try:
             # Item could also be just a variable, so we use try, except
-            if isinstance(value.item(), float) or isinstance(value.item(), int):
+            if isinstance(value.item(), (float, int)):
                 return str(value.item())
         except Exception:  # noqa: S110
             # If the numpy item is not a valid value, the TypeError below will be raised.
@@ -247,14 +247,13 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    elif isinstance(delta, int) or isinstance(delta, float):
+    if isinstance(delta, (int, float)):
         return str(delta)
-    else:
-        raise TypeError(
-            f"'{delta}' is of type {type(delta)}, which is not an accepted type."
-            " delta only accepts: int, float, str, or None."
-            " Please convert the value to an accepted type."
-        )
+    raise TypeError(
+        f"'{delta}' is of type {type(delta)}, which is not an accepted type."
+        " delta only accepts: int, float, str, or None."
+        " Please convert the value to an accepted type."
+    )
 
 
 def _determine_delta_color_and_direction(

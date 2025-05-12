@@ -36,7 +36,7 @@ from tests.streamlit.element_mocks import (
 )
 
 
-def get_version():
+def get_version() -> str | None:
     """Get version by parsing out setup.py."""
     dirname = os.path.dirname(__file__)
     base_dir = os.path.abspath(os.path.join(dirname, "../.."))
@@ -45,6 +45,7 @@ def get_version():
         m = pattern.match(line)
         if m:
             return m.group("version")
+    return None
 
 
 # Commands that don't result in rendered elements in the frontend

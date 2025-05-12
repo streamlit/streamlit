@@ -1668,10 +1668,11 @@ def repr_(self: object) -> str:
 
     reprs = []
     for field_name, value in fields_vals:
-        if isinstance(value, dict):
-            line = f"{field_name}={format_dict(value)}"
-        else:
-            line = f"{field_name}={value!r}"
+        line = (
+            f"{field_name}={format_dict(value)}"
+            if isinstance(value, dict)
+            else f"{field_name}={value!r}"
+        )
         reprs.append(line)
 
     reprs[0] = "\n" + reprs[0]

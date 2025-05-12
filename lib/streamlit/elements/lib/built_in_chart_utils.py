@@ -861,17 +861,14 @@ def _get_x_encoding(
         # Only show a label in the x axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
-        if x_from_user is None:
-            x_title = ""
-        else:
-            x_title = x_column
+        x_title = "" if x_from_user is None else x_column
 
     # User specified x-axis label takes precedence
     if x_axis_label is not None:
         x_title = x_axis_label
 
     # grid lines on x axis for horizontal bar charts only
-    grid = True if chart_type == ChartType.HORIZONTAL_BAR else False
+    grid = chart_type == ChartType.HORIZONTAL_BAR
 
     return alt.X(
         x_field,
@@ -909,17 +906,14 @@ def _get_y_encoding(
         # Only show a label in the y axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
-        if y_from_user is None:
-            y_title = ""
-        else:
-            y_title = y_column
+        y_title = "" if y_from_user is None else y_column
 
     # User specified y-axis label takes precedence
     if y_axis_label is not None:
         y_title = y_axis_label
 
     # grid lines on y axis for all charts except horizontal bar charts
-    grid = False if chart_type == ChartType.HORIZONTAL_BAR else True
+    grid = chart_type != ChartType.HORIZONTAL_BAR
 
     return alt.Y(
         field=y_field,
@@ -986,10 +980,11 @@ def _get_color_encoding(
     if color_column is not None:
         column_type: VegaLiteType
 
-        if color_column == _MELTED_COLOR_COLUMN_NAME:
-            column_type = "nominal"
-        else:
-            column_type = _infer_vegalite_type(df[color_column])
+        column_type = (
+            "nominal"
+            if color_column == _MELTED_COLOR_COLUMN_NAME
+            else _infer_vegalite_type(df[color_column])
+        )
 
         color_enc = alt.Color(
             field=color_column, legend=_COLOR_LEGEND_SETTINGS, type=column_type

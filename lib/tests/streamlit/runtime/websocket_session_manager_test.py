@@ -114,11 +114,11 @@ class WebsocketSessionManagerTests(unittest.TestCase):
 
     def test_connect_session_explodes_if_ID_collission(self):
         session_id = self.connect_session()
-        with pytest.raises(AssertionError):
-            with patch(
-                "streamlit.runtime.app_session.uuid.uuid4", return_value=session_id
-            ):
-                self.connect_session()
+        with (
+            pytest.raises(AssertionError),
+            patch("streamlit.runtime.app_session.uuid.uuid4", return_value=session_id),
+        ):
+            self.connect_session()
 
     @patch(
         "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",

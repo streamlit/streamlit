@@ -728,15 +728,12 @@ def _server_headless() -> bool:
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
     (2) we are running in the Streamlit Atom plugin.
     """
-    if (
+    # Check if we are running in Linux and DISPLAY is unset
+    return (
         env_util.IS_LINUX_OR_BSD
         and not os.getenv("DISPLAY")
         and not os.getenv("WAYLAND_DISPLAY")
-    ):
-        # We're running in Linux and DISPLAY is unset
-        return True
-
-    return False
+    )
 
 
 _create_option(
@@ -1629,10 +1626,11 @@ def _check_conflicts() -> None:
         )
 
     # XSRF conflicts
-    if get_option("server.enableXsrfProtection"):
-        if not get_option("server.enableCORS") or get_option("global.developmentMode"):
-            LOGGER.warning(
-                """
+    if get_option("server.enableXsrfProtection") and (
+        not get_option("server.enableCORS") or get_option("global.developmentMode")
+    ):
+        LOGGER.warning(
+            """
 Warning: the config option 'server.enableCORS=false' is not compatible with
 'server.enableXsrfProtection=true'.
 As a result, 'server.enableCORS' is being overridden to 'true'.
@@ -1644,7 +1642,7 @@ cross-origin resource sharing.
 
 If cross origin resource sharing is required, please disable server.enableXsrfProtection.
             """
-            )
+        )
 
 
 def _set_development_mode() -> None:

@@ -69,6 +69,7 @@ select = [
   "Q",     # Linting rules for quotes.
   "RUF",   # Ruff specific rules.
   "S",     # Linting rules to enforce secure code.
+  "SIM",   # Checks for code that can be simplified.
   "SLOT",  # Enforces usage of slots.
   "T10",   # Check for debugger statements.
   "T20",   # Check for Print statements in python files.
@@ -121,6 +122,11 @@ ignore = [
   "TRY003",  # Checks for exception messages that are not defined in the exception class itself.
   "TRY300",  # Checks for return statements in try blocks.
   "ANN401",  # Checks that `any` is not used as an annotation.
+  "SIM105",  # Enforces use of contextlib.suppress.
+  "SIM108",  # Enforces ternary operators instead of if-else.
+  "SIM115",  # Enforces context manager for opening files.
+  "SIM117",  # Enforces single with statement with multiple contexts.
+  "SIM905",  # Enforces list instead of st.split.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:

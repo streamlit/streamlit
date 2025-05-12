@@ -302,9 +302,11 @@ def test_select_slider_enum_coercion():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        with pytest.raises(AssertionError):
-            test_enum()  # expect a failure with the config value off.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()  # expect a failure with the config value off.
 
 
 def test_select_slider_enum_coercion_multivalue():
@@ -336,9 +338,11 @@ def test_select_slider_enum_coercion_multivalue():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        with pytest.raises(AssertionError):
-            test_enum()  # expect a failure with the config value off.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()  # expect a failure with the config value off.
 
 
 class SelectSliderWidthTest(DeltaGeneratorTestCase):

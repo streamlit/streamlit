@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import unittest
@@ -59,15 +60,11 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         the_globals = globals()
 
         for name in modules:
-            try:
+            with contextlib.suppress(Exception):
                 del sys.modules[the_globals[name].__name__]
-            except Exception:
-                pass
 
-            try:
+            with contextlib.suppress(Exception):
                 del sys.modules[name]
-            except Exception:
-                pass
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_just_script(self, fob):

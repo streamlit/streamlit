@@ -80,7 +80,7 @@ class SnowparkConnectionTest(unittest.TestCase):
     def test_error_if_missing_required_conn_params(self):
         with pytest.raises(StreamlitAPIException) as e:
             SnowparkConnection("my_snowpark_connection", user="my_user")
-        assert "Missing Snowpark connection param: account" == str(e.value)
+        assert str(e.value) == "Missing Snowpark connection param: account"
 
     @patch(
         "streamlit.connections.snowpark_connection.SnowparkConnection._connect",

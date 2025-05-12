@@ -193,20 +193,20 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAuthError) as ex:
             st.login("invalid-provider")
 
-        assert (
+        assert str(ex.exception) == (
             "Authentication credentials in `.streamlit/secrets.toml` are missing for the "
             'authentication provider "invalid-provider". Please check your configuration.'
-        ) == str(ex.exception)
+        )
 
     def test_user_login_with_provider_with_underscore(self):
         """Test that st.login raise exception for provider containing underscore."""
         with self.assertRaises(StreamlitAuthError) as ex:
             st.login("invalid_provider")
 
-        assert (
+        assert str(ex.exception) == (
             """Auth provider name "invalid_provider" contains an underscore. """
             """Please use a provider name without underscores."""
-        ) == str(ex.exception)
+        )
 
     def test_user_login_redirect_uri_missing(self):
         """Tests that an error is raised if the redirect uri is missing"""
@@ -220,8 +220,11 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
             with self.assertRaises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "redirect_uri" key. Please check your configuration.""" == str(ex.exception)
+            assert (
+                str(ex.exception)
+                == """Authentication credentials in `.streamlit/secrets.toml` are missing the
+            "redirect_uri" key. Please check your configuration."""
+            )
 
     def test_user_login_cookie_secret_missing(self):
         """Tests that an error is raised if the cookie secret is missing in secrets.toml"""
@@ -240,9 +243,10 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
             with self.assertRaises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "cookie_secret" key. Please check your configuration.""" == str(
-                ex.exception
+            assert (
+                str(ex.exception)
+                == """Authentication credentials in `.streamlit/secrets.toml` are missing the
+            "cookie_secret" key. Please check your configuration."""
             )
 
     def test_user_login_required_fields_missing(self):
@@ -263,12 +267,12 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
             with self.assertRaises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert (
+            assert str(ex.exception) == (
                 "Authentication credentials in `.streamlit/secrets.toml` for the "
                 'authentication provider "google" are missing the following keys: '
                 "['client_id', 'client_secret', 'server_metadata_url']. Please check your "
                 "configuration."
-            ) == str(ex.exception)
+            )
 
     def test_user_logout(self):
         """Test that st.logout sends correct proto message."""

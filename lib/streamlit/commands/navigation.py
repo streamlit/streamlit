@@ -311,10 +311,7 @@ def _navigation(
     # Build the pagehash-to-pageinfo mapping.
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
-            if isinstance(page._page, Path):
-                script_path = str(page._page)
-            else:
-                script_path = ""
+            script_path = str(page._page) if isinstance(page._page, Path) else ""
 
             script_hash = page._script_hash
             if script_hash in pagehash_to_pageinfo:
