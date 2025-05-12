@@ -111,7 +111,7 @@
     "styletron-react": "^6.1.0",
     "typed-signals": "^3.0.0",
     "unist-util-visit": "^5.0.0",
-    "urlpattern-polyfill": "^10.0.0",
+    "urlpattern-polyfill": "^10.1.0",
     "uuid": "^11.1.0",
     "vega": "^5.33.0",
     "vega-embed": "^6.29.0",
