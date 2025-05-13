@@ -84,7 +84,7 @@
     "@vitejs/plugin-react-swc": "^3.6.0",
     "axios-mock-adapter": "^2.1.0",
     "buffer": "^6.0.3",
-    "chrome-launcher": "^1.1.2",
+    "chrome-launcher": "^1.2.0",
     "eslint": "^8.33.0",
     "eslint-config-airbnb-typescript": "^18.0.0",
     "eslint-config-prettier": "^10.1.5",
