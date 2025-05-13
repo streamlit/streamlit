@@ -590,6 +590,7 @@ class ImageCompareFunction(Protocol):
         pixel_threshold: float = 0.05,
         name: str | None = None,
         fail_fast: bool = False,
+        style: str | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -665,7 +666,9 @@ def output_folder(pytestconfig: Any) -> Path:
 
 @pytest.fixture(scope="function")
 def assert_snapshot(
-    request: FixtureRequest, output_folder: Path, pytestconfig: Any
+    request: FixtureRequest,
+    output_folder: Path,
+    pytestconfig: Any,
 ) -> Generator[ImageCompareFunction, None, None]:
     """Fixture that compares a screenshot with screenshot from a past run."""
 
@@ -711,6 +714,7 @@ def assert_snapshot(
         name: str | None = None,
         fail_fast: bool = False,
         file_type: Literal["png", "jpg"] = "png",
+        style: str | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -740,12 +744,14 @@ def assert_snapshot(
         if file_type == "jpg":
             file_extension = ".jpg"
             img_bytes = element.screenshot(
-                type="jpeg", quality=90, animations="disabled"
+                type="jpeg", quality=90, animations="disabled", style=style
             )
 
         else:
             file_extension = ".png"
-            img_bytes = element.screenshot(type="png", animations="disabled")
+            img_bytes = element.screenshot(
+                type="png", animations="disabled", style=style
+            )
 
         snapshot_file_name: str = snapshot_default_file_name
         if name:

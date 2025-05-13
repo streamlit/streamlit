@@ -23,8 +23,10 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.cursor import make_delta_path
 from streamlit.elements.media import MediaData
+from streamlit.errors import StreamlitInvalidWidthError
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class MockMediaKind(Enum):
@@ -93,3 +95,139 @@ class MediaTest(DeltaGeneratorTestCase):
                     str(make_delta_path(RootContainer.MAIN, (), 0)),
                 )
                 self.assertEqual("https://mockoutputurl.com", element_url)
+
+    def test_audio_width_config_default(self):
+        """Test that default width is 'stretch' for audio."""
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.audio("foo.wav", "audio/wav")
+            c = self.get_delta_from_queue().new_element.audio
+
+            self.assertEqual(
+                c.width_config.WhichOneof("width_spec"),
+                WidthConfigFields.USE_STRETCH.value,
+            )
+            self.assertTrue(c.width_config.use_stretch)
+
+    def test_video_width_config_default(self):
+        """Test that default width is 'stretch' for video."""
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.video("foo.mp4", "video/mp4")
+            c = self.get_delta_from_queue().new_element.video
+
+            self.assertEqual(
+                c.width_config.WhichOneof("width_spec"),
+                WidthConfigFields.USE_STRETCH.value,
+            )
+            self.assertTrue(c.width_config.use_stretch)
+
+    def test_audio_width_config_pixel(self):
+        """Test that pixel width works properly for audio."""
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.audio("foo.wav", "audio/wav", width=200)
+            c = self.get_delta_from_queue().new_element.audio
+
+            self.assertEqual(
+                c.width_config.WhichOneof("width_spec"),
+                WidthConfigFields.PIXEL_WIDTH.value,
+            )
+            self.assertEqual(c.width_config.pixel_width, 200)
+
+    def test_video_width_config_pixel(self):
+        """Test that pixel width works properly for video."""
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.video("foo.mp4", "video/mp4", width=200)
+            c = self.get_delta_from_queue().new_element.video
+
+            self.assertEqual(
+                c.width_config.WhichOneof("width_spec"),
+                WidthConfigFields.PIXEL_WIDTH.value,
+            )
+            self.assertEqual(c.width_config.pixel_width, 200)
+
+    def test_audio_width_config_stretch(self):
+        """Test that 'stretch' width works properly for audio."""
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.audio("foo.wav", "audio/wav", width="stretch")
+            c = self.get_delta_from_queue().new_element.audio
+
+            self.assertEqual(
+                c.width_config.WhichOneof("width_spec"),
+                WidthConfigFields.USE_STRETCH.value,
+            )
+            self.assertTrue(c.width_config.use_stretch)
+
+    def test_video_width_config_stretch(self):
+        """Test that 'stretch' width works properly for video."""
+        with (
+            mock.patch(
+                "streamlit.runtime.media_file_manager.MediaFileManager.add"
+            ) as mock_mfm_add,
+            mock.patch("streamlit.runtime.caching.save_media_data"),
+        ):
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            st.video("foo.mp4", "video/mp4", width="stretch")
+            c = self.get_delta_from_queue().new_element.video
+
+            self.assertEqual(
+                c.width_config.WhichOneof("width_spec"),
+                WidthConfigFields.USE_STRETCH.value,
+            )
+            self.assertTrue(c.width_config.use_stretch)
+
+    @parameterized.expand(
+        [
+            ("invalid",),
+            (-100,),
+            (0,),
+            (100.5,),
+            (None,),
+        ]
+    )
+    def test_audio_invalid_width(self, width):
+        """Test that invalid width values raise exceptions for audio."""
+        with self.assertRaises(StreamlitInvalidWidthError):
+            st.audio("foo.wav", "audio/wav", width=width)
+
+    @parameterized.expand(
+        [
+            ("invalid",),
+            (-100,),
+            (0,),
+            (100.5,),
+            (None,),
+        ]
+    )
+    def test_video_invalid_width(self, width):
+        """Test that invalid width values raise exceptions for video."""
+        with self.assertRaises(StreamlitInvalidWidthError):
+            st.video("foo.mp4", "video/mp4", width=width)

@@ -47,3 +47,6 @@ if st.button("Create some elements to unmount component"):
         time.sleep(1)
         st.write("Another element")
 st.audio(url2, autoplay=autoplay)
+
+st.audio(url2, width=300)
+st.audio(url2, width="stretch")

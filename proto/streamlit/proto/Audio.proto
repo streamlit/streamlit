@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "AudioProto";
 
+import "streamlit/proto/WidthConfig.proto";
+
 message Audio {
   string url = 5;
 
@@ -34,6 +36,8 @@ message Audio {
   bool autoplay = 8;
 
   string id = 9;
+
+  optional streamlit.WidthConfig width_config = 10;
 
   reserved 1, 2, 4;
   reserved "data", "format";
