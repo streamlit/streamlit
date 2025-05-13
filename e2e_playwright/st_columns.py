@@ -69,6 +69,12 @@ with st.expander("Column gap large", expanded=True):
     c11.image(BLACK_IMG)
     c12.image(BLACK_IMG)
 
+with st.expander("Column gap none", expanded=True):
+    c13, c14, c15 = st.columns(3, gap="none")
+    c13.image(BLACK_IMG)
+    c14.image(BLACK_IMG)
+    c15.image(BLACK_IMG)
+
 with st.expander("Nested columns - one level", expanded=True):
     col1, col2 = st.columns(2)
     with col1:

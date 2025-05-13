@@ -184,7 +184,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: Literal["small", "medium", "large"] = "small",
+        gap: Literal["small", "medium", "large", "none"] = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
     ) -> list[DeltaGenerator]:
@@ -213,7 +213,7 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "small", "medium", or "large"
+        gap : "small", "medium", "large", or "none"
             The size of the gap between the columns. The default is ``"small"``.
 
         vertical_alignment : "top", "center", or "bottom"
@@ -359,11 +359,12 @@ class LayoutsMixin:
                 "small": GapSize.SMALL,
                 "medium": GapSize.MEDIUM,
                 "large": GapSize.LARGE,
+                "none": GapSize.NONE,
             }
 
             if isinstance(gap, str):
                 gap_size = gap.lower()
-                valid_sizes = ["small", "medium", "large"]
+                valid_sizes = gap_mapping.keys()
 
                 if gap_size in valid_sizes:
                     return gap_mapping[gap_size]

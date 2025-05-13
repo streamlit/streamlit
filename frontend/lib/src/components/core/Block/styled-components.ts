@@ -32,6 +32,8 @@ function translateGapWidth(
     gapWidth = theme.spacing.threeXL
   } else if (gap === streamlit.GapSize.LARGE) {
     gapWidth = theme.spacing.fourXL
+  } else if (gap === streamlit.GapSize.NONE) {
+    gapWidth = theme.spacing.none
   }
   return gapWidth
 }
@@ -99,7 +101,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
-    const width = `calc(${percentage}% - ${gapWidth})`
+    const width =
+      gapWidth === theme.spacing.none
+        ? `${percentage}%`
+        : `calc(${percentage}% - ${gapWidth})`
 
     return {
       // Calculate width based on percentage, but fill all available space,

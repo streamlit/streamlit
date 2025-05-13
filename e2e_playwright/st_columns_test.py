@@ -105,6 +105,19 @@ def test_column_gap_large_is_correctly_applied(
     assert_snapshot(column_gap_large, name="st_columns-column_gap_large")
 
 
+def test_column_gap_none_is_correctly_applied(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the none column gap is correctly applied."""
+    column_gap_none = (
+        get_expander(app, "Column gap none").get_by_test_id("stHorizontalBlock").nth(0)
+    )
+    # We use regex here since some browsers may resolve this to two numbers:
+    expect(column_gap_none).to_have_css("gap", re.compile("0px"))
+    column_gap_none.scroll_into_view_if_needed()
+    assert_snapshot(column_gap_none, name="st_columns-column_gap_none")
+
+
 def test_one_level_nesting_works_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

@@ -18,7 +18,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import FragmentHandledException, StreamlitAPIException
+from streamlit.errors import (
+    FragmentHandledException,
+    StreamlitAPIException,
+    StreamlitInvalidColumnGapError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -233,6 +237,52 @@ class ColumnsTest(DeltaGeneratorTestCase):
                 col_block.add_block.column.gap_config.gap_size,
                 GapSize.LARGE,
             )
+
+    def test_columns_with_none_gap(self):
+        """Test that it works correctly with "none" gap argument"""
+
+        st.columns(3, gap="none")
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        # 4 elements will be created: 1 horizontal block, 3 columns, each receives
+        # "none" gap arg
+        self.assertTrue(
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "gap_size"
+        )
+        self.assertEqual(
+            horizontal_container.add_block.flex_container.gap_config.gap_size,
+            GapSize.NONE,
+        )
+
+        for col_block in columns_blocks:
+            self.assertTrue(
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "gap_size"
+            )
+            self.assertEqual(
+                col_block.add_block.column.gap_config.gap_size,
+                GapSize.NONE,
+            )
+
+    @parameterized.expand(
+        [
+            "invalid",
+            5,
+            "5rem",
+            "10px",
+        ]
+    )
+    def test_columns_with_invalid_gap(self, invalid_gap):
+        """Test that it throws an error on invalid gap argument"""
+        with self.assertRaises(StreamlitInvalidColumnGapError):
+            st.columns(3, gap=invalid_gap)
 
     def test_columns_with_border(self):
         """Test that it works correctly with border argument"""

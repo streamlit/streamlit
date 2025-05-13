@@ -245,7 +245,7 @@ class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
 
     def __init__(self, gap: str) -> None:
         super().__init__(
-            'The `gap` argument to `st.columns` must be `"small"`, `"medium"`, or `"large"`. \n'
+            'The `gap` argument to `st.columns` must be `"small"`, `"medium"`, `"large"`, or `"none"`. \n'
             "The argument passed was {gap}.",
             gap=gap,
         )
