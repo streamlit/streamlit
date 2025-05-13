@@ -132,8 +132,9 @@
   ],
   "devDependencies": {
     "@swc/plugin-emotion": "^3.0.9",
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^14.1.2",
+    "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/d3": "^7.4.3",
     "@types/d3-graphviz": "^2.6.10",

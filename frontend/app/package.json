@@ -60,8 +60,9 @@
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^1.49.0",
     "@swc/plugin-emotion": "^3.0.9",
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^14.1.2",
+    "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/eslint": "~8.56.12",
     "@types/eslint-plugin-jsx-a11y": "~6.10.0",
