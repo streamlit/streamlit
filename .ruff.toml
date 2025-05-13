@@ -43,6 +43,7 @@ select = [
   "D",     # Check docstrings.
   "E",     # pycodestyle errors
   "ERA",   # Checks for commented out code.
+  "EXE",   # Checks executable permissions and shebangs.
   "F",     # pyflakes
   "FA",    # Verifies files use from __future__ import annotations if a type is used in the module that can be rewritten using PEP 563.
   "FIX",   # Only allow todo comments in the codebase.
@@ -82,14 +83,10 @@ select = [
   "YTT",   # Checks wrong usage of sys.version / sys.version_info.
 ]
 ignore = [
-  "B008",    # Checks for function calls in default function arguments.
   "B904",    # Checks for raise statements in exception handlers that lack a from clause.
-  "ISC001",  # Checks for implicitly concatenated strings on a single line.
-  "NPY002",  # Checks for the use of legacy np.random function calls.
   "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
   "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
   "UP031",   # Checks for printf-style string formatting, and offers to replace it with str.format calls.
-  "PLC0208", # Checks for iterations over set literals.
   "G004",    # Checks for usage of f-strings in logging messages.
   "PD901",   # Checks for usage of `df` variable name.
   "PIE790",  # Checks for unnecessary pass statements.
@@ -132,11 +129,21 @@ exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
   "lib/streamlit/vendor/**",
 ]
+extend-safe-fixes = ["TC002", "TC003"]
 
 [lint.per-file-ignores]
-"e2e_playwright/**" = ["T20", "B018", "PD", "PERF", "N999", "S", "TRY"]
-"lib/streamlit/__init__.py" = ["E402", "PLC0414", "A001"]
-"lib/setup.py" = ["INP"]
+# Only add ignores for entire folders here. To ignore rules in individual
+# files, use the noqa ignore comment on top of the given file.
+"e2e_playwright/**" = [
+  "T20",
+  "B018",
+  "PD",
+  "PERF",
+  "N999",
+  "S",
+  "TRY",
+  "NPY002",
+]
 "lib/tests/**" = [
   "PD",
   "D",
@@ -148,6 +155,7 @@ exclude = [
   "TRY",
   "E501",
   "ANN",
+  "NPY002",
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
 

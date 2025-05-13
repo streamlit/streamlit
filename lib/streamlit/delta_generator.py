@@ -522,9 +522,12 @@ class DeltaGenerator(
 
     def _block(
         self,
-        block_proto: Block_pb2.Block = Block_pb2.Block(),
+        block_proto: Block_pb2.Block | None = None,
         dg_type: type | None = None,
     ) -> DeltaGenerator:
+        if block_proto is None:
+            block_proto = Block_pb2.Block()
+
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
 

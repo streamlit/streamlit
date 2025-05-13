@@ -26,17 +26,24 @@ _LOGGER: Final = get_logger(__name__)
 
 
 def _print_rich_exception(e: BaseException) -> None:
-    from rich import box, panel
+    from rich.box import Box
+    from rich.panel import Panel
 
     # Monkey patch the panel to use our custom box style
-    class ConfigurablePanel(panel.Panel):
+    class ConfigurablePanel(Panel):
         def __init__(
             self,
             renderable: Any,
-            box: box.Box = box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
+            box: Box | None = None,
             **kwargs: Any,
         ) -> None:
-            super().__init__(renderable, box, **kwargs)
+            super().__init__(
+                renderable,
+                box
+                if box is not None
+                else Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
+                **kwargs,
+            )
 
     from rich import traceback as rich_traceback
 
