@@ -96,7 +96,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.0.0-beta-40c6c23-20250301",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-hooks": "^6.0.0-rc.1",
     "eslint-plugin-streamlit-custom": "workspace:^",
     "eslint-plugin-testing-library": "^7.2.0",
     "eslint-plugin-vitest": "^0.5.4",

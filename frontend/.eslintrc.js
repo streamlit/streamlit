@@ -33,7 +33,8 @@ module.exports = {
     // Uses the recommended rules from the @typescript-eslint/eslint-plugin
     "plugin:@typescript-eslint/recommended",
     // Uses the recommended rules from react-hooks
-    "plugin:react-hooks/recommended",
+    // @see https://react.dev/learn/editor-setup#linting
+    "plugin:react-hooks/recommended-legacy",
     "plugin:import/recommended",
     "plugin:import/typescript",
     // Enables eslint-plugin-prettier and eslint-config-prettier.

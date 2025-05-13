@@ -62,9 +62,6 @@ updates:
       - dependency-name: "eslint"
         # It will take a bit more work to get this updated
         versions: [">=9.0.0"]
-      - dependency-name: "eslint-plugin-react-hooks"
-        # Requires eslint update
-        versions: [">=5.0.0"]
       - dependency-name: "@typescript-eslint/parser"
         # Requires eslint update
         versions: [">=8.0.0"]
