@@ -764,3 +764,33 @@ st.dataframe(
     hide_index=True,
     use_container_width=False,
 )
+
+st.header("Localized Date/Number Formatting:")
+
+st.dataframe(
+    data=pd.DataFrame(
+        {
+            "Name": ["John", "Jane", "Jim", "Jill"],
+            "Percent": [0.5, 0.6, 0.7, 0.8],
+            "Salary": [50000, 54000, 58000, 62000],
+            "appointment": [
+                datetime.datetime(2024, 2, 5, 12, 30),
+                datetime.datetime(2023, 11, 10, 18, 0),
+                datetime.datetime(2024, 3, 11, 20, 10),
+                datetime.datetime(2023, 9, 12, 3, 0),
+            ],
+        }
+    ),
+    column_config={
+        "Name": st.column_config.TextColumn("Name"),
+        "Percent": st.column_config.NumberColumn("Percent", format="localized"),
+        "Salary": st.column_config.NumberColumn("Salary", format="localized"),
+        "appointment": st.column_config.DatetimeColumn(
+            "Appointment",
+            min_value=datetime.datetime(2023, 6, 1),
+            max_value=datetime.datetime(2025, 1, 1),
+            format="localized",
+            step=60,
+        ),
+    },
+)

@@ -34,7 +34,7 @@ def test_dataframe_supports_various_configurations(
 ):
     """Screenshot test that st.dataframe supports various configuration options."""
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(29)
+    expect(dataframe_elements).to_have_count(30)
 
     # The dataframe component might require a bit more time for rendering the canvas
     themed_app.wait_for_timeout(250)
@@ -70,6 +70,8 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(26), name="st_dataframe-number_formatting")
     assert_snapshot(dataframe_elements.nth(27), name="st_dataframe-datetime_formatting")
     assert_snapshot(dataframe_elements.nth(28), name="st_dataframe-json_column")
+    # 29th is the localized date/number formatting test - screenshot taken separately
+    # below so that the set locale doesn't impact other tests/screenshots
 
 
 def test_check_top_level_class(app: Page):
@@ -258,3 +260,16 @@ def test_changing_column_order_from_code_updates_ui(
 
     # Verify that the column order has changed:
     assert_snapshot(dataframe_element, name="st_dataframe-column_order_changed")
+
+
+# Issue #11291 - st.column_config 'localized' option
+@pytest.mark.browser_context_args(locale="pt-BR")
+def test_localized_date_and_number_formatting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the localized date and number formatting works correctly."""
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(29)
+    expect_canvas_to_be_visible(dataframe_element)
+    assert_snapshot(
+        dataframe_element, name="st_dataframe-localized_date_and_number_formatting"
+    )
