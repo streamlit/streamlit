@@ -1,6 +1,6 @@
 pre-commit
 # We fix ruff to a version to be in sync with the pre-commit hook:
-ruff==0.11.8
+ruff==0.11.9
 # as soon as the error reported in https://github.com/python/mypy/issues/17604
 # is released for mypy, we can update to version 1.11
 mypy>=1.4, <1.11
