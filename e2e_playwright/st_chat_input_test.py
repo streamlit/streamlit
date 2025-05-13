@@ -42,14 +42,16 @@ def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input_widgets = app.get_by_test_id("stChatInput")
-    expect(chat_input_widgets).to_have_count(6)
+    expect(chat_input_widgets).to_have_count(8)
 
     assert_snapshot(chat_input_widgets.nth(0), name="st_chat_input-inline")
     assert_snapshot(chat_input_widgets.nth(1), name="st_chat_input-in_column_disabled")
     assert_snapshot(chat_input_widgets.nth(2), name="st_chat_input-callback")
     assert_snapshot(chat_input_widgets.nth(3), name="st_chat_input-single-file")
     assert_snapshot(chat_input_widgets.nth(4), name="st_chat_input-multiple-files")
-    assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-bottom")
+    assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-width_300px")
+    assert_snapshot(chat_input_widgets.nth(6), name="st_chat_input-width_stretch")
+    assert_snapshot(chat_input_widgets.nth(7), name="st_chat_input-bottom")
 
 
 def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunction):
@@ -61,7 +63,7 @@ def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunctio
         "tincidunt pul vinar. Nam pulvinar neque sapien, eu pellentesque metus pellentesque "
         "at. Ut et dui molestie, iaculis magna sed. This text should not appear in the input."
     )
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(7)
     chat_input_area = chat_input.locator("textarea")
 
     chat_input_area.type(long_text)
@@ -132,7 +134,7 @@ def test_submit_hover_state_with_input_value(
     """Test the submit button's hover state when input value is present."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(7)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.type("Corgi")
 
@@ -145,16 +147,16 @@ def test_enter_submits_clears_input(app: Page):
     """Test that pressing Enter submits and clears the input."""
     markdown_output = app.get_by_test_id("stMarkdown").nth(5)
     expect(markdown_output).to_have_text(
-        "Chat input 6 (bottom, max_chars) - value: None"
+        "Chat input 8 (bottom, max_chars) - value: None"
     )
 
-    chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(5)
+    chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(7)
     chat_input_area.type("Corgi")
     chat_input_area.press("Enter")
     expect(chat_input_area).to_have_value("")
 
     expect(markdown_output).to_have_text(
-        "Chat input 6 (bottom, max_chars) - value: Corgi"
+        "Chat input 8 (bottom, max_chars) - value: Corgi"
     )
 
 
@@ -162,7 +164,7 @@ def test_shift_enter_creates_new_line(app: Page, assert_snapshot: ImageCompareFu
     """Test that Shift+Enter creates a new line."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(7)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.fill("")  # Clear the input first
     chat_input_area.press("Shift+Enter")
@@ -196,7 +198,7 @@ def test_chat_input_focus_state(app: Page, assert_snapshot: ImageCompareFunction
     """Test that st.chat_input renders the focus state correctly."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(7)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.click()
     expect(chat_input_area).to_be_focused()
@@ -207,7 +209,7 @@ def test_grows_shrinks_input_text(app: Page, assert_snapshot: ImageCompareFuncti
     """Test that input grows with long text and shrinks when text is deleted."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(7)
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.type(
         "Lorem ipsum dolor amet, consectetur adipiscing elit. "
@@ -383,7 +385,7 @@ def test_chat_input_adjusts_for_long_placeholder(
     """Test that chat input properly adjusts its height for long placeholder text."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(5)
+    chat_input = app.get_by_test_id("stChatInput").nth(7)
     chat_input_area = chat_input.locator("textarea")
 
     # Take a snapshot of the initial state with the long placeholder

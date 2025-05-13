@@ -23,13 +23,40 @@ def test_renders_chat_messages_correctly_1(
 ):
     """Test if the chat messages render correctly."""
     # Wait a bit more to allow all images to load:
-    chat_message_elements = themed_app.get_by_test_id("stChatMessage")
-    expect(chat_message_elements).to_have_count(18)
+    chat_message_elements = themed_app.get_by_test_id("stLayoutWrapper")
+    expect(chat_message_elements).to_have_count(21)
 
     # rerun to populate session state chat message
     rerun_app(themed_app)
 
-    expect(chat_message_elements).to_have_count(20)
+    expect(chat_message_elements).to_have_count(23)
+
+    descriptive_names = [
+        "user_message",
+        "assistant_message_with_code_snippet",
+        "user_message_with_emoji_avatar",
+        "custom_name_with_url_avatar_and_chart",
+        "custom_name_with_url_avatar_and_dataframe",
+        "custom_name_with_expander",
+        "empty_message_human",
+        "message_with_red_image_avatar",
+        "message_with_blue_image_avatar",
+        "message_with_same_blue_image_avatar",
+        "message_with_cat_str_path_avatar",
+        "message_with_cat_path_avatar",
+        "message_with_material_icon_avatar_airline_seat",
+        "message_with_material_icon_photo_album",
+        "session_state_message_one",
+        "session_state_message_two",
+        "session_state_message_three",
+        "session_state_message_four",
+        "message_with_nested_chat_message",
+        "nested_chat_message -- this is skipped",
+        "message_with_fixed_width",
+        "message_with_content_width",
+        "message_with_stretched_width",
+    ]
+
     for i, element in enumerate(chat_message_elements.all()):
         if i == 19:
             # Ignore the nested inner message
@@ -38,7 +65,7 @@ def test_renders_chat_messages_correctly_1(
         expect(element).to_be_in_viewport()
         # Wait a bit more to allow the avatar images to load:
         themed_app.wait_for_timeout(100)
-        assert_snapshot(element, name=f"st_chat_message-{i}")
+        assert_snapshot(element, name=f"st_chat_message-{descriptive_names[i]}")
 
 
 def test_check_top_level_class(app: Page):

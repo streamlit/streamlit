@@ -23,6 +23,7 @@ import streamlit as st
 from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidWidthError,
     StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -35,6 +36,7 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.type_util import is_custom_dict
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class ChatTest(DeltaGeneratorTestCase):
@@ -313,3 +315,112 @@ class ChatTest(DeltaGeneratorTestCase):
 
         value = st.chat_input("Placeholder", accept_file="multiple")
         self.assertTrue(is_custom_dict(value))
+
+    def test_chat_message_width_config_default(self):
+        """Test that default width is 'stretch' for chat_message."""
+        with st.chat_message("user"):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        self.assertEqual(
+            message_block.add_block.chat_message.width_config.WhichOneof("width_spec"),
+            WidthConfigFields.USE_STRETCH.value,
+        )
+        self.assertTrue(message_block.add_block.chat_message.width_config.use_stretch)
+
+    def test_chat_message_width_config_pixel(self):
+        """Test that pixel width works properly for chat_message."""
+        with st.chat_message("user", width=300):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        self.assertEqual(
+            message_block.add_block.chat_message.width_config.WhichOneof("width_spec"),
+            WidthConfigFields.PIXEL_WIDTH.value,
+        )
+        self.assertEqual(
+            message_block.add_block.chat_message.width_config.pixel_width, 300
+        )
+
+    def test_chat_message_width_config_content(self):
+        """Test that 'content' width works properly for chat_message."""
+        with st.chat_message("user", width="content"):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        self.assertEqual(
+            message_block.add_block.chat_message.width_config.WhichOneof("width_spec"),
+            WidthConfigFields.USE_CONTENT.value,
+        )
+        self.assertTrue(message_block.add_block.chat_message.width_config.use_content)
+
+    def test_chat_message_width_config_stretch(self):
+        """Test that 'stretch' width works properly for chat_message."""
+        with st.chat_message("user", width="stretch"):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        self.assertEqual(
+            message_block.add_block.chat_message.width_config.WhichOneof("width_spec"),
+            WidthConfigFields.USE_STRETCH.value,
+        )
+        self.assertTrue(message_block.add_block.chat_message.width_config.use_stretch)
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_chat_message_invalid_width(self, width):
+        """Test that invalid width values raise exceptions for chat_message."""
+        with self.assertRaises(StreamlitInvalidWidthError):
+            st.chat_message("user", width=width)
+
+    def test_chat_input_width_config_default(self):
+        """Test that default width is 'stretch' for chat_input."""
+        st.chat_input("Placeholder")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        self.assertEqual(
+            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        )
+        self.assertTrue(c.width_config.use_stretch)
+
+    def test_chat_input_width_config_pixel(self):
+        """Test that pixel width works properly for chat_input."""
+        st.chat_input("Placeholder", width=300)
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        self.assertEqual(
+            c.width_config.WhichOneof("width_spec"), WidthConfigFields.PIXEL_WIDTH.value
+        )
+        self.assertEqual(c.width_config.pixel_width, 300)
+
+    def test_chat_input_width_config_stretch(self):
+        """Test that 'stretch' width works properly for chat_input."""
+        st.chat_input("Placeholder", width="stretch")
+
+        c = self.get_delta_from_queue().new_element.chat_input
+        self.assertEqual(
+            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        )
+        self.assertTrue(c.width_config.use_stretch)
+
+    @parameterized.expand(
+        [
+            "invalid",
+            "content",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_chat_input_invalid_width(self, width):
+        """Test that invalid width values raise exceptions for chat_input."""
+        with self.assertRaises(StreamlitInvalidWidthError):
+            st.chat_input("Placeholder", width=width)

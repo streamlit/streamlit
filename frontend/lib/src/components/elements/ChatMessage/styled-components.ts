@@ -27,6 +27,7 @@ export const StyledChatMessageContainer =
   styled.div<StyledChatMessageContainerProps>(({ theme, background }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
+      width: "100%",
       display: "flex",
       alignItems: "flex-start",
       gap: theme.spacing.sm,

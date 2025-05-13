@@ -38,7 +38,7 @@ enum WidthType {
 }
 
 type LayoutWidthConfig = {
-  widthType: WidthType
+  widthType: WidthType | undefined
   pixels?: number | undefined
 }
 
@@ -46,7 +46,7 @@ const getWidth = (element: LayoutElement): LayoutWidthConfig => {
   // This can be simplified once all elements have been updated to use the
   // new width_config message and useContainerWidth is deprecated.
   let pixels: number | undefined
-  let type: WidthType = WidthType.CONTENT
+  let type: WidthType | undefined
 
   const isStretch =
     element.widthConfig && element.widthConfig.widthSpec === "useStretch"
@@ -112,6 +112,10 @@ export const useLayoutStyles = <T>({
     } else if (widthType === WidthType.PIXEL) {
       return {
         width: commandWidth,
+      }
+    } else if (widthType === WidthType.CONTENT) {
+      return {
+        width: "fit-content",
       }
     }
     return {

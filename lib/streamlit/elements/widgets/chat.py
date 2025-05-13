@@ -33,6 +33,11 @@ from streamlit.elements.lib.file_uploader_utils import (
 )
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
+from streamlit.elements.lib.layout_utils import (
+    Width,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
@@ -47,6 +52,7 @@ from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -224,6 +230,7 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Insert a chat message container.
 
@@ -274,6 +281,14 @@ class ChatMixin:
             .. |st.image| replace:: ``st.image``
             .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
+        width: int, "auto", or "stretch"
+            The width of the chat message. This can be one of the following:
+
+            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
+            - ``"auto"``: Expands to fit the content.
+            - ``"stretch"``: The default value. The chat message stretches to fill
+              available space in its container.
+
         Returns
         -------
         Container
@@ -322,10 +337,23 @@ class ChatMixin:
             avatar, self.dg._get_delta_path_str()
         )
 
+        validate_width(width, allow_content=True)
+
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.name = name
         message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
+
+        # Set up width configuration
+        width_config = WidthConfig()
+        if isinstance(width, int):
+            width_config.pixel_width = width
+        elif width == "content":
+            width_config.use_content = True
+        else:
+            width_config.use_stretch = True
+        message_container_proto.width_config.CopyFrom(width_config)
+
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
@@ -345,6 +373,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | None: ...
 
     @overload
@@ -360,6 +389,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> ChatInputValue | None: ...
 
     @gather_metrics("chat_input")
@@ -375,6 +405,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | ChatInputValue | None:
         """Display a chat input widget.
 
@@ -438,6 +469,13 @@ class ChatMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        width: int or "stretch"
+            The width of the chat input widget. This can be one of the following:
+
+            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
+            - ``"stretch"``: The default value. The chat input stretches to fill
+              available space in its container.
 
         Returns
         -------
@@ -546,6 +584,8 @@ class ChatMixin:
             writes_allowed=False,
         )
 
+        validate_width(width)
+
         if accept_file not in {True, False, "multiple"}:
             raise StreamlitAPIException(
                 "The `accept_file` parameter must be a boolean or 'multiple'."
@@ -562,6 +602,7 @@ class ChatMixin:
             max_chars=max_chars,
             accept_file=accept_file,
             file_type=file_type,
+            width=width,
         )
 
         if file_type:
@@ -604,6 +645,13 @@ class ChatMixin:
 
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
+
+        width_config = WidthConfig()
+        if isinstance(width, int):
+            width_config.pixel_width = width
+        else:
+            width_config.use_stretch = True
+        chat_input_proto.width_config.CopyFrom(width_config)
 
         serde = ChatInputSerde(
             accept_files=bool(accept_file),

@@ -86,7 +86,7 @@ describe("#useLayoutStyles", () => {
         [
           new streamlit.WidthConfig({ useContent: true }),
           false,
-          { width: "auto" },
+          { width: "fit-content" },
         ],
         [
           new streamlit.WidthConfig({ useContent: true }),
@@ -168,7 +168,7 @@ describe("#useLayoutStyles", () => {
             width: 100,
             useContainerWidth: false,
           },
-          { width: "auto" },
+          { width: "fit-content" },
         ],
         [
           {

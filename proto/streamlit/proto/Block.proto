@@ -136,6 +136,7 @@ message Block {
     string name = 1;
     string avatar = 2;
     AvatarType avatar_type = 3;
+    optional streamlit.WidthConfig width_config = 4;
   }
 
   // Next ID: 14
