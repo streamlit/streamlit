@@ -692,7 +692,7 @@ class SliderMixin:
         if single_value:
             value = [value]
 
-        def value_to_generic_type(v):
+        def value_to_generic_type(v: Any) -> SliderProto.DataType.ValueType:
             if isinstance(v, Integral):
                 return SUPPORTED_TYPES[Integral]
             if isinstance(v, Real):

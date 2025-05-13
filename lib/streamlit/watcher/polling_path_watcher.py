@@ -82,7 +82,7 @@ class PollingPathWatcher:
         return repr_(self)
 
     def _schedule(self) -> None:
-        def task():
+        def task() -> None:
             time.sleep(_POLLING_PERIOD_SECS)
             self._check_if_path_changed()
 

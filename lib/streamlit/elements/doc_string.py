@@ -283,9 +283,7 @@ def _get_variable_name_from_code_str(code: str) -> str | None:
     ):
         # A common pattern is to add "," at the end of a magic command to make it print.
         # This removes that final ",", so it looks nicer.
-        code = code.removesuffix(",")
-
-        return code
+        return code.removesuffix(",")
 
     arg_node = _get_stcommand_arg(tree)
 
@@ -427,7 +425,7 @@ def _get_weight(value: Any) -> int:
     return 0
 
 
-def _get_value(obj, var_name):
+def _get_value(obj: object, var_name: str | None) -> str | None:
     obj_value = _get_human_readable_value(obj)
 
     if obj_value is not None:
@@ -459,7 +457,7 @@ def _get_value(obj, var_name):
     return obj_value
 
 
-def _get_human_readable_value(value):
+def _get_human_readable_value(value: Any) -> str | None:
     if isinstance(value, Secrets):
         # Don't want to read secrets.toml because that will show a warning if there's no
         # secrets.toml file.
@@ -508,7 +506,7 @@ def _is_computed_property(obj: object, attr_name: str) -> bool:
     return False
 
 
-def _get_members(obj):
+def _get_members(obj: object) -> list[MemberProto]:
     members_for_sorting = []
 
     for attr_name in dir(obj):

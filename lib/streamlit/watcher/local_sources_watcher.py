@@ -150,7 +150,9 @@ class LocalSourcesWatcher:
         self._watched_pages = set()
         self._is_closed = True
 
-    def _register_watcher(self, filepath, module_name, is_directory=False):
+    def _register_watcher(
+        self, filepath: str, module_name: str | None, is_directory: bool = False
+    ) -> None:
         global PathWatcher  # noqa: PLW0603
         if PathWatcher is None:
             PathWatcher = get_default_path_watcher_class()
@@ -179,7 +181,7 @@ class LocalSourcesWatcher:
 
         self._watched_modules[filepath] = wm
 
-    def _deregister_watcher(self, filepath):
+    def _deregister_watcher(self, filepath: str) -> None:
         if filepath not in self._watched_modules:
             return
 
@@ -200,7 +202,7 @@ class LocalSourcesWatcher:
             or file_util.file_in_pythonpath(filepath)
         )
 
-    def update_watched_modules(self):
+    def update_watched_modules(self) -> None:
         if self._is_closed:
             return
 

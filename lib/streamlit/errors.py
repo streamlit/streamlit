@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from streamlit import util
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from datetime import date, time
 
 
@@ -140,7 +141,7 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     instead.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args: Any) -> None:
         super().__init__(*args)
         import inspect
         import traceback
@@ -157,7 +158,7 @@ class StreamlitModuleNotFoundError(StreamlitAPIWarning):
     that is not one of our core dependencies.
     """
 
-    def __init__(self, module_name, *args):
+    def __init__(self, module_name: str, *args: Any) -> None:
         message = (
             f'This Streamlit command requires module "{module_name}" to be installed.'
         )
@@ -220,7 +221,7 @@ class StreamlitInvalidURLError(LocalizableStreamlitException):
 class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
     """Exception raised when no weights are specified, or a negative weight is specified."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "The `spec` argument to `st.columns` must be either a "
             "positive integer (number of columns) or a list of positive numbers (width ratios of the columns). "
@@ -370,7 +371,7 @@ class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
 class StreamlitMissingPageLabelError(LocalizableStreamlitException):
     """Exception raised when a page_link is created without a label."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "The `label` param is required for external links used with `st.page_link` - please provide a `label`."
         )
@@ -409,7 +410,7 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
 class StreamlitFragmentWidgetsNotAllowedOutsideError(LocalizableStreamlitException):
     """Exception raised when the fragment attempts to write to an element outside of its container."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("Fragments cannot write widgets to outside containers.")
 
 
@@ -418,7 +419,7 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
     the `st.form_submit_button`.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "Within a form, callbacks can only be defined on `st.form_submit_button`. "
             "Defining callbacks on other widgets inside a form is not allowed."
@@ -436,7 +437,9 @@ class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
 
 
 class StreamlitInvalidColorError(LocalizableStreamlitException):
-    def __init__(self, color):
+    def __init__(
+        self, color: str | Collection[Any] | tuple[int, int, int, int]
+    ) -> None:
         super().__init__(
             "This does not look like a valid color: {color}.\n\n"
             "Colors must be in one of the following formats:"

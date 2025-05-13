@@ -182,7 +182,7 @@ class _HashStack:
     This causes the "in" to crash since it expects a boolean.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._stack: collections.OrderedDict[int, list[Any]] = collections.OrderedDict()
         # A function that we decorate with streamlit cache
         # primitive (st.cache_data or st.cache_resource).
@@ -213,7 +213,7 @@ class _HashStack:
 class _HashStacks:
     """Stacks of what has been hashed, with at most 1 stack per thread."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._stacks: weakref.WeakKeyDictionary[threading.Thread, _HashStack] = (
             weakref.WeakKeyDictionary()
         )

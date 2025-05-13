@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import tornado.web
 
@@ -26,7 +26,7 @@ from streamlit.web.server.server_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Awaitable, Sequence
 
 
 def allow_cross_origin_requests() -> bool:
@@ -96,25 +96,25 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
 class AddSlashHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
-    def get(self):
+    def get(self) -> None:
         pass
 
 
 class RemoveSlashHandler(tornado.web.RequestHandler):
     @tornado.web.removeslash
-    def get(self):
+    def get(self) -> None:
         pass
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
 
-    def set_default_headers(self):
+    def set_default_headers(self) -> None:
         self.set_header("Cache-Control", "no-cache")
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def options(self):
+    def options(self) -> None:
         """/OPTIONS handler for preflight CORS checks.
 
         When a browser is making a CORS request, it may sometimes first
@@ -136,7 +136,7 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
 
 class HealthHandler(_SpecialRequestHandler):
-    def initialize(self, callback):
+    def initialize(self, callback: Callable[[], Awaitable[tuple[bool, str]]]) -> None:
         """Initialize the handler.
 
         Parameters
@@ -147,15 +147,15 @@ class HealthHandler(_SpecialRequestHandler):
         """
         self._callback = callback
 
-    async def get(self):
+    async def get(self) -> None:
         await self.handle_request()
 
     # Some monitoring services only support the HTTP HEAD method for requests to
     # healthcheck endpoints, so we support HEAD as well to play nicely with them.
-    async def head(self):
+    async def head(self) -> None:
         await self.handle_request()
 
-    async def handle_request(self):
+    async def handle_request(self) -> None:
         if self.request.uri and "_stcore/" not in self.request.uri:
             new_path = (
                 "/_stcore/script-health-check"
@@ -212,7 +212,7 @@ _DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
 
 
 class HostConfigHandler(_SpecialRequestHandler):
-    def initialize(self):
+    def initialize(self) -> None:
         # Make a copy of the allowedOrigins list, since we might modify it later:
         self._allowed_origins = _DEFAULT_ALLOWED_MESSAGE_ORIGINS.copy()
 

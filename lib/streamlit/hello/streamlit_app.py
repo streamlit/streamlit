@@ -20,7 +20,7 @@ dir_path = Path(__file__).parent
 
 
 # Note that this needs to be in a method so we can have an e2e playwright test.
-def run():
+def run() -> None:
     page = st.navigation(
         [
             st.Page(

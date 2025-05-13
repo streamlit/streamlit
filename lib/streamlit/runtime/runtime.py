@@ -313,7 +313,7 @@ class Runtime:
 
         async_objs = self._get_async_objs()
 
-        def stop_on_eventloop():
+        def stop_on_eventloop() -> None:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 

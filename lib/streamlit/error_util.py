@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Any, Final
 
 import streamlit
 from streamlit import config
@@ -32,10 +32,10 @@ def _print_rich_exception(e: BaseException) -> None:
     class ConfigurablePanel(panel.Panel):
         def __init__(
             self,
-            renderable,
-            box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
-            **kwargs,
-        ):
+            renderable: Any,
+            box: box.Box = box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
+            **kwargs: Any,
+        ) -> None:
             super().__init__(renderable, box, **kwargs)
 
     from rich import traceback as rich_traceback

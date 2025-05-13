@@ -23,7 +23,7 @@ import sys
 import requests
 
 
-def send_notification():
+def send_notification() -> None:
     """Create a slack message."""
 
     webhook = os.getenv("SLACK_WEBHOOK")
@@ -92,7 +92,7 @@ def send_notification():
             )
 
 
-def main():
+def main() -> None:
     send_notification()
 
 

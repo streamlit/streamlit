@@ -1651,7 +1651,7 @@ def _set_development_mode() -> None:
 
 def on_config_parsed(
     func: Callable[[], None], force_connect: bool = False, lock: bool = False
-) -> Callable[[], bool]:
+) -> Callable[[], None]:
     """Wait for the config file to be parsed then call func.
 
     If the config file has already been parsed, just calls func immediately
@@ -1671,7 +1671,7 @@ def on_config_parsed(
 
     Returns
     -------
-    Callable[[], bool]
+    Callable[[], None]
         A function that the caller can use to deregister func.
     """
 
@@ -1680,13 +1680,13 @@ def on_config_parsed(
     # leading to a memory leak because the Signal will keep a reference of the
     # callable argument. When the callable argument is an object method, then
     # the reference to that object won't be released.
-    def receiver(_):
-        return func_with_lock()
+    def receiver(_: Any) -> None:
+        func_with_lock()
 
-    def disconnect():
-        return _on_config_parsed.disconnect(receiver)
+    def disconnect() -> None:
+        _on_config_parsed.disconnect(receiver)
 
-    def func_with_lock():
+    def func_with_lock() -> None:
         if lock:
             with _config_lock:
                 func()

@@ -50,7 +50,7 @@ class modified_sys_path:  # noqa: N801
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         if self._main_script_path not in sys.path:
             sys.path.insert(0, self._main_script_path)
             self._added_path = True

@@ -90,7 +90,7 @@ class CacheStatsProvider(Protocol):
 
 
 class StatsManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache_stats_providers: list[CacheStatsProvider] = []
 
     def register_provider(self, provider: CacheStatsProvider) -> None:

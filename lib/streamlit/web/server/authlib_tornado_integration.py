@@ -29,7 +29,12 @@ if TYPE_CHECKING:
 
 
 class TornadoIntegration(FrameworkIntegration):  # type: ignore[misc]
-    def update_token(self, token, refresh_token=None, access_token=None):
+    def update_token(
+        self,
+        token: dict[str, Any],
+        refresh_token: dict[str, Any] | None = None,
+        access_token: dict[str, Any] | None = None,
+    ) -> None:
         """We do not support access token refresh, since we obtain and operate only on
         identity tokens. We override this method explicitly to implement all abstract
         methods of base class.

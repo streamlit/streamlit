@@ -88,7 +88,7 @@ from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
@@ -1020,7 +1020,7 @@ class AppTest:
     def __len__(self) -> int:
         return len(self._tree)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Node]:
         yield from self._tree
 
     def __getitem__(self, idx: int) -> Node:

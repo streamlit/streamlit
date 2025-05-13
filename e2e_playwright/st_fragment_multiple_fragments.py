@@ -20,7 +20,7 @@ raise_exception = st.checkbox("Raise Exception in Fragment", value=False)
 
 
 @st.fragment
-def my_fragment(n):
+def my_fragment(n: int) -> None:
     with st.container(border=True):
         st.button("rerun this fragment", key=n)
         st.write(f"uuid in fragment {n}: {uuid4()}")

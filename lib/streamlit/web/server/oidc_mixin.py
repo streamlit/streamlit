@@ -14,9 +14,10 @@
 
 # ruff: noqa: ANN201
 
-from typing import Any, cast
+from __future__ import annotations
 
-import tornado.web
+from typing import TYPE_CHECKING, Any, Callable, cast
+
 from authlib.integrations.base_client import (  # type: ignore[import-untyped]
     BaseApp,
     BaseOAuth,
@@ -29,6 +30,11 @@ from authlib.integrations.requests_client import (  # type: ignore[import-untype
 )
 
 from streamlit.web.server.authlib_tornado_integration import TornadoIntegration
+
+if TYPE_CHECKING:
+    import tornado.web
+
+    from streamlit.auth_util import AuthCache
 
 
 class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
@@ -108,7 +114,13 @@ class TornadoOAuth(BaseOAuth):  # type: ignore[misc]
     oauth2_client_cls = TornadoOAuth2App
     framework_integration_cls = TornadoIntegration
 
-    def __init__(self, config=None, cache=None, fetch_token=None, update_token=None):
+    def __init__(
+        self,
+        config: dict[str, Any] | None = None,
+        cache: AuthCache | None = None,
+        fetch_token: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        update_token: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+    ):
         super().__init__(
             cache=cache, fetch_token=fetch_token, update_token=update_token
         )

@@ -19,10 +19,13 @@ import errno
 import io
 import os
 from pathlib import Path
-from typing import Final
+from typing import IO, TYPE_CHECKING, Any, Final
 
 from streamlit import env_util, errors
 from streamlit.string_util import is_binary_string
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 # Configuration and credentials are stored inside the ~/.streamlit folder
 CONFIG_FOLDER_NAME: Final = ".streamlit"
@@ -63,7 +66,7 @@ def get_encoded_file_data(
 
 
 @contextlib.contextmanager
-def streamlit_read(path, binary=False):
+def streamlit_read(path: str, binary: bool = False) -> Generator[IO[Any], None, None]:
     """Opens a context to read this file relative to the streamlit path.
 
     For example:
@@ -88,7 +91,7 @@ def streamlit_read(path, binary=False):
 
 
 @contextlib.contextmanager
-def streamlit_write(path, binary=False):
+def streamlit_write(path: str, binary: bool = False) -> Generator[IO[Any], None, None]:
     """Opens a file for writing within the streamlit path, and
     ensuring that the path exists.
 

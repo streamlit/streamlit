@@ -30,11 +30,11 @@ class StatsRequestHandler(tornado.web.RequestHandler):
     def initialize(self, stats_manager: StatsManager) -> None:
         self._manager = stats_manager
 
-    def set_default_headers(self):
+    def set_default_headers(self) -> None:
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def options(self):
+    def options(self) -> None:
         """/OPTIONS handler for preflight CORS checks."""
         self.set_status(204)
         self.finish()

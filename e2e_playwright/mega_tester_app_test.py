@@ -64,7 +64,7 @@ def test_no_console_errors(page: Page, app_port: int, browser_name: str):
 
     console_errors = []
 
-    def on_console_message(msg):
+    def on_console_message(msg: ConsoleMessage) -> None:
         # Possible message types: "log", "debug", "info", "error", "warning", ...
         if msg.type == "error" and not is_expected_error(
             msg, browser_name, uses_csp=False
@@ -102,7 +102,7 @@ def test_mega_tester_app_in_iframe(iframed_app: IframedPage, browser_name: str):
 
     console_errors = []
 
-    def on_console_message(msg):
+    def on_console_message(msg: ConsoleMessage) -> None:
         # Possible message types: "log", "debug", "info", "error", "warning", ...
         if msg.type == "error" and not is_expected_error(
             msg, browser_name, uses_csp=True

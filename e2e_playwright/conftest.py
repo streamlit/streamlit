@@ -29,7 +29,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
@@ -59,7 +59,7 @@ from e2e_playwright.shared.performance import (
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from types import ModuleType
+    from types import ModuleType, TracebackType
 
 
 # Used for static app testing
@@ -97,7 +97,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc):
 class AsyncSubprocess:
     """A context manager. Wraps subprocess. Popen to capture output safely."""
 
-    def __init__(self, args, cwd=None, env=None):
+    args: list[str]
+    cwd: str
+    env: dict[str, str]
+    _proc: subprocess.Popen[str] | None
+    _stdout_file: TextIOWrapper | None
+
+    def __init__(self, args: list[str], cwd: str, env: dict[str, str] | None = None):
         self.args = args
         self.cwd = cwd
         self.env = env or {}
@@ -141,7 +147,12 @@ class AsyncSubprocess:
             env={**os.environ.copy(), **self.env},
         )
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if self._proc is not None:
             self._proc.terminate()
             self._proc = None

@@ -27,9 +27,8 @@ from typing import (
 
 from blinker import Signal
 
-import streamlit as st
 import streamlit.watcher.path_watcher
-from streamlit import runtime
+from streamlit import config, runtime
 from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
 
@@ -45,7 +44,7 @@ class SecretErrorMessages:
     For internal use, may change in future releases without notice.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.missing_attr_message = lambda attr_name: (
             f'st.secrets has no attribute "{attr_name}". '
             "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
@@ -148,7 +147,7 @@ class AttrDict(Mapping[str, Any]):
     to provide dot access to nested secrets.
     """
 
-    def __init__(self, value):
+    def __init__(self, value: Mapping[str, Any]) -> None:
         self.__dict__["__nested_secrets__"] = dict(value)
 
     @staticmethod
@@ -197,7 +196,7 @@ class Secrets(Mapping[str, Any]):
     Safe to use from multiple threads.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Our secrets dict.
         self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
@@ -360,7 +359,7 @@ class Secrets(Mapping[str, Any]):
 
             secrets = {}
 
-            file_paths = st.config.get_option("secrets.files")
+            file_paths = config.get_option("secrets.files")
             found_secrets_file = False
             for path in file_paths:
                 path_secrets, found_secrets_file_in_path = self._parse_file_path(path)
@@ -413,7 +412,7 @@ class Secrets(Mapping[str, Any]):
             if self._file_watchers_installed:
                 return
 
-            file_paths = st.config.get_option("secrets.files")
+            file_paths = config.get_option("secrets.files")
             for path in file_paths:
                 try:
                     if path.endswith(".toml"):

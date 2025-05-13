@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import check_top_level_class
@@ -52,7 +52,9 @@ def test_st_pydeck_clicking_on_fullscreen_toolbar_button(
     )
 
 
-def screenshot_test_1(assert_snapshot, pydeck_charts):
+def screenshot_test_1(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0),
@@ -61,7 +63,9 @@ def screenshot_test_1(assert_snapshot, pydeck_charts):
     )
 
 
-def screenshot_test_2(assert_snapshot, pydeck_charts):
+def screenshot_test_2(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(0),
@@ -70,7 +74,9 @@ def screenshot_test_2(assert_snapshot, pydeck_charts):
     )
 
 
-def screenshot_test_3(assert_snapshot, pydeck_charts):
+def screenshot_test_3(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(1),
@@ -79,7 +85,9 @@ def screenshot_test_3(assert_snapshot, pydeck_charts):
     )
 
 
-def screenshot_test_4(assert_snapshot, pydeck_charts):
+def screenshot_test_4(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(1),
@@ -88,7 +96,9 @@ def screenshot_test_4(assert_snapshot, pydeck_charts):
     )
 
 
-def screenshot_test_5(assert_snapshot, pydeck_charts):
+def screenshot_test_5(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0),
@@ -97,7 +107,9 @@ def screenshot_test_5(assert_snapshot, pydeck_charts):
     )
 
 
-def screenshot_test_6(assert_snapshot, pydeck_charts):
+def screenshot_test_6(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(0),
@@ -106,7 +118,9 @@ def screenshot_test_6(assert_snapshot, pydeck_charts):
     )
 
 
-def screenshot_test_7(assert_snapshot, pydeck_charts):
+def screenshot_test_7(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0),
@@ -115,7 +129,9 @@ def screenshot_test_7(assert_snapshot, pydeck_charts):
     )
 
 
-def screenshot_test_8(assert_snapshot, pydeck_charts):
+def screenshot_test_8(
+    assert_snapshot: ImageCompareFunction, pydeck_charts: Locator
+) -> None:
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(0),

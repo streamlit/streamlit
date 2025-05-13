@@ -15,11 +15,15 @@
 from __future__ import annotations
 
 import random
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from pandas.io.formats.style import Styler
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
@@ -49,7 +53,7 @@ def style_negative(v: float, props: str = "") -> str | None:
     return props if v < 0 else None
 
 
-def highlight_max(s, props=""):
+def highlight_max(s: Any, props: str = "") -> np.ndarray:
     return np.where(s == np.nanmax(s.values), props, "")
 
 
@@ -85,7 +89,7 @@ def rain_condition(v: float) -> str:
     return "Heavy Rain"
 
 
-def make_pretty(styler):
+def make_pretty(styler: Styler) -> Styler:
     styler.set_caption("Weather Conditions")
     styler.format(rain_condition)
     styler.background_gradient(axis=None, vmin=1, vmax=5, cmap="YlGnBu")

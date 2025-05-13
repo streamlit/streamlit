@@ -92,7 +92,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
 
         self.file_storage[session_id][file.file_id] = file
 
-    def remove_file(self, session_id, file_id):
+    def remove_file(self, session_id: str, file_id: str) -> None:
         """Remove file with given file_id associated with a given session."""
         session_storage = self.file_storage[session_id]
         session_storage.pop(file_id, None)

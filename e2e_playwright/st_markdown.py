@@ -60,7 +60,7 @@ with st.container():
     )
 
 
-def draw_header_test(join_output):
+def draw_header_test(join_output: bool) -> None:
     strings = [
         "# Header header1",
         "## Header header2",

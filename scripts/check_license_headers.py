@@ -78,7 +78,7 @@ IGNORE_PATTERN = re.compile(
 )
 
 
-def main():
+def main() -> None:
     git_files = sorted(
         subprocess.check_output(["git", "ls-files", "--no-empty-directory"])
         .decode()

@@ -21,7 +21,7 @@ import sys
 import click
 
 
-def main():
+def main() -> None:
     standard_cli = ["streamlit", "test", "prog_name"]
     if not _can_run_streamlit(standard_cli):
         sys.exit("Failed to run `streamlit test prog_name`")

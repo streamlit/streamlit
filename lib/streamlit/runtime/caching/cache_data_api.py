@@ -147,7 +147,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
 class DataCaches(CacheStatsProvider):
     """Manages all DataCache instances."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, DataCache] = {}
 
@@ -566,7 +566,7 @@ class CacheDataAPI:
         if experimental_allow_widgets:
             show_widget_replay_deprecation("cache_data")
 
-        def wrapper(f):
+        def wrapper(f):  # noqa: ANN001, ANN202
             return make_cached_func_wrapper(
                 CachedDataFuncInfo(
                     func=f,

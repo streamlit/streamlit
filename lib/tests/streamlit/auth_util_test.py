@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from streamlit.auth_util import AuthCache, get_signing_secret
 
-CONFIG_MOCK = {}
+CONFIG_MOCK: dict[str, Any] = {}
 
 SECRETS_MOCK = {
     "redirect_uri": "http://localhost:8501/oauth2callback",

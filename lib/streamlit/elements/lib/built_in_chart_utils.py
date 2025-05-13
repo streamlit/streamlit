@@ -954,7 +954,9 @@ def _get_color_encoding(
         # If the color value is color-like, return that.
         if is_color_like(cast("Any", color_value)):
             if len(y_column_list) != 1:
-                raise StreamlitColorLengthError([color_value], y_column_list)
+                raise StreamlitColorLengthError(
+                    [color_value] if color_value else [], y_column_list
+                )
 
             return alt.ColorValue(to_css_color(cast("Any", color_value)))
 
@@ -975,7 +977,7 @@ def _get_color_encoding(
                 title=" ",
             )
 
-        raise StreamlitInvalidColorError(df, color_from_user)
+        raise StreamlitInvalidColorError(color_from_user)
 
     if color_column is not None:
         column_type: VegaLiteType
@@ -1132,7 +1134,7 @@ def _get_y_encoding_type(
 
 
 class StreamlitColumnNotFoundError(StreamlitAPIException):
-    def __init__(self, df, col_name, *args):
+    def __init__(self, df: pd.DataFrame, col_name: str, *args: Any) -> None:
         available_columns = ", ".join(str(c) for c in list(df.columns))
         message = (
             f'Data does not have a column named `"{col_name}"`. '
@@ -1142,8 +1144,7 @@ class StreamlitColumnNotFoundError(StreamlitAPIException):
 
 
 class StreamlitInvalidColorError(StreamlitAPIException):
-    def __init__(self, df, color_from_user, *args):
-        ", ".join(str(c) for c in list(df.columns))
+    def __init__(self, color_from_user: str | Color | list[Color] | None) -> None:
         message = f"""
 This does not look like a valid color argument: `{color_from_user}`.
 
@@ -1156,14 +1157,18 @@ The color argument can be:
 * The name of a column.
 * Or a list of colors, matching the number of y columns to draw.
         """
-        super().__init__(message, *args)
+        super().__init__(message)
 
 
 class StreamlitColorLengthError(StreamlitAPIException):
-    def __init__(self, color_values, y_column_list, *args):
+    def __init__(
+        self,
+        color_values: str | Color | Collection[Color] | None,
+        y_column_list: list[str],
+    ) -> None:
         message = (
             f"The list of colors `{color_values}` must have the same "
             "length as the list of columns to be colored "
             f"`{y_column_list}`."
         )
-        super().__init__(message, *args)
+        super().__init__(message)

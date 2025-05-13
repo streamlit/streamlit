@@ -183,7 +183,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             # other arguments change, and the component's iframe won't be
             # remounted on the frontend.
 
-            def marshall_element_args():
+            def marshall_element_args() -> None:
                 element.component_instance.json_args = serialized_json_args
                 element.component_instance.special_args.extend(special_args)
 
@@ -210,7 +210,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 )
             element.component_instance.id = computed_id
 
-            def deserialize_component(ui_value):
+            def deserialize_component(ui_value: Any) -> Any:
                 # ui_value is an object from json, an ArrowTable proto, or a bytearray
                 return ui_value
 

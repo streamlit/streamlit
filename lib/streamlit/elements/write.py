@@ -156,7 +156,7 @@ class WriteMixin:
         streamed_response: str = ""
         written_content: list[Any] = StreamingOutput()
 
-        def flush_stream_response():
+        def flush_stream_response() -> None:
             """Write the full response to the app."""
             nonlocal streamed_response
             nonlocal stream_container
@@ -428,7 +428,7 @@ class WriteMixin:
                 "when called as `st.write()` or `st.sidebar.write()`."
             )
 
-        def flush_buffer():
+        def flush_buffer() -> None:
             if string_buffer:
                 text_content = " ".join(string_buffer)
                 # The usage of empty here prevents

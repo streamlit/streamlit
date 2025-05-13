@@ -46,7 +46,7 @@ class FolderBlackList:
 
     """
 
-    def __init__(self, folder_blacklist):
+    def __init__(self, folder_blacklist: list[str]) -> None:
         """Constructor.
 
         Parameters

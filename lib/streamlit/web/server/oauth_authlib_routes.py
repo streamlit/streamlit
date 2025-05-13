@@ -104,7 +104,7 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
 
 
 class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
-    async def get(self):
+    async def get(self) -> None:
         """Redirect to the OAuth provider login page."""
         provider = self._parse_provider_token()
         if provider is None:
@@ -130,13 +130,13 @@ class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
 
 
 class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
-    def get(self):
+    def get(self) -> None:
         self.clear_auth_cookie()
         self.redirect_to_base()
 
 
 class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
-    async def get(self):
+    async def get(self) -> None:
         provider = self._get_provider_by_state()
         origin = self._get_origin_from_secrets()
         if origin is None:

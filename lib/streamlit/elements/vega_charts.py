@@ -360,7 +360,7 @@ def _convert_altair_to_vega_lite_spec(
         datasets[name] = data_bytes
         return {"name": name}
 
-    alt.data_transformers.register("id", id_transform)  # type: ignore[attr-defined,unused-ignore]
+    alt.data_transformers.register("id", id_transform)  # type: ignore[arg-type,attr-defined,unused-ignore]
 
     # The default altair theme has some width/height defaults defined
     # which are not useful for Streamlit. Therefore, we change the theme to

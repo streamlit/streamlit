@@ -177,6 +177,3 @@ ignore-variadic-names = true
 [lint.flake8-annotations]
 # Allow missing return annotation on functions that return None:
 suppress-none-returning = true
-# Surpresses errors for fully untyped functions:
-# TODO(lukasmasuch): Activate this for additional strictness.
-ignore-fully-untyped = true

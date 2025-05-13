@@ -96,7 +96,7 @@ def verify_semver(version: str) -> str:
     return str(semver.Version.parse(version))
 
 
-def update_files(data, version):
+def update_files(data: dict[str, str], version: str) -> None:
     """Update files with new version number."""
 
     for filename, regex in data.items():
@@ -114,7 +114,7 @@ def update_files(data, version):
             )
 
 
-def main():
+def main() -> None:
     """Run main loop."""
 
     if len(sys.argv) != 2:
@@ -138,9 +138,9 @@ def main():
             sys.argv[1].replace("rc", "-rc.").replace(".dev", "-dev")
         )
 
-    update_files(PYTHON, pep440_version)
+    update_files(PYTHON, str(pep440_version))
     for package in NODE_PACKAGES:
-        update_files(package, semver_version)
+        update_files(package, str(semver_version))
 
 
 if __name__ == "__main__":

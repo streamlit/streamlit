@@ -192,7 +192,7 @@ class QueryParams(MutableMapping[str, str]):
             if key in EMBED_QUERY_PARAMS_KEYS and preserve_embed
         }
 
-    def _ensure_single_query_api_used(self):
+    def _ensure_single_query_api_used(self) -> None:
         ctx = get_script_run_ctx()
         if ctx is None:
             return

@@ -204,7 +204,7 @@ class ScriptRunContext:
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg_to_send)
 
-    def ensure_single_query_api_used(self):
+    def ensure_single_query_api_used(self) -> None:
         if self._experimental_query_params_used and self._production_query_params_used:
             raise StreamlitAPIException(
                 "Using `st.query_params` together with either `st.experimental_get_query_params` "
@@ -212,11 +212,11 @@ class ScriptRunContext:
                 " convert your app to only use `st.query_params`"
             )
 
-    def mark_experimental_query_params_used(self):
+    def mark_experimental_query_params_used(self) -> None:
         self._experimental_query_params_used = True
         self.ensure_single_query_api_used()
 
-    def mark_production_query_params_used(self):
+    def mark_production_query_params_used(self) -> None:
         self._production_query_params_used = True
         self.ensure_single_query_api_used()
 

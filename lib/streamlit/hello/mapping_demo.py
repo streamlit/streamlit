@@ -21,7 +21,7 @@ import streamlit as st
 from streamlit.hello.utils import show_code
 
 
-def mapping_demo():
+def mapping_demo() -> None:
     @st.cache_data
     def from_data_file(filename: str) -> pd.DataFrame:
         url = (

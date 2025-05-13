@@ -69,7 +69,7 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
 class ResourceCaches(CacheStatsProvider):
     """Manages all ResourceCache instances."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, ResourceCache] = {}
 

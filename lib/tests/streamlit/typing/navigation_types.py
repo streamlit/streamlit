@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     assert_type(navigation([page1, page2]), StreamlitPage)
 
     # Test with callable functions
-    def page_func():
+    def page_func() -> None:
         pass
 
     assert_type(navigation([page_func]), StreamlitPage)

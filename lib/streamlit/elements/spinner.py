@@ -83,7 +83,7 @@ def spinner(
 
     try:
 
-        def set_message():
+        def set_message() -> None:
             with display_message_lock:
                 if display_message:
                     spinner_proto = SpinnerProto()

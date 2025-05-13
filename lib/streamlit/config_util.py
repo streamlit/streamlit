@@ -54,16 +54,16 @@ def show_config(
         )
     )
 
-    def append_desc(text):
+    def append_desc(text: str) -> None:
         out.append("# " + cli_util.style_for_cli(text, bold=True))
 
-    def append_comment(text):
+    def append_comment(text: str) -> None:
         out.append("# " + cli_util.style_for_cli(text))
 
-    def append_section(text):
+    def append_section(text: str) -> None:
         out.append(cli_util.style_for_cli(text, bold=True, fg="green"))
 
-    def append_setting(text):
+    def append_setting(text: str) -> None:
         out.append(cli_util.style_for_cli(text, fg="green"))
 
     for section in section_descriptions:
@@ -178,8 +178,7 @@ def _clean_paragraphs(txt: str) -> list[str]:
     # Strip both leading and trailing newlines.
     txt = txt.strip("\n")
     paragraphs = txt.split("\n\n")
-    cleaned_paragraphs = [
+    return [
         "\n".join(_clean(line) for line in paragraph.split("\n"))
         for paragraph in paragraphs
     ]
-    return cleaned_paragraphs

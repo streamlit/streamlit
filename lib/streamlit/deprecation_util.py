@@ -93,7 +93,7 @@ def deprecate_func_name(
     """
 
     @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
+    def wrapped_func(*args: Any, **kwargs: Any) -> Any:
         result = func(*args, **kwargs)
         show_deprecation_warning(
             make_deprecated_name_warning(
@@ -167,7 +167,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             show_warning()
 
     class Wrapper:
-        def __init__(self):
+        def __init__(self) -> None:
             # Override all the Wrapped object's magic functions
             for name in Wrapper._get_magic_functions(obj.__class__):
                 setattr(
@@ -176,7 +176,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
                     property(self._make_magic_function_proxy(name)),
                 )
 
-        def __getattr__(self, attr):
+        def __getattr__(self, attr: str) -> Any:
             # We handle __getattr__ separately from our other magic
             # functions. The wrapped class may not actually implement it,
             # but we still need to implement it to call all its normal
@@ -199,8 +199,8 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             ]
 
         @staticmethod
-        def _make_magic_function_proxy(name):
-            def proxy(self, *args):  # noqa: ARG001
+        def _make_magic_function_proxy(name: str) -> Callable[[Any], Any]:
+            def proxy(_self: Any, *args: Any) -> Any:
                 maybe_show_warning()
                 return getattr(obj, name)
 

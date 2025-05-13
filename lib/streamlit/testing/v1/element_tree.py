@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import textwrap
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime, time, timedelta
 from typing import (
@@ -126,7 +126,7 @@ class Element(ABC):
     @abstractmethod
     def __init__(self, proto: ElementProto, root: ElementTree) -> None: ...
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Self]:
         yield self
 
     @property
@@ -225,7 +225,7 @@ class ElementList(Generic[El_co]):
             return ElementList(self._list[idx])
         return self._list[idx]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[El_co]:
         yield from self._list
 
     def __repr__(self) -> str:
@@ -1455,7 +1455,7 @@ class Block:
     def __len__(self) -> int:
         return len(self.children)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Node]:
         yield self
         for child_idx in self.children:
             yield from self.children[child_idx]
@@ -1860,7 +1860,7 @@ class ElementTree(Block):
 
     _runner: AppTest | None = field(repr=False, default=None)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.children = {}
         self.root = self
         self.type = "root"

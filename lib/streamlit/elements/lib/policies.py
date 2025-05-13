@@ -97,7 +97,7 @@ def check_session_state_rules(
 
 
 class CachedWidgetWarning(StreamlitAPIWarning):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             """
 Your script uses a widget command in a cached function

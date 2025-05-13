@@ -25,7 +25,7 @@ from e2e_playwright.shared.app_utils import (
 )
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Page
+    from playwright.sync_api import Page, WebSocket
 
 
 def _rerun_app(app: Page, times: int):
@@ -101,7 +101,7 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     total_websocket_messages_sent = 0
     total_websocket_messages_received = 0
 
-    def on_web_socket(ws):
+    def on_web_socket(ws: WebSocket) -> None:
         print(f"WebSocket opened: {ws.url}")
 
         def on_frame_sent(payload: str | bytes):

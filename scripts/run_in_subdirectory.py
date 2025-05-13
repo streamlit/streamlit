@@ -102,7 +102,7 @@ def try_as_shell(fixed_args: list[str], subdirectory: str) -> None:
         sys.exit(ex.returncode)
 
 
-def main():
+def main() -> None:
     subdirectory, subprocess_args = parse_args()
 
     fixed_args = [fix_arg(subdirectory, arg) for arg in subprocess_args]

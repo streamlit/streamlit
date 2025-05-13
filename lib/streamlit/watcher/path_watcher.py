@@ -62,7 +62,7 @@ def _is_watchdog_available() -> bool:
         return False
 
 
-def report_watchdog_availability():
+def report_watchdog_availability() -> None:
     if (
         config.get_option("server.fileWatcherType") not in ["poll", "none"]
         and not _is_watchdog_available()

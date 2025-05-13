@@ -14,11 +14,12 @@
 
 import inspect
 import textwrap
+from typing import Any, Callable
 
 import streamlit as st
 
 
-def show_code(demo):
+def show_code(demo: Callable[..., Any]) -> None:
     """Showing the code of the demo."""
     show_code = st.sidebar.checkbox("Show code", True)
     if show_code:

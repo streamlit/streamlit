@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from streamlit import util
 
@@ -45,7 +45,7 @@ class TemporaryDirectory:
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._args = args
         self._kwargs = kwargs
 
