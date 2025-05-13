@@ -105,7 +105,9 @@
             "path": "bash",
             "args": ["-c", "make frontend-dev"]
           }
-        }
+        },
+        "typescript.tsdk": "frontend/node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true
       }
     }
   },

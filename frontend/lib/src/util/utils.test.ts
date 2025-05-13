@@ -424,40 +424,47 @@ describe("getLoadingScreenType", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it("should return an empty string if not in embed mode", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("")
     })
 
     it("should preserve embed query string even with no embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "embed=true&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "embed=true&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("embed=true")
     })
 
     it("should preserve embed query string with embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search:
-          "embed=true&embed_options=option1&embed_options=option2&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search:
+            "embed=true&embed_options=option1&embed_options=option2&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe(
         "embed=true&embed_options=option1&embed_options=option2"
       )

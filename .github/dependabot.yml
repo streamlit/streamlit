@@ -92,9 +92,6 @@ updates:
       - dependency-name: "sass"
         # Breaks our build process, needs more investigation
         versions: [">=1.80.0"]
-      - dependency-name: "typescript"
-        # Requires bigger updates to our types used in tests.
-        versions: [">=5.8.0"]
 
     groups:
       deck-gl:

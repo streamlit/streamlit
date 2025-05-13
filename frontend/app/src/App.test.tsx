@@ -469,9 +469,12 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
     })
-
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it("triggers page reload", () => {
@@ -553,7 +556,11 @@ describe("App", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
 
       window.__streamlit = undefined
 
@@ -2071,7 +2078,11 @@ describe("App", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
       window.parent = prevWindowParent
     })
 
@@ -2548,7 +2559,11 @@ describe("App", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it.each([
@@ -3297,7 +3312,11 @@ describe("App", () => {
       })
 
       afterEach(() => {
-        window.location = prevWindowLocation
+        Object.defineProperty(window, "location", {
+          value: prevWindowLocation,
+          writable: true,
+          configurable: true,
+        })
       })
 
       it("shows hostMenuItems", () => {

@@ -461,7 +461,13 @@ describe("AppView element", () => {
   describe("when window.location.hash changes", () => {
     let originalLocation: Location
     beforeEach(() => (originalLocation = window.location))
-    afterEach(() => (window.location = originalLocation))
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
 
     it("sends UPDATE_HASH message to host", () => {
       const sendMessageToHost = vi.fn()
