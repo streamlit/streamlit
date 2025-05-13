@@ -3379,7 +3379,7 @@ __metadata:
     plotly.js: "npm:^3.0.1"
     postinstall-postinstall: "npm:^2.1.0"
     prettier: "npm:^2.8.3"
-    protobufjs: "npm:^7.5.0"
+    protobufjs: "npm:^7.5.1"
     query-string: "npm:^9.1.2"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
@@ -16199,9 +16199,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^7.5.0":
-  version: 7.5.0
-  resolution: "protobufjs@npm:7.5.0"
+"protobufjs@npm:^7.5.1":
+  version: 7.5.1
+  resolution: "protobufjs@npm:7.5.1"
   dependencies:
     "@protobufjs/aspromise": "npm:^1.1.2"
     "@protobufjs/base64": "npm:^1.1.2"
@@ -16215,7 +16215,7 @@ __metadata:
     "@protobufjs/utf8": "npm:^1.1.0"
     "@types/node": "npm:>=13.7.0"
     long: "npm:^5.0.0"
-  checksum: 10c0/21ae56998d04e31ef7f58f49ccf6cd307f06b6257fee8b53016418176a2a03083f781c42907762bfdf632f425b5cd9707bc3f23aa73a9a774292e1b7190e3689
+  checksum: 10c0/c2522f183df9355cff636a4c7516ab96eeda53e71627ee7f5b347a956f7f8e176c1a5e154aad4a885e709acdfceede25851936f036a6e944a6c1a06dc9c4ea23
   languageName: node
   linkType: hard
 
