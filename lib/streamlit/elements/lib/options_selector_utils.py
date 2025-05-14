@@ -92,8 +92,7 @@ def get_default_indices(
     indexable_options: Sequence[T], default: Sequence[Any] | Any | None = None
 ) -> list[int]:
     default_indices = check_and_convert_to_indices(indexable_options, default)
-    default_indices = default_indices if default_indices is not None else []
-    return default_indices
+    return default_indices if default_indices is not None else []
 
 
 E1 = TypeVar("E1", bound=Enum)

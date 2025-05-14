@@ -218,8 +218,7 @@ class CachedMessageReplayContext(threading.local):
         """
         if len(self._seen_dg_stack) > 0 and acting_on_id in self._seen_dg_stack[-1]:
             return acting_on_id
-        else:
-            return invoked_id
+        return invoked_id
 
     def save_image_data(
         self, image_data: bytes | str, mimetype: str, image_id: str

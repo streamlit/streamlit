@@ -213,9 +213,7 @@ def _pandas_style_to_css(
     selector = ", ".join(selectors)
 
     declaration_block = "; ".join(declarations)
-    rule_set = selector + " { " + declaration_block + " }"
-
-    return rule_set
+    return selector + " { " + declaration_block + " }"
 
 
 def _marshall_display_values(

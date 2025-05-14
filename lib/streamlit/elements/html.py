@@ -113,10 +113,9 @@ class HtmlMixin:
             # If true, there are only style tags - send html to the event container
             html_proto.body = html_content
             return self._event_dg._enqueue("html", html_proto)
-        else:
-            # Otherwise, send the html to the main container as normal
-            html_proto.body = html_content
-            return self.dg._enqueue("html", html_proto)
+        # Otherwise, send the html to the main container as normal
+        html_proto.body = html_content
+        return self.dg._enqueue("html", html_proto)
 
     @property
     def dg(self) -> DeltaGenerator:

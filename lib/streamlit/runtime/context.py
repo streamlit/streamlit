@@ -328,11 +328,7 @@ class ContextProxy:
         url_without_page_prefix = maybe_trim_page_path(
             url_from_frontend, ctx.pages_manager
         )
-        url_with_page_prefix = maybe_add_page_path(
-            url_without_page_prefix, ctx.pages_manager
-        )
-
-        return url_with_page_prefix
+        return maybe_add_page_path(url_without_page_prefix, ctx.pages_manager)
 
     @property
     @gather_metrics("context.ip_address")

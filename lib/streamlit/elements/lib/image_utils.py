@@ -335,9 +335,8 @@ def image_to_url(
         url = runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
         caching.save_media_data(image_data, mimetype, image_id)
         return url
-    else:
-        # When running in "raw mode", we can't access the MediaFileManager.
-        return ""
+    # When running in "raw mode", we can't access the MediaFileManager.
+    return ""
 
 
 def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:

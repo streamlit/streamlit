@@ -289,12 +289,11 @@ class StreamlitPage:
             if callable(self._page):
                 self._page()
                 return
-            else:
-                code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
-                module = types.ModuleType("__main__")
-                # We want __file__ to be the string path to the script
-                module.__dict__["__file__"] = str(self._page)
-                exec(code, module.__dict__)  # noqa: S102
+            code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
+            module = types.ModuleType("__main__")
+            # We want __file__ to be the string path to the script
+            module.__dict__["__file__"] = str(self._page)
+            exec(code, module.__dict__)  # noqa: S102
 
     @property
     def _script_hash(self) -> str:

@@ -252,8 +252,7 @@ class WStates(MutableMapping[str, Any]):
             for widget_id in self.states
             if self.get_serialized(widget_id)
         ]
-        states = cast("list[WidgetStateProto]", states)
-        return states
+        return cast("list[WidgetStateProto]", states)
 
     def call_callback(self, widget_id: str) -> None:
         """Call the given widget's callback and return the callback's

@@ -68,6 +68,7 @@ select = [
   "PLW",   # Pylint warning rules
   "PYI",   # Linting rules for type annotations.
   "Q",     # Linting rules for quotes.
+  "RET",   # Linting rules for return statements.
   "RUF",   # Ruff specific rules.
   "S",     # Linting rules to enforce secure code.
   "SIM",   # Checks for code that can be simplified.
@@ -124,6 +125,7 @@ ignore = [
   "SIM115",  # Enforces context manager for opening files.
   "SIM117",  # Enforces single with statement with multiple contexts.
   "SIM905",  # Enforces list instead of st.split.
+  "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:

@@ -341,12 +341,11 @@ class RadioMixin:
         def handle_captions(caption: str | None) -> str:
             if caption is None:
                 return ""
-            elif isinstance(caption, str):
+            if isinstance(caption, str):
                 return caption
-            else:
-                raise StreamlitAPIException(
-                    f"Radio captions must be strings. Passed type: {type(caption).__name__}"
-                )
+            raise StreamlitAPIException(
+                f"Radio captions must be strings. Passed type: {type(caption).__name__}"
+            )
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:

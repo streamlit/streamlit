@@ -30,7 +30,7 @@ def get_cached_func_name_md(func: Any) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return f"`{func.__name__}()`"
-    elif hasattr(type(func), "__name__"):
+    if hasattr(type(func), "__name__"):
         return f"`{type(func).__name__}`"
     return f"`{type(func)}`"
 

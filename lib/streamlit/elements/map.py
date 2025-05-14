@@ -357,8 +357,7 @@ def _get_lat_or_lon_col_name(
                 f"Map data must contain a {human_readable_name} column named: "
                 f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}"
             )
-        else:
-            col_name = candidate_col_name
+        col_name = candidate_col_name
 
     # Check that the column is well-formed.
     # IMPLEMENTATION NOTE: We can't use isnull().values.any() because .values can return

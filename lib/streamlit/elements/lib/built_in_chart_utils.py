@@ -559,7 +559,7 @@ def _melt_data(
 
     # Arrow has problems with object types after melting two different dtypes
     # > pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+    return dataframe_util.fix_arrow_incompatible_column_types(
         melted_df,
         selected_columns=[
             *columns_to_leave_alone,
@@ -567,8 +567,6 @@ def _melt_data(
             new_y_column_name,
         ],
     )
-
-    return fixed_df
 
 
 def _maybe_reset_index_in_place(

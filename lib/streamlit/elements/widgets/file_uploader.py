@@ -127,7 +127,7 @@ class FileUploaderSerde:
 
         if not files:
             return state_proto
-        elif not isinstance(files, list):
+        if not isinstance(files, list):
             files = [files]
 
         for f in files:
@@ -497,7 +497,7 @@ class FileUploaderMixin:
 
         if isinstance(widget_state.value, DeletedFile):
             return None
-        elif isinstance(widget_state.value, list):
+        if isinstance(widget_state.value, list):
             return [f for f in widget_state.value if not isinstance(f, DeletedFile)]
 
         return widget_state.value

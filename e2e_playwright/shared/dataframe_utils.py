@@ -345,7 +345,7 @@ def get_open_cell_overlay(page: Page | Locator) -> Locator:
 
 def expect_canvas_to_be_stable(
     locator: Locator, timeout_ms: int = 2000, stability_ms: int = 300
-):
+) -> None:
     """
     Wait for canvas to become stable (no visual changes).
 
@@ -400,7 +400,7 @@ def expect_canvas_to_be_stable(
     # Continue anyway - the test may still succeed
 
 
-def expect_canvas_to_be_visible(locator: Locator):
+def expect_canvas_to_be_visible(locator: Locator) -> None:
     """Expect canvas to be visible.
 
     Should be used before trying to click on it or similar.
@@ -466,3 +466,4 @@ def retry_interaction(
 
     if last_exception:
         raise last_exception
+    return None

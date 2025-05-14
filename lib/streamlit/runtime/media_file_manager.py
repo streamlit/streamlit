@@ -38,8 +38,7 @@ def _get_session_id() -> str:
         # "streamlit run myscript.py". In which case the session ID doesn't
         # matter and can just be a constant, as there's only ever "session".
         return "dontcare"
-    else:
-        return ctx.session_id
+    return ctx.session_id
 
 
 class MediaFileMetadata:

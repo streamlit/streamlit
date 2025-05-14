@@ -54,7 +54,7 @@ def merge_dicts(x, y):
     return z
 
 
-def create_advanced_altair_chart() -> alt.Chart:
+def create_advanced_altair_chart() -> alt.Chart | alt.VConcatChart:
     """Create an advanced Altair chart based on concatenation and with parameters."""
     iris = alt.UrlData(
         "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json"
@@ -80,8 +80,7 @@ def create_advanced_altair_chart() -> alt.Chart:
             row |= base.encode(x=x_encoding, y=y_encoding)
         chart &= row
     chart = chart.add_params(point)
-    chart = chart.add_params(interval)
-    return chart
+    return chart.add_params(interval)
 
 
 class AltairChartTest(DeltaGeneratorTestCase):
@@ -1145,6 +1144,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             for prefix, expected_color_values in expected_values.items():
                 if col_name.startswith(prefix):
                     return expected_color_values
+            return None
 
         for color_column in color_columns:
             expected_color_values = get_expected_color_values(color_column)

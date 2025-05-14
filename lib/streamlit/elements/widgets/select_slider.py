@@ -102,8 +102,7 @@ class SelectSliderSerde(Generic[T]):
             if start > end:
                 slider_value = [end, start]
             return slider_value
-        else:
-            return [index_(self.options, v)]
+        return [index_(self.options, v)]
 
 
 class SelectSliderMixin:
@@ -367,15 +366,14 @@ class SelectSliderMixin:
                 if start > end:
                     slider_value = [end, start]
                 return slider_value
-            else:
-                # Simplify future logic by always making value a list
-                try:
-                    return [index_(opt, v)]
-                except ValueError:
-                    if value is not None:
-                        raise
+            # Simplify future logic by always making value a list
+            try:
+                return [index_(opt, v)]
+            except ValueError:
+                if value is not None:
+                    raise
 
-                    return [0]
+                return [0]
 
         # Convert element to index of the elements
         slider_value = as_index_list(value)

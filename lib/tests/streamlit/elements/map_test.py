@@ -206,6 +206,7 @@ class StMapTest(DeltaGeneratorTestCase):
             for prefix, expected_color_values in expected_values.items():
                 if col_name.startswith(prefix):
                     return expected_color_values
+            return None
 
         for color_column in color_columns:
             expected_color_values = get_expected_color_values(color_column)

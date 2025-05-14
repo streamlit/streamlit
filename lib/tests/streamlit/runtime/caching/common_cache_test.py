@@ -56,8 +56,10 @@ def get_text_or_block(delta):
         element = delta.new_element
         if element.WhichOneof("type") == "text":
             return element.text.body
-    elif delta.WhichOneof("type") == "add_block":
+        return None
+    if delta.WhichOneof("type") == "add_block":
         return "new_block"
+    return None
 
 
 def as_cached_result(value: Any) -> CachedResult:
@@ -84,12 +86,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     def get_text_delta_contents(self) -> list[str]:
         deltas = self.get_all_deltas_from_queue()
-        text = [
+        return [
             element.text.body
             for element in (delta.new_element for delta in deltas)
             if element.WhichOneof("type") == "text"
         ]
-        return text
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]

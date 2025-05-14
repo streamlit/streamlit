@@ -45,8 +45,7 @@ class ConditionalHello:
     def __getattribute__(self, name):
         if name == "say_hello" and not self.available:
             raise self.ExceptionType(f"{name} is not accessible when x is even")
-        else:
-            return object.__getattribute__(self, name)
+        return object.__getattribute__(self, name)
 
     def say_hello(self):
         pass

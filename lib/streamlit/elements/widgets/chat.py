@@ -127,7 +127,7 @@ def _process_avatar_input(
 
     if avatar is None:
         return AvatarType.ICON, ""
-    elif isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
+    if isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
         # On the frontend, we only support "assistant" and "user" for the avatar.
         return (
             AvatarType.ICON,
@@ -137,25 +137,24 @@ def _process_avatar_input(
                 else "user"
             ),
         )
-    elif isinstance(avatar, str) and is_emoji(avatar):
+    if isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
 
-    elif isinstance(avatar, str) and avatar.startswith(":material"):
+    if isinstance(avatar, str) and avatar.startswith(":material"):
         return AvatarType.ICON, validate_material_icon(avatar)
-    else:
-        try:
-            return AvatarType.IMAGE, image_to_url(
-                avatar,
-                width=WidthBehavior.ORIGINAL,
-                clamp=False,
-                channels="RGB",
-                output_format="auto",
-                image_id=delta_path,
-            )
-        except Exception as ex:
-            raise StreamlitAPIException(
-                "Failed to load the provided avatar value as an image."
-            ) from ex
+    try:
+        return AvatarType.IMAGE, image_to_url(
+            avatar,
+            width=WidthBehavior.ORIGINAL,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id=delta_path,
+        )
+    except Exception as ex:
+        raise StreamlitAPIException(
+            "Failed to load the provided avatar value as an image."
+        ) from ex
 
 
 def _pop_upload_files(
@@ -208,16 +207,15 @@ class ChatInputSerde:
             return None
         if not self.accept_files:
             return ui_value.data
-        else:
-            uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
-            for file in uploaded_files:
-                if self.allowed_types and not isinstance(file, DeletedFile):
-                    enforce_filename_restriction(file.name, self.allowed_types)
+        uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
+        for file in uploaded_files:
+            if self.allowed_types and not isinstance(file, DeletedFile):
+                enforce_filename_restriction(file.name, self.allowed_types)
 
-            return ChatInputValue(
-                text=ui_value.data,
-                files=uploaded_files,
-            )
+        return ChatInputValue(
+            text=ui_value.data,
+            files=uploaded_files,
+        )
 
     def serialize(self, v: str | None) -> ChatInputValueProto:
         return ChatInputValueProto(data=v)
