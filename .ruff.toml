@@ -33,62 +33,32 @@ docstring-code-line-length = "dynamic"
 line-ending = "lf"
 
 [lint]
-select = [
-  "A",     # Check for python builtins being shadowed.
-  "ANN",   # Enforces usage of type annotations.
-  "ARG",   # Checks for unused arguments.
-  "ASYNC", # Opinionated linting for asyncio.
-  "B",     # flake8-bugbear
-  "C4",    # Helps you write better list/set/dict comprehensions.
-  "D",     # Check docstrings.
-  "E",     # pycodestyle errors
-  "ERA",   # Checks for commented out code.
-  "EXE",   # Checks executable permissions and shebangs.
-  "F",     # pyflakes
-  "FA",    # Verifies files use from __future__ import annotations if a type is used in the module that can be rewritten using PEP 563.
-  "FIX",   # Only allow todo comments in the codebase.
-  "FLY",   # Checks for bad usage of string join.
-  "FURB",  # Rules to refurbish and modernize Python codebases.
-  "G",     # Better usage of built-in logging
-  "I",     # isort - Import sorting
-  "ICN",   # Checks import naming conventions.
-  "INT",   # Checks wrong usage of gettext module.
-  "INP",   # Checks implicit namespace packages.
-  "ISC",   # Encourage correct string literal concatenation.
-  "LOG",   # Checks for issues using the standard library logging module.
-  "N",     # Linting rules for pep8 naming conventions.
-  "NPY",   # Linting rules for numpy
-  "PD",    # Opinionated linting for pandas.
-  "PERF",  # Rules to prevent performance anti-patterns.
-  "PGH",   # Pygrep hook rules.
-  "PIE",   # Rules to prevent unnecessary code logic.
-  "PLC",   # pycodestyle conventions
-  "PLE",   # Pylint error rules.
-  "PLR",   # Pylint refactoring rules.
-  "PLW",   # Pylint warning rules
-  "PYI",   # Linting rules for type annotations.
-  "Q",     # Linting rules for quotes.
-  "RET",   # Linting rules for return statements.
-  "RUF",   # Ruff specific rules.
-  "S",     # Linting rules to enforce secure code.
-  "SIM",   # Checks for code that can be simplified.
-  "SLOT",  # Enforces usage of slots.
-  "T10",   # Check for debugger statements.
-  "T20",   # Check for Print statements in python files.
-  "TC",    # Linting for type-checking imports & forward references.
-  "TD",    # Checks correct usage of TODO comments.
-  "TID",   # Helps you write tidier imports.
-  "TRY",   # Checks for exception handling anti-patterns.
-  "UP",    # pyupgrade
-  "W",     # pycodestyle warnings
-  "YTT",   # Checks wrong usage of sys.version / sys.version_info.
-]
+# We activate all rules and only ignore the rules that we don't want to enforce
+# or that are not relevant for our codebase.
+select = ["ALL"]
 ignore = [
+  # Rules planned to be supported in the future:
+  "EM101",  # Checks for the use of string literals in exception constructors.
+  "EM102",  # Checks for the use of f-strings in exception constructors.
+  "S101",   # Checks for usage of assert statements.
+  "TRY003", # Checks for exception messages that are not defined in the exception class itself.
+  "N806",   # Checks for non-lowercased variable names in functions.
+  "UP031",  # Checks for printf-style string formatting, and offers to replace it with str.format calls.
+  "G004",   # Checks for usage of f-strings in logging messages.
+  "PT",     # Checks for pytest anti-patterns.
+  # Ignored rule sets:
+  "DTZ", # Checks for usage of unsafe naive datetime class.
+  "PTH", # Enforces usage of pathlib.
+  "C90", # Checks for McCabe complexity.
+  "FBT", # Forbids boolean positional arguments.
+  "SLF", # Checks unexpected for private member access.
+  "BLE", # Checks for blind except statements.
+  "CPY", # Checks for copyright statement.
+  "DOC", # Checks for correct docstring format.
+  # Ignored rules:
   "B904",    # Checks for raise statements in exception handlers that lack a from clause.
   "PYI041",  # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
   "PYI051",  # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
-  "UP031",   # Checks for printf-style string formatting, and offers to replace it with str.format calls.
-  "G004",    # Checks for usage of f-strings in logging messages.
   "PD901",   # Checks for usage of `df` variable name.
   "PIE790",  # Checks for unnecessary pass statements.
   "TD003",   # Checks for missing issue link in TODO comment.
@@ -114,10 +84,7 @@ ignore = [
   "PLR0914", # Checks for functions with too many local variables.
   "PLR0915", # Checks for functions with too many statements.
   "PLR0916", # Checks for too many boolean expressions in if statements.
-  "N806",    # Checks for non-lowercased variable names in functions.
   "A002",    # Checks if function argument shadows a Python builtin.
-  "S101",    # Checks for usage of assert statements.
-  "TRY003",  # Checks for exception messages that are not defined in the exception class itself.
   "TRY300",  # Checks for return statements in try blocks.
   "ANN401",  # Checks that `any` is not used as an annotation.
   "SIM105",  # Enforces use of contextlib.suppress.
@@ -125,6 +92,9 @@ ignore = [
   "SIM115",  # Enforces context manager for opening files.
   "SIM117",  # Enforces single with statement with multiple contexts.
   "SIM905",  # Enforces list instead of st.split.
+  "COM812",  # Checks for absence of trailing commas. Not recommended with formatter.
+  "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
+  "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
   "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
 ]
 exclude = [
