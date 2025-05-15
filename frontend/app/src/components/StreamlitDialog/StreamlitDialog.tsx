@@ -61,25 +61,27 @@ export type DialogProps =
   | WarningProps
   | DeployErrorProps
   | DeployDialogProps
+  | ConnectionErrorProps
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
     case DialogType.ABOUT:
-      return aboutDialog(dialogProps)
+      return <AboutDialog {...dialogProps} />
     case DialogType.CLEAR_CACHE:
-      return clearCacheDialog(dialogProps)
+      return <ClearCacheDialog {...dialogProps} />
     case DialogType.SETTINGS:
-      return settingsDialog(dialogProps)
+      return <SettingsDialog {...dialogProps} />
     case DialogType.SCRIPT_COMPILE_ERROR:
-      return scriptCompileErrorDialog(dialogProps)
+      return <ScriptCompileErrorDialog {...dialogProps} />
     case DialogType.THEME_CREATOR:
       return <ThemeCreatorDialog {...dialogProps} />
     case DialogType.WARNING:
-      return warningDialog(dialogProps)
+    case DialogType.CONNECTION_ERROR:
+      return <WarningDialog {...dialogProps} />
     case DialogType.DEPLOY_DIALOG:
       return <DeployDialog {...dialogProps} />
     case DialogType.DEPLOY_ERROR:
-      return deployErrorDialog(dialogProps)
+      return <DeployErrorDialog {...dialogProps} />
     case undefined:
       return noDialog(dialogProps)
     default:
@@ -99,7 +101,7 @@ interface AboutProps {
 }
 
 /** About Dialog */
-function aboutDialog(props: AboutProps): ReactElement {
+function AboutDialog(props: AboutProps): ReactElement {
   if (props.aboutSectionMd) {
     const markdownStyle: CSSProperties = {
       overflowY: "auto",
@@ -175,7 +177,7 @@ interface ClearCacheProps {
  * confirmCallback - callback to send the clear_cache request to the Proxy
  * onClose         - callback to close the dialog
  */
-function clearCacheDialog(props: ClearCacheProps): ReactElement {
+function ClearCacheDialog(props: ClearCacheProps): ReactElement {
   // Markdown New line is 2 spaces + \n
   const newLineMarkdown = "  \n"
   const clearCacheInfo = [
@@ -214,7 +216,7 @@ export interface ScriptCompileErrorProps {
   onClose: PlainEventHandler
 }
 
-function scriptCompileErrorDialog(
+function ScriptCompileErrorDialog(
   props: ScriptCompileErrorProps
 ): ReactElement {
   return (
@@ -234,24 +236,26 @@ function scriptCompileErrorDialog(
   )
 }
 
-/**
- * Shows the settings dialog.
- */
-function settingsDialog(props: SettingsProps): ReactElement {
-  return <SettingsDialog {...props} />
-}
-
-export interface WarningProps {
-  type: DialogType.WARNING
+interface CommonWarningProps {
   title: string
   msg: ReactNode
   onClose: PlainEventHandler
 }
 
+export interface WarningProps extends CommonWarningProps {
+  type: DialogType.WARNING
+}
+
+export interface ConnectionErrorProps extends CommonWarningProps {
+  type: DialogType.CONNECTION_ERROR
+}
+
 /**
  * Prints out a warning
  */
-function warningDialog(props: WarningProps): ReactElement {
+function WarningDialog(
+  props: WarningProps | ConnectionErrorProps
+): ReactElement {
   return (
     <Modal isOpen onClose={props.onClose}>
       <ModalHeader>{props.title}</ModalHeader>
@@ -272,7 +276,7 @@ interface DeployErrorProps {
 /**
  * Modal used to show deployment errors
  */
-function deployErrorDialog({
+function DeployErrorDialog({
   title,
   msg,
   onClose,

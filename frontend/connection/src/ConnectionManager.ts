@@ -23,15 +23,8 @@ import { establishStaticConnection } from "./StaticConnection"
 import { IHostConfigResponse, StreamlitEndpoints } from "./types"
 import { getPossibleBaseUris } from "./utils"
 import { WebsocketConnection } from "./WebsocketConnection"
+import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 
-/**
- * When the websocket connection retries this many times, we show a dialog
- * letting the user know we're having problems connecting. This happens
- * after about 15 seconds as, before the 6th retry, we've set timeouts for
- * a total of approximately 0.5 + 1 + 2 + 4 + 8 = 15.5 seconds (+/- some
- * due to jitter).
- */
-const RETRY_COUNT_FOR_WARNING = 6
 const LOG = getLogger("ConnectionManager")
 
 interface Props {
@@ -232,7 +225,7 @@ export class ConnectionManager {
     // used in tests.
     _retryTimeout: number
   ): void => {
-    if (totalRetries === RETRY_COUNT_FOR_WARNING) {
+    if (totalRetries >= MAX_RETRIES_BEFORE_CLIENT_ERROR) {
       this.props.onConnectionError(latestError)
     }
   }

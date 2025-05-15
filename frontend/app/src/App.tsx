@@ -113,6 +113,7 @@ import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
 import DeployButton from "@streamlit/app/src/components/DeployButton"
 import Header from "@streamlit/app/src/components/Header"
 import {
+  ConnectionErrorProps,
   DialogProps,
   ScriptCompileErrorProps,
   StreamlitDialog,
@@ -602,7 +603,7 @@ export class App extends PureComponent<Props, State> {
    * to be handled by the host.
    */
   maybeShowErrorDialog(
-    newDialog: WarningProps | ScriptCompileErrorProps,
+    newDialog: WarningProps | ConnectionErrorProps | ScriptCompileErrorProps,
     errorMsg: string
   ): void {
     // Show dialog only if blockErrorDialogs host config is false
@@ -624,10 +625,16 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
-  showError(title: string, errorMarkdown: string): void {
+  showError(
+    title: string,
+    errorMarkdown: string,
+    dialogType:
+      | DialogType.WARNING
+      | DialogType.CONNECTION_ERROR = DialogType.WARNING
+  ): void {
     LOG.error(errorMarkdown)
-    const newDialog: DialogProps = {
-      type: DialogType.WARNING,
+    const newDialog: WarningProps | ConnectionErrorProps = {
+      type: dialogType,
       title,
       msg: <StreamlitMarkdown source={errorMarkdown} allowHTML={false} />,
       onClose: () => {},
@@ -723,6 +730,9 @@ export class App extends PureComponent<Props, State> {
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+        this.setState({ dialog: null })
+      } else if (this.state.dialog?.type === DialogType.CONNECTION_ERROR) {
+        // Rescind the "Connection error" dialog if currently shown.
         this.setState({ dialog: null })
       }
 
@@ -1782,7 +1792,13 @@ export class App extends PureComponent<Props, State> {
    * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errMarkdown: string): void => {
-    this.showError("Connection error", errMarkdown)
+    // This is just a regular error dialog, but with type CONNECTION_ERROR
+    // instead of WARNING, so we can rescind the dialog later when reconnected.
+    this.showError(
+      "Connection error",
+      errMarkdown,
+      DialogType.CONNECTION_ERROR
+    )
   }
 
   /**

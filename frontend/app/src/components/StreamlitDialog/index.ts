@@ -15,6 +15,7 @@
  */
 export { StreamlitDialog } from "./StreamlitDialog"
 export type {
+  ConnectionErrorProps,
   DialogProps,
   PlainEventHandler,
   ScriptCompileErrorProps,

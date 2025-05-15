@@ -22,11 +22,11 @@ import { BackMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
-import { CORS_ERROR_MESSAGE_DOCUMENTATION_LINK } from "./constants"
 import {
-  doInitPings,
-  THRESHOLD_FOR_CONNECTION_ERROR_DIALOG,
-} from "./DoInitPings"
+  CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
+  MAX_RETRIES_BEFORE_CLIENT_ERROR,
+} from "./constants"
+import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
@@ -235,7 +235,7 @@ describe("doInitPings", () => {
     )
   })
 
-  it("calls retry with 'Connection failed with status 0.' when there is no response", async () => {
+  it("calls retry with 'Streamlit server is not responding. Are you connected to the internet?' when there is no response", async () => {
     const TEST_ERROR = {
       response: {
         status: 0,
@@ -262,12 +262,12 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Connection failed with status 0.",
+      "Streamlit server is not responding. Are you connected to the internet?",
       expect.anything()
     )
   })
 
-  it("calls retry with 'Connection failed with status 0.' when the request was made but no response was received", async () => {
+  it("calls retry with 'Streamlit server is not responding. Are you connected to the internet?' when the request was made but no response was received", async () => {
     const TEST_ERROR = {
       request: {},
     }
@@ -292,7 +292,7 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      "Connection failed with status 0.",
+      "Streamlit server is not responding. Are you connected to the internet?",
       expect.anything()
     )
   })
@@ -633,18 +633,15 @@ If you are trying to access a Streamlit app running on another server, this coul
       const sendClientErrorSpy = vi.fn()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(
-        THRESHOLD_FOR_CONNECTION_ERROR_DIALOG,
-        {
-          response: {
-            status: 0,
-            statusText: "No response",
-            config: {
-              url: "https://example.com/health",
-            },
+      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+        response: {
+          status: 0,
+          statusText: "No response",
+          config: {
+            url: "https://example.com/health",
           },
-        }
-      )
+        },
+      })
 
       await doInitPings(
         MOCK_PING_DATA.uri,
@@ -667,18 +664,15 @@ If you are trying to access a Streamlit app running on another server, this coul
       const sendClientErrorSpy = vi.fn()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(
-        THRESHOLD_FOR_CONNECTION_ERROR_DIALOG,
-        {
-          response: {
-            status: 403,
-            statusText: "Forbidden",
-            config: {
-              url: "https://example.com/health",
-            },
+      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+        response: {
+          status: 403,
+          statusText: "Forbidden",
+          config: {
+            url: "https://example.com/health",
           },
-        }
-      )
+        },
+      })
 
       await doInitPings(
         MOCK_PING_DATA.uri,
@@ -700,18 +694,15 @@ If you are trying to access a Streamlit app running on another server, this coul
       const sendClientErrorSpy = vi.fn()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(
-        THRESHOLD_FOR_CONNECTION_ERROR_DIALOG,
-        {
-          response: {
-            status: 500,
-            statusText: "Internal Server Error",
-            config: {
-              url: "https://example.com/health",
-            },
+      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+        response: {
+          status: 500,
+          statusText: "Internal Server Error",
+          config: {
+            url: "https://example.com/health",
           },
-        }
-      )
+        },
+      })
 
       await doInitPings(
         MOCK_PING_DATA.uri,
@@ -733,14 +724,11 @@ If you are trying to access a Streamlit app running on another server, this coul
       const sendClientErrorSpy = vi.fn()
 
       // We need to mock axios.get to simulate connection error threshold
-      axios.get = setupAxiosMockWithFailures(
-        THRESHOLD_FOR_CONNECTION_ERROR_DIALOG,
-        {
-          request: {
-            path: "https://example.com/health",
-          },
-        }
-      )
+      axios.get = setupAxiosMockWithFailures(MAX_RETRIES_BEFORE_CLIENT_ERROR, {
+        request: {
+          path: "https://example.com/health",
+        },
+      })
 
       await doInitPings(
         MOCK_PING_DATA.uri,
