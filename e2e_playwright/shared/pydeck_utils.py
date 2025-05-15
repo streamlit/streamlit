@@ -69,7 +69,7 @@ def get_pydeck_chart(
     )
 
 
-def wait_for_chart(app: Page):
+def wait_for_chart(app: Page) -> None:
     # The pydeck chart takes a while to load so check that
     # it gets attached with an increased timeout.
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
@@ -89,7 +89,7 @@ def get_click_handling_div(app: Page, nth: int) -> Locator:
     return click_handling_div
 
 
-def click_point(click_handling_div: Locator, coords: Position):
+def click_point(click_handling_div: Locator, coords: Position) -> None:
     """Helper function to click on a point."""
     # Use force=True since it seems like another div sometimes intercepts events
     # in CI, causing the click to fail

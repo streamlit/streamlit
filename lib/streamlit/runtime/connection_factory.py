@@ -202,7 +202,7 @@ def connection_factory(
     pass
 
 
-def connection_factory(
+def connection_factory(  # type: ignore
     name,
     type=None,
     max_entries=None,

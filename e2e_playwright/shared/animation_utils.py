@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
+
 from playwright.sync_api import Locator, Page
 
 from e2e_playwright.conftest import wait_until
@@ -104,7 +106,7 @@ def wait_for_animation_to_be_hidden(
     for img in animation_images.all():
         wait_until(
             app,
-            lambda current_img=img: check_if_offscreen(app, current_img),
+            partial(check_if_offscreen, app, img),
             timeout=timeout,
         )
 

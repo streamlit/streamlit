@@ -18,8 +18,7 @@ from typing import TYPE_CHECKING, Callable, Final
 
 from playwright.sync_api import FrameLocator, Locator, expect
 
-from e2e_playwright.conftest import IframedPageAttrs
-from e2e_playwright.shared.app_utils import wait_for_app_run
+from e2e_playwright.conftest import IframedPageAttrs, wait_for_app_run
 
 if TYPE_CHECKING:
     from e2e_playwright.conftest import IframedPage, ImageCompareFunction

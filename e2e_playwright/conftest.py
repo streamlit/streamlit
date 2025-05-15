@@ -67,14 +67,14 @@ class StaticPage(Page):
     pass
 
 
-def pytest_configure(config: pytest.Config):
+def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line(
         "markers", "no_perf: mark test to not use performance profiling"
     )
 
 
-def reorder_early_fixtures(metafunc: pytest.Metafunc):
+def reorder_early_fixtures(metafunc: pytest.Metafunc) -> None:
     """Put fixtures with `pytest.mark.early` first during execution.
 
     This allows patch of configurations before the application is initialized
@@ -90,7 +90,7 @@ def reorder_early_fixtures(metafunc: pytest.Metafunc):
                 break
 
 
-def pytest_generate_tests(metafunc: pytest.Metafunc):
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     reorder_early_fixtures(metafunc)
 
 
@@ -880,7 +880,9 @@ def assert_snapshot(
 
 
 @pytest.fixture(scope="function", autouse=True)
-def playwright_profiling(request: FixtureRequest, page: Page):
+def playwright_profiling(
+    request: FixtureRequest, page: Page
+) -> Generator[None, None, None]:
     if request.node.get_closest_marker("no_perf") or not is_supported_browser(page):
         yield
         return
@@ -945,7 +947,7 @@ def wait_for_app_run(
         page.wait_for_timeout(wait_delay)
 
 
-def wait_for_app_loaded(page: Page):
+def wait_for_app_loaded(page: Page) -> None:
     """Wait for the app to fully load."""
     # Wait for the app view container to appear:
     page.wait_for_selector(
@@ -955,7 +957,7 @@ def wait_for_app_loaded(page: Page):
     wait_for_app_run(page)
 
 
-def rerun_app(page: Page):
+def rerun_app(page: Page) -> None:
     """Triggers an app rerun and waits for the run to be finished."""
     # Click somewhere to clear the focus from elements:
     page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
@@ -966,7 +968,7 @@ def rerun_app(page: Page):
 
 def wait_until(
     page: Page, fn: Callable[[], None | bool], timeout: int = 5000, interval: int = 100
-):
+) -> None:
     """Run a test function in a loop until it evaluates to True
     or times out.
 

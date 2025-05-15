@@ -173,7 +173,7 @@ with st.container(key="latex_elements"):
         import sympy
 
         a, b = sympy.symbols("a b")
-        out = a + b
+        out = a + b  # type: ignore[operator]
     except Exception:
         out = "a + b"
 

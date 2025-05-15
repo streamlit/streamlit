@@ -126,4 +126,10 @@ tabs = st.tabs(st.session_state.tabs)
 for tabs_index, tab in enumerate(tabs):
     with tab:
         st.write(f"You are in Tab {tabs_index + 1}")
-        st.slider(f"Slider {tabs_index + 1}", 0, 10, 5, key=tab)
+        st.slider(
+            f"Slider {tabs_index + 1}",
+            min_value=0,
+            max_value=10,
+            value=5,
+            key=f"slider_tab_{tabs_index}",
+        )

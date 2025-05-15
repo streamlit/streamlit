@@ -42,7 +42,7 @@ else:
 
 default = st.session_state.default_segmented_control_options
 
-selection = st.segmented_control(
+s1 = st.segmented_control(
     "Select some options",
     [
         ":material/star: Hello there!",
@@ -62,11 +62,11 @@ selection = st.segmented_control(
     default=default,
     help="You can choose multiple options",
 )
-st.write(f"Multi selection: {selection}")
+st.write(f"Multi selection: {s1}")
 
 
 st.header("Single Select - Segmented Control", anchor="single-select-segmented-control")
-selection = st.segmented_control(
+s2 = st.segmented_control(
     "Select an option",
     [
         ":material/star: Hello there!",
@@ -76,7 +76,7 @@ selection = st.segmented_control(
     key="segmented_control_single_selection",
     selection_mode="single",
 )
-st.write(f"Single selection: {selection}")
+st.write(f"Single selection: {s2}")
 
 option_to_icon_map = {
     0: ":material/add:",
@@ -89,14 +89,14 @@ st.header(
     "Icon-only button group - Segmented Control",
     anchor="icon-only-button-group-segmented-control",
 )
-selection = st.segmented_control(
+s3 = st.segmented_control(
     "select an icon",
     options=[0, 1, 2, 3],
     format_func=lambda option: option_to_icon_map[option],
     key="segmented_control_single_icon_selection",
     selection_mode="single",
 )
-st.write(f"Single icon selection: {selection}")
+st.write(f"Single icon selection: {s3}")
 
 
 st.header(
@@ -117,19 +117,19 @@ st.header(
     "Disabled - Segmented Control (label collapsed)",
     anchor="disabled-segmented-control",
 )
-selection = st.segmented_control(
+s4 = st.segmented_control(
     "Select an emotion:",
     ["Joy", "Sadness", "Anger", "Disgust"],
     key="segmented_control_disabled",
     disabled=True,
     label_visibility="collapsed",
 )
-st.write("segmented-control-disabled:", str(selection))
+st.write("segmented-control-disabled:", str(s4))
 
 
 st.header("Segmented Control in form", anchor="segmented-control-in-form")
 with st.form(key="my_form", clear_on_submit=True):
-    selection = st.segmented_control(
+    st.segmented_control(
         "Select an emotion:",
         ["Joy", "Sadness", "Anger", "Disgust"],
         key="segmented_control_in_form",
@@ -149,12 +149,12 @@ st.header("Segmented Control in fragment", anchor="segmented-control-in-fragment
 
 @st.experimental_fragment()
 def test_fragment():
-    selection = st.segmented_control(
+    s5 = st.segmented_control(
         "Select an emotion:",
         ["Joy", "Sadness", "Anger", "Disgust"],
         key="segmented_control_in_fragment",
     )
-    st.write("segmented-control-in-fragment:", str(selection))
+    st.write("segmented-control-in-fragment:", str(s5))
 
 
 test_fragment()
@@ -168,12 +168,12 @@ if st.button("Create some elements to unmount component"):
         time.sleep(1)
         st.write("Another element")
 
-selection = st.segmented_control(
+s6 = st.segmented_control(
     "Select an emotion:",
     ["Joy", "Sadness", "Anger", "Disgust"],
     key="segmented_control_after_sleep",
 )
-st.write("segmented-control-after-sleep:", str(selection))
+st.write("segmented-control-after-sleep:", str(s6))
 
 
 if "runs" not in st.session_state:

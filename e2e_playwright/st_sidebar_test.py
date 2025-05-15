@@ -94,7 +94,7 @@ def test_sidebar_resize_functionality(app: Page):
     expect(sidebar).to_be_visible()
 
     # Get the initial width of the sidebar
-    initial_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    initial_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
 
     # Find the resize handle (the element with cursor: col-resize)
     resize_handle = app.locator("div[style*='cursor: col-resize']")
@@ -118,7 +118,7 @@ def test_sidebar_resize_functionality(app: Page):
 
     # Wait for the resize to take effect
     def check_width_changed() -> bool:
-        current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+        current_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
         return current_width > initial_width
 
     wait_until(app, check_width_changed)

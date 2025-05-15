@@ -31,7 +31,7 @@ from typing import (
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import Required, TypeAlias
 
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib import dicttools
@@ -218,7 +218,7 @@ class VegaLiteState(TypedDict, total=False):
 
     """
 
-    selection: AttributeDictionary
+    selection: Required[AttributeDictionary]
 
 
 @dataclass
@@ -242,7 +242,7 @@ class VegaLiteStateSerde:
         )
 
         if "selection" not in selection_state:
-            selection_state = empty_selection_state
+            selection_state = empty_selection_state  # type: ignore[unreachable]
 
         return cast("VegaLiteState", AttributeDictionary(selection_state))
 
@@ -1479,7 +1479,7 @@ class VegaChartsMixin:
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
     ) -> DeltaGenerator: ...
 
@@ -1492,7 +1492,7 @@ class VegaChartsMixin:
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
     ) -> VegaLiteState: ...
 
@@ -1638,7 +1638,7 @@ class VegaChartsMixin:
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator: ...
@@ -1653,7 +1653,7 @@ class VegaChartsMixin:
         use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> VegaLiteState: ...

@@ -16,7 +16,7 @@ import textwrap
 
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
+import seaborn as sns  # type: ignore
 
 import streamlit as st
 
@@ -80,7 +80,7 @@ kwargs = {
 
 # We need to set clear_figure=True, otherwise the global object
 # test below would not work.
-st.pyplot(fig, clear_figure=True, **kwargs)
+st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type]
 
 st.write("Figure using deprecated global object:")
 plot = plt.plot(data)

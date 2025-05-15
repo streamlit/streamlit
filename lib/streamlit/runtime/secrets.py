@@ -45,29 +45,31 @@ class SecretErrorMessages:
     """
 
     def __init__(self) -> None:
-        self.missing_attr_message = lambda attr_name: (
+        self.missing_attr_message: Callable[[str], str] = lambda attr_name: (
             f'st.secrets has no attribute "{attr_name}". '
             "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
             "on Streamlit Cloud? More info: "
             "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
         )
-        self.missing_key_message = lambda key: (
+        self.missing_key_message: Callable[[str], str] = lambda key: (
             f'st.secrets has no key "{key}". '
             "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
             "on Streamlit Cloud? More info: "
             "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
         )
-        self.no_secrets_found = lambda file_paths: (
+        self.no_secrets_found: Callable[[list[str]], str] = lambda file_paths: (
             f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {', '.join(file_paths)}"
         )
-        self.error_parsing_file_at_path = (
+        self.error_parsing_file_at_path: Callable[[str, Exception], str] = (
             lambda path, ex: f"Error parsing secrets file at {path}: {ex}"
         )
-        self.subfolder_path_is_not_a_folder = lambda sub_folder_path: (
-            f"{sub_folder_path} is not a folder. "
-            "To use directory based secrets, mount every secret in a subfolder under the secret directory"
+        self.subfolder_path_is_not_a_folder: Callable[[str], str] = (
+            lambda sub_folder_path: (
+                f"{sub_folder_path} is not a folder. "
+                "To use directory based secrets, mount every secret in a subfolder under the secret directory"
+            )
         )
-        self.invalid_secret_path = lambda path: (
+        self.invalid_secret_path: Callable[[str], str] = lambda path: (
             f"Invalid secrets path: {path}: path is not a .toml file or a directory"
         )
 

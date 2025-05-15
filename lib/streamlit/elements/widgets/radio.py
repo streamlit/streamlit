@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, cast, overload
 
+from typing_extensions import Never
+
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import index_, maybe_coerce_enum
@@ -79,6 +81,25 @@ class RadioSerde(Generic[T]):
 
 
 class RadioMixin:
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: Sequence[Never],
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> None: ...
+
     @overload
     def radio(
         self,

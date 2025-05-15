@@ -172,6 +172,7 @@ details.
 
 import sys
 import types as Types
+from typing import Any
 import warnings
 import weakref as Weakref
 from inspect import isbuiltin, isclass, iscode, isframe, isfunction, ismethod, ismodule
@@ -2586,7 +2587,7 @@ def asized(*objs, **opts):
     return t
 
 
-def asizeof(*objs, **opts):
+def asizeof(*objs: Any, **opts: Any) -> int:
     """Return the combined size (in bytes) of all objects passed
     as positional arguments.
 

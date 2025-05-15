@@ -40,9 +40,9 @@ if TYPE_CHECKING:
 class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
     client_cls = OAuth2Session
 
-    def load_server_metadata(self):
+    def load_server_metadata(self) -> dict[str, Any]:
         """We enforce S256 code challenge method if it is supported by the server."""
-        result = super().load_server_metadata()
+        result = cast("dict[str, Any]", super().load_server_metadata())
         if "S256" in result.get("code_challenge_methods_supported", []):
             self.client_kwargs["code_challenge_method"] = "S256"
         return result

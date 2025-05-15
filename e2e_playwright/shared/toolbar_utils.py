@@ -33,7 +33,7 @@ def assert_fullscreen_toolbar_button_interactions(
     filename_prefix: str = "",
     nth: int = 0,
     pixel_threshold: float = 0.05,
-):
+) -> None:
     """
     Shared test function to assert that clicking on fullscreen toolbar button
     expands the map into fullscreen.

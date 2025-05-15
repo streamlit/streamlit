@@ -146,7 +146,7 @@ st.button(
 
 def set_page_config_menu_items_additive():
     st.set_page_config(menu_items={"Get help": "https://www.streamlit.io"})
-    st.set_page_config(menu_items={"Report a Bug": "https://www.example.com"})
+    st.set_page_config(menu_items={"Report a bug": "https://www.example.com"})
 
 
 st.button(

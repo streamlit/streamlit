@@ -23,6 +23,7 @@ import pandas as pd
 import streamlit as st
 
 if TYPE_CHECKING:
+    import numpy.typing as npt
     from pandas.io.formats.style import Styler
 
 # Explicitly seed the RNG for deterministic results
@@ -53,7 +54,7 @@ def style_negative(v: float, props: str = "") -> str | None:
     return props if v < 0 else None
 
 
-def highlight_max(s: Any, props: str = "") -> np.ndarray:
+def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
     return np.where(s == np.nanmax(s.values), props, "")
 
 

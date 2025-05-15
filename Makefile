@@ -155,7 +155,7 @@ pytest-integration:
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
-	mypy --config-file=lib/mypy.ini --namespace-packages lib/streamlit/ lib/tests/streamlit/typing/ scripts/
+	mypy --config-file=mypy.ini
 
 .PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.

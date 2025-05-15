@@ -185,7 +185,11 @@ def maybe_coerce_enum(
 ) -> RegisterWidgetResult[T]: ...
 
 
-def maybe_coerce_enum(register_widget_result, options, opt_sequence):
+def maybe_coerce_enum(
+    register_widget_result: RegisterWidgetResult[Any],
+    options: OptionSequence[Any],
+    opt_sequence: Sequence[Any],
+) -> RegisterWidgetResult[Any]:
     """Maybe Coerce a RegisterWidgetResult with an Enum member value to
     RegisterWidgetResult[option] if option is an EnumType, otherwise just return
     the original RegisterWidgetResult.
@@ -227,7 +231,11 @@ def maybe_coerce_enum_sequence(
 ) -> RegisterWidgetResult[tuple[T, T]]: ...
 
 
-def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
+def maybe_coerce_enum_sequence(
+    register_widget_result: RegisterWidgetResult[list[Any] | tuple[Any, ...]],
+    options: OptionSequence[Any],
+    opt_sequence: Sequence[Any],
+) -> RegisterWidgetResult[list[Any] | tuple[Any, ...]]:
     """Maybe Coerce a RegisterWidgetResult with a sequence of Enum members as value
     to RegisterWidgetResult[Sequence[option]] if option is an EnumType, otherwise just
     return the original RegisterWidgetResult.

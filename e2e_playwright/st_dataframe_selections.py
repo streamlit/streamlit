@@ -145,7 +145,7 @@ st.header("Selections in fragment:")
 
 
 @st.fragment
-def test_fragment():
+def test_fragment() -> None:
     selection = st.dataframe(
         df,
         hide_index=True,

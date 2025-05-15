@@ -24,7 +24,9 @@ from typing import TYPE_CHECKING, Any
 from e2e_playwright.shared.git_utils import get_git_root
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Page, WebSocket
+    from collections.abc import Generator
+
+    from playwright.sync_api import CDPSession, Page, WebSocket
 
 
 # Observe long tasks, measure, marks, and paints with PerformanceObserver
@@ -70,14 +72,14 @@ def is_supported_browser(page: Page) -> bool:
     return browser_name == "chromium"
 
 
-def start_capture_traces(page: Page):
+def start_capture_traces(page: Page) -> None:
     """Start capturing traces using the PerformanceObserver API."""
     if is_supported_browser(page):
         page.evaluate(CAPTURE_TRACES_SCRIPT)
 
 
 @contextmanager
-def with_cdp_session(page: Page):
+def with_cdp_session(page: Page) -> Generator[CDPSession, None, None]:
     """
     Create a new Chrome DevTools Protocol session.
     Detach the session when the context manager exits.
@@ -95,7 +97,7 @@ def with_cdp_session(page: Page):
 @contextmanager
 def measure_performance(
     page: Page, *, test_name: str, cpu_throttling_rate: int | None = None
-):
+) -> Generator[None, None, None]:
     """Measure the performance of the page using the native performance API from
     Chrome DevTools Protocol.
 

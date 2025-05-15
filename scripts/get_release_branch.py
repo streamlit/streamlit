@@ -45,7 +45,7 @@ def get_release_branch() -> str | None:
     return None
 
 
-def main():
+def main() -> None:
     print(get_release_branch())
 
 

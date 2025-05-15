@@ -16,6 +16,8 @@ from __future__ import annotations
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
+from typing_extensions import Never
+
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
@@ -132,6 +134,26 @@ class SelectboxSerde(Generic[T]):
 
 
 class SelectboxMixin:
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: Sequence[Never],  # Type for empty or Never-inferred options
+        index: int = 0,
+        format_func: Callable[[Any], str] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        accept_new_options: Literal[False] = False,
+        width: WidthWithoutContent = "stretch",
+    ) -> None: ...  # Returns None if options is empty and accept_new_options is False
+
     @overload
     def selectbox(
         self,

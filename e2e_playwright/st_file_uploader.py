@@ -45,7 +45,7 @@ multiple_files = st.file_uploader(
     accept_multiple_files=True,
     key="multiple",
 )
-if multiple_files is None:
+if not multiple_files:
     st.text("No upload")
 else:
     files = [file.read().decode() for file in multiple_files]

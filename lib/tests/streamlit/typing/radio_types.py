@@ -31,6 +31,8 @@ if TYPE_CHECKING:
         WALLACE = 2
         GREENE = 3
 
+    assert_type(radio("foo", []), None)
+
     assert_type(radio("foo", [1, 2, 3]), int)
     assert_type(radio("foo", [1, 2, 3], index=None), Union[int, None])
     assert_type(radio("foo", [1.0, 2.0, 3.0]), float)

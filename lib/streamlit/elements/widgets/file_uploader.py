@@ -170,7 +170,7 @@ class FileUploaderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-    ) -> list[UploadedFile] | None: ...
+    ) -> list[UploadedFile]: ...
 
     # 1. type is given as not a keyword-only argument
     # 2. accept_multiple_files = False or omitted
@@ -213,7 +213,7 @@ class FileUploaderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-    ) -> list[UploadedFile] | None: ...
+    ) -> list[UploadedFile]: ...
 
     # 1. type is skipped or a keyword argument
     # 2. accept_multiple_files = False or omitted

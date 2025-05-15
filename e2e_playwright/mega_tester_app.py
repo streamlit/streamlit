@@ -585,7 +585,7 @@ st.exception(RuntimeError("st.exception"))
 
 
 @st.fragment
-def my_fragment():
+def my_fragment() -> None:
     if st.button("Wait 1s inside the fragment"):
         time.sleep(1)
 

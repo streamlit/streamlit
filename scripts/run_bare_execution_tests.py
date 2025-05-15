@@ -104,7 +104,7 @@ def run_commands(section_header: str, commands: list[str]) -> list[str]:
     return failed_commands
 
 
-def main():
+def main() -> None:
     filenames = _get_filenames(E2E_DIRS)
     commands = [f"python {filename}" for filename in filenames]
     failed = run_commands("bare scripts", commands)

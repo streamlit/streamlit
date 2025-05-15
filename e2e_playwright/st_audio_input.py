@@ -20,7 +20,7 @@ import streamlit as st
 
 
 # Main Audio Input Section
-def render_main_audio_input():
+def render_main_audio_input() -> None:
     """
     Renders the main audio input component with a label and help tooltip.
     Displays the recorded audio and a boolean indicating if any audio was captured.
@@ -57,7 +57,7 @@ def render_main_audio_input():
 
 
 # Form Audio Input Section
-def render_form_audio_input():
+def render_form_audio_input() -> None:
     """
     Renders a form with an audio input and a submit button.
     The form clears on submission and displays the captured audio.
@@ -72,7 +72,7 @@ def render_form_audio_input():
 
 # Fragment Audio Input Section
 @st.fragment()
-def test_fragment():
+def test_fragment() -> None:
     """
     Defines a fragment that includes an audio input component.
     Displays the captured audio from the fragment.
@@ -82,7 +82,7 @@ def test_fragment():
 
 
 # Audio Input with Various Options
-def render_special_audio_inputs():
+def render_special_audio_inputs() -> None:
     """
     Renders various audio inputs with different properties such as
     disabled and hidden label visibility.
@@ -92,12 +92,12 @@ def render_special_audio_inputs():
 
 
 # Callback Example
-def on_change():
+def on_change() -> None:
     """Callback function to set a flag when audio input changes."""
     st.session_state.audio_input_changed = True
 
 
-def render_callback_audio_input():
+def render_callback_audio_input() -> None:
     """
     Renders an audio input component with an `on_change` callback.
     Displays whether the audio input has changed.
@@ -110,7 +110,7 @@ def render_callback_audio_input():
 
 
 # Component Remounting Section
-def render_remount_test():
+def render_remount_test() -> None:
     """
     Renders an audio input component, simulates element unmounting, and checks
     if the value persists after remounting. Also includes a button to create additional elements.
@@ -128,7 +128,7 @@ def render_remount_test():
 
 
 # Runs Tracker
-def track_runs():
+def track_runs() -> None:
     """Tracks how many times the app has been run in this session."""
     if "runs" not in st.session_state:
         st.session_state.runs = 0

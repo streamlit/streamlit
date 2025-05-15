@@ -18,8 +18,12 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 CONFIG_FILE_PATH: str
 CREDENTIALS_FILE_PATH: str
@@ -50,7 +54,7 @@ class TestCLIRegressions:
     """
 
     @pytest.fixture(scope="module", autouse=True)
-    def setup(self):
+    def setup(self) -> Generator[None, None, None]:
         # ---- Initialization
         global CONFIG_FILE_PATH  # noqa: PLW0603
         CONFIG_FILE_PATH = os.path.expanduser("~/.streamlit/config.toml")

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-def wait_for_react_stability(page: Page, timeout_ms: int = 1000):
+def wait_for_react_stability(page: Page, timeout_ms: int = 1000) -> None:
     """
     Wait for React 18 rendering to stabilize.
 
