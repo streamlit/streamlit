@@ -319,13 +319,16 @@ class SQLConnection(BaseConnection["Engine"]):
             import pandas as pd
 
             instance = self._instance.connect()
-            return pd.read_sql(
-                text(sql),
-                instance,
-                index_col=index_col,
-                chunksize=chunksize,
-                params=params,
-                **kwargs,
+            return cast(
+                "DataFrame",
+                pd.read_sql(
+                    text(sql),
+                    instance,
+                    index_col=index_col,
+                    chunksize=chunksize,
+                    params=params,
+                    **kwargs,
+                ),
             )
 
         # We modify our helper function's `__qualname__` here to work around default

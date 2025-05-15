@@ -236,34 +236,34 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_value_out_of_bounds(self):
         # Max int
         with pytest.raises(StreamlitAPIException) as exc:
-            value = JSNumber.MAX_SAFE_INTEGER + 1
-            st.number_input("Label", value=value)
+            int_value = JSNumber.MAX_SAFE_INTEGER + 1
+            st.number_input("Label", value=int_value)
         self.assertEqual(
-            "`value` (%s) must be <= (1 << 53) - 1" % str(value), str(exc.value)
+            "`value` (%s) must be <= (1 << 53) - 1" % str(int_value), str(exc.value)
         )
 
         # Min int
         with pytest.raises(StreamlitAPIException) as exc:
-            value = JSNumber.MIN_SAFE_INTEGER - 1
-            st.number_input("Label", value=value)
+            int_value = JSNumber.MIN_SAFE_INTEGER - 1
+            st.number_input("Label", value=int_value)
         self.assertEqual(
-            "`value` (%s) must be >= -((1 << 53) - 1)" % str(value), str(exc.value)
+            "`value` (%s) must be >= -((1 << 53) - 1)" % str(int_value), str(exc.value)
         )
 
         # Max float
         with pytest.raises(StreamlitAPIException) as exc:
-            value = 2e308
-            st.number_input("Label", value=value)
+            float_val = 2e308
+            st.number_input("Label", value=float_val)
         self.assertEqual(
-            "`value` (%s) must be <= 1.797e+308" % str(value), str(exc.value)
+            "`value` (%s) must be <= 1.797e+308" % str(float_val), str(exc.value)
         )
 
         # Min float
         with pytest.raises(StreamlitAPIException) as exc:
-            value = -2e308
-            st.number_input("Label", value=value)
+            float_val = -2e308
+            st.number_input("Label", value=float_val)
         self.assertEqual(
-            "`value` (%s) must be >= -1.797e+308" % str(value), str(exc.value)
+            "`value` (%s) must be >= -1.797e+308" % str(float_val), str(exc.value)
         )
 
     def test_min_and_max_setting_for_integer_inputs(self):
@@ -360,7 +360,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
-            st.number_input("the label", label_visibility="wrong_value")
+            st.number_input("the label", label_visibility="wrong_value")  # type: ignore[call-arg]
         self.assertEqual(
             str(e.exception),
             "Unsupported label_visibility option 'wrong_value'. Valid values are "

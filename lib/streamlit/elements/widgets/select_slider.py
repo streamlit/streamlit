@@ -107,7 +107,7 @@ class SelectSliderSerde(Generic[T]):
 
 class SelectSliderMixin:
     @overload
-    def select_slider(  # type: ignore[overload-overlap]
+    def select_slider(
         self,
         label: str,
         options: OptionSequence[T],
@@ -123,18 +123,6 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
     ) -> tuple[T, T]: ...
-
-    # The overload-overlap error given by mypy here stems from
-    # the fact that
-    #
-    # > opt:List[object] = [1, 2, "3"]
-    # > select_slider("foo", options=opt, value=[1, 2])
-    #
-    # matches both overloads; "opt" matches
-    # OptionsSequence[T] in each case, binding T to object.
-    # However, the list[int] type of "value" can be interpreted
-    # as subtype of object, or as a subtype of List[object],
-    # meaning it matches both signatures.
 
     @overload
     def select_slider(

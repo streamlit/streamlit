@@ -116,7 +116,7 @@ class NumberInputMixin:
     def number_input(
         self,
         label: str,
-        min_value: int | None = None,
+        min_value: None = None,
         *,
         max_value: int,
         value: IntOrNone | Literal["min"] = "min",
@@ -166,8 +166,8 @@ class NumberInputMixin:
     def number_input(
         self,
         label: str,
-        min_value: int | None = None,
-        max_value: int | None = None,
+        min_value: None = None,
+        max_value: None = None,
         value: IntOrNone | Literal["min"] = "min",
         *,
         step: int,
