@@ -3283,7 +3283,7 @@ __metadata:
     prettier: "npm:^2.8.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^6.3.5"
-    vite-plugin-dts: "npm:^4.5.3"
+    vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.1.3"
@@ -3415,7 +3415,7 @@ __metadata:
     vega-interpreter: "npm:^1.2.0"
     vega-lite: "npm:5.23.0"
     vite: "npm:^6.3.5"
-    vite-plugin-dts: "npm:^4.5.3"
+    vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.1.3"
@@ -3455,7 +3455,7 @@ __metadata:
     prettier: "npm:^2.8.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^6.3.5"
-    vite-plugin-dts: "npm:^4.5.3"
+    vite-plugin-dts: "npm:^4.5.4"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.1.3"
   languageName: unknown
@@ -20364,9 +20364,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-dts@npm:^4.5.3":
-  version: 4.5.3
-  resolution: "vite-plugin-dts@npm:4.5.3"
+"vite-plugin-dts@npm:^4.5.4":
+  version: 4.5.4
+  resolution: "vite-plugin-dts@npm:4.5.4"
   dependencies:
     "@microsoft/api-extractor": "npm:^7.50.1"
     "@rollup/pluginutils": "npm:^5.1.4"
@@ -20383,7 +20383,7 @@ __metadata:
   peerDependenciesMeta:
     vite:
       optional: true
-  checksum: 10c0/e86ff3a92bda138b5d69696297f520e796282d65af8f459c2ed7870e79fc67b3ea74afabe79678c2141e1ab651ec73c3928d8ae255ff08ff0c9e08477f8b1bcf
+  checksum: 10c0/5fcb7f3739d115f36195a692c0e9f9fca4e504bbbbabe29e71ee06630dd05ea2920169371e80e548eb4779d2eca14107277497838d7df588d53e1fadf84be861
   languageName: node
   linkType: hard
 
