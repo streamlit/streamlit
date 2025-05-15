@@ -3333,7 +3333,7 @@ __metadata:
     "@types/lodash": "npm:~4.17.16"
     "@types/mapbox-gl": "npm:~1.13.10"
     "@types/moment-duration-format": "npm:~2.2.6"
-    "@types/plotly.js": "npm:^2.35.5"
+    "@types/plotly.js": "npm:^3.0.0"
     "@types/react": "npm:^18.2.0"
     "@types/react-color": "npm:^3.0.13"
     "@types/react-dom": "npm:^18.2.0"
@@ -4768,10 +4768,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/plotly.js@npm:^2.35.5":
-  version: 2.35.5
-  resolution: "@types/plotly.js@npm:2.35.5"
-  checksum: 10c0/02268e979c471a9dccd0e1a344ed69e8d71b3b1680c0f1dd08b9d421e2689315906d7010eb4011a6e0280929a9003efaad3319cd103a52f7ed2fc9807bc7bec1
+"@types/plotly.js@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@types/plotly.js@npm:3.0.0"
+  checksum: 10c0/889c5c111566e6ce579b3677f47bef1642e303b716a65fcaca3bb8e1a2482a9d13155a7bbf4efa488bb3fcc636893b24e9b281320fd1693dc6ccb327ef199f5d
   languageName: node
   linkType: hard
 
