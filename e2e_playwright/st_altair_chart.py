@@ -20,9 +20,8 @@ import streamlit as st
 
 np.random.seed(0)
 
-data = np.random.randn(200, 3)
-df = pd.DataFrame(data, columns=["a", "b", "c"])
-chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
+df1 = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
+chart = alt.Chart(df1).mark_circle().encode(x="a", y="b", size="c", color="c")
 
 st.write("Show default vega lite theme:")
 st.altair_chart(chart, theme=None)
@@ -32,20 +31,20 @@ st.altair_chart(chart, theme="streamlit")
 
 st.write("Overwrite theme config:")
 chart = (
-    alt.Chart(df, usermeta={"embedOptions": {"theme": None}})
+    alt.Chart(df1, usermeta={"embedOptions": {"theme": None}})
     .mark_circle()
     .encode(x="a", y="b", size="c", color="c")
 )
 st.altair_chart(chart, theme="streamlit")
 
-data = pd.DataFrame(
+df2 = pd.DataFrame(
     {
         "a": ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
         "b": [28, 55, 43, 91, 81, 53, 19, 87, 52],
     }
 )
 
-chart = alt.Chart(data).mark_bar().encode(x="a", y="b")
+chart = alt.Chart(df2).mark_bar().encode(x="a", y="b")
 
 st.write("Bar chart with overwritten theme props:")
 st.altair_chart(chart.configure_mark(color="black"), theme="streamlit")
@@ -111,10 +110,10 @@ x = np.linspace(10, 100, 10)
 y1 = 5 * x
 y2 = 1 / x
 
-df1 = pd.DataFrame.from_dict({"x": x, "y1": y1, "y2": y2})
+df3 = pd.DataFrame.from_dict({"x": x, "y1": y1, "y2": y2})
 
-c1 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y1"))
+c1 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y1"))
 
-c2 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y2"))
+c2 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y2"))
 
 st.altair_chart(c1 & c2, use_container_width=True)

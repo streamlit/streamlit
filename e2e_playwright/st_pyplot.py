@@ -24,9 +24,9 @@ np.random.seed(0)
 
 
 st.write("Normal figure:")
-data = np.random.normal(1, 1, size=100)
+data1 = np.random.normal(1, 1, size=100)
 fig, ax = plt.subplots()
-ax.hist(data, bins=20)
+ax.hist(data1, bins=20)
 st.pyplot(fig)
 
 st.write("Resized figure:")
@@ -45,12 +45,12 @@ st.write("Advanced Seaborn figure:")
 data_points = 100
 x_data: "np.typing.NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
 y_data: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
-data: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 2)
+data2: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 2)
 
 # Generate plot
 fig, ax = plt.subplots(figsize=(4.5, 4.5))
 sns.set_context(rc={"font.size": 10})
-p = sns.regplot(x=x_data, y=y_data, data=data, ci=None, ax=ax, color="grey")
+p = sns.regplot(x=x_data, y=y_data, data=data2, ci=None, ax=ax, color="grey")
 
 p.set_title("An Extremely and Really Really Long Long Long Title", fontweight="bold")
 p.set_xlabel("Very long long x label")
@@ -83,7 +83,7 @@ kwargs = {
 st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type]
 
 st.write("Figure using deprecated global object:")
-plot = plt.plot(data)
+plot = plt.plot(data2)
 st.pyplot()
 plt.clf()
 

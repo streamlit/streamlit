@@ -134,11 +134,10 @@ def _mpa_v1(main_script_path: str) -> None:
     PAGES_FOLDER = MAIN_SCRIPT_PATH.parent / "pages"
 
     # Read out the my_pages folder and create a page for every script:
-    pages = PAGES_FOLDER.glob("*.py")
     pages = sorted(
         [
             page
-            for page in pages
+            for page in PAGES_FOLDER.glob("*.py")
             if page.name.endswith(".py")
             and not page.name.startswith(".")
             and page.name != "__init__.py"
