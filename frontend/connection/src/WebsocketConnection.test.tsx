@@ -73,6 +73,7 @@ function createMockArgs(overrides?: Partial<Args>): Args {
     endpoints: mockEndpoints(),
     baseUriPartsList: [
       {
+        protocol: "http:",
         hostname: "localhost",
         port: "1234",
         pathname: "/",
@@ -92,8 +93,18 @@ function createMockArgs(overrides?: Partial<Args>): Args {
 describe("doInitPings", () => {
   const MOCK_PING_DATA = {
     uri: [
-      { hostname: "not.a.real.host", port: "3000", pathname: "/" },
-      { hostname: "not.a.real.host", port: "3001", pathname: "/" },
+      {
+        protocol: "http:",
+        hostname: "not.a.real.host",
+        port: "3000",
+        pathname: "/",
+      },
+      {
+        protocol: "http:",
+        hostname: "not.a.real.host",
+        port: "3001",
+        pathname: "/",
+      },
     ] as URL[],
     timeoutMs: 10,
     maxTimeoutMs: 100,
@@ -113,6 +124,7 @@ describe("doInitPings", () => {
 
   afterEach(() => {
     axios.get = originalAxiosGet
+    window.__STREAMLIT_HOST_CONFIG_BASE_URL = undefined
   })
 
   it("calls the /_stcore/health endpoint when pinging server", async () => {
@@ -133,6 +145,32 @@ describe("doInitPings", () => {
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
     )
+  })
+
+  it("makes the host config call using window.__STREAMLIT_HOST_CONFIG_BASE_URL if set", async () => {
+    window.__STREAMLIT_HOST_CONFIG_BASE_URL = "https://example.com:1234"
+    axios.get = vi
+      .fn()
+      .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
+      .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
+
+    const uriIndex = await doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+    expect(uriIndex).toEqual(0)
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_CONFIG
+    )
+    // @ts-expect-error
+    expect(axios.get.mock.calls[1]).toEqual([
+      "https://example.com:1234/_stcore/host-config",
+      { timeout: 15000 },
+    ])
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (0)", async () => {
@@ -301,8 +339,18 @@ describe("doInitPings", () => {
     const MOCK_PING_DATA_LOCALHOST = {
       ...MOCK_PING_DATA,
       uri: [
-        { hostname: "localhost", port: "3000", pathname: "/" },
-        { hostname: "localhost", port: "3001", pathname: "/" },
+        {
+          protocol: "http:",
+          hostname: "localhost",
+          port: "3000",
+          pathname: "/",
+        },
+        {
+          protocol: "http:",
+          hostname: "localhost",
+          port: "3001",
+          pathname: "/",
+        },
       ] as URL[],
     }
 

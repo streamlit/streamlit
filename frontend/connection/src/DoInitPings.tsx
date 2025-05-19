@@ -26,6 +26,7 @@ import { getLogger } from "loglevel"
 // Note we expect the polyfill to load from this import
 import { buildHttpUri } from "@streamlit/utils"
 
+import { getBaseUriParts } from "./utils"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   HOST_CONFIG_PATH,
@@ -128,7 +129,15 @@ If you are trying to access a Streamlit app running on another server, this coul
   connect = () => {
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
-    const hostConfigUri = buildHttpUri(uriParts, HOST_CONFIG_PATH)
+
+    const hostConfigServerUriParts = window.__STREAMLIT_HOST_CONFIG_BASE_URL
+      ? getBaseUriParts(window.__STREAMLIT_HOST_CONFIG_BASE_URL)
+      : uriParts
+
+    const hostConfigUri = buildHttpUri(
+      hostConfigServerUriParts,
+      HOST_CONFIG_PATH
+    )
 
     LOG.info(`Attempting to connect to ${healthzUri}.`)
 

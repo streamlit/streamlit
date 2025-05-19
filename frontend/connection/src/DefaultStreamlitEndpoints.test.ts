@@ -22,6 +22,7 @@ import { buildHttpUri } from "@streamlit/utils"
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 const MOCK_SERVER_URI = {
+  protocol: "http:",
   hostname: "streamlit.mock",
   port: "80",
   pathname: "/mock/base/path",

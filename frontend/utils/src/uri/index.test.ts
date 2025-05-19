@@ -16,7 +16,7 @@
 
 import { MockInstance } from "vitest"
 
-import { buildHttpUri, isHttps, isLocalhost, makePath } from "."
+import { buildHttpUri, isLocalhost, makePath } from "."
 
 describe("uri", () => {
   let originalLocation: Location
@@ -33,12 +33,9 @@ describe("uri", () => {
 
   describe("buildHttpUri", () => {
     it("builds HTTP URI correctly", () => {
-      windowSpy.mockReturnValue({
-        ...originalLocation,
-        href: "http://something",
-      })
       const uri = buildHttpUri(
         {
+          protocol: "http:",
           hostname: "the_host",
           port: "9988",
           pathname: "foo/bar",
@@ -49,12 +46,9 @@ describe("uri", () => {
     })
 
     it("builds HTTPS URI correctly", () => {
-      windowSpy.mockReturnValue({
-        ...originalLocation,
-        href: "https://something",
-      })
       const uri = buildHttpUri(
         {
+          protocol: "https:",
           hostname: "the_host",
           port: "9988",
           pathname: "foo/bar",
@@ -65,12 +59,9 @@ describe("uri", () => {
     })
 
     it("builds HTTP URI with no base path", () => {
-      windowSpy.mockReturnValue({
-        ...originalLocation,
-        href: "http://something",
-      })
       const uri = buildHttpUri(
         {
+          protocol: "http:",
           hostname: "the_host",
           port: "9988",
           pathname: "",
@@ -90,24 +81,6 @@ describe("uri", () => {
     it("makes path with no base path", () => {
       const path = makePath("", "baz")
       expect(path).toBe("baz")
-    })
-  })
-
-  describe("isHttps", () => {
-    it("returns true for HTTPS", () => {
-      windowSpy.mockReturnValue({
-        ...originalLocation,
-        href: "https://something",
-      })
-      expect(isHttps()).toBe(true)
-    })
-
-    it("returns false for HTTP", () => {
-      windowSpy.mockReturnValue({
-        ...originalLocation,
-        href: "http://something",
-      })
-      expect(isHttps()).toBe(false)
     })
   })
 
