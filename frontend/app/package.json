@@ -71,7 +71,7 @@
     "@types/iframe-resizer": "~4.0.0",
     "@types/jsdom": "~21.1.7",
     "@types/lodash": "^4.17.16",
-    "@types/node": "^22.15.18",
+    "@types/node": "^22.15.19",
     "@types/prop-types": "~15.7.14",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
