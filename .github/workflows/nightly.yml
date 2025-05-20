@@ -72,8 +72,6 @@ jobs:
   run-python-tests:
     needs: create-nightly-tag
     permissions:
-      # Pass additional permission needed to upload constraints
-      contents: write
       # Additional permissions for py-coverage-report
       actions: read
       pull-requests: write
