@@ -143,7 +143,10 @@ class RuntimeTest(RuntimeTestCase):
         """Test that setting both existing_session_id and session_id_override is an error."""
         await self.runtime.start()
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match="Only one of existing_session_id and session_id_override should be set. This should never happen.",
+        ):
             self.runtime.connect_session(
                 client=MockSessionClient(),
                 user_info=MagicMock(),

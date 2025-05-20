@@ -40,7 +40,6 @@ ignore = [
   # Rules planned to be supported in the future:
   "EM101",  # Checks for the use of string literals in exception constructors.
   "EM102",  # Checks for the use of f-strings in exception constructors.
-  "S101",   # Checks for usage of assert statements.
   "TRY003", # Checks for exception messages that are not defined in the exception class itself.
   "N806",   # Checks for non-lowercased variable names in functions.
   "UP031",  # Checks for printf-style string formatting, and offers to replace it with str.format calls.

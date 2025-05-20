@@ -154,8 +154,6 @@ def help() -> None:  # noqa: A001
     # anything with its return value.
     _get_command_line_as_string()
 
-    assert len(sys.argv) == 2  # This is always true, but let's assert anyway.
-
     # Pretend user typed 'streamlit --help' instead of 'streamlit help'.
     sys.argv[1] = "--help"
     main(prog_name="streamlit")
@@ -171,7 +169,6 @@ def main_version() -> None:
     # anything with its return value.
     _get_command_line_as_string()
 
-    assert len(sys.argv) == 2  # This is always true, but let's assert anyway.
     sys.argv[1] = "--version"
     main()
 
@@ -363,8 +360,13 @@ def test_prog_name() -> None:
 
     parent = click.get_current_context().parent
 
-    assert parent is not None
-    assert parent.command_path == "streamlit test"
+    if parent is None:
+        raise AssertionError("parent is None")
+
+    if parent.command_path != "streamlit test":
+        raise AssertionError(
+            f"Parent command path is {parent.command_path} not streamlit test."
+        )
 
 
 @main.command("init")

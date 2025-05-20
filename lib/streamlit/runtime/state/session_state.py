@@ -261,7 +261,10 @@ class WStates(MutableMapping[str, Any]):
         If the widget doesn't exist, raise an Exception.
         """
         metadata = self.widget_metadata.get(widget_id)
-        assert metadata is not None
+
+        if metadata is None:
+            raise RuntimeError(f"Widget {widget_id} not found.")
+
         callback = metadata.callback
         if callback is None:
             return
@@ -468,7 +471,10 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        assert user_key is not None or widget_id is not None
+        if user_key is None and widget_id is None:
+            raise ValueError(
+                "user_key and widget_id cannot both be None. This should never happen."
+            )
 
         if user_key is not None:
             try:

@@ -578,9 +578,11 @@ class AppSession:
             browser. Set only for the SCRIPT_STARTED event.
         """
 
-        assert self._event_loop == asyncio.get_running_loop(), (
-            "This function must only be called on the eventloop thread the AppSession was created on."
-        )
+        if self._event_loop != asyncio.get_running_loop():
+            raise RuntimeError(
+                "This function must only be called on the eventloop thread the AppSession was created on. "
+                "This should never happen."
+            )
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
@@ -596,9 +598,10 @@ class AppSession:
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
-            assert page_script_hash is not None, (
-                "page_script_hash must be set for the SCRIPT_STARTED event"
-            )
+            if page_script_hash is None:
+                raise RuntimeError(
+                    "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
+                )
 
             # Update the client state with the new page_script_hash if
             # necessary. This handles an edge case where a script is never
@@ -646,9 +649,11 @@ class AppSession:
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
-                assert exception is not None, (
-                    "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event"
-                )
+                if exception is None:
+                    raise RuntimeError(
+                        "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. "
+                        "This should never happen."
+                    )
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
@@ -666,9 +671,10 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            assert client_state is not None, (
-                "client_state must be set for the SHUTDOWN event"
-            )
+            if client_state is None:
+                raise RuntimeError(
+                    "client_state must be set for the SHUTDOWN event. This should never happen."
+                )
 
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
@@ -679,9 +685,10 @@ class AppSession:
             self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
-            assert forward_msg is not None, (
-                "null forward_msg in ENQUEUE_FORWARD_MSG event"
-            )
+            if forward_msg is None:
+                raise RuntimeError(
+                    "null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen."
+                )
             self._enqueue_forward_msg(forward_msg)
 
         # Send a message if our run state changed

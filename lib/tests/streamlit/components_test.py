@@ -229,6 +229,41 @@ class DeclareComponentTest(unittest.TestCase):
         components.declare_component("test", url=URL)
         self.assertIsInstance(ComponentRegistry.instance(), LocalComponentRegistry)
 
+    @patch("streamlit.components.v1.component_registry.inspect.currentframe")
+    def test_declare_component_raises_runtime_error_if_current_frame_is_none(
+        self, mock_currentframe
+    ):
+        """Test that declare_component raises RuntimeError if inspect.currentframe returns None."""
+        mock_currentframe.return_value = None
+        with pytest.raises(
+            RuntimeError, match="current_frame is None. This should never happen."
+        ):
+            components.declare_component("test_component", url="http://example.com")
+
+    @patch("streamlit.components.v1.component_registry.inspect.currentframe")
+    def test_declare_component_raises_runtime_error_if_caller_frame_is_none(
+        self, mock_currentframe
+    ):
+        """Test that declare_component raises RuntimeError if inspect.currentframe().f_back is None."""
+        mock_frame = MagicMock()
+        mock_frame.f_back = None
+        mock_currentframe.return_value = mock_frame
+        with pytest.raises(
+            RuntimeError, match="caller_frame is None. This should never happen."
+        ):
+            components.declare_component("test_component", url="http://example.com")
+
+    @patch("streamlit.components.v1.component_registry.inspect.getmodule")
+    def test_declare_component_raises_runtime_error_if_module_is_none(
+        self, mock_getmodule
+    ):
+        """Test that declare_component raises RuntimeError if inspect.getmodule returns None."""
+        mock_getmodule.return_value = None
+        with pytest.raises(
+            RuntimeError, match="module is None. This should never happen."
+        ):
+            components.declare_component("test_component", url="http://example.com")
+
 
 class ComponentRegistryTest(unittest.TestCase):
     """Test component registration."""

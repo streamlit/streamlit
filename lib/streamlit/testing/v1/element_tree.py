@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Assert statements are allowed here since the app testing logic is used within unit tests:
+# ruff: noqa: S101
+
 from __future__ import annotations
 
 import textwrap

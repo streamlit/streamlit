@@ -416,13 +416,15 @@ def marshall_images(
     else:
         captions = [str(caption)]
 
-    assert isinstance(captions, list), (
-        "If image is a list then caption should be as well"
-    )
-    assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
-        len(captions),
-        len(images),
-    )
+    if not isinstance(captions, list):
+        raise StreamlitAPIException(
+            "If image is a list then caption should be a list as well."
+        )
+
+    if len(captions) != len(images):
+        raise StreamlitAPIException(
+            f"Cannot pair {len(captions)} captions with {len(images)} images."
+        )
 
     proto_imgs.width = int(width)
     # Each image in an image list needs to be kept track of at its own coordinates.

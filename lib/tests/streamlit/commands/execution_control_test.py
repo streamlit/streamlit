@@ -38,7 +38,10 @@ class NewFragmentIdQueueTest(unittest.TestCase):
         ctx.fragment_ids_this_run = ["some_fragment_id"]
         ctx.current_fragment_id = "some_other_fragment_id"
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match="Could not find current_fragment_id in fragment_id_queue. This should never happen.",
+        ):
             _new_fragment_id_queue(ctx, scope="fragment")
 
     def test_drops_items_in_queue_until_curr_id(self):

@@ -33,7 +33,8 @@ def _get_module_name(caller_frame: FrameType) -> str:
     # Get the caller's module name. `__name__` gives us the module's
     # fully-qualified name, which includes its package.
     module = inspect.getmodule(caller_frame)
-    assert module is not None
+    if module is None:
+        raise RuntimeError("module is None. This should never happen.")
     module_name = module.__name__
 
     # If the caller was the main module that was executed (that is, if the
@@ -96,10 +97,13 @@ def declare_component(
 
     # Get our stack frame.
     current_frame: FrameType | None = inspect.currentframe()
-    assert current_frame is not None
+    if current_frame is None:
+        raise RuntimeError("current_frame is None. This should never happen.")
     # Get the stack frame of our calling function.
     caller_frame = current_frame.f_back
-    assert caller_frame is not None
+    if caller_frame is None:
+        raise RuntimeError("caller_frame is None. This should never happen.")
+
     module_name = _get_module_name(caller_frame)
 
     # Build the component name.

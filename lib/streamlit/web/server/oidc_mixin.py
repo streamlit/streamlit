@@ -81,7 +81,6 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
             "state": request_handler.get_argument("state"),
         }
 
-        assert self.framework.cache is not None
         session = None
 
         claims_options = kwargs.pop("claims_options", None)
@@ -103,7 +102,6 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
         """
         state = kwargs.pop("state", None)
         if state:
-            assert self.framework.cache is not None
             session = None
             self.framework.set_state_data(session, state, kwargs)
         else:

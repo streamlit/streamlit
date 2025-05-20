@@ -144,7 +144,10 @@ class ConfigTest(unittest.TestCase):
 
         This is because the doc string forms the option's description.
         """
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match="Complex config options require doc strings for their description.",
+        ):
 
             @ConfigOption("_test.noDocString")
             def no_doc_string():
@@ -152,23 +155,32 @@ class ConfigTest(unittest.TestCase):
 
     def test_invalid_config_name(self):
         """Test setting an invalid config section."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            ValueError,
+            match='Key "_test.myParam." has invalid format.',
+        ):
             ConfigOption("_test.myParam.")
 
     def test_invalid_config_section(self):
         """Test setting an invalid config section."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(RuntimeError):
             config._create_option("mySection.myParam")
 
     def test_cannot_overwrite_config_section(self):
         """Test overwriting a config section using _create_section."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match='Cannot define section "_test2" twice.',
+        ):
             config._create_section("_test2", "A test section.")
             config._create_section("_test2", "A test section.")
 
     def test_cannot_overwrite_config_key(self):
         """Test overwriting a config option using _create_option."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match='Cannot define option "_test.overwriteKey" twice.',
+        ):
             config._create_option("_test.overwriteKey")
             config._create_option("_test.overwriteKey")
 
@@ -178,7 +190,10 @@ class ConfigTest(unittest.TestCase):
         Note the exception is the "_test" section which is used
         for unit testing.
         """
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            ValueError,
+            match='Key "_test.snake_case" has invalid format.',
+        ):
             config._create_option("_test.snake_case")
 
     def test_get_set_and_complex_config_options(self):
@@ -548,12 +563,11 @@ class ConfigTest(unittest.TestCase):
     def test_check_conflicts_server_port(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("server.port", 1234, "test")
-        with pytest.raises(AssertionError) as e:
+        with pytest.raises(
+            RuntimeError,
+            match="server.port does not work when global.developmentMode is true.",
+        ):
             config._check_conflicts()
-        self.assertEqual(
-            str(e.value),
-            "server.port does not work when global.developmentMode is true.",
-        )
 
     @patch("streamlit.logger.get_logger")
     def test_check_conflicts_server_csrf(self, get_logger):
@@ -566,12 +580,11 @@ class ConfigTest(unittest.TestCase):
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("browser.serverPort", 1234, "test")
-        with pytest.raises(AssertionError) as e:
+        with pytest.raises(
+            RuntimeError,
+            match="browser.serverPort does not work when global.developmentMode is true.",
+        ):
             config._check_conflicts()
-        self.assertEqual(
-            str(e.value),
-            "browser.serverPort does not work when global.developmentMode is true.",
-        )
 
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))

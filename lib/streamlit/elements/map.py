@@ -296,7 +296,7 @@ def to_deckgl_json(
     )
     df = df[used_columns]
 
-    color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
+    converted_color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
 
     zoom, center_lat, center_lon = _get_viewport_details(
         df, lat_col_name, lon_col_name, zoom
@@ -313,7 +313,7 @@ def to_deckgl_json(
             "getRadius": size_arg,
             "radiusMinPixels": 3,
             "radiusUnits": "meters",
-            "getFillColor": color_arg,
+            "getFillColor": converted_color_arg,
             "data": df.to_dict("records"),
         }
     ]
@@ -378,7 +378,7 @@ def _get_value_and_col_name(
     data: DataFrame,
     value_or_name: Any,
     default_value: Any,
-) -> tuple[Any, str | None]:
+) -> tuple[str, str | None]:
     """Take a value_or_name passed in by the Streamlit developer and return a PyDeck
     argument and column name for that property.
 
@@ -390,7 +390,7 @@ def _get_value_and_col_name(
     - If the user passes size="my_col_123", this returns "@@=my_col_123" and "my_col_123".
     """
 
-    pydeck_arg: str | float
+    pydeck_arg: str
 
     if isinstance(value_or_name, str) and value_or_name in data.columns:
         col_name = value_or_name
@@ -405,7 +405,7 @@ def _get_value_and_col_name(
 
 def _convert_color_arg_or_column(
     data: DataFrame,
-    color_arg: str | Color,
+    color_arg: str,
     color_col_name: str | None,
 ) -> None | str | IntColorTuple:
     """Converts color to a format accepted by PyDeck.
@@ -434,8 +434,6 @@ def _convert_color_arg_or_column(
                 f'Column "{color_col_name}" does not appear to contain valid colors.'
             )
 
-        # This is guaranteed to be a str because of _get_value_and_col_name
-        assert isinstance(color_arg, str)
         color_arg_out = color_arg
 
     elif color_arg is not None:
