@@ -27,4 +27,4 @@ class PlatformTest(DeltaGeneratorTestCase):
     def test_post_parent_message(self, message: str):
         post_parent_message(message)
         c = self.get_message_from_queue().parent_message
-        self.assertEqual(c.message, message)
+        assert c.message == message

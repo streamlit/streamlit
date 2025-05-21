@@ -14,6 +14,7 @@
 from unittest.mock import MagicMock, patch
 
 import plotly.express as px
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -30,13 +31,13 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(fig)
 
         el = self.get_delta_from_queue().new_element
-        self.assertNotEqual(el.plotly_chart.spec, "")
-        self.assertNotEqual(el.plotly_chart.config, "")
+        assert el.plotly_chart.spec != ""
+        assert el.plotly_chart.config != ""
 
         # Check that deprecated properties are empty
-        self.assertEqual(el.plotly_chart.figure.spec, "")
-        self.assertEqual(el.plotly_chart.figure.config, "")
-        self.assertEqual(el.plotly_chart.HasField("url"), False)
+        assert el.plotly_chart.figure.spec == ""
+        assert el.plotly_chart.figure.config == ""
+        assert not el.plotly_chart.HasField("url")
 
     @parameterized.expand(
         [
@@ -50,17 +51,17 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(fig, theme=theme_value)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.theme, proto_value)
+        assert el.plotly_chart.theme == proto_value
 
     def test_bad_theme(self):
         df = px.data.gapminder().query("country=='Canada'")
         fig = px.line(df, x="year", y="lifeExp", title="Life expectancy in Canada")
-        with self.assertRaises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitAPIException) as exc:
             st.plotly_chart(fig, theme="bad_theme")
 
-        self.assertEqual(
-            'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
-            str(exc.exception),
+        assert (
+            str(exc.value)
+            == 'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
         )
 
     def test_st_plotly_chart_simple(self):
@@ -74,10 +75,10 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.HasField("url"), False)
-        self.assertNotEqual(el.plotly_chart.spec, "")
-        self.assertNotEqual(el.plotly_chart.config, "")
-        self.assertEqual(el.plotly_chart.use_container_width, True)
+        assert not el.plotly_chart.HasField("url")
+        assert el.plotly_chart.spec != ""
+        assert el.plotly_chart.config != ""
+        assert el.plotly_chart.use_container_width
 
     def test_st_plotly_chart_use_container_width_true(self):
         """Test st.plotly_chart."""
@@ -90,10 +91,10 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data, use_container_width=True)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.HasField("url"), False)
-        self.assertNotEqual(el.plotly_chart.spec, "")
-        self.assertNotEqual(el.plotly_chart.config, "")
-        self.assertEqual(el.plotly_chart.use_container_width, True)
+        assert not el.plotly_chart.HasField("url")
+        assert el.plotly_chart.spec != ""
+        assert el.plotly_chart.config != ""
+        assert el.plotly_chart.use_container_width
 
     def test_works_with_element_replay(self):
         """Test that element replay works for plotly if used as non-widget element."""
@@ -112,19 +113,19 @@ class PyDeckTest(DeltaGeneratorTestCase):
         ) as replay_cached_messages_mock:
             cache_element()
             el = self.get_delta_from_queue().new_element.plotly_chart
-            self.assertNotEqual(el.spec, "")
+            assert el.spec != ""
             # The first time the cached function is called, the replay function is not called
             replay_cached_messages_mock.assert_not_called()
 
             cache_element()
             el = self.get_delta_from_queue().new_element.plotly_chart
-            self.assertNotEqual(el.spec, "")
+            assert el.spec != ""
             # The second time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called_once()
 
             cache_element()
             el = self.get_delta_from_queue().new_element.plotly_chart
-            self.assertNotEqual(el.spec, "")
+            assert el.spec != ""
             # The third time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called()
 
@@ -145,8 +146,8 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data, on_select=on_select)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.selection_mode, proto_value)
-        self.assertEqual(el.plotly_chart.form_id, "")
+        assert el.plotly_chart.selection_mode == proto_value
+        assert el.plotly_chart.form_id == ""
 
     def test_plotly_chart_on_select_initial_returns(self):
         """Test st.plotly_chart returns an empty selection as initial result."""
@@ -158,16 +159,16 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         selection = st.plotly_chart(data, on_select="rerun", key="plotly_chart")
 
-        self.assertEqual(selection.selection.points, [])
-        self.assertEqual(selection.selection.box, [])
-        self.assertEqual(selection.selection.lasso, [])
-        self.assertEqual(selection.selection.point_indices, [])
+        assert selection.selection.points == []
+        assert selection.selection.box == []
+        assert selection.selection.lasso == []
+        assert selection.selection.point_indices == []
 
         # Check that the selection state is added to the session state:
-        self.assertEqual(st.session_state.plotly_chart.selection.points, [])
-        self.assertEqual(st.session_state.plotly_chart.selection.box, [])
-        self.assertEqual(st.session_state.plotly_chart.selection.lasso, [])
-        self.assertEqual(st.session_state.plotly_chart.selection.point_indices, [])
+        assert st.session_state.plotly_chart.selection.points == []
+        assert st.session_state.plotly_chart.selection.box == []
+        assert st.session_state.plotly_chart.selection.lasso == []
+        assert st.session_state.plotly_chart.selection.point_indices == []
 
     def test_st_plotly_chart_invalid_on_select(self):
         import plotly.graph_objs as go
@@ -175,7 +176,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
 
         data = [trace0]
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.plotly_chart(data, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -190,11 +191,11 @@ class PyDeckTest(DeltaGeneratorTestCase):
             st.plotly_chart(data, on_select="rerun")
 
         # 2 elements will be created: form block, plotly_chart
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
-        self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+        assert plotly_proto.form_id == form_proto.form.form_id
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form_on_select_ignore(self):
@@ -208,11 +209,11 @@ class PyDeckTest(DeltaGeneratorTestCase):
             st.plotly_chart(data, on_select="ignore")
 
         # 2 elements will be created: form block, plotly_chart
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
-        self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+        assert plotly_proto.form_id == form_proto.form.form_id
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this is used with selections activated
@@ -225,8 +226,8 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
     def test_selection_mode_parsing(self):
         """Test that the selection_mode parameter is parsed correctly."""
@@ -237,30 +238,30 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         st.plotly_chart(data, on_select="rerun", selection_mode="points")
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.selection_mode, [0])
+        assert el.plotly_chart.selection_mode == [0]
 
         st.plotly_chart(data, on_select="rerun", selection_mode=("points", "lasso"))
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.selection_mode, [0, 2])
+        assert el.plotly_chart.selection_mode == [0, 2]
 
         st.plotly_chart(data, on_select="rerun", selection_mode={"box", "lasso"})
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.selection_mode, [1, 2])
+        assert el.plotly_chart.selection_mode == [1, 2]
 
         # If selections are deactivated, the selection mode list should be empty
         # even if the selection_mode parameter is set.
         st.plotly_chart(data, on_select="ignore", selection_mode={"box", "lasso"})
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.selection_mode, [])
+        assert el.plotly_chart.selection_mode == []
 
         st.plotly_chart(
             data, on_select=lambda: None, selection_mode=["points", "box", "lasso"]
         )
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.selection_mode, [0, 1, 2])
+        assert el.plotly_chart.selection_mode == [0, 1, 2]
 
         # Should throw an exception of the selection mode is parsed wrongly
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
 
     def test_show_deprecation_warning_for_sharing(self):
@@ -272,7 +273,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data, sharing="streamlit")
         # Get the second to last element, which should be deprecation warning
         el = self.get_delta_from_queue(-2).new_element
-        self.assertIn(
-            "has been deprecated and will be removed in a future release",
-            el.alert.body,
+        assert (
+            "has been deprecated and will be removed in a future release"
+            in el.alert.body
         )

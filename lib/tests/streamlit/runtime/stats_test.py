@@ -42,7 +42,7 @@ class StatsManagerTest(unittest.TestCase):
         manager.register_provider(provider2)
 
         # No stats
-        self.assertEqual([], manager.get_stats())
+        assert manager.get_stats() == []
 
         # Some stats
         provider1.stats = [
@@ -55,7 +55,7 @@ class StatsManagerTest(unittest.TestCase):
             CacheStat("provider2", "qux", 4),
         ]
 
-        self.assertEqual(provider1.stats + provider2.stats, manager.get_stats())
+        assert provider1.stats + provider2.stats == manager.get_stats()
 
     def test_group_stats(self):
         """Should return stats grouped by category_name and cache_name.
@@ -86,25 +86,14 @@ class StatsManagerTest(unittest.TestCase):
             CacheStat("provider3", "boo", 1),
         ]
 
-        self.assertEqual(
-            set(group_stats(stats1)),
-            {
-                CacheStat("provider1", "foo", 1),
-                CacheStat("provider1", "bar", 7),
-            },
-        )
+        assert set(group_stats(stats1)) == {
+            CacheStat("provider1", "foo", 1),
+            CacheStat("provider1", "bar", 7),
+        }
 
-        self.assertEqual(
-            set(group_stats(stats2)),
-            {
-                CacheStat("provider2", "baz", 31),
-                CacheStat("provider2", "qux", 4),
-            },
-        )
+        assert set(group_stats(stats2)) == {
+            CacheStat("provider2", "baz", 31),
+            CacheStat("provider2", "qux", 4),
+        }
 
-        self.assertEqual(
-            set(group_stats(stats3)),
-            {
-                CacheStat("provider3", "boo", 7),
-            },
-        )
+        assert set(group_stats(stats3)) == {CacheStat("provider3", "boo", 7)}

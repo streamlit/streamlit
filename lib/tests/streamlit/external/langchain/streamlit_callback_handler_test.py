@@ -66,4 +66,4 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
             collapse_completed_thoughts=False,
             thought_labeler=None,
         )
-        self.assertIsInstance(handler, InternalStreamlitCallbackHandler)
+        assert isinstance(handler, InternalStreamlitCallbackHandler)

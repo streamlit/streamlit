@@ -27,20 +27,20 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         st.markdown("    some markdown  ")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "some markdown")
+        assert el.markdown.body == "some markdown"
 
         # test the unsafe_allow_html keyword
         st.markdown("    some markdown  ", unsafe_allow_html=True)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "some markdown")
-        self.assertTrue(el.markdown.allow_html)
+        assert el.markdown.body == "some markdown"
+        assert el.markdown.allow_html
 
         # test the help keyword
         st.markdown("    some markdown  ", help="help text")
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "some markdown")
-        self.assertEqual(el.markdown.help, "help text")
+        assert el.markdown.body == "some markdown"
+        assert el.markdown.help == "help text"
 
     def test_works_with_element_replay(self):
         """Test that element replay works for a markdown element."""
@@ -79,7 +79,7 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
         """Test st.caption with help."""
         st.caption("some caption", help="help text")
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.help, "help text")
+        assert el.markdown.help == "help text"
 
 
 class StLatexAPITest(DeltaGeneratorTestCase):
@@ -96,7 +96,7 @@ class StLatexAPITest(DeltaGeneratorTestCase):
             help="help text",
         )
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.help, "help text")
+        assert el.markdown.help == "help text"
 
 
 class StBadgeAPITest(DeltaGeneratorTestCase):
@@ -112,12 +112,12 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, ":red-badge[:material/warning: Badge with all params]"
+        assert (
+            el.markdown.body == ":red-badge[:material/warning: Badge with all params]"
         )
-        self.assertFalse(el.markdown.allow_html)
+        assert not el.markdown.allow_html
 
         # Test with default parameters
         st.badge("Simple badge")
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, ":blue-badge[Simple badge]")
+        assert el.markdown.body == ":blue-badge[Simple badge]"

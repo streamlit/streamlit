@@ -43,9 +43,9 @@ class RuntimeUtilTest(unittest.TestCase):
             deserialized_msg.ParseFromString(serialize_forward_msg(large_msg_copy))
 
             # The metadata should be the same, but contents should be replaced
-            self.assertEqual(deserialized_msg.metadata, large_msg.metadata)
-            self.assertNotEqual(deserialized_msg, large_msg)
-            self.assertTrue(
+            assert deserialized_msg.metadata == large_msg.metadata
+            assert deserialized_msg != large_msg
+            assert (
                 "exceeds the message size limit"
                 in deserialized_msg.delta.new_element.exception.message
             )

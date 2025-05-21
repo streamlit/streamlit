@@ -53,10 +53,10 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         url = self.media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
         rsp = self.fetch(url, method="GET")
 
-        self.assertEqual(200, rsp.code)
-        self.assertEqual(b"mock_data", rsp.body)
-        self.assertEqual("video/mp4", rsp.headers["Content-Type"])
-        self.assertEqual(str(len(b"mock_data")), rsp.headers["Content-Length"])
+        assert rsp.code == 200
+        assert rsp.body == b"mock_data"
+        assert rsp.headers["Content-Type"] == "video/mp4"
+        assert str(len(b"mock_data")) == rsp.headers["Content-Length"]
 
     @parameterized.expand(
         [
@@ -96,14 +96,14 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
         rsp = self.fetch(url, method="GET")
 
-        self.assertEqual(200, rsp.code)
-        self.assertEqual(b"mock_data", rsp.body)
-        self.assertEqual(mimetype, rsp.headers["Content-Type"])
-        self.assertEqual(str(len(b"mock_data")), rsp.headers["Content-Length"])
-        self.assertEqual(content_disposition_header, rsp.headers["Content-Disposition"])
+        assert rsp.code == 200
+        assert rsp.body == b"mock_data"
+        assert mimetype == rsp.headers["Content-Type"]
+        assert str(len(b"mock_data")) == rsp.headers["Content-Length"]
+        assert content_disposition_header == rsp.headers["Content-Disposition"]
 
     def test_invalid_file(self) -> None:
         """Requests for invalid files fail with 404."""
         url = f"{MOCK_ENDPOINT}/invalid_media_file.mp4"
         rsp = self.fetch(url, method="GET")
-        self.assertEqual(404, rsp.code)
+        assert rsp.code == 404

@@ -41,7 +41,7 @@ class FileUploaderUtilsTest(unittest.TestCase):
     def test_file_type(self, file_type: str | Sequence[str], expected: Sequence[str]):
         """Test that it can be called using string(s) for type parameter."""
         normalized = normalize_upload_file_type(file_type=file_type)
-        self.assertEqual(normalized, expected)
+        assert normalized == expected
 
 
 def is_filename_valid(filename: str, allowed_types: Sequence[str]) -> bool:
@@ -86,4 +86,4 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
     def test_filename_valid(self, _, filename, allowed_types, expected_valid):
         """Test whether filenames are valid against allowed extensions."""
         actual_valid = is_filename_valid(filename, allowed_types)
-        self.assertEqual(actual_valid, expected_valid)
+        assert actual_valid == expected_valid

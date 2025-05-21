@@ -39,10 +39,8 @@ class MagicTest(unittest.TestCase):
                 node.func
             ):
                 count += 1
-        self.assertEqual(
-            expected_count,
-            count,
-            f"There must be exactly {expected_count} {magic.MAGIC_MODULE_NAME} nodes, but found {count}",
+        assert expected_count == count, (
+            f"There must be exactly {expected_count} {magic.MAGIC_MODULE_NAME} nodes, but found {count}"
         )
 
     def test_simple_statement(self):

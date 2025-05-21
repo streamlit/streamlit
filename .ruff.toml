@@ -44,7 +44,6 @@ ignore = [
   "N806",   # Checks for non-lowercased variable names in functions.
   "UP031",  # Checks for printf-style string formatting, and offers to replace it with str.format calls.
   "G004",   # Checks for usage of f-strings in logging messages.
-  "PT",     # Checks for pytest anti-patterns.
   # Ignored rule sets:
   "DTZ", # Checks for usage of unsafe naive datetime class.
   "PTH", # Enforces usage of pathlib.
@@ -95,6 +94,8 @@ ignore = [
   "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
   "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
   "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
+  "PT012",   # Checks for pytest.raises context managers with multiple statements.
+  "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:

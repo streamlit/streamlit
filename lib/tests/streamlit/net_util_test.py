@@ -30,28 +30,28 @@ class UtilTest(unittest.TestCase):
         # Test success
         with requests_mock.mock() as m:
             m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
-            self.assertEqual("1.2.3.4", net_util.get_external_ip())
+            assert net_util.get_external_ip() == "1.2.3.4"
 
         net_util._external_ip = None
 
         # Test failure
         with requests_mock.mock() as m:
             m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
-            self.assertEqual(None, net_util.get_external_ip())
+            assert None is net_util.get_external_ip()
 
     def test_get_external_ip_use_http_by_default(self):
         with requests_mock.mock() as m:
             m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
             m.get(net_util._AWS_CHECK_IP_HTTPS, text="5.6.7.8")
-            self.assertEqual("1.2.3.4", net_util.get_external_ip())
-            self.assertEqual(m.call_count, 1)
+            assert net_util.get_external_ip() == "1.2.3.4"
+            assert m.call_count == 1
 
     def test_get_external_ip_https_if_http_fails(self):
         with requests_mock.mock() as m:
             m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
             m.get(net_util._AWS_CHECK_IP_HTTPS, text="5.6.7.8")
-            self.assertEqual("5.6.7.8", net_util.get_external_ip())
-            self.assertEqual(m.call_count, 2)
+            assert net_util.get_external_ip() == "5.6.7.8"
+            assert m.call_count == 2
 
     def test_get_external_ip_html(self):
         # This tests the case where the external URL returns a web page.
@@ -65,6 +65,6 @@ class UtilTest(unittest.TestCase):
 
         with requests_mock.mock() as m:
             m.get(net_util._AWS_CHECK_IP, text=response_text)
-            self.assertEqual(None, net_util.get_external_ip())
+            assert None is net_util.get_external_ip()
 
         net_util._external_ip = None

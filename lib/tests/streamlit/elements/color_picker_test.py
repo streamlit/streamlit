@@ -31,20 +31,20 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         st.color_picker("the label")
 
         c = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, "#000000")
-        self.assertEqual(c.disabled, False)
+        assert c.default == "#000000"
+        assert not c.disabled
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.color_picker("the label", disabled=True)
 
         c = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     @parameterized.expand([("#333333", "#333333"), ("#333", "#333"), (None, "#000000")])
     def test_value_types(self, arg_value, proto_value):
@@ -52,8 +52,8 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         st.color_picker("the label", arg_value)
 
         c = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, proto_value)
+        assert c.label == "the label"
+        assert c.default == proto_value
 
     def test_invalid_value_type_error(self):
         """Tests that when the value type is invalid, an exception is generated"""
@@ -71,7 +71,7 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         st.color_picker("foo")
 
         proto = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -81,11 +81,11 @@ class ColorPickerTest(DeltaGeneratorTestCase):
             st.color_picker("foo")
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         color_picker_proto = self.get_delta_from_queue(1).new_element.color_picker
-        self.assertEqual(color_picker_proto.form_id, form_proto.form.form_id)
+        assert color_picker_proto.form_id == form_proto.form.form_id
 
     @parameterized.expand(
         [
@@ -99,16 +99,15 @@ class ColorPickerTest(DeltaGeneratorTestCase):
         st.color_picker("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label == "the label"
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.color_picker("the label", label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):
@@ -117,5 +116,5 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning

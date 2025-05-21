@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -27,31 +29,28 @@ class ToastTest(DeltaGeneratorTestCase):
         st.toast("toast text")
 
         c = self.get_delta_from_queue().new_element.toast
-        self.assertEqual(c.body, "toast text")
-        self.assertEqual(c.icon, "")
+        assert c.body == "toast text"
+        assert c.icon == ""
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.toast("")
-        self.assertEqual(
-            str(e.exception),
-            "Toast body cannot be blank - please provide a message.",
-        )
+        assert str(e.value) == "Toast body cannot be blank - please provide a message."
 
     def test_valid_icon(self):
         """Test that it can be called passing a valid emoji as icon."""
         st.toast("toast text", icon="🦄")
 
         c = self.get_delta_from_queue().new_element.toast
-        self.assertEqual(c.body, "toast text")
-        self.assertEqual(c.icon, "🦄")
+        assert c.body == "toast text"
+        assert c.icon == "🦄"
 
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.toast("toast text", icon="invalid")
-        self.assertEqual(
-            str(e.exception),
-            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.',
+        assert (
+            str(e.value)
+            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
         )

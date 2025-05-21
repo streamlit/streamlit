@@ -125,7 +125,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.performance)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def benchmark(
     benchmark,
     request: pytest.FixtureRequest,

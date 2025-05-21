@@ -47,7 +47,8 @@ def test_multiline_text(app: Page):
 
     # check that the text is displayed as multiline with its div's height > width
     bounding_box = multiline_text.locator("div").bounding_box()
-    assert bounding_box is not None and bounding_box["height"] > bounding_box["width"]
+    assert bounding_box is not None
+    assert bounding_box["height"] > bounding_box["width"]
 
 
 def test_singleline_text_with_escape_char(app: Page):

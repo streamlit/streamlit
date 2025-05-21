@@ -34,7 +34,7 @@ class UploadedFileManagerTest(unittest.TestCase):
     def test_added_file_id(self):
         """Presigned file URL should have a unique ID."""
         info1, info2 = self.mgr.get_upload_urls("session", ["name1", "name1"])
-        self.assertNotEqual(info1.file_id, info2.file_id)
+        assert info1.file_id != info2.file_id
 
     def test_retrieve_added_file(self):
         """An added file should maintain all its source properties
@@ -43,18 +43,18 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.add_file("session", FILE_2)
 
         file1_from_storage, *rest_files = self.mgr.get_files("session", ["url1"])
-        self.assertEqual(len(rest_files), 0)
-        self.assertEqual(file1_from_storage.file_id, FILE_1.file_id)
-        self.assertEqual(file1_from_storage.name, FILE_1.name)
-        self.assertEqual(file1_from_storage.type, FILE_1.type)
-        self.assertEqual(file1_from_storage.data, FILE_1.data)
+        assert len(rest_files) == 0
+        assert file1_from_storage.file_id == FILE_1.file_id
+        assert file1_from_storage.name == FILE_1.name
+        assert file1_from_storage.type == FILE_1.type
+        assert file1_from_storage.data == FILE_1.data
 
         file2_from_storage, *other_files = self.mgr.get_files("session", ["url2"])
-        self.assertEqual(len(other_files), 0)
-        self.assertEqual(file2_from_storage.file_id, FILE_2.file_id)
-        self.assertEqual(file2_from_storage.name, FILE_2.name)
-        self.assertEqual(file2_from_storage.type, FILE_2.type)
-        self.assertEqual(file2_from_storage.data, FILE_2.data)
+        assert len(other_files) == 0
+        assert file2_from_storage.file_id == FILE_2.file_id
+        assert file2_from_storage.name == FILE_2.name
+        assert file2_from_storage.type == FILE_2.type
+        assert file2_from_storage.data == FILE_2.data
 
     def test_remove_file(self):
         # This should not error.
@@ -62,18 +62,18 @@ class UploadedFileManagerTest(unittest.TestCase):
 
         self.mgr.add_file("session", FILE_1)
         self.mgr.remove_file("session", FILE_1.file_id)
-        self.assertEqual([], self.mgr.get_files("session", [FILE_1.file_id]))
+        assert self.mgr.get_files("session", [FILE_1.file_id]) == []
 
         # Remove the file again. It doesn't exist, but this isn't an error.
         self.mgr.remove_file("session", FILE_1.file_id)
-        self.assertEqual([], self.mgr.get_files("session", [FILE_1.file_id]))
+        assert self.mgr.get_files("session", [FILE_1.file_id]) == []
 
         self.mgr.add_file("session", FILE_1)
         self.mgr.add_file("session", FILE_2)
         self.mgr.remove_file("session", FILE_1.file_id)
-        self.assertEqual(
-            [FILE_2], self.mgr.get_files("session", [FILE_1.file_id, FILE_2.file_id])
-        )
+        assert self.mgr.get_files("session", [FILE_1.file_id, FILE_2.file_id]) == [
+            FILE_2
+        ]
 
     def test_remove_session_files(self):
         # This should not error.
@@ -86,16 +86,14 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.add_file("session2", FILE_1)
 
         self.mgr.remove_session_files("session1")
-        self.assertEqual(
-            [], self.mgr.get_files("session1", [FILE_1.file_id, FILE_2.file_id])
-        )
-        self.assertEqual([FILE_1], self.mgr.get_files("session2", [FILE_1.file_id]))
+        assert self.mgr.get_files("session1", [FILE_1.file_id, FILE_2.file_id]) == []
+        assert self.mgr.get_files("session2", [FILE_1.file_id]) == [FILE_1]
 
     def test_cache_stats_provider(self):
         """Test CacheStatsProvider implementation."""
 
         # Test empty manager
-        self.assertEqual([], self.mgr.get_stats())
+        assert self.mgr.get_stats() == []
 
         # Test manager with files
         self.mgr.add_file("session1", FILE_1)
@@ -108,7 +106,7 @@ class UploadedFileManagerTest(unittest.TestCase):
                 byte_length=len(FILE_1.data) + len(FILE_2.data),
             ),
         ]
-        self.assertEqual(expected, self.mgr.get_stats())
+        assert expected == self.mgr.get_stats()
 
 
 class UploadedFileManagerThreadingTest(unittest.TestCase):
@@ -140,14 +138,14 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
         # Ensure all our files are present
         for ii in range(self.NUM_THREADS):
             files = self.mgr.get_files("session", [f"id_{ii}"])
-            self.assertEqual(1, len(files))
-            self.assertEqual(bytes(f"{ii}", "utf-8"), files[0].data)
+            assert len(files) == 1
+            assert bytes(f"{ii}", "utf-8") == files[0].data
 
         # Ensure all files have unique IDs
         file_ids = set()
         for file_rec in self.mgr.file_storage["session"].values():
             file_ids.add(file_rec.file_id)
-        self.assertEqual(self.NUM_THREADS, len(file_ids))
+        assert len(file_ids) == self.NUM_THREADS
 
     def test_remove_file(self):
         """`remove_file` is thread-safe."""
@@ -169,16 +167,16 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
 
             # Ensure our file exists
             get_files_result = self.mgr.get_files("session", [file_id])
-            self.assertEqual(1, len(get_files_result))
+            assert len(get_files_result) == 1
 
             # Remove our file and ensure our file no longer exists
             self.mgr.remove_file("session", file_id)
             get_files_result = self.mgr.get_files("session", [file_id])
-            self.assertEqual(0, len(get_files_result))
+            assert len(get_files_result) == 0
 
         call_on_threads(remove_file, self.NUM_THREADS)
 
-        self.assertEqual(0, len(self.mgr.file_storage["session"]))
+        assert len(self.mgr.file_storage["session"]) == 0
 
     def test_remove_session_files(self):
         """`remove_session_files` is thread-safe."""
@@ -199,14 +197,14 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
             session_id = f"session_{index}"
             # Our file should exist
             session_files = self.mgr.get_files(session_id, [f"id_{index}"])
-            self.assertEqual(1, len(session_files))
-            self.assertEqual(file_ids[index], session_files[0].file_id)
+            assert len(session_files) == 1
+            assert file_ids[index] == session_files[0].file_id
 
             # Remove session files
             self.mgr.remove_session_files(session_id)
 
             # Our file should no longer exist
             session_files = self.mgr.get_files(session_id, [f"id_{index}"])
-            self.assertEqual(0, len(session_files))
+            assert len(session_files) == 0
 
         call_on_threads(remove_session_files, num_threads=self.NUM_THREADS)

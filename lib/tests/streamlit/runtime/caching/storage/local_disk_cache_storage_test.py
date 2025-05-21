@@ -23,6 +23,7 @@ import shutil
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from testfixtures import TempDirectory
 
 from streamlit import errors
@@ -70,9 +71,9 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
         )
         manager = LocalDiskCacheStorageManager()
         storage = manager.create(context)
-        self.assertIsInstance(storage, InMemoryCacheStorageWrapper)
-        self.assertEqual(storage.ttl_seconds, 60)
-        self.assertEqual(storage.max_entries, 100)
+        assert isinstance(storage, InMemoryCacheStorageWrapper)
+        assert storage.ttl_seconds == 60
+        assert storage.max_entries == 100
 
     def test_create_not_persist_context(self):
         """Tests that LocalDiskCacheStorageManager.create()
@@ -88,9 +89,9 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
         )
         manager = LocalDiskCacheStorageManager()
         storage = manager.create(context)
-        self.assertIsInstance(storage, InMemoryCacheStorageWrapper)
-        self.assertEqual(storage.ttl_seconds, math.inf)
-        self.assertEqual(storage.max_entries, math.inf)
+        assert isinstance(storage, InMemoryCacheStorageWrapper)
+        assert storage.ttl_seconds == math.inf
+        assert storage.max_entries == math.inf
 
     def test_check_context_with_persist_and_ttl(self):
         """Tests that LocalDiskCacheStorageManager.check_context() writes a warning
@@ -112,10 +113,9 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
             manager.check_context(context)
 
             output = "".join(logs.output)
-            self.assertIn(
-                "The cached function 'func-display-name' has a TTL that will be "
-                "ignored. Persistent cached functions currently don't support TTL.",
-                output,
+            assert (
+                "The cached function 'func-display-name' has a TTL that will be ignored. Persistent cached functions currently don't support TTL."
+                in output
             )
 
     def test_check_context_without_persist(self):
@@ -144,10 +144,9 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
             ).warning("irrelevant warning so assertLogs passes")
 
             output = "".join(logs.output)
-            self.assertNotIn(
-                "The cached function 'func-display-name' has a TTL that will be "
-                "ignored. Persistent cached functions currently don't support TTL.",
-                output,
+            assert (
+                "The cached function 'func-display-name' has a TTL that will be ignored. Persistent cached functions currently don't support TTL."
+                not in output
             )
 
     @patch("shutil.rmtree", wraps=shutil.rmtree)
@@ -185,21 +184,21 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
     def test_storage_get_not_found(self):
         """Test that storage.get() returns the correct value."""
 
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("some-key")
 
     def test_storage_get_found(self):
         """Test that storage.get() returns the correct value."""
         self.storage.set("some-key", b"some-value")
-        self.assertEqual(self.storage.get("some-key"), b"some-value")
+        assert self.storage.get("some-key") == b"some-value"
 
     def test_storage_set(self):
         """Test that storage.set() writes the correct value to disk."""
         self.storage.set("new-key", b"new-value")
-        self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-new-key.memo"))
+        assert os.path.exists(self.tempdir.path + "/func-key-new-key.memo")
 
         with open(self.tempdir.path + "/func-key-new-key.memo", "rb") as f:
-            self.assertEqual(f.read(), b"new-value")
+            assert f.read() == b"new-value"
 
     @patch(
         "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write",
@@ -207,50 +206,46 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
     )
     def test_storage_set_error(self):
         """Test that storage.set() raises an exception when it fails to write to disk."""
-        with self.assertRaises(CacheStorageError) as e:
+        with pytest.raises(CacheStorageError) as e:
             self.storage.set("uniqueKey", b"new-value")
-        self.assertEqual(str(e.exception), "Unable to write to cache")
+        assert str(e.value) == "Unable to write to cache"
 
     def test_storage_set_override(self):
         """Test that storage.set() overrides the value of an existing key."""
         self.storage.set("another_key", b"another_value")
         self.storage.set("another_key", b"new_value")
-        self.assertEqual(self.storage.get("another_key"), b"new_value")
+        assert self.storage.get("another_key") == b"new_value"
 
     def test_storage_delete(self):
         """Test that storage.delete() removes the correct file from disk."""
         self.storage.set("new-key", b"new-value")
-        self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-new-key.memo"))
+        assert os.path.exists(self.tempdir.path + "/func-key-new-key.memo")
         self.storage.delete("new-key")
-        self.assertFalse(os.path.exists(self.tempdir.path + "/func-key-new-key.memo"))
+        assert not os.path.exists(self.tempdir.path + "/func-key-new-key.memo")
 
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("new-key")
 
     def test_storage_clear(self):
         """Test that storage.clear() removes all storage files from disk."""
         self.storage.set("some-key", b"some-value")
         self.storage.set("another-key", b"another-value")
-        self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-some-key.memo"))
-        self.assertTrue(
-            os.path.exists(self.tempdir.path + "/func-key-another-key.memo")
-        )
+        assert os.path.exists(self.tempdir.path + "/func-key-some-key.memo")
+        assert os.path.exists(self.tempdir.path + "/func-key-another-key.memo")
 
         self.storage.clear()
 
-        self.assertFalse(os.path.exists(self.tempdir.path + "/func-key-some-key.memo"))
-        self.assertFalse(
-            os.path.exists(self.tempdir.path + "/func-key-another-key.memo")
-        )
+        assert not os.path.exists(self.tempdir.path + "/func-key-some-key.memo")
+        assert not os.path.exists(self.tempdir.path + "/func-key-another-key.memo")
 
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("some-key")
 
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("another-key")
 
         # test that cache folder is empty
-        self.assertEqual(os.listdir(self.tempdir.path), [])
+        assert os.listdir(self.tempdir.path) == []
 
     def test_storage_clear_not_existing_cache_directory(self):
         """Test that clear() is not crashing if the cache directory does not exist."""

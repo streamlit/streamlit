@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -212,10 +213,14 @@ def test_switch_page():
     at.switch_page("pages/page1.py").run()
     assert at.text[0].value == "page 1"
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(
+        ValueError,
+        match=re.compile(
+            r".*make sure the page given is relative to the main script.*"
+        ),
+    ):
         # Pages must be relative to main script path
         at.switch_page("test_data/pages/page1.py")
-        assert "relative to the main script path" in str(e.value)
 
 
 def test_switch_page_widgets():

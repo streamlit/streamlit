@@ -42,61 +42,61 @@ class RadioTest(DeltaGeneratorTestCase):
         st.radio("the label", ("m", "f"))
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.disabled, False)
-        self.assertEqual(c.HasField("default"), True)
-        self.assertEqual(c.captions, [])
+        assert c.default == 0
+        assert not c.disabled
+        assert c.HasField("default")
+        assert c.captions == []
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.radio("the label", ("m", "f"), disabled=True)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     def test_none_value(self):
         """Test that it can be called with None as index value."""
         st.radio("the label", ("m", "f"), index=None)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
+        assert c.label == "the label"
         # If a proto property is null is not determined by this value,
         # but by the check via the HasField method:
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.HasField("default"), False)
+        assert c.default == 0
+        assert not c.HasField("default")
 
     def test_horizontal(self):
         """Test that it can be called with horizontal param."""
         st.radio("the label", ("m", "f"), horizontal=True)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.horizontal, True)
+        assert c.horizontal
 
     def test_horizontal_default_value(self):
         """Test that it can called with horizontal param value False by default."""
         st.radio("the label", ("m", "f"))
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.horizontal, False)
+        assert not c.horizontal
 
     def test_valid_value(self):
         """Test that valid value is an int."""
         st.radio("the label", ("m", "f"), 1)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 1)
+        assert c.label == "the label"
+        assert c.default == 1
 
     def test_noneType_option(self):
         """Test NoneType option value."""
         current_value = st.radio("the label", (None, "selected"), 0)
 
-        self.assertEqual(current_value, None)
+        assert current_value is None
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -120,9 +120,9 @@ class RadioTest(DeltaGeneratorTestCase):
         st.radio("the label", arg_options)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.options == proto_options
 
     def test_format_function(self):
         """Test that it formats options."""
@@ -132,9 +132,9 @@ class RadioTest(DeltaGeneratorTestCase):
         st.radio("the label", arg_options, format_func=lambda x: x["name"])
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.options == proto_options
 
     @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
     def test_no_options(self, options):
@@ -142,22 +142,22 @@ class RadioTest(DeltaGeneratorTestCase):
         st.radio("the label", options)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.options, [])
+        assert c.default == 0
+        assert c.options == []
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.radio("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.radio("the label", ("m", "f"), 2)
 
     def test_outside_form(self):
@@ -166,7 +166,7 @@ class RadioTest(DeltaGeneratorTestCase):
         st.radio("foo", ["bar", "baz"])
 
         proto = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -176,11 +176,11 @@ class RadioTest(DeltaGeneratorTestCase):
             st.radio("foo", ["bar", "baz"])
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         radio_proto = self.get_delta_from_queue(1).new_element.radio
-        self.assertEqual(radio_proto.form_id, form_proto.form.form_id)
+        assert radio_proto.form_id == form_proto.form.form_id
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
@@ -192,12 +192,12 @@ class RadioTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
-        self.assertEqual(len(all_deltas), 4)
+        assert len(all_deltas) == 4
         radio_proto = self.get_delta_from_queue().new_element.radio
 
-        self.assertEqual(radio_proto.label, "foo")
-        self.assertEqual(radio_proto.options, ["bar", "baz"])
-        self.assertEqual(radio_proto.default, 0)
+        assert radio_proto.label == "foo"
+        assert radio_proto.options == ["bar", "baz"]
+        assert radio_proto.default == 0
 
     @parameterized.expand(
         [
@@ -211,17 +211,16 @@ class RadioTest(DeltaGeneratorTestCase):
         st.radio("the label", ("m", "f"), label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.radio("the label", ("m", "f"), label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_no_captions(self):
@@ -229,9 +228,9 @@ class RadioTest(DeltaGeneratorTestCase):
         st.radio("the label", ("option1", "option2", "option3"), captions=None)
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.captions, [])
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.captions == []
 
     def test_some_captions(self):
         """Test that it can be called with some captions."""
@@ -242,9 +241,9 @@ class RadioTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.radio
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.captions, ["first caption", "", "", "last caption"])
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.captions == ["first caption", "", "", "last caption"]
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -252,8 +251,8 @@ class RadioTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
 
 def test_radio_interaction():

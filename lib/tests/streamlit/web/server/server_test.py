@@ -20,6 +20,7 @@ import asyncio
 import contextlib
 import errno
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -77,21 +78,20 @@ class ServerTest(ServerTestCase):
         """Test that we can start and stop the server."""
         with self._patch_app_session():
             await self.server.start()
-            self.assertEqual(
-                RuntimeState.NO_SESSIONS_CONNECTED, self.server._runtime._state
-            )
+            assert self.server._runtime._state == RuntimeState.NO_SESSIONS_CONNECTED
 
             await self.ws_connect()
-            self.assertEqual(
-                RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.server._runtime._state
+            assert (
+                self.server._runtime._state
+                == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             )
 
             self.server.stop()
             await asyncio.sleep(0)  # Wait a tick for the stop to be acknowledged
-            self.assertEqual(RuntimeState.STOPPING, self.server._runtime._state)
+            assert self.server._runtime._state == RuntimeState.STOPPING
 
             await asyncio.sleep(0.1)
-            self.assertEqual(RuntimeState.STOPPED, self.server._runtime._state)
+            assert self.server._runtime._state == RuntimeState.STOPPED
 
     @tornado.testing.gen_test
     async def test_websocket_connect(self):
@@ -99,26 +99,26 @@ class ServerTest(ServerTestCase):
         with self._patch_app_session():
             await self.server.start()
 
-            self.assertFalse(self.server.browser_is_connected)
+            assert not self.server.browser_is_connected
 
             # Open a websocket connection
             ws_client = await self.ws_connect()
-            self.assertTrue(self.server.browser_is_connected)
+            assert self.server.browser_is_connected
 
             # Get this client's SessionInfo object
-            self.assertEqual(1, self.server._runtime._session_mgr.num_active_sessions())
+            assert self.server._runtime._session_mgr.num_active_sessions() == 1
             session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
 
             # Close the connection
             ws_client.close()
             await asyncio.sleep(0.1)
-            self.assertFalse(self.server.browser_is_connected)
+            assert not self.server.browser_is_connected
 
             # Ensure AppSession.disconnect_file_watchers() was called, and that our
             # session exists but is no longer active.
             session_info.session.disconnect_file_watchers.assert_called_once()
-            self.assertEqual(0, self.server._runtime._session_mgr.num_active_sessions())
-            self.assertEqual(1, self.server._runtime._session_mgr.num_sessions())
+            assert self.server._runtime._session_mgr.num_active_sessions() == 0
+            assert self.server._runtime._session_mgr.num_sessions() == 1
 
     @tornado.testing.gen_test
     async def test_websocket_connect_to_nonexistent_session(self):
@@ -129,7 +129,7 @@ class ServerTest(ServerTestCase):
 
             session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
 
-            self.assertNotEqual(session_info.session.id, "nonexistent_session")
+            assert session_info.session.id != "nonexistent_session"
 
             ws_client.close()
             await asyncio.sleep(0.1)
@@ -153,11 +153,11 @@ class ServerTest(ServerTestCase):
                 existing_session_id=original_session_info.session.id
             )
 
-            self.assertEqual(self.server._runtime._session_mgr.num_active_sessions(), 1)
+            assert self.server._runtime._session_mgr.num_active_sessions() == 1
             new_session_info = self.server._runtime._session_mgr.list_active_sessions()[
                 0
             ]
-            self.assertEqual(new_session_info.session, original_session_info.session)
+            assert new_session_info.session == original_session_info.session
 
             ws_client.close()
             await asyncio.sleep(0.1)
@@ -168,33 +168,30 @@ class ServerTest(ServerTestCase):
         with self._patch_app_session():
             await self.server.start()
 
-            self.assertFalse(self.server.browser_is_connected)
+            assert not self.server.browser_is_connected
 
             # Open a websocket connection
             ws_client1 = await self.ws_connect()
-            self.assertTrue(self.server.browser_is_connected)
+            assert self.server.browser_is_connected
 
             # Open another
             ws_client2 = await self.ws_connect()
-            self.assertTrue(self.server.browser_is_connected)
+            assert self.server.browser_is_connected
 
             # Assert that our session_infos are sane
             session_infos = self.server._runtime._session_mgr.list_active_sessions()
-            self.assertEqual(2, len(session_infos))
-            self.assertNotEqual(
-                session_infos[0].session.id,
-                session_infos[1].session.id,
-            )
+            assert len(session_infos) == 2
+            assert session_infos[0].session.id != session_infos[1].session.id
 
             # Close the first
             ws_client1.close()
             await asyncio.sleep(0.1)
-            self.assertTrue(self.server.browser_is_connected)
+            assert self.server.browser_is_connected
 
             # Close the second
             ws_client2.close()
             await asyncio.sleep(0.1)
-            self.assertFalse(self.server.browser_is_connected)
+            assert not self.server.browser_is_connected
 
     @tornado.testing.gen_test
     async def test_websocket_compression(self):
@@ -210,7 +207,7 @@ class ServerTest(ServerTestCase):
             # Ensure that the "permessage-deflate" extension is returned
             # from the server.
             extensions = ws_client.headers.get("Sec-Websocket-Extensions")
-            self.assertIn("permessage-deflate", extensions)
+            assert "permessage-deflate" in extensions
 
     @tornado.testing.gen_test
     async def test_websocket_compression_disabled(self):
@@ -225,7 +222,7 @@ class ServerTest(ServerTestCase):
 
             # Ensure that the "Sec-Websocket-Extensions" header is not
             # present in the response from the server.
-            self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
+            assert ws_client.headers.get("Sec-Websocket-Extensions") is None
 
     @tornado.testing.gen_test
     async def test_send_message_to_disconnected_websocket(self):
@@ -264,10 +261,11 @@ class ServerTest(ServerTestCase):
 
                 # Our session should have been removed from the server as
                 # a result of the WebSocketClosedError.
-                self.assertIsNone(
+                assert (
                     self.server._runtime._session_mgr.get_active_session_info(
                         session_info.session.id
                     )
+                    is None
                 )
 
 
@@ -303,9 +301,9 @@ class PortRotateAHundredTest(unittest.TestCase):
             ) as mock_server,
         ):
             start_listening(app)
-            self.assertEqual(pytest_wrapped_e.type, SystemExit)
-            self.assertEqual(pytest_wrapped_e.value.code, errno.EADDRINUSE)
-            self.assertEqual(mock_server.listen.call_count, MAX_PORT_SEARCH_RETRIES)
+            assert pytest_wrapped_e.type is SystemExit
+            assert pytest_wrapped_e.value.code == errno.EADDRINUSE
+            assert mock_server.listen.call_count == MAX_PORT_SEARCH_RETRIES
 
 
 class PortRotateOneTest(unittest.TestCase):
@@ -361,14 +359,9 @@ class SslServerTest(unittest.TestCase):
             self.assertLogs("streamlit.web.server.server") as logs,
         ):
             start_listening(mock.MagicMock())
-        self.assertEqual(
-            logs.output,
-            [
-                "ERROR:streamlit.web.server.server:Options 'server.sslCertFile' and "
-                "'server.sslKeyFile' must be set together. Set missing options or "
-                "delete existing options."
-            ],
-        )
+        assert logs.output == [
+            "ERROR:streamlit.web.server.server:Options 'server.sslCertFile' and 'server.sslKeyFile' must be set together. Set missing options or delete existing options."
+        ]
 
     @parameterized.expand(["server.sslCertFile", "server.sslKeyFile"])
     def test_missing_file(self, option_name):
@@ -397,10 +390,9 @@ class SslServerTest(unittest.TestCase):
 
             start_listening(mock.MagicMock())
 
-        self.assertRegex(
+        assert re.search(
+            r"ERROR:streamlit\.web\.server\.server:(Cert|Key) file '.+' does not exist\.",
             logs.output[0],
-            r"ERROR:streamlit\.web\.server\.server:(Cert|Key) file "
-            r"'.+' does not exist\.",
         )
 
     @parameterized.expand(["server.sslCertFile", "server.sslKeyFile"])
@@ -454,10 +446,9 @@ class SslServerTest(unittest.TestCase):
             )
 
             start_listening(mock.MagicMock())
-        self.assertRegex(
+        assert re.search(
+            r"ERROR:streamlit\.web\.server\.server:Failed to load SSL certificate\. Make sure cert file '.+' and key file '.+' are correct\.",
             logs.output[0],
-            r"ERROR:streamlit\.web\.server\.server:Failed to load SSL certificate\. "
-            r"Make sure cert file '.+' and key file '.+' are correct\.",
         )
 
 
@@ -528,18 +519,18 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_endpoint(self):
         response = self.fetch("/_stcore/script-health-check")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"test_message", response.body)
+        assert response.code == 200
+        assert response.body == b"test_message"
 
     def test_deprecated_endpoint(self):
         response = self.fetch("/script-health-check")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"test_message", response.body)
-        self.assertEqual(
-            response.headers["link"],
-            f'<http://127.0.0.1:{self.get_http_port()}/_stcore/script-health-check>; rel="alternate"',
+        assert response.code == 200
+        assert response.body == b"test_message"
+        assert (
+            response.headers["link"]
+            == f'<http://127.0.0.1:{self.get_http_port()}/_stcore/script-health-check>; rel="alternate"'
         )
-        self.assertEqual(response.headers["deprecation"], "True")
+        assert response.headers["deprecation"] == "True"
 
 
 class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
@@ -565,4 +556,4 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
-        self.assertEqual(404, response.code)
+        assert response.code == 404

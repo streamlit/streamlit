@@ -29,7 +29,7 @@ information.
 """
 
 
-@pytest.fixture(scope="function", params=["en-US", "de-DE", "ja-JP", "ar-EG"])
+@pytest.fixture(params=["en-US", "de-DE", "ja-JP", "ar-EG"])
 def browser_context_args(
     request: pytest.FixtureRequest,
     browser_context_args: dict[str, Any],

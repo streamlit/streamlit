@@ -50,9 +50,9 @@ class AuthUtilTest(unittest.TestCase):
         """Test AuthCache basic functionality."""
         cache = AuthCache()
         cache.set("key1", "value1", 3600)
-        self.assertEqual(cache.get("key1"), "value1")
+        assert cache.get("key1") == "value1"
         cache.delete("key1")
-        self.assertIsNone(cache.get("key1"))
+        assert cache.get("key1") is None
 
     @patch(
         "streamlit.auth_util.secrets_singleton",

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from streamlit import string_util
@@ -40,7 +41,7 @@ class StringUtilTest(unittest.TestCase):
     )
     def test_is_emoji(self, text: str, expected: bool):
         """Test streamlit.string_util.is_emoji."""
-        self.assertEqual(string_util.is_emoji(text), expected)
+        assert string_util.is_emoji(text) == expected
 
     @parameterized.expand(
         [
@@ -63,7 +64,7 @@ class StringUtilTest(unittest.TestCase):
         ]
     )
     def test_extract_leading_emoji(self, text, expected):
-        self.assertEqual(string_util.extract_leading_emoji(text), expected)
+        assert string_util.extract_leading_emoji(text) == expected
 
     @parameterized.expand(
         [
@@ -86,20 +87,20 @@ class StringUtilTest(unittest.TestCase):
         ]
     )
     def test_contains_special_chars(self, text: str, expected: bool):
-        self.assertEqual(string_util._contains_special_chars(text), expected)
+        assert string_util._contains_special_chars(text) == expected
 
     def test_simplify_number(self):
         """Test streamlit.string_util.simplify_number."""
 
-        self.assertEqual(string_util.simplify_number(100), "100")
+        assert string_util.simplify_number(100) == "100"
 
-        self.assertEqual(string_util.simplify_number(10000), "10k")
+        assert string_util.simplify_number(10000) == "10k"
 
-        self.assertEqual(string_util.simplify_number(1000000), "1m")
+        assert string_util.simplify_number(1000000) == "1m"
 
-        self.assertEqual(string_util.simplify_number(1000000000), "1b")
+        assert string_util.simplify_number(1000000000) == "1b"
 
-        self.assertEqual(string_util.simplify_number(1000000000000), "1t")
+        assert string_util.simplify_number(1000000000000) == "1t"
 
     @parameterized.expand(
         [
@@ -122,7 +123,7 @@ class StringUtilTest(unittest.TestCase):
         ]
     )
     def test_max_char_sequence(self, text, char, expected):
-        self.assertEqual(string_util.max_char_sequence(text, char), expected)
+        assert string_util.max_char_sequence(text, char) == expected
 
     @parameterized.expand(
         [
@@ -144,7 +145,7 @@ class StringUtilTest(unittest.TestCase):
     )
     def test_validate_material_icons_raises_exception(self, icon_name):
         """Test that validate_material_icons raises exception on incorrect icons."""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             string_util.validate_material_icon(icon_name)
 
-        self.assertIn("not a valid Material icon.", str(e.exception))
+        assert "not a valid Material icon." in str(e.value)

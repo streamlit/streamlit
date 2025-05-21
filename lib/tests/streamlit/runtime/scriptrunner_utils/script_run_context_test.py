@@ -18,6 +18,7 @@ import threading
 import unittest
 from typing import Callable
 
+import pytest
 from parameterized import parameterized
 
 from streamlit.errors import NoSessionContext, StreamlitAPIException
@@ -112,7 +113,7 @@ class ScriptRunContextTest(unittest.TestCase):
         msg.delta.new_element.markdown.body = "foo"
 
         ctx.enqueue(msg)
-        self.assertEqual(msg.metadata.active_script_hash, ctx.active_script_hash)
+        assert msg.metadata.active_script_hash == ctx.active_script_hash
 
         ctx.set_mpa_v2_page("new_hash")
 
@@ -142,7 +143,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx._production_query_params_used = production_used
 
         if should_raise:
-            with self.assertRaises(StreamlitAPIException):
+            with pytest.raises(StreamlitAPIException):
                 ctx.ensure_single_query_api_used()
         else:
             ctx.ensure_single_query_api_used()
@@ -167,7 +168,7 @@ class ScriptRunContextTest(unittest.TestCase):
         msg = ForwardMsg()
         msg.delta.new_element.markdown.body = "foo"
 
-        with self.assertRaises(NoSessionContext):
+        with pytest.raises(NoSessionContext):
             enqueue_message(msg)
 
     def test_enqueue_message(self):
@@ -181,10 +182,10 @@ class ScriptRunContextTest(unittest.TestCase):
         msg = ForwardMsg()
         msg.delta.new_element.markdown.body = "foo"
         enqueue_message(msg)
-        self.assertIsNotNone(fake_enqueue_result)
-        self.assertEqual(
-            fake_enqueue_result["msg"].delta.new_element.markdown.body,
-            msg.delta.new_element.markdown.body,
+        assert fake_enqueue_result is not None
+        assert (
+            fake_enqueue_result["msg"].delta.new_element.markdown.body
+            == msg.delta.new_element.markdown.body
         )
 
     def test_enqueue_message_sets_cacheable_flag(self):
@@ -200,14 +201,14 @@ class ScriptRunContextTest(unittest.TestCase):
         with patch_config_options({"global.minCachedMessageSize": 0}):
             cacheable_msg = create_dataframe_msg([1, 2, 3])
             enqueue_message(cacheable_msg)
-            self.assertIsNotNone(fake_enqueue_result)
-            self.assertEqual(fake_enqueue_result["msg"].metadata.cacheable, True)
+            assert fake_enqueue_result is not None
+            assert fake_enqueue_result["msg"].metadata.cacheable
 
         with patch_config_options({"global.minCachedMessageSize": 1000}):
             cacheable_msg = create_dataframe_msg([4, 5, 6])
             enqueue_message(cacheable_msg)
-            self.assertIsNotNone(fake_enqueue_result)
-            self.assertEqual(fake_enqueue_result["msg"].metadata.cacheable, False)
+            assert fake_enqueue_result is not None
+            assert not fake_enqueue_result["msg"].metadata.cacheable
 
     def test_enqueue_reference_message_if_cached(self):
         """Test that a reference message is enqueued if the original message is cached."""
@@ -225,8 +226,8 @@ class ScriptRunContextTest(unittest.TestCase):
             )
             add_script_run_ctx(ctx=ctx)
             enqueue_message(cacheable_msg)
-            self.assertIsNotNone(fake_enqueue_result)
-            self.assertEqual(fake_enqueue_result["msg"].WhichOneof("type"), "ref_hash")
+            assert fake_enqueue_result is not None
+            assert fake_enqueue_result["msg"].WhichOneof("type") == "ref_hash"
 
     def test_enqueue_message_with_fragment_id(self):
         fake_enqueue_result = {}
@@ -241,14 +242,12 @@ class ScriptRunContextTest(unittest.TestCase):
             msg = ForwardMsg()
             msg.delta.new_element.markdown.body = "foo"
             enqueue_message(msg)
-            self.assertIsNotNone(fake_enqueue_result)
-            self.assertEqual(
-                fake_enqueue_result["msg"].delta.new_element.markdown.body,
-                msg.delta.new_element.markdown.body,
+            assert fake_enqueue_result is not None
+            assert (
+                fake_enqueue_result["msg"].delta.new_element.markdown.body
+                == msg.delta.new_element.markdown.body
             )
-            self.assertEqual(
-                fake_enqueue_result["msg"].delta.fragment_id, "my_fragment_id"
-            )
+            assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
 
     def test_run_with_active_hash(self):
         """Ensure the active script is set correctly"""

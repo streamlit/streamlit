@@ -38,10 +38,10 @@ class WebSocketHeadersTest(ServerTestCase):
             session_mgr = self.server._runtime._session_mgr
 
             # Get our client's session_id and some other stuff
-            self.assertEqual(1, session_mgr.num_active_sessions())
+            assert session_mgr.num_active_sessions() == 1
             session_info = session_mgr.list_active_sessions()[0]
             session_id = session_info.session.id
-            self.assertIsInstance(session_info.client, BrowserWebSocketHandler)
+            assert isinstance(session_info.client, BrowserWebSocketHandler)
 
             # Mock get_script_run_ctx() to return our session_id
             mock_script_run_ctx = MagicMock(spec=ScriptRunContext)
@@ -53,13 +53,13 @@ class WebSocketHeadersTest(ServerTestCase):
                 # Assert that our headers are equal to our BrowserWebSocketHandler's
                 # request headers.
                 headers = websocket_headers._get_websocket_headers()
-                self.assertEqual(headers, dict(session_info.client.request.headers))
+                assert headers == dict(session_info.client.request.headers)
 
                 # Assert the presence of some (arbitrary) headers that should always
                 # be in a WebSocket request.
-                self.assertIn("Host", headers)
-                self.assertIn("Upgrade", headers)
-                self.assertIn("Connection", headers)
+                assert "Host" in headers
+                assert "Upgrade" in headers
+                assert "Connection" in headers
 
     @patch("streamlit.web.server.websocket_headers.show_deprecation_warning")
     def test_deprecation_warnings(self, show_warning_mock: Mock):

@@ -221,8 +221,8 @@ class PollingPathWatcherTest(unittest.TestCase):
         modify_mock_file()
         self._run_executor_tasks()
 
-        self.assertEqual(callback1.call_count, 1)
-        self.assertEqual(callback2.call_count, 1)
+        assert callback1.call_count == 1
+        assert callback2.call_count == 1
 
         # Close watcher1. Only watcher2's callback should be called after this.
         watcher1.close()
@@ -231,8 +231,8 @@ class PollingPathWatcherTest(unittest.TestCase):
         modify_mock_file()
         self._run_executor_tasks()
 
-        self.assertEqual(callback1.call_count, 1)
-        self.assertEqual(callback2.call_count, 2)
+        assert callback1.call_count == 1
+        assert callback2.call_count == 2
 
         watcher2.close()
 
@@ -241,5 +241,5 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         # Both watchers are now closed, so their callback counts
         # should not have increased.
-        self.assertEqual(callback1.call_count, 1)
-        self.assertEqual(callback2.call_count, 2)
+        assert callback1.call_count == 1
+        assert callback2.call_count == 2

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import get_args
 from unittest.mock import ANY, MagicMock, call, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -77,25 +78,27 @@ class WidgetManagerTests(unittest.TestCase):
         session_state._set_widget_metadata(create_metadata("int", "int_value"))
         session_state._set_widget_metadata(create_metadata("string", "string_value"))
 
-        self.assertEqual(True, session_state["trigger"])
-        self.assertEqual(True, session_state["bool"])
-        self.assertAlmostEqual(0.5, session_state["float"])
-        self.assertEqual(123, session_state["int"])
-        self.assertEqual("howdy!", session_state["string"])
+        assert session_state["trigger"]
+        assert session_state["bool"]
+        assert session_state["float"] == pytest.approx(0.5)
+        assert session_state["int"] == 123
+        assert session_state["string"] == "howdy!"
 
     def test_get_nonexistent(self):
         session_state = SessionState()
-        self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
+        with pytest.raises(KeyError):
+            session_state["fake_widget_id"]
 
     def test_get_prev_widget_value_nonexistent(self):
         session_state = SessionState()
-        self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
+        with pytest.raises(KeyError):
+            session_state["fake_widget_id"]
 
     def test_set_widget_attrs_nonexistent(self):
         session_state = SessionState()
         session_state._set_widget_metadata(create_metadata("fake_widget_id", ""))
 
-        self.assertIsInstance(
+        assert isinstance(
             session_state._new_widget_state.widget_metadata["fake_widget_id"],
             WidgetMetadata,
         )
@@ -172,8 +175,8 @@ class WidgetManagerTests(unittest.TestCase):
 
         widgets = session_state.get_widget_states()
 
-        self.assertEqual(len(widgets), 1)
-        self.assertEqual(widgets[0].id, "trigger")
+        assert len(widgets) == 1
+        assert widgets[0].id == "trigger"
 
     def test_reset_triggers(self):
         states = WidgetStates()
@@ -189,13 +192,13 @@ class WidgetManagerTests(unittest.TestCase):
             WidgetMetadata("int", lambda x: x, None, "int_value")
         )
 
-        self.assertTrue(session_state["trigger"])
-        self.assertEqual(123, session_state["int"])
+        assert session_state["trigger"]
+        assert session_state["int"] == 123
 
         session_state._reset_triggers()
 
-        self.assertFalse(session_state["trigger"])
-        self.assertEqual(123, session_state["int"])
+        assert not session_state["trigger"]
+        assert session_state["int"] == 123
 
     def test_reset_chat_input_triggers(self):
         states = WidgetStates()
@@ -215,13 +218,13 @@ class WidgetManagerTests(unittest.TestCase):
             WidgetMetadata("int", lambda x: x, None, "int_value")
         )
 
-        self.assertEqual("Some Value", session_state["chat_input"].data)
-        self.assertEqual(123, session_state["int"])
+        assert session_state["chat_input"].data == "Some Value"
+        assert session_state["int"] == 123
 
         session_state._reset_triggers()
 
-        self.assertIsNone(session_state["chat_input"])
-        self.assertEqual(123, session_state["int"])
+        assert session_state["chat_input"] is None
+        assert session_state["int"] == 123
 
     def test_coalesce_widget_states(self):
         session_state = SessionState()
@@ -286,17 +289,20 @@ class WidgetManagerTests(unittest.TestCase):
             _coalesce_widget_states(old_states, new_states)
         )
 
-        self.assertRaises(KeyError, lambda: session_state["old_unset_trigger"])
-        self.assertRaises(KeyError, lambda: session_state["missing_in_new"])
-        self.assertRaises(KeyError, lambda: session_state["old_unset_string_trigger"])
+        with pytest.raises(KeyError):
+            session_state["old_unset_trigger"]
+        with pytest.raises(KeyError):
+            session_state["missing_in_new"]
+        with pytest.raises(KeyError):
+            session_state["old_unset_string_trigger"]
 
-        self.assertEqual(True, session_state["old_set_trigger"])
-        self.assertEqual(True, session_state["new_set_trigger"])
-        self.assertEqual(456, session_state["added_in_new"])
+        assert session_state["old_set_trigger"]
+        assert session_state["new_set_trigger"]
+        assert session_state["added_in_new"] == 456
 
         # Widgets that were triggers before, but no longer are, will *not*
         # be coalesced
-        self.assertEqual(3, session_state["shape_changing_trigger"])
+        assert session_state["shape_changing_trigger"] == 3
 
     def coalesce_widget_states_returns_None_if_both_inputs_None(self):
         assert _coalesce_widget_states(None, None) is None
@@ -421,7 +427,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         Test that duplicate ID error is raised if the same widget is called twice.
         """
         widget_func()
-        with self.assertRaises(errors.DuplicateWidgetID):
+        with pytest.raises(errors.DuplicateWidgetID):
             widget_func()
 
     @parameterized.expand(
@@ -452,7 +458,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
-        with self.assertRaises(errors.DuplicateWidgetID):
+        with pytest.raises(errors.DuplicateWidgetID):
             widget_func("my_widget", disabled=True)
 
     @parameterized.expand(
@@ -547,7 +553,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
-        with self.assertRaises(errors.DuplicateWidgetID):
+        with pytest.raises(errors.DuplicateWidgetID):
             widget_func("my_widget", options, disabled=True)
 
     def test_widget_id_computation_data_editor(self):
@@ -569,7 +575,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
-        with self.assertRaises(errors.DuplicateWidgetID):
+        with pytest.raises(errors.DuplicateWidgetID):
             st.data_editor(data=[], disabled=True)
 
 

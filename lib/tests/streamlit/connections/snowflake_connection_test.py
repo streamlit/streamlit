@@ -148,7 +148,7 @@ class SnowflakeConnectionTest(unittest.TestCase):
     def test_retry_behavior(self):
         mock_cursor = MagicMock()
         mock_cursor.fetch_pandas_all = MagicMock(
-            side_effect=SomeError("oh noes :(", sqlstate="08001")
+            side_effect=SomeError("oh no", sqlstate="08001")
         )
 
         conn = SnowflakeConnection("my_snowflake_connection")
@@ -174,7 +174,7 @@ class SnowflakeConnectionTest(unittest.TestCase):
     def test_retry_fails_fast_for_programming_errors_with_wrong_sqlstate(self):
         mock_cursor = MagicMock()
         mock_cursor.fetch_pandas_all = MagicMock(
-            side_effect=SomeError("oh noes :(", sqlstate="42")
+            side_effect=SomeError("oh no", sqlstate="42")
         )
 
         conn = SnowflakeConnection("my_snowflake_connection")
@@ -195,9 +195,7 @@ class SnowflakeConnectionTest(unittest.TestCase):
         from snowflake.connector.errors import Error as SnowflakeError
 
         mock_cursor = MagicMock()
-        mock_cursor.fetch_pandas_all = MagicMock(
-            side_effect=SnowflakeError("oh noes :(")
-        )
+        mock_cursor.fetch_pandas_all = MagicMock(side_effect=SnowflakeError("oh no"))
 
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
@@ -215,12 +213,12 @@ class SnowflakeConnectionTest(unittest.TestCase):
     )
     def test_retry_fails_fast_for_other_errors(self):
         mock_cursor = MagicMock()
-        mock_cursor.fetch_pandas_all = MagicMock(side_effect=Exception("oh noes :("))
+        mock_cursor.fetch_pandas_all = MagicMock(side_effect=Exception("oh no"))
 
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
 
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception, match="oh no"):
             conn.query("SELECT 1;")
 
         # conn._connect should have just been called once when first creating the

@@ -25,6 +25,7 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -116,8 +117,8 @@ class CacheDataTest(unittest.TestCase):
 
         exception.assert_not_called()
 
-        self.assertEqual(r1, [1, 1])
-        self.assertEqual(r2, [0, 1])
+        assert r1 == [1, 1]
+        assert r2 == [0, 1]
 
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
@@ -144,9 +145,9 @@ class CacheDataTest(unittest.TestCase):
                 return "static method!"
 
         obj = TestClass()
-        self.assertEqual("member func!", obj.member_func())
-        self.assertEqual("class method!", obj.class_method())
-        self.assertEqual("static method!", obj.static_method())
+        assert obj.member_func() == "member func!"
+        assert obj.class_method() == "class method!"
+        assert obj.static_method() == "static method!"
 
     def test_function_name_does_not_use_hashfuncs(self):
         """Hash funcs should only be used on arguments to a function,
@@ -191,7 +192,7 @@ class CacheDataTest(unittest.TestCase):
         def user_hash_error_func(x):
             pass
 
-        with self.assertRaises(UserHashError) as ctx:
+        with pytest.raises(UserHashError) as ctx:
             my_obj = MyObj()
             user_hash_error_func(my_obj)
 
@@ -212,7 +213,7 @@ Object of type tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest
 
 If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
-        self.assertEqual(str(ctx.exception), expected_message)
+        assert str(ctx.value) == expected_message
 
     def test_cached_st_function_clear_args(self):
         self.x = 0
@@ -315,7 +316,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         match = re.fullmatch(
             r"/mock/home/folder/.streamlit/cache/.*?\.memo", write_path
         )
-        self.assertIsNotNone(match)
+        assert match is not None
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
@@ -335,7 +336,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
         data = foo()
         mock_read.assert_called_once()
-        self.assertEqual("mock_pickled_value", data)
+        assert data == "mock_pickled_value"
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
@@ -350,10 +351,10 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         def foo():
             return "actual_value"
 
-        with self.assertRaises(CacheError) as error:
+        with pytest.raises(CacheError) as error:
             foo()
         mock_read.assert_called_once()
-        self.assertEqual("Unable to read from cache", str(error.exception))
+        assert str(error.value) == "Unable to read from cache"
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch("streamlit.file_util.open", mock_open(read_data=b"bad_binary_pickled_value"))
@@ -368,22 +369,22 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         def foo():
             return "actual_value"
 
-        with self.assertRaises(CacheError) as error:
+        with pytest.raises(CacheError) as error:
             foo()
         mock_read.assert_called_once()
-        self.assertIn("Failed to unpickle", str(error.exception))
+        assert "Failed to unpickle" in str(error.value)
 
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
 
             @st.cache_data(persist="yesplz")
             def foo():
                 pass
 
-        self.assertEqual(
-            "Unsupported persist option 'yesplz'. Valid values are 'disk' or None.",
-            str(e.exception),
+        assert (
+            str(e.value)
+            == "Unsupported persist option 'yesplz'. Valid values are 'disk' or None."
         )
 
     @patch("shutil.rmtree")
@@ -420,7 +421,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         foo(1)
 
         # We should've opened two files, one for each distinct "foo" call.
-        self.assertEqual(2, mock_open.call_count)
+        assert mock_open.call_count == 2
 
         # Get the names of the two files that were created. These will look
         # something like '/mock/home/folder/.streamlit/cache/[long_hash].memo'
@@ -443,7 +444,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             foo.clear()
 
         # os.remove should have been called once for each of our created cache files
-        self.assertEqual(2, mock_os_remove.call_count)
+        assert mock_os_remove.call_count == 2
 
         removed_filenames = {
             mock_os_remove.call_args_list[0][0][0],
@@ -451,7 +452,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         }
 
         # The two files we removed should be the same two files we created.
-        self.assertEqual(created_filenames, removed_filenames)
+        assert created_filenames == removed_filenames
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
@@ -530,9 +531,9 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             st.write(user_function())
 
             output = "".join(logs.output)
-            self.assertIn(
-                "The cached function 'user_function' has a TTL that will be ignored.",
-                output,
+            assert (
+                "The cached function 'user_function' has a TTL that will be ignored."
+                in output
             )
 
     @parameterized.expand(
@@ -581,7 +582,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         st.cache_data.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_data_cache_stats_provider().get_stats())
+        assert get_data_cache_stats_provider().get_stats() == []
 
     def test_multiple_stats(self):
         @st.cache_data
@@ -618,9 +619,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(
-            set(expected), set(get_data_cache_stats_provider().get_stats())
-        )
+        assert set(expected) == set(get_data_cache_stats_provider().get_stats())
 
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
@@ -634,7 +633,7 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
 
     def test_error_logged_and_raised_on_improperly_configured_cache_data(self):
         with (
-            self.assertRaises(InvalidCacheStorageContextError) as e,
+            pytest.raises(InvalidCacheStorageContextError) as e,
             self.assertLogs(
                 "streamlit.runtime.caching.cache_data_api", level=logging.ERROR
             ) as logs,
@@ -644,9 +643,9 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
             def foo():
                 return "data"
 
-        self.assertEqual(str(e.exception), "This CacheStorageManager always fails")
+        assert str(e.value) == "This CacheStorageManager always fails"
         output = "".join(logs.output)
-        self.assertIn("This CacheStorageManager always fails", output)
+        assert "This CacheStorageManager always fails" in output
 
 
 class CacheDataMessageReplayTest(DeltaGeneratorTestCase):

@@ -27,32 +27,32 @@ class StHeaderTest(DeltaGeneratorTestCase):
         st.header("some header")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertFalse(el.heading.hide_anchor, False)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
 
     def test_st_header_with_anchor(self):
         """Test st.header with anchor."""
         st.header("some header", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertEqual(el.heading.anchor, "some-anchor")
-        self.assertFalse(el.heading.hide_anchor, False)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert el.heading.anchor == "some-anchor"
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
 
     def test_st_header_with_hidden_anchor(self):
         """Test st.header with hidden anchor."""
         st.header("some header", anchor=False)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertEqual(el.heading.anchor, "")
-        self.assertTrue(el.heading.hide_anchor, True)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert el.heading.anchor == ""
+        assert el.heading.hide_anchor is True
+        assert not el.heading.divider
 
     def test_st_header_with_invalid_anchor(self):
         """Test st.header with invalid anchor."""
@@ -63,30 +63,30 @@ class StHeaderTest(DeltaGeneratorTestCase):
         """Test st.header with help."""
         st.header("some header", help="help text")
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertEqual(el.heading.help, "help text")
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert el.heading.help == "help text"
+        assert not el.heading.divider
 
     def test_st_header_with_divider_true(self):
         """Test st.header with divider True."""
         st.header("some header", divider=True)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertFalse(el.heading.hide_anchor, False)
-        self.assertEqual(el.heading.divider, "auto")
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert not el.heading.hide_anchor
+        assert el.heading.divider == "auto"
 
     def test_st_header_with_divider_color(self):
         """Test st.header with divider color."""
         st.header("some header", divider="blue")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertFalse(el.heading.hide_anchor, False)
-        self.assertEqual(el.heading.divider, "blue")
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert not el.heading.hide_anchor
+        assert el.heading.divider == "blue"
 
     def test_st_header_with_invalid_divider(self):
         """Test st.header with invalid divider."""
@@ -102,32 +102,32 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         st.subheader("some subheader")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertFalse(el.heading.hide_anchor)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
 
     def test_st_subheader_with_anchor(self):
         """Test st.subheader with anchor."""
         st.subheader("some subheader", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertEqual(el.heading.anchor, "some-anchor")
-        self.assertFalse(el.heading.hide_anchor)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert el.heading.anchor == "some-anchor"
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
 
     def test_st_subheader_with_hidden_anchor(self):
         """Test st.subheader with hidden anchor."""
         st.subheader("some subheader", anchor=False)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertEqual(el.heading.anchor, "")
-        self.assertTrue(el.heading.hide_anchor, True)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert el.heading.anchor == ""
+        assert el.heading.hide_anchor is True
+        assert not el.heading.divider
 
     def test_st_subheader_with_invalid_anchor(self):
         """Test st.subheader with invalid anchor."""
@@ -138,30 +138,30 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         """Test st.subheader with help."""
         st.subheader("some subheader", help="help text")
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertEqual(el.heading.help, "help text")
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert el.heading.help == "help text"
+        assert not el.heading.divider
 
     def test_st_subheader_with_divider_true(self):
         """Test st.subheader with divider True."""
         st.subheader("some subheader", divider=True)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertFalse(el.heading.hide_anchor)
-        self.assertEqual(el.heading.divider, "auto")
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert not el.heading.hide_anchor
+        assert el.heading.divider == "auto"
 
     def test_st_subheader_with_divider_color(self):
         """Test st.subheader with divider color."""
         st.subheader("some subheader", divider="blue")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertFalse(el.heading.hide_anchor)
-        self.assertEqual(el.heading.divider, "blue")
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert not el.heading.hide_anchor
+        assert el.heading.divider == "blue"
 
     def test_st_subheader_with_invalid_divider(self):
         """Test st.subheader with invalid divider."""
@@ -177,32 +177,32 @@ class StTitleTest(DeltaGeneratorTestCase):
         st.title("some title")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some title")
-        self.assertEqual(el.heading.tag, "h1")
-        self.assertFalse(el.heading.hide_anchor)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some title"
+        assert el.heading.tag == "h1"
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
 
     def test_st_title_with_anchor(self):
         """Test st.title with anchor."""
         st.title("some title", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some title")
-        self.assertEqual(el.heading.tag, "h1")
-        self.assertEqual(el.heading.anchor, "some-anchor")
-        self.assertFalse(el.heading.hide_anchor)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some title"
+        assert el.heading.tag == "h1"
+        assert el.heading.anchor == "some-anchor"
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
 
     def test_st_title_with_hidden_anchor(self):
         """Test st.title with hidden anchor."""
         st.title("some title", anchor=False)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some title")
-        self.assertEqual(el.heading.tag, "h1")
-        self.assertEqual(el.heading.anchor, "")
-        self.assertTrue(el.heading.hide_anchor)
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some title"
+        assert el.heading.tag == "h1"
+        assert el.heading.anchor == ""
+        assert el.heading.hide_anchor
+        assert not el.heading.divider
 
     def test_st_title_with_invalid_anchor(self):
         """Test st.title with invalid anchor."""
@@ -220,10 +220,10 @@ class StTitleTest(DeltaGeneratorTestCase):
         st.title("some title", help="help text")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some title")
-        self.assertEqual(el.heading.tag, "h1")
-        self.assertEqual(el.heading.help, "help text")
-        self.assertFalse(el.heading.divider)
+        assert el.heading.body == "some title"
+        assert el.heading.tag == "h1"
+        assert el.heading.help == "help text"
+        assert not el.heading.divider
 
     def test_st_title_with_invalid_divider(self):
         """Test st.title with invalid divider."""

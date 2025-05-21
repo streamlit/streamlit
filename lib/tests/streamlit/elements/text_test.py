@@ -24,11 +24,11 @@ class StTextAPITest(DeltaGeneratorTestCase):
         st.text("some text")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "some text")
+        assert el.text.body == "some text"
 
     def test_st_text_with_help(self):
         """Test st.text with help."""
         st.text("some text", help="help text")
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.text.body, "some text")
-        self.assertEqual(el.text.help, "help text")
+        assert el.text.body == "some text"
+        assert el.text.help == "help text"

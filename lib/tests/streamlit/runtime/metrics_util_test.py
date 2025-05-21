@@ -112,7 +112,7 @@ class MetricsUtilTest(unittest.TestCase):
         ):
             machine_id = metrics_util._get_machine_id_v4()
             file_open().write.assert_called_once_with(UUID)
-        self.assertEqual(machine_id, UUID)
+        assert machine_id == UUID
 
     @patch(
         "streamlit.runtime.metrics_util.file_util.get_streamlit_file_path",
@@ -128,7 +128,7 @@ class MetricsUtilTest(unittest.TestCase):
         ):
             machine_id = metrics_util._get_machine_id_v4()
             file_open().read.assert_called_once()
-        self.assertEqual(machine_id, UUID)
+        assert machine_id == UUID
 
     @patch(
         "streamlit.runtime.metrics_util.file_util.get_streamlit_file_path",
@@ -147,7 +147,7 @@ class MetricsUtilTest(unittest.TestCase):
             machine_id = metrics_util._get_machine_id_v4()
             file_open().read.assert_called_once()
             file_open().write.assert_called_once_with(UUID)
-        self.assertEqual(machine_id, UUID)
+        assert machine_id == UUID
 
 
 class PageTelemetryTest(DeltaGeneratorTestCase):

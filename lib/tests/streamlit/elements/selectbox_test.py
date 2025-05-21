@@ -45,48 +45,48 @@ class SelectboxTest(DeltaGeneratorTestCase):
         st.selectbox("the label", ("m", "f"))
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.HasField("default"), True)
-        self.assertEqual(c.disabled, False)
-        self.assertEqual(c.placeholder, "Choose an option")
-        self.assertEqual(c.accept_new_options, False)
+        assert c.default == 0
+        assert c.HasField("default")
+        assert not c.disabled
+        assert c.placeholder == "Choose an option"
+        assert not c.accept_new_options
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.selectbox("the label", ("m", "f"), disabled=True)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     def test_valid_value(self):
         """Test that valid value is an int."""
         st.selectbox("the label", ("m", "f"), 1)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 1)
+        assert c.label == "the label"
+        assert c.default == 1
 
     def test_none_index(self):
         """Test that it can be called with None as index value."""
         st.selectbox("the label", ("m", "f"), index=None)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, "the label")
+        assert c.label == "the label"
         # If a proto property is null is not determined by this value,
         # but by the check via the HasField method:
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.HasField("default"), False)
+        assert c.default == 0
+        assert not c.HasField("default")
 
     def test_noneType_option(self):
         """Test NoneType option value."""
         current_value = st.selectbox("the label", (None, "selected"), 0)
 
-        self.assertEqual(current_value, None)
+        assert current_value is None
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -110,9 +110,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
         st.selectbox("the label", arg_options)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.options == proto_options
 
     def test_format_function(self):
         """Test that it formats options."""
@@ -122,9 +122,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
         st.selectbox("the label", arg_options, format_func=lambda x: x["name"])
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.options == proto_options
 
     @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
     def test_no_options(self, options):
@@ -132,35 +132,35 @@ class SelectboxTest(DeltaGeneratorTestCase):
         st.selectbox("the label", options)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.options, [])
+        assert c.label == "the label"
+        assert c.default == 0
+        assert c.options == []
 
     def test_accept_new_options(self):
         """Test that it can accept new options."""
         st.selectbox("the label", ("m", "f"), accept_new_options=True)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.accept_new_options, True)
-        self.assertEqual(c.placeholder, "Choose or add an option")
+        assert c.accept_new_options
+        assert c.placeholder == "Choose or add an option"
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.selectbox("the label", ("m", "f"), 2)
 
     def test_raises_exception_of_index_larger_than_options(self):
         """Test that it raises an exception if index is larger than options."""
-        with self.assertRaises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitAPIException) as ex:
             st.selectbox("Test box", ["a"], index=1)
 
         assert (
-            str(ex.exception)
+            str(ex.value)
             == "Selectbox index must be greater than or equal to 0 and less than the length of options."
         )
 
@@ -170,7 +170,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         st.selectbox("foo", ("bar", "baz"))
 
         proto = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -180,11 +180,11 @@ class SelectboxTest(DeltaGeneratorTestCase):
             st.selectbox("foo", ("bar", "baz"))
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         selectbox_proto = self.get_delta_from_queue(1).new_element.selectbox
-        self.assertEqual(selectbox_proto.form_id, form_proto.form.form_id)
+        assert selectbox_proto.form_id == form_proto.form.form_id
 
     @parameterized.expand(
         [
@@ -198,15 +198,14 @@ class SelectboxTest(DeltaGeneratorTestCase):
         st.selectbox("the label", ("m", "f"), label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.selectbox("the label", ("m", "f"), label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_placeholder(self):
@@ -214,37 +213,40 @@ class SelectboxTest(DeltaGeneratorTestCase):
         st.selectbox("the label", ("m", "f"), placeholder="Please select")
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.placeholder, "Please select")
+        assert c.placeholder == "Please select"
 
     def test_width_config_default(self):
         """Test that default width is 'stretch'."""
         st.selectbox("the label", ("m", "f"))
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     def test_width_config_pixel(self):
         """Test that pixel width works properly."""
         st.selectbox("the label", ("m", "f"), width=200)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.PIXEL_WIDTH.value
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
         )
-        self.assertEqual(c.width_config.pixel_width, 200)
+        assert c.width_config.pixel_width == 200
 
     def test_width_config_stretch(self):
         """Test that 'stretch' width works properly."""
         st.selectbox("the label", ("m", "f"), width="stretch")
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     @parameterized.expand(
         [
@@ -257,7 +259,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
     )
     def test_invalid_width(self, width):
         """Test that invalid width values raise exceptions."""
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.selectbox("the label", ("m", "f"), width=width)
 
     def test_shows_cached_widget_replay_warning(self):
@@ -266,8 +268,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
 
 def test_selectbox_interaction():

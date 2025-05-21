@@ -70,11 +70,9 @@ class RuntimeConfigTests(unittest.TestCase):
             MemoryUploadedFileManager("/mock/upload"),
         )
 
-        self.assertIsInstance(
-            config.cache_storage_manager, LocalDiskCacheStorageManager
-        )
-        self.assertIs(config.session_manager_class, WebsocketSessionManager)
-        self.assertIsInstance(config.session_storage, MemorySessionStorage)
+        assert isinstance(config.cache_storage_manager, LocalDiskCacheStorageManager)
+        assert config.session_manager_class is WebsocketSessionManager
+        assert isinstance(config.session_storage, MemorySessionStorage)
 
 
 class RuntimeSingletonTest(unittest.TestCase):
@@ -83,19 +81,19 @@ class RuntimeSingletonTest(unittest.TestCase):
 
     def test_runtime_constructor_sets_instance(self):
         """Creating a Runtime instance sets Runtime.instance"""
-        self.assertIsNone(Runtime._instance)
+        assert Runtime._instance is None
         _ = Runtime(MagicMock())
-        self.assertIsNotNone(Runtime._instance)
+        assert Runtime._instance is not None
 
     def test_multiple_runtime_error(self):
         """Creating multiple Runtimes raises an error."""
         Runtime(MagicMock())
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             Runtime(MagicMock())
 
     def test_instance_class_method(self):
         """Runtime.instance() returns our singleton instance."""
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             # No Runtime: error
             Runtime.instance()
 
@@ -105,25 +103,25 @@ class RuntimeSingletonTest(unittest.TestCase):
 
     def test_exists(self):
         """Runtime.exists() returns True iff the Runtime singleton exists."""
-        self.assertFalse(Runtime.exists())
+        assert not Runtime.exists()
         _ = Runtime(MagicMock())
-        self.assertTrue(Runtime.exists())
+        assert Runtime.exists()
 
 
 class RuntimeTest(RuntimeTestCase):
     async def test_start_stop(self):
         """starting and stopping the Runtime should work as expected."""
-        self.assertEqual(RuntimeState.INITIAL, self.runtime.state)
+        assert self.runtime.state == RuntimeState.INITIAL
 
         await self.runtime.start()
-        self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
+        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
 
         self.runtime.stop()
         await asyncio.sleep(0)  # Wait 1 tick for the stop to be acknowledged
-        self.assertEqual(RuntimeState.STOPPING, self.runtime.state)
+        assert self.runtime.state == RuntimeState.STOPPING
 
         await self.runtime.stopped
-        self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
+        assert self.runtime.state == RuntimeState.STOPPED
 
     async def test_connect_session(self):
         """We can create and remove a single session."""
@@ -132,12 +130,10 @@ class RuntimeTest(RuntimeTestCase):
         session_id = self.runtime.connect_session(
             client=MockSessionClient(), user_info=MagicMock()
         )
-        self.assertEqual(
-            RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state
-        )
+        assert self.runtime.state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
 
         self.runtime.disconnect_session(session_id)
-        self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
+        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
 
     async def test_connect_session_error_if_both_session_id_args(self):
         """Test that setting both existing_session_id and session_id_override is an error."""
@@ -277,9 +273,7 @@ class RuntimeTest(RuntimeTestCase):
                 user_info=MagicMock(),
             )
 
-            self.assertEqual(
-                RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state
-            )
+            assert self.runtime.state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             session_ids.append(session_id)
 
         for i in range(len(session_ids)):
@@ -289,9 +283,9 @@ class RuntimeTest(RuntimeTestCase):
                 if i == len(session_ids) - 1
                 else RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             )
-            self.assertEqual(expected_state, self.runtime.state)
+            assert expected_state == self.runtime.state
 
-        self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
+        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
 
     async def test_disconnect_invalid_session(self):
         """Disconnecting a session that doesn't exist is a no-op: no error raised."""
@@ -327,11 +321,11 @@ class RuntimeTest(RuntimeTestCase):
         session_id = self.runtime.connect_session(
             client=MockSessionClient(), user_info=MagicMock()
         )
-        self.assertTrue(self.runtime.is_active_session(session_id))
-        self.assertFalse(self.runtime.is_active_session("not_a_session_id"))
+        assert self.runtime.is_active_session(session_id)
+        assert not self.runtime.is_active_session("not_a_session_id")
 
         self.runtime.disconnect_session(session_id)
-        self.assertFalse(self.runtime.is_active_session(session_id))
+        assert not self.runtime.is_active_session(session_id)
 
     async def test_closes_app_sessions_on_stop(self):
         """When the Runtime stops, it should close all AppSessions."""
@@ -353,7 +347,7 @@ class RuntimeTest(RuntimeTestCase):
             self.runtime.stop()
             await self.runtime.stopped
 
-            self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
+            assert self.runtime.state == RuntimeState.STOPPED
 
             # All sessions should be shut down via self._session_mgr.close_session
             patched_close_session.assert_has_calls(call(s.id) for s in app_sessions)
@@ -414,7 +408,7 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.stop()
         await self.tick_runtime_loop()
 
-        with self.assertRaises(RuntimeStoppedError):
+        with pytest.raises(RuntimeStoppedError):
             self.runtime.connect_session(MagicMock(), MagicMock())
 
     async def test_handle_backmsg_after_stop(self):
@@ -423,7 +417,7 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.stop()
         await self.tick_runtime_loop()
 
-        with self.assertRaises(RuntimeStoppedError):
+        with pytest.raises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
     async def test_handle_session_client_disconnected(self):
@@ -440,7 +434,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.tick_runtime_loop()
 
         client.write_forward_msg.assert_called_once()
-        self.assertTrue(self.runtime.is_active_session(session_id))
+        assert self.runtime.is_active_session(session_id)
 
         # Send another message - but this time the client will raise an error.
         raise_disconnected_error = MagicMock(side_effect=SessionClientDisconnectedError)
@@ -450,7 +444,7 @@ class RuntimeTest(RuntimeTestCase):
 
         # Assert that our error was raised, and that our session was disconnected.
         raise_disconnected_error.assert_called_once()
-        self.assertFalse(self.runtime.is_active_session(session_id))
+        assert not self.runtime.is_active_session(session_id)
 
     async def test_stable_number_of_async_tasks(self):
         """Test that the number of async tasks remains stable.
@@ -468,7 +462,7 @@ class RuntimeTest(RuntimeTestCase):
             await self.tick_runtime_loop()
 
         # It is expected that there are a couple of tasks, but not one per loop:
-        self.assertLess(len(asyncio.all_tasks()), 10)
+        assert len(asyncio.all_tasks()) < 10
 
     async def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
@@ -486,19 +480,19 @@ class RuntimeTest(RuntimeTestCase):
 
         received = client.forward_msgs.pop()
         populate_hash_if_needed(msg)
-        self.assertEqual(msg.hash, received.hash)
+        assert msg.hash == received.hash
 
     async def test_get_async_objs(self):
         """Runtime._get_async_objs() will raise an error if called before the
         Runtime is started, and will return the Runtime's AsyncObjects instance otherwise.
         """
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             # Runtime hasn't started yet: error!
             _ = self.runtime._get_async_objs()
 
         # Runtime has started: no error
         await self.runtime.start()
-        self.assertIsInstance(self.runtime._get_async_objs(), AsyncObjects)
+        assert isinstance(self.runtime._get_async_objs(), AsyncObjects)
 
 
 class ScriptCheckTest(RuntimeTestCase):
@@ -579,5 +573,5 @@ time.sleep(5)
         ok, msg = await self.runtime.does_script_run_without_error()
         event_based_path_watcher._MultiPathWatcher.get_singleton().close()
         event_based_path_watcher._MultiPathWatcher._singleton = None
-        self.assertEqual(expected_loads, ok)
-        self.assertEqual(expected_msg, msg)
+        assert expected_loads == ok
+        assert expected_msg == msg

@@ -56,47 +56,47 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_health(self):
         response = self.fetch("/_stcore/health")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"ok", response.body)
+        assert response.code == 200
+        assert response.body == b"ok"
 
         self._is_healthy = False
         response = self.fetch("/_stcore/health")
-        self.assertEqual(503, response.code)
+        assert response.code == 503
 
     def test_health_head(self):
         response = self.fetch("/_stcore/health", method="HEAD")
-        self.assertEqual(200, response.code)
+        assert response.code == 200
 
         self._is_healthy = False
         response = self.fetch("/_stcore/health", method="HEAD")
-        self.assertEqual(503, response.code)
+        assert response.code == 503
 
     @patch_config_options({"server.enableXsrfProtection": False})
     def test_health_without_csrf(self):
         response = self.fetch("/_stcore/health")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"ok", response.body)
-        self.assertNotIn("Set-Cookie", response.headers)
+        assert response.code == 200
+        assert response.body == b"ok"
+        assert "Set-Cookie" not in response.headers
 
     @patch_config_options({"server.enableXsrfProtection": True})
     def test_health_with_csrf(self):
         response = self.fetch("/_stcore/health")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"ok", response.body)
-        self.assertIn("Set-Cookie", response.headers)
+        assert response.code == 200
+        assert response.body == b"ok"
+        assert "Set-Cookie" in response.headers
 
     def test_health_deprecated(self):
         response = self.fetch("/healthz")
-        self.assertEqual(
-            response.headers["link"],
-            f'<http://127.0.0.1:{self.get_http_port()}/_stcore/health>; rel="alternate"',
+        assert (
+            response.headers["link"]
+            == f'<http://127.0.0.1:{self.get_http_port()}/_stcore/health>; rel="alternate"'
         )
-        self.assertEqual(response.headers["deprecation"], "True")
+        assert response.headers["deprecation"] == "True"
 
     def test_new_health_endpoint_should_not_display_deprecation_warning(self):
         response = self.fetch("/_stcore/health")
-        self.assertNotIn("link", response.headers)
-        self.assertNotIn("deprecation", response.headers)
+        assert "link" not in response.headers
+        assert "deprecation" not in response.headers
 
 
 class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
@@ -267,29 +267,23 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_allowed_message_origins(self):
         response = self.fetch("/_stcore/host-config")
         response_body = json.loads(response.body)
-        self.assertEqual(200, response.code)
-        self.assertEqual(
-            {
-                "allowedOrigins": _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
-                "useExternalAuthToken": False,
-                # Default host configuration settings:
-                "enableCustomParentMessages": False,
-                "enforceDownloadInNewTab": False,
-                "metricsUrl": "",
-                "blockErrorDialogs": False,
-            },
-            response_body,
-        )
+        assert response.code == 200
+        assert response_body == {
+            "allowedOrigins": _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+            "useExternalAuthToken": False,
+            # Default host configuration settings:
+            "enableCustomParentMessages": False,
+            "enforceDownloadInNewTab": False,
+            "metricsUrl": "",
+            "blockErrorDialogs": False,
+        }
         # Check that localhost NOT appended/allowed outside dev mode
-        self.assertNotIn(
-            "http://localhost",
-            response_body["allowedOrigins"],
-        )
+        assert "http://localhost" not in response_body["allowedOrigins"]
 
     @patch_config_options({"global.developmentMode": True})
     def test_allowed_message_origins_dev_mode(self):
         response = self.fetch("/_stcore/host-config")
-        self.assertEqual(200, response.code)
+        assert response.code == 200
         # Check that localhost has been appended/allowed in dev mode
         origins_list = json.loads(response.body)["allowedOrigins"]
-        self.assertIn("http://localhost", origins_list)
+        assert "http://localhost" in origins_list

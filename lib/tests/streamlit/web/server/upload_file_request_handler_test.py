@@ -85,15 +85,12 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             params, session_id="test_session_id", file_id=file.name
         )
 
-        self.assertEqual(204, response.code, response.reason)
+        assert response.code == 204, response.reason
 
-        self.assertEqual(
-            [(file.name, file.name, file.data)],
-            [
-                (rec.file_id, rec.name, rec.data)
-                for rec in self.file_mgr.get_files("test_session_id", [file.name])
-            ],
-        )
+        assert [(file.name, file.name, file.data)] == [
+            (rec.file_id, rec.name, rec.data)
+            for rec in self.file_mgr.get_files("test_session_id", [file.name])
+        ]
 
     def test_upload_multiple_files_error(self):
         """Uploading multiple files will error"""
@@ -107,8 +104,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self._upload_files(
             files_body, session_id="some-session-id", file_id="some-file-id"
         )
-        self.assertEqual(400, response.code)
-        self.assertIn("Expected 1 file, but got 2", response.reason)
+        assert response.code == 400
+        assert "Expected 1 file, but got 2" in response.reason
 
     def test_upload_missing_session_id_error(self):
         """Missing session_id in the path should fail with 404 status."""
@@ -117,8 +114,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         }
 
         response = self._upload_files(file_body, session_id="", file_id="file_id")
-        self.assertEqual(404, response.code)
-        self.assertIn("Not Found", response.reason)
+        assert response.code == 404
+        assert "Not Found" in response.reason
 
     def test_upload_missing_file_id_error(self):
         """Missing file_id in the path should fail with 404 status."""
@@ -127,8 +124,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         }
 
         response = self._upload_files(file_body, session_id="session_id", file_id="")
-        self.assertEqual(404, response.code)
-        self.assertIn("Not Found", response.reason)
+        assert response.code == 404
+        assert "Not Found" in response.reason
 
     def test_upload_missing_file_error(self):
         """Missing file should fail with 400 status."""
@@ -139,8 +136,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             file_body, session_id="sessionId", file_id="fileId"
         )
 
-        self.assertEqual(400, response.code)
-        self.assertIn("Expected 1 file, but got 0", response.reason)
+        assert response.code == 400
+        assert "Expected 1 file, but got 0" in response.reason
 
 
 class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCase):
@@ -184,6 +181,6 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
         file = MockFile("filename", b"123")
         params = {file.name: file.data}
         response = self._upload_files(params, session_id="sessionId", file_id="fileId")
-        self.assertEqual(400, response.code)
-        self.assertIn("Invalid session_id", response.reason)
-        self.assertEqual(self.file_mgr.get_files("sessionId", ["fileId"]), [])
+        assert response.code == 400
+        assert "Invalid session_id" in response.reason
+        assert self.file_mgr.get_files("sessionId", ["fileId"]) == []

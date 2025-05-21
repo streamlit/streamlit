@@ -59,7 +59,7 @@ class DeprecationUtilTest(unittest.TestCase):
 
         beta_multiply = deprecate_func_name(multiply, "beta_multiply", "1980-01-01")
 
-        self.assertEqual(beta_multiply(3, 2), 6)
+        assert beta_multiply(3, 2) == 6
 
         expected_warning = (
             "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
@@ -76,7 +76,7 @@ class DeprecationUtilTest(unittest.TestCase):
             multiply, "beta_multiply", "1980-01-01", name_override="mul"
         )
 
-        self.assertEqual(beta_multiply(3, 2), 6)
+        assert beta_multiply(3, 2) == 6
 
         expected_warning = (
             "Please replace `st.beta_multiply` with `st.mul`.\n\n"
@@ -96,9 +96,9 @@ class DeprecationUtilTest(unittest.TestCase):
         )
 
         beta_dict["foo"] = "bar"
-        self.assertEqual(beta_dict["foo"], "bar")
-        self.assertEqual(len(beta_dict), 1)
-        self.assertEqual(list(beta_dict), ["foo"])
+        assert beta_dict["foo"] == "bar"
+        assert len(beta_dict) == 1
+        assert list(beta_dict) == ["foo"]
 
         expected_warning = (
             "Please replace `st.beta_dict` with `st.my_dict`.\n\n"
@@ -122,9 +122,9 @@ class DeprecationUtilTest(unittest.TestCase):
         )
 
         beta_dict["foo"] = "bar"
-        self.assertEqual(beta_dict["foo"], "bar")
-        self.assertEqual(len(beta_dict), 1)
-        self.assertEqual(list(beta_dict), ["foo"])
+        assert beta_dict["foo"] == "bar"
+        assert len(beta_dict) == 1
+        assert list(beta_dict) == ["foo"]
 
         expected_warning = (
             "Please replace `beta_dict` with `my_dict`.\n\n"

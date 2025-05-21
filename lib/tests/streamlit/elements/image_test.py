@@ -182,12 +182,10 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         st.image(data_in, output_format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
-        self.assertEqual(len(imglist.imgs), 1)
-        self.assertTrue(imglist.imgs[0].url.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(
-            imglist.imgs[0].url.endswith(get_extension_for_mimetype(mimetype))
-        )
-        self.assertTrue(file_id in imglist.imgs[0].url)
+        assert len(imglist.imgs) == 1
+        assert imglist.imgs[0].url.startswith(MEDIA_ENDPOINT)
+        assert imglist.imgs[0].url.endswith(get_extension_for_mimetype(mimetype))
+        assert file_id in imglist.imgs[0].url
 
     @parameterized.expand(
         [
@@ -211,8 +209,8 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         st.image(data_in, output_format="auto")
         imglist = self.get_delta_from_queue().new_element.imgs
-        self.assertEqual(len(imglist.imgs), 1)
-        self.assertTrue(imglist.imgs[0].url.endswith(expected_extension))
+        assert len(imglist.imgs) == 1
+        assert imglist.imgs[0].url.endswith(expected_extension)
 
     @parameterized.expand(
         [
@@ -235,7 +233,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             output_format="JPEG",
             image_id="blah",
         )
-        self.assertTrue(url.startswith(expected_prefix))
+        assert url.startswith(expected_prefix)
 
     @parameterized.expand(
         [
@@ -254,7 +252,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             output_format="auto",
             image_id="blah",
         )
-        self.assertTrue(url.endswith(expected_suffix))
+        assert url.endswith(expected_suffix)
 
     @parameterized.expand(
         [
@@ -301,11 +299,11 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             if is_url:
                 # URLs should be returned as-is, and should not result in a call to
                 # MediaFileManager.add
-                self.assertEqual(input_string, result)
+                assert input_string == result
                 mock_mfm_add.assert_not_called()
             else:
                 # Other strings and Path objects should be passed to MediaFileManager.add
-                self.assertEqual("https://mockoutputurl.com", result)
+                assert result == "https://mockoutputurl.com"
                 expected_input = (
                     str(input_string)
                     if isinstance(input_string, Path)
@@ -355,7 +353,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         )
 
         img = image_list_proto.imgs[0]
-        self.assertTrue(img.url.startswith(expected_prefix))
+        assert img.url.startswith(expected_prefix)
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""
@@ -370,15 +368,13 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         """
         with pytest.raises(StreamlitAPIException) as shape_exc:
             st.image(np.ndarray(shape=1))
-        self.assertEqual(
-            "Numpy shape has to be of length 2 or 3.", str(shape_exc.value)
-        )
+        assert str(shape_exc.value) == "Numpy shape has to be of length 2 or 3."
 
         with pytest.raises(StreamlitAPIException) as shape2_exc:
             st.image(np.ndarray(shape=(1, 2, 2)))
-        self.assertEqual(
-            "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)",
-            str(shape2_exc.value),
+        assert (
+            str(shape2_exc.value)
+            == "Channel can only be 1, 3, or 4 got 2. Shape is (1, 2, 2)"
         )
 
     def test_clip_image(self):
@@ -394,7 +390,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @parameterized.expand([("P", True), ("RGBA", True), ("LA", True), ("RGB", False)])
     def test_image_may_have_alpha_channel(self, format: str, expected_alpha: bool):
         img = Image.new(format, (1, 1))
-        self.assertEqual(_image_may_have_alpha_channel(img), expected_alpha)
+        assert _image_may_have_alpha_channel(img) == expected_alpha
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
@@ -403,15 +399,15 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img, caption="some caption", width=100, output_format="PNG")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, 100)
-        self.assertEqual(el.imgs.imgs[0].caption, "some caption")
+        assert el.imgs.width == 100
+        assert el.imgs.imgs[0].caption == "some caption"
 
         # locate resultant file in the file manager and check its metadata.
         file_id = _calculate_file_id(_pil_to_bytes(img, format="PNG"), "image/png")
         media_file = self.media_file_storage.get_file(file_id)
-        self.assertIsNotNone(media_file)
-        self.assertEqual(media_file.mimetype, "image/png")
-        self.assertEqual(self.media_file_storage.get_url(file_id), el.imgs.imgs[0].url)
+        assert media_file is not None
+        assert media_file.mimetype == "image/png"
+        assert self.media_file_storage.get_url(file_id) == el.imgs.imgs[0].url
 
     def test_st_image_PIL_array(self):
         """Test st.image with a PIL array."""
@@ -431,20 +427,18 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, -2)
+        assert el.imgs.width == -2
 
         # locate resultant file in the file manager and check its metadata.
         for idx in range(len(imgs)):
             file_id = _calculate_file_id(
                 _pil_to_bytes(imgs[idx], format="PNG"), "image/png"
             )
-            self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
+            assert el.imgs.imgs[idx].caption == "some caption"
             media_file = self.media_file_storage.get_file(file_id)
-            self.assertIsNotNone(media_file)
-            self.assertEqual(media_file.mimetype, "image/png")
-            self.assertEqual(
-                self.media_file_storage.get_url(file_id), el.imgs.imgs[idx].url
-            )
+            assert media_file is not None
+            assert media_file.mimetype == "image/png"
+            assert self.media_file_storage.get_url(file_id) == el.imgs.imgs[idx].url
 
     def test_st_image_with_single_url(self):
         """Test st.image with single url."""
@@ -453,9 +447,9 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(url, caption="some caption", width=300)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, 300)
-        self.assertEqual(el.imgs.imgs[0].caption, "some caption")
-        self.assertEqual(el.imgs.imgs[0].url, url)
+        assert el.imgs.width == 300
+        assert el.imgs.imgs[0].caption == "some caption"
+        assert el.imgs.imgs[0].url == url
 
     def test_st_image_with_list_of_urls(self):
         """Test st.image with list of urls."""
@@ -467,10 +461,10 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(urls, caption=["some caption"] * 3, width=300)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, 300)
+        assert el.imgs.width == 300
         for idx, url in enumerate(urls):
-            self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            self.assertEqual(el.imgs.imgs[idx].url, url)
+            assert el.imgs.imgs[idx].caption == "some caption"
+            assert el.imgs.imgs[idx].url == url
 
     def test_st_image_bad_width(self):
         """Test st.image with bad width."""
@@ -481,7 +475,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, WidthBehavior.ORIGINAL)
+        assert el.imgs.width == WidthBehavior.ORIGINAL
 
     def test_st_image_use_container_width_default(self):
         """Test st.image without specifying a use_container_width."""
@@ -490,7 +484,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, WidthBehavior.MIN_IMAGE_OR_CONTAINER)
+        assert el.imgs.width == WidthBehavior.MIN_IMAGE_OR_CONTAINER
 
     def test_st_image_use_container_width_true(self):
         """Test st.image with use_container_width=True."""
@@ -499,7 +493,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img, use_container_width=True)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, WidthBehavior.MAX_IMAGE_OR_CONTAINER)
+        assert el.imgs.width == WidthBehavior.MAX_IMAGE_OR_CONTAINER
 
     def test_st_image_use_container_width_false(self):
         """Test st.image with use_container_width=False."""
@@ -508,7 +502,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img, use_container_width=False)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, WidthBehavior.MIN_IMAGE_OR_CONTAINER)
+        assert el.imgs.width == WidthBehavior.MIN_IMAGE_OR_CONTAINER
 
     def test_st_image_use_container_width_true_and_given_width(self):
         """Test st.image with use_container_width=True and a given width."""
@@ -517,7 +511,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img, width=100, use_container_width=True)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, WidthBehavior.MAX_IMAGE_OR_CONTAINER)
+        assert el.imgs.width == WidthBehavior.MAX_IMAGE_OR_CONTAINER
 
     def test_st_image_use_container_width_false_and_given_width(self):
         """Test st.image with use_container_width=False and a given width."""
@@ -526,16 +520,16 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img, width=100, use_container_width=False)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, 100)
+        assert el.imgs.width == 100
 
     def test_st_image_use_container_width_and_use_column_width(self):
         """Test st.image with use_container_width and use_column_width."""
         img = Image.new("RGB", (64, 64), color="red")
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.image(img, use_container_width=True, use_column_width=True)
 
-        self.assertTrue(
+        assert (
             "`use_container_width` and `use_column_width` cannot be set at the same time."
-            in str(e.exception)
+            in str(e.value)
         )

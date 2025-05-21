@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from unittest.mock import ANY, MagicMock, patch
 
+import pytest
 import tornado.httpserver
 import tornado.testing
 import tornado.web
@@ -81,7 +82,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             # Get our connected BrowserWebSocketHandler
             session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
             websocket_handler = session_info.client
-            self.assertIsInstance(websocket_handler, BrowserWebSocketHandler)
+            assert isinstance(websocket_handler, BrowserWebSocketHandler)
 
             # Patch _BrowserWebSocketHandler.write_message to raise an error
             with patch.object(websocket_handler, "write_message") as write_message_mock:
@@ -95,7 +96,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
                 # Send a ForwardMsg. write_message will raise a
                 # WebSocketClosedError, and write_forward_msg should re-raise
                 # it as a SessionClientDisconnectedError.
-                with self.assertRaises(SessionClientDisconnectedError):
+                with pytest.raises(SessionClientDisconnectedError):
                     websocket_handler.write_forward_msg(msg)
 
                 write_message_mock.assert_called_once()
@@ -137,7 +138,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
                 BackMsg(debug_disconnect_websocket=True).SerializeToString()
             )
 
-            self.assertIsNotNone(websocket_handler.ws_connection)
+            assert websocket_handler.ws_connection is not None
 
     @patch_config_options({"global.developmentMode": True})
     @tornado.testing.gen_test
@@ -154,7 +155,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
                 BackMsg(debug_disconnect_websocket=True).SerializeToString()
             )
 
-            self.assertIsNone(websocket_handler.ws_connection)
+            assert websocket_handler.ws_connection is None
 
     @patch_config_options({"global.developmentMode": False})
     @tornado.testing.gen_test

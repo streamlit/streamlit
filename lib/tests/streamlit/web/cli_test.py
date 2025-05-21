@@ -74,7 +74,7 @@ class CliTest(unittest.TestCase):
     def test_run_no_arguments(self):
         """streamlit run should fail if run with no arguments."""
         result = self.runner.invoke(cli, ["run"])
-        self.assertNotEqual(0, result.exit_code)
+        assert result.exit_code != 0
 
     def test_run_existing_file_argument(self):
         """streamlit run succeeds if an existing file is passed."""
@@ -84,7 +84,7 @@ class CliTest(unittest.TestCase):
             patch("os.path.exists", return_value=True),
         ):
             result = self.runner.invoke(cli, ["run", "file_name.py"])
-        self.assertEqual(0, result.exit_code)
+        assert result.exit_code == 0
 
     def test_run_non_existing_file_argument(self):
         """streamlit run should fail if a non existing file is passed."""
@@ -95,18 +95,16 @@ class CliTest(unittest.TestCase):
             patch("os.path.exists", return_value=False),
         ):
             result = self.runner.invoke(cli, ["run", "file_name.py"])
-        self.assertNotEqual(0, result.exit_code)
-        self.assertIn("File does not exist", result.output)
+        assert result.exit_code != 0
+        assert "File does not exist" in result.output
 
     def test_run_not_allowed_file_extension(self):
         """streamlit run should fail if a not allowed file extension is passed."""
 
         result = self.runner.invoke(cli, ["run", "file_name.doc"])
 
-        self.assertNotEqual(0, result.exit_code)
-        self.assertIn(
-            "Streamlit requires raw Python (.py) files, not .doc.", result.output
-        )
+        assert result.exit_code != 0
+        assert "Streamlit requires raw Python (.py) files, not .doc." in result.output
 
     @tempdir()
     def test_run_valid_url(self, temp_dir):
@@ -123,9 +121,9 @@ class CliTest(unittest.TestCase):
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
                 with open(os.path.join(temp_dir.path, "app.py"), "rb") as f:
-                    self.assertEqual(file_content, f.read())
+                    assert file_content == f.read()
 
-        self.assertEqual(0, result.exit_code)
+        assert result.exit_code == 0
 
     @tempdir()
     def test_run_non_existing_url(self, temp_dir):
@@ -143,8 +141,8 @@ class CliTest(unittest.TestCase):
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
 
-        self.assertNotEqual(0, result.exit_code)
-        self.assertIn("Unable to fetch", result.output)
+        assert result.exit_code != 0
+        assert "Unable to fetch" in result.output
 
     def test_run_arguments(self):
         """The correct command line should be passed downstream."""
@@ -164,12 +162,12 @@ class CliTest(unittest.TestCase):
             )
         mock_main_run.assert_called_once()
         positional_args = mock_main_run.call_args[0]
-        self.assertEqual(positional_args[0], "some script.py")
-        self.assertEqual(
-            positional_args[1],
-            ("argument with space", "argument with another space"),
+        assert positional_args[0] == "some script.py"
+        assert positional_args[1] == (
+            "argument with space",
+            "argument with another space",
         )
-        self.assertEqual(0, result.exit_code)
+        assert result.exit_code == 0
 
     def test_run_command_with_flag_config_options(self):
         with (
@@ -183,8 +181,8 @@ class CliTest(unittest.TestCase):
 
         streamlit.web.bootstrap.load_config_options.assert_called_once()
         _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
-        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
-        self.assertEqual(0, result.exit_code)
+        assert kwargs["flag_options"]["server_port"] == 8502
+        assert result.exit_code == 0
 
     def test_run_command_with_multiple_secrets_path_single_value(self):
         with (
@@ -236,8 +234,8 @@ class CliTest(unittest.TestCase):
                 cli, ["run", "file_name.py", f"--{sensitive_option}=TESTSECRET"]
             )
 
-        self.assertIn("option using the CLI flag is not allowed", result.output)
-        self.assertEqual(1, result.exit_code)
+        assert "option using the CLI flag is not allowed" in result.output
+        assert result.exit_code == 1
 
     def test_get_command_line(self):
         """Test that _get_command_line_as_string correctly concatenates values
@@ -248,7 +246,7 @@ class CliTest(unittest.TestCase):
         with patch("click.get_current_context", return_value=mock_context):
             with patch.object(sys, "argv", ["", "os_arg1", "os_arg2"]):
                 result = cli._get_command_line_as_string()
-                self.assertEqual("streamlit os_arg1 os_arg2", result)
+                assert result == "streamlit os_arg1 os_arg2"
 
     def test_get_command_line_without_parent_context(self):
         """Test that _get_command_line_as_string correctly returns None when
@@ -258,7 +256,7 @@ class CliTest(unittest.TestCase):
         mock_context.parent = None
         with patch("click.get_current_context", return_value=mock_context):
             result = cli._get_command_line_as_string()
-            self.assertIsNone(result)
+            assert result is None
 
     def test_convert_config_option_to_click_option(self):
         """Test that configurator_options adds dynamic commands based on a
@@ -273,11 +271,11 @@ class CliTest(unittest.TestCase):
 
         result = _convert_config_option_to_click_option(config_option)
 
-        self.assertEqual(result["option"], "--server.customKey")
-        self.assertEqual(result["param"], "server_customKey")
-        self.assertEqual(result["type"], config_option.type)
-        self.assertEqual(result["description"], config_option.description)
-        self.assertEqual(result["envvar"], "STREAMLIT_SERVER_CUSTOM_KEY")
+        assert result["option"] == "--server.customKey"
+        assert result["param"] == "server_customKey"
+        assert result["type"] == config_option.type
+        assert result["description"] == config_option.description
+        assert result["envvar"] == "STREAMLIT_SERVER_CUSTOM_KEY"
 
     def test_convert_depecated_config_option_to_click_option(self):
         """Test that configurator_options adds extra deprecation information
@@ -294,9 +292,7 @@ class CliTest(unittest.TestCase):
 
         result = _convert_config_option_to_click_option(config_option)
 
-        self.assertEqual(
-            "Custom description.\n\nLine one.\n Foo - Bar", result["description"]
-        )
+        assert result["description"] == "Custom description.\n\nLine one.\n Foo - Bar"
 
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,
@@ -315,8 +311,8 @@ class CliTest(unittest.TestCase):
             from streamlit.runtime.credentials import Credentials
 
             credentials = Credentials.get_current()
-            self.assertIsNone(credentials.activation)
-            self.assertEqual(0, result.exit_code)
+            assert credentials.activation is None
+            assert result.exit_code == 0
 
     @parameterized.expand([(True,), (False,)])
     def test_credentials_headless_with_config(self, headless_mode):
@@ -338,8 +334,8 @@ class CliTest(unittest.TestCase):
                 ),
             ):
                 result = self.runner.invoke(cli, ["run", "some script.py"])
-            self.assertTrue(mock_check.called)
-            self.assertEqual(0, result.exit_code)
+            assert mock_check.called
+            assert result.exit_code == 0
 
     @parameterized.expand([(True,), (False,)])
     def test_headless_telemetry_message(self, headless_mode):
@@ -357,23 +353,20 @@ class CliTest(unittest.TestCase):
             ):
                 result = self.runner.invoke(cli, ["run", "file_name.py"])
 
-            self.assertNotEqual(0, result.exit_code)
-            self.assertEqual(
-                "Collecting usage statistics" in result.output,
-                headless_mode,  # Should only be shown if n headless mode
-            )
+            assert result.exit_code != 0
+            assert ("Collecting usage statistics" in result.output) == headless_mode
 
     def test_help_command(self):
         """Tests the help command redirects to using the --help flag"""
         with patch.object(sys, "argv", ["streamlit", "help"]) as args:
             self.runner.invoke(cli, ["help"])
-            self.assertEqual("--help", args[1])
+            assert args[1] == "--help"
 
     def test_version_command(self):
         """Tests the version command redirects to using the --version flag"""
         with patch.object(sys, "argv", ["streamlit", "version"]) as args:
             self.runner.invoke(cli, ["version"])
-            self.assertEqual("--version", args[1])
+            assert args[1] == "--version"
 
     def test_docs_command(self):
         """Tests the docs command opens the browser"""
@@ -390,7 +383,7 @@ class CliTest(unittest.TestCase):
 
             mock_main_run.assert_called_once()
             positional_args = mock_main_run.call_args[0]
-            self.assertEqual(positional_args[0], streamlit_app.__file__)
+            assert positional_args[0] == streamlit_app.__file__
 
     @patch("streamlit.logger.get_logger")
     def test_hello_command_with_logs(self, get_logger):
@@ -412,8 +405,8 @@ class CliTest(unittest.TestCase):
 
         streamlit.web.bootstrap.load_config_options.assert_called_once()
         _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
-        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
-        self.assertEqual(0, result.exit_code)
+        assert kwargs["flag_options"]["server_port"] == 8502
+        assert result.exit_code == 0
 
     def test_config_show_command(self):
         """Tests the config show command calls the corresponding method in
@@ -433,8 +426,8 @@ class CliTest(unittest.TestCase):
 
         streamlit.web.bootstrap.load_config_options.assert_called_once()
         _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
-        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
-        self.assertEqual(0, result.exit_code)
+        assert kwargs["flag_options"]["server_port"] == 8502
+        assert result.exit_code == 0
 
     @patch(
         "streamlit.runtime.caching.storage.local_disk_cache_storage.LocalDiskCacheStorageManager.clear_all"

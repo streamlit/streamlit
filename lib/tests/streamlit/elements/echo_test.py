@@ -62,10 +62,10 @@ class MyClass:
         pass"""
 
         element = self.get_delta_from_queue(echo_index).new_element
-        self.assertEqual(echo_str, element.code.code_text)
+        assert echo_str == element.code.code_text
 
         element = self.get_delta_from_queue(output_index).new_element
-        self.assertEqual("Hello", element.markdown.body)
+        assert element.markdown.body == "Hello"
 
         self.clear_queue()
 
@@ -117,9 +117,9 @@ class MyClass:
         pass"""
 
         element = self.get_delta_from_queue(echo_index).new_element
-        self.assertEqual(echo_str, element.code.code_text)
+        assert echo_str == element.code.code_text
         element = self.get_delta_from_queue(output_index).new_element
-        self.assertEqual("Hello", element.markdown.body)
+        assert element.markdown.body == "Hello"
         self.clear_queue()
 
     def test_if_elif_else(self):
@@ -139,9 +139,9 @@ class MyClass:
 
         echo_str = 'st.write("Dual")'
         element = self.get_delta_from_queue(0).new_element
-        self.assertEqual(echo_str, element.code.code_text)
+        assert echo_str == element.code.code_text
         element = self.get_delta_from_queue(1).new_element
-        self.assertEqual("Dual", element.markdown.body)
+        assert element.markdown.body == "Dual"
         self.clear_queue()
 
     def test_root_level_echo(self):
@@ -150,7 +150,7 @@ class MyClass:
         echo_str = "a = 123"
 
         element = self.get_delta_from_queue(0).new_element
-        self.assertEqual(echo_str, element.code.code_text)
+        assert echo_str == element.code.code_text
 
     def test_echo_multiline_param(self):
         import tests.streamlit.echo_test_data.multiline_param_echo  # noqa: F401
@@ -158,4 +158,4 @@ class MyClass:
         echo_str = "a = 123"
 
         element = self.get_delta_from_queue(0).new_element
-        self.assertEqual(echo_str, element.code.code_text)
+        assert echo_str == element.code.code_text

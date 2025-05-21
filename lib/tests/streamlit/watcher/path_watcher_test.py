@@ -139,7 +139,7 @@ class FileWatcherTest(unittest.TestCase):
                 ),
             ):
                 # Test get_default_path_watcher_class() result
-                self.assertEqual(path_watcher_class, get_default_path_watcher_class())
+                assert path_watcher_class == get_default_path_watcher_class()
 
                 # Test watch_file(). If path_watcher_class is
                 # NoOpPathWatcher, nothing should happen. Otherwise,
@@ -154,9 +154,9 @@ class FileWatcherTest(unittest.TestCase):
                         glob_pattern=None,
                         allow_nonexistent=False,
                     )
-                    self.assertTrue(watching_file)
+                    assert watching_file
                 else:
-                    self.assertFalse(watching_file)
+                    assert not watching_file
 
     @patch(
         "streamlit.watcher.path_watcher._is_watchdog_available", Mock(return_value=True)
@@ -176,7 +176,7 @@ class FileWatcherTest(unittest.TestCase):
             allow_nonexistent=True,
         )
 
-        self.assertTrue(watching_dir)
+        assert watching_dir
         mock_event_watcher.assert_called_with(
             "some/dir/path/",
             on_file_changed,

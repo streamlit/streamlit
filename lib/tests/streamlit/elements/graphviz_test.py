@@ -33,7 +33,7 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertEqual(hasattr(c, "spec"), True)
+        assert hasattr(c, "spec")
 
     def test_dot(self):
         """Test that it can be called with dot string."""
@@ -45,7 +45,7 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertEqual(hasattr(c, "spec"), True)
+        assert hasattr(c, "spec")
 
     def test_use_container_width_true(self):
         """Test that it can be called with use_container_width."""
@@ -57,7 +57,7 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph, use_container_width=True)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertEqual(c.use_container_width, True)
+        assert c.use_container_width
 
     def test_engines(self):
         """Test that it can be called with engines."""
@@ -71,8 +71,8 @@ class GraphvizTest(DeltaGeneratorTestCase):
             st.graphviz_chart(graph)
 
             c = self.get_delta_from_queue().new_element.graphviz_chart
-            self.assertEqual(hasattr(c, "engine"), True)
-            self.assertEqual(c.engine, engine)
+            assert hasattr(c, "engine")
+            assert c.engine == engine
 
     def test_source(self):
         """Test that it can be called with graphviz.sources.Source object."""
@@ -83,4 +83,4 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertIn("grenade", c.spec)
+        assert "grenade" in c.spec

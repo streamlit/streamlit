@@ -697,13 +697,13 @@ class SessionStateMethodTests(unittest.TestCase):
     def test_clear_state(self):
         # Sanity test
         keys = {"foo", "baz", "corge", f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None"}
-        self.assertEqual(keys, self.session_state._keys())
+        assert keys == self.session_state._keys()
 
         # Clear state
         self.session_state.clear()
 
         # Keys should be empty
-        self.assertEqual(set(), self.session_state._keys())
+        assert set() == self.session_state._keys()
 
     def test_filtered_state(self):
         assert self.session_state.filtered_state == {

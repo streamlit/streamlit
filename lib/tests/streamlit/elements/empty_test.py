@@ -25,4 +25,4 @@ class StEmptyAPITest(DeltaGeneratorTestCase):
         st.empty()
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.empty, EmptyProto())
+        assert el.empty == EmptyProto()

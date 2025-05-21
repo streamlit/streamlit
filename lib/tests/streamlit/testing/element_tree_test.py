@@ -593,7 +593,7 @@ def test_selectbox():
     assert sr6.selectbox[0].value == "male"
     assert sr6.selectbox[3].value == "Lisp"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="'invalid' is not in list"):
         sr6.selectbox[0].select("invalid").run()
 
     with pytest.raises(IndexError):

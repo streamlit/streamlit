@@ -20,6 +20,8 @@ from queue import Queue
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock
 
+import pytest
+
 from streamlit.runtime import Runtime, RuntimeConfig
 
 
@@ -40,7 +42,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
             try:
                 # This function should be called in another thread, which
                 # should not already have an asyncio loop.
-                with self.assertRaises(RuntimeError):
+                with pytest.raises(RuntimeError):
                     asyncio.get_running_loop()
 
                 # Create a Runtime instance and put it in the (thread-safe) queue,

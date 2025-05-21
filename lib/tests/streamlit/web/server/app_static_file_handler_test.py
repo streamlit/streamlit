@@ -182,10 +182,9 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Files with size greater than MAX_APP_STATIC_FILE_SIZE should return 404."""
         response = self.fetch(f"/app/static/{self._temp_filenames['png']}")
         assert response.code == 404
-        self.assertEqual(
-            b"<html><title>404: File is too large</title>"
-            b"<body>404: File is too large</body></html>",
-            response.body,
+        assert (
+            response.body
+            == b"<html><title>404: File is too large</title><body>404: File is too large</body></html>"
         )
 
     def test_staticfiles_404(self):

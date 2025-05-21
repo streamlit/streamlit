@@ -28,14 +28,14 @@ from tests import testutil
 
 class ServerUtilTest(unittest.TestCase):
     def test_is_url_from_allowed_origins_allowed_domains(self):
-        self.assertTrue(server_util.is_url_from_allowed_origins("localhost"))
-        self.assertTrue(server_util.is_url_from_allowed_origins("127.0.0.1"))
+        assert server_util.is_url_from_allowed_origins("localhost")
+        assert server_util.is_url_from_allowed_origins("127.0.0.1")
 
     def test_is_url_from_allowed_origins_CORS_off(self):
         with patch(
             "streamlit.web.server.server_util.config.get_option", side_effect=[False]
         ):
-            self.assertTrue(server_util.is_url_from_allowed_origins("does not matter"))
+            assert server_util.is_url_from_allowed_origins("does not matter")
 
     def test_is_url_from_allowed_origins_browser_serverAddress(self):
         with (
@@ -48,9 +48,7 @@ class ServerUtilTest(unittest.TestCase):
                 side_effect=[True, "browser.server.address"],
             ),
         ):
-            self.assertTrue(
-                server_util.is_url_from_allowed_origins("browser.server.address")
-            )
+            assert server_util.is_url_from_allowed_origins("browser.server.address")
 
     @parameterized.expand(
         [
@@ -75,7 +73,7 @@ class ServerUtilTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option):
             actual_url = server_util.get_url("the_ip_address")
 
-        self.assertEqual(expected_url, actual_url)
+        assert expected_url == actual_url
 
     def test_make_url_path_regex(self):
         assert (

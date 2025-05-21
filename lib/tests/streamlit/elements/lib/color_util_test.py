@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import unittest
 
+import pytest
+
 from streamlit import errors
 from streamlit.elements.lib import color_util
 
@@ -88,12 +90,12 @@ class ColorUtilTest(unittest.TestCase):
 
         for test_arg, expected_out in test_combinations:
             out = color_util.to_int_color_tuple(test_arg)
-            self.assertEqual(out, expected_out)
+            assert out == expected_out
 
     def test_to_int_color_tuple_fails(self):
         """Test to_int_color_tuple with bad inputs"""
         for test_arg in invalid_colors:
-            with self.assertRaises(errors.StreamlitInvalidColorError):
+            with pytest.raises(errors.StreamlitInvalidColorError):
                 color_util.to_int_color_tuple(test_arg)
 
     def test_to_css_color(self):
@@ -124,7 +126,7 @@ class ColorUtilTest(unittest.TestCase):
 
         for test_arg, expected_out in test_combinations:
             out = color_util.to_css_color(test_arg)
-            self.assertEqual(out, expected_out)
+            assert out == expected_out
 
     def test_to_css_color_fails(self):
         """Test to_css_color with bad inputs."""
@@ -138,13 +140,13 @@ class ColorUtilTest(unittest.TestCase):
         test_args.remove("rgb(1, 2, 3)")
 
         for test_arg in test_args:
-            with self.assertRaises(errors.StreamlitInvalidColorError):
+            with pytest.raises(errors.StreamlitInvalidColorError):
                 color_util.to_css_color(test_arg)
 
     def test_is_hex_color_like_true(self):
         for test_arg in valid_hex_colors:
             out = color_util.is_hex_color_like(test_arg)
-            self.assertTrue(out)
+            assert out
 
     def test_is_hex_color_like_false(self):
         test_args = list(invalid_colors)
@@ -154,12 +156,12 @@ class ColorUtilTest(unittest.TestCase):
 
         for test_arg in test_args:
             out = color_util.is_hex_color_like(test_arg)
-            self.assertFalse(out)
+            assert not out
 
     def test_is_css_color_like_true(self):
         for test_arg in [*valid_hex_colors, *valid_css_rgb_colors]:
             out = color_util.is_css_color_like(test_arg)
-            self.assertTrue(out)
+            assert out
 
     def test_is_css_color_like_false(self):
         test_args = list(invalid_colors)
@@ -172,22 +174,22 @@ class ColorUtilTest(unittest.TestCase):
 
         for test_arg in test_args:
             out = color_util.is_css_color_like(test_arg)
-            self.assertFalse(out)
+            assert not out
 
     def test_is_color_tuple_like_true(self):
         for test_arg in valid_color_tuples:
             out = color_util.is_color_tuple_like(test_arg)
-            self.assertTrue(out)
+            assert out
 
     def test_is_color_tuple_like_false(self):
         for test_arg in invalid_colors:
             out = color_util.is_color_tuple_like(test_arg)
-            self.assertFalse(out)
+            assert not out
 
     def test_is_color_like_true(self):
         for test_arg in [*valid_color_tuples, *valid_hex_colors]:
             out = color_util.is_color_like(test_arg)
-            self.assertTrue(out)
+            assert out
 
     def test_is_color_like_false(self):
         test_args = list(invalid_colors)
@@ -200,4 +202,4 @@ class ColorUtilTest(unittest.TestCase):
 
         for test_arg in test_args:
             out = color_util.is_color_like(test_arg)
-            self.assertFalse(out)
+            assert not out

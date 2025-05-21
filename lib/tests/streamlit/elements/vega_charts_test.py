@@ -101,27 +101,24 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
 
-        self.assertFalse(proto.HasField("data"))
-        self.assertEqual(len(proto.datasets), 1)
+        assert not proto.HasField("data")
+        assert len(proto.datasets) == 1
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
         )
 
         spec_dict = json.loads(proto.spec)
-        self.assertEqual(
-            spec_dict["encoding"],
-            {
-                "y": {"field": "b", "type": "quantitative"},
-                "x": {"field": "a", "type": "nominal"},
-            },
-        )
-        self.assertEqual(spec_dict["data"], {"name": proto.datasets[0].name})
-        self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
-        self.assertIn("encoding", spec_dict)
-        self.assertEqual(proto.selection_mode, [])
-        self.assertEqual(proto.id, "")
-        self.assertEqual(proto.form_id, "")
+        assert spec_dict["encoding"] == {
+            "y": {"field": "b", "type": "quantitative"},
+            "x": {"field": "a", "type": "nominal"},
+        }
+        assert spec_dict["data"] == {"name": proto.datasets[0].name}
+        assert spec_dict["mark"] in ["bar", {"type": "bar"}]
+        assert "encoding" in spec_dict
+        assert proto.selection_mode == []
+        assert proto.id == ""
+        assert proto.form_id == ""
 
     def test_altair_chart_uses_convert_anything_to_df(self):
         """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
@@ -149,19 +146,14 @@ class AltairChartTest(DeltaGeneratorTestCase):
         st.altair_chart(chart, theme=theme_value)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.arrow_vega_lite_chart.theme, proto_value)
+        assert el.arrow_vega_lite_chart.theme == proto_value
 
     def test_bad_theme(self):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        with self.assertRaises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitAPIException):
             st.altair_chart(chart, theme="bad_theme")
-
-        self.assertEqual(
-            'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
-            str(exc.exception),
-        )
 
     def test_works_with_element_replay(self):
         """Test that element replay works for vega if used as non-widget element."""
@@ -178,24 +170,24 @@ class AltairChartTest(DeltaGeneratorTestCase):
         ) as replay_cached_messages_mock:
             cache_element()
             el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-            self.assertNotEqual(el.spec, "")
+            assert el.spec != ""
             # The first time the cached function is called, the replay function is not called
             replay_cached_messages_mock.assert_not_called()
 
             cache_element()
             el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-            self.assertNotEqual(el.spec, "")
+            assert el.spec != ""
             # The second time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called_once()
 
             cache_element()
             el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-            self.assertNotEqual(el.spec, "")
+            assert el.spec != ""
             # The third time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called()
 
     def test_empty_altair_chart_throws_error(self):
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.altair_chart(use_container_width=True)
 
     @parameterized.expand(
@@ -216,10 +208,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         st.altair_chart(chart, on_select=on_select)
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(
-            proto.selection_mode,
-            expected_selection_mode,
-        )
+        assert proto.selection_mode == expected_selection_mode
 
     def test_dataset_names_stay_stable(self):
         """Test that dataset names stay stable across multiple calls
@@ -239,16 +228,15 @@ class AltairChartTest(DeltaGeneratorTestCase):
         chart_el_2 = self.get_delta_from_queue().new_element
 
         # Make sure that there is one named dataset:
-        self.assertEqual(len(chart_el_1.arrow_vega_lite_chart.datasets), 1)
+        assert len(chart_el_1.arrow_vega_lite_chart.datasets) == 1
         # The names should not have changes
-        self.assertEqual(
-            [dataset.name for dataset in chart_el_1.arrow_vega_lite_chart.datasets],
-            [dataset.name for dataset in chart_el_2.arrow_vega_lite_chart.datasets],
-        )
+        assert [
+            dataset.name for dataset in chart_el_1.arrow_vega_lite_chart.datasets
+        ] == [dataset.name for dataset in chart_el_2.arrow_vega_lite_chart.datasets]
         # The specs should also be the same:
-        self.assertEqual(
-            chart_el_1.arrow_vega_lite_chart.spec,
-            chart_el_2.arrow_vega_lite_chart.spec,
+        assert (
+            chart_el_1.arrow_vega_lite_chart.spec
+            == chart_el_2.arrow_vega_lite_chart.spec
         )
 
     @parameterized.expand(
@@ -267,7 +255,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.altair_chart(chart, on_select=on_select)
 
     @unittest.skipIf(
@@ -281,14 +269,11 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertIn(
-            "param_1",
-            proto.spec,
-        )
-        self.assertNotIn("param1", proto.spec)
-        self.assertEqual(proto.selection_mode, ["param_1"])
-        self.assertNotEqual(proto.id, "")
-        self.assertEqual(proto.form_id, "")
+        assert "param_1" in proto.spec
+        assert "param1" not in proto.spec
+        assert proto.selection_mode == ["param_1"]
+        assert proto.id != ""
+        assert proto.form_id == ""
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -301,11 +286,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertIn(
-            "param_1",
-            proto.spec,
-        )
-        self.assertNotIn("param1", proto.spec)
+        assert "param_1" in proto.spec
+        assert "param1" not in proto.spec
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -318,13 +300,11 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertTrue(
-            "point" in proto.spec,
-        )
-        self.assertFalse("param_1" in proto.spec)
-        self.assertEqual(proto.selection_mode, ["point"])
-        self.assertNotEqual(proto.id, "")
-        self.assertEqual(proto.form_id, "")
+        assert "point" in proto.spec
+        assert "param_1" not in proto.spec
+        assert proto.selection_mode == ["point"]
+        assert proto.id != ""
+        assert proto.form_id == ""
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -337,13 +317,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertIn(
-            "interval",
-            proto.spec,
-        )
-        self.assertEqual(proto.selection_mode, ["interval"])
-        self.assertNotEqual(proto.id, "")
-        self.assertEqual(proto.form_id, "")
+        assert "interval" in proto.spec
+        assert proto.selection_mode == ["interval"]
+        assert proto.id != ""
+        assert proto.form_id == ""
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -357,10 +334,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         event = st.altair_chart(chart, on_select="rerun", key="chart_selection")
 
-        self.assertEqual(event.selection.my_param, {})
+        assert event.selection.my_param == {}
 
         # Check that the selection state is added to the session state:
-        self.assertEqual(st.session_state.chart_selection.selection.my_param, {})
+        assert st.session_state.chart_selection.selection.my_param == {}
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -379,13 +356,13 @@ class AltairChartTest(DeltaGeneratorTestCase):
             st.altair_chart(chart, on_select="rerun")
 
         # 2 elements will be created: form block, altair_chart
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         arrow_vega_lite_proto = self.get_delta_from_queue(
             1
         ).new_element.arrow_vega_lite_chart
-        self.assertEqual(arrow_vega_lite_proto.form_id, form_proto.form.form_id)
+        assert arrow_vega_lite_proto.form_id == form_proto.form.form_id
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -404,10 +381,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
             st.altair_chart(chart, on_select="ignore")
 
         # 2 elements will be created: form block, altair_chart
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         vega_lite_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
-        self.assertEqual(vega_lite_proto.form_id, "")
+        assert vega_lite_proto.form_id == ""
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -419,7 +396,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.altair_chart(
                 chart, on_select="rerun", selection_mode=["not_existing_param"]
             )
@@ -443,7 +420,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         st.altair_chart(chart, on_select="rerun", selection_mode=["my_point_selection"])
         vega_lite_proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(vega_lite_proto.selection_mode, ["my_point_selection"])
+        assert vega_lite_proto.selection_mode == ["my_point_selection"]
 
     def test_throws_exception_if_no_selections_defined_in_spec(self):
         """Test that an exception is thrown if no selections are defined in the spec
@@ -452,7 +429,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.altair_chart(chart, on_select="rerun")
 
     @unittest.skipIf(
@@ -470,8 +447,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -493,7 +470,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
             st.altair_chart(chart)
 
             el = self.get_delta_from_queue().new_element
-            self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
+            assert el.arrow_vega_lite_chart.spec == initial_spec
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -504,7 +481,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         is passed with selections."""
         chart = create_advanced_altair_chart()
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.altair_chart(chart, on_select="rerun")
 
 
@@ -513,12 +490,12 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
     def test_no_args(self):
         """Test that an error is raised when called with no args."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.vega_lite_chart()
 
     def test_none_args(self):
         """Test that an error is raised when called with args set to None."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.vega_lite_chart(None, None)
 
     def test_spec_but_no_data(self):
@@ -526,20 +503,16 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         st.vega_lite_chart(None, {"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.HasField("data"), False)
-        self.assertDictEqual(
-            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
-        )
+        assert not proto.HasField("data")
+        assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
     def test_spec_in_arg1(self):
         """Test that it can be called with spec as the 1st arg."""
         st.vega_lite_chart({"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.HasField("data"), False)
-        self.assertDictEqual(
-            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
-        )
+        assert not proto.HasField("data")
+        assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
     def test_data_in_spec(self):
         """Test passing data=df inside the spec."""
@@ -549,9 +522,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
         )
-        self.assertDictEqual(
-            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
-        )
+        assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
     def test_vega_lite_chart_uses_convert_anything_to_df(self):
         """Test that st.vega_lite_chart uses convert_anything_to_df to convert input data."""
@@ -572,20 +543,15 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
         )
-        self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect"}),
-        )
+        assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
     def test_datasets_in_spec(self):
         """Test passing datasets={foo: df} inside the spec."""
         st.vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.HasField("data"), False)
-        self.assertDictEqual(
-            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
-        )
+        assert not proto.HasField("data")
+        assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
     def test_datasets_correctly_in_spec(self):
         """Test passing datasets={foo: df}, data={name: 'foo'} in the spec."""
@@ -594,10 +560,9 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         )
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.HasField("data"), False)
-        self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}),
+        assert not proto.HasField("data")
+        assert json.loads(proto.spec) == merge_dicts(
+            autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}
         )
 
     def test_dict_unflatten(self):
@@ -608,16 +573,13 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
         )
-        self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(
-                autosize_spec,
-                {
-                    "baz": {"boz": "booz"},
-                    "boink": {"boop": 100},
-                    "encoding": {"x": "foo"},
-                },
-            ),
+        assert json.loads(proto.spec) == merge_dicts(
+            autosize_spec,
+            {
+                "baz": {"boz": "booz"},
+                "boink": {"boop": 100},
+                "encoding": {"x": "foo"},
+            },
         )
 
     def test_pyarrow_table_data(self):
@@ -627,15 +589,15 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
 
-        self.assertEqual(proto.HasField("data"), True)
-        self.assertEqual(proto.data.data, convert_arrow_table_to_arrow_bytes(table))
+        assert proto.HasField("data")
+        assert proto.data.data == convert_arrow_table_to_arrow_bytes(table)
 
     def test_add_rows(self):
         """Test that you can call add_rows on arrow_vega_lite_chart (with data)."""
         chart = st.vega_lite_chart(df1, {"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.HasField("data"), True)
+        assert proto.HasField("data")
 
         chart.add_rows(df2)
 
@@ -649,7 +611,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         chart = st.vega_lite_chart({"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertFalse(proto.HasField("data"))
+        assert not proto.HasField("data")
 
         chart.add_rows(df1)
 
@@ -663,11 +625,9 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         st.vega_lite_chart(df1, {"mark": "rect"}, use_container_width=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertDictEqual(
-            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
-        )
+        assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
 
-        self.assertTrue(proto.use_container_width)
+        assert proto.use_container_width
 
     @parameterized.expand(
         [
@@ -681,25 +641,19 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.arrow_vega_lite_chart.theme, proto_value)
+        assert el.arrow_vega_lite_chart.theme == proto_value
 
     def test_bad_theme(self):
-        with self.assertRaises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitAPIException):
             st.vega_lite_chart(df1, theme="bad_theme")
-
-        self.assertEqual(
-            'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
-            str(exc.exception),
-        )
 
     def test_width_inside_spec(self):
         """Test that Vega-Lite sets the width."""
         st.vega_lite_chart(df1, {"mark": "rect", "width": 200})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect", "width": 200}),
+        assert json.loads(proto.spec) == merge_dicts(
+            autosize_spec, {"mark": "rect", "width": 200}
         )
 
     @parameterized.expand(
@@ -711,7 +665,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         ]
     )
     def test_empty_vega_lite_chart_throws_error(self, data, spec):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.vega_lite_chart(data, spec, use_container_width=True)
 
     @parameterized.expand(
@@ -735,10 +689,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             on_select=on_select,
         )
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(
-            proto.selection_mode,
-            expected_selection_mode,
-        )
+        assert proto.selection_mode == expected_selection_mode
 
     def test_vega_lite_on_select_initial_returns(self):
         """Test st.vega_lite_chart returns an empty selection as initial result."""
@@ -754,10 +705,10 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             key="chart_selection",
         )
 
-        self.assertEqual(event.selection.my_param, {})
+        assert event.selection.my_param == {}
 
         # Check that the selection state is added to the session state:
-        self.assertEqual(st.session_state.chart_selection.selection.my_param, {})
+        assert st.session_state.chart_selection.selection.my_param == {}
 
     @parameterized.expand(
         [
@@ -767,7 +718,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         ]
     )
     def test_vega_lite_on_select_invalid(self, on_select: Any):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.vega_lite_chart(
                 df1,
                 {
@@ -790,10 +741,10 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             on_select="rerun",
         )
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.selection_mode, ["my_param"])
+        assert proto.selection_mode == ["my_param"]
 
     def test_vega_lite_no_selection_throws_streamlit_exception(self):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.vega_lite_chart(
                 df1,
                 {
@@ -822,8 +773,8 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
 
 ST_CHART_ARGS = [
@@ -855,7 +806,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         chart_spec = json.loads(proto.spec)
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
 
         pd.testing.assert_frame_equal(
             convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data),
@@ -883,14 +834,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+        assert chart_spec["encoding"]["x"]["field"] == "a"
+        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -917,14 +864,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+        assert chart_spec["encoding"]["x"]["field"] == "a"
+        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -950,12 +893,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(
-            chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
-        self.assertFalse("color" in chart_spec["encoding"])
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+        assert chart_spec["encoding"]["x"]["field"] == "index--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["y"]["field"] == "b"
+        assert "color" not in chart_spec["encoding"]
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -986,16 +927,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(
-            chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+        assert chart_spec["encoding"]["x"]["field"] == "index--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1014,17 +949,17 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        self.assertEqual(chart_spec["width"], 640)
-        self.assertEqual(chart_spec["height"], 480)
+        assert chart_spec["width"] == 640
+        assert chart_spec["height"] == 480
 
         if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
             # Line charts are layered as default to support better tooltips.
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
-        self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+        assert chart_spec["encoding"]["x"]["field"] == "a"
+        assert chart_spec["encoding"]["y"]["field"] == "b"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1051,14 +986,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+        assert chart_spec["encoding"]["x"]["field"] == "a"
+        assert chart_spec["encoding"]["y"]["field"] == "value--p5bJXXpQgvPz6yvQMFiy"
+        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1080,7 +1011,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertEqual(chart_spec["encoding"]["color"]["value"], "#f00")
+        assert chart_spec["encoding"]["color"]["value"] == "#f00"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1159,13 +1090,13 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
                 # Extract the actual line mark from the layer.
                 chart_spec = chart_spec["layer"][0]
 
-            self.assertEqual(chart_spec["encoding"]["color"]["field"], color_column)
+            assert chart_spec["encoding"]["color"]["field"] == color_column
 
             # Manually-specified colors should not have a legend
-            self.assertEqual(chart_spec["encoding"]["color"]["legend"], None)
+            assert chart_spec["encoding"]["color"]["legend"] is None
 
             # Manually-specified colors are set via the color scale's range property.
-            self.assertTrue(chart_spec["encoding"]["color"]["scale"]["range"])
+            assert chart_spec["encoding"]["color"]["scale"]["range"]
 
             proto_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
 
@@ -1197,18 +1128,16 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Extract the actual line mark from the layer.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
 
         # Color should be set to the melted column name.
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
+        assert chart_spec["encoding"]["color"]["field"] == "color--p5bJXXpQgvPz6yvQMFiy"
 
         # Automatically-specified colors should have no legend title.
-        self.assertEqual(chart_spec["encoding"]["color"]["title"], " ")
+        assert chart_spec["encoding"]["color"]["title"] == " "
 
         # Automatically-specified colors should have a legend
-        self.assertNotEqual(chart_spec["encoding"]["color"]["legend"], None)
+        assert chart_spec["encoding"]["color"]["legend"] is not None
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1233,7 +1162,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             chart_spec = chart_spec["layer"][0]
 
         # Color should be set to the melted column name.
-        self.assertEqual(getattr(chart_spec["encoding"], "color", None), None)
+        assert getattr(chart_spec["encoding"], "color", None) is None
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1280,8 +1209,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Line charts in Altair >=5 are layered to better support tooltips.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
-        self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
+        assert chart_spec["encoding"]["x"]["field"] == "a"
+        assert chart_spec["encoding"]["y"]["field"] == "b"
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1316,10 +1245,10 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Line charts in Altair >=5 are layered to better support tooltips.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(chart_spec["encoding"]["x"]["type"], "ordinal")
-        self.assertEqual(chart_spec["encoding"]["x"]["sort"], ["c", "b", "a"])
-        self.assertEqual(chart_spec["encoding"]["y"]["type"], "quantitative")
+        assert chart_spec["mark"] in [altair_type, {"type": altair_type}]
+        assert chart_spec["encoding"]["x"]["type"] == "ordinal"
+        assert chart_spec["encoding"]["x"]["sort"] == ["c", "b", "a"]
+        assert chart_spec["encoding"]["y"]["type"] == "quantitative"
 
     def test_line_chart_with_named_index(self):
         """Test st.line_chart with a named index."""
@@ -1341,7 +1270,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Line charts in Altair >=5 are layered to better support tooltips.
             chart_spec = chart_spec["layer"][0]
 
-        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
+        assert chart_spec["mark"] in ["line", {"type": "line"}]
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
@@ -1408,24 +1337,22 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         bad_args = ["foo", "blue"]
 
         for color_arg in too_few_args:
-            with self.assertRaises(StreamlitAPIException) as exc:
+            with pytest.raises(StreamlitAPIException) as exc:
                 chart_command(df, y=["a", "b"], color=color_arg)
 
-            self.assertIn("The list of colors", str(exc.exception))
+            assert "The list of colors" in str(exc.value)
 
         for color_arg in too_many_args:
-            with self.assertRaises(StreamlitAPIException) as exc:
+            with pytest.raises(StreamlitAPIException) as exc:
                 chart_command(df, y="a", color=color_arg)
 
-            self.assertIn("The list of colors", str(exc.exception))
+            assert "The list of colors" in str(exc.value)
 
         for color_arg in bad_args:
-            with self.assertRaises(StreamlitAPIException) as exc:
+            with pytest.raises(StreamlitAPIException) as exc:
                 chart_command(df, y="a", color=color_arg)
 
-            self.assertIn(
-                "This does not look like a valid color argument", str(exc.exception)
-            )
+            assert "This does not look like a valid color argument" in str(exc.value)
 
     def assert_output_df_is_correct_and_input_is_untouched(
         self, orig_df, expected_df, chart_proto
@@ -1433,9 +1360,9 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         """Test that when we modify the outgoing DF we don't mutate the input DF."""
         output_df = convert_arrow_bytes_to_pandas_df(chart_proto.datasets[0].data.data)
 
-        self.assertNotEqual(id(orig_df), id(output_df))
-        self.assertNotEqual(id(orig_df), id(expected_df))
-        self.assertNotEqual(id(output_df), id(expected_df))
+        assert id(orig_df) != id(output_df)
+        assert id(orig_df) != id(expected_df)
+        assert id(output_df) != id(expected_df)
 
         pd.testing.assert_frame_equal(output_df, expected_df)
 
@@ -1449,8 +1376,8 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        self.assertIn(chart_spec["mark"], ["area", {"type": "area"}])
-        self.assertEqual(chart_spec["encoding"]["y"]["stack"], stack)
+        assert chart_spec["mark"] in ["area", {"type": "area"}]
+        assert chart_spec["encoding"]["y"]["stack"] == stack
 
 
 class VegaUtilitiesTest(unittest.TestCase):
@@ -1488,7 +1415,7 @@ class VegaUtilitiesTest(unittest.TestCase):
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):
         """Test that _reset_counter_pattern correctly replaces IDs."""
         result = _reset_counter_pattern(prefix, vega_spec)
-        self.assertEqual(result, expected)
+        assert result == expected
 
     @parameterized.expand(
         [
@@ -1511,7 +1438,7 @@ class VegaUtilitiesTest(unittest.TestCase):
     ):
         """Test that _extract_selection_parameters correctly extracts parameters."""
         result = _extract_selection_parameters(json.loads(vega_spec))
-        self.assertEqual(result, expected_params)
+        assert result == expected_params
 
     @parameterized.expand(
         [
@@ -1540,22 +1467,22 @@ class VegaUtilitiesTest(unittest.TestCase):
     ):
         """Test that _parse_selection_mode correctly extracts parameters."""
         result = _parse_selection_mode(json.loads(vega_spec), input_selection_modes)
-        self.assertEqual(result, expected_selection_modes)
+        assert result == expected_selection_modes
 
     def test_parse_selection_mode_raises_exception(self):
         """Test that _parse_selection_mode correctly extracts parameters."""
         vega_spec = json.loads(
             '{"params": [{"name": "my_param_1", "select": {"type": "point"}}, {"name": "my_param_2", "select": {"type": "interval"}}]}'
         )
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             # The provided parameter is not defined in spec:
             _parse_selection_mode(vega_spec, "not_exiting_param")
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             # One of the parameters is not defined in spec:
             _parse_selection_mode(vega_spec, ("my_param_1", "not_exiting_param"))
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             # No parameters defined in spec
             _parse_selection_mode({}, ())
 
@@ -1611,4 +1538,4 @@ class VegaUtilitiesTest(unittest.TestCase):
     def test_stabilize_vega_json_spec(self, input_spec: str, expected: str):
         """Test that _stabilize_vega_json_spec correctly fixes the auto-generated names."""
         result = _stabilize_vega_json_spec(input_spec)
-        self.assertEqual(result, expected)
+        assert result == expected

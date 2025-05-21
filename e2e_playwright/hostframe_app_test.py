@@ -177,7 +177,8 @@ def test_handles_set_file_upload_client_config_message(iframed_app: IframedPage)
     response = r.value.response()
     assert response is not None
     assert response.status == 204  # Upload successful
-    assert url.startswith("http://localhost") and "_stcore/upload_file" in url
+    assert url.startswith("http://localhost")
+    assert "_stcore/upload_file" in url
     assert "header1" not in headers
 
     wait_for_app_run(frame_locator, wait_delay=500)

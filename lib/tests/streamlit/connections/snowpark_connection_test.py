@@ -152,7 +152,7 @@ class SnowparkConnectionTest(unittest.TestCase):
 
         mock_sql_return = MagicMock()
         mock_sql_return.to_pandas = MagicMock(
-            side_effect=SnowparkServerException("oh noes :(")
+            side_effect=SnowparkServerException("oh no")
         )
 
         conn = SnowparkConnection("my_snowpark_connection")
@@ -177,12 +177,12 @@ class SnowparkConnectionTest(unittest.TestCase):
     )
     def test_retry_fails_fast_for_most_errors(self):
         mock_sql_return = MagicMock()
-        mock_sql_return.to_pandas = MagicMock(side_effect=Exception("oh noes :("))
+        mock_sql_return.to_pandas = MagicMock(side_effect=Exception("oh no"))
 
         conn = SnowparkConnection("my_snowpark_connection")
         conn._instance.sql.return_value = mock_sql_return
 
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception, match="oh no"):
             conn.query("SELECT 1;")
 
         # conn._connect should have just been called once when first creating the

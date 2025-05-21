@@ -21,6 +21,7 @@ import unittest
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -79,8 +80,8 @@ class CacheResourceTest(unittest.TestCase):
 
         exception.assert_not_called()
 
-        self.assertEqual(r1, [1, 1])
-        self.assertEqual(r2, [1, 1])
+        assert r1 == [1, 1]
+        assert r2 == [1, 1]
 
     @patch(
         "streamlit.runtime.caching.cache_resource_api.show_widget_replay_deprecation"
@@ -120,9 +121,9 @@ class CacheResourceTest(unittest.TestCase):
                 return "static method!"
 
         obj = TestClass()
-        self.assertEqual("member func!", obj.member_func())
-        self.assertEqual("class method!", obj.class_method())
-        self.assertEqual("static method!", obj.static_method())
+        assert obj.member_func() == "member func!"
+        assert obj.class_method() == "class method!"
+        assert obj.static_method() == "static method!"
 
     def test_function_name_does_not_use_hashfuncs(self):
         """Hash funcs should only be used on arguments to a function,
@@ -156,7 +157,7 @@ class CacheResourceTest(unittest.TestCase):
         def user_hash_error_func(x):
             pass
 
-        with self.assertRaises(UserHashError) as ctx:
+        with pytest.raises(UserHashError) as ctx:
             my_obj = MyObj()
             user_hash_error_func(my_obj)
 
@@ -177,7 +178,7 @@ Object of type tests.streamlit.runtime.caching.cache_resource_api_test.CacheReso
 
 If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
-        self.assertEqual(str(ctx.exception), expected_message)
+        assert str(ctx.value) == expected_message
 
     def test_cached_st_function_clear_args(self):
         self.x = 0
@@ -266,12 +267,12 @@ class CacheResourceValidateTest(unittest.TestCase):
             return call_count[0]
 
         # First call: call_count == 1; validate not called (because we computed a new value)
-        self.assertEqual(1, f())
+        assert f() == 1
         validate.assert_not_called()
 
         # Subsequent calls: call_count == 1; validate called each time
         for _ in range(3):
-            self.assertEqual(1, f())
+            assert f() == 1
             validate.assert_called_once_with(1)
             validate.reset_mock()
 
@@ -288,13 +289,13 @@ class CacheResourceValidateTest(unittest.TestCase):
 
         # First call: call_count == 1; validate not called (because we computed a new value)
         expected_call_count = 1
-        self.assertEqual(expected_call_count, f())
+        assert expected_call_count == f()
         validate.assert_not_called()
 
         # Subsequent calls: call_count increases; validate called with previous value
         for _ in range(3):
             expected_call_count += 1
-            self.assertEqual(expected_call_count, f())
+            assert expected_call_count == f()
             validate.assert_called_once_with(expected_call_count - 1)
             validate.reset_mock()
 
@@ -312,7 +313,7 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
         st.cache_resource.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_resource_cache_stats_provider().get_stats())
+        assert get_resource_cache_stats_provider().get_stats() == []
 
     def test_multiple_stats(self):
         @st.cache_resource
@@ -349,9 +350,7 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(
-            set(expected), set(get_resource_cache_stats_provider().get_stats())
-        )
+        assert set(expected) == set(get_resource_cache_stats_provider().get_stats())
 
 
 class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):

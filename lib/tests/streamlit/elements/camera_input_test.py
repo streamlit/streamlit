@@ -16,6 +16,7 @@
 
 from unittest.mock import patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -33,10 +34,10 @@ class CameraInputTest(DeltaGeneratorTestCase):
         st.camera_input("the label")
 
         c = self.get_delta_from_queue().new_element.camera_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
 
     def test_help_tooltip(self):
@@ -44,7 +45,7 @@ class CameraInputTest(DeltaGeneratorTestCase):
         st.camera_input("the label", help="help_label")
 
         c = self.get_delta_from_queue().new_element.camera_input
-        self.assertEqual(c.help, "help_label")
+        assert c.help == "help_label"
 
     @parameterized.expand(
         [
@@ -58,15 +59,14 @@ class CameraInputTest(DeltaGeneratorTestCase):
         st.camera_input("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.camera_input
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.camera_input("the label", label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_cached_widget_replay_warning(self):
@@ -75,8 +75,8 @@ class CameraInputTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
     @patch("streamlit.elements.widgets.camera_input._get_upload_files")
     def test_not_allowed_file_extension_raise_an_exception_for_camera_input(
@@ -91,13 +91,10 @@ class CameraInputTest(DeltaGeneratorTestCase):
         ]
 
         get_upload_files_patch.return_value = uploaded_files
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             return_val = st.camera_input("label")
             st.write(return_val)
-        self.assertEqual(
-            str(e.exception),
-            "Invalid file extension: `.png`. Allowed: ['.jpg']",
-        )
+        assert str(e.value) == "Invalid file extension: `.png`. Allowed: ['.jpg']"
 
 
 class CameraInputWidthTest(DeltaGeneratorTestCase):
@@ -105,31 +102,31 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
         """Test that camera_input can be displayed with a specific width in pixels."""
         st.camera_input("Label", width=500)
         c = self.get_delta_from_queue().new_element.camera_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"),
-            WidthConfigFields.PIXEL_WIDTH.value,
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
         )
-        self.assertEqual(c.width_config.pixel_width, 500)
+        assert c.width_config.pixel_width == 500
 
     def test_camera_input_with_width_stretch(self):
         """Test that camera_input can be displayed with a width of 'stretch'."""
         st.camera_input("Label", width="stretch")
         c = self.get_delta_from_queue().new_element.camera_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"),
-            WidthConfigFields.USE_STRETCH.value,
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     def test_camera_input_with_default_width(self):
         """Test that the default width is used when not specified."""
         st.camera_input("Label")
         c = self.get_delta_from_queue().new_element.camera_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"),
-            WidthConfigFields.USE_STRETCH.value,
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     @parameterized.expand(
         [
@@ -141,5 +138,5 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
     )
     def test_width_config_invalid(self, invalid_width):
         """Test width config with various invalid values."""
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.camera_input("the label", width=invalid_width)

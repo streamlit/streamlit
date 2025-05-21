@@ -25,4 +25,4 @@ class DividerTest(DeltaGeneratorTestCase):
         st.divider()
 
         c = self.get_delta_from_queue().new_element.markdown
-        self.assertEqual(c.body, "---")
+        assert c.body == "---"

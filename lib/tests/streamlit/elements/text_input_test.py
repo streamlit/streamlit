@@ -17,6 +17,7 @@
 import re
 from unittest.mock import MagicMock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -36,22 +37,22 @@ class TextInputTest(DeltaGeneratorTestCase):
         st.text_input("the label")
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.HasField("default"), True)
-        self.assertEqual(c.type, TextInput.DEFAULT)
-        self.assertEqual(c.disabled, False)
+        assert c.default == ""
+        assert c.HasField("default")
+        assert c.type == TextInput.DEFAULT
+        assert not c.disabled
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.text_input("the label", disabled=True)
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     def test_value_types(self):
         """Test that it supports different types of values."""
@@ -62,19 +63,19 @@ class TextInputTest(DeltaGeneratorTestCase):
             st.text_input("the label", arg_value)
 
             c = self.get_delta_from_queue().new_element.text_input
-            self.assertEqual(c.label, "the label")
-            self.assertTrue(re.match(proto_value, c.default))
+            assert c.label == "the label"
+            assert re.match(proto_value, c.default)
 
     def test_none_value(self):
         """Test that it can be called with None as initial value."""
         st.text_input("the label", value=None)
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.label, "the label")
+        assert c.label == "the label"
         # If a proto property is null, it is not determined by
         # this value, but by the check via the HasField method:
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.HasField("default"), False)
+        assert c.default == ""
+        assert not c.HasField("default")
 
     def test_input_types(self):
         # Test valid input types.
@@ -84,16 +85,15 @@ class TextInputTest(DeltaGeneratorTestCase):
             st.text_input("label", type=type_string)
 
             c = self.get_delta_from_queue().new_element.text_input
-            self.assertEqual(type_value, c.type)
+            assert type_value == c.type
 
         # An invalid input type should raise an exception.
-        with self.assertRaises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitAPIException) as exc:
             st.text_input("label", type="bad_type")
 
-        self.assertEqual(
-            "'bad_type' is not a valid text_input type. "
-            "Valid types are 'default' and 'password'.",
-            str(exc.exception),
+        assert (
+            str(exc.value)
+            == "'bad_type' is not a valid text_input type. Valid types are 'default' and 'password'."
         )
 
     def test_placeholder(self):
@@ -101,10 +101,10 @@ class TextInputTest(DeltaGeneratorTestCase):
         st.text_input("the label", "", placeholder="testing")
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.placeholder, "testing")
-        self.assertEqual(c.type, TextInput.DEFAULT)
+        assert c.label == "the label"
+        assert c.default == ""
+        assert c.placeholder == "testing"
+        assert c.type == TextInput.DEFAULT
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -112,21 +112,21 @@ class TextInputTest(DeltaGeneratorTestCase):
         st.text_input("foo")
 
         proto = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     def test_emoji_icon(self):
         """Test that it can be called with an emoji icon."""
         st.text_input("foo", icon="📋")
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.icon, "📋")
+        assert c.icon == "📋"
 
     def test_material_icon(self):
         """Test that it can be called with a material icon."""
         st.text_input("foo", icon=":material/search:")
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.icon, ":material/search:")
+        assert c.icon == ":material/search:"
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -136,11 +136,11 @@ class TextInputTest(DeltaGeneratorTestCase):
             st.text_input("foo")
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         text_input_proto = self.get_delta_from_queue(1).new_element.text_input
-        self.assertEqual(text_input_proto.form_id, form_proto.form.form_id)
+        assert text_input_proto.form_id == form_proto.form.form_id
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
@@ -152,10 +152,10 @@ class TextInputTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
 
         # 5 elements will be created: 1 horizontal block, 3 columns, 1 widget
-        self.assertEqual(len(all_deltas), 5)
+        assert len(all_deltas) == 5
         text_input_proto = self.get_delta_from_queue().new_element.text_input
 
-        self.assertEqual(text_input_proto.label, "foo")
+        assert text_input_proto.label == "foo"
 
     def test_autocomplete_defaults(self):
         """If 'autocomplete' is unspecified, it defaults to the empty string
@@ -163,17 +163,17 @@ class TextInputTest(DeltaGeneratorTestCase):
         """
         st.text_input("foo")
         proto = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual("", proto.autocomplete)
+        assert proto.autocomplete == ""
 
         st.text_input("password", type="password")
         proto = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual("new-password", proto.autocomplete)
+        assert proto.autocomplete == "new-password"
 
     def test_autcomplete(self):
         """Autocomplete should be marshalled if specified."""
         st.text_input("foo", autocomplete="you-complete-me")
         proto = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual("you-complete-me", proto.autocomplete)
+        assert proto.autocomplete == "you-complete-me"
 
     @parameterized.expand(
         [
@@ -186,15 +186,14 @@ class TextInputTest(DeltaGeneratorTestCase):
         """Test that it can be called with label_visibility param."""
         st.text_input("the label", label_visibility=label_visibility_value)
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.text_input("the label", label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_width_config_default(self):
@@ -202,30 +201,33 @@ class TextInputTest(DeltaGeneratorTestCase):
         st.text_input("the label")
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     def test_width_config_pixel(self):
         """Test that pixel width works properly."""
         st.text_input("the label", width=100)
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.PIXEL_WIDTH.value
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
         )
-        self.assertEqual(c.width_config.pixel_width, 100)
+        assert c.width_config.pixel_width == 100
 
     def test_width_config_stretch(self):
         """Test that 'stretch' width works properly."""
         st.text_input("the label", width="stretch")
 
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     @parameterized.expand(
         [
@@ -238,7 +240,7 @@ class TextInputTest(DeltaGeneratorTestCase):
     )
     def test_invalid_width(self, width):
         """Test that invalid width values raise exceptions."""
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.text_input("the label", width=width)
 
     def test_shows_cached_widget_replay_warning(self):
@@ -247,8 +249,8 @@ class TextInputTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
 
 class SomeObj:

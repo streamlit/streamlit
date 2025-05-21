@@ -51,16 +51,16 @@ class ConfigOptionTest(unittest.TestCase):
     )
     def test_valid_keys(self, key, section, name):
         c = ConfigOption(key)
-        self.assertEqual(section, c.section)
-        self.assertEqual(name, c.name)
+        assert section == c.section
+        assert name == c.name
 
     def test_constructor_default_values(self):
         key = "mysection.myName"
         c = ConfigOption(key)
-        self.assertEqual("mysection", c.section)
-        self.assertEqual("myName", c.name)
-        self.assertEqual(None, c.description)
-        self.assertEqual("visible", c.visibility)
+        assert c.section == "mysection"
+        assert c.name == "myName"
+        assert None is c.description
+        assert c.visibility == "visible"
 
     def test_call(self):
         key = "mysection.myName"
@@ -71,8 +71,8 @@ class ConfigOptionTest(unittest.TestCase):
             """Random docstring."""
             pass
 
-        self.assertEqual("Random docstring.", c.description)
-        self.assertEqual(someRandomFunction._get_val_func, c._get_val_func)
+        assert c.description == "Random docstring."
+        assert someRandomFunction._get_val_func == c._get_val_func
 
     def test_call_assert(self):
         key = "mysection.myName"
@@ -98,7 +98,7 @@ class ConfigOptionTest(unittest.TestCase):
             """Random docstring."""
             return my_value
 
-        self.assertEqual(my_value, c.value)
+        assert my_value == c.value
 
     def test_set_value(self):
         my_value = "myValue"
@@ -108,8 +108,8 @@ class ConfigOptionTest(unittest.TestCase):
         c = ConfigOption(key)
         c.set_value(my_value, where_defined)
 
-        self.assertEqual(my_value, c.value)
-        self.assertEqual(where_defined, c.where_defined)
+        assert my_value == c.value
+        assert where_defined == c.where_defined
 
     def test_deprecated_expired(self):
         my_value = "myValue"
@@ -128,7 +128,7 @@ class ConfigOptionTest(unittest.TestCase):
         # just a slightly different text.
         c.set_value(my_value, where_defined)
 
-        self.assertTrue(c.is_expired())
+        assert c.is_expired()
 
     def test_deprecated_unexpired(self):
         my_value = "myValue"
@@ -145,7 +145,7 @@ class ConfigOptionTest(unittest.TestCase):
 
         c.set_value(my_value, where_defined)
 
-        self.assertFalse(c.is_expired())
+        assert not c.is_expired()
 
     def test_replaced_by_unexpired(self):
         c = ConfigOption(
@@ -155,8 +155,8 @@ class ConfigOptionTest(unittest.TestCase):
             expiration_date="2100-01-01",
         )
 
-        self.assertTrue(c.deprecated)
-        self.assertFalse(c.is_expired())
+        assert c.deprecated
+        assert not c.is_expired()
 
     def test_replaced_by_expired(self):
         c = ConfigOption(
@@ -166,5 +166,5 @@ class ConfigOptionTest(unittest.TestCase):
             expiration_date="2000-01-01",
         )
 
-        self.assertTrue(c.deprecated)
-        self.assertTrue(c.is_expired())
+        assert c.deprecated
+        assert c.is_expired()
