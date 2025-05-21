@@ -141,7 +141,7 @@
     "@types/eslint": "~8.56.12",
     "@types/hoist-non-react-statics": "~3.3.6",
     "@types/katex": "~0.16.7",
-    "@types/lodash": "~4.17.16",
+    "@types/lodash": "~4.17.17",
     "@types/mapbox-gl": "~1.13.10",
     "@types/moment-duration-format": "~2.2.6",
     "@types/plotly.js": "^3.0.0",
