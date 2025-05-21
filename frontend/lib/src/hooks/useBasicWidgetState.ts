@@ -179,7 +179,7 @@ export function useBasicWidgetState<
   Dispatch<SetStateAction<ValueWithSource<T> | null>>
 ] {
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
-    (wm, el) => {
+    (_wm, el) => {
       return getDefaultStateFromProto(el)
     },
     [getDefaultStateFromProto]

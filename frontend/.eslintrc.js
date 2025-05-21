@@ -121,7 +121,7 @@ module.exports = {
       "error",
       {
         vars: "all",
-        args: "after-used",
+        args: "all",
         ignoreRestSiblings: false,
         argsIgnorePattern: "^_",
       },

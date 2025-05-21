@@ -547,7 +547,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidUpdate(
-    prevProps: Readonly<Props>,
+    _prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
     // @ts-expect-error

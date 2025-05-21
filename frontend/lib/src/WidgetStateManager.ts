@@ -99,7 +99,7 @@ export class WidgetStateDict {
 
   /** Remove the state of widgets that are not contained in `activeIds`. */
   public removeInactive(activeIds: Set<string>): void {
-    this.widgetStates.forEach((value, key) => {
+    this.widgetStates.forEach((_value, key) => {
       if (!activeIds.has(key)) {
         this.widgetStates.delete(key)
       }

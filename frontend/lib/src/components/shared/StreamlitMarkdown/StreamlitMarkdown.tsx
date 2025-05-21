@@ -596,7 +596,7 @@ function createRemarkStreamlitLogo() {
 function createRemarkTypographicalSymbols() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   return () => (tree: any) => {
-    visit(tree, (node, index, parent) => {
+    visit(tree, (node, _index, parent) => {
       if (
         parent &&
         (parent.type === "link" || parent.type === "linkReference")

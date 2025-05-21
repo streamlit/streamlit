@@ -162,7 +162,7 @@ describe("#getContextualFillColor", () => {
     ],
   ]
 
-  it.each(testCases)("%s", (description, args, expected) => {
+  it.each(testCases)("%s", (_description, args, expected) => {
     expect(getContextualFillColor(args)).toEqual(expected)
   })
 })

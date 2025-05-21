@@ -104,7 +104,7 @@ const mergeColumnConfig = (
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const customMergeArrays = (objValue: object, srcValue: object): any => {
+  const customMergeArrays = (_objValue: object, srcValue: object): any => {
     // If the new value is an array, just return it as is (overwriting the old)
     if (isArray(srcValue)) {
       return srcValue
