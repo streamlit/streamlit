@@ -3357,7 +3357,7 @@ __metadata:
     date-fns: "npm:^4.1.0"
     decamelize: "npm:^6.0.0"
     deck.gl: "npm:^9.1.12"
-    dompurify: "npm:^3.2.5"
+    dompurify: "npm:^3.2.6"
     eslint: "npm:^8.33.0"
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-vitest: "npm:^0.5.4"
