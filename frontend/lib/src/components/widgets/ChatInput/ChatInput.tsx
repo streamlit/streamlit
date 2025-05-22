@@ -166,6 +166,7 @@ function ChatInput({
           file.status.type === "uploaded" &&
           file.status.fileUrls.deleteUrl
         ) {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
           uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
         }
 

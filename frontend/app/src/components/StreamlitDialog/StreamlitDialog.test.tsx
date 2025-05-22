@@ -84,7 +84,7 @@ describe("StreamlitDialog", () => {
 })
 
 describe("aboutDialog", () => {
-  it("shows version string if SessionInfo is initialized", async () => {
+  it("shows version string if SessionInfo is initialized", () => {
     render(
       <Fragment>
         {StreamlitDialog({
@@ -102,7 +102,7 @@ describe("aboutDialog", () => {
     expect(versionText).toBeDefined()
   })
 
-  it("shows no version string if SessionInfo is not initialized", async () => {
+  it("shows no version string if SessionInfo is not initialized", () => {
     const sessionInfo = new SessionInfo()
     expect(sessionInfo.isSet).toBe(false)
 

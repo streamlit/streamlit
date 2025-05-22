@@ -203,6 +203,7 @@ function generateTableCell(
       )
     }
     default: {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       throw new Error(`Cannot parse type "${type}".`)
     }
   }

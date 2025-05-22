@@ -142,6 +142,7 @@ const Multiselect: FC<Props> = props => {
           return value.concat([data.option?.value])
         }
         default: {
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           throw new Error(`State transition is unknown: ${data.type}`)
         }
       }

@@ -148,7 +148,7 @@ export function useVegaEmbed(
         defaultDataName.current = DEFAULT_DATA_NAME
       }
 
-      const dataObj = getInlineData(dataRef.current as Quiver | null)
+      const dataObj = getInlineData(dataRef.current)
       if (dataObj) {
         vegaView.current.insert(defaultDataName.current, dataObj)
       }

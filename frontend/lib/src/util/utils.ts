@@ -488,9 +488,8 @@ export function getIFrameEnclosingApp(
   }
   const embeddingIdClassName = getEmbeddingIdClassName(embeddingId)
   const qsStreamlitAppStr = 'iframe[title="streamlitApp"]'
-  let qs = window.document.querySelectorAll(
-    qsStreamlitAppStr
-  ) as NodeListOf<HTMLIFrameElement>
+  let qs: NodeListOf<HTMLIFrameElement> =
+    window.document.querySelectorAll(qsStreamlitAppStr)
   let foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -508,9 +507,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  let htmlCollection = window.document.getElementsByTagName(
-    "iframe"
-  ) as HTMLCollectionOf<HTMLIFrameElement>
+  let htmlCollection = window.document.getElementsByTagName("iframe")
   foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null

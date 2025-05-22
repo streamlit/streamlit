@@ -22,7 +22,7 @@ import {
 } from "./FileHelper"
 
 describe("getSizeDisplay", () => {
-  test("it shows unit", async () => {
+  test("it shows unit", () => {
     expect(getSizeDisplay(BYTE_CONVERSION_SIZE, FileSize.Byte)).toEqual(
       "1.0KB"
     )
@@ -39,14 +39,14 @@ describe("getSizeDisplay", () => {
     )
   })
 
-  test("it has unusual values", async () => {
+  test("it has unusual values", () => {
     expect(() => getSizeDisplay(-100, FileSize.Byte)).toThrow(
       "Size must be greater than or equal to 0"
     )
     expect(getSizeDisplay(0, FileSize.Byte, -1)).toEqual("0B")
   })
 
-  test("it truncates to the right amount of decimals", async () => {
+  test("it truncates to the right amount of decimals", () => {
     expect(getSizeDisplay(BYTE_CONVERSION_SIZE, FileSize.Byte)).toEqual(
       "1.0KB"
     )
@@ -58,7 +58,7 @@ describe("getSizeDisplay", () => {
     )
   })
 
-  test("it rounds up to the next unit", async () => {
+  test("it rounds up to the next unit", () => {
     expect(getSizeDisplay(500, FileSize.Byte)).toEqual("500.0B")
     expect(getSizeDisplay(800, FileSize.Byte)).toEqual("0.8KB")
     expect(getSizeDisplay(501, FileSize.Gigabyte)).toEqual("501.0GB")
@@ -66,7 +66,7 @@ describe("getSizeDisplay", () => {
 })
 
 describe("sizeConverter", () => {
-  test("it converts up to the bigger unit", async () => {
+  test("it converts up to the bigger unit", () => {
     expect(sizeConverter(0.5, FileSize.Kilobyte, FileSize.Megabyte)).toEqual(
       0.5 / BYTE_CONVERSION_SIZE
     )
@@ -85,7 +85,7 @@ describe("sizeConverter", () => {
     )
   })
 
-  test("it converts down to the smaller unit", async () => {
+  test("it converts down to the smaller unit", () => {
     expect(sizeConverter(0.5, FileSize.Gigabyte, FileSize.Megabyte)).toEqual(
       BYTE_CONVERSION_SIZE * 0.5
     )
@@ -104,7 +104,7 @@ describe("sizeConverter", () => {
     )
   })
 
-  test("it handles unusual cases", async () => {
+  test("it handles unusual cases", () => {
     expect(
       sizeConverter(BYTE_CONVERSION_SIZE, FileSize.Byte, FileSize.Byte)
     ).toEqual(BYTE_CONVERSION_SIZE)

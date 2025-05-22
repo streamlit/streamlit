@@ -49,6 +49,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       validateRegex = new RegExp(parameters.validate, "us")
     } catch (error) {
       // Put error message in validateRegex so we can display it in the cell
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       validateRegex = `Invalid validate regex: ${parameters.validate}.\nError: ${error}`
     }
   }
@@ -138,6 +139,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
         // This should never happen, but if it does, we want to show an error
         return getErrorCell(
           "Incompatible value",
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `The value cannot be interpreted as string. Error: ${error}`
         )
       }

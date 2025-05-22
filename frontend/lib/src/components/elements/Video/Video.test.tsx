@@ -179,17 +179,17 @@ describe("Video Element", () => {
 
     it("sets the current time to startTime on render", async () => {
       render(<Video {...props} />)
-      const videoElement = (await screen.findByTestId(
+      const videoElement: HTMLMediaElement = await screen.findByTestId(
         "stVideo"
-      )) as HTMLMediaElement
+      )
       expect(videoElement.currentTime).toBe(0)
     })
 
     it("updates the current time when startTime is changed", async () => {
       const { rerender } = render(<Video {...props} />)
-      const videoElement = (await screen.findByTestId(
+      const videoElement: HTMLMediaElement = await screen.findByTestId(
         "stVideo"
-      )) as HTMLMediaElement
+      )
       expect(videoElement.currentTime).toBe(0)
 
       rerender(<Video {...getProps({ startTime: 10 })} />)

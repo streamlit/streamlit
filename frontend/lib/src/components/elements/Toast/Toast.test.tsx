@@ -146,7 +146,7 @@ describe("Toast Component", () => {
     await waitFor(() => expect(toast).not.toBeInTheDocument())
   })
 
-  test("throws an error when called via st.sidebar.toast", async () => {
+  test("throws an error when called via st.sidebar.toast", () => {
     const props = getProps({})
     render(
       <ThemeProvider

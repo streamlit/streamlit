@@ -67,7 +67,6 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
-import { Quiver } from "~lib/dataframes/Quiver"
 // Load (non-lazy) elements.
 import AlertElement, {
   getAlertElementKind,
@@ -82,7 +81,6 @@ import Metric from "~lib/components/elements/Metric"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
 import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "~lib/components/elements/ArrowVegaLiteChart"
 import Maybe from "~lib/components/core/Maybe"
 import { FormSubmitContent } from "~lib/components/widgets/Form"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
@@ -212,9 +210,7 @@ const RawElementNodeRenderer = (
     }
 
     case "arrowTable":
-      return (
-        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
-      )
+      return <ArrowTable element={node.quiverElement} {...elementProps} />
 
     case "audio":
       return (
@@ -421,14 +417,14 @@ const RawElementNodeRenderer = (
           // be undefined.
           key={arrowProto.id || undefined}
           element={arrowProto}
-          data={node.quiverElement as Quiver}
+          data={node.quiverElement}
           {...widgetProps}
         />
       )
     }
 
     case "arrowVegaLiteChart": {
-      const vegaLiteElement = node.vegaLiteChartElement as VegaLiteChartElement
+      const vegaLiteElement = node.vegaLiteChartElement
       return (
         <ArrowVegaLiteChart
           element={vegaLiteElement}

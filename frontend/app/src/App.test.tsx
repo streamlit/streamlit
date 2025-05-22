@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
@@ -2594,7 +2595,7 @@ describe("App", () => {
       ["remoteHost", true, Config.ToolbarMode.VIEWER, false],
     ])(
       "should render or not render dev menu depending on hostname, host ownership, toolbarMode[%s, %s, %s]",
-      async (hostname, hostIsOwnr, toolbarMode, expectedResult) => {
+      (hostname, hostIsOwnr, toolbarMode, expectedResult) => {
         mockWindowLocation(hostname)
 
         const result = showDevelopmentOptions(hostIsOwnr, toolbarMode)
@@ -3251,7 +3252,7 @@ describe("App", () => {
       })
     })
 
-    it("clears fragment auto rerun intervals when page changes", async () => {
+    it("clears fragment auto rerun intervals when page changes", () => {
       prepareHostCommunicationManager()
 
       // autoRerun uses setInterval under-the-hood, so use fake timers

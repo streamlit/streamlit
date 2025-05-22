@@ -235,6 +235,7 @@ export class WidgetStateManager {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`invalid formID '${formId}'`)
     }
 
@@ -861,6 +862,7 @@ function requireNumberInt(value: number | Long): number {
   }
 
   throw new Error(
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
     `value ${value} cannot be converted to number without a loss of precision!`
   )
 }

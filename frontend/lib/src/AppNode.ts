@@ -679,6 +679,7 @@ export class AppRoot {
       isNullOrUndefined(this.event) ||
       isNullOrUndefined(this.bottom)
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       throw new Error(`Invalid root node children! ${root}`)
     }
   }
@@ -917,6 +918,7 @@ export class AppRoot {
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (isNullOrUndefined(existingNode)) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 

@@ -391,6 +391,7 @@ class FileUploader extends PureComponent<InnerProps, State> {
     }
 
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
 

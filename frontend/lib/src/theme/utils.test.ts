@@ -92,7 +92,7 @@ const mockWindow = (...overrides: object[]): MockInstance => {
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
-    test("pulls correct theme values", async () => {
+    test("pulls correct theme values", () => {
       expect(computeSpacingStyle("sm md lg none", lightTheme.emotion)).toEqual(
         "0.5rem 0.75rem 1rem 0"
       )
@@ -774,7 +774,7 @@ describe("hasLightBackgroundColor", () => {
 })
 
 describe("theme overrides", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.resetModules()
     window.__streamlit = undefined
   })

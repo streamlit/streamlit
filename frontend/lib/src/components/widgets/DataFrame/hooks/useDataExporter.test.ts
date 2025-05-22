@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from "@testing-library/react"
+import { renderHook, waitFor } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
 import { showSaveFilePicker } from "native-file-system-adapter"
 
@@ -133,11 +133,13 @@ describe("useDataExporter hook", () => {
     if (typeof result.current.exportToCsv !== "function") {
       throw new Error("exportToCsv is expected to be a function")
     }
-    await result.current.exportToCsv()
+    result.current.exportToCsv()
 
     const textEncoder = new TextEncoder()
 
-    expect(getCellContentMock).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(getCellContentMock).toHaveBeenCalled()
+    })
     // Number of writes: 1 for BOM + 1 for header + num rows
     expect(mockWrite).toBeCalledTimes(NUM_ROWS + 2)
     expect(mockWrite).toBeCalledWith(textEncoder.encode("\ufeff"))
@@ -157,9 +159,11 @@ describe("useDataExporter hook", () => {
     }
 
     const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
-    await result.current.exportToCsv()
+    result.current.exportToCsv()
 
-    expect(showSaveFilePicker).toBeCalledTimes(1)
+    await waitFor(() => {
+      expect(showSaveFilePicker).toBeCalledTimes(1)
+    })
     expect(showSaveFilePicker).toBeCalledWith({
       excludeAcceptAllOption: false,
       suggestedName: `${timestamp}_export.csv`,

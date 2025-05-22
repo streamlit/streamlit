@@ -124,7 +124,7 @@ export interface SubMenuProps {
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
+  StyledMenuItemType: typeof StyledCoreItem,
   metricsMgr: MetricsManager
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {

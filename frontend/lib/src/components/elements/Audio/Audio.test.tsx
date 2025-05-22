@@ -118,14 +118,14 @@ describe("Audio Element", () => {
     })
 
     const { rerender } = render(<Audio {...props} />)
-    let audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
+    let audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
 
     expect(audioElement.currentTime).toBe(0)
 
     const newProps = getProps({ startTime: 10 })
     rerender(<Audio {...newProps} />)
 
-    audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
+    audioElement = screen.getByTestId("stAudio")
 
     expect(audioElement.currentTime).toBe(10)
   })

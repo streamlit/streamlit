@@ -55,6 +55,7 @@ export const createDropHandler =
       rejectedFiles.length > 1
     ) {
       const firstFileIndex = rejectedFiles.findIndex(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
         file => file.errors?.[0].code === FileErrorCode.TooManyFiles
       )
 

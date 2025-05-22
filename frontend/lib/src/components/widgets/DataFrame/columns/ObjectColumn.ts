@@ -63,6 +63,7 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
       } catch (error) {
         return getErrorCell(
           toSafeString(data),
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `The value cannot be interpreted as a string. Error: ${error}`
         )
       }

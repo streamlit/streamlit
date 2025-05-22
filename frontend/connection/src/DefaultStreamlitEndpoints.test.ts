@@ -476,7 +476,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest(url, {})
+      void endpoints.csrfRequest(url, {})
 
       expect(spyRequest).toHaveBeenCalledWith({
         headers: { "X-Xsrftoken": "mockXsrfCookie" },
@@ -494,7 +494,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest(url, {})
+      void endpoints.csrfRequest(url, {})
 
       expect(spyRequest).toHaveBeenCalledWith({
         url,

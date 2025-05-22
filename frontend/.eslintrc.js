@@ -32,6 +32,8 @@ module.exports = {
     "plugin:react/recommended",
     // Uses the recommended rules from the @typescript-eslint/eslint-plugin
     "plugin:@typescript-eslint/recommended",
+    // Uses the recommended rules from the @typescript-eslint/eslint-plugin with type-checking
+    "plugin:@typescript-eslint/recommended-type-checked",
     // Uses the recommended rules from react-hooks
     // @see https://react.dev/learn/editor-setup#linting
     "plugin:react-hooks/recommended-legacy",
@@ -106,6 +108,16 @@ module.exports = {
     "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
     // We don't want to warn about empty fragments
     "@eslint-react/no-useless-fragment": "off",
+    // #region TypeScript rules with type-checking
+    // We want to use these, but we have far too many instances of these rules
+    // for it to be realistic right now. Over time, we should fix these.
+    "@typescript-eslint/no-unsafe-argument": "off",
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
+    "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unsafe-return": "off",
+    "@typescript-eslint/unbound-method": "off",
+    // #endregion
     // Some of these are being caught erroneously
     "@typescript-eslint/camelcase": "off",
     // Empty interfaces are ok
@@ -272,6 +284,14 @@ module.exports = {
       files: ["**/components/elements/**/*", "**/components/widgets/**/*"],
       rules: {
         "streamlit-custom/enforce-memo": "error",
+      },
+    },
+    {
+      // It is okay for Emotion to use template expressions with complex
+      // stringified types
+      files: ["**/styled-components.ts", "**/styled-components.tsx"],
+      rules: {
+        "@typescript-eslint/restrict-template-expressions": "off",
       },
     },
   ],

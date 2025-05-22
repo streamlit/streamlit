@@ -789,6 +789,7 @@ function DataFrame({
             onClick={() => {
               if (onRowAppended) {
                 setIsFocused(true)
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
                 onRowAppended()
                 clearTooltip()
                 // Automatically scroll to the new row on the vertical axis:

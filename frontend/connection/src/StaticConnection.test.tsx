@@ -243,7 +243,7 @@ describe("StaticConnection", () => {
       const onMessage = vi.fn()
       const onConnectionError = vi.fn()
 
-      establishStaticConnection(
+      await establishStaticConnection(
         staticAppId,
         onConnectionStateChange,
         onMessage,

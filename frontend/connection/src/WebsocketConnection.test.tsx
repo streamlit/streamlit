@@ -814,7 +814,7 @@ describe("WebsocketConnection", () => {
     client = new WebsocketConnection(createMockArgs())
   })
 
-  afterEach(async () => {
+  afterEach(() => {
     axios.get = originalAxiosGet
 
     // @ts-expect-error

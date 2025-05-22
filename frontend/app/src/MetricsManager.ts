@@ -193,6 +193,7 @@ export class MetricsManager {
     } else if (this.metricsUrl === "postMessage") {
       this.postMessageEvent(evName, data)
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.track(data)
     }
   }

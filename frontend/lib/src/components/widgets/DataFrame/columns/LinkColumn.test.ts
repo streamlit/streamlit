@@ -71,7 +71,7 @@ describe("LinkColumn", () => {
     // should also be supported by the UrlColumn.
   ])(
     "supports string-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
     (input: any, value: any | null) => {
       const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)

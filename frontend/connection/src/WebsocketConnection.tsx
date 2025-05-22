@@ -212,6 +212,7 @@ export class WebsocketConnection {
     // Perform pre-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         this.pingServer()
         break
 
@@ -224,6 +225,7 @@ export class WebsocketConnection {
     // Perform post-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.CONNECTING:
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         this.connectToWebSocket()
         break
 
@@ -430,6 +432,7 @@ export class WebsocketConnection {
         LOG.error("Client Error: WebSocket onerror")
         this.args.sendClientError(
           "Websocket connection onerror triggered",
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
           `Error: ${event}`,
           "Websocket Connection"
         )

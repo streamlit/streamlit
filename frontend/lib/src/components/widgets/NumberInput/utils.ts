@@ -74,6 +74,7 @@ export const formatValue = ({
   try {
     return sprintf(formatString, value)
   } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     LOG.warn(`Error in sprintf(${formatString}, ${value}): ${e}`)
     return String(value)
   }

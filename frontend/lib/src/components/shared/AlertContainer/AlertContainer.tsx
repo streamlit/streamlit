@@ -47,6 +47,7 @@ function getNotificationKind(
     case Kind.WARNING:
       return KIND.warning
     default:
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Unexpected alert type: ${kind}`)
   }
 }

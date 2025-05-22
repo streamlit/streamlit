@@ -533,7 +533,7 @@ export class App extends PureComponent<Props, State> {
       }
 
       // @ts-expect-error
-      import("iframe-resizer/js/iframeResizer.contentWindow")
+      void import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
     this.hostCommunicationMgr.sendMessageToHost({
@@ -1212,6 +1212,7 @@ export class App extends PureComponent<Props, State> {
       SessionInfo.propsFromNewSessionMessage(newSessionProto)
     )
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
       sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
@@ -1324,6 +1325,7 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       Promise.resolve().then(() => {
         // Notify any subscribers of this event (and do it on the next cycle of
         // the event loop)
@@ -1806,6 +1808,7 @@ export class App extends PureComponent<Props, State> {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Not connected. Cannot send back message: ${msg}`)
     }
   }
@@ -2012,6 +2015,7 @@ export class App extends PureComponent<Props, State> {
 
   handleKeyUp = (keyName: string): void => {
     if (keyName === "esc") {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.screenCast.stopRecording()
     }
   }

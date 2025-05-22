@@ -526,7 +526,7 @@ describe("ComponentInstance", () => {
       ).toBeVisible()
     })
 
-    it("warns if COMPONENT_READY hasn't been received after a timeout", () => {
+    it("warns if COMPONENT_READY hasn't been received after a timeout", async () => {
       renderWithContexts(
         <ComponentInstance
           element={createElementProp()}
@@ -543,7 +543,7 @@ describe("ComponentInstance", () => {
         }
       )
       // Advance past our warning timeout, and force a re-render.
-      act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
+      await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
 
       expect(
         screen.getByText(/The app is attempting to load the component from/)
@@ -580,7 +580,7 @@ describe("ComponentInstance", () => {
       )
     })
 
-    it("triggers component registry's sendTimeoutError when component has timed out waiting for READY message", () => {
+    it("triggers component registry's sendTimeoutError when component has timed out waiting for READY message", async () => {
       const componentRegistry = getComponentRegistry()
       // spy on Component Registry's sendTimeoutError method
       const sendTimeoutErrorSpy = vi.spyOn(
@@ -604,7 +604,7 @@ describe("ComponentInstance", () => {
         }
       )
       // Advance past our warning timeout, and force a re-render.
-      act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
+      await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
 
       expect(sendTimeoutErrorSpy).toHaveBeenCalledWith(
         "http://a.mock.url?streamlitUrl=http%3A%2F%2Flocalhost%3A3000%2F",

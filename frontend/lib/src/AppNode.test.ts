@@ -477,7 +477,7 @@ describe("AppRoot.empty", () => {
     windowSpy.mockRestore()
   })
 
-  it("creates empty tree except for a skeleton", async () => {
+  it("creates empty tree except for a skeleton", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search: "",
@@ -510,7 +510,7 @@ describe("AppRoot.empty", () => {
     expect(empty.root.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
   })
 
-  it("creates empty tree with no loading screen if query param is set", async () => {
+  it("creates empty tree with no loading screen if query param is set", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search: "?embed_options=hide_loading_screen",
@@ -523,7 +523,7 @@ describe("AppRoot.empty", () => {
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
-  it("creates empty tree with v1 loading screen if query param is set", async () => {
+  it("creates empty tree with v1 loading screen if query param is set", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search: "?embed_options=show_loading_screen_v1",
@@ -541,7 +541,7 @@ describe("AppRoot.empty", () => {
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
-  it("creates empty tree with v2 loading screen if query param is set", async () => {
+  it("creates empty tree with v2 loading screen if query param is set", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search: "?embed_options=show_loading_screen_v2",
@@ -559,7 +559,7 @@ describe("AppRoot.empty", () => {
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
-  it("creates empty tree with no loading screen if query param is v1 and it's not first load", async () => {
+  it("creates empty tree with no loading screen if query param is v1 and it's not first load", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search: "?embed_options=show_loading_screen_v1",
@@ -572,7 +572,7 @@ describe("AppRoot.empty", () => {
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
-  it("passes logo to new Root if empty is called with logo", async () => {
+  it("passes logo to new Root if empty is called with logo", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search: "",

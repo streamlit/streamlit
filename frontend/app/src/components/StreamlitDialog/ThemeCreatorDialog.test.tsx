@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 
 import {
   darkTheme,
@@ -126,7 +126,7 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(props.backToSettings).toHaveBeenCalled()
   })
 
-  it("should copy to clipboard", () => {
+  it("should copy to clipboard", async () => {
     const props = getProps()
     renderWithContexts(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
@@ -141,9 +141,12 @@ describe("Opened ThemeCreatorDialog", () => {
     // eslint-disable-next-line testing-library/prefer-user-event
     fireEvent.click(copyBtn)
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 base="light"
 `)
-    expect(screen.getByText("Copied to clipboard")).toBeInTheDocument()
+    })
+
+    expect(await screen.findByText("Copied to clipboard")).toBeInTheDocument()
   })
 })

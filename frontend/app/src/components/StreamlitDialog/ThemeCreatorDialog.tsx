@@ -111,12 +111,16 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
 
   const config = toMinimalToml(themeInput)
 
-  const copyConfig = (): void => {
+  const copyConfig = async (): Promise<void> => {
     props.metricsMgr.enqueue("menuClick", {
       label: "copyThemeToClipboard",
     })
-    navigator.clipboard.writeText(config)
-    updateCopied(true)
+    try {
+      await navigator.clipboard.writeText(config)
+      updateCopied(true)
+    } catch (e) {
+      updateCopied(false)
+    }
   }
 
   const onClickedBack = (): void => {

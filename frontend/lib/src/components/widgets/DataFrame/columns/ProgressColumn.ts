@@ -162,8 +162,10 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(
           toSafeString(cellData),
           notNullOrUndefined(parameters.format)
-            ? `Failed to format the number based on the provided format configuration: (${parameters.format}). Error: ${error}`
-            : `Failed to format the number. Error: ${error}`
+            ? // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+              `Failed to format the number based on the provided format configuration: (${parameters.format}). Error: ${error}`
+            : // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+              `Failed to format the number. Error: ${error}`
         )
       }
 

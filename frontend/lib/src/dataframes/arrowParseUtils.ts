@@ -110,7 +110,7 @@ function parsePandasIndexData(
       }
 
       // Otherwise, use the index name to get the index column data.
-      const column = table.getChild(indexCol as string)
+      const column = table.getChild(indexCol)
       if (column instanceof Vector && column.type instanceof Null) {
         return null
       }
@@ -250,7 +250,7 @@ function parsePandasIndexColumnTypes(
             name: indexName,
             pandas_type: PandasRangeIndexType,
             numpy_type: PandasRangeIndexType,
-            metadata: indexCol as PandasRangeIndex,
+            metadata: indexCol,
           },
         }
       }

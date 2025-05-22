@@ -24,5 +24,6 @@
  * @returns {never} This function never returns a value.
  */
 export const assertNever = (x: never): never => {
+  // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
   throw new Error(`Reached a branch with non-exhaustive item: ${x}`)
 }

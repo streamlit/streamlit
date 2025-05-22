@@ -139,6 +139,7 @@ export async function establishStaticConnection(
   const staticConfigUrl = await getStaticConfig()
   endpoints.setStaticConfigUrl(staticConfigUrl)
 
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
   dispatchAppForwardMessages(
     staticAppId,
     staticConfigUrl,

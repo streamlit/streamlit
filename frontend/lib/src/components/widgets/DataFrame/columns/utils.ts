@@ -97,13 +97,13 @@ export interface BaseColumn extends BaseColumnProps {
   // Validate the input data for compatibility with the column type:
   // Either returns a boolean indicating if the data is valid or not, or
   // returns the corrected value.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
   validateInput?(data?: any): boolean | any
   // Get a cell with the provided data for the column type:
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getCell(data?: any, validate?: boolean): GridCell
   // Get the raw value of the given cell:
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
   getCellValue(cell: GridCell): any | null
 }
 

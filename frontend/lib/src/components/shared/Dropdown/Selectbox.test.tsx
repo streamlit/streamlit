@@ -256,7 +256,7 @@ describe("Selectbox widget", () => {
     )
   })
 
-  it("does not call onChange when the user deletes characters", async () => {
+  it("does not call onChange when the user deletes characters", () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
     expect(

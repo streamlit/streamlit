@@ -145,7 +145,7 @@ describe("FileUploadClient Upload", () => {
   })
 
   it("onFileURLsResponse rejects promise on errorMsg", async () => {
-    uploader.fetchFileURLs([])
+    void uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests
@@ -161,7 +161,7 @@ describe("FileUploadClient Upload", () => {
   })
 
   it("onFileURLsResponse resolves promise on success", async () => {
-    uploader.fetchFileURLs([])
+    void uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests

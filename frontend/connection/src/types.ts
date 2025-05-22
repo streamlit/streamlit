@@ -232,6 +232,7 @@ export type MetricsConfig = {
    * Setting to "off" disables metrics collection.
    * If undefined, metricsUrl requested from centralized config file.
    */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   metricsUrl?: string | "postMessage" | "off"
 }
 

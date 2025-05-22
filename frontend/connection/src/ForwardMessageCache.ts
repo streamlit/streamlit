@@ -115,6 +115,7 @@ export class ForwardMsgCache {
    * - If the message is instead a reference to another message, look for
    *   the referenced message in the cache, and return it.
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   public async processMessagePayload(
     msg: ForwardMsg,
     encodedMsg: Uint8Array

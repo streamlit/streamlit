@@ -171,7 +171,7 @@ function useDataExporter(
         let csvContent = ""
 
         const inMemoryWriter = new WritableStream({
-          write: async chunk => {
+          write: chunk => {
             csvContent += new TextDecoder("utf-8").decode(chunk)
           },
           close: async () => {},
@@ -209,6 +209,7 @@ function useDataExporter(
   }, [columns, numRows, getCellContent, enforceDownloadInNewTab])
 
   return {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     exportToCsv,
   }
 }

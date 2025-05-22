@@ -26,7 +26,7 @@ function withFullScreenWrapper<P extends object>(
   const ComponentWithFullScreenWrapper = (props: P): ReactElement => {
     return (
       <ElementFullscreenWrapper>
-        <WrappedComponent {...(props as P)}></WrappedComponent>
+        <WrappedComponent {...props}></WrappedComponent>
       </ElementFullscreenWrapper>
     )
   }

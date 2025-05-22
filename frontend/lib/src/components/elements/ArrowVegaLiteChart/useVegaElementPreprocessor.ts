@@ -175,7 +175,7 @@ export const useVegaElementPreprocessor = (
   // change, not the reference itself (since each forward message would be a new
   // reference).
   const selectionMode = useMemo(() => {
-    return inputSelectionMode as string[]
+    return inputSelectionMode
     // eslint-disable-next-line react-compiler/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(inputSelectionMode)])

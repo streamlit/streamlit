@@ -253,6 +253,7 @@ function ComponentInstance(props: Props): ReactElement {
   useEffect(() => {
     // Iframe onerror event unreliable - check custom component
     // src on mount to catch iframe load errors
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     registry.checkSourceUrlResponse(componentSourceUrl, componentName)
   }, [componentSourceUrl, componentName, registry])
 
