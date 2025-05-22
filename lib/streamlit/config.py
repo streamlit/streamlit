@@ -1126,7 +1126,7 @@ _create_theme_options(
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `font` value for a custom font table under [[theme.fontFaces]]
+        - the `family` value for a custom font table under [[theme.fontFaces]]
         - a comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1146,7 +1146,7 @@ _create_theme_options(
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `font` value for a custom font table under [[theme.fontFaces]]
+        - the `family` value for a custom font table under [[theme.fontFaces]]
         - a comma-separated list of these (as a single string) to specify
           fallbacks
     """,
@@ -1161,7 +1161,7 @@ _create_theme_options(
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `font` value for a custom font table under [[theme.fontFaces]]
+        - the `family` value for a custom font table under [[theme.fontFaces]]
         - a comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1176,7 +1176,7 @@ _create_theme_options(
         An array of fonts to use in your app.
 
         Each font in the array is a table (dictionary) with the following three
-        attributes: font, url, weight, and style.
+        attributes: family, url, weight, and style.
 
         To host a font with your app, enable static file serving with
         `server.enableStaticServing=true`.
@@ -1187,7 +1187,7 @@ _create_theme_options(
         follows:
 
             [[theme.fontFaces]]
-            font = "font_name"
+            family = "font_name"
             url = "app/static/font_file.woff"
             weight = 400
             style = "normal"
