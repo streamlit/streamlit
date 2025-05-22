@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from typing import NamedTuple
+from unittest.mock import MagicMock, patch
 
 import requests
 import tornado.testing
@@ -27,6 +28,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.web.server.server import UPLOAD_FILE_ENDPOINT
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
+from tests.testutil import patch_config_options
 
 LOGGER = get_logger(__name__)
 
@@ -59,7 +61,10 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ]
         )
 
-    def _upload_files(self, files_body, session_id, file_id):
+    def _upload_files(self, files_body, session_id, file_id, headers=None):
+        if headers is None:
+            headers = {}
+
         # We use requests.Request to construct our multipart/form-data request
         # here, because they are absurdly fiddly to compose, and Tornado
         # doesn't include a utility for building them. We then use self.fetch()
@@ -68,6 +73,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             method="PUT",
             url=self.get_url(f"{UPLOAD_FILE_ENDPOINT}/{session_id}/{file_id}"),
             files=files_body,
+            headers=headers,
         ).prepare()
 
         return self.fetch(
@@ -91,6 +97,56 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             (rec.file_id, rec.name, rec.data)
             for rec in self.file_mgr.get_files("test_session_id", [file.name])
         ]
+        assert (
+            response.headers["Access-Control-Allow-Origin"] == "http://localhost:3000"
+        )
+
+    @patch(
+        "streamlit.web.server.upload_file_request_handler.is_xsrf_enabled",
+        MagicMock(return_value=False),
+    )
+    def test_upload_one_file_xsrf_and_cors_protection_off(self):
+        """Uploading a file should populate our file_mgr with xsrf and cors protection
+        off."""
+        file = MockFile("filename", b"123")
+        params = {file.name: file.data}
+        response = self._upload_files(
+            params, session_id="test_session_id", file_id=file.name
+        )
+
+        assert response.code == 204, response.reason
+        assert [(file.name, file.name, file.data)] == [
+            (rec.file_id, rec.name, rec.data)
+            for rec in self.file_mgr.get_files("test_session_id", [file.name])
+        ]
+        assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+    @patch(
+        "streamlit.web.server.upload_file_request_handler.is_xsrf_enabled",
+        MagicMock(return_value=False),
+    )
+    @patch(
+        "streamlit.web.server.upload_file_request_handler.routes.allow_all_cross_origin_requests",
+        MagicMock(return_value=False),
+    )
+    @patch_config_options({"server.corsAllowedOrigins": ["http://example.com"]})
+    def test_upload_one_file_allowed_origins(self):
+        """Uploading a file should populate our file_mgr."""
+        file = MockFile("filename", b"123")
+        params = {file.name: file.data}
+        response = self._upload_files(
+            params,
+            session_id="test_session_id",
+            file_id=file.name,
+            headers={"Origin": "http://example.com"},
+        )
+
+        assert response.code == 204, response.reason
+        assert [(file.name, file.name, file.data)] == [
+            (rec.file_id, rec.name, rec.data)
+            for rec in self.file_mgr.get_files("test_session_id", [file.name])
+        ]
+        assert response.headers["Access-Control-Allow-Origin"] == "http://example.com"
 
     def test_upload_multiple_files_error(self):
         """Uploading multiple files will error"""

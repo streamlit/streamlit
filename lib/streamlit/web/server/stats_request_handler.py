@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import tornado.web
 
-from streamlit.web.server import allow_cross_origin_requests
+from streamlit.web.server import allow_all_cross_origin_requests, is_allowed_origin
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
 if TYPE_CHECKING:
@@ -31,8 +31,10 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         self._manager = stats_manager
 
     def set_default_headers(self) -> None:
-        if allow_cross_origin_requests():
+        if allow_all_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
+        elif is_allowed_origin(origin := self.request.headers.get("Origin")):
+            self.set_header("Access-Control-Allow-Origin", cast("str", origin))
 
     def options(self) -> None:
         """/OPTIONS handler for preflight CORS checks."""

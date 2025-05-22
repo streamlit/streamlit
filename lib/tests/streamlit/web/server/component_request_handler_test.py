@@ -28,7 +28,7 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.web.server import ComponentRequestHandler, Server
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 URL = "http://not.a.real.url:3001"
 PATH = "/not/a/real/path"
@@ -69,8 +69,10 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ]
         )
 
-    def _request_component(self, path):
-        return self.fetch("/component/%s" % path, method="GET")
+    def _request_component(self, path, headers=None):
+        if headers is None:
+            headers = {}
+        return self.fetch("/component/%s" % path, method="GET", headers=headers)
 
     def test_success_request(self):
         """Test request success when valid parameters are provided."""
@@ -89,6 +91,32 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         assert response.code == 200
         assert response.body == b"Test Content"
+        assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+    @mock.patch(
+        "streamlit.web.server.routes.allow_all_cross_origin_requests",
+        mock.MagicMock(return_value=False),
+    )
+    @patch_config_options({"server.corsAllowedOrigins": ["http://example.com"]})
+    def test_success_request_allowlisted_origin(self):
+        """Test request success when valid parameters are provided with an allowlisted origin."""
+
+        with mock.patch(MOCK_IS_DIR_PATH):
+            # We don't need the return value in this case.
+            declare_component("test", path=PATH)
+
+        with mock.patch(
+            "streamlit.web.server.component_request_handler.open",
+            mock.mock_open(read_data="Test Content"),
+        ):
+            response = self._request_component(
+                "tests.streamlit.web.server.component_request_handler_test.test",
+                headers={"Origin": "http://example.com"},
+            )
+
+        assert response.code == 200
+        assert response.body == b"Test Content"
+        assert response.headers["Access-Control-Allow-Origin"] == "http://example.com"
 
     def test_outside_component_root_request(self):
         """Tests to ensure a path based on the root directory (and therefore
@@ -139,6 +167,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Test request failure when invalid component name is provided."""
 
         response = self._request_component("invalid_component")
+
         assert response.code == 404
         assert response.body == b"not found"
 
@@ -189,7 +218,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             )
 
         assert response.code == 200
-        assert payload == response.body
+        assert response.body == payload
 
     def test_mimetype_is_overridden_by_server(self):
         """Test get_content_type function."""

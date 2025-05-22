@@ -31,6 +31,10 @@ DEVELOPMENT_PORT: Final = 3000
 AUTH_COOKIE_NAME: Final = "_streamlit_user"
 
 
+def allowlisted_origins() -> set[str]:
+    return {origin.strip() for origin in config.get_option("server.corsAllowedOrigins")}
+
+
 def is_url_from_allowed_origins(url: str) -> bool:
     """Return True if URL is from allowed origins (for CORS purpose).
 
@@ -47,7 +51,11 @@ def is_url_from_allowed_origins(url: str) -> bool:
 
     hostname = url_util.get_hostname(url)
 
-    allowed_domains: list[str | Callable[[], str | None]] = [
+    allowlisted_domains = [
+        url_util.get_hostname(origin) for origin in allowlisted_origins()
+    ]
+
+    allowed_domains: list[str | None | Callable[[], str | None]] = [
         # Check localhost first.
         "localhost",
         "0.0.0.0",  # noqa: S104
@@ -58,6 +66,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
         # Then try the options that depend on HTTP requests or opening sockets.
         net_util.get_internal_ip,
         net_util.get_external_ip,
+        *allowlisted_domains,
     ]
 
     for allowed_domain in allowed_domains:
