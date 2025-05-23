@@ -22,12 +22,16 @@ import type { ElementNode } from "~lib/AppNode"
 import { StyledElementContainer } from "./styled-components"
 
 export const StyledElementContainerLayoutWrapper: FC<
-  Omit<Parameters<typeof StyledElementContainer>[0], "width"> & {
+  Omit<
+    Parameters<typeof StyledElementContainer>[0],
+    "width" | "height" | "overflow"
+  > & {
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
   const styles = useLayoutStyles({
-    element:
+    element: node.element,
+    subElement:
       (node.element?.type && node.element[node.element.type]) || undefined,
   })
 

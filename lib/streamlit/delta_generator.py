@@ -106,6 +106,7 @@ if TYPE_CHECKING:
 
     from streamlit.cursor import Cursor
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
+    from streamlit.elements.lib.layout_utils import LayoutConfig
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
@@ -437,6 +438,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         add_rows_metadata: AddRowsMetadata | None = None,
+        layout_config: LayoutConfig | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -475,6 +477,25 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
+
+        if layout_config:
+            if layout_config.height:
+                if isinstance(layout_config.height, int):
+                    msg.delta.new_element.height_config.pixel_height = (
+                        layout_config.height
+                    )
+                elif layout_config.height == "content":
+                    msg.delta.new_element.height_config.use_content = True
+                else:
+                    msg.delta.new_element.height_config.use_stretch = True
+
+            if layout_config.width:
+                if isinstance(layout_config.width, int):
+                    msg.delta.new_element.width_config.pixel_width = layout_config.width
+                elif layout_config.width == "content":
+                    msg.delta.new_element.width_config.use_content = True
+                else:
+                    msg.delta.new_element.width_config.use_stretch = True
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False

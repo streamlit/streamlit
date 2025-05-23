@@ -255,7 +255,8 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { formsData } = useRequiredContext(FormsContext)
 
   const styles = useLayoutStyles({
-    element:
+    element: node.deltaBlock,
+    subElement:
       (node.deltaBlock.type && node.deltaBlock[node.deltaBlock.type]) ||
       undefined,
   })

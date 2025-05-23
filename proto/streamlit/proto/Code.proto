@@ -31,8 +31,6 @@ message Code {
   bool show_line_numbers = 3;
   bool wrap_lines = 4;
 
-  uint32 height = 5;
-
-  // Width configuration
-  streamlit.WidthConfig width_config = 6;
+  // deprecated use height on Element.proto
+  uint32 height = 5 [deprecated = true];
 }

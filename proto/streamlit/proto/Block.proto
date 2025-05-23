@@ -40,6 +40,8 @@ message Block {
 
   bool allow_empty = 8;
   optional string id = 12;
+  optional streamlit.HeightConfig height_config = 14;
+  optional streamlit.WidthConfig width_config = 15;
 
   message Vertical {
     bool border = 1;
@@ -53,8 +55,8 @@ message Block {
 
   message FlexContainer {
     bool border = 1;
+    // TODO (lwilby): move this to use block level field.
     streamlit.HeightConfig height_config = 2;
-    streamlit.WidthConfig width_config = 3;
 
     streamlit.GapConfig gap_config = 4;
     float scale = 5;
@@ -136,6 +138,7 @@ message Block {
     string name = 1;
     string avatar = 2;
     AvatarType avatar_type = 3;
+    // TODO (lwilby): move this to use block level field.
     optional streamlit.WidthConfig width_config = 4;
   }
 

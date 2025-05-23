@@ -99,7 +99,6 @@ st.code(code, height=200)
 # width tests
 long_code = """
 def process_data(data):
-    # This is a longer function to demonstrate width behavior
     result = []
     for item in data:
         if item % 2 == 0:

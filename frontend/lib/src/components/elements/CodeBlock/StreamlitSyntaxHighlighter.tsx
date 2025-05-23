@@ -40,7 +40,6 @@ function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
   wrapLines,
-  height,
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   const renderer = useCallback(
@@ -78,7 +77,7 @@ function StreamlitSyntaxHighlighter({
 
   return (
     <StyledCodeBlock className="stCode" data-testid="stCode">
-      <StyledPre height={height}>
+      <StyledPre>
         <SyntaxHighlighter
           language={language}
           PreTag="div"

@@ -16,72 +16,129 @@
 
 import { useMemo } from "react"
 
-import { streamlit } from "@streamlit/protobuf"
+import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
 
-type LayoutElement = {
-  width?: number
-  widthConfig?: streamlit.WidthConfig
+type SubElement = {
   useContainerWidth?: boolean | null
+  height?: number
+  width?: number
+  // We must include this for backwards compatiblity since
+  // Alert.proto has been released (1.45) with the field in this position.
+  widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
 export type UseLayoutStylesArgs<T> = {
-  element: (T & LayoutElement) | undefined
+  element: Element | BlockProto
+  // subElement supports older config where the width/height is set on the lower
+  // level element.
+  subElement?: T & SubElement
 }
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
   typeof value === "number" && value > 0 && !isNaN(value)
 
-enum WidthType {
+enum DimensionType {
   PIXEL = "pixel",
   STRETCH = "stretch",
   CONTENT = "content",
 }
 
-type LayoutWidthConfig = {
-  widthType: WidthType | undefined
+type LayoutDimensionConfig = {
+  type: DimensionType | undefined
   pixels?: number | undefined
 }
 
-const getWidth = (element: LayoutElement): LayoutWidthConfig => {
-  // This can be simplified once all elements have been updated to use the
-  // new width_config message and useContainerWidth is deprecated.
+const getWidth = (
+  element: Element | BlockProto,
+  // subElement supports older config where the width is set on the lower
+  // level element.
+  subElement?: SubElement
+): LayoutDimensionConfig => {
+  // We need to support old width configurations for backwards compatibility,
+  // since some integrations cache the messages and we want to ensure that the FE
+  // can still support old message formats.
   let pixels: number | undefined
-  let type: WidthType | undefined
+  let type: DimensionType | undefined
 
   const isStretch =
-    element.widthConfig && element.widthConfig.widthSpec === "useStretch"
+    element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
   const isContent =
-    element.widthConfig && element.widthConfig.widthSpec === "useContent"
+    element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
-    element.widthConfig && element.widthConfig.widthSpec === "pixelWidth"
+    element?.widthConfig?.pixelWidth || subElement?.widthConfig?.pixelWidth
 
   if (isStretch) {
-    type = WidthType.STRETCH
+    type = DimensionType.STRETCH
   } else if (isContent) {
-    type = WidthType.CONTENT
+    type = DimensionType.CONTENT
   } else if (
     isPixel &&
     isNonZeroPositiveNumber(element.widthConfig?.pixelWidth)
   ) {
-    type = WidthType.PIXEL
+    type = DimensionType.PIXEL
     pixels = element.widthConfig?.pixelWidth
   } else if (
-    isNonZeroPositiveNumber(element.width) &&
-    element.widthConfig === undefined
+    isPixel &&
+    isNonZeroPositiveNumber(subElement?.widthConfig?.pixelWidth)
   ) {
-    pixels = element.width
-    type = WidthType.PIXEL
+    type = DimensionType.PIXEL
+    pixels = subElement?.widthConfig?.pixelWidth
+  } else if (
+    isNonZeroPositiveNumber(subElement?.width) &&
+    !element.widthConfig
+  ) {
+    pixels = subElement?.width
+    type = DimensionType.PIXEL
   }
   // The current behaviour is for useContainerWidth to take precedence over
   // width, see arrow.py for reference.
-  if (element.useContainerWidth) {
-    type = WidthType.STRETCH
+  if (subElement?.useContainerWidth) {
+    type = DimensionType.STRETCH
   }
-  return { pixels, widthType: type }
+  return { pixels, type }
+}
+
+const getHeight = (
+  element: Element | BlockProto,
+  // subElement supports older config where the height is set on the lower
+  // level element.
+  subElement?: SubElement
+): LayoutDimensionConfig => {
+  // We need to support old height configurations for backwards compatibility,
+  // since some integrations cache the messages and we want to ensure that the FE
+  // can still support old message formats.
+  let pixels: number | undefined
+  let type: DimensionType | undefined
+
+  const isStretch = !!element.heightConfig?.useStretch
+  const isContent = !!element.heightConfig?.useContent
+  const isPixel = !!element.heightConfig?.pixelHeight
+
+  if (isStretch) {
+    type = DimensionType.STRETCH
+  } else if (isContent) {
+    type = DimensionType.CONTENT
+  } else if (
+    isPixel &&
+    isNonZeroPositiveNumber(element.heightConfig?.pixelHeight)
+  ) {
+    type = DimensionType.PIXEL
+    pixels = element.heightConfig?.pixelHeight
+  } else if (
+    isNonZeroPositiveNumber(subElement?.height) &&
+    !element.heightConfig
+  ) {
+    pixels = subElement?.height
+    type = DimensionType.PIXEL
+  }
+
+  return { pixels, type }
 }
 
 export type UseLayoutStylesShape = {
   width: React.CSSProperties["width"]
+  height: React.CSSProperties["height"]
+  overflow: React.CSSProperties["overflow"]
 }
 
 /**
@@ -89,6 +146,7 @@ export type UseLayoutStylesShape = {
  */
 export const useLayoutStyles = <T>({
   element,
+  subElement,
 }: UseLayoutStylesArgs<T>): UseLayoutStylesShape => {
   // Note: Consider rounding the width to the nearest pixel so we don't have
   // subpixel widths, which leads to blurriness on screen
@@ -96,32 +154,64 @@ export const useLayoutStyles = <T>({
     if (!element) {
       return {
         width: "auto",
+        height: "auto",
+        overflow: "visible",
       }
     }
 
-    const { pixels: commandWidth, widthType } = getWidth(element)
     // The st.image element is potentially a list of images, so we always want
     // the enclosing container to be full width. The size of individual
     // images is managed in the ImageList component.
-    const isImgList = element && "imgs" in element
+    const isImgList = element.type === "imgs"
 
-    if (widthType === WidthType.STRETCH || isImgList) {
-      return {
-        width: "100%",
-      }
-    } else if (widthType === WidthType.PIXEL) {
-      return {
-        width: commandWidth,
-      }
-    } else if (widthType === WidthType.CONTENT) {
-      return {
-        width: "fit-content",
-      }
+    const { pixels: commandWidth, type: widthType } = getWidth(
+      element,
+      subElement
+    )
+    let width: React.CSSProperties["width"] = "auto"
+
+    if (widthType === DimensionType.STRETCH || isImgList) {
+      width = "100%"
+    } else if (widthType === DimensionType.PIXEL) {
+      width = commandWidth
+    } else if (widthType === DimensionType.CONTENT) {
+      width = "fit-content"
     }
+
+    const { pixels: commandHeight, type: heightType } = getHeight(
+      element,
+      subElement
+    )
+    let height: React.CSSProperties["height"] = "auto"
+    let overflow: React.CSSProperties["overflow"] = "visible"
+
+    // The st.text_area element has a legacy implementation where the height
+    // is measuing only the input box so the pixel height must be set in the element
+    // and the container must be allowed to expand.
+    const isTextArea = element.type === "textArea"
+
+    // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
+    // if we can remove this custom handling in future layouts work.
+    const skipOverflow =
+      element.type === "iframe" ||
+      element.type === "deckGlJsonChart" ||
+      element.type === "arrowDataFrame"
+
+    if (heightType === DimensionType.STRETCH) {
+      height = "100%"
+    } else if (heightType === DimensionType.CONTENT || isTextArea) {
+      height = "auto"
+    } else if (heightType === DimensionType.PIXEL) {
+      height = commandHeight
+      overflow = skipOverflow ? "visible" : "auto"
+    }
+
     return {
-      width: "auto",
+      width,
+      height,
+      overflow,
     }
-  }, [element])
+  }, [element, subElement])
 
   return layoutStyles
 }
