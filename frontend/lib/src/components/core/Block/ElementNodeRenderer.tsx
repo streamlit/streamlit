@@ -112,8 +112,6 @@ const Toast = lazy(() => import("~lib/components/elements/Toast"))
 // when the sidebar is toggled, which significantly slows down the app.
 const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
 
-// RTL ESLint triggers a false positive on this render function
-// eslint-disable-next-line testing-library/render-result-naming-convention
 const DebouncedBokehChart = withCalculatedWidth(
   debounceRender(BokehChart, 100)
 )

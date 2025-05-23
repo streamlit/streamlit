@@ -43,8 +43,6 @@ module.exports = {
     // This will display prettier errors as ESLint errors.
     // Make sure this is always the last configuration in the extends array.
     "plugin:prettier/recommended",
-    // Uses the recommended rules from React Testing Library:
-    "plugin:testing-library/react",
     // Uses the recommended rules from lodash
     "plugin:lodash/recommended",
     // This uses the `-legacy` nomenclature since we're on an older version of
@@ -275,6 +273,7 @@ module.exports = {
     {
       // test-only rules
       files: ["**/*.test.ts", "**/*.test.tsx"],
+      // Uses the recommended rules from React Testing Library:
       extends: ["plugin:testing-library/react"],
       rules: {
         "testing-library/prefer-user-event": "error",
