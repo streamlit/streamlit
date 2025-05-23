@@ -58,7 +58,7 @@
     "@sindresorhus/slugify": "^2.2.1",
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
-    "apache-arrow": "^19.0.1",
+    "apache-arrow": "^20.0.0",
     "axios": "^1.9.0",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",
