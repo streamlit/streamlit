@@ -21,6 +21,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    Width,
     WidthWithoutContent,
     get_width_config,
     validate_width,
@@ -54,6 +55,7 @@ class LayoutsMixin:
         height: int | None = None,
         border: bool | None = None,
         key: Key | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -175,6 +177,9 @@ class LayoutsMixin:
                 # border as default setting for scrolling
                 # containers.
                 block_proto.flex_container.border = True
+
+        validate_width(width)
+        block_proto.width_config.CopyFrom(get_width_config(width))
 
         if key:
             # At the moment, the ID is only used for extracting the
