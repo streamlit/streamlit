@@ -97,10 +97,6 @@ from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.errors import StreamlitAPIException
-from streamlit.lib.streamlit.elements.lib.layout_utils import (
-    get_height_config,
-    get_width_config,
-)
 from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
