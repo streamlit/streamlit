@@ -908,6 +908,25 @@ def _arrow_add_rows(
         and dg._cursor.props["add_rows_metadata"].last_index is None
     ):
         st_method = getattr(dg, dg._cursor.props["add_rows_metadata"].chart_command)
+        metadata = dg._cursor.props["add_rows_metadata"]
+
+        # Pass the styling properties stored in add_rows_metadata
+        # to the new element call.
+        kwargs = {}
+        if metadata.color is not None:
+            kwargs["color"] = metadata.color
+        if metadata.width is not None:
+            kwargs["width"] = metadata.width
+        if metadata.height is not None:
+            kwargs["height"] = metadata.height
+        if metadata.stack is not None:
+            kwargs["stack"] = metadata.stack
+
+        if metadata.chart_command == "bar_chart":
+            kwargs["horizontal"] = metadata.horizontal
+
+        kwargs["use_container_width"] = metadata.use_container_width
+
         st_method(data, **kwargs)
         return None
 

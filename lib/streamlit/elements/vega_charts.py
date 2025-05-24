@@ -742,6 +742,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -983,6 +984,7 @@ class VegaChartsMixin:
             width=width,
             height=height,
             stack=stack,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -1248,7 +1250,9 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            use_container_width=use_container_width,
             stack=stack,
+            horizontal=horizontal,
         )
         return cast(
             "DeltaGenerator",
@@ -1459,6 +1463,7 @@ class VegaChartsMixin:
             size_from_user=size,
             width=width,
             height=height,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",

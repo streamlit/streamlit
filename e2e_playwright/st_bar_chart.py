@@ -80,3 +80,26 @@ st.bar_chart(source, x="variety", y="yield", color="site", stack=False)
 st.bar_chart(source, x="variety", y="yield", color="site", stack="normalize")
 st.bar_chart(source, x="variety", y="yield", color="site", stack="center")
 st.bar_chart(source, x="variety", y="yield", color="site", stack="layered")
+
+# Test that add_rows maintains original styling params:
+# color, width, height, use_container_width, horizontal, stack
+bar_data = pd.DataFrame({"Bar 1": [], "Bar 2": []})
+
+empty_bar = st.bar_chart(
+    bar_data,
+    y=["Bar 1", "Bar 2"],
+    color=["#800080", "#0000FF"],  # Purple and Blue
+    width=600,
+    height=300,
+    stack=False,
+    horizontal=True,
+    use_container_width=False,
+)
+
+if st.button("Add data to Bar Chart"):
+    new_data = pd.DataFrame(
+        {"Bar 1": np.random.rand(5) * 100, "Bar 2": np.random.rand(5) * 100},
+        index=["A", "B", "C", "D", "E"],
+    )
+
+    empty_bar.add_rows(new_data)

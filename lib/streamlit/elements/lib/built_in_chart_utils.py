@@ -71,6 +71,15 @@ class AddRowsMetadata:
     chart_command: str
     last_index: Hashable | None
     columns: PrepDataColumns
+    # Chart styling properties
+    color: str | Color | list[Color] | None = None
+    width: int | None = None
+    height: int | None = None
+    use_container_width: bool = True
+    # Only applicable for bar & area charts
+    stack: bool | ChartStackType | None = None
+    # Only applicable for bar charts
+    horizontal: bool = False
 
 
 class ChartType(Enum):
@@ -147,8 +156,11 @@ def generate_chart(
     size_from_user: str | float | None = None,
     width: int | None = None,
     height: int | None = None,
+    use_container_width: bool = True,
     # Bar & Area charts only:
     stack: bool | ChartStackType | None = None,
+    # Bar charts only:
+    horizontal: bool = False,
 ) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
@@ -186,6 +198,13 @@ def generate_chart(
             "color_column": color_column,
             "size_column": size_column,
         },
+        # Chart styling properties
+        color=color_from_user,
+        width=width,
+        height=height,
+        use_container_width=use_container_width,
+        stack=stack,
+        horizontal=horizontal,
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
