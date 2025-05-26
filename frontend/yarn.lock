@@ -3382,7 +3382,7 @@ __metadata:
     mdast-util-find-and-replace: "npm:^3.0.2"
     moment: "npm:^2.30.1"
     moment-duration-format: "npm:^2.3.2"
-    moment-timezone: "npm:^0.5.48"
+    moment-timezone: "npm:^0.6.0"
     native-file-system-adapter: "npm:^3.0.1"
     node-emoji: "npm:^2.2.0"
     node-fetch: "npm:3.3.2"
@@ -14747,12 +14747,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"moment-timezone@npm:^0.5.48":
-  version: 0.5.48
-  resolution: "moment-timezone@npm:0.5.48"
+"moment-timezone@npm:^0.6.0":
+  version: 0.6.0
+  resolution: "moment-timezone@npm:0.6.0"
   dependencies:
     moment: "npm:^2.29.4"
-  checksum: 10c0/ab14ec9d94bc33f29ac18e5417b7f8aca0b17130b952c5cc9697b8fea839e5ece9313af5fd3c9703a05db472b1560ddbfc7ad2aa24aac9afd047d6da6c3c6033
+  checksum: 10c0/16164cf321d8be0bf7d43855286b426c94c8200e0634f2e42cf469f591c6a230ac43f37d3826d76b05ac221f69a571400323fb8625e3d4e8669f4d9ab00fe779
   languageName: node
   linkType: hard
 
