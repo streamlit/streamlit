@@ -210,7 +210,7 @@ def _print_url(is_running_hello: bool) -> None:
                 named_urls.append(("External URL", server_util.get_url(external_ip)))
 
     cli_util.print_to_cli("")
-    cli_util.print_to_cli("  %s" % title_message, fg="blue", bold=True)
+    cli_util.print_to_cli(f"  {title_message}", fg="blue", bold=True)
     cli_util.print_to_cli("")
 
     for url_name, url in named_urls:

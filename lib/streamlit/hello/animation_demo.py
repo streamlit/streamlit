@@ -42,7 +42,7 @@ def animation_demo() -> None:
     for frame_num, a in enumerate(np.linspace(0.0, 4 * np.pi, 100)):
         # Here were setting value for these two elements.
         progress_bar.progress(frame_num)
-        frame_text.text("Frame %i/100" % (frame_num + 1))
+        frame_text.text(f"Frame {frame_num + 1}/100")
 
         # Performing some fractal wizardry.
         c = separation * np.exp(1j * a)

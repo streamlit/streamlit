@@ -159,7 +159,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         st.number_input("the label", value=10.5)
 
         c = self.get_delta_from_queue().new_element.number_input
-        assert "%0.2f" % c.step == "0.01"
+        assert f"{c.step:0.2f}" == "0.01"
 
     def test_default_format_int(self):
         st.number_input("the label", value=10)
@@ -185,7 +185,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         assert c.format == "%f"
-        assert "%0.2f" % c.step == "0.01"
+        assert f"{c.step:0.2f}" == "0.01"
 
     def test_accept_valid_formats(self):
         # note: We decided to accept %u even though it is slightly problematic.
@@ -238,29 +238,25 @@ class NumberInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             int_value = JSNumber.MAX_SAFE_INTEGER + 1
             st.number_input("Label", value=int_value)
-        assert "`value` (%s) must be <= (1 << 53) - 1" % str(int_value) == str(
-            exc.value
-        )
+        assert f"`value` ({int_value}) must be <= (1 << 53) - 1" == str(exc.value)
 
         # Min int
         with pytest.raises(StreamlitAPIException) as exc:
             int_value = JSNumber.MIN_SAFE_INTEGER - 1
             st.number_input("Label", value=int_value)
-        assert "`value` (%s) must be >= -((1 << 53) - 1)" % str(int_value) == str(
-            exc.value
-        )
+        assert f"`value` ({int_value}) must be >= -((1 << 53) - 1)" == str(exc.value)
 
         # Max float
         with pytest.raises(StreamlitAPIException) as exc:
             float_val = 2e308
             st.number_input("Label", value=float_val)
-        assert "`value` (%s) must be <= 1.797e+308" % str(float_val) == str(exc.value)
+        assert f"`value` ({float_val}) must be <= 1.797e+308" == str(exc.value)
 
         # Min float
         with pytest.raises(StreamlitAPIException) as exc:
             float_val = -2e308
             st.number_input("Label", value=float_val)
-        assert "`value` (%s) must be >= -1.797e+308" % str(float_val) == str(exc.value)
+        assert f"`value` ({float_val}) must be >= -1.797e+308" == str(exc.value)
 
     def test_min_and_max_setting_for_integer_inputs(self):
         """Test min & max set by user respected, otherwise use defaults."""

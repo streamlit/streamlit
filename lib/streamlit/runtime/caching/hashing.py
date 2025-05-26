@@ -92,26 +92,25 @@ class UserHashError(StreamlitAPIException):
         args = self._get_error_message_args(orig_exc, cached_func)
 
         return (
-            """
-%(orig_exception_desc)s
+            f"""
+{args["orig_exception_desc"]}
 
-This error is likely due to a bug in %(hash_func_name)s, which is a
-user-defined hash function that was passed into the `%(cache_primitive)s` decorator of
-%(object_desc)s.
+This error is likely due to a bug in {args["hash_func_name"]}, which is a
+user-defined hash function that was passed into the `{args["cache_primitive"]}` decorator of
+{args["object_desc"]}.
 
-%(hash_func_name)s failed when hashing an object of type
-`%(failed_obj_type_str)s`.  If you don't know where that object is coming from,
+{args["hash_func_name"]} failed when hashing an object of type
+`{args["failed_obj_type_str"]}`.  If you don't know where that object is coming from,
 try looking at the hash chain below for an object that you do recognize, then
 pass that to `hash_funcs` instead:
 
 ```
-%(hash_stack)s
+{args["hash_stack"]}
 ```
 
 If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose).
 """
-            % args
         ).strip("\n")
 
     def _get_error_message_args(

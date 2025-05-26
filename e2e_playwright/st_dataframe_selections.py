@@ -26,7 +26,7 @@ random.seed(0)
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=("col_%d" % i for i in range(5)),
+    columns=(f"col_{i}" for i in range(5)),
 )
 
 # set fixed column with so our pixel-clicks in the test are stable

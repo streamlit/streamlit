@@ -320,13 +320,10 @@ class ConfigTest(unittest.TestCase):
         )
 
         # Override it with some TOML
-        NEW_TOML = (
-            """
+        NEW_TOML = f"""
             [_test]
-            tomlTest="%s"
+            tomlTest="{DUMMY_VAL_2}"
         """
-            % DUMMY_VAL_2
-        )
         config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
         assert config.get_option("_test.tomlTest") == DUMMY_VAL_2
         assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION

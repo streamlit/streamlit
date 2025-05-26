@@ -72,7 +72,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def _request_component(self, path, headers=None):
         if headers is None:
             headers = {}
-        return self.fetch("/component/%s" % path, method="GET", headers=headers)
+        return self.fetch(f"/component/{path}", method="GET", headers=headers)
 
     def test_success_request(self):
         """Test request success when valid parameters are provided."""

@@ -101,7 +101,7 @@ def echo(
         show_code(code_string, "python")
 
     except FileNotFoundError as err:
-        show_warning("Unable to display code. %s" % err)
+        show_warning(f"Unable to display code. {err}")
 
 
 def _get_initial_indent(lines: Iterable[str]) -> int:

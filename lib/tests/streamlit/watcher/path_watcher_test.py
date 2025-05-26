@@ -45,15 +45,14 @@ class FileWatcherTest(unittest.TestCase):
         msg = "\n  $ xcode-select --install"
         calls = [
             call(
-                "  %s" % "For better performance, install the Watchdog module:",
+                "  For better performance, install the Watchdog module:",
                 fg="blue",
                 bold=True,
             ),
             call(
-                """%s
+                f"""{msg}
   $ pip install watchdog
             """
-                % msg
             ),
         ]
         mock_echo.assert_has_calls(calls)
@@ -98,15 +97,14 @@ class FileWatcherTest(unittest.TestCase):
         msg = ""
         calls = [
             call(
-                "  %s" % "For better performance, install the Watchdog module:",
+                "  For better performance, install the Watchdog module:",
                 fg="blue",
                 bold=True,
             ),
             call(
-                """%s
+                f"""{msg}
   $ pip install watchdog
             """
-                % msg
             ),
         ]
         mock_echo.assert_has_calls(calls)

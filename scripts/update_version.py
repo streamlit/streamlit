@@ -106,12 +106,11 @@ def update_files(data: dict[str, str], version: str) -> None:
         for line in fileinput.input(file_path, inplace=True):
             if pattern.match(line.rstrip()):
                 matched = True
-            updated_line = re.sub(regex, r"\g<pre>%s\g<post>" % version, line.rstrip())
+            updated_line = re.sub(regex, rf"\g<pre>{version}\g<post>", line.rstrip())
             print(updated_line)
         if not matched:
-            raise Exception(
-                'In file "%s", did not find regex "%s"' % (file_path, regex)
-            )
+            msg = f'In file "{file_path}", did not find regex "{regex}"'
+            raise Exception(msg)
 
 
 def main() -> None:
@@ -119,7 +118,7 @@ def main() -> None:
 
     if len(sys.argv) != 2:
         e = Exception(
-            'Specify semvver version as an argument, e.g.: "%s 1.2.3"' % sys.argv[0]
+            f'Specify semvver version as an argument, e.g.: "{sys.argv[0]} 1.2.3"'
         )
         raise (e)
 

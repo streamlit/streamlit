@@ -286,14 +286,13 @@ class HeadingMixin:
                 proto.anchor = anchor
             elif anchor is True:  # type: ignore
                 raise StreamlitAPIException(
-                    "Anchor parameter has invalid value: %s. "
-                    "Supported values: None, any string or False" % anchor
+                    f"Anchor parameter has invalid value: {anchor}. "
+                    "Supported values: None, any string or False"
                 )
             else:
                 raise StreamlitAPIException(
-                    "Anchor parameter has invalid type: %s. "
+                    f"Anchor parameter has invalid type: {type(anchor).__name__}. "
                     "Supported values: None, any string or False"
-                    % type(anchor).__name__
                 )
 
         if help:

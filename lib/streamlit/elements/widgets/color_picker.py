@@ -206,25 +206,19 @@ class ColorPickerMixin:
 
         # make sure the value is a string
         if not isinstance(value, str):
-            raise StreamlitAPIException(
-                """
-                Color Picker Value has invalid type: %s. Expects a hex string
-                like '#00FFAA' or '#000'.
-                """
-                % type(value).__name__
-            )
+            raise StreamlitAPIException(f"""
+Color Picker Value has invalid type: {type(value).__name__}. Expects a hex string
+like '#00FFAA' or '#000'.
+""")
 
         # validate the value and expects a hex string
         match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", value)
 
         if not match:
-            raise StreamlitAPIException(
-                """
-                '%s' is not a valid hex code for colors. Valid ones are like
-                '#00FFAA' or '#000'.
-                """
-                % value
-            )
+            raise StreamlitAPIException(f"""
+'{value}' is not a valid hex code for colors. Valid ones are like
+'#00FFAA' or '#000'.
+""")
 
         color_picker_proto = ColorPickerProto()
         color_picker_proto.id = element_id

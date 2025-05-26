@@ -478,7 +478,7 @@ def _marshall_av_media(
     elif type_util.is_type(data, "numpy.ndarray"):
         data_or_filename = cast("npt.NDArray[Any]", data).tobytes()
     else:
-        raise RuntimeError("Invalid binary data format: %s" % type(data))
+        raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(

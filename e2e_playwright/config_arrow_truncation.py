@@ -19,6 +19,6 @@ import streamlit as st
 
 np.random.seed(0)
 
-df = pd.DataFrame(np.random.randn(50000, 20), columns=("col %d" % i for i in range(20)))
+df = pd.DataFrame(np.random.randn(50000, 20), columns=(f"col_{i}" for i in range(20)))
 
 st.dataframe(df)

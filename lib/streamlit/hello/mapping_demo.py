@@ -26,7 +26,7 @@ def mapping_demo() -> None:
     def from_data_file(filename: str) -> pd.DataFrame:
         url = (
             "https://raw.githubusercontent.com/streamlit/"
-            "example-data/master/hello/v1/%s" % filename
+            f"example-data/master/hello/v1/{filename}"
         )
         return pd.read_json(url)
 
@@ -95,11 +95,10 @@ def mapping_demo() -> None:
             st.error("Please choose at least one layer above.")
     except URLError as e:
         st.error(
-            """
+            f"""
             **This demo requires internet access.**
-            Connection error: %s
+            Connection error: {e.reason}
         """
-            % e.reason
         )
 
 

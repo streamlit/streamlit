@@ -42,7 +42,6 @@ ignore = [
   "EM102",  # Checks for the use of f-strings in exception constructors.
   "TRY003", # Checks for exception messages that are not defined in the exception class itself.
   "N806",   # Checks for non-lowercased variable names in functions.
-  "UP031",  # Checks for printf-style string formatting, and offers to replace it with str.format calls.
   "G004",   # Checks for usage of f-strings in logging messages.
   # Ignored rule sets:
   "DTZ", # Checks for usage of unsafe naive datetime class.

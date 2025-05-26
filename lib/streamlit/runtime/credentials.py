@@ -263,41 +263,28 @@ class Credentials:
                 if self.activation.is_valid:
                     self.save()
                     # IMPORTANT: Break the text below at 80 chars.
-                    TELEMETRY_TEXT = """
-  You can find our privacy policy at %(link)s
+                    TELEMETRY_TEXT = f"""
+  You can find our privacy policy at {cli_util.style_for_cli("https://streamlit.io/privacy-policy", underline=True)}
 
   Summary:
   - This open source library collects usage statistics.
   - We cannot see and do not store information contained inside Streamlit apps,
     such as text, charts, images, etc.
   - Telemetry data is stored in servers in the United States.
-  - If you'd like to opt out, add the following to %(config)s,
+  - If you'd like to opt out, add the following to {cli_util.style_for_cli(_CONFIG_FILE_PATH)},
     creating that file if necessary:
 
     [browser]
     gatherUsageStats = false
-""" % {
-                        "link": cli_util.style_for_cli(
-                            "https://streamlit.io/privacy-policy", underline=True
-                        ),
-                        "config": cli_util.style_for_cli(_CONFIG_FILE_PATH),
-                    }
+"""
 
                     cli_util.print_to_cli(TELEMETRY_TEXT)
                     if show_instructions:
                         # IMPORTANT: Break the text below at 80 chars.
-                        INSTRUCTIONS_TEXT = """
-  %(start)s
-  %(prompt)s %(hello)s
-""" % {
-                            "start": cli_util.style_for_cli(
-                                "Get started by typing:", fg="blue", bold=True
-                            ),
-                            "prompt": cli_util.style_for_cli("$", fg="blue"),
-                            "hello": cli_util.style_for_cli(
-                                "streamlit hello", bold=True
-                            ),
-                        }
+                        INSTRUCTIONS_TEXT = f"""
+  {cli_util.style_for_cli("Get started by typing:", fg="blue", bold=True)}
+  {cli_util.style_for_cli("$", fg="blue")} {cli_util.style_for_cli("streamlit hello", bold=True)}
+"""
 
                         cli_util.print_to_cli(INSTRUCTIONS_TEXT)
                     activated = True

@@ -219,15 +219,13 @@ class SliderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             max_value = JSNumber.MAX_SAFE_INTEGER + 1
             st.slider("Label", max_value=max_value)
-        assert "`max_value` (%s) must be <= (1 << 53) - 1" % str(max_value) == str(
-            exc.value
-        )
+        assert f"`max_value` ({max_value}) must be <= (1 << 53) - 1" == str(exc.value)
 
         # Min int
         with pytest.raises(StreamlitAPIException) as exc:
             min_value = JSNumber.MIN_SAFE_INTEGER - 1
             st.slider("Label", min_value=min_value)
-        assert "`min_value` (%s) must be >= -((1 << 53) - 1)" % str(min_value) == str(
+        assert f"`min_value` ({min_value}) must be >= -((1 << 53) - 1)" == str(
             exc.value
         )
 
@@ -235,17 +233,13 @@ class SliderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             max_value = 2e308
             st.slider("Label", value=0.5, max_value=max_value)
-        assert "`max_value` (%s) must be <= 1.797e+308" % str(max_value) == str(
-            exc.value
-        )
+        assert f"`max_value` ({max_value}) must be <= 1.797e+308" == str(exc.value)
 
         # Min float
         with pytest.raises(StreamlitAPIException) as exc:
             min_value = -2e308
             st.slider("Label", value=0.5, min_value=min_value)
-        assert "`min_value` (%s) must be >= -1.797e+308" % str(min_value) == str(
-            exc.value
-        )
+        assert f"`min_value` ({min_value}) must be >= -1.797e+308" == str(exc.value)
 
     def test_step_zero(self):
         with pytest.raises(StreamlitAPIException) as exc:

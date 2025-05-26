@@ -22,16 +22,16 @@ import streamlit as st
 # 1-delta loop. If you change this, please change that file too.
 
 checkbox = st.checkbox("checkbox", False)
-st.text("%s" % checkbox)
+st.text(checkbox)
 
 text_area = st.text_area("text_area", "ahoy!")
-st.text("%s" % text_area)
+st.text(text_area)
 
 radio = st.radio("radio", ("0", "1", "2"), 0)
-st.text("%s" % radio)
+st.text(radio)
 
 button = st.button("button")
-st.text("%s" % button)
+st.text(button)
 
 # Loop forever so that our test can check widget states
 # without the scriptrunner shutting down.
