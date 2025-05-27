@@ -59,9 +59,9 @@ class PyDeckTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.plotly_chart(fig, theme="bad_theme")
 
-        assert (
-            str(exc.value)
-            == 'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+        assert str(exc.value) == (
+            'You set theme="bad_theme" while Streamlit charts only support '
+            "theme=”streamlit” or theme=None to fallback to the default library theme."
         )
 
     def test_st_plotly_chart_simple(self):

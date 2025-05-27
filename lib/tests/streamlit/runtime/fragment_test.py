@@ -577,7 +577,8 @@ def get_test_tuples(
     app_functions : list[APP_FUNCTION]
         Functions that run Streamlit elements like they are an app.
     elements : list[tuple[str, Callable[[], DeltaGenerator]]]
-        Tuples of (name, element-producer) where name describes the produced element and element_producer is a function that executes a Streamlit element.
+        Tuples of (name, element-producer) where name describes the produced element and element_producer
+        is a function that executes a Streamlit element.
     """
     return [
         (_element_producer[0], _app, _element_producer[1])

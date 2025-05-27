@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: E501
+
 """Unit tests for st.image and other image.py utility code."""
 
 from __future__ import annotations

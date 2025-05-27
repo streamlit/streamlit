@@ -187,9 +187,9 @@ class MetricTest(DeltaGeneratorTestCase):
         with pytest.raises(TypeError) as exc:
             st.metric(123, "-321")
 
-        assert (
-            str(exc.value)
-            == "'123' is of type <class 'int'>, which is not an accepted type. label only accepts: str. Please convert the label to an accepted type."
+        assert str(exc.value) == (
+            "'123' is of type <class 'int'>, which is not an accepted type. "
+            "label only accepts: str. Please convert the label to an accepted type."
         )
 
     def test_invalid_label_visibility(self):
@@ -217,18 +217,20 @@ class MetricTest(DeltaGeneratorTestCase):
         with pytest.raises(TypeError) as exc:
             st.metric("Testing", [1, 2, 3])
 
-        assert (
-            str(exc.value)
-            == "'[1, 2, 3]' is of type <class 'list'>, which is not an accepted type. value only accepts: int, float, str, or None. Please convert the value to an accepted type."
+        assert str(exc.value) == (
+            "'[1, 2, 3]' is of type <class 'list'>, which is not an accepted type. "
+            "value only accepts: int, float, str, or None. "
+            "Please convert the value to an accepted type."
         )
 
     def test_invalid_delta(self):
         with pytest.raises(TypeError) as exc:
             st.metric("Testing", "123", [123])
 
-        assert (
-            str(exc.value)
-            == "'[123]' is of type <class 'list'>, which is not an accepted type. delta only accepts: int, float, str, or None. Please convert the value to an accepted type."
+        assert str(exc.value) == (
+            "'[123]' is of type <class 'list'>, which is not an accepted type. "
+            "delta only accepts: int, float, str, or None. "
+            "Please convert the value to an accepted type."
         )
 
     def test_invalid_delta_color(self):

@@ -79,9 +79,9 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         assert ds.name == "my_func"
-        assert (
-            ds.value
-            == "tests.streamlit.elements.help_test.StHelpTest.test_basic_func_with_doc.<locals>.my_func(some_param, another_param=123)"
+        assert ds.value == (
+            "tests.streamlit.elements.help_test.StHelpTest.test_basic_func_with_doc.<locals>.my_func(some_param, "
+            "another_param=123)"
         )
         assert ds.type == "function"
         assert ds.doc_string == "This is the doc"
@@ -97,9 +97,9 @@ class StHelpTest(DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         assert ds.name == "my_func"
-        assert (
-            ds.value
-            == "tests.streamlit.elements.help_test.StHelpTest.test_basic_func_without_doc.<locals>.my_func(some_param, another_param=123)"
+        assert ds.value == (
+            "tests.streamlit.elements.help_test.StHelpTest.test_basic_func_without_doc.<locals>.my_func(some_param, "
+            "another_param=123)"
         )
         assert ds.type == "function"
         assert ds.doc_string == ""
@@ -114,7 +114,11 @@ class StHelpTest(DeltaGeneratorTestCase):
         assert ds.name == "st.audio"
         assert ds.type == "method"
 
-        signature = "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'MediaTime' = 0, *, sample_rate: 'int | None' = None, end_time: 'MediaTime | None' = None, loop: 'bool' = False, autoplay: 'bool' = False, width: 'WidthWithoutContent' = 'stretch') -> 'DeltaGenerator'"
+        signature = (
+            "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'MediaTime' = 0, *, "
+            "sample_rate: 'int | None' = None, end_time: 'MediaTime | None' = None, loop: 'bool' = False, "
+            "autoplay: 'bool' = False, width: 'WidthWithoutContent' = 'stretch') -> 'DeltaGenerator'"
+        )
 
         assert f"streamlit.delta_generator.MediaMixin.audio{signature}" == ds.value
         assert ds.doc_string.startswith("Display an audio player")

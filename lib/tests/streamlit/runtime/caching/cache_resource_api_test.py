@@ -104,7 +104,9 @@ class CacheResourceTest(unittest.TestCase):
         class TestClass:
             @st.cache_resource(
                 hash_funcs={
-                    "tests.streamlit.runtime.caching.cache_resource_api_test.CacheResourceTest.test_cached_member_function_with_hash_func.<locals>.TestClass": id
+                    "tests.streamlit.runtime.caching.cache_resource_api_test."
+                    "CacheResourceTest.test_cached_member_function_with_hash_func."
+                    "<locals>.TestClass": id
                 }
             )
             def member_func(self):
@@ -177,7 +179,7 @@ Object of type tests.streamlit.runtime.caching.cache_resource_api_test.CacheReso
 ```
 
 If you think this is actually a Streamlit bug, please
-[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""  # noqa: E501
         assert str(ctx.value) == expected_message
 
     def test_cached_st_function_clear_args(self):

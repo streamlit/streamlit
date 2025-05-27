@@ -62,7 +62,9 @@ class TestSecretErrorMessages(unittest.TestCase):
         messages = SecretErrorMessages()
         assert (
             messages.get_missing_attr_message("attr")
-            == 'st.secrets has no attribute "attr". Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings on Streamlit Cloud? More info: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management'
+            == 'st.secrets has no attribute "attr". Did you forget to add it to secrets.toml, '
+            "mount it to secret directory, or the app settings on Streamlit Cloud? More info: "
+            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
         )
 
         messages.set_missing_attr_message(

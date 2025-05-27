@@ -520,8 +520,9 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
         st.markdown("Object 1b") |
                                  | st.markdown("Object 2")
 
-        In this scenario, Task 2 should inherit the container1 context from Task 1 when it is created, so Objects 1a and 1b
-        will both go in container 1, and object 2 will go in container 2.
+        In this scenario, Task 2 should inherit the container1 context from Task 1
+        when it is created, so Objects 1a and 1b will both go in container 1,
+        and object 2 will go in container 2.
         """
         container1 = st.container()
         container2 = st.container()

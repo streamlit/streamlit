@@ -613,7 +613,8 @@ class ConfigTest(unittest.TestCase):
             config._set_option("not.defined", "no.value", "test")
         # cm.output is a list of messages and there shouldn't be any other messages besides one created by this test
         assert (
-            '"not.defined" is not a valid config option. If you previously had this config option set, it may have been removed.'
+            '"not.defined" is not a valid config option. '
+            "If you previously had this config option set, it may have been removed."
             in cm.output[0]
         )
 
@@ -771,7 +772,8 @@ class ConfigTest(unittest.TestCase):
                 config._set_option(f"theme.sidebar.{option}", True, "test")
             # cm.output is a list of messages and there shouldn't be any other messages besides one created by this test
             assert (
-                f'"theme.sidebar.{option}" is not a valid config option. If you previously had this config option set, it may have been removed.'
+                f'"theme.sidebar.{option}" is not a valid config option. '
+                "If you previously had this config option set, it may have been removed."
                 in cm.output[0]
             )
 

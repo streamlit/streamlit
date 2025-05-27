@@ -114,8 +114,8 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
 
             output = "".join(logs.output)
             assert (
-                "The cached function 'func-display-name' has a TTL that will be ignored. Persistent cached functions currently don't support TTL."
-                in output
+                "The cached function 'func-display-name' has a TTL that will be ignored. "
+                "Persistent cached functions currently don't support TTL." in output
             )
 
     def test_check_context_without_persist(self):
@@ -145,8 +145,8 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
 
             output = "".join(logs.output)
             assert (
-                "The cached function 'func-display-name' has a TTL that will be ignored. Persistent cached functions currently don't support TTL."
-                not in output
+                "The cached function 'func-display-name' has a TTL that will be ignored. "
+                "Persistent cached functions currently don't support TTL." not in output
             )
 
     @patch("shutil.rmtree", wraps=shutil.rmtree)

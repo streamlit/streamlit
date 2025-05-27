@@ -147,9 +147,9 @@ class PageConfigTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as e:
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
-        assert (
-            str(e.value)
-            == 'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` (`"invalid"` is not a valid key.)'
+        assert str(e.value) == (
+            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` '
+            '(`"invalid"` is not a valid key.)'
         )
 
     def test_set_page_config_menu_items_empty_dict(self):
