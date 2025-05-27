@@ -41,7 +41,6 @@ ignore = [
   "EM101",  # Checks for the use of string literals in exception constructors.
   "EM102",  # Checks for the use of f-strings in exception constructors.
   "TRY003", # Checks for exception messages that are not defined in the exception class itself.
-  "N806",   # Checks for non-lowercased variable names in functions.
   # Ignored rule sets:
   "DTZ", # Checks for usage of unsafe naive datetime class.
   "PTH", # Enforces usage of pathlib.

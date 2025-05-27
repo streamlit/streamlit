@@ -81,25 +81,25 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     # justified, and expected.
 
     # BackMsg's
-    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_MB: Final = 0.1
+    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_MB: Final = 0.1  # noqa: N806
     # Number of websocket messages sent
-    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 34
+    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 34  # noqa: N806
 
     # ForwardMsg's
-    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_MB: Final = 55
+    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_MB: Final = 55  # noqa: N806
     # Max number of websocket messages received.
-    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 2540
+    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 2540  # noqa: N806
     # There can be a bit of fluctuation because of optimization logic:
     # See the composable messages logic in
     # lib/streamlit/runtime/forward_msg_queue.py (-> `_maybe_compose_delta_msgs`)
     # the queues can be flushed to the browser before
     # the optimization is able to be applied.
-    ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE: Final = 25
+    ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE: Final = 25  # noqa: N806
 
-    total_websocket_sent_size_bytes = 0
-    total_websocket_received_size_bytes = 0
-    total_websocket_messages_sent = 0
-    total_websocket_messages_received = 0
+    total_websocket_sent_size_bytes: int = 0
+    total_websocket_received_size_bytes: int = 0
+    total_websocket_messages_sent: int = 0
+    total_websocket_messages_received: int = 0
 
     def on_web_socket(ws: WebSocket) -> None:
         print(f"WebSocket opened: {ws.url}")

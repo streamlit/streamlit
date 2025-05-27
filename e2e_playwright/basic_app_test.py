@@ -42,7 +42,7 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     # frontend (in MB) for a basic app run. While its important to keep the total
     # size of web assets low, you can modify this threshold if it's really needed
     # to add some new features. But make sure that its justified and intended.
-    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 7.5
+    TOTAL_ASSET_SIZE_THRESHOLD_MB: Final = 7.5  # noqa: N806
 
     total_size_bytes = 0
 
@@ -93,14 +93,14 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     # and expected
 
     # BackMsg's; currently: ~70 bytes
-    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_BYTES: Final = 150
+    TOTAL_WEBSOCKET_SENT_SIZE_THRESHOLD_BYTES: Final = 150  # noqa: N806
     # Number of websocket messages sent
-    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 1
+    EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 1  # noqa: N806
 
     # ForwardMsg's; currently: ~1200 bytes
-    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_BYTES: Final = 2000
+    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_BYTES: Final = 2000  # noqa: N806
     # Number of websocket messages received
-    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 8
+    EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 8  # noqa: N806
 
     total_websocket_sent_size_bytes = 0
     total_websocket_received_size_bytes = 0

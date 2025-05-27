@@ -1381,9 +1381,9 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         # Import logger locally to prevent circular references
         from streamlit.logger import get_logger
 
-        LOGGER = get_logger(__name__)
+        logger: Final = get_logger(__name__)
 
-        LOGGER.warning(
+        logger.warning(
             '"%s" is not a valid config option. If you previously had this config '
             "option set, it may have been removed.",
             key,
@@ -1507,9 +1507,9 @@ def _maybe_read_env_variable(value: Any) -> Any:
             # Import logger locally to prevent circular references
             from streamlit.logger import get_logger
 
-            LOGGER = get_logger(__name__)
+            logger: Final = get_logger(__name__)
 
-            LOGGER.error("No environment variable called %s", var_name)
+            logger.error("No environment variable called %s", var_name)
         else:
             return _maybe_convert_to_number(env_var)
 
@@ -1609,8 +1609,8 @@ def get_config_options(
             # Import logger locally to prevent circular references.
             from streamlit.logger import get_logger
 
-            LOGGER = get_logger(__name__)
-            LOGGER.warning(
+            logger: Final = get_logger(__name__)
+            logger.warning(
                 "An update to the [server] config option section was detected."
                 " To have these changes be reflected, please restart streamlit."
             )
@@ -1630,7 +1630,7 @@ def _check_conflicts() -> None:
     # Import logger locally to prevent circular references
     from streamlit.logger import get_logger
 
-    LOGGER = get_logger(__name__)
+    logger: Final = get_logger(__name__)
 
     if get_option("global.developmentMode"):
         if not _is_unset("server.port"):
@@ -1647,7 +1647,7 @@ def _check_conflicts() -> None:
     if get_option("server.enableXsrfProtection") and (
         not get_option("server.enableCORS") or get_option("global.developmentMode")
     ):
-        LOGGER.warning(
+        logger.warning(
             """
 Warning: the config option 'server.enableCORS=false' is not compatible with
 'server.enableXsrfProtection=true'.

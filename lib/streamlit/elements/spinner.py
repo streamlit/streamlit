@@ -16,13 +16,17 @@ from __future__ import annotations
 
 import contextlib
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import streamlit as st
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+# Set the message 0.5 seconds in the future to avoid annoying
+# flickering if this spinner runs too quickly.
+DELAY_SECS: Final = 0.5
 
 
 @contextlib.contextmanager
@@ -75,9 +79,6 @@ def spinner(
 
     message = st.empty()
 
-    # Set the message 0.5 seconds in the future to avoid annoying
-    # flickering if this spinner runs too quickly.
-    DELAY_SECS = 0.5
     display_message = True
     display_message_lock = threading.Lock()
 

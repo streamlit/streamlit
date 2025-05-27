@@ -123,7 +123,7 @@ def _process_avatar_input(
     Tuple[AvatarType, str]
         The detected avatar type and the prepared avatar data.
     """
-    AvatarType = BlockProto.ChatMessage.AvatarType
+    AvatarType = BlockProto.ChatMessage.AvatarType  # noqa: N806
 
     if avatar is None:
         return AvatarType.ICON, ""
