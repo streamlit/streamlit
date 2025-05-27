@@ -12,20 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# mypy: disable-error-code="no-untyped-call"
 # ruff: noqa: ANN201
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from authlib.integrations.base_client import (  # type: ignore[import-untyped]
+from authlib.integrations.base_client import (
     BaseApp,
     BaseOAuth,
     OAuth2Mixin,
     OAuthError,
     OpenIDMixin,
 )
-from authlib.integrations.requests_client import (  # type: ignore[import-untyped]
+from authlib.integrations.requests_client import (
     OAuth2Session,
 )
 
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
     from streamlit.auth_util import AuthCache
 
 
-class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
+class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
     client_cls = OAuth2Session
 
     def load_server_metadata(self) -> dict[str, Any]:
@@ -86,7 +87,7 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
         claims_options = kwargs.pop("claims_options", None)
         state_data = self.framework.get_state_data(session, params.get("state"))
         self.framework.clear_state_data(session, params.get("state"))
-        params = self._format_state_params(state_data, params)
+        params = self._format_state_params(state_data, params)  # type: ignore[attr-defined]
         token = self.fetch_access_token(**params, **kwargs)
 
         if "id_token" in token and "nonce" in state_data:
@@ -108,7 +109,7 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
             raise RuntimeError("Missing state value")
 
 
-class TornadoOAuth(BaseOAuth):  # type: ignore[misc]
+class TornadoOAuth(BaseOAuth):
     oauth2_client_cls = TornadoOAuth2App
     framework_integration_cls = TornadoIntegration
 

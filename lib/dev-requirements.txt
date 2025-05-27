@@ -12,11 +12,10 @@ pytz
 emoji
 
 # mypy types
-types-click
 types-protobuf
 types-pytz
 types-requests
 types-setuptools
 types-toml
-types-typed-ast
 types-cachetools
+types-Authlib

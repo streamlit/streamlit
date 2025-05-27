@@ -295,6 +295,7 @@ def app_server(
 @pytest.fixture
 def app(page: Page, app_port: int) -> Page:
     """Fixture that opens the app."""
+    response: Response | None = None
     try:
         response = page.goto(f"http://localhost:{app_port}/")
     except Exception as e:

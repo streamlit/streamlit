@@ -62,7 +62,7 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
 
     oauth = TornadoOAuth(config, cache=auth_cache)
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri
+    return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
 
 
 class AuthHandlerMixin(tornado.web.RequestHandler):
