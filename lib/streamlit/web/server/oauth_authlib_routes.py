@@ -156,7 +156,9 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
                 else None
             )
             _LOGGER.error(
-                f"""Error during authentication: {sanitized_error}. Error description: {sanitized_error_description}""",
+                "Error during authentication: %s. Error description: %s",
+                sanitized_error,
+                sanitized_error_description,
             )
             self.redirect_to_base()
             return

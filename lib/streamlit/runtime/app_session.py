@@ -375,8 +375,9 @@ class AppSession:
             # sometimes stays open.
             if fragment_id and not self._fragment_storage.contains(fragment_id):
                 _LOGGER.info(
-                    f"The fragment with id {fragment_id} does not exist anymore - "
-                    "it might have been removed during a preceding full-app rerun."
+                    "The fragment with id %s does not exist anymore - "
+                    "it might have been removed during a preceding full-app rerun.",
+                    fragment_id,
                 )
                 return
 
@@ -954,9 +955,10 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if base is not None:
         if base not in base_map:
             _LOGGER.warning(
-                f'"{base}" is an invalid value for theme.base.'
-                f" Allowed values include {list(base_map.keys())}."
-                ' Setting theme.base to "light".'
+                '"%s" is an invalid value for theme.base. Allowed values include %s. '
+                'Setting theme.base to "light".',
+                base,
+                list(base_map.keys()),
             )
         else:
             msg.base = base_map[base]
@@ -976,8 +978,8 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
             font_faces = json.loads(font_faces)
         except Exception as e:
             _LOGGER.warning(
-                "Failed to parse the theme.fontFaces config option with json.loads: "
-                f"{font_faces}.",
+                "Failed to parse the theme.fontFaces config option with json.loads: %s.",
+                font_faces,
                 exc_info=e,
             )
             font_faces = None
@@ -988,7 +990,8 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
             except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
-                    f"Failed to parse the theme.fontFaces config option: {font_face}.",
+                    "Failed to parse the theme.fontFaces config option: %s.",
+                    font_face,
                     exc_info=e,
                 )
 

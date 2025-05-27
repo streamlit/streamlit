@@ -639,13 +639,14 @@ class ScriptRunner:
                                 # (see https://github.com/streamlit/streamlit/issues/9080).
                                 if not rerun_data.is_auto_rerun:
                                     _LOGGER.warning(
-                                        f"Couldn't find fragment with id {fragment_id}."
+                                        "Couldn't find fragment with id %s."
                                         " This can happen if the fragment does not"
                                         " exist anymore when this request is processed,"
                                         " for example because a full app rerun happened"
                                         " that did not register the fragment."
                                         " Usually this doesn't happen or no action is"
-                                        " required, so its mainly for debugging."
+                                        " required, so its mainly for debugging.",
+                                        fragment_id,
                                     )
                             except (RerunException, StopException):
                                 # The wrapped_fragment function is executed

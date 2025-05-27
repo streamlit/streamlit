@@ -167,7 +167,7 @@ def set_user_option(key: str, value: Any) -> None:
 
     raise StreamlitAPIException(
         f"{key} cannot be set on the fly. Set as command line option, e.g. "
-        "streamlit run script.py --{key}, or in config.toml instead."
+        f"streamlit run script.py --{key}, or in config.toml instead."
     )
 
 
@@ -1384,8 +1384,9 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         LOGGER = get_logger(__name__)
 
         LOGGER.warning(
-            f'"{key}" is not a valid config option. If you previously had this config '
-            "option set, it may have been removed."
+            '"%s" is not a valid config option. If you previously had this config '
+            "option set, it may have been removed.",
+            key,
         )
 
     else:

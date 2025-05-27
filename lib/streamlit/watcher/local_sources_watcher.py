@@ -258,7 +258,7 @@ def get_module_paths(module: ModuleType) -> set[str]:
             pass
         except Exception:
             _LOGGER.warning(
-                f"Examining the path of {module.__name__} raised:", exc_info=True
+                "Examining the path of %s raised:", module.__name__, exc_info=True
             )
 
         all_paths.update(

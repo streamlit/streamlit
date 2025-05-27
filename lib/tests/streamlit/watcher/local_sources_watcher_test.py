@@ -174,8 +174,9 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_called_once()  # Just __init__.py
 
         # Check that the warning was called with the expected message
-        patched_logger.warning.assert_any_call(
-            "Examining the path of MisbehavedModule raised:",
+        patched_logger.warning.assert_called_once_with(
+            "Examining the path of %s raised:",
+            "MisbehavedModule",
             exc_info=True,
         )
 
