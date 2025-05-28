@@ -47,8 +47,8 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
   } catch (e) {
     const error = ensureError(e)
     try {
-      // eslint-disable-next-line import/no-named-as-default-member
       bodyObject = JSON5.parse(element.body)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (json5Error) {
       // If content fails to parse as Json, rebuild the error message
       // to show where the problem occurred.

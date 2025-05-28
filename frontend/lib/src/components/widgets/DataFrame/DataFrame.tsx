@@ -239,7 +239,7 @@ function DataFrame({
   useEffect(() => {
     setColumnOrder(element.columnOrder)
 
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.columnOrder.join(",")])
 
@@ -282,7 +282,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
@@ -396,7 +396,7 @@ function DataFrame({
     clearSelection(true, true)
     // Only run this on changes to the fullscreen mode:
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen])
 
@@ -464,7 +464,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )

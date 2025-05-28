@@ -208,16 +208,10 @@ function ComponentInstance(props: Props): ReactElement {
     dataframeArgs: [],
   })
   const haveDataframeArgsChanged = compareDataframeArgs(
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
     parsedArgsRef.current.dataframeArgs,
     parsedDataframeArgs
   )
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   parsedArgsRef.current.args = parsedNewArgs
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
@@ -399,7 +393,7 @@ function ComponentInstance(props: Props): ReactElement {
   // Show the loading Skeleton while we have not received the ready message from the custom component
   // but while we also have not waited until the ready timeout
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+
   const loadingSkeleton = !isReadyRef.current &&
     !isReadyTimeout &&
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
@@ -417,7 +411,7 @@ function ComponentInstance(props: Props): ReactElement {
   // display a warning.
   const warns =
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+
     !isReadyRef.current && isReadyTimeout ? (
       <AlertElement
         body={getWarnMessage(componentName, url)}
@@ -456,7 +450,7 @@ function ComponentInstance(props: Props): ReactElement {
         sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
         title={componentName}
         // TODO: Update to match React best practices
-        // eslint-disable-next-line react-compiler/react-compiler
+
         componentReady={isReadyRef.current}
         tabIndex={element.tabIndex ?? undefined}
       />

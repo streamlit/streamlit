@@ -153,7 +153,6 @@ export function createAnchorFromText(text: string | null): string {
   }
 
   // If slugify is not able to create a slug, fallback to hash
-  // eslint-disable-next-line import/no-named-as-default-member
   return xxhash.h32(text, 0xabcd).toString(16)
 }
 
@@ -339,6 +338,7 @@ export const CustomCodeTag: FunctionComponent<
   PropsWithChildren<CustomCodeTagProps>
 > = ({ inline, className, children, ...props }) => {
   const match = /language-(\w+)/.exec(className || "")
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   const codeText = String(children).trim().replace(/\n$/, "")
 
   const language = (match && match[1]) || ""

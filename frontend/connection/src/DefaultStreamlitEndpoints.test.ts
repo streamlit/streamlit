@@ -223,7 +223,6 @@ describe("DefaultStreamlitEndpoints", () => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       const mockOnUploadProgress = (_: any): void => {}
-      // eslint-disable-next-line import/no-named-as-default-member -- TODO: Utilize AbortController instead
       const mockCancelToken = axios.CancelToken.source().token
 
       await expect(
@@ -257,7 +256,6 @@ describe("DefaultStreamlitEndpoints", () => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       const mockOnUploadProgress = (_: any): void => {}
-      // eslint-disable-next-line import/no-named-as-default-member -- TODO: Utilize AbortController instead
       const mockCancelToken = axios.CancelToken.source().token
 
       await expect(
@@ -291,7 +289,6 @@ describe("DefaultStreamlitEndpoints", () => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       const mockOnUploadProgress = (_: any): void => {}
-      // eslint-disable-next-line import/no-named-as-default-member -- TODO: Utilize AbortController instead
       const mockCancelToken = axios.CancelToken.source().token
 
       endpoints.setFileUploadClientConfig({

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FileRejection } from "react-dropzone/."
+import { type FileRejection } from "react-dropzone"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { isFromWindows } from "~lib/util/utils"

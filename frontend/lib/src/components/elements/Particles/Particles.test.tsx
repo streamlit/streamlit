@@ -50,7 +50,6 @@ describe("Particles element", () => {
     expect(particleElement).toBeInTheDocument()
     expect(particleElement).toHaveClass("particles")
 
-    // eslint-disable-next-line testing-library/no-node-access
     const particleComponents = particleElement.children
     expect(particleComponents.length).toBe(10)
   })

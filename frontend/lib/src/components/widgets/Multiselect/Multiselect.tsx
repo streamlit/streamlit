@@ -18,8 +18,8 @@ import React, { FC, memo, useCallback, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
-  OnChangeParams,
-  Option,
+  type OnChangeParams,
+  type Option,
   TYPE,
   Select as UISelect,
 } from "baseui/select"

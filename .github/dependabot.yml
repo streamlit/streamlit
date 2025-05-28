@@ -59,25 +59,12 @@ updates:
       - dependency-name: "@vitejs/plugin-react-swc"
         # Breaks our build pipeline, needs more investigation
         versions: [">=3.8.0"]
-      - dependency-name: "eslint"
-        # It will take a bit more work to get this updated
-        versions: [">=9.0.0"]
-      - dependency-name: "@typescript-eslint/parser"
-        # Requires eslint update
-        versions: [">=8.0.0"]
-      - dependency-name: "@typescript-eslint/eslint-plugin"
-        # It will take a bit more work to get this updated
-        # since it requires updates for other eslint dependencies as well
-        versions: [">=8.0.0"]
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
       - dependency-name: "prettier"
         # Breaks our build process, needs more investigation
         versions: [">=3.0.0"]
-      - dependency-name: "eslint-plugin-prettier"
-        # Breaks our build process, needs more investigation
-        versions: [">=5.0.0"]
       - dependency-name: "@vitejs/plugin-react-swc"
         # Breaks our build process, needs more investigation
         versions: [">=3.7.1"]
@@ -87,8 +74,6 @@ updates:
       - dependency-name: "immer"
         # Breaks our build process, needs more investigation
         versions: [">=10.0.0"]
-      - dependency-name: "eslint-plugin-react-compiler"
-        # Still in beta and gets very frequent updates.
       - dependency-name: "sass"
         # Breaks our build process, needs more investigation
         versions: [">=1.80.0"]

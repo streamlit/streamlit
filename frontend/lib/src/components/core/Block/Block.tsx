@@ -383,7 +383,6 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
       // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
       return <ContainerContentsWrapper {...mappedChildProps} />
     }
     const tabsProps: TabProps = { ...childProps, isStale, renderTabContent }

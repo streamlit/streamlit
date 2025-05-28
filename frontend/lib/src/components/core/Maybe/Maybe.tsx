@@ -15,6 +15,7 @@
  */
 import React, { memo, PropsWithChildren } from "react"
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface MaybeProps
   extends PropsWithChildren<{
     enable: boolean

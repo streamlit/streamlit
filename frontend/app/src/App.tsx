@@ -208,7 +208,6 @@ const INITIAL_SCRIPT_RUN_ID = "<null>"
 
 export const LOG = getLogger("App")
 
-// eslint-disable-next-line
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -565,6 +564,7 @@ export class App extends PureComponent<Props, State> {
             ScriptRunState.RUNNING,
             ScriptRunState.NOT_RUNNING
           )
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
@@ -1885,6 +1885,7 @@ export class App extends PureComponent<Props, State> {
       } else {
         windowToPrint = window
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       windowToPrint = window
     } finally {
@@ -2015,7 +2016,6 @@ export class App extends PureComponent<Props, State> {
 
   handleKeyUp = (keyName: string): void => {
     if (keyName === "esc") {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.screenCast.stopRecording()
     }
   }

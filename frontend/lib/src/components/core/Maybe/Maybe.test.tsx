@@ -35,7 +35,7 @@ let innerRenderCount = 0
 const Inner: FC<InnerProps> = props => {
   // Side-effect: mutable variable for testing render counts
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/react-compiler
   innerRenderCount += 1
   return <div>{props.name}</div>
 }

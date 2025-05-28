@@ -118,6 +118,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
     try {
       await navigator.clipboard.writeText(config)
       updateCopied(true)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       updateCopied(false)
     }

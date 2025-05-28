@@ -485,8 +485,6 @@ describe("AppRoot.empty", () => {
     }))
     const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
-    // The linter is misfiring here. We're not accessing a DOM node.
-    // eslint-disable-next-line testing-library/no-node-access
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
     expect(child.element.skeleton).not.toBeNull()
@@ -532,8 +530,6 @@ describe("AppRoot.empty", () => {
 
     const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
-    // The linter is misfiring here. We're not accessing a DOM node.
-    // eslint-disable-next-line testing-library/no-node-access
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
     expect(child.element.alert).toBeDefined()
@@ -550,8 +546,6 @@ describe("AppRoot.empty", () => {
 
     const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
-    // The linter is misfiring here. We're not accessing a DOM node.
-    // eslint-disable-next-line testing-library/no-node-access
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
     expect(child.element.skeleton).not.toBeNull()
@@ -1183,8 +1177,9 @@ interface CustomMatchers<R = unknown> {
 }
 
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- TODO: Replace 'any' with a more specific type.
   interface Assertion<T = any> extends CustomMatchers<T> {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
 

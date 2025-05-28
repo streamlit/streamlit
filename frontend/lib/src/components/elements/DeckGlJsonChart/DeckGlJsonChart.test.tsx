@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-disable import/no-named-as-default-member */
 
 import React, { FC } from "react"
 

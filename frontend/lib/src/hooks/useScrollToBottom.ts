@@ -245,12 +245,8 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
     }
   }, [scrollableRef])
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   useScrollSpy(scrollableRef.current, handleScroll)
   useScrollAnimation(
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
     scrollableRef.current,
     handleScrollToBottomFinished,
     isAnimating

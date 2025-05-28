@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-module.exports = {
-  extends: ["../.eslintrc.js"], // Extend from the root configuration
-  // Explicitly override plugins to avoid duplicate plugin loading
-  plugins: [],
-  rules: {
-    "no-restricted-imports": [
-      "error",
-      {
-        patterns: [
-          {
-            group: ["~lib/*"],
-            message:
-              "Direct imports from '~lib/*' are not allowed. Please import from '@streamlit/lib' instead.",
-          },
-        ],
-      },
-    ],
+import baseConfig from "../eslint.config.mjs"
+
+export default [
+  ...baseConfig,
+  {
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["~lib/*"],
+              message:
+                "Direct imports from '~lib/*' are not allowed. Please import from '@streamlit/lib' instead.",
+            },
+          ],
+        },
+      ],
+    },
   },
-}
+]

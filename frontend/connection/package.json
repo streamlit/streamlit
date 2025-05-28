@@ -20,7 +20,7 @@
     "buildWatch": "env DEV_WATCH=1 vite build --watch",
     "test": "vitest run",
     "testWatch": "vitest",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
+    "lint": "eslint --max-warnings 0 src",
     "typecheck": "yarn run typecheck:all",
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
@@ -35,10 +35,10 @@
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
-    "@types/eslint": "~8.56.12",
+    "@types/eslint": "^9.6.1",
     "@types/lodash": "~4.17.17",
     "axios-mock-adapter": "^2.1.0",
-    "eslint": "^8.33.0",
+    "eslint": "^9.27.0",
     "prettier": "^2.8.3",
     "typesync": "^0.14.3",
     "vite": "^6.3.5",

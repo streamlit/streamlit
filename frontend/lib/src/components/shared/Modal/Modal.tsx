@@ -18,7 +18,7 @@ import React, { FunctionComponent, ReactElement, ReactNode } from "react"
 
 import { useTheme } from "@emotion/react"
 import {
-  ModalProps,
+  type ModalProps,
   SIZE,
   Modal as UIModal,
   ModalBody as UIModalBody,

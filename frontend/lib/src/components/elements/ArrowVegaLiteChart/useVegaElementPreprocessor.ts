@@ -176,7 +176,7 @@ export const useVegaElementPreprocessor = (
   // reference).
   const selectionMode = useMemo(() => {
     return inputSelectionMode
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(inputSelectionMode)])
 

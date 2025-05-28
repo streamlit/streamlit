@@ -552,7 +552,6 @@ class CameraInput extends PureComponent<Props, State> {
 
   public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
-    // eslint-disable-next-line import/no-named-as-default-member -- TODO: Utilize AbortController instead
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
       file.name,

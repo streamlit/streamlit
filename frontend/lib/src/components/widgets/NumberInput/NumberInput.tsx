@@ -228,7 +228,7 @@ const NumberInput: React.FC<Props> = ({
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [])
 

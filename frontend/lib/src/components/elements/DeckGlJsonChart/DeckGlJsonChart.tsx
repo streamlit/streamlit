@@ -154,10 +154,10 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
             if (selectionMap.size === 0) {
               // If the layer has nothing selected, remove the layer from the returned value
-              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: _, ...restIndices } =
                 currState.selection.indices
-              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: __, ...restObjects } =
                 currState.selection.objects
 

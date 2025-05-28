@@ -200,7 +200,7 @@ export function useBasicWidgetState<
   useEffect(() => {
     if (!element.setValue) return
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     element.setValue = false // Clear "event".
 
     setNextValueWithSource({

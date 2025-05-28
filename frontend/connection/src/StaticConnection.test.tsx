@@ -51,6 +51,7 @@ describe("StaticConnection", () => {
 
   describe("getStaticConfig", () => {
     it("fetches URL from localStorage if available", async () => {
+      // eslint-disable-next-line no-proto
       vi.spyOn(window.localStorage.__proto__, "getItem").mockReturnValue(
         "https://example.com"
       )
@@ -59,7 +60,9 @@ describe("StaticConnection", () => {
     })
 
     it("fetches URL from STATIC_ASSET_CONFIG if not in localStorage", async () => {
+      // eslint-disable-next-line no-proto
       vi.spyOn(window.localStorage.__proto__, "getItem").mockReturnValue(null)
+      // eslint-disable-next-line no-proto
       const setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem")
 
       // Mock fetch for our static asset location
@@ -85,6 +88,7 @@ describe("StaticConnection", () => {
     })
 
     it("logs error when fetch fails", async () => {
+      // eslint-disable-next-line no-proto
       vi.spyOn(window.localStorage.__proto__, "getItem").mockReturnValue(null)
       // Mock fetch for our static asset location
       // @ts-expect-error
@@ -222,6 +226,7 @@ describe("StaticConnection", () => {
 
     beforeEach(() => {
       // Handles getStaticConfig
+      // eslint-disable-next-line no-proto
       vi.spyOn(window.localStorage.__proto__, "getItem").mockReturnValue(
         "www.example.com"
       )

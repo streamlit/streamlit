@@ -308,6 +308,7 @@ export function toSafeArray(data: any): any[] {
       // Support for JSON arrays: ["foo", 1, null, "test"]
       try {
         return JSON.parse(data)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
         return [data]
       }
@@ -333,6 +334,7 @@ export function toSafeArray(data: any): any[] {
         ? value
         : toSafeString(value)
     )
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     return [toSafeString(data)]
   }
@@ -366,11 +368,13 @@ export function toSafeString(data: any): string {
   try {
     try {
       return toString(data)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return JSON.stringify(data, (_key, value) =>
         typeof value === "bigint" ? Number(value) : value
       )
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     // This is most likely an object that cannot be converted to a string
     // console.log converts this to `[object Object]` which we are doing here as well:
@@ -443,12 +447,12 @@ export function toSafeNumber(value: any): number | null {
       if (notNullOrUndefined(unformattedValue)) {
         return unformattedValue
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // Do nothing here
     }
   } else if (value instanceof Int32Array) {
     // int values need to be extracted this way:
-    // eslint-disable-next-line prefer-destructuring
     return Number(value[0])
   }
 
@@ -481,6 +485,7 @@ export function toJsonString(value: any): string {
       // so we convert them to a number as fallback
       typeof val === "bigint" ? Number(val) : val
     )
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     // If the value cannot be converted to a JSON string, return the stringified value
     return toSafeString(value)
@@ -540,8 +545,8 @@ function formatIntlNumberWithLocales(
  */
 export function formatNumber(
   value: number,
-  format?: string | undefined,
-  maxPrecision?: number | undefined
+  format?: string,
+  maxPrecision?: number
 ): string {
   if (Number.isNaN(value) || !Number.isFinite(value)) {
     return ""
@@ -725,7 +730,6 @@ export function toSafeDate(value: any): Date | null | undefined {
       }
 
       // Parse it as a unix timestamp in seconds
-      // eslint-disable-next-line import/no-named-as-default-member
       const parsedMomentDate = moment.unix(timestampInSeconds).utc()
       if (parsedMomentDate.isValid()) {
         return parsedMomentDate.toDate()
@@ -734,26 +738,22 @@ export function toSafeDate(value: any): Date | null | undefined {
 
     if (typeof value === "string") {
       // Try to parse string via momentJS:
-      // eslint-disable-next-line import/no-named-as-default-member
       const parsedMomentDate = moment.utc(value)
       if (parsedMomentDate.isValid()) {
         return parsedMomentDate.toDate()
       }
       // The pasted value was not a valid date string
       // Try to interpret value as time string instead (HH:mm:ss)
-      // eslint-disable-next-line import/no-named-as-default-member
       const parsedMomentTime = moment.utc(value, [
-        // eslint-disable-next-line import/no-named-as-default-member
         moment.HTML5_FMT.TIME_MS, // HH:mm:ss.SSS
-        // eslint-disable-next-line import/no-named-as-default-member
         moment.HTML5_FMT.TIME_SECONDS, // HH:mm:ss
-        // eslint-disable-next-line import/no-named-as-default-member
         moment.HTML5_FMT.TIME, // HH:mm
       ])
       if (parsedMomentTime.isValid()) {
         return parsedMomentTime.toDate()
       }
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     return undefined
   }
@@ -858,6 +858,7 @@ export function getLinkDisplayValueFromRegex(
 
     // if the regex doesn't find a match with the url, just use the url as display value
     return href
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     // if there was any error return the href
     return href

@@ -244,12 +244,10 @@ export class ElementNode implements AppNode {
     return toReturn
   }
 
-  // eslint-disable-next-line class-methods-use-this
   public getIn(): AppNode | undefined {
     return undefined
   }
 
-  // eslint-disable-next-line class-methods-use-this
   public setIn(): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
@@ -580,7 +578,7 @@ export class AppRoot {
   public static empty(
     mainScriptHash = "",
     isInitialRender = true,
-    sidebarElements?: BlockNode | undefined,
+    sidebarElements?: BlockNode,
     logo?: Logo | null
   ): AppRoot {
     const mainNodes: AppNode[] = []

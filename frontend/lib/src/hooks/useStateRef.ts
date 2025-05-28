@@ -57,8 +57,6 @@ export default function useStateRef<T>(
 ): [T, Dispatch<SetStateAction<T>>, MutableRefObject<T>] {
   const [state, setState] = useState<T>(initialState)
   const ref = useRef<T>(initialState)
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   ref.current = state
 
   return [state, setState, ref]

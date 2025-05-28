@@ -16,7 +16,11 @@
 
 import React, { Children, forwardRef, ReactElement } from "react"
 
-import { OptionListProps, StyledEmptyState, StyledList } from "baseui/menu"
+import {
+  type OptionListProps,
+  StyledEmptyState,
+  StyledList,
+} from "baseui/menu"
 import { FixedSizeList } from "react-window"
 import { useTheme } from "@emotion/react"
 

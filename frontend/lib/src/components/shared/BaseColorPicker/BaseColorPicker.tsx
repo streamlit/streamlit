@@ -58,6 +58,7 @@ SaturationComponent.prototype.getContainerRenderWindow = function () {
       lastRenderWindow = renderWindow
       renderWindow = renderWindow.parent as Window & typeof globalThis
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     renderWindow = lastRenderWindow
   }

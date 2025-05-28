@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable import/no-extraneous-dependencies */
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
 import { Vector } from "apache-arrow"
@@ -24,7 +23,6 @@ import {
   RenderResult,
 } from "@testing-library/react"
 
-/* eslint-enable */
 import ThemeProvider from "./components/core/ThemeProvider"
 import { baseTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"

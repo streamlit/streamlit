@@ -24,7 +24,7 @@ import React, {
 } from "react"
 
 import { useTheme } from "@emotion/react"
-import { toaster, ToastOverrides } from "baseui/toast"
+import { toaster, type ToastOverrides } from "baseui/toast"
 
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
@@ -180,7 +180,7 @@ function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
 
     // Array must be empty to run as mount/cleanup
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

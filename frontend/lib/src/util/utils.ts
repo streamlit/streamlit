@@ -228,6 +228,7 @@ export function getUrl(): string {
     } else {
       url = document.location.href
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     // CSP error might occur when trying to access parent frame
     url = document.location.href
@@ -307,7 +308,6 @@ export function makeAppSkeletonElement(): Element {
  * Seed used: 0xDEADBEEF
  */
 export function hashString(s: string): string {
-  // eslint-disable-next-line import/no-named-as-default-member
   return xxhash.h32(s, 0xdeadbeef).toString(16)
 }
 
@@ -470,6 +470,7 @@ export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
     const doc = iframe.contentDocument || iframe.contentWindow.document
     const html = doc.body.innerHTML
     return html !== null && html !== ""
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {
     return false
   }

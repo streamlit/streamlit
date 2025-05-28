@@ -18,7 +18,7 @@ import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
 import {
-  ProgressBarOverrides,
+  type ProgressBarOverrides,
   ProgressBar as UIProgressBar,
 } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"

@@ -61,10 +61,9 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
     try {
       parsedJson =
         typeof jsonValue === "string"
-          ? // eslint-disable-next-line import/no-named-as-default-member
-            JSON5.parse(jsonValue)
-          : // eslint-disable-next-line import/no-named-as-default-member
-            JSON5.parse(JSON5.stringify(jsonValue))
+          ? JSON5.parse(jsonValue)
+          : JSON5.parse(JSON5.stringify(jsonValue))
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // Keep the parsed JSON as undefined.
       parsedJson = undefined

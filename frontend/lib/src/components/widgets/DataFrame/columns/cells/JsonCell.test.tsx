@@ -45,7 +45,7 @@ describe("JsonCell renderer", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     } as any
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- TODO: Replace 'any' with a more specific type.
     const width = renderer.measure!(ctx, cell, mockTheme as any)
     expect(width).toBeGreaterThan(0)
   })

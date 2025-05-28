@@ -26,7 +26,7 @@ import { useTheme } from "@emotion/react"
 import {
   ACCESSIBILITY_TYPE,
   PLACEMENT,
-  PopoverOverrides,
+  type PopoverOverrides,
   StatefulTooltip,
 } from "baseui/tooltip"
 

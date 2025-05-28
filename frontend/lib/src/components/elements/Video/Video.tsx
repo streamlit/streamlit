@@ -245,6 +245,7 @@ function Video({
   // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
   // when streamlit frontend and backend are running on different ports
   return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption
     <video
       className="stVideo"
       data-testid="stVideo"

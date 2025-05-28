@@ -103,7 +103,7 @@ export default function useScrollAnimation(
           }
 
           // TODO: Update to match React best practices
-          // eslint-disable-next-line react-compiler/react-compiler
+          // eslint-disable-next-line react-hooks/react-compiler
           target.scrollTop = nextValue
 
           if (toNumber === nextValue) {

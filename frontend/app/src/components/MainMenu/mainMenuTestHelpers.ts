@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable import/no-extraneous-dependencies */
 import { fireEvent, RenderResult, Screen } from "@testing-library/react"
 
 export function openMenu(screen: Screen): void {

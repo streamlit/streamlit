@@ -26,7 +26,6 @@ import { IAppPage } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 
-// eslint-disable-next-line
 declare global {
   // These window variables are used so that some deployments of Streamlit can
   // edit the index.html served to the client so that a Streamlit server at an
