@@ -19,8 +19,11 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    expect(themed_app.get_by_test_id("stMarkdown").locator("hr")).to_be_visible()
-    assert_snapshot(themed_app.get_by_test_id("stMarkdown"), name="st_divider")
+    markdown_elements = themed_app.get_by_test_id("stMarkdown")
+    expect(themed_app.get_by_test_id("stMarkdown").first).to_be_visible()
+    assert_snapshot(markdown_elements.nth(0), name="st_divider")
+    assert_snapshot(markdown_elements.nth(1), name="st_divider_width_600")
+    assert_snapshot(markdown_elements.nth(2), name="st_divider_width_stretch")
 
 
 def test_check_top_level_class(app: Page):

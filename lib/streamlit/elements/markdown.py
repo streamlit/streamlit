@@ -16,6 +16,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, Literal, cast
 
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
@@ -212,6 +218,7 @@ class MarkdownMixin:
         body: SupportsStr | sympy.Expr,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
@@ -235,6 +242,12 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : int or "stretch" or "content"
+            The width of the LaTeX expression. If "stretch" (default), the
+            expression will take up the full width of the container. If "content",
+            the expression will take up only as much width as needed. If an integer,
+            the width will be set to that number of pixels.
+
         Example
         -------
         >>> import streamlit as st
@@ -246,6 +259,7 @@ class MarkdownMixin:
         ...     ''')
 
         """
+
         if is_sympy_expression(body):
             import sympy
 
@@ -256,11 +270,22 @@ class MarkdownMixin:
         latex_proto.element_type = MarkdownProto.Type.LATEX
         if help:
             latex_proto.help = help
-        return self.dg._enqueue("markdown", latex_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", latex_proto, layout_config=layout_config)
 
     @gather_metrics("divider")
-    def divider(self) -> DeltaGenerator:
+    def divider(self, *, width: WidthWithoutContent = "stretch") -> DeltaGenerator:
         """Display a horizontal rule.
+
+        Parameters
+        ----------
+        width : int or "stretch"
+            The width of the divider. If "stretch" (default), the divider will
+            take up the full width of the container. If an integer, the width
+            will be set to that number of pixels.
 
         .. note::
             You can achieve the same effect with st.write("---") or
@@ -273,10 +298,15 @@ class MarkdownMixin:
         >>> st.divider()
 
         """
+
         divider_proto = MarkdownProto()
         divider_proto.body = MARKDOWN_HORIZONTAL_RULE_EXPRESSION
         divider_proto.element_type = MarkdownProto.Type.DIVIDER
-        return self.dg._enqueue("markdown", divider_proto)
+
+        validate_width(width, allow_content=False)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", divider_proto, layout_config=layout_config)
 
     @gather_metrics("badge")
     def badge(

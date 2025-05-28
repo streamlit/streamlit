@@ -190,6 +190,17 @@ with st.container(key="latex_elements"):
         help="foo",
     )
 
+    st.latex(
+        r"""
+    \text{This is a longer LaTeX equation demonstrating fixed width: }
+    \int_{a}^{b} f(x) \, dx = F(b) - F(a) \text{ where } F'(x) = f(x)
+    \text{ and } a \leq x \leq b
+""",
+        width=300,
+    )
+    st.latex("ax^2 + bx + c = 0", width="stretch")
+    st.latex("ax^2 + bx + c = 0", width="content")
+
 "---"
 
 with st.container(key="badge_elements"):
