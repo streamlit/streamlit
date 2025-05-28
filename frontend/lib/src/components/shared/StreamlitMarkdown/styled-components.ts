@@ -194,18 +194,26 @@ export const StyledStreamlitMarkdown =
         },
 
         li: {
-          // TODO(lukasmasuch): We might want to refactor
-          // these settings to use our spacing props instead.
-          // But this would require some styling changes.
-          margin: "0.2em 0 0.2em 1.2em",
-          padding: "0 0 0 0.6em",
+          margin: "0.2em 0 0.2em 1.15em",
+          padding: "0 0 0 0.3em",
+        },
+
+        "li.task-list-item": {
+          listStyleType: "none",
+          padding: "0",
+          marginLeft: "0",
+          "input[type='checkbox']": {
+            verticalAlign: "middle",
+            margin: "0 0.35em 0.1em 0",
+          },
         },
 
         // Handles quotes:
         blockquote: {
           margin: "1em 0 1em 0",
-          padding: "0 0 0 1.2em",
-          borderLeft: `${theme.sizes.borderWidth} solid ${theme.colors.lightGray}`,
+          padding: `0 0 0 0.75em`,
+          borderLeft: `0.15em solid ${theme.colors.borderColor}`,
+          opacity: 0.6,
         },
 
         "b, strong": {

@@ -237,7 +237,7 @@ this is a very long formula this is a very long formula this is a very long form
 this is a very long formula this is a very long formula
 $$
 
-> This is a blockquote
+> This is a **blockquote**
 
 ### :material/home: :streamlit: Some header
 
@@ -250,9 +250,9 @@ $$
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet],
   :orange-background[orange], :gray-background[gray], :grey-background[grey], :primary-background[primary],
   :rainbow-background[rainbow]
-- :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange],
+- [x] :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange],
   :violet-badge[violet], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
-- Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
+- [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
   and Streamlit logo :streamlit: :red-background[:streamlit:]
 - <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
 
