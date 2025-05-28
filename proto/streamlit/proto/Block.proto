@@ -55,7 +55,6 @@ message Block {
 
   message FlexContainer {
     bool border = 1;
-
     streamlit.GapConfig gap_config = 2;
     float scale = 3;
 

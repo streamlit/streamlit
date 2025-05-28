@@ -49,7 +49,6 @@ import {
   getActivateScrollToBottomBackwardsCompatible,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getHeightBackwardsCompatible,
   getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
@@ -173,8 +172,13 @@ export const FlexBoxContainer = (
   )
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
 
-  const height = getHeightBackwardsCompatible(props.node.deltaBlock)
-  const flex = height ? `0 0 ${height}px` : undefined
+  const layout_styles = useLayoutStyles({
+    element: props.node.deltaBlock,
+    subElement:
+      (props.node.deltaBlock.type &&
+        props.node.deltaBlock[props.node.deltaBlock.type]) ||
+      undefined,
+  })
 
   // TODO(lawilby): as advanced layouts is rolled out, we will add useLayoutStyles
   // here to get the correct styles for the flexbox container based on user
@@ -189,8 +193,8 @@ export const FlexBoxContainer = (
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
     $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
-    height,
-    flex,
+    height: layout_styles.height,
+    flex: layout_styles.flex,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
   }
 

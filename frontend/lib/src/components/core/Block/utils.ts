@@ -228,17 +228,3 @@ export function getBorderBackwardsCompatible(blockProto: BlockProto): boolean {
     blockProto.flexContainer?.border || blockProto.vertical?.border || false
   )
 }
-
-export function getHeightBackwardsCompatible(
-  blockProto: BlockProto
-): number | undefined {
-  // TODO: when height and width are added for containers, this will be calculated with
-  // useLayoutStyles. Currently we are only using pixel height based on the pre-advanced layouts
-  // feature.
-  if (blockProto.heightConfig?.pixelHeight) {
-    return blockProto.heightConfig?.pixelHeight
-  } else if (blockProto.vertical?.height) {
-    return blockProto.vertical?.height
-  }
-  return undefined
-}
