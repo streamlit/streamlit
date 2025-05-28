@@ -145,6 +145,7 @@ export type UseLayoutStylesShape = {
   height: React.CSSProperties["height"]
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
+  alignSelf: React.CSSProperties["alignSelf"]
 }
 
 /**
@@ -163,6 +164,7 @@ export const useLayoutStyles = ({
         width: "auto",
         height: "auto",
         overflow: "visible",
+        alignSelf: "flex-start",
       }
     }
     let flex: React.CSSProperties["flex"] = undefined
@@ -186,6 +188,7 @@ export const useLayoutStyles = ({
     )
     let height: React.CSSProperties["height"] = "auto"
     let overflow: React.CSSProperties["overflow"] = "visible"
+    let alignSelf: React.CSSProperties["alignSelf"] = "flex-start"
 
     if (heightType === DimensionType.STRETCH) {
       height = "100%"
@@ -204,6 +207,7 @@ export const useLayoutStyles = ({
       height,
       overflow,
       flex,
+      alignSelf,
     }
 
     return {

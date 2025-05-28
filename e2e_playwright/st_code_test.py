@@ -116,6 +116,8 @@ def test_code_blocks_render_correctly(
     expect(themed_app.get_by_text(long_string).nth(1)).to_be_attached()
     assert_snapshot(code_blocks.nth(25), name="st_code-long-single-word-string-wrap")
 
+    assert_snapshot(code_blocks.nth(25), name="st_code-height-stretch-code")
+
 
 def test_correct_bottom_spacing_for_code_blocks(app: Page):
     """Test that the code blocks have the correct bottom spacing."""

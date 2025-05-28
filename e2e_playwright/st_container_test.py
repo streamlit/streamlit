@@ -113,14 +113,26 @@ def test_dimensions_are_correctly_applied(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.container dimensions are correctly applied."""
-    fixed_width_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5)
+    container_elements = app.get_by_test_id("stVerticalBlockBorderWrapper")
+    fixed_width_container = container_elements.nth(5)
     assert_snapshot(fixed_width_container, name="st_container-fixed_width")
 
-    stretch_width_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)
+    stretch_width_container = container_elements.nth(6)
     assert_snapshot(stretch_width_container, name="st_container-stretch_width")
 
-    content_width_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(7)
+    content_width_container = container_elements.nth(7)
     assert_snapshot(content_width_container, name="st_container-content_width")
+
+    fixed_height_container = container_elements.nth(8)
+    assert_snapshot(
+        fixed_height_container, name="st_container-stretch_and_fixed_height"
+    )
+
+    # number 9 is nested in 8 so skip to 10 for the next snapshot.
+    stretch_height_container = container_elements.nth(10)
+    assert_snapshot(
+        stretch_height_container, name="st_container-content_and_fixed_height"
+    )
 
 
 def test_check_top_level_class(app: Page):

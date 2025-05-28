@@ -465,13 +465,39 @@ class ContainerTest(DeltaGeneratorTestCase):
             ("invalid",),
             (-100,),
             (0,),
-            ("content",),
         ]
     )
     def test_invalid_width(self, invalid_width):
         """Test that invalid width values raise an error"""
         with pytest.raises(StreamlitAPIException):
             st.container(width=invalid_width)
+
+    def test_height_config(self):
+        """Test that height configuration works correctly"""
+        st.container(height=200)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.height_config.pixel_height == 200
+
+        st.container(height="stretch")
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.height_config.use_stretch
+
+        st.container(height="content")
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.height_config.use_content
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+        ]
+    )
+    def test_invalid_height(self, invalid_height):
+        """Test that invalid height values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.container(height=invalid_height)
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):
