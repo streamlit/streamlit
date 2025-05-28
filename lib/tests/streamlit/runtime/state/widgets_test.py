@@ -357,7 +357,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute element ID
         # but don't appear in widget signatures.
-        for kwarg in ["form_id", "user_key"]:
+        for kwarg in ["form_id", "user_key", "dg"]:
             kwargs[kwarg] = ANY
 
         return kwargs
@@ -428,6 +428,17 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         """
         widget_func()
         with pytest.raises(errors.DuplicateWidgetID):
+            widget_func()
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_not_triggers_duplicate_id_error(self, _element_name: str, widget_func):
+        """
+        Test that duplicate ID error is not raised if the same widget is
+        both in the main and sidebar area.
+        """
+        with st.container():
+            widget_func()
+        with st.sidebar:
             widget_func()
 
     @parameterized.expand(

@@ -151,7 +151,6 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
                 ],
             ),
             use_container_width=True,
-            key="mocked_pydeck_chart",
             on_select="rerun",
             selection_mode="single-object",
         ),

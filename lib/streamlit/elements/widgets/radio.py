@@ -341,6 +341,7 @@ class RadioMixin:
             "radio",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,

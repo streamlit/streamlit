@@ -818,6 +818,7 @@ class ButtonMixin:
             user_key=key,
             # download_button is not allowed to be used in a form.
             form_id=None,
+            dg=self.dg,
             label=label,
             icon=icon,
             file_name=file_name,
@@ -1009,6 +1010,7 @@ class ButtonMixin:
             user_key=key,
             # Only the
             form_id=form_id,
+            dg=self.dg,
             label=label,
             icon=icon,
             help=help,

@@ -307,6 +307,7 @@ class CheckboxMixin:
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             value=bool(value),
             help=help,

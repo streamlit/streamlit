@@ -236,6 +236,7 @@ class AudioInputMixin:
             "audio_input",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             help=help,
             width=width,

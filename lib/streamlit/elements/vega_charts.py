@@ -1947,6 +1947,7 @@ class VegaChartsMixin:
                 "arrow_vega_lite_chart",
                 user_key=key,
                 form_id=vega_lite_proto.form_id,
+                dg=self.dg,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data
                 # or in a named dataset in vega_lite_proto.datasets

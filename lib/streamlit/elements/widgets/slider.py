@@ -674,6 +674,7 @@ class SliderMixin:
             "slider",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             min_value=min_value,
             max_value=max_value,

@@ -519,6 +519,7 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             options=formatted_options,
             index=index,

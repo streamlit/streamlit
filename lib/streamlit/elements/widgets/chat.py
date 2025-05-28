@@ -596,6 +596,7 @@ class ChatMixin:
             user_key=key,
             # chat_input is not allowed to be used in a form.
             form_id=None,
+            dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
             accept_file=accept_file,

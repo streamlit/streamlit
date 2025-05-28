@@ -441,6 +441,7 @@ class FileUploaderMixin:
             "file_uploader",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
