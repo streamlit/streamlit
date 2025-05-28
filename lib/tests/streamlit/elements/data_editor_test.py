@@ -441,6 +441,59 @@ class DataEditorUtilTest(unittest.TestCase):
         # Check dtypes=False because deletion/addition might change column dtypes
         pd.testing.assert_frame_equal(df, expected_df, check_dtype=False)
 
+    def test_apply_dataframe_edits_string_index_delete_and_edit(self):
+        """Test applying edits with string index: delete last two rows and edit first row index.
+
+        Related issue: https://github.com/streamlit/streamlit/pull/11448
+        """
+        # Create DataFrame with 10 rows and string index
+        df = pd.DataFrame(
+            {"col1": list(range(10)), "col2": [f"value_{i}" for i in range(10)]},
+            index=[f"row_{i}" for i in range(10)],
+        )
+
+        # Delete the last two rows (indices 8 and 9)
+        deleted_rows: list[int] = [8, 9]
+        # Edit the index value of the first row (row 0)
+        edited_rows: dict[int, dict[str, str | int | float | bool | None]] = {
+            0: {
+                INDEX_IDENTIFIER: "edited_row_0",
+            }
+        }
+        # No row additions for this test
+        added_rows: list[dict[str, Any]] = []
+
+        _apply_dataframe_edits(
+            df,
+            {
+                "deleted_rows": deleted_rows,
+                "added_rows": added_rows,
+                "edited_rows": edited_rows,
+            },
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
+        )
+
+        # Expected results:
+        # - Rows 8 and 9 should be deleted (original rows with values 8,9)
+        # - Index of first row should be changed from "row_0" to "edited_row_0"
+        # - Should have 8 rows remaining (0-7, with 8-9 deleted)
+        assert len(df) == 8
+
+        # Check that the index was properly edited
+        assert df.index[0] == "edited_row_0"
+
+        # Check that the remaining indices are correct (excluding the edited first one)
+        expected_remaining_indices = ["edited_row_0"] + [
+            f"row_{i}" for i in range(1, 8)
+        ]
+        assert df.index.tolist() == expected_remaining_indices
+
+        # Check that the data values are correct
+        expected_col1_values = list(range(8))  # 0-7, since rows 8-9 were deleted
+        expected_col2_values = [f"value_{i}" for i in range(8)]
+        assert df["col1"].tolist() == expected_col1_values
+        assert df["col2"].tolist() == expected_col2_values
+
 
 class DataEditorTest(DeltaGeneratorTestCase):
     def test_default_params(self):
