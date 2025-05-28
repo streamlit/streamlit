@@ -19,7 +19,11 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -34,7 +38,6 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -308,7 +311,6 @@ class TextWidgetsMixin:
             default_value=None if value == "" else value,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
@@ -356,14 +358,6 @@ class TextWidgetsMixin:
         if icon is not None:
             text_input_proto.icon = validate_icon_or_emoji(icon)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        text_input_proto.width_config.CopyFrom(width_config)
-
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT
         elif type == "password":
@@ -397,7 +391,10 @@ class TextWidgetsMixin:
                 text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
-        self.dg._enqueue("text_input", text_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue("text_input", text_input_proto, layout_config=layout_config)
         return widget_state.value
 
     @overload
@@ -614,7 +611,6 @@ class TextWidgetsMixin:
             default_value=None if value == "" else value,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         value = str(value) if value is not None else None
 
@@ -659,14 +655,6 @@ class TextWidgetsMixin:
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        text_area_proto.width_config.CopyFrom(width_config)
-
         serde = TextAreaSerde(value)
         widget_state = register_widget(
             text_area_proto.id,
@@ -684,7 +672,10 @@ class TextWidgetsMixin:
                 text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
-        self.dg._enqueue("text_area", text_area_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

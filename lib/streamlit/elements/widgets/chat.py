@@ -34,6 +34,7 @@ from streamlit.elements.lib.file_uploader_utils import (
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
 from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
     Width,
     WidthWithoutContent,
     validate_width,
@@ -350,11 +351,11 @@ class ChatMixin:
             width_config.use_content = True
         else:
             width_config.use_stretch = True
-        message_container_proto.width_config.CopyFrom(width_config)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
+        block_proto.width_config.CopyFrom(width_config)
 
         return self.dg._block(block_proto=block_proto)
 
@@ -582,8 +583,6 @@ class ChatMixin:
             writes_allowed=False,
         )
 
-        validate_width(width)
-
         if accept_file not in {True, False, "multiple"}:
             raise StreamlitAPIException(
                 "The `accept_file` parameter must be a boolean or 'multiple'."
@@ -645,13 +644,6 @@ class ChatMixin:
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
 
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        chat_input_proto.width_config.CopyFrom(width_config)
-
         serde = ChatInputSerde(
             accept_files=bool(accept_file),
             allowed_types=file_type,
@@ -667,6 +659,9 @@ class ChatMixin:
             value_type="chat_input_value",
         )
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:
             chat_input_proto.value = widget_state.value
@@ -678,10 +673,12 @@ class ChatMixin:
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input", chat_input_proto
+                "chat_input", chat_input_proto, layout_config=layout_config
             )
         else:
-            self.dg._enqueue("chat_input", chat_input_proto)
+            self.dg._enqueue(
+                "chat_input", chat_input_proto, layout_config=layout_config
+            )
 
         return widget_state.value if not widget_state.value_changed else None
 

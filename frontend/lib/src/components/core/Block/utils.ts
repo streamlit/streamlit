@@ -209,8 +209,7 @@ export function getActivateScrollToBottomBackwardsCompatible(
   blockNode: BlockNode
 ): boolean {
   const hasHeight =
-    blockNode.deltaBlock.flexContainer?.heightConfig ||
-    blockNode.deltaBlock.vertical?.height
+    blockNode.deltaBlock.heightConfig || blockNode.deltaBlock.vertical?.height
   if (
     hasHeight &&
     blockNode.children.some(node => {
@@ -236,8 +235,8 @@ export function getHeightBackwardsCompatible(
   // TODO: when height and width are added for containers, this will be calculated with
   // useLayoutStyles. Currently we are only using pixel height based on the pre-advanced layouts
   // feature.
-  if (blockProto.flexContainer?.heightConfig?.pixelHeight) {
-    return blockProto.flexContainer?.heightConfig?.pixelHeight
+  if (blockProto.heightConfig?.pixelHeight) {
+    return blockProto.heightConfig?.pixelHeight
   } else if (blockProto.vertical?.height) {
     return blockProto.vertical?.height
   }

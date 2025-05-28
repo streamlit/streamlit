@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "SelectboxProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
-import "streamlit/proto/WidthConfig.proto";
 
 message Selectbox {
   string id = 1;
@@ -40,8 +39,6 @@ message Selectbox {
   LabelVisibilityMessage label_visibility = 10;
   string placeholder = 11;
   optional bool accept_new_options = 12;
-
-  optional streamlit.WidthConfig width_config = 14;
 
   // Next: 15
 }

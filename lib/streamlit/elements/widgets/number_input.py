@@ -23,7 +23,11 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -43,7 +47,6 @@ from streamlit.errors import (
     StreamlitValueBelowMinError,
 )
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -437,7 +440,6 @@ class NumberInputMixin:
             default_value=value if value != "min" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         element_id = compute_and_register_element_id(
             "number_input",
@@ -606,14 +608,6 @@ class NumberInputMixin:
         if icon is not None:
             number_input_proto.icon = validate_icon_or_emoji(icon)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        number_input_proto.width_config.CopyFrom(width_config)
-
         serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
             number_input_proto.id,
@@ -648,7 +642,12 @@ class NumberInputMixin:
                 number_input_proto.value = widget_state.value
             number_input_proto.set_value = True
 
-        self.dg._enqueue("number_input", number_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue(
+            "number_input", number_input_proto, layout_config=layout_config
+        )
         return widget_state.value
 
     @property

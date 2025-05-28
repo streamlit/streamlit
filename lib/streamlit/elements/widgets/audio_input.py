@@ -22,7 +22,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -38,7 +38,6 @@ from streamlit.elements.widgets.file_uploader import _get_upload_files
 from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -254,14 +253,8 @@ class AudioInputMixin:
         if label and help is not None:
             audio_input_proto.help = dedent(help)
 
-        # Set width configuration
         validate_width(width)
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        audio_input_proto.width_config.CopyFrom(width_config)
+        layout_config = LayoutConfig(width=width)
 
         serde = AudioInputSerde()
 
@@ -276,7 +269,7 @@ class AudioInputMixin:
             value_type="file_uploader_state_value",
         )
 
-        self.dg._enqueue("audio_input", audio_input_proto)
+        self.dg._enqueue("audio_input", audio_input_proto, layout_config=layout_config)
 
         if isinstance(audio_input_state.value, DeletedFile):
             return None

@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "FileUploaderProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
-import "streamlit/proto/WidthConfig.proto";
 
 // file_uploader widget
 message FileUploader {
@@ -46,8 +45,6 @@ message FileUploader {
   bool disabled = 9;
 
   LabelVisibilityMessage label_visibility = 10;
-
-  optional streamlit.WidthConfig width_config = 11;
 
   reserved 5;
 }

@@ -113,7 +113,7 @@ describe("FlexBoxContainer Block Component", () => {
     const block: BlockNode = makeVerticalBlock(
       [makeHorizontalBlockWithColumns(4)],
       {
-        flexContainer: { heightConfig: { pixelHeight: 100 } },
+        heightConfig: { pixelHeight: 100 },
       }
     )
 

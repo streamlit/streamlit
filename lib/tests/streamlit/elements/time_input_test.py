@@ -163,7 +163,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
         """Test that default width is 'stretch'."""
         st.time_input("the label")
 
-        c = self.get_delta_from_queue().new_element.time_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -174,7 +174,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
         """Test that pixel width works properly."""
         st.time_input("the label", width=200)
 
-        c = self.get_delta_from_queue().new_element.time_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -185,7 +185,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
         """Test that 'stretch' width works properly."""
         st.time_input("the label", width="stretch")
 
-        c = self.get_delta_from_queue().new_element.time_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value

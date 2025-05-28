@@ -160,7 +160,9 @@ class LayoutsMixin:
 
             height_config = HeightConfig()
             height_config.pixel_height = height
-            block_proto.flex_container.height_config.CopyFrom(height_config)
+            # Use block-level height_config instead of flex_container
+            block_proto.height_config.CopyFrom(height_config)
+
             if border is None:
                 # If border is None, we activated the
                 # border as default setting for scrolling

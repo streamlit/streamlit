@@ -165,7 +165,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that default width is 'stretch'."""
         st.text_area("the label")
 
-        c = self.get_delta_from_queue().new_element.text_area
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -176,7 +176,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that pixel width works properly."""
         st.text_area("the label", width=100)
 
-        c = self.get_delta_from_queue().new_element.text_area
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -187,7 +187,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that 'stretch' width works properly."""
         st.text_area("the label", width="stretch")
 
-        c = self.get_delta_from_queue().new_element.text_area
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value

@@ -316,7 +316,7 @@ describe("getHeightBackwardsCompatible", () => {
     {
       description:
         "returns pixelHeight when flexContainer.heightConfig.pixelHeight exists",
-      blockProto: { flexContainer: { heightConfig: { pixelHeight: 100 } } },
+      blockProto: { heightConfig: { pixelHeight: 100 } },
       expected: 100,
     },
     {
@@ -333,7 +333,7 @@ describe("getHeightBackwardsCompatible", () => {
       description:
         "prioritizes flexContainer.heightConfig.pixelHeight when both exist",
       blockProto: {
-        flexContainer: { heightConfig: { pixelHeight: 300 } },
+        heightConfig: { pixelHeight: 300 },
         vertical: { height: 400 },
       },
       expected: 300,
@@ -389,7 +389,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
 
   it("returns true when flexContainer has heightConfig and has chatMessage child", () => {
     const mockNode = createBlockNode(
-      { flexContainer: { heightConfig: { pixelHeight: 100 } } },
+      { heightConfig: { pixelHeight: 100 } },
       true // Has chatMessage child
     )
 
@@ -407,7 +407,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
 
   it("returns false when has height but no chatMessage child", () => {
     const mockNode = createBlockNode(
-      { flexContainer: { heightConfig: { pixelHeight: 100 } } },
+      { heightConfig: { pixelHeight: 100 } },
       false // No chatMessage child
     )
 

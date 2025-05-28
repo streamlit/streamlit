@@ -349,32 +349,32 @@ class SelectSliderWidthTest(DeltaGeneratorTestCase):
     def test_select_slider_with_width_pixels(self):
         """Test that select_slider can be displayed with a specific width in pixels."""
         st.select_slider("Label", options=["a", "b", "c"], width=500)
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        assert c.width_config.pixel_width == 500
+        assert element.width_config.pixel_width == 500
 
     def test_select_slider_with_width_stretch(self):
         """Test that select_slider can be displayed with a width of 'stretch'."""
         st.select_slider("Label", options=["a", "b", "c"], width="stretch")
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     def test_select_slider_with_default_width(self):
         """Test that the default width is used when not specified."""
         st.select_slider("Label", options=["a", "b", "c"])
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     @parameterized.expand(
         [

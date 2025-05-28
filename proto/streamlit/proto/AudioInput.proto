@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "AudioInputProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
-import "streamlit/proto/WidthConfig.proto";
 
 message AudioInput {
   string id = 1;
@@ -29,5 +28,4 @@ message AudioInput {
   string form_id = 4;
   bool disabled = 5;
   LabelVisibilityMessage label_visibility = 6;
-  streamlit.WidthConfig width_config = 7;
 }

@@ -219,7 +219,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         """Test that default width is 'stretch'."""
         st.selectbox("the label", ("m", "f"))
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -230,7 +230,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         """Test that pixel width works properly."""
         st.selectbox("the label", ("m", "f"), width=200)
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -241,7 +241,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         """Test that 'stretch' width works properly."""
         st.selectbox("the label", ("m", "f"), width="stretch")
 
-        c = self.get_delta_from_queue().new_element.selectbox
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value

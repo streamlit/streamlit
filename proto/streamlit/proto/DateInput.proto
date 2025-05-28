@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "DateInputProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
-import "streamlit/proto/WidthConfig.proto";
 
 message DateInput {
   string id = 1;
@@ -36,5 +35,4 @@ message DateInput {
   bool disabled = 11;
   LabelVisibilityMessage label_visibility = 12;
   string format = 13;
-  optional streamlit.WidthConfig width_config = 14;
 }

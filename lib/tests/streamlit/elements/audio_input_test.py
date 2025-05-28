@@ -67,7 +67,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
         """Test width config with 'stretch' value."""
         st.audio_input("the label", width="stretch")
 
-        c = self.get_delta_from_queue().new_element.audio_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -78,7 +78,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
         """Test width config with pixel value."""
         st.audio_input("the label", width=100)
 
-        c = self.get_delta_from_queue().new_element.audio_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -89,7 +89,7 @@ class AudioInputTest(DeltaGeneratorTestCase):
         """Test width config with default value."""
         st.audio_input("the label")
 
-        c = self.get_delta_from_queue().new_element.audio_input
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value

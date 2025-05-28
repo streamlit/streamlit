@@ -55,19 +55,17 @@ message Block {
 
   message FlexContainer {
     bool border = 1;
-    // TODO (lwilby): move this to use block level field.
-    streamlit.HeightConfig height_config = 2;
 
-    streamlit.GapConfig gap_config = 4;
-    float scale = 5;
+    streamlit.GapConfig gap_config = 2;
+    float scale = 3;
 
     enum Direction {
       DIRECTION_UNDEFINED = 0;
       VERTICAL = 1;
       HORIZONTAL = 2;
     }
-    Direction direction = 6;
-    bool wrap = 7;
+    Direction direction = 4;
+    bool wrap = 5;
   }
 
   message Column {
@@ -138,8 +136,6 @@ message Block {
     string name = 1;
     string avatar = 2;
     AvatarType avatar_type = 3;
-    // TODO (lwilby): move this to use block level field.
-    optional streamlit.WidthConfig width_config = 4;
   }
 
   // Next ID: 14

@@ -27,11 +27,11 @@ type SubElement = {
   widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
-export type UseLayoutStylesArgs<T> = {
+export type UseLayoutStylesArgs = {
   element: Element | BlockProto
-  // subElement supports older config where the width/height is set on the lower
-  // level element.
-  subElement?: T & SubElement
+  // subElement supports older config where the height is set on the lower
+  // level element. This will be the proto corresponding to the element type, e.g. "textArea".
+  subElement?: SubElement
 }
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
@@ -100,7 +100,7 @@ const getWidth = (
 
 const getHeight = (
   element: Element | BlockProto,
-  // subElement supports older config where the height is set on the lower
+  // subElement supports older config where the width is set on the lower
   // level element.
   subElement?: SubElement
 ): LayoutDimensionConfig => {
@@ -144,10 +144,10 @@ export type UseLayoutStylesShape = {
 /**
  * Returns the contextually-aware style values for an element container
  */
-export const useLayoutStyles = <T>({
+export const useLayoutStyles = ({
   element,
   subElement,
-}: UseLayoutStylesArgs<T>): UseLayoutStylesShape => {
+}: UseLayoutStylesArgs): UseLayoutStylesShape => {
   // Note: Consider rounding the width to the nearest pixel so we don't have
   // subpixel widths, which leads to blurriness on screen
   const layoutStyles = useMemo((): UseLayoutStylesShape => {

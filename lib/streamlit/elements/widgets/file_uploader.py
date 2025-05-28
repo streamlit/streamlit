@@ -26,7 +26,11 @@ from streamlit.elements.lib.file_uploader_utils import (
     normalize_upload_file_type,
 )
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -41,7 +45,6 @@ from streamlit.elements.lib.utils import (
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -487,14 +490,11 @@ class FileUploaderMixin:
         )
 
         validate_width(width)
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        file_uploader_proto.width_config.CopyFrom(width_config)
+        layout_config = LayoutConfig(width=width)
 
-        self.dg._enqueue("file_uploader", file_uploader_proto)
+        self.dg._enqueue(
+            "file_uploader", file_uploader_proto, layout_config=layout_config
+        )
 
         if isinstance(widget_state.value, DeletedFile):
             return None

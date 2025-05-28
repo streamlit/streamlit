@@ -20,7 +20,11 @@ from typing_extensions import Never
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     index_,
@@ -40,7 +44,6 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -488,7 +491,6 @@ class SelectboxMixin:
             default_value=None if index == 0 else index,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
@@ -550,14 +552,6 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = dedent(help)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        selectbox_proto.width_config.CopyFrom(width_config)
-
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
@@ -582,9 +576,12 @@ class SelectboxMixin:
                 selectbox_proto.raw_value = serialized_value
             selectbox_proto.set_value = True
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
-        self.dg._enqueue("selectbox", selectbox_proto)
+        self.dg._enqueue("selectbox", selectbox_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

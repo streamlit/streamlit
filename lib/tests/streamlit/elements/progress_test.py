@@ -77,7 +77,7 @@ class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
     def test_progress_width(self):
         """Test Progress with width parameter."""
         st.progress(50, width="stretch")
-        c = self.get_delta_from_queue().new_element.progress
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -85,7 +85,7 @@ class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
         assert c.width_config.use_stretch
 
         st.progress(50, width=500)
-        c = self.get_delta_from_queue().new_element.progress
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -93,7 +93,7 @@ class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
         assert c.width_config.pixel_width == 500
 
         st.progress(50)
-        c = self.get_delta_from_queue().new_element.progress
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value

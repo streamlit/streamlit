@@ -24,10 +24,9 @@ import types
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_runner import (
     __file__ as SCRIPTRUNNER_FILENAME,  # noqa: N812
@@ -125,9 +124,12 @@ class HelpMixin:
         doc_string_proto = DocStringProto()
 
         validate_width(width, allow_content=False)
-        _marshall(doc_string_proto, obj, width)
+        layout_config = LayoutConfig(width=width)
+        _marshall(doc_string_proto, obj)
 
-        return self.dg._enqueue("doc_string", doc_string_proto)
+        return self.dg._enqueue(
+            "doc_string", doc_string_proto, layout_config=layout_config
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -135,9 +137,7 @@ class HelpMixin:
         return cast("DeltaGenerator", self)
 
 
-def _marshall(
-    doc_string_proto: DocStringProto, obj: Any, width: WidthWithoutContent = "stretch"
-) -> None:
+def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
     """Construct a DocString object.
 
     See DeltaGenerator.help for docs.
@@ -158,14 +158,6 @@ def _marshall(
         doc_string_proto.value = obj_value
 
     doc_string_proto.members.extend(_get_members(obj))
-
-    # Set width configuration
-    width_config = WidthConfig()
-    if isinstance(width, int):
-        width_config.pixel_width = width
-    else:
-        width_config.use_stretch = True
-    doc_string_proto.width_config.CopyFrom(width_config)
 
 
 def _get_name(obj: object) -> str | None:

@@ -254,7 +254,7 @@ class FileUploaderWidthTest(DeltaGeneratorTestCase):
     def test_file_uploader_with_width_pixels(self):
         """Test that file_uploader can be displayed with a specific width in pixels."""
         st.file_uploader("Label", width=500)
-        c = self.get_delta_from_queue().new_element.file_uploader
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
@@ -264,7 +264,7 @@ class FileUploaderWidthTest(DeltaGeneratorTestCase):
     def test_file_uploader_with_width_stretch(self):
         """Test that file_uploader can be displayed with a width of 'stretch'."""
         st.file_uploader("Label", width="stretch")
-        c = self.get_delta_from_queue().new_element.file_uploader
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
@@ -274,7 +274,7 @@ class FileUploaderWidthTest(DeltaGeneratorTestCase):
     def test_file_uploader_with_default_width(self):
         """Test that the default width is used when not specified."""
         st.file_uploader("Label")
-        c = self.get_delta_from_queue().new_element.file_uploader
+        c = self.get_delta_from_queue().new_element
         assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value

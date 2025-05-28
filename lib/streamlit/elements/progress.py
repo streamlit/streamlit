@@ -19,10 +19,9 @@ from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
@@ -158,18 +157,10 @@ class ProgressMixin:
         if text is not None:
             progress_proto.text = text
 
-        width_config = WidthConfig()
-
         validate_width(width)
+        layout_config = LayoutConfig(width=width)
 
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-
-        progress_proto.width_config.CopyFrom(width_config)
-
-        return self.dg._enqueue("progress", progress_proto)
+        return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

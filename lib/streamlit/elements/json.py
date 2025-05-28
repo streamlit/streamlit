@@ -19,7 +19,11 @@ import types
 from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
@@ -139,12 +143,9 @@ class JsonMixin:
             )
 
         validate_width(width)
-        if isinstance(width, int):
-            json_proto.width_config.pixel_width = width
-        else:
-            json_proto.width_config.use_stretch = True
+        layout_config = LayoutConfig(width=width)
 
-        return self.dg._enqueue("json", json_proto)
+        return self.dg._enqueue("json", json_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
