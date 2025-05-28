@@ -1042,8 +1042,8 @@ function DataFrame({
             rowSelect: disabled
               ? "none"
               : isMultiRowSelectionActivated
-              ? "multi"
-              : "single",
+                ? "multi"
+                : "single",
             rowSelectionBlending: "mixed",
             // Deactivate the combination of row selections
             // and cell selections. This will automatically clear
@@ -1057,8 +1057,8 @@ function DataFrame({
             columnSelect: disabled
               ? "none"
               : isMultiColumnSelectionActivated
-              ? "multi"
-              : "single",
+                ? "multi"
+                : "single",
             columnSelectionBlending: "mixed",
             // Deactivate the combination of column selections
             // and cell selections. This will automatically clear

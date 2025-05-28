@@ -161,7 +161,7 @@
     "eslint-plugin-streamlit-custom": "workspace:^",
     "node-fetch": "3.3.2",
     "postinstall-postinstall": "^2.1.0",
-    "prettier": "^2.8.3",
+    "prettier": "^3.5.3",
     "timezone-mock": "^1.3.6",
     "tsc-alias": "^1.8.16",
     "typesync": "^0.14.3",

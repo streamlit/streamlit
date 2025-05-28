@@ -37,7 +37,7 @@ interface ValueElementProtoInterface {
 
 interface BaseArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface // Proto for this widget.
+  P extends ValueElementProtoInterface, // Proto for this widget.
 > {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -56,7 +56,7 @@ interface BaseArgs<
 
 export interface UseBasicWidgetClientStateArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface // Proto for this widget.
+  P extends ValueElementProtoInterface, // Proto for this widget.
 > extends BaseArgs<T, P> {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -70,7 +70,7 @@ export interface UseBasicWidgetClientStateArgs<
  */
 export function useBasicWidgetClientState<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface // Proto for this widget.
+  P extends ValueElementProtoInterface, // Proto for this widget.
 >({
   getStateFromWidgetMgr,
   getDefaultState,
@@ -81,7 +81,7 @@ export function useBasicWidgetClientState<
   onFormCleared,
 }: UseBasicWidgetClientStateArgs<T, P>): [
   T,
-  Dispatch<SetStateAction<ValueWithSource<T> | null>>
+  Dispatch<SetStateAction<ValueWithSource<T> | null>>,
 ] {
   const [currentValue, setCurrentValue] = useState<T>(() => {
     // If WidgetStateManager knew a value for this widget, initialize to that.
@@ -151,7 +151,7 @@ interface ValueElementProtoInterfaceWithSetValue
 
 export interface UseBasicWidgetStateArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterfaceWithSetValue // Proto for this widget.
+  P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
 > extends BaseArgs<T, P> {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -164,7 +164,7 @@ export interface UseBasicWidgetStateArgs<
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterfaceWithSetValue // Proto for this widget.
+  P extends ValueElementProtoInterfaceWithSetValue, // Proto for this widget.
 >({
   getStateFromWidgetMgr,
   getDefaultStateFromProto,
@@ -176,7 +176,7 @@ export function useBasicWidgetState<
   onFormCleared,
 }: UseBasicWidgetStateArgs<T, P>): [
   T,
-  Dispatch<SetStateAction<ValueWithSource<T> | null>>
+  Dispatch<SetStateAction<ValueWithSource<T> | null>>,
 ] {
   const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
     (_wm, el) => {

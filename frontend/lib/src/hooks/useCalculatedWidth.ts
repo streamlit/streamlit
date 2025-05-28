@@ -46,7 +46,7 @@ import { useResizeObserver } from "./useResizeObserver"
  */
 export const useCalculatedWidth = <T extends HTMLDivElement>(): [
   number,
-  MutableRefObject<T | null>
+  MutableRefObject<T | null>,
 ] => {
   const {
     values: [width],

@@ -405,9 +405,8 @@ describe("DateInput widget", () => {
   describe("localization", () => {
     const getCalendarHeader = async (): Promise<HTMLElement> => {
       const calendar = await screen.findByLabelText("Calendar.")
-      const presentations = await within(calendar).findAllByRole(
-        "presentation"
-      )
+      const presentations =
+        await within(calendar).findAllByRole("presentation")
       return presentations[presentations.length - 1]
     }
 

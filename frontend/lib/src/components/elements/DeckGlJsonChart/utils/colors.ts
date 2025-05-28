@@ -63,7 +63,7 @@ export type SerializedColorArray = [
   SerializedColorValue?,
   SerializedColorValue?,
   SerializedColorValue?,
-  SerializedColorValue?
+  SerializedColorValue?,
 ]
 
 type ObjectCallbackShape<T = unknown> = {

@@ -3327,7 +3327,7 @@ __metadata:
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
     polyfill-pseudoclass-has: "npm:^1.0.0"
-    prettier: "npm:^2.8.3"
+    prettier: "npm:^3.5.3"
     prop-types: "npm:^15.7.2"
     re-resizable: "npm:^6.11.2"
     react: "npm:^18.2.0"
@@ -3370,7 +3370,7 @@ __metadata:
     eslint: "npm:^9.27.0"
     lodash: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
-    prettier: "npm:^2.8.3"
+    prettier: "npm:^3.5.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^6.3.5"
     vite-plugin-dts: "npm:^4.5.4"
@@ -3467,7 +3467,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.0.1"
     postinstall-postinstall: "npm:^2.1.0"
-    prettier: "npm:^2.8.3"
+    prettier: "npm:^3.5.3"
     protobufjs: "npm:^7.5.2"
     query-string: "npm:^9.2.0"
     re-resizable: "npm:^6.11.2"
@@ -3541,7 +3541,7 @@ __metadata:
   dependencies:
     "@types/eslint": "npm:^9.6.1"
     eslint: "npm:^9.27.0"
-    prettier: "npm:^2.8.3"
+    prettier: "npm:^3.5.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^6.3.5"
     vite-plugin-dts: "npm:^4.5.4"
@@ -15965,12 +15965,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:^2.8.3":
-  version: 2.8.8
-  resolution: "prettier@npm:2.8.8"
+"prettier@npm:^3.5.3":
+  version: 3.5.3
+  resolution: "prettier@npm:3.5.3"
   bin:
-    prettier: bin-prettier.js
-  checksum: 10c0/463ea8f9a0946cd5b828d8cf27bd8b567345cf02f56562d5ecde198b91f47a76b7ac9eae0facd247ace70e927143af6135e8cf411986b8cb8478784a4d6d724a
+    prettier: bin/prettier.cjs
+  checksum: 10c0/3880cb90b9dc0635819ab52ff571518c35bd7f15a6e80a2054c05dbc8a3aa6e74f135519e91197de63705bcb38388ded7e7230e2178432a1468005406238b877
   languageName: node
   linkType: hard
 

@@ -70,10 +70,13 @@ export function debounce(
         clearTimeout(timeout)
       }
 
-      timeout = setTimeout(() => {
-        fn(...args)
-        last = Date.now()
-      }, Math.max(0, ms - now + last))
+      timeout = setTimeout(
+        () => {
+          fn(...args)
+          last = Date.now()
+        },
+        Math.max(0, ms - now + last)
+      )
     }
   }
 }

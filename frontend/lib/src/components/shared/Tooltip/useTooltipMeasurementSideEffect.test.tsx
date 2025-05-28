@@ -112,7 +112,7 @@ describe("useTooltipMeasurementSideEffect", () => {
             transform: MOCK_TRANSFORM,
             getPropertyValue: (prop: string) =>
               prop === "transform" ? MOCK_TRANSFORM : "",
-          } as unknown as CSSStyleDeclaration)
+          }) as unknown as CSSStyleDeclaration
       )
 
     innerWidthSpy = vi

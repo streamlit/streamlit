@@ -30,8 +30,8 @@ export function getColumnName(column: BaseColumn): string {
   return column.isIndex
     ? INDEX_IDENTIFIER
     : isNullOrUndefined(column.name)
-    ? ""
-    : column.name
+      ? ""
+      : column.name
 }
 
 /**

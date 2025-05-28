@@ -52,7 +52,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     {
       options: isBooleanType(props.arrowType)
         ? [true, false]
-        : props.arrowType.categoricalOptions ?? [],
+        : (props.arrowType.categoricalOptions ?? []),
     },
     // User parameters:
     props.columnTypeOptions

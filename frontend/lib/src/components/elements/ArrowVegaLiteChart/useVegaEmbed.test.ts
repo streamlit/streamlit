@@ -64,7 +64,7 @@ const createMockWidgetMgr = (): Mocked<WidgetStateManager> =>
     setElementState: vi.fn(),
     getStringValue: vi.fn(),
     setStringValue: vi.fn(),
-  } as unknown as Mocked<WidgetStateManager>)
+  }) as unknown as Mocked<WidgetStateManager>
 
 // ------------------------------------------
 // 2. The Tests

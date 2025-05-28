@@ -404,8 +404,8 @@ export const createTheme = (
       baseThemeConfig
         ? baseThemeConfig
         : getLuminance(bgColor) > 0.5
-        ? lightTheme
-        : darkTheme
+          ? lightTheme
+          : darkTheme
     ),
     { emotion: { inSidebar } }
   )

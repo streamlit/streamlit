@@ -6,8 +6,8 @@ alwaysApply: false
 # TypeScript Guide
 
 - TypeScript: v5
-- Linter: eslint v8
-- Formatter: prettier v2
+- Linter: eslint v9
+- Formatter: prettier v3
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v6

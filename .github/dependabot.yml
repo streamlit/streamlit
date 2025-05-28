@@ -59,9 +59,6 @@ updates:
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
-      - dependency-name: "prettier"
-        # Breaks our build process, needs more investigation
-        versions: [">=3.0.0"]
       - dependency-name: "immer"
         # Breaks our build process, needs more investigation
         versions: [">=10.0.0"]

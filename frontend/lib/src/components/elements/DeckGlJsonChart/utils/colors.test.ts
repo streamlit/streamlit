@@ -24,7 +24,7 @@ describe("#getContextualFillColor", () => {
   const testCases: [
     string,
     Parameters<typeof getContextualFillColor>[0],
-    ReturnType<typeof getContextualFillColor>
+    ReturnType<typeof getContextualFillColor>,
   ][] = [
     [
       "should return the original fill color when not selected",
