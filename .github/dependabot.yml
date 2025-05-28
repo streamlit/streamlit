@@ -56,21 +56,12 @@ updates:
       - dependency-name: "react-markdown"
         # Requires update of the remark / rehype dependencies
         versions: [">=9.0.0"]
-      - dependency-name: "@vitejs/plugin-react-swc"
-        # Breaks our build pipeline, needs more investigation
-        versions: [">=3.8.0"]
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
       - dependency-name: "prettier"
         # Breaks our build process, needs more investigation
         versions: [">=3.0.0"]
-      - dependency-name: "@vitejs/plugin-react-swc"
-        # Breaks our build process, needs more investigation
-        versions: [">=3.7.1"]
-      - dependency-name: "@swc/plugin-emotion"
-        # Breaks our build process, needs more investigation
-        versions: [">=4.0.0"]
       - dependency-name: "immer"
         # Breaks our build process, needs more investigation
         versions: [">=10.0.0"]
@@ -117,6 +108,9 @@ updates:
           - "vite"
           - "vite-*"
           - "@vitejs/*"
+          # Due to the coupling between vite plugins and underlying swc
+          # versions, it makes sense to keep these grouped together
+          - "@swc/*"
 
   # Keep python dependencies up to date
   - package-ecosystem: "pip"
