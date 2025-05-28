@@ -21,6 +21,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    Width,
     WidthWithoutContent,
     get_width_config,
     validate_width,
@@ -54,6 +55,7 @@ class LayoutsMixin:
         height: int | None = None,
         border: bool | None = None,
         key: Key | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -160,6 +162,9 @@ class LayoutsMixin:
         block_proto.flex_container.border = border or False
         block_proto.flex_container.wrap = False
 
+        validate_width(width, allow_content=True)
+        block_proto.width_config.CopyFrom(get_width_config(width))
+
         if isinstance(height, int) or border:
             block_proto.allow_empty = True
 
@@ -196,6 +201,7 @@ class LayoutsMixin:
         gap: Literal["small", "medium", "large"] | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -413,6 +419,10 @@ class LayoutsMixin:
         block_proto.flex_container.wrap = True
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
+
+        validate_width(width=width)
+        block_proto.width_config.CopyFrom(get_width_config(width=width))
+
         row = self.dg._block(block_proto)
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]

@@ -251,10 +251,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
 
-  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    return <FlexBoxContainer {...childProps} />
-  }
-
+  let containerElement: ReactElement | undefined
   const child: ReactElement = (
     <ContainerContentsWrapper
       {...childProps}
@@ -263,7 +260,9 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     />
   )
 
-  let containerElement: ReactElement | undefined
+  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
+    containerElement = <FlexBoxContainer {...childProps} />
+  }
 
   if (node.deltaBlock.dialog) {
     return (

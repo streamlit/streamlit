@@ -87,3 +87,20 @@ with col2:
         st.write("Inside container 7")
     with st.container(height=100, border=True):
         st.write("Inside container 8")
+
+code = """
+def hello():
+    print("Hello, Streamlit!")
+"""
+
+with st.container(width=200, border=True):
+    st.write("fixed 200px width container")
+    st.code(code)
+
+with st.container(width="stretch", border=True):
+    st.write("stretch width container")
+    st.code(code)
+
+with st.container(width="content", border=True):
+    st.write("content width container")
+    st.code(code)
