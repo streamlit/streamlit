@@ -63,6 +63,10 @@ from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.lib.form_utils import FormData, current_form_id
+from streamlit.elements.lib.layout_utils import (
+    get_height_config,
+    get_width_config,
+)
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
@@ -480,22 +484,14 @@ class DeltaGenerator(
 
         if layout_config:
             if layout_config.height:
-                if isinstance(layout_config.height, int):
-                    msg.delta.new_element.height_config.pixel_height = (
-                        layout_config.height
-                    )
-                elif layout_config.height == "content":
-                    msg.delta.new_element.height_config.use_content = True
-                else:
-                    msg.delta.new_element.height_config.use_stretch = True
+                msg.delta.new_element.height_config.CopyFrom(
+                    get_height_config(layout_config.height)
+                )
 
             if layout_config.width:
-                if isinstance(layout_config.width, int):
-                    msg.delta.new_element.width_config.pixel_width = layout_config.width
-                elif layout_config.width == "content":
-                    msg.delta.new_element.width_config.use_content = True
-                else:
-                    msg.delta.new_element.width_config.use_stretch = True
+                msg.delta.new_element.width_config.CopyFrom(
+                    get_width_config(layout_config.width)
+                )
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False

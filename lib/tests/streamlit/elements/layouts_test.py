@@ -305,6 +305,30 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert expander_block.add_block.expandable.label == "label"
         assert not expander_block.add_block.expandable.expanded
 
+    def test_width_config(self):
+        """Test that width configuration works correctly"""
+        st.expander("label", width=200)
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.width_config.pixel_width == 200
+
+        st.expander("label", width="stretch")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+            ("content",),
+        ]
+    )
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.expander("label", width=invalid_width)
+
     def test_valid_emoji_icon(self):
         """Test that it can be called with an emoji icon"""
         expander = st.expander("label", icon="🦄")

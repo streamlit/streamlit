@@ -86,3 +86,9 @@ level1.write("First level expander")
 
 level2 = level1.expander("Inside expander")
 level2.write("Second level expander")
+
+with st.expander("Fixed width expander", width=200):
+    st.write("Hello")
+
+with st.expander("Stretch width expander", width="stretch"):
+    st.write("Hello")

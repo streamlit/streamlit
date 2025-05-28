@@ -19,6 +19,8 @@ from typing import Literal, Union
 from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitInvalidHeightError, StreamlitInvalidWidthError
+from streamlit.proto.HeightConfig_pb2 import HeightConfig
+from streamlit.proto.WidthConfig_pb2 import WidthConfig
 
 WidthWithoutContent: TypeAlias = Union[int, Literal["stretch"]]
 Width: TypeAlias = Union[int, Literal["stretch", "content"]]
@@ -89,3 +91,25 @@ def validate_height(height: Height, allow_content: bool = False) -> None:
 
     elif height <= 0:
         raise StreamlitInvalidHeightError(height, allow_content)
+
+
+def get_width_config(width: Width) -> WidthConfig:
+    width_config = WidthConfig()
+    if isinstance(width, int):
+        width_config.pixel_width = width
+    elif width == "content":
+        width_config.use_content = True
+    else:
+        width_config.use_stretch = True
+    return width_config
+
+
+def get_height_config(height: Height) -> HeightConfig:
+    height_config = HeightConfig()
+    if isinstance(height, int):
+        height_config.pixel_height = height
+    elif height == "content":
+        height_config.use_content = True
+    else:
+        height_config.use_stretch = True
+    return height_config

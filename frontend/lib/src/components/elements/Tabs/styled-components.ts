@@ -20,10 +20,11 @@ import { transparentize } from "color2k"
 export interface StyledTabContainerProps {
   isOverflowing: boolean
   tabHeight: string
+  width: React.CSSProperties["width"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ theme, isOverflowing, tabHeight }) => ({
+  ({ theme, isOverflowing, tabHeight, width }) => ({
     ...(isOverflowing
       ? {
           position: "relative",
@@ -43,5 +44,8 @@ export const StyledTabContainer = styled.div<StyledTabContainerProps>(
           },
         }
       : {}),
+    ...(width && {
+      width,
+    }),
   })
 )
