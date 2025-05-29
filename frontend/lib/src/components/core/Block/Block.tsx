@@ -335,7 +335,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     const hasSubmitButton =
       submitButtons !== undefined && submitButtons.length > 0
     const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
-    return (
+    containerElement = (
       <Form
         formId={formId}
         clearOnSubmit={clearOnSubmit}
