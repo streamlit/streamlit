@@ -180,7 +180,7 @@ export const FlexBoxContainer = (
       undefined,
   })
 
-  // TODO(lawilby): as advanced layouts is rolled out, we will add useLayoutStyles
+  // TODO: as advanced layouts is rolled out, we will add useLayoutStyles
   // here to get the correct styles for the flexbox container based on user
   // settings.
   const styles = {
