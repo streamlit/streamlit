@@ -36,9 +36,9 @@ from streamlit.errors import (
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidVerticalAlignmentError,
 )
-from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
+from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
 
