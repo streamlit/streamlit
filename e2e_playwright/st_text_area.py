@@ -99,3 +99,8 @@ st.text_area(
 
 st.text_area("text area 16 (width=200px)", "width test", width=200)
 st.text_area("text area 17 (width='stretch')", "width test", width="stretch")
+
+st.text_area("text area 18 (height='stretch)", "height test", height="stretch")
+
+# TODO: This should auto-expand
+st.text_area("text area 19 (height='content)", "height test", height="content")

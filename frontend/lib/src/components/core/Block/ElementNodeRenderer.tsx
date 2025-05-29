@@ -96,6 +96,7 @@ import {
   shouldComponentBeEnabled,
 } from "./utils"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
+import { useLayoutStyles } from "../Layout/useLayoutStyles"
 
 // Lazy-load elements.
 const Audio = lazy(() => import("~lib/components/elements/Audio"))
@@ -640,10 +641,14 @@ const RawElementNodeRenderer = (
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
       widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
+      const styles = useLayoutStyles({
+        element: node.element,
+      })
       return (
         <TextArea
           key={textAreaProto.id}
           element={textAreaProto}
+          height={styles.height}
           {...widgetProps}
         />
       )

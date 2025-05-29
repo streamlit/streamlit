@@ -25,7 +25,10 @@ message TextArea {
   string id = 1;
   string label = 2;
   optional string default = 3;
-  uint32 height = 4;
+
+  // deprecated. Use heightConfig on Element.proto.
+  uint32 height = 4 [deprecated = true];
+
   uint32 max_chars = 5;
   string help = 6;
   string form_id = 7;
