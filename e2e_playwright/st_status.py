@@ -58,3 +58,9 @@ try:
         raise Exception("Error!")
 except Exception:
     pass
+
+with st.status("Fixed width status", state="complete", width=200):
+    st.write("Hello World")
+
+with st.status("Stretch width status", state="complete", width="stretch"):
+    st.write("Hello World")

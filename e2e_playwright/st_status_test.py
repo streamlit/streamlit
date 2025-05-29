@@ -23,7 +23,7 @@ def test_status_container_rendering(
 ):
     """Test that st.status renders correctly via screenshots."""
     status_containers = themed_app.get_by_test_id("stExpander")
-    expect(status_containers).to_have_count(9)
+    expect(status_containers).to_have_count(11)
 
     # Don't check screenshot for first element,
     # since we cannot reliably screenshot test the spinner icon.
@@ -36,6 +36,8 @@ def test_status_container_rendering(
     assert_snapshot(status_containers.nth(6), name="st_status-collapsed_via_update")
     assert_snapshot(status_containers.nth(7), name="st_status-empty_state")
     assert_snapshot(status_containers.nth(8), name="st_status-uncaught_exception")
+    assert_snapshot(status_containers.nth(9), name="st_status-fixed_pixel_width")
+    assert_snapshot(status_containers.nth(10), name="st_status-stretch_width")
 
 
 def test_running_state(app: Page):
