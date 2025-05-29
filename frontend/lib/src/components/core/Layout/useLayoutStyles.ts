@@ -164,7 +164,6 @@ export const useLayoutStyles = ({
         width: "auto",
         height: "auto",
         overflow: "visible",
-        alignSelf: "flex-start",
       }
     }
     let flex: React.CSSProperties["flex"] = undefined
@@ -188,7 +187,6 @@ export const useLayoutStyles = ({
     )
     let height: React.CSSProperties["height"] = "auto"
     let overflow: React.CSSProperties["overflow"] = "visible"
-    let alignSelf: React.CSSProperties["alignSelf"] = "flex-start"
 
     if (heightType === DimensionType.STRETCH) {
       height = "100%"
