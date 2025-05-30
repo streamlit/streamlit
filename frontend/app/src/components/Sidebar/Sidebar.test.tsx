@@ -351,7 +351,9 @@ describe("Sidebar Component", () => {
         "stSidebarCollapsedControl"
       )
       expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      const collapsedLogo = within(openSidebarContainer).getByTestId(
+        "stHeaderLogo"
+      )
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://docs.streamlit.io/logo.svg"
@@ -376,7 +378,9 @@ describe("Sidebar Component", () => {
         "stSidebarCollapsedControl"
       )
       expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      const collapsedLogo = within(openSidebarContainer).getByTestId(
+        "stHeaderLogo"
+      )
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
@@ -397,7 +401,9 @@ describe("Sidebar Component", () => {
       renderSidebar({})
       const sidebarLogoContainer = screen.getByTestId("stSidebarHeader")
       expect(sidebarLogoContainer).toBeInTheDocument()
-      const sidebarLogo = within(sidebarLogoContainer).getByTestId("stLogo")
+      const sidebarLogo = within(sidebarLogoContainer).getByTestId(
+        "stSidebarLogo"
+      )
       expect(sidebarLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
@@ -421,7 +427,7 @@ describe("Sidebar Component", () => {
       ).queryByTestId("stLogoLink")
       expect(sidebarLogoLink).not.toBeInTheDocument()
       const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
+        "stSidebarLogo"
       )
       expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
     })
@@ -443,7 +449,7 @@ describe("Sidebar Component", () => {
       ).getByTestId("stLogoLink")
       expect(sidebarLogoLink).toHaveAttribute("href", "www.example.com")
       const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
+        "stSidebarLogo"
       )
       expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
     })
@@ -461,7 +467,7 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
+        "stSidebarLogo"
       )
       expect(sidebarLogo).toHaveStyle({ height: "1.25rem" })
     })
@@ -482,7 +488,7 @@ describe("Sidebar Component", () => {
         screen.getByTestId("stSidebar")
       ).width
       const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
+        "stSidebarLogo"
       )
       // L & R sidebar padding + 8px margin for scrollbarGutter + R margin (sm) + collapse button (2.25rem)
       expect(sidebarLogo).toHaveStyle(
@@ -504,7 +510,7 @@ describe("Sidebar Component", () => {
 
       const sidebarLogo = within(
         screen.getByTestId("stSidebarHeader")
-      ).getByTestId("stLogo")
+      ).getByTestId("stSidebarLogo")
       expect(sidebarLogo).toBeInTheDocument()
 
       fireEvent.error(sidebarLogo)

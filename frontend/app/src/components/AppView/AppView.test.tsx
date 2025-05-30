@@ -389,7 +389,7 @@ describe("AppView element", () => {
 
     it("doesn't render if no logo provided", () => {
       render(<AppView {...getProps()} />)
-      expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
     })
 
     it("uses iconImage if provided", () => {
@@ -399,7 +399,9 @@ describe("AppView element", () => {
         "stSidebarCollapsedControl"
       )
       expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      const collapsedLogo = within(openSidebarContainer).getByTestId(
+        "stHeaderLogo"
+      )
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://docs.streamlit.io/logo.svg"
@@ -415,7 +417,9 @@ describe("AppView element", () => {
         "stSidebarCollapsedControl"
       )
       expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      const collapsedLogo = within(openSidebarContainer).getByTestId(
+        "stHeaderLogo"
+      )
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
@@ -425,7 +429,9 @@ describe("AppView element", () => {
     it("default no link with image size medium", () => {
       render(<AppView {...getProps({ appLogo: imageOnly })} />)
       expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
-      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "1.5rem" })
+      expect(screen.getByTestId("stHeaderLogo")).toHaveStyle({
+        height: "1.5rem",
+      })
     })
 
     it("link with image if provided", () => {
@@ -438,13 +444,15 @@ describe("AppView element", () => {
 
     it("renders logo - large size when specified", () => {
       render(<AppView {...getProps({ appLogo: imageWithSize })} />)
-      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "2rem" })
+      expect(screen.getByTestId("stHeaderLogo")).toHaveStyle({
+        height: "2rem",
+      })
     })
 
     it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
       const props = getProps({ appLogo: imageOnly })
       render(<AppView {...props} />)
-      const logoElement = screen.getByTestId("stLogo")
+      const logoElement = screen.getByTestId("stHeaderLogo")
       expect(logoElement).toBeInTheDocument()
 
       fireEvent.error(logoElement)

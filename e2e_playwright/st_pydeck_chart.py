@@ -36,7 +36,7 @@ H3_HEX_DATA = [
 hex_data = pd.DataFrame(H3_HEX_DATA)
 
 
-def test_1():
+def empty_chart_subtest():
     st.write("""
     ## Test empty chart
     """)
@@ -44,7 +44,7 @@ def test_1():
     st.pydeck_chart()
 
 
-def test_2():
+def basic_chart_subtest():
     st.write("""
     ## Test basic chart
 
@@ -83,7 +83,7 @@ def test_2():
     )
 
 
-def test_3():
+def invalid_prop_subtest():
     st.write("""
     ## Test invalid property
 
@@ -109,7 +109,7 @@ def test_3():
     st.pydeck_chart(deck, use_container_width=True)
 
 
-def test_4():
+def map_styles_subtest():
     st.write("""
     ## Test map styles
 
@@ -144,7 +144,7 @@ def test_4():
     )
 
 
-def test_5():
+def light_style_subtest():
     st.write("""
     ## Test light style
 
@@ -183,7 +183,7 @@ def test_5():
     )
 
 
-def test_6():
+def dark_style_subtest():
     st.write("""
     ## Test dark style
 
@@ -222,7 +222,7 @@ def test_6():
     )
 
 
-def test_7():
+def dimensions_subtest():
     st.write("""
     ## Test with width and height set
 
@@ -256,7 +256,7 @@ def test_7():
     )
 
 
-def test_8():
+def mapbox_subtest():
     st.write("""
     ## Test with Mapbox provider
 
@@ -289,8 +289,8 @@ def test_8():
     )
 
 
-TESTS = {k: v for k, v in globals().items() if k.startswith("test_")}
+SUBTESTS = {k: v for k, v in globals().items() if k.endswith("_subtest")}
 
-test = TESTS[st.selectbox("Test to run", TESTS.keys())]
+subtest = SUBTESTS[st.selectbox("Test to run", SUBTESTS.keys())]
 
-test()
+subtest()

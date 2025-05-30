@@ -20,6 +20,7 @@ st.write(
     """
     Streamlit is an open-source app framework built specifically for
     machine learning and data science projects.
+
     **👈 Select a demo from the sidebar** to see some examples
     of what Streamlit can do!
 

@@ -256,7 +256,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         sidebarWidth={sidebarWidth}
         alt="Logo"
         className="stLogo"
-        data-testid="stLogo"
+        data-testid={collapsed ? "stHeaderLogo" : "stSidebarLogo"}
         // Save to logo's src to send on load error
         onError={_ => handleLogoError(source, collapsed)}
       />
