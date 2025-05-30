@@ -106,7 +106,6 @@ class LayoutsMixin:
             parent container, Streamlit sets the width of the container to match
             the width of the parent container.
 
-
         Examples
         --------
         Inserting elements using ``with`` notation:
