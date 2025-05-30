@@ -113,23 +113,25 @@ def test_dimensions_are_correctly_applied(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.container dimensions are correctly applied."""
+
+    # The chat messages have vertical blocks as well so these are offset by 10.
     container_elements = app.get_by_test_id("stVerticalBlock")
-    fixed_width_container = container_elements.nth(6)
+    fixed_width_container = container_elements.nth(16)
     assert_snapshot(fixed_width_container, name="st_container-fixed_width")
 
-    stretch_width_container = container_elements.nth(7)
+    stretch_width_container = container_elements.nth(17)
     assert_snapshot(stretch_width_container, name="st_container-stretch_width")
 
-    content_width_container = container_elements.nth(8)
+    content_width_container = container_elements.nth(18)
     assert_snapshot(content_width_container, name="st_container-content_width")
 
-    fixed_height_container = container_elements.nth(9)
+    fixed_height_container = container_elements.nth(19)
     assert_snapshot(
         fixed_height_container, name="st_container-stretch_and_fixed_height"
     )
 
-    # number 10 is nested in 9 so skip to 11 for the next snapshot.
-    stretch_height_container = container_elements.nth(11)
+    # number 20 is nested in 19 so skip to 21 for the next snapshot.
+    stretch_height_container = container_elements.nth(21)
     assert_snapshot(
         stretch_height_container, name="st_container-content_and_fixed_height"
     )
