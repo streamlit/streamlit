@@ -76,8 +76,8 @@ class LayoutsMixin:
             Desired height of the container expressed in pixels. If ``content`` (default),
             the container grows to fit its content. If a fixed height, scrolling is
             enabled for large content and a grey border is shown around the container
-            to visually separate its scroll surface from the rest of the app. If ``stretch``, Streamlit
-            sets the width of the container to match the width of the parent container
+            to visually separate its scroll surface from the rest of the app. If ``stretch``,
+            Streamlit sets the width of the container to match the width of the parent container
 
             .. note::
                 Use scrolling containers sparingly. If you use scrolling
