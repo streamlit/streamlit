@@ -149,6 +149,42 @@ export const parseFont = (font: string): string => {
   return font
 }
 
+/**
+ * Helper function to parse the baseRadius & buttonRadius options which allow the same possible values
+ * @param radius: a string - "none", "small", "medium", "large", "full", a number in pixels or rem
+ * @returns radius value and css unit
+ */
+export const parseRadius = (
+  radius: string
+): [number | undefined, "px" | "rem"] => {
+  let cssUnit: "px" | "rem" = "rem"
+  let radiusValue: number | undefined = undefined
+  const processedRadius = radius.trim().toLowerCase()
+
+  if (processedRadius === "none") {
+    radiusValue = 0
+  } else if (processedRadius === "small") {
+    radiusValue = 0.35
+  } else if (processedRadius === "medium") {
+    radiusValue = 0.5
+  } else if (processedRadius === "large") {
+    radiusValue = 1
+  } else if (processedRadius === "full") {
+    radiusValue = 1.4
+  } else if (processedRadius.endsWith("rem")) {
+    radiusValue = parseFloat(processedRadius)
+  } else if (processedRadius.endsWith("px")) {
+    radiusValue = parseFloat(processedRadius)
+    cssUnit = "px"
+  } else if (!isNaN(parseFloat(processedRadius))) {
+    // Fallback: if the value can be parsed as a number, treat it as pixels
+    radiusValue = parseFloat(processedRadius)
+    cssUnit = "px"
+  }
+
+  return [radiusValue, cssUnit]
+}
+
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
@@ -157,6 +193,7 @@ export const createEmotionTheme = (
   const {
     baseFontSize,
     baseRadius,
+    buttonRadius,
     showWidgetBorder,
     headingFont,
     bodyFont,
@@ -236,33 +273,16 @@ export const createEmotionTheme = (
     conditionalOverrides.radii = {
       ...baseThemeConfig.emotion.radii,
     }
-    let cssUnit: "px" | "rem" = "rem"
-    let radiusValue: number | undefined = undefined
-    const processedBaseRadius = baseRadius.trim().toLowerCase()
 
-    if (processedBaseRadius === "none") {
-      radiusValue = 0
-    } else if (processedBaseRadius === "small") {
-      radiusValue = 0.35
-    } else if (processedBaseRadius === "medium") {
-      radiusValue = 0.5
-    } else if (processedBaseRadius === "large") {
-      radiusValue = 1
-    } else if (processedBaseRadius === "full") {
-      radiusValue = 1.4
-    } else if (processedBaseRadius.endsWith("rem")) {
-      radiusValue = parseFloat(processedBaseRadius)
-    } else if (processedBaseRadius.endsWith("px")) {
-      radiusValue = parseFloat(processedBaseRadius)
-      cssUnit = "px"
-    } else if (!isNaN(parseFloat(processedBaseRadius))) {
-      // Fallback: if the value can be parsed as a number, treat it as pixels
-      radiusValue = parseFloat(processedBaseRadius)
-      cssUnit = "px"
-    }
+    const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
     if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
-      conditionalOverrides.radii.default = addCssUnit(radiusValue, cssUnit)
+      const radiusWithCssUnit = addCssUnit(radiusValue, cssUnit)
+      conditionalOverrides.radii.default = radiusWithCssUnit
+
+      // Set the fallback button radius if baseRadius is set
+      conditionalOverrides.radii.button = radiusWithCssUnit
+
       // Adapt all the other radii sizes based on the base radii:
       // We make sure that the value is rounded to 2 decimal places to avoid
       // floating point precision issues.
@@ -281,6 +301,26 @@ export const createEmotionTheme = (
     } else {
       LOG.warn(
         `Invalid base radius: ${baseRadius}. Falling back to default base radius.`
+      )
+    }
+  }
+
+  if (notNullOrUndefined(buttonRadius)) {
+    // Handles case where buttonRadius is the only radius set in the themeInput
+    if (!conditionalOverrides.radii) {
+      conditionalOverrides.radii = {
+        ...baseThemeConfig.emotion.radii,
+      }
+    }
+
+    const [radiusValue, cssUnit] = parseRadius(buttonRadius)
+
+    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+      // If valid buttonRadius set, override baseRadius fallback
+      conditionalOverrides.radii.button = addCssUnit(radiusValue, cssUnit)
+    } else {
+      LOG.warn(
+        `Invalid button radius: ${buttonRadius}. Falling back to default button radius.`
       )
     }
   }

@@ -108,6 +108,7 @@ FD = FieldDescriptor
                 ("font_sizes", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("skeleton_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("base_radius", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("button_radius", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("border_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("show_widget_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("link_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),

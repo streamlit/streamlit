@@ -1226,6 +1226,24 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "buttonRadius",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        The radius used as basis for the corners of buttons.
+
+        This can be one of the following:
+        - "none"
+        - "small"
+        - "medium"
+        - "large"
+        - "full"
+        - ...or the number in pixels or rem. For example, you can use "10px",
+          "0.5rem", or "2rem". To follow best practices, use rem instead of
+          pixels when specifying a numeric size.
+    """,
+)
+
+_create_theme_options(
     "borderColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
