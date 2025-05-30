@@ -96,7 +96,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-lodash": "^8.0.0",
     "eslint-plugin-no-relative-import-paths": "^1.6.1",
-    "eslint-plugin-prettier": "^5.4.0",
+    "eslint-plugin-prettier": "^5.4.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^6.0.0-rc.1",
     "eslint-plugin-streamlit-custom": "workspace:^",
