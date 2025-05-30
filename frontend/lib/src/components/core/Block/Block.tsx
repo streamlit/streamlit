@@ -193,9 +193,10 @@ export const FlexBoxContainer = (
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
     $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    overflow: layout_styles.overflow,
+    border: getBorderBackwardsCompatible(props.node.deltaBlock),
     height: layout_styles.height,
     flex: layout_styles.flex,
-    border: getBorderBackwardsCompatible(props.node.deltaBlock),
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
