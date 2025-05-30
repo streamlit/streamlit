@@ -180,9 +180,8 @@ export const FlexBoxContainer = (
       undefined,
   })
 
-  // TODO: as advanced layouts is rolled out, we will add useLayoutStyles
-  // here to get the correct styles for the flexbox container based on user
-  // settings.
+  // TODO: as advanced layouts is rolled out, more of these styles will
+  // be provided by useLayoutStyles
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
