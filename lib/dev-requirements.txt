@@ -1,7 +1,9 @@
 pre-commit
 # We fix ruff to a version to be in sync with the pre-commit hook:
 ruff==0.11.11
-mypy>=1.15
+# We are pinning the upper version to not break our CI on updates,
+# and have dependabot handle the updates instead.
+mypy>=1.15,<1.16
 mypy-protobuf>=3.2
 semver>=3
 setuptools>=65.5.1
