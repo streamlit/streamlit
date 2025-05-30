@@ -72,11 +72,12 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        height : int or None
-            Desired height of the container expressed in pixels. If ``None`` (default)
+        height : int, "content", or "stretch"
+            Desired height of the container expressed in pixels. If ``content`` (default),
             the container grows to fit its content. If a fixed height, scrolling is
             enabled for large content and a grey border is shown around the container
-            to visually separate its scroll surface from the rest of the app.
+            to visually separate its scroll surface from the rest of the app. If ``stretch``, Streamlit
+            sets the width of the container to match the width of the parent container
 
             .. note::
                 Use scrolling containers sparingly. If you use scrolling
@@ -95,6 +96,15 @@ class LayoutsMixin:
 
             Additionally, if ``key`` is provided, it will be used as CSS
             class name prefixed with ``st-key-``.
+
+        width : int or "stretch"
+            The desired width of the container expressed in pixels. If this is
+            ``"stretch"`` (default), Streamlit sets the width of the container to
+            match the width of the parent container. If ``content`` (default),
+            the container grows to fit its content. Otherwise, this must be an
+            integer. If the specified width is greater than the width of the
+            parent container, Streamlit sets the width of the container to match
+            the width of the parent container.
 
 
         Examples
