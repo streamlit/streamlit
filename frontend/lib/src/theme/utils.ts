@@ -23,6 +23,7 @@ import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
+import type { StreamlitWindowObject } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -54,11 +55,7 @@ export const CUSTOM_THEME_NAME = "Custom Theme"
 
 declare global {
   interface Window {
-    __streamlit?: {
-      LIGHT_THEME: ICustomThemeConfig
-      DARK_THEME: ICustomThemeConfig
-      ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
-    }
+    __streamlit?: StreamlitWindowObject
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{

@@ -550,7 +550,6 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
 
-      // @ts-expect-error
       window.__streamlit = {
         ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION: true,
       }

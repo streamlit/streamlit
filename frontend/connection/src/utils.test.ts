@@ -172,7 +172,7 @@ describe("getPossibleBaseUris", () => {
 
   afterEach(() => {
     window.location.pathname = originalPathName
-    window.__STREAMLIT_BACKEND_BASE_URL = undefined
+    window.__streamlit = undefined
   })
 
   const testCases = [
@@ -208,8 +208,8 @@ describe("getPossibleBaseUris", () => {
     })
   })
 
-  it("Calculates possibleBaseUris with window.__STREAMLIT_BACKEND_BASE_URL if set", () => {
-    window.__STREAMLIT_BACKEND_BASE_URL = "https://used_host:443/foo/bar"
+  it("Calculates possibleBaseUris with window.__streamlit.BACKEND_BASE_URL if set", () => {
+    window.__streamlit = { BACKEND_BASE_URL: "https://used_host:443/foo/bar" }
     window.location.href = "https://unused_host:443/foo/bar"
 
     const possibleBaseUris = getPossibleBaseUris()

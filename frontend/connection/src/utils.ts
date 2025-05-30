@@ -49,7 +49,7 @@ export function getBaseUriParts(url?: string): URL {
 // the best path forward may be tricky as I wasn't able to come up with an
 // easy solution covering every deployment scenario.
 export function getPossibleBaseUris(): Array<URL> {
-  const baseUriParts = getBaseUriParts(window.__STREAMLIT_BACKEND_BASE_URL)
+  const baseUriParts = getBaseUriParts(window.__streamlit?.BACKEND_BASE_URL)
   const { pathname } = baseUriParts
 
   if (pathname === "/") {

@@ -139,7 +139,7 @@ describe("doInitPings", () => {
     vi.clearAllTimers()
     vi.useRealTimers()
     axios.get = originalAxiosGet
-    window.__STREAMLIT_HOST_CONFIG_BASE_URL = undefined
+    window.__streamlit = undefined
   })
 
   it("calls the /_stcore/health endpoint when pinging server", async () => {
@@ -162,8 +162,8 @@ describe("doInitPings", () => {
     )
   })
 
-  it("makes the host config call using window.__STREAMLIT_HOST_CONFIG_BASE_URL if set", async () => {
-    window.__STREAMLIT_HOST_CONFIG_BASE_URL = "https://example.com:1234"
+  it("makes the host config call using window.__streamlit.HOST_CONFIG_BASE_URL if set", async () => {
+    window.__streamlit = { HOST_CONFIG_BASE_URL: "https://example.com:1234" }
     axios.get = vi
       .fn()
       .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
