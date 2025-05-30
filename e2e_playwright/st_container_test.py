@@ -56,7 +56,7 @@ def test_renders_container_with_border(
     container_with_border = themed_app.get_by_test_id("stVerticalBlock").nth(3)
     assert_snapshot(container_with_border, name="st_container-has_border")
     # This one should not have scrolling activated:
-    expect(container_with_border).not_to_have_css("overflow", "auto")
+    expect(vertical_block).not_to_have_css("overflow", "auto")
 
 
 def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFunction):

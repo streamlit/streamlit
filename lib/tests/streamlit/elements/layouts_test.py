@@ -286,14 +286,16 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[1].add_block.column.show_border
         assert columns_blocks[2].add_block.column.show_border
 
-    def test_width_config(self):
+    def test_width_config_pixel_width(self):
         """Test that width configuration works correctly"""
         st.columns(3, width=200)
-        columns_block = self.get_delta_from_queue()
+        columns_block = self.get_delta_from_queue(0)
         assert columns_block.add_block.width_config.pixel_width == 200
 
+    def test_width_config_stretch(self):
+        """Test that width configuration works correctly"""
         st.columns(3, width="stretch")
-        columns_block = self.get_delta_from_queue()
+        columns_block = self.get_delta_from_queue(0)
         assert columns_block.add_block.width_config.use_stretch
 
     @parameterized.expand(

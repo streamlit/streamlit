@@ -249,6 +249,14 @@ class LayoutsMixin:
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown around each column.
 
+        width : int or "stretch"
+            The desired width of the columns expressed in pixels. If this is
+            ``"stretch"`` (default), Streamlit sets the width of the columns to
+            match the width of the parent container. Otherwise, this must be an
+            integer. If the specified width is greater than the width of the
+            parent container, Streamlit sets the width of the columns to match
+            the width of the parent container.
+
         Returns
         -------
         list of containers
