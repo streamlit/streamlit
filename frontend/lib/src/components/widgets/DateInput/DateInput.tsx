@@ -49,6 +49,7 @@ import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibContext } from "~lib/components/core/LibContext"
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
@@ -90,6 +91,7 @@ function DateInput({
   fragmentId,
 }: Props): ReactElement {
   const theme: EmotionTheme = useTheme()
+  const isInSidebar = useContext(IsSidebarContext)
 
   /**
    * An array with start and end date specified by the user via the UI. If the user
@@ -244,6 +246,7 @@ function DateInput({
         overrides={{
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               placement: PLACEMENT.bottomLeft,
               overrides: {
                 Body: {

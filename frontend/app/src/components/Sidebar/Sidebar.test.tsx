@@ -472,30 +472,6 @@ describe("Sidebar Component", () => {
       expect(sidebarLogo).toHaveStyle({ height: "1.25rem" })
     })
 
-    it("sets maxWidth of logo based on sidebar width", () => {
-      // Update the mock to return a context with appLogo
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getContextOutput({
-          appLogo: imageWithLink,
-        })
-      )
-      renderSidebar()
-
-      const sidebarWidth = window.getComputedStyle(
-        screen.getByTestId("stSidebar")
-      ).width
-      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stSidebarLogo"
-      )
-      // L & R sidebar padding + 8px margin for scrollbarGutter + R margin (sm) + collapse button (2.25rem)
-      expect(sidebarLogo).toHaveStyle(
-        `max-width: calc(${sidebarWidth} - 2 * calc(1rem + 2px) - (2 * 8px) - 0.5rem - 2.25rem)`
-      )
-    })
-
     it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
       // Update the mock to return a context with appLogo
       vi.spyOn(

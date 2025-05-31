@@ -45,19 +45,22 @@ const getNavTextColor = (
 }
 
 /**
- * Returns the horizontal spacing for the sidebar. Since scrollbarGutter is set
- * to `stable both-edges`, we need to match the prior spacing from when we were
- * reliant on overlay scrollbars. This doesn't directly map to a value in the
- * theme.spacing object. We add 2px to achieve this as a close approximation for
- * Chrome. The space reserved for the scrollbar is dependent upon browser and
- * OS, so this will be an imperfect match to prior behavior due to the
- * deprecated browser API of `overflow: overlay`.
+ * Returns the horizontal spacing for the sidebar, taking into consideration
+ * the scrollbar gutters (one on each side) which are present when the OS
+ * doesn't support overlay scrollbars.
  *
  * @param theme The theme to use.
  * @returns The horizontal spacing for the sidebar.
  */
 const getSidebarHorizontalSpacing = (theme: EmotionTheme): string => {
-  return `calc(${theme.spacing.lg} + 2px)`
+  // This should be max(0px, ...), but there's a Chrome bug that
+  // causes content to clip when scrollbar-gutter is set to "stable both-edges".
+  // So we change the min from 0px to --scrollbar-width to account for that.
+  // Chrome bug: https://issues.chromium.org/issues/40064879
+  return `max(
+    calc(var(--scrollbar-width)),
+    calc(${theme.spacing.lg} - var(--scrollbar-width))
+  )`
 }
 
 export interface StyledSidebarProps {
@@ -68,8 +71,8 @@ export interface StyledSidebarProps {
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, adjustTop, sidebarWidth }) => {
-    const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
-    const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
+    const minWidth = isCollapsed ? 0 : Math.min(200, window.innerWidth)
+    const maxWidth = isCollapsed ? 0 : Math.min(600, window.innerWidth * 0.9)
 
     return {
       position: "relative",
@@ -303,14 +306,6 @@ function translateLogoHeight(theme: any, size: string): string {
   return theme.sizes.defaultLogoHeight
 }
 
-/**
- * The width of the scrollbar gutter is estimated to be 8px.
- *
- * Note that the actual width of the scrollbar gutter is browser and OS
- * dependent.
- */
-const SCROLLBAR_GUTTER_WIDTH_ESTIMATE = "8px"
-
 export const StyledLogo = styled.img<StyledLogoProps>(
   ({ theme, size, sidebarWidth }) => ({
     height: translateLogoHeight(theme, size),
@@ -327,9 +322,7 @@ export const StyledLogo = styled.img<StyledLogoProps>(
       // L & R padding (lg) + scrollbarGutter on both sides (2 * 8px) + R margin (sm) + collapse button (2.25rem)
       maxWidth: `calc(${sidebarWidth}px - 2 * ${getSidebarHorizontalSpacing(
         theme
-      )} - (2 * ${SCROLLBAR_GUTTER_WIDTH_ESTIMATE}) - ${
-        theme.spacing.sm
-      } - 2.25rem)`,
+      )} - (2 * var(--scrollbar-width)) - ${theme.spacing.sm} - 2.25rem)`,
     }),
   })
 )
@@ -457,4 +450,6 @@ export const StyledViewButton = styled.button(({ theme }) => {
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   paddingTop: theme.spacing.lg,
   borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  marginRight: getSidebarHorizontalSpacing(theme),
+  marginLeft: getSidebarHorizontalSpacing(theme),
 }))

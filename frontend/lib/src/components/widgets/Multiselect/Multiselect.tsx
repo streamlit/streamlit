@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useMemo } from "react"
+import React, { FC, memo, useCallback, useContext, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
@@ -29,6 +29,7 @@ import { useTheme } from "@emotion/react"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
 import { Placement } from "~lib/components/shared/Tooltip"
@@ -97,6 +98,7 @@ const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
   const theme: EmotionTheme = useTheme()
+  const isInSidebar = useContext(IsSidebarContext)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -265,6 +267,7 @@ const Multiselect: FC<Props> = props => {
           overrides={{
             Popover: {
               props: {
+                ignoreBoundary: isInSidebar,
                 overrides: {
                   Body: {
                     style: () => ({
@@ -277,6 +280,9 @@ const Multiselect: FC<Props> = props => {
             SelectArrow: {
               component: ChevronDown,
               props: {
+                style: {
+                  cursor: "pointer",
+                },
                 overrides: {
                   Svg: {
                     style: () => ({
