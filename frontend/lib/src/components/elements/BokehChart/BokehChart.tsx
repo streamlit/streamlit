@@ -129,7 +129,13 @@ export function BokehChart({
   }, [width, height, element, memoizedGetChartData, memoizedUpdateChart])
 
   return (
-    <div id={chartId} className="stBokehChart" data-testid="stBokehChart" />
+    <div
+      id={chartId}
+      className="stBokehChart"
+      data-testid="stBokehChart"
+      // TODO: create a styled div for this.
+      style={{ minWidth: "250px" }}
+    />
   )
 }
 
