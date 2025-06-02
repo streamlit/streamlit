@@ -24,7 +24,7 @@ import { StyledElementContainer } from "./styled-components"
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
     Parameters<typeof StyledElementContainer>[0],
-    "width" | "height" | "overflow"
+    "width" | "height" | "overflowY"
   > & {
     node: ElementNode
   }
