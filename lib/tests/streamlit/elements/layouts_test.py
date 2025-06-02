@@ -230,7 +230,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     def test_columns_with_none_gap(self):
         """Test that it works correctly with "none" gap argument"""
 
-        st.columns(3, gap="none")
+        st.columns(3, gap=None)
 
         all_deltas = self.get_all_deltas_from_queue()
 

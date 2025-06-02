@@ -70,7 +70,7 @@ with st.expander("Column gap large", expanded=True):
     c12.image(BLACK_IMG)
 
 with st.expander("Column gap none", expanded=True):
-    c13, c14, c15 = st.columns(3, gap="none")
+    c13, c14, c15 = st.columns(3, gap=None)
     c13.image(BLACK_IMG)
     c14.image(BLACK_IMG)
     c15.image(BLACK_IMG)
