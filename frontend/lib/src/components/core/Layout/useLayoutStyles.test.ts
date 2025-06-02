@@ -40,7 +40,11 @@ class MockElement implements Element {
 const getDefaultStyles = (
   overrides: Partial<UseLayoutStylesShape>
 ): UseLayoutStylesShape => {
-  const defaults = { width: "auto", height: "auto", overflow: "visible" }
+  const defaults = {
+    width: "auto" as const,
+    height: "auto" as const,
+    overflowY: "visible" as const,
+  }
   return { ...defaults, ...overrides }
 }
 

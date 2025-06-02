@@ -56,20 +56,20 @@ def test_renders_container_with_border(
     container_with_border = themed_app.get_by_test_id("stVerticalBlock").nth(3)
     assert_snapshot(container_with_border, name="st_container-has_border")
     # This one should not have scrolling activated:
-    expect(container_with_border).not_to_have_css("overflow", "auto")
+    expect(container_with_border).not_to_have_css("overflowY", "auto")
 
 
 def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.container(height=<pixels>) renders a scroll container."""
 
     scroll_container = app.get_by_test_id("stVerticalBlock").nth(4)
-    expect(scroll_container).to_have_css("overflow", "auto")
+    expect(scroll_container).to_have_css("overflowY", "auto")
     expect(scroll_container).to_have_css("height", "200px")
     expect(scroll_container).to_have_attribute("data-test-scroll-behavior", "normal")
     assert_snapshot(scroll_container, name="st_container-scroll_container")
 
     scroll_container_empty = app.get_by_test_id("stVerticalBlock").nth(5)
-    expect(scroll_container_empty).to_have_css("overflow", "auto")
+    expect(scroll_container_empty).to_have_css("overflowY", "auto")
     expect(scroll_container_empty).to_have_css("height", "100px")
     expect(scroll_container_empty).to_have_attribute(
         "data-test-scroll-behavior", "normal"
@@ -78,7 +78,7 @@ def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFuncti
 
     # This one should be pinned to the bottom:
     scroll_container_chat = app.get_by_test_id("stVerticalBlock").nth(6)
-    expect(scroll_container_chat).to_have_css("overflow", "auto")
+    expect(scroll_container_chat).to_have_css("overflowY", "auto")
     expect(scroll_container_chat).to_have_css("height", "200px")
     expect(scroll_container_chat).to_have_attribute(
         "data-test-scroll-behavior", "scroll-to-bottom"
