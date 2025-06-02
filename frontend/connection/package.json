@@ -38,7 +38,7 @@
     "@types/eslint": "^9.6.1",
     "@types/lodash": "~4.17.17",
     "axios-mock-adapter": "^2.1.0",
-    "eslint": "^9.27.0",
+    "eslint": "^9.28.0",
     "prettier": "^3.5.3",
     "typesync": "^0.14.3",
     "vite": "^6.3.5",
