@@ -134,7 +134,7 @@ export function BokehChart({
       className="stBokehChart"
       data-testid="stBokehChart"
       // TODO: create a styled div for this.
-      style={{ minWidth: "250px" }}
+      style={{ minWidth: "16rem" }}
     />
   )
 }
