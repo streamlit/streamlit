@@ -43,7 +43,7 @@ const getDefaultStyles = (
   const defaults = {
     width: "auto" as const,
     height: "auto" as const,
-    overflowY: "visible" as const,
+    overflow: "visible" as const,
   }
   return { ...defaults, ...overrides }
 }

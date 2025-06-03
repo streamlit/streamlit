@@ -93,7 +93,7 @@ describe("FlexBoxContainer Block Component", () => {
 
     expect(screen.getAllByTestId("stColumn")).toHaveLength(4)
     expect(screen.getAllByTestId("stVerticalBlock")[0]).not.toHaveStyle(
-      "overflowY: auto"
+      "overflow: auto"
     )
   })
 
@@ -120,7 +120,7 @@ describe("FlexBoxContainer Block Component", () => {
     renderWithContexts(makeVerticalBlockComponent(block), {})
 
     expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
-      "overflowY: auto"
+      "overflow: auto"
     )
   })
 
