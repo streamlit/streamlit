@@ -45,6 +45,10 @@ with st.container(width="content", border=True):
 with st.container(width="content", border=True):
     st.area_chart(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
 
+with st.container(width="content", border=True, height=400):
+    st.area_chart(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    st.write("with height")
+
 with st.container(width="content", border=True):
     st.bar_chart(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
 
@@ -155,14 +159,6 @@ with st.container(width="content", border=True):
         },
     }
     st.vega_lite_chart(data, vega_lite_spec)
-
-with st.container(width="content", border=True):
-    from bokeh.plotting import figure
-
-    # Create a Bokeh figure
-    p = figure(title="Simple Bokeh Line Chart", x_axis_label="x", y_axis_label="y")
-    p.line([1, 2, 3, 4, 5], [2, 4, 6, 8, 10], line_width=2)
-    st.bokeh_chart(p)
 
 with st.container(width="content", border=True):
     import plotly.express as px
