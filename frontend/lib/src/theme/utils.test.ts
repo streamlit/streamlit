@@ -941,23 +941,14 @@ describe("createEmotionTheme", () => {
     ["14REM", "14rem"],
     ["14px", "14px"],
     ["14PX", "14px"],
-    [14, "14px"], // number values are treated as pixels
   ])(
     "correctly applies codeFontSize '%s'",
     (codeFontSize, expectedCodeFontSize) => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
         codeFontSize,
       }
 
       const theme = createEmotionTheme(themeInput)
-
-      if (codeFontSize === 14) {
-        // Should log a warning for number values
-        expect(logWarningSpy).toHaveBeenCalledWith(
-          `Number passed for codeFontSize in theme. Falling back to 14px.`
-        )
-      }
 
       expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
     }
@@ -969,6 +960,7 @@ describe("createEmotionTheme", () => {
     ["14", "0.875rem"],
     ["rem", "0.875rem"],
     ["px", "0.875rem"],
+    [" ", "0.875rem"],
   ])(
     "logs a warning and falls back to default for any invalid codeFontSize '%s'",
     (codeFontSize, expectedCodeFontSize) => {
