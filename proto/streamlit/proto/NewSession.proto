@@ -170,6 +170,7 @@ message CustomThemeConfig {
   optional string base_radius = 18;
   optional string button_radius = 26;
   optional string border_color = 19;
+  optional string dataframe_border_color = 27;
   optional bool show_widget_border = 20;
   optional string link_color = 21;
   optional int32 base_font_size = 22;
@@ -177,7 +178,7 @@ message CustomThemeConfig {
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
 
-  // Next ID: 27
+  // Next ID: 28
 }
 
 message FontFace {

@@ -1252,6 +1252,14 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "dataframeBorderColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        The color of the border around dataframes and tables.
+    """,
+)
+
+_create_theme_options(
     "showWidgetBorder",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""

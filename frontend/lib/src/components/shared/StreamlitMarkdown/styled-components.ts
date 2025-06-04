@@ -244,7 +244,7 @@ export const StyledStreamlitMarkdown =
         },
 
         tr: {
-          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
         th: {
@@ -253,7 +253,7 @@ export const StyledStreamlitMarkdown =
 
         "th, td": {
           padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
         "span.has-background-color": {

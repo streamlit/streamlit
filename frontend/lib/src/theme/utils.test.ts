@@ -16,6 +16,7 @@
 
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
+import { transparentize } from "color2k"
 
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
@@ -793,6 +794,142 @@ describe("createEmotionTheme", () => {
     expect(theme.radii.md).toBe("0.39rem")
     expect(theme.radii.xl).toBe("1.16rem")
     expect(theme.radii.xxl).toBe("1.54rem")
+  })
+
+  it.each([
+    // Test valid color values
+    ["red", "orange", "blue", "pink", "purple"],
+    ["#ff0000", "#ffa500", "#0000ff", "#ffc0cb", "#800080"],
+    [
+      "rgb(255, 0, 0)",
+      "rgb(255, 165, 0)",
+      "rgb(0, 0, 255)",
+      "rgb(255, 192, 192)",
+      "rgb(128, 0, 128)",
+    ],
+  ])(
+    "correctly handles setting of basic color configs '%s'",
+    (primary, bodyText, secondaryBg, bgColor, linkColor) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        primaryColor: primary,
+        textColor: bodyText,
+        secondaryBackgroundColor: secondaryBg,
+        backgroundColor: bgColor,
+        linkColor,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.primary).toBe(primary)
+      expect(theme.colors.bodyText).toBe(bodyText)
+      expect(theme.colors.secondaryBg).toBe(secondaryBg)
+      expect(theme.colors.bgColor).toBe(bgColor)
+      expect(theme.colors.link).toBe(linkColor)
+    }
+  )
+
+  it.each([
+    // Test invalid color values passed to each color config
+    ["primaryColor", "invalid", "orange", "blue", "pink", "purple", "green"],
+    ["textColor", "red", "invalid", "blue", "pink", "purple", "green"],
+    [
+      "secondaryBackgroundColor",
+      "red",
+      "orange",
+      "invalid",
+      "pink",
+      "purple",
+      "green",
+    ],
+    ["backgroundColor", "red", "orange", "blue", "invalid", "purple", "green"],
+    ["linkColor", "red", "orange", "blue", "pink", "invalid", "green"],
+    ["borderColor", "red", "orange", "blue", "pink", "purple", "invalid"],
+  ])(
+    "logs an warning and falls back to default for any invalid color configs '%s'",
+    (
+      invalidColorConfig,
+      primary,
+      bodyText,
+      secondaryBg,
+      bgColor,
+      linkColor,
+      borderColor
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        primaryColor: primary,
+        textColor: bodyText,
+        secondaryBackgroundColor: secondaryBg,
+        backgroundColor: bgColor,
+        linkColor,
+        borderColor,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for ${invalidColorConfig} in theme: "invalid"`
+      )
+
+      // Check that valid colors are set correctly
+      if (invalidColorConfig !== "primaryColor")
+        expect(theme.colors.primary).toBe(primary)
+      if (invalidColorConfig !== "textColor")
+        expect(theme.colors.bodyText).toBe(bodyText)
+      if (invalidColorConfig !== "secondaryBackgroundColor")
+        expect(theme.colors.secondaryBg).toBe(secondaryBg)
+      if (invalidColorConfig !== "backgroundColor")
+        expect(theme.colors.bgColor).toBe(bgColor)
+      if (invalidColorConfig !== "linkColor")
+        expect(theme.colors.link).toBe(linkColor)
+      if (invalidColorConfig !== "borderColor")
+        expect(theme.colors.borderColor).toBe(borderColor)
+
+      // Check that invalid color falls back to default value
+      if (invalidColorConfig === "primaryColor")
+        expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
+      if (invalidColorConfig === "textColor")
+        expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
+      if (invalidColorConfig === "secondaryBackgroundColor")
+        expect(theme.colors.secondaryBg).toBe(
+          baseTheme.emotion.colors.secondaryBg
+        )
+      if (invalidColorConfig === "backgroundColor")
+        expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
+      if (invalidColorConfig === "linkColor")
+        expect(theme.colors.link).toBe(baseTheme.emotion.colors.link)
+      if (invalidColorConfig === "borderColor")
+        expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
+    }
+  )
+
+  it("sets the borderColor properties based on borderColor config", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      borderColor: "blue",
+      // Note no specified dataframeBorderColor
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.colors.borderColor).toBe("blue")
+    expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
+    // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
+    // not configured
+    expect(theme.colors.dataframeBorderColor).toBe(
+      theme.colors.borderColorLight
+    )
+  })
+
+  it("sets the dataframeBorderColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      borderColor: "red",
+      dataframeBorderColor: "green",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.borderColor).toBe("red")
+    expect(theme.colors.dataframeBorderColor).toBe("green")
   })
 })
 
