@@ -197,15 +197,17 @@ export const parseFontSize = (
   if (typeof fontSize === "number") {
     // If fontSize is a number, convert to pixels and return
     LOG.warn(
-      `Number passed for ${configName} in ${themeSection}:. Falling back to ${fontSize}px.`
+      `Number passed for ${configName} in ${themeSection}. Falling back to ${fontSize}px.`
     )
     return `${fontSize}px`
   } else if (typeof fontSize === "string") {
-    // If string, check its valid (ends with "rem" or "px") and return
+    // If string, check its valid (ends with "rem" or "px")
+    // and can be parsed as a number
     const processedFontSize = fontSize.trim().toLowerCase()
+    const parsedFontSize = parseFloat(processedFontSize)
     if (
-      processedFontSize.endsWith("rem") ||
-      processedFontSize.endsWith("px")
+      parsedFontSize &&
+      (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
     ) {
       return processedFontSize
     }

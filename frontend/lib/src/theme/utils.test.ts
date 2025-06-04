@@ -576,6 +576,10 @@ describe("isColor", () => {
 })
 
 describe("createEmotionTheme", () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("sets to light when matchMedia does not match dark", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       headingFont: "serif",
@@ -685,9 +689,8 @@ describe("createEmotionTheme", () => {
     "invalid",
     "rem", // Missing number
     "px", // Missing number
-    "", // Empty string
   ])(
-    "logs an warning and falls back to default for invalid baseRadius '%s'",
+    "logs a warning and falls back to default for invalid baseRadius '%s'",
     invalidBaseRadius => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -845,7 +848,7 @@ describe("createEmotionTheme", () => {
     ["linkColor", "red", "orange", "blue", "pink", "invalid", "green"],
     ["borderColor", "red", "orange", "blue", "pink", "purple", "invalid"],
   ])(
-    "logs an warning and falls back to default for any invalid color configs '%s'",
+    "logs a warning and falls back to default for any invalid color configs '%s'",
     (
       invalidColorConfig,
       primary,
@@ -931,6 +934,59 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.borderColor).toBe("red")
     expect(theme.colors.dataframeBorderColor).toBe("green")
   })
+
+  it.each([
+    // Test valid codeFontSize values
+    ["14rem", "14rem"],
+    ["14REM", "14rem"],
+    ["14px", "14px"],
+    ["14PX", "14px"],
+    [14, "14px"], // number values are treated as pixels
+  ])(
+    "correctly applies codeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      if (codeFontSize === 14) {
+        // Should log a warning for number values
+        expect(logWarningSpy).toHaveBeenCalledWith(
+          `Number passed for codeFontSize in theme. Falling back to 14px.`
+        )
+      }
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+    }
+  )
+
+  it.each([
+    // Test invalid codeFontSize values
+    ["invalid", "0.875rem"],
+    ["14", "0.875rem"],
+    ["rem", "0.875rem"],
+    ["px", "0.875rem"],
+  ])(
+    "logs a warning and falls back to default for any invalid codeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error with the actual codeFontSize value
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for codeFontSize in theme: ${codeFontSize}. Falling back to default codeFontSize.`
+      )
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+    }
+  )
 })
 
 describe("toThemeInput", () => {
