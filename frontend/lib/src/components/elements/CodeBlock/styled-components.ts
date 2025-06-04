@@ -52,7 +52,7 @@ const codeBlockStyle = (
   color: "inherit",
   display: "inline",
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.codeFontSize,
   lineHeight: "inherit",
   margin: 0,
   overflowX: "auto",

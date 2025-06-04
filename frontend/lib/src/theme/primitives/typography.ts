@@ -41,6 +41,7 @@ export const fontSizes = {
   twoXL: "1.75rem",
   threeXL: "2.25rem",
   fourXL: "2.75rem",
+  codeFontSize: "0.875rem",
 }
 
 export const fontWeights = {

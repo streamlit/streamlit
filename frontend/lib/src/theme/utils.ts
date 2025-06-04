@@ -182,6 +182,40 @@ export const parseRadius = (
   return [radiusValue, cssUnit]
 }
 
+/**
+ * Helper function to parse fontSize options which allow the same possible values
+ * @param fontSize: a string - a number in pixels or rem; handles number values as pixels
+ * @returns font size
+ */
+export const parseFontSize = (
+  configName: string,
+  fontSize: string | number,
+  inSidebar: boolean
+): string | undefined => {
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  if (typeof fontSize === "number") {
+    // If fontSize is a number, convert to pixels and return
+    LOG.warn(
+      `Number passed for ${configName} in ${themeSection}:. Falling back to ${fontSize}px.`
+    )
+    return `${fontSize}px`
+  } else if (typeof fontSize === "string") {
+    // If string, check its valid (ends with "rem" or "px") and return
+    const processedFontSize = fontSize.trim().toLowerCase()
+    if (
+      processedFontSize.endsWith("rem") ||
+      processedFontSize.endsWith("px")
+    ) {
+      return processedFontSize
+    }
+  }
+  // If invalid, log warning and return undefined
+  LOG.warn(
+    `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
+  )
+}
+
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
@@ -191,6 +225,7 @@ export const createEmotionTheme = (
     baseFontSize,
     baseRadius,
     buttonRadius,
+    codeFontSize,
     showWidgetBorder,
     headingFont,
     bodyFont,
@@ -351,6 +386,26 @@ export const createEmotionTheme = (
 
     // Set the root font size to the configured value (used on global styles):
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
+  }
+
+  if (codeFontSize) {
+    // Handles case where codeFontSize is set, but not baseFontSize
+    if (!conditionalOverrides.fontSizes) {
+      conditionalOverrides.fontSizes = {
+        ...baseThemeConfig.emotion.fontSizes,
+      }
+    }
+
+    // Returns font size as a string, or undefined if invalid
+    const parsedCodeFontSize = parseFontSize(
+      "codeFontSize",
+      codeFontSize,
+      inSidebar
+    )
+    if (parsedCodeFontSize) {
+      conditionalOverrides.fontSizes.codeFontSize = parsedCodeFontSize
+    }
+    // Code font size default (fallback) set in typography primitives (0.875rem)
   }
 
   if (notNullOrUndefined(showSidebarBorder)) {
