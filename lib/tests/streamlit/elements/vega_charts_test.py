@@ -778,6 +778,64 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
+    def test_altair_chart_patches_null_title(self):
+        """Test that title=None is converted to ' ' in the 'color' channel
+        of an Altair Chart."""
+        df = pd.DataFrame(
+            {
+                "x": [1, 2, 3],
+                "y": [4, 5, 6],
+                "category": ["A", "B", "C"],
+            }
+        )
+
+        chart = (
+            alt.Chart(df)
+            .mark_line()
+            .encode(
+                x=alt.X("x", title="X Axis"),
+                y=alt.Y("y", title="Y Axis"),
+                color=alt.Color("category:N", title=None),
+            )
+        )
+
+        st.altair_chart(chart)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        spec_dict = json.loads(proto.spec)
+
+        color = spec_dict["encoding"].get("color", {})
+        assert "title" in color
+        assert color["title"] == " "
+
+    def test_altair_chart_patches_null_legend_title(self):
+        """Test that legend.title=None is converted to ' ' in the 'color' channel
+        of an Altair Chart."""
+        df = pd.DataFrame(
+            {
+                "x": [1, 2, 3],
+                "y": [4, 5, 6],
+                "category": ["A", "B", "C"],
+            }
+        )
+
+        chart = (
+            alt.Chart(df)
+            .mark_line()
+            .encode(
+                x=alt.X("x", title="X Axis"),
+                y=alt.Y("y", title="Y Axis"),
+                color=alt.Color("category:N", legend={"title": None}),
+            )
+        )
+
+        st.altair_chart(chart)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        spec_dict = json.loads(proto.spec)
+
+        legend = spec_dict["encoding"]["color"].get("legend", {})
+        assert "title" in legend
+        assert legend["title"] == " "
+
 
 ST_CHART_ARGS = [
     (st.area_chart, "area"),

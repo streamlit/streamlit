@@ -117,3 +117,25 @@ c1 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y1"))
 c2 = alt.Chart(df3).mark_line().encode(alt.X("x"), alt.Y("y2"))
 
 st.altair_chart(c1 & c2, use_container_width=True)
+
+# Issue #9339: legend.title=None shouldn't cut chart off
+df_cut_off_issue = pd.DataFrame(
+    {
+        "x": [1, 2, 3, 4],
+        "y": [10, 20, 30, 40],
+        "category": ["A", "B", "C", "D"],
+    }
+)
+
+cut_off_chart = (
+    alt.Chart(df_cut_off_issue)
+    .mark_line(point=True)
+    .encode(
+        x=alt.X("x", title="Date"),
+        y=alt.Y("y:Q", title="Value"),
+        color=alt.Color("category:N").legend(orient="bottom", title=None),
+    )
+)
+
+st.write("Altair chart cut off if legend title is None (Issue #9339)")
+st.altair_chart(cut_off_chart, use_container_width=True)
