@@ -29,7 +29,6 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import config
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -41,6 +40,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
 )
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping

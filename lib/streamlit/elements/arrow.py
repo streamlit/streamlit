@@ -37,7 +37,6 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
@@ -51,6 +50,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Iterable
@@ -823,9 +823,7 @@ def _prep_data_for_add_rows(
 def _arrow_add_rows(
     dg: DeltaGenerator,
     data: Data = None,
-    **kwargs: (
-        DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
-    ),
+    **kwargs: DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None,
 ) -> DeltaGenerator | None:
     """Concatenate a dataframe to the bottom of the current one.
 

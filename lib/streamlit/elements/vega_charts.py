@@ -42,7 +42,6 @@ from streamlit.elements.lib.built_in_chart_utils import (
     generate_chart,
     maybe_raise_stack_warning,
 )
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -53,7 +52,7 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import calc_md5
+from streamlit.util import AttributeDictionary, calc_md5
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence

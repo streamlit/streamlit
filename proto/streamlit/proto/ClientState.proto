@@ -21,13 +21,13 @@ option java_outer_classname = "ClientStateProto";
 
 import "streamlit/proto/WidgetStates.proto";
 
-
 message ContextInfo {
   optional string timezone = 1;
   optional int32 timezone_offset = 2;
   optional string locale = 3;
   optional string url = 4;
   optional bool is_embedded = 5;
+  optional string color_scheme = 6;
 }
 
 message ClientState {
