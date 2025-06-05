@@ -110,6 +110,7 @@ class ConfigTest(unittest.TestCase):
             "_test.simpleParam",
             description="Simple config option.",
             default_val=[12345],
+            multiple=True,
         )
 
         assert config_option.key == "_test.simpleParam"
@@ -439,6 +440,7 @@ class ConfigTest(unittest.TestCase):
             "_test.testMultipleValueOption",
             description="This option tests multiple values for an option",
             default_val=["Option 1", "Option 2"],
+            multiple=True,
         )
 
         assert option.multiple

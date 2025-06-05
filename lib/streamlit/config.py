@@ -54,6 +54,9 @@ _config_options_template: dict[str, ConfigOption] = OrderedDict()
 # Stores the current state of config options.
 _config_options: dict[str, ConfigOption] | None = None
 
+# Stores the path to the main script. This is used to
+# resolve config and secret files relative to the main script:
+_main_script_path: str | None = None
 
 # Indicates that a config option was defined by the user.
 _USER_DEFINED: Final = "<user defined>"
@@ -243,6 +246,7 @@ def _create_option(
     replaced_by: str | None = None,
     type_: type = str,
     sensitive: bool = False,
+    multiple: bool = False,
 ) -> ConfigOption:
     '''Create a ConfigOption and store it globally in this module.
 
@@ -291,6 +295,7 @@ def _create_option(
         replaced_by=replaced_by,
         type_=type_,
         sensitive=sensitive,
+        multiple=multiple,
     )
     if option.section not in _section_descriptions:
         raise RuntimeError(
@@ -384,6 +389,7 @@ _create_option(
 
 
 @_create_option("global.developmentMode", visibility="hidden", type_=bool)
+@util.memoize
 def _global_development_mode() -> bool:
     """Are we in development mode.
 
@@ -492,6 +498,7 @@ def _logger_message_format() -> str:
     type_=bool,
     scriptable=True,
 )
+@util.memoize
 def _logger_enable_rich() -> bool:
     """
     Controls whether uncaught app exceptions are logged via the rich library.
@@ -677,6 +684,7 @@ _create_option(
         Note: This is a list of absolute paths.
     """,
     default_val=[],
+    multiple=True,
 )
 
 _create_option(
@@ -689,6 +697,7 @@ _create_option(
         Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
     default_val=[],
+    multiple=True,
 )
 
 _create_option(
@@ -831,6 +840,7 @@ _create_option(
         Example: ['http://example.com', 'https://streamlit.io']
     """,
     default_val=[],
+    multiple=True,
 )
 
 _create_option(
@@ -1020,6 +1030,7 @@ _create_option(
         to pass the Mapbox API token.
     """,
     default_val="",
+    type_=str,
     sensitive=True,
     deprecated=True,
     deprecation_text="""
@@ -1295,23 +1306,17 @@ _create_theme_options(
 
 _create_section("secrets", "Secrets configuration.")
 
-_create_option(
-    "secrets.files",
-    description="""
-        List of locations where secrets are searched.
 
-        An entry can be a path to a TOML file or directory path where
-        Kubernetes style secrets are saved. Order is important, import is
-        first to last, so secrets in later files will take precedence over
-        earlier ones.
-    """,
-    default_val=[
-        # NOTE: The order here is important! Project-level secrets should overwrite
-        # global secrets.
-        file_util.get_streamlit_file_path("secrets.toml"),
-        file_util.get_project_streamlit_file_path("secrets.toml"),
-    ],
-)
+@_create_option("secrets.files", multiple=True)
+def _secrets_files() -> list[str]:
+    """List of locations where secrets are searched.
+
+    An entry can be a path to a TOML file or directory path where
+    Kubernetes style secrets are saved. Order is important, import is
+    first to last, so secrets in later files will take precedence over
+    earlier ones.
+    """
+    return get_config_files("secrets.toml")
 
 
 def get_where_defined(key: str) -> str:
@@ -1561,10 +1566,30 @@ def _maybe_convert_to_number(v: Any) -> Any:
 # something.
 _on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
 
-CONFIG_FILENAMES = [
-    file_util.get_streamlit_file_path("config.toml"),
-    file_util.get_project_streamlit_file_path("config.toml"),
-]
+
+def get_config_files(file_name: str) -> list[str]:
+    """Return the list of config files (e.g. config.toml or secrets.toml) to be parsed.
+
+    Order is important, import is first to last, so options in later files
+    will take precedence over earlier ones.
+    """
+    # script-level config files overwrite project-level config
+    # files, which in turn overwrite global config files.
+    config_files = [
+        file_util.get_streamlit_file_path(file_name),
+        file_util.get_project_streamlit_file_path(file_name),
+    ]
+
+    if _main_script_path is not None:
+        script_level_config = file_util.get_main_script_streamlit_file_path(
+            _main_script_path, file_name
+        )
+        if script_level_config not in config_files:
+            # We need to append the script-level config file to the list
+            # so that it overwrites project & global level config files:
+            config_files.append(script_level_config)
+
+    return config_files
 
 
 def get_config_options(
@@ -1615,7 +1640,7 @@ def get_config_options(
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
         # set earlier.
-        for filename in CONFIG_FILENAMES:
+        for filename in get_config_files("config.toml"):
             if not os.path.exists(filename):
                 continue
 
