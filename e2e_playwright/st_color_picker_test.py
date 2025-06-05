@@ -29,7 +29,7 @@ def test_color_picker_widget_display(
 ):
     """Test that st.color_picker renders correctly."""
     color_pickers = themed_app.get_by_test_id("stColorPicker")
-    expect(color_pickers).to_have_count(8)
+    expect(color_pickers).to_have_count(11)
     assert_snapshot(color_pickers.nth(0), name="st_color_picker-regular")
     assert_snapshot(color_pickers.nth(1), name="st_color_picker-default_help")
     assert_snapshot(color_pickers.nth(2), name="st_color_picker-disabled")
@@ -197,3 +197,15 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "color_picker_1")).to_be_visible()
+
+
+def test_color_picker_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that color picker elements with different width configurations are displayed correctly."""
+    color_pickers = themed_app.get_by_test_id("stColorPicker")
+
+    # Test width examples (these are the last 3 color picker elements)
+    assert_snapshot(color_pickers.nth(8), name="st_color_picker-width_content")
+    assert_snapshot(color_pickers.nth(9), name="st_color_picker-width_stretch")
+    assert_snapshot(color_pickers.nth(10), name="st_color_picker-width_100px")
