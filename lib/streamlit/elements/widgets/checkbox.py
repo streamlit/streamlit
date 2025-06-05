@@ -19,6 +19,11 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -69,6 +74,7 @@ class CheckboxMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> bool:
         r"""Display a checkbox widget.
 
@@ -133,6 +139,10 @@ class CheckboxMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
+        width : Width
+            The width of the widget. Can be an integer for pixel width,
+            or one of "content" or "stretch". Defaults to "content".
+
         Returns
         -------
         bool
@@ -165,6 +175,7 @@ class CheckboxMixin:
             label_visibility=label_visibility,
             type=CheckboxProto.StyleType.DEFAULT,
             ctx=ctx,
+            width=width,
         )
 
     @gather_metrics("toggle")
@@ -180,6 +191,7 @@ class CheckboxMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> bool:
         r"""Display a toggle widget.
 
@@ -244,6 +256,10 @@ class CheckboxMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
+        width : Width
+            The width of the widget. Can be an integer for pixel width,
+            or one of "content" or "stretch". Defaults to "content".
+
         Returns
         -------
         bool
@@ -276,6 +292,7 @@ class CheckboxMixin:
             label_visibility=label_visibility,
             type=CheckboxProto.StyleType.TOGGLE,
             ctx=ctx,
+            width=width,
         )
 
     def _checkbox(
@@ -292,6 +309,7 @@ class CheckboxMixin:
         label_visibility: LabelVisibility = "visible",
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
         ctx: ScriptRunContext | None = None,
+        width: Width = "content",
     ) -> bool:
         key = to_key(key)
 
@@ -311,6 +329,7 @@ class CheckboxMixin:
             label=label,
             value=bool(value),
             help=help,
+            width=width,
         )
 
         checkbox_proto = CheckboxProto()
@@ -326,6 +345,9 @@ class CheckboxMixin:
 
         if help is not None:
             checkbox_proto.help = dedent(help)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
 
         serde = CheckboxSerde(value)
 
@@ -344,7 +366,7 @@ class CheckboxMixin:
             checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
 
-        self.dg._enqueue("checkbox", checkbox_proto)
+        self.dg._enqueue("checkbox", checkbox_proto, layout_config=layout_config)
         return checkbox_state.value
 
     @property
