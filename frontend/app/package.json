@@ -116,7 +116,7 @@
     "vite": "^6.3.5",
     "vite-plugin-svgr": "^4.3.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.1.4",
+    "vitest": "^3.2.1",
     "vitest-canvas-mock": "^0.3.3",
     "vitest-websocket-mock": "^0.5.0"
   },

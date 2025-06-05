@@ -19,7 +19,7 @@ import { coverageConfigDefaults, defineConfig } from "vitest/config"
 export default defineConfig({
   test: {
     // Include all packages that have a vite.config.ts file
-    workspace: ["*/vite.config.ts"],
+    projects: ["*/vite.config.ts"],
 
     // Global coverage configuration
     coverage: {
