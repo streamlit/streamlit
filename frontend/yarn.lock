@@ -3199,7 +3199,7 @@ __metadata:
     eslint-plugin-react: "npm:^7.37.5"
     eslint-plugin-react-hooks: "npm:^6.0.0-rc.1"
     eslint-plugin-streamlit-custom: "workspace:^"
-    eslint-plugin-testing-library: "npm:^7.3.0"
+    eslint-plugin-testing-library: "npm:^7.4.0"
     globals: "npm:^16.2.0"
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.0.0"
@@ -9941,15 +9941,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"eslint-plugin-testing-library@npm:^7.3.0":
-  version: 7.3.0
-  resolution: "eslint-plugin-testing-library@npm:7.3.0"
+"eslint-plugin-testing-library@npm:^7.4.0":
+  version: 7.4.0
+  resolution: "eslint-plugin-testing-library@npm:7.4.0"
   dependencies:
     "@typescript-eslint/scope-manager": "npm:^8.15.0"
     "@typescript-eslint/utils": "npm:^8.15.0"
   peerDependencies:
     eslint: ^8.57.0 || ^9.0.0
-  checksum: 10c0/febd1823838813bf5ebd122d1da97b3059c181a9586cc8b378870d20d27383342c4536ae86d51a4c2a95b1085167cdf951a5c83ff22c6087d7e9357a10e986a5
+  checksum: 10c0/eeff84b2d01af6d71149a6de52a895e582d7806253d2026640e5bebccee040380eae31a54807a2c5fd6be1357b5ba9506d64b78539955b17bbd0dac96c5c3e89
   languageName: node
   linkType: hard
 
