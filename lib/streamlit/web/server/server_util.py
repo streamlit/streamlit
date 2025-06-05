@@ -25,7 +25,7 @@ from streamlit.runtime.secrets import secrets_singleton
 if TYPE_CHECKING:
     from tornado.web import RequestHandler
 
-# The port reserved for internal development.
+# The port used for internal development.
 DEVELOPMENT_PORT: Final = 3000
 
 AUTH_COOKIE_NAME: Final = "_streamlit_user"
