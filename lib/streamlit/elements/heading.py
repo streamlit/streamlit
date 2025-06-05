@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -26,6 +27,7 @@ from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Width
     from streamlit.type_util import SupportsStr
 
 
@@ -48,6 +50,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display text in header formatting.
 
@@ -84,6 +87,11 @@ class HeadingMixin:
             the following: blue, green, orange, red, violet, gray/grey, or
             rainbow.
 
+        width : int or "stretch" or "content"
+            The width of the header. Can be an integer (pixels), "stretch" to
+            use the full width of the container, or "content" (default) to size
+            based on the content.
+
         Examples
         --------
         >>> import streamlit as st
@@ -101,6 +109,9 @@ class HeadingMixin:
            height: 600px
 
         """
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
@@ -110,6 +121,7 @@ class HeadingMixin:
                 help=help,
                 divider=divider,
             ),
+            layout_config=layout_config,
         )
 
     @gather_metrics("subheader")
@@ -120,6 +132,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
@@ -156,6 +169,11 @@ class HeadingMixin:
             the following: blue, green, orange, red, violet, gray/grey, or
             rainbow.
 
+        width : int or "stretch" or "content"
+            The width of the subheader. Can be an integer (pixels), "stretch" to
+            use the full width of the container, or "content" (default) to size
+            based on the content.
+
         Examples
         --------
         >>> import streamlit as st
@@ -173,6 +191,9 @@ class HeadingMixin:
            height: 500px
 
         """
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
@@ -182,6 +203,7 @@ class HeadingMixin:
                 help=help,
                 divider=divider,
             ),
+            layout_config=layout_config,
         )
 
     @gather_metrics("title")
@@ -191,6 +213,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display text in title formatting.
 
@@ -222,6 +245,11 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : int or "stretch" or "content"
+            The width of the title. Can be an integer (pixels), "stretch" to
+            use the full width of the container, or "content" (default) to size
+            based on the content.
+
         Examples
         --------
         >>> import streamlit as st
@@ -234,11 +262,15 @@ class HeadingMixin:
            height: 220px
 
         """
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
                 tag=HeadingProtoTag.TITLE_TAG, body=body, anchor=anchor, help=help
             ),
+            layout_config=layout_config,
         )
 
     @property
