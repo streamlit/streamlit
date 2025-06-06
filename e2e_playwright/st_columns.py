@@ -137,7 +137,7 @@ if st.button("Nested columns - in sidebar"):
         st.text_input("Text input 5")
 
 with st.expander("Columns with width configuration", expanded=True):
-    col1, col2, col3 = st.columns(3, width=200, border=True)
+    col1, col2, col3 = st.columns(3, width=300, border=True)
     col1.write("column one")
     col2.write("column two")
     col3.write("column three")

@@ -118,6 +118,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // e.g. if it overflows to next row.
       width,
       flex: `1 1 ${width}`,
+      minWidth: "4rem",
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
@@ -176,7 +177,7 @@ export const StyledFlexContainerBlock =
         gap: gapWidth,
         width: "100%",
         maxWidth: "100%",
-        minWidth: "9rem",
+        minWidth: "4rem",
         height: height,
         flexDirection: direction,
         flex,
