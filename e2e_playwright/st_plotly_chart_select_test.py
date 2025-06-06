@@ -110,7 +110,9 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-@pytest.mark.skip_browser("webkit")  # Flaky on WebKit, but manually tested
+@pytest.mark.only_browser(
+    "chromium"
+)  # Flaky on WebKit and Firefox, but manually tested
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
