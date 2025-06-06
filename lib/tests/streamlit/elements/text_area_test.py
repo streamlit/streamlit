@@ -21,11 +21,18 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidHeightError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 class TextAreaTest(DeltaGeneratorTestCase):
@@ -194,11 +201,11 @@ class TextAreaTest(DeltaGeneratorTestCase):
         st.text_area("the label")
 
         c = self.get_delta_from_queue().new_element
-        # Default height should not be set in width_config
-        assert not c.width_config.HasField("pixel_height")
-        assert not c.width_config.HasField("use_stretch")
-        assert not c.width_config.HasField("use_content")
-        assert not c.text_area.HasField("height")
+        # Default height should not be set in width_config.
+        # This will be set to 68px in the frontend.
+        assert not c.height_config.HasField("pixel_height")
+        assert not c.height_config.HasField("use_stretch")
+        assert not c.height_config.HasField("use_content")
 
     def test_height_config_pixel(self):
         """Test that pixel height works properly."""
@@ -206,10 +213,10 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("height_spec")
-            == WidthConfigFields.PIXEL_HEIGHT.value
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.PIXEL_HEIGHT.value
         )
-        assert c.width_config.pixel_height == 150
+        assert c.height_config.pixel_height == 150
 
     def test_height_config_content(self):
         """Test that 'content' height works properly."""
@@ -217,10 +224,10 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("height_spec")
-            == WidthConfigFields.USE_CONTENT.value
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
         )
-        assert c.width_config.use_content_height
+        assert c.height_config.use_content
 
     def test_height_config_stretch(self):
         """Test that 'stretch' height works properly."""
@@ -228,23 +235,37 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("height_spec")
-            == WidthConfigFields.USE_STRETCH.value
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch_height
+        assert c.height_config.use_stretch
 
     @parameterized.expand(
         [
-            -100,
-            0,
             100.5,
             "invalid",
         ]
     )
     def test_invalid_height(self, height):
         """Test that invalid height values raise exceptions."""
-        with pytest.raises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidHeightError):
             st.text_area("the label", height=height)
+
+    @parameterized.expand(
+        [
+            0,
+            -100,
+        ]
+    )
+    def test_height_config_negative_zero(self, height):
+        """Negative and zero height will be defaulted to 68px in the frontend consistent with legacy behavior."""
+        st.text_area("the label", height=height)
+        c = self.get_delta_from_queue().new_element
+        # Default height should not be set in height_config.
+        # This will be set to 68px in the frontend.
+        assert not c.height_config.HasField("pixel_height")
+        assert not c.height_config.HasField("use_stretch")
+        assert not c.height_config.HasField("use_content")
 
     def test_help_dedents(self):
         """Test that help properly dedents"""
