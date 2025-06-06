@@ -18,7 +18,6 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
-    expect_exception,
     expect_help_tooltip,
     get_element_by_key,
 )
@@ -29,7 +28,7 @@ def test_text_area_widget_rendering(
 ):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = themed_app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(17)
+    expect(text_area_widgets).to_have_count(20)
 
     assert_snapshot(text_area_widgets.nth(0), name="st_text_area-default")
     assert_snapshot(text_area_widgets.nth(1), name="st_text_area-value_some_text")
@@ -44,8 +43,21 @@ def test_text_area_widget_rendering(
     assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
     assert_snapshot(text_area_widgets.nth(11), name="st_text_area-height_75")
     assert_snapshot(text_area_widgets.nth(14), name="st_text_area-markdown_label")
+
+
+def test_text_area_dimentions(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
+    text_area_widgets = app.get_by_test_id("stTextArea")
+    expect(text_area_widgets).to_have_count(20)
+
+    assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
+    assert_snapshot(text_area_widgets.nth(11), name="st_text_area-height_75")
+    # Expect this to default to the minimum height of 68px
+    assert_snapshot(text_area_widgets.nth(12), name="st_text_area-height_60")
     assert_snapshot(text_area_widgets.nth(15), name="st_text_area-width_200px")
     assert_snapshot(text_area_widgets.nth(16), name="st_text_area-width_stretch")
+    assert_snapshot(text_area_widgets.nth(17), name="st_text_area-height_stretch")
+    assert_snapshot(text_area_widgets.nth(18), name="st_text_area-height_content")
 
 
 def test_help_tooltip_works(app: Page):
@@ -252,14 +264,6 @@ def test_text_area_in_form_with_submit_by_enter(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(14)).to_have_text(
         "text area 14 (value from form) - value: hello world",
         use_inner_text=True,
-    )
-
-
-def test_invalid_height(app: Page):
-    """Test that it raises an error when passed an invalid height."""
-    expect_exception(
-        app,
-        "StreamlitAPIException: Invalid height 65px for st.text_area - must be at least 68 pixels.",
     )
 
 
