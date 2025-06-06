@@ -111,7 +111,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         // override text color on hover for colored text - note since text color applied
         // as inline style (highest specificity) we need to use !important
         // use inherit to handle all button types
-        "span.colored-text": {
+        "span.stMarkdownColoredText": {
           color: "inherit !important",
         },
       },

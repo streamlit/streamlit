@@ -146,7 +146,9 @@ def test_colored_text_hover(app: Page):
     """Test that the colored text is correctly rendered and changes color on hover."""
     # Check hover behavior for colored text in primary button
     primary_button_element = app.get_by_test_id("stButton").nth(22)
-    expect(primary_button_element.locator("span")).to_have_class("colored-text")
+    expect(primary_button_element.locator("span")).to_have_class(
+        "stMarkdownColoredText"
+    )
     expect(primary_button_element.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )
@@ -158,7 +160,9 @@ def test_colored_text_hover(app: Page):
 
     # Check hover behavior for colored text in secondary button
     secondary_button_element = app.get_by_test_id("stButton").nth(23)
-    expect(secondary_button_element.locator("span")).to_have_class("colored-text")
+    expect(secondary_button_element.locator("span")).to_have_class(
+        "stMarkdownColoredText"
+    )
     expect(secondary_button_element.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )
@@ -170,7 +174,9 @@ def test_colored_text_hover(app: Page):
 
     # Check hover behavior for colored text in tertiary button
     tertiary_button_element = app.get_by_test_id("stButton").nth(24)
-    expect(tertiary_button_element.locator("span")).to_have_class("colored-text")
+    expect(tertiary_button_element.locator("span")).to_have_class(
+        "stMarkdownColoredText"
+    )
     expect(tertiary_button_element.locator("span")).to_have_css(
         "color", "rgb(0, 104, 201)"
     )

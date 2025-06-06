@@ -33,6 +33,7 @@ alwaysApply: false
 - Utilize props in styled components to display elements that may have some interactivity.
   - Avoid the need to target other components.
 - When using BaseWeb, be sure to import our theme via `useTheme` and use those values in overrides.
+- Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 
 ## Yarn Workspaces
 

@@ -256,13 +256,13 @@ export const StyledStreamlitMarkdown =
           border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
-        "span.has-background-color": {
+        "span.stMarkdownColoredBackground": {
           borderRadius: theme.radii.md,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
         },
 
-        "span.is-badge": {
+        "span.stMarkdownBadge": {
           borderRadius: theme.radii.md,
           // Since we're using inline-block below, we're not using vertical padding here,
           // because inline-block already makes the element look a bit taller.

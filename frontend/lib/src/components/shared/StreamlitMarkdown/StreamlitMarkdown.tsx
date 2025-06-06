@@ -467,7 +467,7 @@ function createRemarkColoringAndSmall(
           const data = node.data || (node.data = {})
           data.hName = "span"
           data.hProperties = data.hProperties || {}
-          data.hProperties.className = "is-badge"
+          data.hProperties.className = "stMarkdownBadge"
           data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
           return
         }
@@ -482,13 +482,13 @@ function createRemarkColoringAndSmall(
         data.hProperties.style = style
         // Add class name specific to colored text used for button hover selector
         // to override text color
-        data.hProperties.className = "colored-text"
+        data.hProperties.className = "stMarkdownColoredText"
         // Add class for background color for custom styling
         if (
           style &&
           (/background-color:/.test(style) || /background:/.test(style))
         ) {
-          data.hProperties.className = "has-background-color"
+          data.hProperties.className = "stMarkdownColoredBackground"
         }
         return
       }
