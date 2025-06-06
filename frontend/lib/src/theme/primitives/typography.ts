@@ -42,6 +42,8 @@ export const fontSizes = {
   threeXL: "2.25rem",
   fourXL: "2.75rem",
   codeFontSize: "0.875rem",
+  // Inline code font size as em value for proper scaling w/ captions
+  inlineCodeFontSize: "0.75em",
 }
 
 export const fontWeights = {

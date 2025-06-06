@@ -937,13 +937,15 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test valid codeFontSize values
-    ["14rem", "14rem"],
-    ["14REM", "14rem"],
-    ["14px", "14px"],
-    ["14PX", "14px"],
+    ["0.875rem", "0.875rem", "0.875em"],
+    ["0.875REM", "0.875rem", "0.875em"],
+    ["14px", "14px", "0.875em"],
+    ["14PX", "14px", "0.875em"],
+    // Rounded to 3 decimal places
+    ["15", "15px", "0.938em"],
   ])(
-    "correctly applies codeFontSize '%s'",
-    (codeFontSize, expectedCodeFontSize) => {
+    "correctly applies codeFontSize and inlineCodeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
       const themeInput: Partial<CustomThemeConfig> = {
         codeFontSize,
       }
@@ -951,19 +953,21 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
     }
   )
 
   it.each([
     // Test invalid codeFontSize values
-    ["invalid", "0.875rem"],
-    ["14", "0.875rem"],
-    ["rem", "0.875rem"],
-    ["px", "0.875rem"],
-    [" ", "0.875rem"],
+    ["invalid", "0.875rem", "0.75em"],
+    ["rem", "0.875rem", "0.75em"],
+    ["px", "0.875rem", "0.75em"],
+    [" ", "0.875rem", "0.75em"],
   ])(
     "logs a warning and falls back to default for any invalid codeFontSize '%s'",
-    (codeFontSize, expectedCodeFontSize) => {
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
         codeFontSize,
@@ -977,6 +981,9 @@ describe("createEmotionTheme", () => {
       )
 
       expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
     }
   )
 })

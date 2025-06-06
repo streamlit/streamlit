@@ -184,8 +184,9 @@ export const parseRadius = (
 
 /**
  * Helper function to parse fontSize options which allow the same possible values
- * @param fontSize: a string - a number in pixels or rem; handles number values as pixels
- * @returns font size
+ * @param fontSize a string number in pixels or rem; handles number values as pixels
+ * (e.g. "15px", "0.875rem", "15")
+ * @returns font size in em (e.g. "0.875em")
  */
 export const parseFontSize = (
   configName: string,
@@ -205,11 +206,43 @@ export const parseFontSize = (
     ) {
       return processedFontSize
     }
+
+    // Fallback: if the value can be parsed as a number, treat it as pixels
+    if (parsedFontSize.toString() === processedFontSize) {
+      return `${processedFontSize}px`
+    }
   }
   // If invalid, log warning and return undefined
   LOG.warn(
     `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
   )
+}
+
+/**
+ * Calculate an em value for inline code based on the configured code font size
+ * This ensures inline code scales properly relative to its parent while respecting the configured size
+ * @param codeFontSize: the configured code font size (e.g. "14px", "0.875rem")
+ * @param baseFontSize: the base font size in pixels (default 16)
+ * @returns em value as a string (e.g. "0.875em")
+ */
+export const calculateInlineCodeFontSize = (
+  codeFontSize: string,
+  baseFontSize: number
+): string => {
+  const processedFontSize = codeFontSize.trim().toLowerCase()
+
+  if (processedFontSize.endsWith("rem")) {
+    // Simply replace "rem" with "em" since both are relative units
+    return processedFontSize.replace("rem", "em")
+  } else if (processedFontSize.endsWith("px")) {
+    // Convert px to em using baseFontSize
+    const emValue = parseFloat(processedFontSize) / baseFontSize
+    return `${emValue.toFixed(3)}em`
+  }
+
+  // This should never happen (parseFontSize has already returned px/rem value for
+  // parsedCodeFontSize, this called after checking parsedCodeFontSize not undefined)
+  return "0.75em"
 }
 
 export const createEmotionTheme = (
@@ -400,8 +433,16 @@ export const createEmotionTheme = (
     )
     if (parsedCodeFontSize) {
       conditionalOverrides.fontSizes.codeFontSize = parsedCodeFontSize
+
+      // Calculate inline code font size as em value for proper scaling
+      conditionalOverrides.fontSizes.inlineCodeFontSize =
+        calculateInlineCodeFontSize(
+          parsedCodeFontSize,
+          conditionalOverrides.fontSizes.baseFontSize
+        )
     }
-    // Code font size default (fallback) set in typography primitives (0.875rem)
+    // codeFontSize default (fallback) set in typography primitives (0.875rem)
+    // inlineCodeFontSize fallback set in typography primitives (0.75em)
   }
 
   if (notNullOrUndefined(showSidebarBorder)) {
