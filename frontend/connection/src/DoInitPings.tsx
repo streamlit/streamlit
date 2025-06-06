@@ -24,7 +24,7 @@ import axios from "axios"
 import { getLogger } from "loglevel"
 
 // Note we expect the polyfill to load from this import
-import { buildHttpUri } from "@streamlit/utils"
+import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
 
 import { getBaseUriParts } from "./utils"
 import {
@@ -38,6 +38,17 @@ import { IHostConfigResponse, OnRetry } from "./types"
 
 const LOG = getLogger("DoInitPings")
 
+export class PingCancelledError extends Error {
+  constructor() {
+    super("Ping cancelled")
+  }
+}
+
+export interface AsyncPingRequest {
+  promise: Promise<number>
+  cancel: () => void
+}
+
 export function doInitPings(
   uriPartsList: URL[],
   minimumTimeoutMs: number,
@@ -49,10 +60,11 @@ export function doInitPings(
     source: string
   ) => void,
   onHostConfigResp: (resp: IHostConfigResponse) => void
-): Promise<number> {
-  const { promise, resolve } = Promise.withResolvers<number>()
+): AsyncPingRequest {
+  const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
   let uriNumber = 0
+  let timeoutId: number | undefined
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
@@ -79,7 +91,7 @@ export function doInitPings(
 
     retryCallback(totalTries, errorMarkdown, retryTimeout)
 
-    window.setTimeout(retryImmediately, retryTimeout)
+    timeoutId = window.setTimeout(retryImmediately, retryTimeout)
   }
 
   const retryWhenTheresNoResponse = (): void => {
@@ -264,5 +276,15 @@ If you are trying to access a Streamlit app running on another server, this coul
 
   connect()
 
-  return promise
+  const cancel = (): void => {
+    if (notNullOrUndefined(timeoutId)) {
+      window.clearTimeout(timeoutId)
+    }
+    reject(new PingCancelledError())
+  }
+
+  return {
+    promise,
+    cancel,
+  }
 }
