@@ -222,7 +222,7 @@ export const parseFontSize = (
  * Calculate an em value for inline code based on the configured code font size
  * This ensures inline code scales properly relative to its parent while respecting the configured size
  * @param codeFontSize: the configured code font size (e.g. "14px", "0.875rem")
- * @param baseFontSize: the base font size in pixels (default 16)
+ * @param baseFontSize: the base font size in pixels
  * @returns em value as a string (e.g. "0.875em")
  */
 export const calculateInlineCodeFontSize = (

@@ -33,7 +33,8 @@ export const StyledInlineCode = styled.code(({ theme }) => ({
   background: theme.colors.codeBackgroundColor,
   color: theme.colors.codeTextColor,
   fontFamily: theme.genericFonts.codeFont,
-  // Use em here so that it works correctly within captions
+  // Use em here so that it works correctly within headers, captions,
+  // sidebar, etc.
   fontSize: theme.fontSizes.inlineCodeFontSize,
 
   ...codeLink,
