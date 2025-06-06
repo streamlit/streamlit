@@ -260,6 +260,7 @@ export const StyledStreamlitMarkdown =
           borderRadius: theme.radii.md,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
+          boxDecorationBreak: "clone",
         },
 
         "span.stMarkdownBadge": {
