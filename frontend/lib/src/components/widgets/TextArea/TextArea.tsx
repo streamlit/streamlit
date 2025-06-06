@@ -45,7 +45,7 @@ export interface Props {
   element: TextAreaProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  height: React.CSSProperties["height"]
+  height?: React.CSSProperties["height"]
 }
 
 type TextAreaValue = string | null
