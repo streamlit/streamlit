@@ -26,7 +26,7 @@ import { getLogger } from "loglevel"
 // Note we expect the polyfill to load from this import
 import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
 
-import { getBaseUriParts } from "./utils"
+import { parseUriIntoBaseParts } from "./utils"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   HOST_CONFIG_PATH,
@@ -145,7 +145,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     const hostConfigBaseUrl = window.__streamlit?.HOST_CONFIG_BASE_URL
     const hostConfigServerUriParts = hostConfigBaseUrl
-      ? getBaseUriParts(hostConfigBaseUrl)
+      ? parseUriIntoBaseParts(hostConfigBaseUrl)
       : uriParts
 
     const hostConfigUri = buildHttpUri(

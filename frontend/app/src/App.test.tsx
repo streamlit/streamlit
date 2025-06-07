@@ -1633,8 +1633,15 @@ describe("App", () => {
   })
 
   describe("App.sendRerunBackMsg", () => {
+    let originalStreamlitWindowObj: typeof window.__streamlit
+
+    beforeEach(() => {
+      originalStreamlitWindowObj = window.__streamlit
+    })
+
     afterEach(() => {
       window.history.pushState({}, "", "/")
+      window.__streamlit = originalStreamlitWindowObj
     })
 
     it("sends the currentPageScriptHash if no pageScriptHash is given", () => {
@@ -1765,6 +1772,38 @@ describe("App", () => {
         port: "8501",
       } as URL)
 
+      window.history.pushState({}, "", "/foo/bar/baz")
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
+      ).toBe("baz")
+    })
+
+    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (main page)", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
+      window.history.pushState({}, "", "/foo/bar/")
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
+      ).toBe("")
+    })
+
+    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (non-main page)", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
       window.history.pushState({}, "", "/foo/bar/baz")
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
@@ -3638,16 +3677,19 @@ describe("App", () => {
   describe("page change URL handling", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     let pushStateSpy: any
+    let originalStreamlitWindowObj: typeof window.__streamlit
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
       pushStateSpy = vi.spyOn(window.history, "pushState")
+      originalStreamlitWindowObj = window.__streamlit
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
       window.localStorage.clear()
+      window.__streamlit = originalStreamlitWindowObj
     })
 
     it("can switch to the main page from a different page", () => {
@@ -3801,6 +3843,43 @@ describe("App", () => {
         hostname: "",
         port: "8501",
       } as URL)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        appPages: [],
+        pageScriptHash: "hash2",
+      })
+
+      sendForwardMessage("navigation", {
+        appPages: [
+          {
+            pageScriptHash: "page_script_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+            isDefault: true,
+          },
+          {
+            pageScriptHash: "hash2",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
+        ],
+        pageScriptHash: "hash2",
+        position: Navigation.Position.SIDEBAR,
+        sections: [],
+      })
+
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/foo/page2"
+      )
+    })
+
+    it("works with window.__streamlit.MAIN_PAGE_BASE_URL", () => {
+      renderApp(getProps())
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://example.com/foo" }
 
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,

@@ -16,7 +16,11 @@
 
 import { buildHttpUri } from "@streamlit/utils"
 
-import { buildWsUri, getBaseUriParts, getPossibleBaseUris } from "./utils"
+import {
+  buildWsUri,
+  getPossibleBaseUris,
+  parseUriIntoBaseParts,
+} from "./utils"
 
 const location: Partial<Location> = {}
 
@@ -26,7 +30,7 @@ Object.defineProperty(window, "location", { value: location })
 test("gets all window URI parts", () => {
   location.href = "https://the_host:9988/foo"
 
-  expect(getBaseUriParts()).toMatchObject({
+  expect(parseUriIntoBaseParts()).toMatchObject({
     protocol: "https:",
     hostname: "the_host",
     port: "9988",
@@ -37,7 +41,7 @@ test("gets all window URI parts", () => {
 test("gets window URI parts without basePath", () => {
   location.href = "https://the_host:9988"
 
-  expect(getBaseUriParts()).toMatchObject({
+  expect(parseUriIntoBaseParts()).toMatchObject({
     protocol: "https:",
     hostname: "the_host",
     port: "9988",
@@ -48,7 +52,7 @@ test("gets window URI parts without basePath", () => {
 test("gets window URI parts with long basePath", () => {
   location.href = "https://the_host:9988/foo/bar"
 
-  expect(getBaseUriParts()).toMatchObject({
+  expect(parseUriIntoBaseParts()).toMatchObject({
     protocol: "https:",
     hostname: "the_host",
     port: "9988",
@@ -59,7 +63,7 @@ test("gets window URI parts with long basePath", () => {
 test("gets window URI parts with weird basePath", () => {
   location.href = "https://the_host:9988///foo/bar//"
 
-  expect(getBaseUriParts()).toMatchObject({
+  expect(parseUriIntoBaseParts()).toMatchObject({
     protocol: "https:",
     hostname: "the_host",
     port: "9988",
@@ -71,7 +75,7 @@ test("Uses provided URL instead of window.location.href to get URI parts if prov
   location.href = "https://the_host:9988/foo/bar"
 
   expect(
-    getBaseUriParts("https://the_other_host:9999/foo/bar/baz")
+    parseUriIntoBaseParts("https://the_other_host:9999/foo/bar/baz")
   ).toMatchObject({
     protocol: "https:",
     hostname: "the_other_host",
