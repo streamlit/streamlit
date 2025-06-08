@@ -708,6 +708,7 @@ def _mock_get_options_for_section(
         "font": "Inter",
         "headingFont": "Inter Bold",
         "linkColor": "#2EC163",
+        "linkUnderline": False,
         "primaryColor": "red",
         "secondaryBackgroundColor": "blue",
         "showWidgetBorder": True,
@@ -747,6 +748,7 @@ def _mock_get_options_for_section(
         ],
         "headingFont": "Inter Bold",
         "linkColor": "#2EC163",
+        "linkUnderline": False,
         "primaryColor": "coral",
         "secondaryBackgroundColor": "blue",
         "showWidgetBorder": True,
@@ -1203,6 +1205,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "fontFaces": None,
                     "headingFont": None,
                     "linkColor": None,
+                    "linkUnderline": None,
                     "primaryColor": None,
                     "secondaryBackgroundColor": None,
                     "showWidgetBorder": None,
@@ -1237,6 +1240,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "fontFaces": None,
                     "headingFont": None,
                     "linkColor": None,
+                    "linkUnderline": None,
                     "primaryColor": None,
                     "secondaryBackgroundColor": None,
                     "showWidgetBorder": False,
@@ -1273,6 +1277,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "fontFaces": None,
                     "headingFont": None,
                     "linkColor": None,
+                    "linkUnderline": None,
                     "secondaryBackgroundColor": None,
                     "showWidgetBorder": None,
                     "showSidebarBorder": None,
@@ -1289,6 +1294,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "font": None,
                         "headingFont": None,
                         "linkColor": None,
+                        "linkUnderline": None,
                         "secondaryBackgroundColor": None,
                         "showWidgetBorder": None,
                         "textColor": None,
@@ -1319,6 +1325,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField("border_color")
         assert not new_session_msg.custom_theme.HasField("show_widget_border")
         assert not new_session_msg.custom_theme.HasField("link_color")
+        assert not new_session_msg.custom_theme.HasField("link_underline")
         assert not new_session_msg.custom_theme.HasField("base_font_size")
         assert not new_session_msg.custom_theme.HasField("code_background_color")
         assert not new_session_msg.custom_theme.HasField("show_sidebar_border")
@@ -1340,6 +1347,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField("border_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_widget_border")
         assert not new_session_msg.custom_theme.sidebar.HasField("link_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField("link_underline")
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "code_background_color"
         )
@@ -1364,6 +1372,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.border_color == "#ff0000"
         assert new_session_msg.custom_theme.show_widget_border is True
         assert new_session_msg.custom_theme.link_color == "#2EC163"
+        assert new_session_msg.custom_theme.link_underline is False
         assert new_session_msg.custom_theme.base_font_size == 14
         assert new_session_msg.custom_theme.code_background_color == "blue"
         assert new_session_msg.custom_theme.show_sidebar_border is True
@@ -1402,6 +1411,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.sidebar.border_color == "#ff0000"
         assert new_session_msg.custom_theme.sidebar.show_widget_border is True
         assert new_session_msg.custom_theme.sidebar.link_color == "#2EC163"
+        assert new_session_msg.custom_theme.sidebar.link_underline is False
         assert new_session_msg.custom_theme.sidebar.heading_font == "Inter Bold"
         assert new_session_msg.custom_theme.sidebar.body_font == "Inter"
         assert new_session_msg.custom_theme.sidebar.code_font == "Monaspace Argon"
