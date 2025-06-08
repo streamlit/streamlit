@@ -557,6 +557,7 @@ class LayoutsMixin:
     def tabs(
         self,
         tabs: Sequence[str],
+        default: str | None = None,
         *,
         width: WidthWithoutContent = "stretch",
     ) -> Sequence[DeltaGenerator]:
@@ -660,6 +661,11 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
+        if default and default not in tabs:
+            raise StreamlitAPIException(
+                f"The default tab '{default}' is not in the list of tabs."
+            )
+
         if any(not isinstance(tab, str) for tab in tabs):
             raise StreamlitAPIException(
                 "The tabs input list to st.tabs is only allowed to contain strings."
@@ -676,6 +682,10 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
         tab_container = self.dg._block(block_proto)
+
+        default_index = tabs.index(default) if default else 0
+        block_proto.tab_container.default_tab_index = default_index
+
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
