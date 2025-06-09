@@ -14,23 +14,20 @@
 
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 from PIL import Image, ImageDraw
 
 import streamlit as st
-
-if TYPE_CHECKING:
-    import numpy.typing as npt
-
 
 # Construct test assets path relative to this script file to
 # allow its execution with different working directories.
 TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
-img = np.repeat(0, 10000).reshape(100, 100)
-img800 = np.repeat(0, 640000).reshape(800, 800)
+img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
+img800: npt.NDArray[np.int_] = np.repeat(0, 640000).reshape(800, 800)
 
 
 st.header("Images from numpy arrays")

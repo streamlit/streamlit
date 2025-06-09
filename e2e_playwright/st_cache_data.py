@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import requests
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 
 @st.cache_data
@@ -88,7 +91,7 @@ video()
 
 @st.cache_data
 def image():
-    img = np.repeat(0, 10000).reshape(100, 100)
+    img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
     st.image(img, caption="A black square", width=200)
 
 
