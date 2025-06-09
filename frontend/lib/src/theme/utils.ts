@@ -48,7 +48,7 @@ import {
   createEmotionColors,
   DerivedColors,
 } from "./getColors"
-import { fonts } from "./primitives/typography"
+import { fonts, fontSizes } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -242,7 +242,7 @@ export const calculateInlineCodeFontSize = (
 
   // This should never happen (parseFontSize has already returned px/rem value for
   // parsedCodeFontSize, this called after checking parsedCodeFontSize not undefined)
-  return "0.75em"
+  return fontSizes.inlineCodeFontSize
 }
 
 export const createEmotionTheme = (
