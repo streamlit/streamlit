@@ -3385,7 +3385,7 @@ __metadata:
     uuid: "npm:^11.1.0"
     vega: "npm:^5.33.0"
     vega-embed: "npm:^6.29.0"
-    vega-interpreter: "npm:^1.2.0"
+    vega-interpreter: "npm:^2.0.0"
     vega-lite: "npm:5.23.0"
     vite: "npm:^6.3.5"
     vite-plugin-dts: "npm:^4.5.4"
@@ -20009,12 +20009,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-interpreter@npm:^1.2.0":
-  version: 1.2.0
-  resolution: "vega-interpreter@npm:1.2.0"
+"vega-interpreter@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "vega-interpreter@npm:2.0.0"
   dependencies:
-    vega-util: "npm:^1.17.3"
-  checksum: 10c0/678743d286465e35fcbc074b99aaf456f7cd72a25c5a4af2a37634d555d95c79ac02d0779ca4e400a6a42af0edf29ef6b25e877e048d3f6383a60d6b7d3bbf49
+    vega-util: "npm:^2.0.0"
+  checksum: 10c0/5dfeeabb1af2ffbe08c6c99e9571398929f0f60841584ac95b3da9c6a4c779ebf7c86e5e7dba054fe285af9b7c2433bb3d78e25e8f7a3ee07c743bb8e7ff73b7
   languageName: node
   linkType: hard
 
@@ -20235,6 +20235,13 @@ __metadata:
   version: 1.17.3
   resolution: "vega-util@npm:1.17.3"
   checksum: 10c0/10fd9d80ef09914dbb6538c0205e98bb7bf2eb21debb33c5f103a637377b6fdfd6bd7d2148cec4755050e3c802b805bec865ad3eb28068fd4dee76ef33d35a08
+  languageName: node
+  linkType: hard
+
+"vega-util@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "vega-util@npm:2.0.0"
+  checksum: 10c0/462a3ce6d89783b50d29e4aa0784976bd55bbf10bc0d3fa8add341ebe2b053a01c3d3048321702a566dd6c08bed2cc8a0f5d6022b68d1b2daa3bacce292c5b2a
   languageName: node
   linkType: hard
 
