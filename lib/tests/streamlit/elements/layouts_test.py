@@ -943,6 +943,37 @@ class TabsTest(DeltaGeneratorTestCase):
             context.value
         )
 
+    def test_valid_default_tab(self):
+        """Test that a valid default tab sets the correct index."""
+        tabs = ["Home", "Profile", "Settings"]
+        default = "Profile"
+        st.tabs(tabs, default=default)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+
+        assert tab_container_block.add_block.tab_container.default_tab_index == 1
+
+    def test_tab_labels_with_whitespace(self):
+        """Test that labels with leading/trailing spaces are accepted and preserved."""
+        tabs = ["  Tab 1", "Tab 2  ", "  Tab 3  "]
+        st.tabs(tabs)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        labels = [delta.add_block.tab.label for delta in all_deltas[1:]]
+
+        assert labels == tabs
+
+    def test_duplicate_tab_labels(self):
+        """Test that duplicate tab labels are allowed."""
+        tabs = ["Tab", "Tab", "Tab"]
+        st.tabs(tabs)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        labels = [delta.add_block.tab.label for delta in all_deltas[1:]]
+
+        assert labels == tabs
+
 
 class DialogTest(DeltaGeneratorTestCase):
     """Run unit tests for the non-public delta-generator dialog and also the dialog
