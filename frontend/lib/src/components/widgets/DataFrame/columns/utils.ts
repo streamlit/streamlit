@@ -806,9 +806,17 @@ export function countDecimals(value: number): number {
  * truncateDecimals(123.456, 0); // returns 123
  */
 export function truncateDecimals(value: number, decimals: number): number {
-  return decimals === 0
-    ? Math.trunc(value)
-    : Math.trunc(value * 10 ** decimals) / 10 ** decimals
+  if (!Number.isFinite(value)) return value // keep NaN/±∞ untouched
+  if (decimals <= 0) return Math.trunc(value)
+
+  const factor = 10 ** decimals
+  const shifted = value * factor
+
+  // Add/subtract a relative ε that is just large enough to push
+  // 451.999… → 452 (or −452.000… → −451.999…) before we truncate.
+  const epsilon = Number.EPSILON * Math.abs(shifted) * 10
+
+  return Math.trunc(shifted + Math.sign(shifted) * epsilon) / factor
 }
 
 const LINE_BREAK_REGEX = new RegExp(/(\r\n|\n|\r)/gm)
