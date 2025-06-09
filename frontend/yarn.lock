@@ -3180,7 +3180,7 @@ __metadata:
     "@types/ua-parser-js": "npm:^0.7.39"
     "@types/uuid": "npm:^10.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.33.1"
-    "@vitejs/plugin-react-swc": "npm:^3.10.0"
+    "@vitejs/plugin-react-swc": "npm:^3.10.1"
     "@vitest/eslint-plugin": "npm:^1.2.1"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
@@ -3318,7 +3318,7 @@ __metadata:
     "@types/uuid": "npm:^10.0.0"
     "@types/wavesurfer.js": "npm:^6.0.12"
     "@types/xxhashjs": "npm:^0.2.2"
-    "@vitejs/plugin-react-swc": "npm:^3.10.0"
+    "@vitejs/plugin-react-swc": "npm:^3.10.1"
     apache-arrow: "npm:^20.0.0"
     axios: "npm:^1.9.0"
     axios-mock-adapter: "npm:^2.1.0"
@@ -5503,15 +5503,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react-swc@npm:^3.10.0":
-  version: 3.10.0
-  resolution: "@vitejs/plugin-react-swc@npm:3.10.0"
+"@vitejs/plugin-react-swc@npm:^3.10.1":
+  version: 3.10.1
+  resolution: "@vitejs/plugin-react-swc@npm:3.10.1"
   dependencies:
     "@rolldown/pluginutils": "npm:1.0.0-beta.9"
     "@swc/core": "npm:^1.11.22"
   peerDependencies:
     vite: ^4 || ^5 || ^6
-  checksum: 10c0/a53dbb3e739c37fa7de8a9775d2d086b70e6ac87ea118bcdde7cf786a2d11db9540d4692580df959712f4b6795efbc8a5148f37057266a029bbc5e6c2aff82ef
+  checksum: 10c0/64e7019974ac0639fc09144aa3f1d9eef4e45eaa0c43d34dc81ccf12047623636c9b998a0faf6892c8cce1a2efc3c13c4de04ac120d3534e242d7615117204d5
   languageName: node
   linkType: hard
 
