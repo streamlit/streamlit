@@ -236,6 +236,7 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
             query_string=ctx.query_string,
             page_script_hash=page_script_hash,
             cached_message_hashes=ctx.cached_message_hashes,
+            context_info=ctx.context_info,
         )
     )
     # Force a yield point so the runner can do the rerun
