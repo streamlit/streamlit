@@ -46,6 +46,19 @@ st.code(
     language="diff",
 )
 
+code_with_leading_whitespace = """
+    def hello():
+        print("Hello, Streamlit!")
+"""
+
+st.code(code_with_leading_whitespace, language="python")
+
+st.markdown("```python\n" + code_with_leading_whitespace + "\n```")
+
+st.code("\n" + code_with_leading_whitespace + "\n", language="python")
+
+st.markdown("```python\n\n" + code_with_leading_whitespace + "\n\n```")
+
 with st.expander("`st.code` usage", expanded=True):
     st.code(code, language="python")
     st.code(code, language="python")

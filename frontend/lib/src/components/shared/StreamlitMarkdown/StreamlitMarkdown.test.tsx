@@ -574,6 +574,19 @@ describe("CustomCodeTag Element", () => {
         "</code></div>"
     )
   })
+
+  it("should trim leading and final newlines", () => {
+    const props = getCustomCodeTagProps({
+      children: [
+        `
+      def hello():
+          print("Hello, Streamlit!")
+`,
+      ],
+    })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(baseElement).toMatchSnapshot()
+  })
 })
 
 describe("CustomPreTag", () => {

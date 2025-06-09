@@ -241,3 +241,18 @@ class CodeElement(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidHeightError) as e:
             st.code(code, height=height)
         assert "Invalid height" in str(e.value)
+
+    def test_st_code_with_leading_whitespace(self):
+        """Test st.code with code containing leading whitespace."""
+        code = """
+            def hello():
+                print("Hello, Streamlit!")
+"""
+        st.code(code)
+
+        element = self.get_delta_from_queue().new_element
+        assert (
+            element.code.code_text
+            == """            def hello():
+                print("Hello, Streamlit!")"""
+        )
