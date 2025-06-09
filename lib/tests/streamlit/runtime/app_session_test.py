@@ -625,6 +625,72 @@ class AppSessionTest(unittest.TestCase):
 
         mock_enqueue.assert_called_once_with(expected_msg)
 
+    def test_manual_rerun_preserves_context_info(self):
+        """Test that manual reruns preserve context info."""
+        session = _create_test_session()
+
+        # Create a client state with context info (simulating a manual rerun from frontend)
+        client_state = ClientState()
+        client_state.context_info.timezone = "Europe/Berlin"
+        client_state.context_info.locale = "de-DE"
+        client_state.query_string = "test_query"
+        client_state.page_script_hash = "test_hash"
+        client_state.is_auto_rerun = False
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        # Verify that _create_scriptrunner was called
+        session._create_scriptrunner.assert_called_once()
+
+        # Get the RerunData that was passed to _create_scriptrunner
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+
+        # Verify that context_info was preserved
+        assert rerun_data.context_info is not None
+        assert rerun_data.context_info.timezone == "Europe/Berlin"
+        assert rerun_data.context_info.locale == "de-DE"
+        assert rerun_data.query_string == "test_query"
+        assert rerun_data.page_script_hash == "test_hash"
+        assert rerun_data.is_auto_rerun is False
+
+    def test_context_info_preserved_in_client_state_on_shutdown(self):
+        """Test that context_info is preserved in client_state during SHUTDOWN event."""
+        session = _create_test_session()
+
+        # Set up initial context info in client state
+        session._client_state.context_info.timezone = "America/New_York"
+        session._client_state.context_info.locale = "en-US"
+        session._client_state.query_string = "initial_query"
+        session._client_state.page_script_hash = "initial_hash"
+
+        # Create a mock ScriptRunner and simulate SHUTDOWN event
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        # Create client state with context info (as would be sent in SHUTDOWN event)
+        shutdown_client_state = ClientState()
+        shutdown_client_state.context_info.timezone = "Europe/London"
+        shutdown_client_state.context_info.locale = "en-GB"
+        shutdown_client_state.query_string = "shutdown_query"
+        shutdown_client_state.page_script_hash = "shutdown_hash"
+
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=shutdown_client_state,
+            )
+
+        # Verify that the client state was updated with the shutdown data
+        assert session._client_state.context_info.timezone == "Europe/London"
+        assert session._client_state.context_info.locale == "en-GB"
+        assert session._client_state.query_string == "shutdown_query"
+        assert session._client_state.page_script_hash == "shutdown_hash"
+
 
 def _mock_get_options_for_section(
     overrides: dict[str, Any] | None = None,
