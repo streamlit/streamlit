@@ -299,6 +299,15 @@ function DateInput({
               "::after": {
                 borderColor: colors.transparent,
               },
+              //Apply background color only when hovering over a date in the range in light theme
+              ...(hasLightBackgroundColor(theme) &&
+              $isHovered &&
+              $pseudoSelected &&
+              !$selected
+                ? {
+                    color: colors.secondaryBg,
+                  }
+                : {}),
             }),
           },
           PrevButton: {
