@@ -35,7 +35,7 @@
     "vite": "^6.3.5",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.2"
+    "vitest": "^3.2.3"
   },
   "browserslist": [
     ">0.2%",
