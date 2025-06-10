@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -281,3 +282,11 @@ def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunctio
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stMarkdown")
+
+
+@pytest.mark.app_hash("bold-header1")
+def test_anchor_scrolling(app: Page):
+    """Test that anchor scrolling works correctly."""
+    # The app fixture navigates to http://localhost:{app_port}/#bold-header1
+    # which should scroll to the header.
+    expect(app.get_by_text("Bold header1")).to_be_in_viewport()

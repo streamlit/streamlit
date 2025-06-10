@@ -15,7 +15,6 @@
  */
 
 import React, {
-  createElement,
   CSSProperties,
   FC,
   FunctionComponent,
@@ -26,7 +25,6 @@ import React, {
   ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react"
@@ -64,7 +62,6 @@ import {
   getMarkdownBgColors,
   getMarkdownTextColors,
 } from "~lib/theme"
-import { LibContext } from "~lib/components/core/LibContext"
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 
 import {
@@ -212,29 +209,9 @@ export const HeadingWithActionElements: FunctionComponent<
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   const [elementId, setElementId] = useState(propsAnchor)
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-
-  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
-    useContext(LibContext)
-  const onScriptFinished = useCallback(() => {
-    if (target !== null) {
-      // wait a bit for everything on page to finish loading
-      window.setTimeout(() => {
-        scrollNodeIntoView(target)
-      }, 300)
-    }
-  }, [target])
-
-  useEffect(() => {
-    addScriptFinishedHandler(onScriptFinished)
-    return () => {
-      removeScriptFinishedHandler(onScriptFinished)
-    }
-  }, [addScriptFinishedHandler, removeScriptFinishedHandler, onScriptFinished])
 
   const ref = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (node: any) => {
+    (node: HTMLElement | null) => {
       if (node === null) {
         return
       }
@@ -243,7 +220,7 @@ export const HeadingWithActionElements: FunctionComponent<
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
       if (windowHash && windowHash === anchor) {
-        setTarget(node)
+        scrollNodeIntoView(node)
       }
     },
     [propsAnchor]
@@ -259,19 +236,15 @@ export const HeadingWithActionElements: FunctionComponent<
   )
 
   const attributes = isInSidebarOrDialog ? {} : { ref, id: elementId }
+  const Tag = tag
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
-  const headerElementWithActions = createElement(
-    tag,
-    {
-      ...tagProps,
-      ...attributes,
-    },
-    <>
+  const headerElementWithActions = (
+    <Tag {...tagProps} {...attributes}>
       {children}
       {actionElements}
-    </>
+    </Tag>
   )
 
   // we don't want to apply styling, so return the "raw" header
