@@ -68,6 +68,7 @@ const MOCK_COMPONENT_NAME = "mock_component_name"
 
 describe("ComponentInstance", () => {
   let logWarnSpy: MockInstance
+  let originalStreamlitWindowObj: typeof window.__streamlit
   const getComponentRegistry = (): ComponentRegistry => {
     return new ComponentRegistry(mockEndpoints())
   }
@@ -85,6 +86,11 @@ describe("ComponentInstance", () => {
       elementRef: { current: null },
       values: [250],
     })
+    originalStreamlitWindowObj = window.__streamlit
+  })
+
+  afterEach(() => {
+    window.__streamlit = originalStreamlitWindowObj
   })
 
   it("registers a message listener on render", () => {
@@ -157,6 +163,30 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("allow", DEFAULT_IFRAME_FEATURE_POLICY)
     expect(iframe).toHaveAttribute("sandbox", DEFAULT_IFRAME_SANDBOX_POLICY)
     expect(iframe).toHaveClass("stCustomComponentV1")
+  })
+
+  it("includes window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID in queryString if set", () => {
+    window.__streamlit = { CUSTOM_COMPONENT_CLIENT_ID: "foobar" }
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp()}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+      />,
+      {
+        componentRegistry: getComponentRegistry(),
+      }
+    )
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute(
+      "src",
+      "http://a.mock.url?__streamlit_parent_client_id=foobar&streamlitUrl=http%3A%2F%2Flocalhost%3A3000%2F"
+    )
   })
 
   it("displays a skeleton initially with a certain height", () => {

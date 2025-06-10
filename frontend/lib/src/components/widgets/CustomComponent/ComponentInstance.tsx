@@ -99,10 +99,17 @@ function getSrc(
   }
 
   // Add streamlitUrl query parameter to src
+  const customComponentClientId =
+    window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID
   const currentUrl = new URL(window.location.href)
   src = queryString.stringifyUrl({
     url: src,
-    query: { streamlitUrl: currentUrl.origin + currentUrl.pathname },
+    query: {
+      streamlitUrl: currentUrl.origin + currentUrl.pathname,
+      ...(customComponentClientId && {
+        __streamlit_parent_client_id: customComponentClientId,
+      }),
+    },
   })
   return src
 }

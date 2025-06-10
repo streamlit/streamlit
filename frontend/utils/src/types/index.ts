@@ -46,6 +46,16 @@ export interface StreamlitWindowObject {
   // works.
   MAIN_PAGE_BASE_URL?: string
 
+  // When our Streamlit app is embedded in an iframe, this can be set by the
+  // parent frame of the app so that the Streamlit app is aware of its own
+  // Service Worker clientId. This has to be done when using Custom Components
+  // in an app deployed in a context where we use a Service Worker as `fetch`
+  // requests sent from the component iframe set `resultingClientId` but not
+  // `replacesClientId`, which means that without this we would be unable to
+  // associate a `fetch` request from a custom component iframe with its parent
+  // frame.
+  CUSTOM_COMPONENT_CLIENT_ID?: string
+
   // Theme related settings.
   LIGHT_THEME?: ICustomThemeConfig
   DARK_THEME?: ICustomThemeConfig
