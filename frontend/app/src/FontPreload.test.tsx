@@ -18,9 +18,9 @@ import fs from "fs"
 import path from "path"
 
 // Current hashes for our preloaded font assets:
-const REGULAR_HASH = "DZLUzqI4"
-const SEMI_BOLD_HASH = "sKQIyTMz"
-const BOLD_HASH = "-6c9oR8J"
+const REGULAR_HASH = "BqTI-3mA"
+const SEMI_BOLD_HASH = "BQV5CVwD"
+const BOLD_HASH = "gn7Db9ke"
 
 // Render a copy of index.html file to test
 const HTML = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8")
@@ -46,7 +46,10 @@ test("index.html preloads 3 expected fonts with expected hashes", () => {
   for (let i = 0; i < preloadedFontsCount; i++) {
     const fontHref = getFontHref(i)
     const fontFullName = fontHref.split("/").pop()
-    const fontHash = fontFullName ? fontFullName.split(".")[1] : ""
+
+    // 4 parts in full name split by "."
+    // <font>-<weight>.otf.<fontHash>.woff2
+    const fontHash = fontFullName ? fontFullName.split(".")[2] : ""
     expect(fontHash).toBe(expectedfontHashes[i])
   }
 })

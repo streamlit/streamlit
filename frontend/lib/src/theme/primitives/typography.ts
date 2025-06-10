@@ -15,9 +15,9 @@
  */
 
 export const fonts: { [key: string]: string } = {
-  sansSerif: '"Source Sans Pro", sans-serif',
+  sansSerif: '"Source Sans", sans-serif',
   monospace: '"Source Code Pro", monospace',
-  serif: '"Source Serif Pro", serif',
+  serif: '"Source Serif", serif',
   materialIcons: "Material Symbols Rounded",
 }
 

@@ -181,7 +181,7 @@ describe("Cached theme helpers", () => {
         backgroundColor: "orange",
         secondaryBackgroundColor: "yellow",
         textColor: "green",
-        bodyFont: '"Source Sans Pro", sans-serif',
+        bodyFont: '"Source Sans", sans-serif',
       }
 
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
@@ -226,7 +226,7 @@ describe("Cached theme helpers", () => {
       backgroundColor: "orange",
       secondaryBackgroundColor: "yellow",
       textColor: "green",
-      bodyFont: '"Source Sans Pro", sans-serif',
+      bodyFont: '"Source Sans", sans-serif',
     }
     const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
 
@@ -938,7 +938,7 @@ describe("toThemeInput", () => {
     const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({
       primaryColor: colors.primary,
-      bodyFont: `"Source Sans Pro", sans-serif`,
+      bodyFont: `"Source Sans", sans-serif`,
       backgroundColor: colors.bgColor,
       secondaryBackgroundColor: colors.secondaryBg,
       textColor: colors.bodyText,
@@ -1041,11 +1041,11 @@ describe("theme overrides", () => {
 describe("parseFont", () => {
   it.each([
     // Test standard font mappings
-    ["sans-serif", '"Source Sans Pro", sans-serif'],
-    ["Sans-Serif", '"Source Sans Pro", sans-serif'], // Case insensitive
-    ["SANS-SERIF", '"Source Sans Pro", sans-serif'], // All caps
-    ["sans serif", '"Source Sans Pro", sans-serif'], // With space
-    ["serif", '"Source Serif Pro", serif'],
+    ["sans-serif", '"Source Sans", sans-serif'],
+    ["Sans-Serif", '"Source Sans", sans-serif'], // Case insensitive
+    ["SANS-SERIF", '"Source Sans", sans-serif'], // All caps
+    ["sans serif", '"Source Sans", sans-serif'], // With space
+    ["serif", '"Source Serif", serif'],
     ["monospace", '"Source Code Pro", monospace'],
 
     // Test fonts that aren't in the map (should return as-is)
