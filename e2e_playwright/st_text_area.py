@@ -70,37 +70,38 @@ v12 = st.text_area("text area 12 (height=75)", "default text", height=75)
 st.write("value 12:", v12)
 
 # Expect this to default to the minimum height of 68px
-st.text_area("text area 13 (height=60)", "default text", height=60)
+v13 = st.text_area("text area 13 (height=60)", "default text", height=60)
+st.write("value 13:", v13)
 
-if "text_area_13" not in st.session_state:
-    st.session_state["text_area_13"] = "xyz"
+if "text_area_14" not in st.session_state:
+    st.session_state["text_area_14"] = "xyz"
 
-v13 = st.text_area(
-    "text area 13 (value from state)",
+v14 = st.text_area(
+    "text area 14 (value from state)",
     value=None,
-    key="text_area_13",
+    key="text_area_14",
 )
-st.write("text area 13 (value from state) - value: ", v13)
+st.write("text area 14 (value from state) - value: ", v14)
 
 with st.form("form"):
-    st.text_area("text area 14 (value from form)", key="text_area_14")
+    st.text_area("text area 15 (value from form)", key="text_area_15")
     st.form_submit_button("submit")
 
-form_value = st.session_state.get("text_area_14", None)
-st.write("text area 14 (value from form) - value: ", form_value)
+form_value = st.session_state.get("text_area_15", None)
+st.write("text area 15 (value from form) - value: ", form_value)
 
 st.text_area(
-    "text area 15 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
+    "text area 16 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
 )
 
-st.text_area("text area 16 (width=200px)", "width test", width=200)
-st.text_area("text area 17 (width='stretch')", "width test", width="stretch")
+st.text_area("text area 17 (width=200px)", "width test", width=200)
+st.text_area("text area 18 (width='stretch')", "width test", width="stretch")
 
 st.text_area(
-    "text area 18 (height='content') - Multi-line initial content",
+    "text area 19 (height='content') - Multi-line initial content",
     """Line 1
 This text area has multiple lines initially and should show expanded height from the start.""",
     height="content",
 )
 
-st.text_area("text area 19 (height='stretch)", "height test", height="stretch")
+st.text_area("text area 20 (height='stretch)", "height test", height="stretch")

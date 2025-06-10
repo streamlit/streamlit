@@ -28,7 +28,7 @@ def test_text_area_widget_rendering(
 ):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = themed_app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(23)
+    expect(text_area_widgets).to_have_count(20)
 
     assert_snapshot(text_area_widgets.nth(0), name="st_text_area-default")
     assert_snapshot(text_area_widgets.nth(1), name="st_text_area-value_some_text")
@@ -46,15 +46,15 @@ def test_text_area_widget_rendering(
 def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(23)
+    expect(text_area_widgets).to_have_count(20)
 
     assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
     assert_snapshot(text_area_widgets.nth(11), name="st_text_area-height_75")
     # Expect this to default to the minimum height of 68px
     assert_snapshot(text_area_widgets.nth(12), name="st_text_area-height_60")
-    assert_snapshot(text_area_widgets.nth(15), name="st_text_area-width_200px")
-    assert_snapshot(text_area_widgets.nth(16), name="st_text_area-width_stretch")
-    assert_snapshot(text_area_widgets.nth(18), name="st_text_area-height_stretch")
+    assert_snapshot(text_area_widgets.nth(16), name="st_text_area-width_200px")
+    assert_snapshot(text_area_widgets.nth(17), name="st_text_area-width_stretch")
+    assert_snapshot(text_area_widgets.nth(19), name="st_text_area-height_stretch")
     # content height is tested in test_text_area_content_height_expansion
 
 
@@ -299,7 +299,7 @@ def test_text_area_content_height_expansion(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.text_area with height='content' expands correctly when content is added."""
-    content_height_text_area = app.get_by_test_id("stTextArea").nth(17)
+    content_height_text_area = app.get_by_test_id("stTextArea").nth(18)
     text_area_field = content_height_text_area.locator("textarea").first
 
     # Take initial snapshot
