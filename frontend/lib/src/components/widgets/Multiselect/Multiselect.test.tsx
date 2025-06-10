@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -223,10 +223,11 @@ describe("Multiselect widget", () => {
     const props = getProps()
     render(<Multiselect {...props} />)
 
+    // Add new selection (b) in addition to existing selection (a)
+    // by typing in the preferred option
     const multiSelect = screen.getByRole("combobox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(multiSelect, { target: { value: "b" } })
+    await user.type(multiSelect, "b")
+    // Select the matching option from the list
     const match = screen.getByRole("option")
     await user.click(match)
 
@@ -285,13 +286,12 @@ describe("Multiselect widget", () => {
 
     render(<Multiselect {...props} />)
 
-    // Change the widget value
+    // Change the widget value - add selection (b)
+    // to existing selection (a) by typing in
     const multiSelect = screen.getByRole("combobox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(multiSelect, { target: { value: "b" } })
+    await user.type(multiSelect, "b")
+    // Select the matching option from the list
     const match = screen.getByRole("option")
-    // Select b
     await user.click(match)
 
     // Options list should only have c available - a & b selected
@@ -385,13 +385,17 @@ describe("Multiselect widget", () => {
       )
       render(<Multiselect {...props} />)
 
-      // Select another option, b
-      const multiSelect = screen.getByRole("combobox")
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(multiSelect, { target: { value: "b" } })
-      const match = screen.getByRole("option")
-      await user.click(match)
+      // Select another option, b, from the dropdown list
+      const expandListButton = screen.getAllByTitle("open")[0]
+      // Open the list
+      await user.click(expandListButton)
+      // Options list should only have b & c available - default a selected
+      const options = screen.getAllByRole("option")
+      expect(options.length).toBe(2)
+      expect(options[0]).toHaveTextContent("b")
+      expect(options[1]).toHaveTextContent("c")
+      // Select b from the list
+      await user.click(options[0])
 
       expect(
         screen.getByText(
