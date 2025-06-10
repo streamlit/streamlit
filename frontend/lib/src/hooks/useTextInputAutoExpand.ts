@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { RefObject, useLayoutEffect, useRef, useState } from "react"
+import {
+  RefObject,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
+
 import { useTheme } from "@emotion/react"
 
 // Constants for auto-expansion behavior
@@ -127,9 +134,9 @@ export const useTextInputAutoExpand = ({
   const [scrollHeight, setScrollHeight] = useState(0)
   const [isExtended, setIsExtended] = useState(false)
 
-  const updateScrollHeight = (): void => {
+  const updateScrollHeight = useCallback((): void => {
     setScrollHeight(getScrollHeight(textareaRef))
-  }
+  }, [textareaRef, setScrollHeight])
 
   // Initialize height guidance
   useLayoutEffect(() => {
@@ -147,7 +154,7 @@ export const useTextInputAutoExpand = ({
   // Update scroll height when dependencies change
   useLayoutEffect(() => {
     updateScrollHeight()
-  }, [textareaRef, ...dependencies])
+  }, [textareaRef, updateScrollHeight, ...dependencies]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { maxHeight: maxHeightValue } = heightGuidance.current
 

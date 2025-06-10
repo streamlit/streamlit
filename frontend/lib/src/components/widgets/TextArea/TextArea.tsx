@@ -19,7 +19,7 @@ import React, { FC, memo, useCallback, useRef, useState } from "react"
 import { Textarea as UITextArea } from "baseui/textarea"
 import uniqueId from "lodash/uniqueId"
 
-import { TextArea as TextAreaProto } from "@streamlit/protobuf"
+import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
@@ -40,13 +40,15 @@ import {
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
+import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 
 export interface Props {
   disabled: boolean
   element: TextAreaProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  height?: React.CSSProperties["height"]
+  // needed for height
+  outerElement: Element
 }
 
 type TextAreaValue = string | null
@@ -85,10 +87,8 @@ const TextArea: FC<Props> = ({
   element,
   widgetMgr,
   fragmentId,
-  height,
+  outerElement,
 }) => {
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   const id = useRef(uniqueId("text_area_")).current
 
   const [width, elementRef] = useCalculatedWidth()
@@ -102,8 +102,12 @@ const TextArea: FC<Props> = ({
    */
   const [focused, setFocused] = useState(false)
 
+  const styles = useLayoutStyles({
+    element: outerElement,
+  })
+
   // Determine if we should use auto-expansion
-  const isAutoHeight = height === "auto"
+  const isAutoHeight = styles.height === "auto"
 
   // Create ref for auto-expansion
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -225,7 +229,7 @@ const TextArea: FC<Props> = ({
               lineHeight: theme.lineHeights.inputWidget,
 
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height: isAutoHeight ? autoExpand.height : height || "",
+              height: isAutoHeight ? autoExpand.height : styles.height || "",
               maxHeight: isAutoHeight ? autoExpand.maxHeight : "",
               minHeight: theme.sizes.largestElementHeight,
               resize: "vertical",

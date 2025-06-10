@@ -87,6 +87,7 @@ import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "~lib/components/core/LibContext"
 import { getElementId } from "~lib/util/utils"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { useLayoutStyles } from "src/components/core/Layout/useLayoutStyles"
 
 import {
   BaseBlockProps,
@@ -96,7 +97,6 @@ import {
   shouldComponentBeEnabled,
 } from "./utils"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
-import { useLayoutStyles } from "../Layout/useLayoutStyles"
 
 // Lazy-load elements.
 const Audio = lazy(() => import("~lib/components/elements/Audio"))
@@ -641,14 +641,11 @@ const RawElementNodeRenderer = (
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
       widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
-      const styles = useLayoutStyles({
-        element: node.element,
-      })
       return (
         <TextArea
           key={textAreaProto.id}
           element={textAreaProto}
-          height={styles.height}
+          outerElement={node.element}
           {...widgetProps}
         />
       )

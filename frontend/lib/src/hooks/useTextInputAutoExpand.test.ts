@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-import { renderHook, act } from "@testing-library/react"
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { RefObject } from "react"
+
+import { act, renderHook } from "@testing-library/react"
+
 import { useTextInputAutoExpand } from "./useTextInputAutoExpand"
 
 // Mock the useTheme hook
 vi.mock("@emotion/react", () => ({
+  // eslint-disable-next-line @eslint-react/hooks-extra/no-unnecessary-use-prefix, @eslint-react/hooks-extra/no-useless-custom-hooks
   useTheme: () => ({
     sizes: {
       minElementHeight: "2.5rem",
@@ -239,7 +244,7 @@ describe("useTextInputAutoExpand", () => {
       const multiDepRef = createMockTextareaRef()
 
       let dep1 = "a"
-      let dep2 = "b"
+      const dep2 = "b"
       const { result, rerender } = renderHook(() =>
         useTextInputAutoExpand({
           textareaRef: multiDepRef,
