@@ -104,4 +104,140 @@ describe("useOnInputChange", () => {
       expect(setValueWithSource).not.toHaveBeenCalled()
     })
   })
+
+  it("should call additional actions after main logic", async () => {
+    const setDirtyCallback = vi.fn()
+    const setUiValueCallback = vi.fn()
+    const setValueWithSource = vi.fn()
+    const additionalAction1 = vi.fn()
+    const additionalAction2 = vi.fn()
+
+    const { result: onInputChange } = renderHook(() =>
+      useOnInPutChange({
+        formId: "someFormId",
+        maxChars: 0,
+        setDirty: setDirtyCallback,
+        setUiValue: setUiValueCallback,
+        setValueWithSource,
+        additionalActions: [additionalAction1, additionalAction2],
+      })
+    )
+
+    onInputChange.current({ target: { value: "someValue" } })
+
+    await waitFor(() => {
+      expect(setDirtyCallback).toHaveBeenCalledWith(true)
+    })
+    await waitFor(() => {
+      expect(setUiValueCallback).toHaveBeenCalledWith("someValue")
+    })
+    await waitFor(() => {
+      expect(setValueWithSource).toHaveBeenCalledWith({
+        value: "someValue",
+        fromUi: true,
+      })
+    })
+    await waitFor(() => {
+      expect(additionalAction1).toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(additionalAction2).toHaveBeenCalled()
+    })
+  })
+
+  it("should work without additional actions (default behavior)", async () => {
+    const setDirtyCallback = vi.fn()
+    const setUiValueCallback = vi.fn()
+    const setValueWithSource = vi.fn()
+
+    const { result: onInputChange } = renderHook(() =>
+      useOnInPutChange({
+        formId: undefined,
+        maxChars: 0,
+        setDirty: setDirtyCallback,
+        setUiValue: setUiValueCallback,
+        setValueWithSource,
+        // additionalActions not provided - should default to empty array
+      })
+    )
+
+    onInputChange.current({ target: { value: "someValue" } })
+
+    await waitFor(() => {
+      expect(setDirtyCallback).toHaveBeenCalledWith(true)
+    })
+    await waitFor(() => {
+      expect(setUiValueCallback).toHaveBeenCalledWith("someValue")
+    })
+    // Should not call setValueWithSource since not in form
+    await waitFor(() => {
+      expect(setValueWithSource).not.toHaveBeenCalled()
+    })
+  })
+
+  it("should not call additional actions if value exceeds maxChars", async () => {
+    const setDirtyCallback = vi.fn()
+    const setUiValueCallback = vi.fn()
+    const setValueWithSource = vi.fn()
+    const additionalAction = vi.fn()
+
+    const { result: onInputChange } = renderHook(() =>
+      useOnInPutChange({
+        formId: undefined,
+        maxChars: 1,
+        setDirty: setDirtyCallback,
+        setUiValue: setUiValueCallback,
+        setValueWithSource,
+        additionalActions: [additionalAction],
+      })
+    )
+
+    onInputChange.current({ target: { value: "someValue" } })
+
+    await waitFor(() => {
+      expect(setDirtyCallback).not.toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(setUiValueCallback).not.toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(setValueWithSource).not.toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(additionalAction).not.toHaveBeenCalled()
+    })
+  })
+
+  it("should call additional actions even when not in form", async () => {
+    const setDirtyCallback = vi.fn()
+    const setUiValueCallback = vi.fn()
+    const setValueWithSource = vi.fn()
+    const additionalAction = vi.fn()
+
+    const { result: onInputChange } = renderHook(() =>
+      useOnInPutChange({
+        formId: undefined, // Not in form
+        maxChars: 0,
+        setDirty: setDirtyCallback,
+        setUiValue: setUiValueCallback,
+        setValueWithSource,
+        additionalActions: [additionalAction],
+      })
+    )
+
+    onInputChange.current({ target: { value: "someValue" } })
+
+    await waitFor(() => {
+      expect(setDirtyCallback).toHaveBeenCalledWith(true)
+    })
+    await waitFor(() => {
+      expect(setUiValueCallback).toHaveBeenCalledWith("someValue")
+    })
+    await waitFor(() => {
+      expect(setValueWithSource).not.toHaveBeenCalled() // Not in form
+    })
+    await waitFor(() => {
+      expect(additionalAction).toHaveBeenCalled() // Should still be called
+    })
+  })
 })

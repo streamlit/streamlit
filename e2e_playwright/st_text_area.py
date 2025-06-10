@@ -96,7 +96,11 @@ st.text_area(
 st.text_area("text area 16 (width=200px)", "width test", width=200)
 st.text_area("text area 17 (width='stretch')", "width test", width="stretch")
 
-st.text_area("text area 18 (height='stretch)", "height test", height="stretch")
+st.text_area(
+    "text area 18 (height='content') - Multi-line initial content",
+    """Line 1
+This text area has multiple lines initially and should show expanded height from the start.""",
+    height="content",
+)
 
-# TODO: This should auto-expand
-st.text_area("text area 19 (height='content)", "height test", height="content")
+st.text_area("text area 19 (height='stretch)", "height test", height="stretch")

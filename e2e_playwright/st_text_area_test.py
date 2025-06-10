@@ -28,7 +28,7 @@ def test_text_area_widget_rendering(
 ):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = themed_app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(20)
+    expect(text_area_widgets).to_have_count(23)
 
     assert_snapshot(text_area_widgets.nth(0), name="st_text_area-default")
     assert_snapshot(text_area_widgets.nth(1), name="st_text_area-value_some_text")
@@ -40,15 +40,13 @@ def test_text_area_widget_rendering(
     assert_snapshot(text_area_widgets.nth(7), name="st_text_area-collapsed_label")
     assert_snapshot(text_area_widgets.nth(8), name="st_text_area-callback_help")
     assert_snapshot(text_area_widgets.nth(9), name="st_text_area-max_chars_5")
-    assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
-    assert_snapshot(text_area_widgets.nth(11), name="st_text_area-height_75")
     assert_snapshot(text_area_widgets.nth(14), name="st_text_area-markdown_label")
 
 
-def test_text_area_dimentions(app: Page, assert_snapshot: ImageCompareFunction):
+def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(20)
+    expect(text_area_widgets).to_have_count(23)
 
     assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
     assert_snapshot(text_area_widgets.nth(11), name="st_text_area-height_75")
@@ -56,8 +54,8 @@ def test_text_area_dimentions(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(text_area_widgets.nth(12), name="st_text_area-height_60")
     assert_snapshot(text_area_widgets.nth(15), name="st_text_area-width_200px")
     assert_snapshot(text_area_widgets.nth(16), name="st_text_area-width_stretch")
-    assert_snapshot(text_area_widgets.nth(17), name="st_text_area-height_stretch")
-    assert_snapshot(text_area_widgets.nth(18), name="st_text_area-height_content")
+    assert_snapshot(text_area_widgets.nth(18), name="st_text_area-height_stretch")
+    # content height is tested in test_text_area_content_height_expansion
 
 
 def test_help_tooltip_works(app: Page):
@@ -275,3 +273,59 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "text_area9")).to_be_visible()
+
+
+def test_text_area_auto_expansion(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.text_area with height='auto' expands correctly when content is added."""
+    # Get the auto-expanding text area (empty one)
+    auto_expand_text_area = app.get_by_test_id("stTextArea").nth(20)
+    text_area_field = auto_expand_text_area.locator("textarea").first
+
+    # Take initial snapshot
+    assert_snapshot(auto_expand_text_area, name="st_text_area-auto_expand_initial")
+
+    # Add content that should trigger expansion
+    text_area_field.fill("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7")
+
+    # Take snapshot after expansion
+    assert_snapshot(auto_expand_text_area, name="st_text_area-auto_expand_expanded")
+
+    # Test that the text area maintains its expanded height
+    text_area_field.blur()
+    assert_snapshot(auto_expand_text_area, name="st_text_area-auto_expand_after_blur")
+
+
+def test_text_area_content_height_expansion(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.text_area with height='content' expands correctly when content is added."""
+    content_height_text_area = app.get_by_test_id("stTextArea").nth(17)
+    text_area_field = content_height_text_area.locator("textarea").first
+
+    # Take initial snapshot
+    assert_snapshot(
+        content_height_text_area, name="st_text_area-content_height_initial"
+    )
+
+    # Add content that should trigger expansion
+    text_area_field.fill(
+        "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8"
+    )
+
+    # Take snapshot after expansion
+    assert_snapshot(
+        content_height_text_area, name="st_text_area-content_height_expanded"
+    )
+
+    # Test that the text area maintains its expanded height after losing focus
+    text_area_field.blur()
+    assert_snapshot(
+        content_height_text_area, name="st_text_area-content_height_after_blur"
+    )
+
+    # Test reducing content and verify it shrinks back
+    text_area_field.focus()
+    text_area_field.fill("Line 1\nLine 2")
+    assert_snapshot(
+        content_height_text_area, name="st_text_area-content_height_reduced"
+    )
