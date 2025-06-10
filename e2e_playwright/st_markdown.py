@@ -264,3 +264,16 @@ $$
 This is a repeating multiline string that wraps within purple background.]
 """
 )
+
+"---"
+
+# Performance test comparison between st.markdown and st.text
+
+element = st.radio("Element to use", ["st.markdown", "st.text"])
+text = "ABCabc" * 10000
+if st.button("Run element"):
+    if element == "st.text":
+        st.text(text)
+    else:
+        st.markdown(text)
+    st.write("DONE")

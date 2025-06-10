@@ -290,3 +290,17 @@ def test_anchor_scrolling(app: Page):
     # The app fixture navigates to http://localhost:{app_port}/#bold-header1
     # which should scroll to the header.
     expect(app.get_by_text("Bold header1")).to_be_in_viewport()
+
+
+@pytest.mark.performance
+def test_markdown_rendering_performance(app: Page):
+    """Test that the performance of st.markdown and st.text."""
+    app.get_by_text("Run element").click()
+    # This is currently very slow, hence the need for a performance test
+    expect(app.get_by_text("DONE")).to_be_attached(timeout=15000)
+
+    app.get_by_text("st.text").click()
+    expect(app.get_by_text("DONE")).not_to_be_attached()
+
+    app.get_by_text("Run element").click()
+    expect(app.get_by_text("DONE")).to_be_attached()
