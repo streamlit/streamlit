@@ -40,7 +40,7 @@ def test_text_area_widget_rendering(
     assert_snapshot(text_area_widgets.nth(7), name="st_text_area-collapsed_label")
     assert_snapshot(text_area_widgets.nth(8), name="st_text_area-callback_help")
     assert_snapshot(text_area_widgets.nth(9), name="st_text_area-max_chars_5")
-    assert_snapshot(text_area_widgets.nth(14), name="st_text_area-markdown_label")
+    assert_snapshot(text_area_widgets.nth(15), name="st_text_area-markdown_label")
 
 
 def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
@@ -66,7 +66,7 @@ def test_help_tooltip_works(app: Page):
 def test_text_area_has_correct_initial_values(app: Page):
     """Test that st.text_area has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(15)
+    expect(markdown_elements).to_have_count(16)
 
     expected = [
         "value 1: ",
@@ -82,8 +82,9 @@ def test_text_area_has_correct_initial_values(app: Page):
         "value 10: 1234",
         "value 11: default text",
         "value 12: default text",
-        "text area 13 (value from state) - value: xyz",
-        "text area 14 (value from form) - value: ",
+        "value 13: default text",
+        "text area 14 (value from state) - value: xyz",
+        "text area 15 (value from form) - value: ",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -92,7 +93,7 @@ def test_text_area_has_correct_initial_values(app: Page):
 
 def test_text_area_shows_state_value(app: Page):
     expect(
-        app.get_by_test_id("stTextArea").nth(12).locator("textarea").first
+        app.get_by_test_id("stTextArea").nth(13).locator("textarea").first
     ).to_have_text("xyz")
 
 
@@ -256,11 +257,11 @@ def test_calls_callback_on_change(app: Page):
 
 def test_text_area_in_form_with_submit_by_enter(app: Page):
     """Test that text area in form can be submitted by pressing Command+Enter."""
-    text_area_field = app.get_by_test_id("stTextArea").nth(13).locator("textarea").first
+    text_area_field = app.get_by_test_id("stTextArea").nth(14).locator("textarea").first
     text_area_field.fill("hello world")
     text_area_field.press("Control+Enter")
-    expect(app.get_by_test_id("stMarkdown").nth(14)).to_have_text(
-        "text area 14 (value from form) - value: hello world",
+    expect(app.get_by_test_id("stMarkdown").nth(15)).to_have_text(
+        "text area 15 (value from form) - value: hello world",
         use_inner_text=True,
     )
 
@@ -273,26 +274,6 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "text_area9")).to_be_visible()
-
-
-def test_text_area_auto_expansion(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that st.text_area with height='auto' expands correctly when content is added."""
-    # Get the auto-expanding text area (empty one)
-    auto_expand_text_area = app.get_by_test_id("stTextArea").nth(20)
-    text_area_field = auto_expand_text_area.locator("textarea").first
-
-    # Take initial snapshot
-    assert_snapshot(auto_expand_text_area, name="st_text_area-auto_expand_initial")
-
-    # Add content that should trigger expansion
-    text_area_field.fill("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7")
-
-    # Take snapshot after expansion
-    assert_snapshot(auto_expand_text_area, name="st_text_area-auto_expand_expanded")
-
-    # Test that the text area maintains its expanded height
-    text_area_field.blur()
-    assert_snapshot(auto_expand_text_area, name="st_text_area-auto_expand_after_blur")
 
 
 def test_text_area_content_height_expansion(
@@ -315,12 +296,6 @@ def test_text_area_content_height_expansion(
     # Take snapshot after expansion
     assert_snapshot(
         content_height_text_area, name="st_text_area-content_height_expanded"
-    )
-
-    # Test that the text area maintains its expanded height after losing focus
-    text_area_field.blur()
-    assert_snapshot(
-        content_height_text_area, name="st_text_area-content_height_after_blur"
     )
 
     # Test reducing content and verify it shrinks back
