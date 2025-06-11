@@ -24,3 +24,13 @@ st.toast(
 )
 
 st.toast("Your edited image was saved!", icon=":material/cabin:")
+
+
+@st.dialog("Streamlit Toast Notification")
+def toast_notification():
+    activate_toast = st.button(label="Toast from dialog")
+    if activate_toast:
+        st.toast("Toast above dialog", icon="🎉")
+
+
+st.button("Trigger dialog", on_click=toast_notification)
