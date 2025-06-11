@@ -38,24 +38,6 @@ updates:
       - dependency-name: "react-dom"
         # Updating react will need some extra work.
         versions: [">=19.0.0"]
-      - dependency-name: "remark-gfm"
-        # Breaks our current markdown rendering logic.
-        versions: [">=4.0.0"]
-      - dependency-name: "remark-math"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=6.0.0"]
-      - dependency-name: "remark-emoji"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=3.1.2"]
-      - dependency-name: "rehype-raw"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=7.0.0"]
-      - dependency-name: "rehype-katex"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=7.0.0"]
-      - dependency-name: "react-markdown"
-        # Requires update of the remark / rehype dependencies
-        versions: [">=9.0.0"]
       - dependency-name: "jsdom"
         # Breaks some of our RTL unit tests
         versions: [">=25.0.0"]
@@ -85,6 +67,7 @@ updates:
           - "remark-*"
           - "rehype-*"
           - "react-markdown"
+          - "unified"
       eslint:
         patterns:
           - "eslint"

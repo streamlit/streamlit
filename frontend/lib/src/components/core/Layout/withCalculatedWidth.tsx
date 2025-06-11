@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { ComponentType } from "react"
+import React, { ComponentType, ReactElement } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
-import { ReactElement } from "react-markdown/lib/react-markdown"
 
 import { Box } from "~lib/components/shared/Base/styled-components"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
