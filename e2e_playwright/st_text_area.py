@@ -116,13 +116,13 @@ with st.form("form3", height=500):
 col1, col2 = st.columns(2)
 with col1:
     st.text_area(
-        "text area 22 (height='500')",
+        "text area 21 (height='500')",
         """Fixed height of 500px""",
         height=500,
     )
 with col2:
     st.text_area(
-        "text area 23 (height='stretch')",
+        "text area 22 (height='stretch')",
         """Height matches partner column""",
         height="stretch",
     )
