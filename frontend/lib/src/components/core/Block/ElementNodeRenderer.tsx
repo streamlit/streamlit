@@ -87,7 +87,6 @@ import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "~lib/components/core/LibContext"
 import { getElementId } from "~lib/util/utils"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import { useLayoutStyles } from "src/components/core/Layout/useLayoutStyles"
 
 import {
   BaseBlockProps,
