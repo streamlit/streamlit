@@ -26,7 +26,9 @@ def test_scatter_chart_rendering(app: Page, assert_snapshot: ImageCompareFunctio
     expect(scatter_chart_elements).to_have_count(TOTAL_SCATTER_CHARTS)
 
     # Also make sure that all canvas objects are rendered:
-    expect(scatter_chart_elements.locator("canvas")).to_have_count(TOTAL_SCATTER_CHARTS)
+    expect(scatter_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_SCATTER_CHARTS
+    )
 
     # Take individual snapshots for each chart with meaningful names
     assert_snapshot(scatter_chart_elements.nth(0), name="st_scatter_chart-empty_chart")
@@ -76,7 +78,9 @@ def test_themed_scatter_chart_rendering(
     expect(scatter_chart_elements).to_have_count(TOTAL_SCATTER_CHARTS)
 
     # Also make sure that all canvas objects are rendered:
-    expect(scatter_chart_elements.locator("canvas")).to_have_count(TOTAL_SCATTER_CHARTS)
+    expect(scatter_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_SCATTER_CHARTS
+    )
 
     # Only test a single chart per built-in chart type:
     assert_snapshot(scatter_chart_elements.nth(1), name="st_scatter_chart_themed")
@@ -100,7 +104,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     wait_for_app_run(app)
 
     # Wait for the chart to update
-    chart_canvas = add_rows_chart.locator("canvas")
+    chart_canvas = add_rows_chart.locator("[role='graphics-document']")
     expect(chart_canvas).to_be_visible()
 
     # Check that the chart has the correct styling params

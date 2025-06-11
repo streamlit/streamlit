@@ -25,7 +25,9 @@ def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
     # Also make sure that all canvas objects are rendered:
-    expect(line_chart_elements.locator("canvas")).to_have_count(TOTAL_LINE_CHARTS)
+    expect(line_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_LINE_CHARTS
+    )
 
     assert_snapshot(line_chart_elements.nth(0), name="st_line_chart-empty_chart")
     assert_snapshot(line_chart_elements.nth(1), name="st_line_chart-basic_df")
@@ -58,7 +60,9 @@ def test_themed_line_chart_rendering(
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
     # Also make sure that all canvas objects are rendered:
-    expect(line_chart_elements.locator("canvas")).to_have_count(TOTAL_LINE_CHARTS)
+    expect(line_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_LINE_CHARTS
+    )
 
     # Only test a single chart per built-in chart type:
     assert_snapshot(line_chart_elements.nth(1), name="st_line_chart_themed")
@@ -73,7 +77,9 @@ def test_multi_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(multi_line_chart).to_be_visible()
 
     multi_line_chart.scroll_into_view_if_needed()
-    multi_line_chart.locator("canvas").hover(position={"x": 100, "y": 100}, force=True)
+    multi_line_chart.locator("[role='graphics-document']").hover(
+        position={"x": 100, "y": 100}, force=True
+    )
 
     expect(app.locator("#vg-tooltip-element")).to_be_visible()
 
@@ -87,7 +93,9 @@ def test_single_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(single_line_chart).to_be_visible()
 
     single_line_chart.scroll_into_view_if_needed()
-    single_line_chart.locator("canvas").hover(position={"x": 100, "y": 100}, force=True)
+    single_line_chart.locator("[role='graphics-document']").hover(
+        position={"x": 100, "y": 100}, force=True
+    )
 
     expect(app.locator("#vg-tooltip-element")).to_be_visible()
     assert_snapshot(single_line_chart, name="st_line_chart-single_line_hover")
@@ -106,7 +114,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     wait_for_app_run(app)
 
     # Wait for the chart to update
-    chart_canvas = add_rows_chart.locator("canvas")
+    chart_canvas = add_rows_chart.locator("[role='graphics-document']")
     expect(chart_canvas).to_be_visible()
 
     # Check that the chart has the correct styling params
