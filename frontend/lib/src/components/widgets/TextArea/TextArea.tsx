@@ -42,6 +42,8 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 
+import { StyledTextAreaContainer } from "./styled-components"
+
 export interface Props {
   disabled: boolean
   element: TextAreaProto
@@ -107,7 +109,7 @@ const TextArea: FC<Props> = ({
   })
 
   // Determine if we should use auto-expansion
-  const isAutoHeight = outerElement.heightConfig?.useContent
+  const isAutoHeight = outerElement.heightConfig?.useContent ?? false
 
   // Create ref for auto-expansion
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -194,7 +196,11 @@ const TextArea: FC<Props> = ({
     focused && width > theme.breakpoints.hideWidgetDetails
 
   return (
-    <div className="stTextArea" data-testid="stTextArea" ref={elementRef}>
+    <StyledTextAreaContainer
+      className="stTextArea"
+      data-testid="stTextArea"
+      ref={elementRef}
+    >
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -212,6 +218,7 @@ const TextArea: FC<Props> = ({
           </StyledWidgetLabelHelp>
         )}
       </WidgetLabel>
+
       <UITextArea
         inputRef={isAutoHeight ? textareaRef : undefined}
         value={uiValue ?? ""}
@@ -227,9 +234,8 @@ const TextArea: FC<Props> = ({
           Input: {
             style: {
               lineHeight: theme.lineHeights.inputWidget,
-
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height: isAutoHeight ? autoExpand.height : styles.height || "",
+              height: isAutoHeight ? autoExpand.height : "",
               maxHeight: isAutoHeight ? autoExpand.maxHeight : "",
               minHeight: theme.sizes.largestElementHeight,
               resize: "vertical",
@@ -253,10 +259,13 @@ const TextArea: FC<Props> = ({
               borderRightWidth: theme.sizes.borderWidth,
               borderTopWidth: theme.sizes.borderWidth,
               borderBottomWidth: theme.sizes.borderWidth,
+              height: styles.height,
+              maxHeight: "100%",
             },
           },
         }}
       />
+
       {shouldShowInstructions && (
         <InputInstructions
           dirty={dirty}
@@ -267,7 +276,7 @@ const TextArea: FC<Props> = ({
           allowEnterToSubmit={allowEnterToSubmit}
         />
       )}
-    </div>
+    </StyledTextAreaContainer>
   )
 }
 

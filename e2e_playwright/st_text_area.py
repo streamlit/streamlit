@@ -99,9 +99,28 @@ st.text_area("text area 18 (width='stretch')", "width test", width="stretch")
 
 st.text_area(
     "text area 19 (height='content') - Multi-line initial content",
-    """Line 1
-This text area has multiple lines initially and should show expanded height from the start.""",
+    """Line 1\nLine 2\nLine 3""",
     height="content",
 )
 
-st.text_area("text area 20 (height='stretch)", "height test", height="stretch")
+with st.form("form2", height=500):
+    st.text_area(
+        "text area 20 (height='stretch)",
+        "Height stretches to fill space in fixed height form.",
+        height="stretch",
+    )
+    st.form_submit_button("submit")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.text_area(
+        "text area 21 (height='500')",
+        """Fixed height of 500px""",
+        height=500,
+    )
+with col2:
+    st.text_area(
+        "text area 22 (height='stretch')",
+        """Height matches partner column""",
+        height="stretch",
+    )
