@@ -13,7 +13,10 @@
       "@streamlit/app": ["./src"],
       "@streamlit/connection": ["../connection/src"],
       "@streamlit/protobuf": ["../protobuf/src"],
-      "@streamlit/utils": ["../utils/src"]
+      "@streamlit/utils": ["../utils/src"],
+      // TODO: #moduleResolutionBundler
+      // We need to change tsconfig.json to use "moduleResolution": "bundler" to properly handle this. When we do that, we can remove this.
+      "vega-embed": ["../node_modules/vega-embed/build/embed.d.ts"]
     }
   },
   "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"],
