@@ -18,3 +18,4 @@ import { createContext } from "react"
 export const PortalContext = createContext<(() => HTMLElement | null) | null>(
   null
 )
+PortalContext.displayName = "PortalContext"

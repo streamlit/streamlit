@@ -16,4 +16,7 @@
 
 import { createContext } from "react"
 
-export default createContext(false)
+const IsSidebarContext = createContext(false)
+IsSidebarContext.displayName = "IsSidebarContext"
+
+export default IsSidebarContext

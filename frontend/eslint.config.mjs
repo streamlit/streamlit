@@ -111,6 +111,8 @@ export default tseslint.config([
       "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
       // We don't want to warn about empty fragments
       "@eslint-react/no-useless-fragment": "off",
+      // We want to enforce display names for context providers for better debugging
+      "@eslint-react/no-missing-context-display-name": "error",
       // TypeScript rules with type-checking
       // We want to use these, but we have far too many instances of these rules
       // for it to be realistic right now. Over time, we should fix these.

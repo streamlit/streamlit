@@ -170,3 +170,4 @@ export const LibContext = createContext<LibContextProps>({
   // This should be overwritten
   componentRegistry: new ComponentRegistry(noOpEndpoints),
 })
+LibContext.displayName = "LibContext"
