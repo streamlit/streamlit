@@ -56,7 +56,7 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(text_area_widgets.nth(17), name="st_text_area-width_stretch")
 
     # Snapshot the form containing the stretch height text area
-    form_container = app.get_by_test_id("stForm").nth(1)  # Second form (form2)
+    form_container = app.get_by_test_id("stForm").nth(2)  # Third form (form3)
     assert_snapshot(form_container, name="st_text_area-height_stretch")
 
     # Snapshot the column area containing both text areas
@@ -288,27 +288,19 @@ def test_text_area_content_height_expansion(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.text_area with height='content' expands correctly when content is added."""
-    content_height_text_area = app.get_by_test_id("stTextArea").nth(18)
-    text_area_field = content_height_text_area.locator("textarea").first
+    content_height_form = app.get_by_test_id("stForm").nth(1)
 
     # Take initial snapshot
-    assert_snapshot(
-        content_height_text_area, name="st_text_area-content_height_initial"
-    )
+    assert_snapshot(content_height_form, name="st_text_area-content_height_initial")
 
     # Add content that should trigger expansion
-    text_area_field.fill(
+    content_height_form.locator("textarea").first.fill(
         "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8"
     )
 
     # Take snapshot after expansion
-    assert_snapshot(
-        content_height_text_area, name="st_text_area-content_height_expanded"
-    )
+    assert_snapshot(content_height_form, name="st_text_area-content_height_expanded")
 
     # Test reducing content and verify it shrinks back
-    text_area_field.focus()
-    text_area_field.fill("Line 1\nLine 2")
-    assert_snapshot(
-        content_height_text_area, name="st_text_area-content_height_reduced"
-    )
+    content_height_form.locator("textarea").first.fill("Line 1\nLine 2")
+    assert_snapshot(content_height_form, name="st_text_area-content_height_reduced")
