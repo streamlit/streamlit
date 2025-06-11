@@ -22,6 +22,7 @@ import { userEvent } from "@testing-library/user-event"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
+  Element,
 } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
@@ -29,6 +30,15 @@ import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
+
+// Mock Element for tests
+class MockElement implements Element {
+  constructor() {}
+
+  toJSON(): MockElement {
+    return this
+  }
+}
 
 const getProps = (
   elementProps: Partial<TextAreaProto> = {},
@@ -46,7 +56,7 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-
+  outerElement: new MockElement(),
   ...widgetProps,
 })
 

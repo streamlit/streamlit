@@ -107,7 +107,7 @@ const TextArea: FC<Props> = ({
   })
 
   // Determine if we should use auto-expansion
-  const isAutoHeight = styles.height === "auto"
+  const isAutoHeight = outerElement.heightConfig?.useContent
 
   // Create ref for auto-expansion
   const textareaRef = useRef<HTMLTextAreaElement>(null)
