@@ -17,6 +17,7 @@
 import React from "react"
 
 import { fireEvent, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { render, ScriptRunState } from "@streamlit/lib"
 import { SessionEvent } from "@streamlit/protobuf"
@@ -121,21 +122,25 @@ describe("StatusWidget element", () => {
   })
 
   it("calls stopScript when clicked", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.useFakeTimers()
     const stopScript = vi.fn()
     render(<StatusWidget {...getProps({ stopScript })} />)
 
+    // Advance timers to ensure the running animation is shown
     vi.runAllTimers()
-    const baseButtonHeader = await screen.findByTestId("stBaseButton-header")
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(baseButtonHeader)
+    // Wait for the stop button to appear
+    const stopButton = await screen.findByRole("button", { name: "Stop" })
+
+    await user.click(stopButton)
 
     expect(stopScript).toHaveBeenCalled()
+    vi.useRealTimers()
   })
 
   it("shows the rerun button when script changes", async () => {
+    const user = userEvent.setup()
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
@@ -167,14 +172,13 @@ describe("StatusWidget element", () => {
     expect(buttons[1]).toHaveTextContent("Always rerun")
 
     // Click "Rerun" button
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(buttons[0])
+    await user.click(buttons[0])
 
     expect(rerunScript).toHaveBeenCalledWith(false)
   })
 
   it("shows the always rerun button when script changes", async () => {
+    const user = userEvent.setup()
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
@@ -206,9 +210,7 @@ describe("StatusWidget element", () => {
     expect(buttons[1]).toHaveTextContent("Always rerun")
 
     // Click "Always Rerun" button
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(buttons[1])
+    await user.click(buttons[1])
 
     expect(rerunScript).toHaveBeenCalledWith(true)
   })
@@ -269,7 +271,7 @@ describe("StatusWidget element", () => {
     // Verify the Always rerun is visible
     expect(await screen.findByText("Always rerun")).toBeVisible()
 
-    // TODO: Utilize user-event instead of fireEvent
+    // Use fireEvent for document-level keyboard events since react-hot-keys listens at document level
     // eslint-disable-next-line testing-library/prefer-user-event
     fireEvent.keyDown(document.body, {
       key: "a",
