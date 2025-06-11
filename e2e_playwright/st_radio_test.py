@@ -94,12 +94,6 @@ def test_radio_has_correct_default_values(app: Page):
 def test_set_value_correctly_when_click(app: Page):
     """Test that st.radio returns the correct values when the selection is changed."""
     wait_for_app_run(app)
-    for index, element in enumerate(app.get_by_test_id("stRadio").all()):
-        if index not in [2, 3]:  # skip disabled and no-options widget
-            element.scroll_into_view_if_needed()
-            radio_option = element.locator('label[data-baseweb="radio"]').nth(1)
-            radio_option.click(delay=50)
-            wait_for_app_run(app)
 
     expected = [
         "value 1: male",
@@ -118,10 +112,26 @@ def test_set_value_correctly_when_click(app: Page):
         "value 13: male",
     ]
 
-    for markdown_element, expected_text in zip(
-        app.get_by_test_id("stMarkdown").all(), expected
-    ):
-        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+    for radio_index, expected_text in enumerate(expected):
+        if radio_index not in [2, 3]:  # skip disabled and no-options widget
+            element = app.get_by_test_id("stRadio").nth(radio_index)
+            element.scroll_into_view_if_needed()
+
+            # Get the second radio option (index 1)
+            radio_option = element.locator('label[data-baseweb="radio"]').nth(1)
+
+            radio_option.click(delay=50)
+            wait_for_app_run(app)
+
+            # Immediately verify this specific change took effect
+            # This catches failures early and provides better debugging info
+            expect(app.get_by_test_id("stMarkdown").nth(radio_index)).to_have_text(
+                expected_text, use_inner_text=True
+            )
+        else:
+            expect(app.get_by_test_id("stMarkdown").nth(radio_index)).to_have_text(
+                expected_text, use_inner_text=True
+            )
 
 
 def test_calls_callback_on_change(app: Page):
