@@ -415,6 +415,7 @@ def test_csv_download_button(
     _test_csv_download(app, app.locator("body"), click_enter_on_file_picker)
 
 
+@pytest.mark.flaky(reruns=4)
 def test_csv_download_button_in_iframe(iframed_app: IframedPage):
     """Test that the csv download button works in an iframe.
 

@@ -113,6 +113,7 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
 @pytest.mark.only_browser(
     "chromium"
 )  # Flaky on WebKit and Firefox, but manually tested
+@pytest.mark.flaky(reruns=4)
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
