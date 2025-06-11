@@ -53,9 +53,14 @@ const getElement = (
 })
 
 describe("useVegaElementPreprocessor", () => {
+  const isFullScreen = false
+  const width = 100
+  const height = 100
+
   it("renders the same selectionMode even if reference changes", () => {
     const { result, rerender } = renderHook(
-      (element: VegaLiteChartElement) => useVegaElementPreprocessor(element),
+      (element: VegaLiteChartElement) =>
+        useVegaElementPreprocessor(element, isFullScreen, width, height),
       {
         initialProps: getElement({
           selectionMode: ["single"],
@@ -76,7 +81,8 @@ describe("useVegaElementPreprocessor", () => {
 
   it("renders the same spec even if reference changes", () => {
     const { result, rerender } = renderHook(
-      (element: VegaLiteChartElement) => useVegaElementPreprocessor(element),
+      (element: VegaLiteChartElement) =>
+        useVegaElementPreprocessor(element, isFullScreen, width, height),
       {
         initialProps: getElement(),
       }
@@ -91,7 +97,8 @@ describe("useVegaElementPreprocessor", () => {
 
   it("updates the spec if factors cause it to change (like sizing, theme, selection mode, and spec)", () => {
     const { result, rerender } = renderHook(
-      (element: VegaLiteChartElement) => useVegaElementPreprocessor(element),
+      (element: VegaLiteChartElement) =>
+        useVegaElementPreprocessor(element, isFullScreen, width, height),
       {
         initialProps: getElement(),
       }
@@ -113,5 +120,98 @@ describe("useVegaElementPreprocessor", () => {
       // Save the last spec to compare with the next one
       spec = result.current.spec
     }
+  })
+
+  describe("spec.title.limit", () => {
+    const height = 100
+    type VegaLiteSpec = {
+      title?: string | { text: string; limit?: number }
+      [key: string]: unknown
+    }
+
+    it("should not have title property if spec has no title", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, false, 100, height),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+            }),
+          }),
+        }
+      )
+      expect(
+        (result.current.spec as unknown as VegaLiteSpec).title
+      ).toBeUndefined()
+    })
+
+    it.each([
+      {
+        testName: "should set title.limit when title is a string",
+        spec: { title: "My Chart", mark: "bar" },
+        width: 100,
+        isFullScreen: false,
+        expectedLimit: 60,
+        expectedText: "My Chart",
+      },
+      {
+        testName: "should set title.limit when title is an object",
+        spec: { title: { text: "My Chart" }, mark: "bar" },
+        width: 100,
+        isFullScreen: false,
+        expectedLimit: 60,
+        expectedText: "My Chart",
+      },
+      {
+        testName: "should preserve existing title.limit",
+        spec: { title: { text: "My Chart", limit: 50 }, mark: "bar" },
+        width: 100,
+        isFullScreen: false,
+        expectedLimit: 50,
+        expectedText: "My Chart",
+      },
+      {
+        testName: "should set title.limit to 0 for small widths",
+        spec: { title: "My Chart", mark: "bar" },
+        width: 30,
+        isFullScreen: false,
+        expectedLimit: 0,
+        expectedText: "My Chart",
+      },
+      {
+        testName:
+          "should apply title.limit logic in fullscreen mode with a string title",
+        spec: { title: "My Chart", mark: "bar" },
+        width: 800,
+        isFullScreen: true,
+        expectedLimit: 760,
+        expectedText: "My Chart",
+      },
+    ])(
+      "$testName",
+      ({
+        spec: specInput,
+        width,
+        isFullScreen,
+        expectedLimit,
+        expectedText,
+      }) => {
+        const { result } = renderHook(
+          (element: VegaLiteChartElement) =>
+            useVegaElementPreprocessor(element, isFullScreen, width, height),
+          {
+            initialProps: getElement({
+              spec: JSON.stringify(specInput),
+            }),
+          }
+        )
+        const spec = result.current.spec as unknown as VegaLiteSpec
+        if (expectedText) {
+          expect((spec.title as { text: string }).text).toBe(expectedText)
+        }
+        expect((spec.title as { limit: number }).limit).toBe(expectedLimit)
+      }
+    )
   })
 })

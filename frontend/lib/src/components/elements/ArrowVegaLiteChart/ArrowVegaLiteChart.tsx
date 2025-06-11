@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useRef } from "react"
+import React, { FC, memo, useEffect, useLayoutEffect } from "react"
 
 import { Global } from "@emotion/react"
 
@@ -25,6 +25,7 @@ import Toolbar, {
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import {
@@ -49,12 +50,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
 }) => {
   const {
     expanded: isFullScreen,
-    width,
     height,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [width, containerRef] = useCalculatedWidth()
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -62,7 +62,12 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // 2. Stabilize some aspects of the input element to detect changes in the
   //    configuration of the chart since each element will always provide new references
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
-  const element = useVegaElementPreprocessor(inputElement)
+  const element = useVegaElementPreprocessor(
+    inputElement,
+    isFullScreen,
+    width,
+    height ?? 0
+  )
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
@@ -85,7 +90,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
 
     return finalizeView
-  }, [createView, finalizeView, spec, width, height])
+  }, [createView, finalizeView, spec, width, height, containerRef])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
