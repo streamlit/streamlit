@@ -20,6 +20,7 @@ export const StyledAudioContainer = styled.div(() => ({
   // Without setting lineHeight to 0, the audio element will
   // have some extra weird space in Safari & Firefox.
   lineHeight: 0,
+  minWidth: "7rem",
 }))
 
 export const StyledAudio = styled.audio(({ theme }) => ({

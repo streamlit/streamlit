@@ -49,7 +49,6 @@ export const StyledTableBorder = styled.div(({ theme }) => ({
 export const StyledTable = styled.table(({ theme }) => ({
   width: theme.sizes.full,
   color: theme.colors.bodyText,
-
   borderSpacing: 0,
 }))
 

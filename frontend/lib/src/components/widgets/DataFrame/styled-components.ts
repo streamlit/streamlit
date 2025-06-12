@@ -28,6 +28,7 @@ export const StyledResizableContainer =
     ({ hasCustomizedScrollbars, theme }) => ({
       position: "relative",
       display: "inline-block",
+      minWidth: "7rem",
 
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
