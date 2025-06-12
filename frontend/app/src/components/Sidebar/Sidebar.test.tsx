@@ -22,6 +22,7 @@ import {
   screen,
   within,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { mockEndpoints, render } from "@streamlit/lib"
 import { Logo, PageConfig } from "@streamlit/protobuf"
@@ -107,7 +108,8 @@ describe("Sidebar Component", () => {
     )
   })
 
-  it("should collapse on toggle if expanded", () => {
+  it("should collapse on toggle if expanded", async () => {
+    const user = userEvent.setup()
     renderSidebar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
@@ -117,16 +119,14 @@ describe("Sidebar Component", () => {
       "true"
     )
 
+    // Hover over the sidebar header so the collapse button is visible
+    await user.hover(screen.getByTestId("stSidebarHeader"))
+
     // Click the close sidebar <
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
     const sidebarCollapseButton = within(
       screen.getByTestId("stSidebarCollapseButton")
     ).getByRole("button")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(sidebarCollapseButton)
+    await user.click(sidebarCollapseButton)
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
       "aria-expanded",
@@ -134,7 +134,8 @@ describe("Sidebar Component", () => {
     )
   })
 
-  it("should expand on toggle if collapsed", () => {
+  it("should expand on toggle if collapsed", async () => {
+    const user = userEvent.setup()
     renderSidebar({
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
@@ -148,9 +149,7 @@ describe("Sidebar Component", () => {
     const expandButton = within(
       screen.getByTestId("stSidebarCollapsedControl")
     ).getByRole("button")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(expandButton)
+    await user.click(expandButton)
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
       "aria-expanded",
@@ -158,7 +157,8 @@ describe("Sidebar Component", () => {
     )
   })
 
-  it("shows/hides the collapse arrow when hovering over top of sidebar", () => {
+  it("shows/hides the collapse arrow when hovering over top of sidebar", async () => {
+    const user = userEvent.setup()
     // Update the mock to return a context with appPages
     vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
       getContextOutput({
@@ -176,10 +176,8 @@ describe("Sidebar Component", () => {
       "display: none"
     )
 
-    // Hover over the sidebar header
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
+    // Hover over the sidebar header so the collapse button is visible
+    await user.hover(screen.getByTestId("stSidebarHeader"))
 
     // Displays the collapse <
     expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
@@ -489,6 +487,8 @@ describe("Sidebar Component", () => {
       ).getByTestId("stSidebarLogo")
       expect(sidebarLogo).toBeInTheDocument()
 
+      // Trigger the onerror event for the logo
+      // need lower level fireEvent here
       fireEvent.error(sidebarLogo)
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(
