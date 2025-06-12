@@ -75,7 +75,7 @@
     "@types/jsdom": "~21.1.7",
     "@types/lodash": "^4.17.17",
     "@types/node": "^22.15.30",
-    "@types/prop-types": "~15.7.14",
+    "@types/prop-types": "~15.7.15",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/react-transition-group": "^4.4.12",

@@ -3171,7 +3171,7 @@ __metadata:
     "@types/jsdom": "npm:~21.1.7"
     "@types/lodash": "npm:^4.17.17"
     "@types/node": "npm:^22.15.30"
-    "@types/prop-types": "npm:~15.7.14"
+    "@types/prop-types": "npm:~15.7.15"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
     "@types/react-transition-group": "npm:^4.4.12"
@@ -4757,10 +4757,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/prop-types@npm:~15.7.14":
-  version: 15.7.14
-  resolution: "@types/prop-types@npm:15.7.14"
-  checksum: 10c0/1ec775160bfab90b67a782d735952158c7e702ca4502968aa82565bd8e452c2de8601c8dfe349733073c31179116cf7340710160d3836aa8a1ef76d1532893b1
+"@types/prop-types@npm:~15.7.15":
+  version: 15.7.15
+  resolution: "@types/prop-types@npm:15.7.15"
+  checksum: 10c0/b59aad1ad19bf1733cf524fd4e618196c6c7690f48ee70a327eb450a42aab8e8a063fbe59ca0a5701aebe2d92d582292c0fb845ea57474f6a15f6994b0e260b2
   languageName: node
   linkType: hard
 
