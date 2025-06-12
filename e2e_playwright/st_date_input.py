@@ -109,3 +109,6 @@ st.date_input(
 
 st.date_input("Date input 16 (width=200px)", date(1970, 1, 1), width=200)
 st.date_input("Date input 17 (width='stretch')", date(1970, 1, 1), width="stretch")
+
+st.write("""This is a block of text. We can click on it to
+         trigger a click outside of the element to submit the value.""")

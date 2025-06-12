@@ -43,6 +43,7 @@ class MarkdownMixin:
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -116,6 +117,11 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : int or "stretch" or "content"
+            The width of the markdown element. Can be an integer (pixels),
+            "stretch" to use the full width of the container, or "content"
+            (default) to size based on the content.
+
         Examples
         --------
         >>> import streamlit as st
@@ -147,7 +153,10 @@ class MarkdownMixin:
         if help:
             markdown_proto.help = help
 
-        return self.dg._enqueue("markdown", markdown_proto)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
 
     @gather_metrics("caption")
     def caption(
@@ -156,6 +165,7 @@ class MarkdownMixin:
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
         """Display text in small font.
 
@@ -195,6 +205,11 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : int or "stretch" or "content"
+            The width of the caption. Can be an integer (pixels), "stretch" to
+            use the full width of the container, or "content" (default) to size
+            based on the content.
+
         Examples
         --------
         >>> import streamlit as st
@@ -210,7 +225,11 @@ class MarkdownMixin:
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         if help:
             caption_proto.help = help
-        return self.dg._enqueue("markdown", caption_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
 
     @gather_metrics("latex")
     def latex(
@@ -324,6 +343,7 @@ class MarkdownMixin:
             "grey",
             "primary",
         ] = "blue",
+        width: Width = "content",
     ) -> DeltaGenerator:
         """Display a colored badge with an icon and label.
 
@@ -378,6 +398,11 @@ class MarkdownMixin:
             ``"primary"``, Streamlit will use the default primary accent color
             unless you set the ``theme.primaryColor`` configuration option.
 
+        width : int or "stretch" or "content"
+            The width of the badge. Can be an integer (pixels), "stretch" to
+            use the full width of the container, or "content" (default) to size
+            based on the content.
+
         Examples
         --------
         Create standalone badges with ``st.badge`` (with or without icons). If
@@ -406,7 +431,11 @@ class MarkdownMixin:
         badge_proto = MarkdownProto()
         badge_proto.body = f":{color}-badge[{icon_str}{escaped_label}]"
         badge_proto.element_type = MarkdownProto.Type.NATIVE
-        return self.dg._enqueue("markdown", badge_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("markdown", badge_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
