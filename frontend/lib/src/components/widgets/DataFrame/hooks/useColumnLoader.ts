@@ -15,7 +15,6 @@
  */
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import isArray from "lodash/isArray"
 import isEmpty from "lodash/isEmpty"
 import merge from "lodash/merge"
@@ -37,7 +36,8 @@ import {
   ObjectColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 // Using this ID for column config will apply the config to all index columns
@@ -281,7 +281,7 @@ function useColumnLoader(
   disabled: boolean,
   columnOrder: string[]
 ): ColumnLoaderReturn {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   // Memoize the column config parsing to avoid unnecessary re-renders & re-parsing:
   const parsedColumnConfig = useMemo(

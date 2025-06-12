@@ -29,18 +29,18 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 import { LayersList, PickingInfo } from "@deck.gl/core"
-import { useTheme } from "@emotion/react"
 import { Close } from "@emotion-icons/material-outlined"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import { LibContext } from "~lib/components/core/LibContext"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledDeckGlChart,
@@ -60,7 +60,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const { disabled, disableFullscreenMode, element, fragmentId, widgetMgr } =
     props
   const { libConfig } = useContext(LibContext)
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
     expand,

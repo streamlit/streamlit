@@ -16,7 +16,6 @@
 
 import React, { memo, ReactElement, useCallback } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
   LABEL_PLACEMENT,
   STYLE_TYPE,
@@ -37,6 +36,7 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledCheckbox, StyledContent } from "./styled-components"
 
@@ -74,7 +74,7 @@ function Checkbox({
     [setValueWithSource]
   )
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const { colors, spacing, sizes } = theme
 
   const lightTheme = hasLightBackgroundColor(theme)

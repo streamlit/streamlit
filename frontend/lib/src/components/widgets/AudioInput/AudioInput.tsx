@@ -23,7 +23,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete, FileDownload } from "@emotion-icons/material-outlined"
@@ -48,6 +47,7 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget"
 import { usePrevious } from "~lib/util/Hooks"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledAudioInputContainerDiv,
@@ -71,7 +71,6 @@ import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
 import convertAudioToWav from "./convertAudioToWav"
 import AudioInputErrorState from "./AudioInputErrorState"
-
 export interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
@@ -87,7 +86,7 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
   const waveSurferRef = useRef<HTMLDivElement | null>(null)

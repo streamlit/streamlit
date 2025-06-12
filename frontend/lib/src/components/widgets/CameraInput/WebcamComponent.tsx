@@ -24,13 +24,12 @@ import React, {
 } from "react"
 
 import { Video } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
 
 import { debounce } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "~lib/urls"
 
@@ -121,7 +120,7 @@ const WebcamComponent = ({
     }
   }
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   return (
     <StyledCameraInput data-testid="stCameraInputWebcamComponent">

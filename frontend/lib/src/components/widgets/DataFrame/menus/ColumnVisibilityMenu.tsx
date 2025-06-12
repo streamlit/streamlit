@@ -16,7 +16,6 @@
 
 import React, { memo, ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import {
   LABEL_PLACEMENT,
@@ -25,7 +24,8 @@ import {
 } from "baseui/checkbox"
 import { transparentize } from "color2k"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 const NAMELESS_INDEX_NAME = "(index)"
@@ -44,7 +44,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
   initialValue,
   onChange,
 }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   return (
     <UICheckbox
@@ -154,7 +154,7 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   isOpen,
   onClose,
 }): ReactElement => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   return (
     <UIPopover

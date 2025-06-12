@@ -22,15 +22,11 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
-import {
-  convertRemToPx,
-  EmotionTheme,
-  hasLightBackgroundColor,
-} from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledMenuDivider,
@@ -81,7 +77,7 @@ function ColumnMenu({
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
   const { colors, fontSizes, radii, fontWeights } = theme
 

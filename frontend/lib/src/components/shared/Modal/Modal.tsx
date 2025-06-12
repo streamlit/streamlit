@@ -16,7 +16,6 @@
 
 import React, { FunctionComponent, ReactElement, ReactNode } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
   type ModalProps,
   SIZE,
@@ -28,7 +27,7 @@ import {
 import merge from "lodash/merge"
 
 import BaseButton, { BaseButtonProps } from "~lib/components/shared/BaseButton"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledModalButton } from "./styled-components"
 
@@ -41,13 +40,8 @@ function ModalHeader({
   children,
   overrides,
 }: Readonly<ModalHeaderProps>): ReactElement {
-  const {
-    genericFonts,
-    fontSizes,
-    spacing,
-    fontWeights,
-    lineHeights,
-  }: EmotionTheme = useTheme()
+  const { genericFonts, fontSizes, spacing, fontWeights, lineHeights } =
+    useEmotionTheme()
 
   return (
     <UIModalHeader
@@ -83,7 +77,7 @@ export interface ModalBodyProps {
 }
 
 function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
-  const { colors, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { colors, fontSizes, spacing } = useEmotionTheme()
 
   return (
     <UIModalBody
@@ -110,7 +104,7 @@ export interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: Readonly<ModalFooterProps>): ReactElement {
-  const { spacing }: EmotionTheme = useTheme()
+  const { spacing } = useEmotionTheme()
 
   return (
     <UIModalFooter
@@ -172,7 +166,7 @@ export function calculateModalSize(
 }
 
 function Modal(props: StreamlitModalProps): ReactElement {
-  const { spacing, radii, colors, sizes }: EmotionTheme = useTheme()
+  const { spacing, radii, colors, sizes } = useEmotionTheme()
 
   const defaultOverrides = {
     Root: {

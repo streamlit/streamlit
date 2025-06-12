@@ -24,7 +24,6 @@ import React, {
 } from "react"
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
 
@@ -46,7 +45,8 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import {
@@ -76,7 +76,7 @@ const NumberInput: React.FC<Props> = ({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const {
     dataType: elementDataType,

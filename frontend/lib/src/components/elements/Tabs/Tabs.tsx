@@ -23,7 +23,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
@@ -32,6 +31,7 @@ import { isElementStale } from "~lib/components/core/Block/utils"
 import { LibContext } from "~lib/components/core/LibContext"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { STALE_STYLES } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledTabContainer } from "./styled-components"
 
@@ -57,7 +57,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   )
 
   const tabListRef = useRef<HTMLUListElement>(null)
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const [isOverflowing, setIsOverflowing] = useState(false)
 

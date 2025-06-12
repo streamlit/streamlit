@@ -24,7 +24,6 @@ import React, {
 } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import { useTheme } from "@emotion/react"
 import { getLogger } from "loglevel"
 import {
   NumberSize,
@@ -37,12 +36,12 @@ import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
   BaseButtonKind,
-  EmotionTheme,
   Icon,
   isColoredLineDisplayed,
   isEmbed,
   IsSidebarContext,
   LibContext,
+  useEmotionTheme,
 } from "@streamlit/lib"
 import { PageConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
@@ -103,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   initialSidebarState,
   hasElements,
 }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const sideBarInitiallyCollapsed = shouldCollapse(
     initialSidebarState,

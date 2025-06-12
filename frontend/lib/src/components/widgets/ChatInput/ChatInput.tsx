@@ -26,7 +26,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
@@ -56,6 +55,7 @@ import { FileUploadClient } from "~lib/FileUploadClient"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledChatInput,
@@ -103,7 +103,7 @@ function ChatInput({
   fragmentId,
   uploadClient,
 }: Props): React.ReactElement {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const { placeholder, maxChars } = element
 

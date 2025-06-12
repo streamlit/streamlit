@@ -30,7 +30,6 @@ import {
   type Option,
   Select as UISelect,
 } from "baseui/select"
-import { useTheme } from "@emotion/react"
 import sortBy from "lodash/sortBy"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
@@ -43,7 +42,7 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export interface Props {
   value: string | null
@@ -99,7 +98,7 @@ const Selectbox: React.FC<Props> = ({
   clearable,
   acceptNewOptions,
 }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
 
   const [value, setValue] = useState<string | null>(propValue)

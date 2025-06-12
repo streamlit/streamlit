@@ -27,7 +27,6 @@ import React, {
 
 import pick from "lodash/pick"
 import { type StyleProps, Slider as UISlider } from "baseui/slider"
-import { useTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
 import moment from "moment"
 
@@ -46,6 +45,7 @@ import {
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledThumb,
@@ -96,7 +96,7 @@ function Slider({
     React.MutableRefObject<HTMLDivElement | null>[]
   >([])
 
-  const { colors, fonts, fontSizes, spacing } = useTheme()
+  const { colors, fonts, fontSizes, spacing } = useEmotionTheme()
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
   const formattedMinValue = formatValue(element.min, element)

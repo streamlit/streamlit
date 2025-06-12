@@ -17,7 +17,6 @@
 import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import { useTheme } from "@emotion/react"
 import uniqueId from "lodash/uniqueId"
 
 import { TextArea as TextAreaProto } from "@streamlit/protobuf"
@@ -34,12 +33,12 @@ import {
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { EmotionTheme } from "~lib/theme"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export interface Props {
   disabled: boolean
@@ -122,7 +121,7 @@ const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)

@@ -23,7 +23,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { toaster, type ToastOverrides } from "baseui/toast"
 
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
@@ -31,6 +30,7 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Kind } from "~lib/components/shared/AlertContainer"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledMessageWrapper,
@@ -112,7 +112,7 @@ export function shortenMessage(fullMessage: string): string {
 }
 
 function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const displayMessage = shortenMessage(body)
   const shortened = body !== displayMessage
 

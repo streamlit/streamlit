@@ -172,7 +172,7 @@ export default tseslint.config([
           selector: "CallExpression[callee.name='withTheme']",
           message:
             "The use of withTheme HOC is not allowed for functional components. " +
-            "Please use the useTheme hook instead.",
+            "Please use the useEmotionTheme hook instead.",
         },
       ],
       "no-restricted-globals": [
@@ -261,6 +261,12 @@ export default tseslint.config([
             {
               name: "timezone-mock",
               message: "Please use the withTimezones test harness instead",
+            },
+            {
+              name: "@emotion/react",
+              message:
+                "Please use the useEmotionTheme hook instead of useTheme for type-safety",
+              importNames: ["useTheme"],
             },
           ],
         },

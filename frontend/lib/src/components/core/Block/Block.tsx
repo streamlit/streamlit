@@ -17,7 +17,6 @@
 import React, { ReactElement, ReactNode, useContext } from "react"
 
 import classNames from "classnames"
-import { useTheme } from "@emotion/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -39,6 +38,7 @@ import Expander from "~lib/components/elements/Expander"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   assignDividerColor,
@@ -68,7 +68,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { libConfig } = useContext(LibContext)
 
   // Handle cycling of colors for dividers:
-  assignDividerColor(props.node, useTheme())
+  assignDividerColor(props.node, useEmotionTheme())
 
   // Capture all the element ids to avoid rendering the same element twice
   const elementKeySet = new Set<string>()

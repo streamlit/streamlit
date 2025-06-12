@@ -23,7 +23,6 @@ import React, {
 } from "react"
 
 import { Info } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
 import { SignalConnection } from "typed-signals"
@@ -36,6 +35,7 @@ import {
   ScriptRunState,
   Timer,
   Tooltip,
+  useEmotionTheme,
 } from "@streamlit/lib"
 import { SessionEvent } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
@@ -140,7 +140,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   const delayShowRunningManTimer: React.MutableRefObject<Timer | null> =
     useRef(null)
   const sessionEventConn = useRef<SignalConnection>()
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const handleAlwaysRerunClick = (): void => {
     if (allowRunOnSave) {

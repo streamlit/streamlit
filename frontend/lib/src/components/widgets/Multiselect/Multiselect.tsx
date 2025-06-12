@@ -25,7 +25,6 @@ import {
 } from "baseui/select"
 import without from "lodash/without"
 import { isMobile } from "react-device-detect"
-import { useTheme } from "@emotion/react"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
@@ -39,7 +38,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
@@ -97,7 +96,7 @@ const updateWidgetMgrState = (
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,

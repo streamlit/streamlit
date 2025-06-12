@@ -14,34 +14,20 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+// eslint-disable-next-line no-restricted-imports -- Expected usage
+import { useTheme } from "@emotion/react"
 
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { EmotionTheme } from "~lib/theme"
 
-interface Props {
-  children: ReactElement
-  content: string
-}
+/**
+ * This hook is a wrapper around the useTheme hook from @emotion/react.
+ * It is used to get the current theme from the emotion cache.
+ * It is required to use this hook instead of useTheme for type-safety.
+ *
+ * @returns The current theme from the emotion cache.
+ */
+export const useEmotionTheme = (): EmotionTheme => {
+  const theme: EmotionTheme = useTheme()
 
-export function ChatUploadedFileIconTooltip({
-  children,
-  content,
-}: Props): ReactElement {
-  const theme = useEmotionTheme()
-  return (
-    <Tooltip
-      content={content}
-      placement={Placement.TOP}
-      overrides={{
-        Body: {
-          style: {
-            top: `-${theme.sizes.minElementHeight}`,
-          },
-        },
-      }}
-    >
-      {children}
-    </Tooltip>
-  )
+  return theme
 }

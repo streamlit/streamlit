@@ -16,10 +16,9 @@
 
 import { useMemo } from "react"
 
-import { useTheme } from "@emotion/react"
-
 import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { VegaLiteChartElement } from "./arrowUtils"
@@ -168,7 +167,7 @@ export const useVegaElementPreprocessor = (
   width: number,
   height: number
 ): VegaLiteChartElement => {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const {
     id,

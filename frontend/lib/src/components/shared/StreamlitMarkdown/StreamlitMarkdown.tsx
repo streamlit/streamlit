@@ -31,7 +31,6 @@ import { type Element, type Root } from "hast"
 import xxhash from "xxhashjs"
 import slugify from "@sindresorhus/slugify"
 import { visit } from "unist-util-visit"
-import { useTheme } from "@emotion/react"
 import ReactMarkdown, {
   Components,
   Options as ReactMarkdownProps,
@@ -61,6 +60,7 @@ import {
   getMarkdownTextColors,
 } from "~lib/theme"
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledHeadingActionElements,
@@ -195,7 +195,7 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
   help,
   hideAnchor,
 }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   if (!help && hideAnchor) {
     return <></>
   }
@@ -717,7 +717,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   isLabel,
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
 
