@@ -125,7 +125,9 @@ FD = FieldDescriptor
                 ("url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("family", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("weight_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("style", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("unicode_range", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (

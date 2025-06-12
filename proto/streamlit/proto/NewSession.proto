@@ -183,9 +183,16 @@ message CustomThemeConfig {
 
 message FontFace {
   string url = 1;
+  // Equivalent to font-family @font-face CSS property.
   string family = 2;
-  int32 weight = 3;
+  // DEPRECATED: Use weight_range instead which supports single weights & weight ranges.
+  int32 weight = 3 [deprecated = true];
+  // Equivalent to font-weight @font-face CSS property.
+  string weight_range = 5;
+  // Equivalent to font-style @font-face CSS property.
   string style = 4;
+  // Equivalent to unicode-range @font-face CSS property.
+  string unicode_range = 6;
 }
 
 // DEPRECATED: Please use the base_radius theme config instead.

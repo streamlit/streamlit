@@ -1380,12 +1380,12 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             FontFace(
                 family="Inter",
                 url="https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",
-                weight=400,
+                weight_range="400",
             ),
             FontFace(
                 family="Monaspace Argon",
                 url="https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
-                weight=400,
+                weight_range="400",
             ),
         ]
 

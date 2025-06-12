@@ -797,7 +797,13 @@ def wait_for_all_images_to_be_loaded(page: Page) -> None:
     """)
 
 
-def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
+def expect_font(
+    page: Page,
+    font_family: str,
+    style: str = "normal",
+    weight: str = "normal",
+    timeout: int = 20000,
+) -> None:
     """
     Wait until the given font_family is recognized as available by the browser.
     Uses document.fonts.check within a wait_for_function call.
@@ -811,6 +817,10 @@ def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
             The Playwright Page object.
         font_family: str
             The name of the font family to check.
+        style: str
+            The style of the font to check (default: "normal").
+        weight: str
+            The weight of the font to check (default: "normal").
         timeout: int
             How long to wait in milliseconds (default: 20000).
 
@@ -818,15 +828,18 @@ def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
     ------
         TimeoutError: If the font isn't recognized in time
     """
+    font = f"{style} {weight} 16px '{font_family}'"
+    # Remove single quotes if the font name has a space in it
+    if " " in font_family:
+        font = font.replace("'", "")
+
     check_script = """
-    (fontName) => {
-        if (!('fonts' in document)) {
-            return false;
-        }
-        return document.fonts.check('16px ' + fontName);
+    (font) => {
+    if (!('fonts' in document)) return false;
+    return document.fonts.ready.then(() => document.fonts.check(font));
     }
     """
-    page.wait_for_function(check_script, arg=font_family, timeout=timeout)
+    page.wait_for_function(check_script, arg=font, timeout=timeout)
 
 
 def is_child_bounding_box_inside_parent(
