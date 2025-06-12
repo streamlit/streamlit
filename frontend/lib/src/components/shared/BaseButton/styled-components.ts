@@ -26,7 +26,6 @@ export enum BaseButtonKind {
   SECONDARY = "secondary",
   TERTIARY = "tertiary",
   GHOST = "ghost",
-  ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
   BORDERLESS_ICON_ACTIVE = "borderlessIconActive",
   MINIMAL = "minimal",
@@ -248,51 +247,6 @@ export const StyledSecondaryFormSubmitButton = styled(
 export const StyledTertiaryFormSubmitButton = styled(
   StyledTertiaryButton
 )<RequiredBaseButtonProps>()
-
-export const StyledIconButton = styled(
-  StyledBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => {
-  return {
-    backgroundColor: theme.colors.transparent,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-    flex: "1 1 0",
-    padding: 0,
-
-    "&:hover": {
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
-    },
-    "&:active": {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-      color: theme.colors.white,
-    },
-    "&:not(:active)": {
-      boxShadow: "none",
-    },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
-      cursor: "not-allowed",
-    },
-  }
-})
-
-export const StyledIconButtonActive = styled(
-  StyledIconButton
-)<RequiredBaseButtonProps>(({ theme }) => {
-  return {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-    color: theme.colors.white,
-    "&:hover": {
-      backgroundColor: theme.colors.transparent,
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
-    },
-  }
-})
 
 const StyledButtonGroupBaseButton = styled(
   StyledBaseButton
