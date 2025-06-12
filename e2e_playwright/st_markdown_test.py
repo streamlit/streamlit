@@ -186,6 +186,9 @@ def test_match_snapshot_for_column_beside_widget(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the st.markdown columns beside widget snapshot is correct."""
+    # Wait for the labels to be visible, or else the snapshot tests will flake
+    expect(app.get_by_text("This is a label")).to_have_count(2)
+
     container = _get_container_of_text(app, "Headers in column beside widget")
     assert_snapshot(container, name="st_markdown-headers_beside_widget")
 
