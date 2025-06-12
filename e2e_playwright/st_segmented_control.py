@@ -147,7 +147,7 @@ st.write(
 st.header("Segmented Control in fragment", anchor="segmented-control-in-fragment")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     s5 = st.segmented_control(
         "Select an emotion:",

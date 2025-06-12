@@ -52,7 +52,7 @@ with st.form(key="my_form", clear_on_submit=True):
 st.write("feedback-in-form:", str(sentiment))
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     sentiment = st.feedback(key="fragment_feedback")
     st.write("feedback-in-fragment:", str(sentiment))
