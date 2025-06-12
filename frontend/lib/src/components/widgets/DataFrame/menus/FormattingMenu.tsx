@@ -60,6 +60,11 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     icon: ":material/euro:",
   },
   {
+    format: "yen",
+    label: "Yen",
+    icon: ":material/currency_yen:",
+  },
+  {
     format: "percent",
     label: "Percent",
     icon: ":material/percent:",

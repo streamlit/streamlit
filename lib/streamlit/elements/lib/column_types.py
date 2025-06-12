@@ -32,6 +32,7 @@ NumberFormat: TypeAlias = Literal[
     "localized",
     "dollar",
     "euro",
+    "yen",
     "percent",
     "compact",
     "scientific",
@@ -416,7 +417,7 @@ def NumberColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format:  str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format:  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 
@@ -426,6 +427,7 @@ def NumberColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
@@ -1991,7 +1993,7 @@ def ProgressColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    format: str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format: str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how the numbers are displayed.
         This can be one of the following values:
 
@@ -2001,6 +2003,7 @@ def ProgressColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").

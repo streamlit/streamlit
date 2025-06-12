@@ -604,6 +604,12 @@ export function formatNumber(
       currency: "EUR",
       maximumFractionDigits: 2,
     })
+  } else if (format === "yen") {
+    return formatIntlNumberWithLocales(value, {
+      style: "currency",
+      currency: "JPY",
+      maximumFractionDigits: 0,
+    })
   } else if (["compact", "scientific", "engineering"].includes(format)) {
     return formatIntlNumberWithLocales(value, {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
