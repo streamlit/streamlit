@@ -26,7 +26,6 @@ export enum BaseButtonKind {
   SECONDARY = "secondary",
   TERTIARY = "tertiary",
   GHOST = "ghost",
-  LINK = "link",
   ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
   BORDERLESS_ICON_ACTIVE = "borderlessIconActive",
@@ -219,28 +218,6 @@ export const StyledGhostButton = styled(
   "&:focus:not(:active)": {
     borderColor: theme.colors.transparent,
     color: theme.colors.primary,
-  },
-  "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.lightGray,
-    borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
-  },
-}))
-
-export const StyledLinkButton = styled(
-  StyledBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.transparent,
-  padding: theme.spacing.none,
-  border: "none",
-  color: theme.colors.primary,
-  "&:hover": {
-    textDecoration: "underline",
-  },
-  "&:active": {
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.primary,
-    textDecoration: "underline",
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
     backgroundColor: theme.colors.lightGray,
