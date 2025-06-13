@@ -145,6 +145,13 @@ function TimeInput({
               },
             },
           },
+
+          Placeholder: {
+            style: () => ({
+              color: theme.colors.fadedText60,
+            }),
+          },
+
           SelectArrow: {
             component: ChevronDown,
 

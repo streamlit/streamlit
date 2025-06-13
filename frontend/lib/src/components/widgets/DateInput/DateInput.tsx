@@ -421,6 +421,10 @@ function DateInput({
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,
 
+                    "::placeholder": {
+                      color: theme.colors.fadedText60,
+                    },
+
                     // Change input value text color in error state - matches st.error in light and dark mode
                     ...(error && {
                       color: hasLightBackgroundColor(theme)
