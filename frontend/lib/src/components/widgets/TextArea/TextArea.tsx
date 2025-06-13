@@ -205,14 +205,14 @@ const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
               height: height ? `${height}px` : "",
               minHeight: theme.sizes.largestElementHeight,
               resize: "vertical",
-              "::placeholder": {
-                opacity: "0.7",
-              },
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.md,
               paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.md,
               paddingTop: theme.spacing.md,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
             },
           },
           Root: {

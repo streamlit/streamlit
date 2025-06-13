@@ -199,15 +199,15 @@ function TextInput({
               // unless the line below is provided.
               // See https://stackoverflow.com/a/33811151
               minWidth: 0,
-              "::placeholder": {
-                opacity: "0.7",
-              },
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
               paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
             },
           },
           Root: {
