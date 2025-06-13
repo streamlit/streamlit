@@ -20,12 +20,37 @@ st.page_link("http://www.example.com", label="Default Example")
 st.page_link("http://www.example.com", label="Icon Example", icon="🌎")
 st.page_link("http://www.example.com", label="Help Example", help="Some help text")
 st.page_link("http://www.example.com", label="Disabled Example", disabled=True)
+
 # Default is container width=false in main app section
 st.page_link(
     "http://www.example.com",
     label="Main container_width=true",
     use_container_width=True,
 )
+
+# Test Material icon
+st.page_link(
+    "http://www.example.com", label="Material Icon Example", icon=":material/home:"
+)
+
+
+# Test st.Page objects - create pages with different icon scenarios
+def dummy_page():
+    st.write("This is a dummy page")
+
+
+# Create page objects to test st.Page -> st.page_link workflow
+page_with_icon = st.Page(dummy_page, title="Page with Icon", icon="🌎")
+page_with_material_icon = st.Page(
+    dummy_page, title="Page with Material Icon", icon=":material/star:"
+)
+
+# Test passing st.Page objects to st.page_link
+st.page_link(page_with_icon, label="Page Link with Icon from st.Page")
+st.page_link(page_with_material_icon, label="Page Link with Material Icon from st.Page")
+
+# Test overriding page icons in st.page_link
+st.page_link(page_with_icon, label="Override Page Icon from st.Page", icon="🔥")
 
 with st.sidebar:
     st.page_link("http://www.example.com", label="Default Sidebar")
