@@ -247,6 +247,23 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveAttribute("alt", "Streamlit logo")
   })
 
+  it("renders streamlit logo with allowHTML=true", () => {
+    render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
+    const image = screen.getByRole("img")
+    expect(image).toHaveAttribute("alt", "Streamlit logo")
+    expect(image).toHaveStyle("display: inline-block")
+    expect(image).toHaveStyle("user-select: none")
+  })
+
+  it("renders material icons with allowHTML=true", () => {
+    const source = `:material/search: Icon`
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const markdown = screen.getByText("search")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
+  })
+
   // Typographical symbol replacements
   const symbolReplacementCases = [
     { input: "a -> b", tag: "p", expected: "a → b" },

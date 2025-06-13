@@ -23,7 +23,10 @@ st.markdown(
 
 st.markdown("This <b>HTML tag</b> is escaped!")
 
-st.markdown("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
+st.markdown(
+    ":streamlit: :material/info: This <b>HTML tag</b> is :red[not] escaped!",
+    unsafe_allow_html=True,
+)
 
 st.markdown("[text]")
 

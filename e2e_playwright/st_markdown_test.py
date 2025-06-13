@@ -60,7 +60,7 @@ def test_displays_individual_markdowns(app: Page):
     text = [
         "This markdown is awesome! 😎",
         "This <b>HTML tag</b> is escaped!",
-        "This HTML tag is not escaped!",
+        "info This HTML tag is not escaped!",
         "[text]",
         "link",
         "[][]",
@@ -396,3 +396,12 @@ def test_badge_width_examples(themed_app: Page, assert_snapshot: ImageCompareFun
         badge_elements.nth(2),
         name="st_badge-width_stretch",
     )
+
+
+def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that unsafe allow html works correctly."""
+    markdown_element = app.get_by_test_id("stMarkdown").get_by_text(
+        "info This HTML tag is not escaped!"
+    )
+    expect(markdown_element).to_be_visible()
+    assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
