@@ -286,7 +286,7 @@ if st.button("Run element"):
 with st.expander("Markdown Width Examples", expanded=True):
     with st.container(border=True):
         st.markdown(
-            "**Default width (content):** This is regular markdown text with default "
+            "**Content width:** This is regular markdown text with "
             "content-based sizing that adapts to its content width.",
             width="content",
         )
@@ -306,7 +306,7 @@ with st.expander("Markdown Width Examples", expanded=True):
 with st.expander("Caption Width Examples", expanded=True):
     with st.container(border=True):
         st.caption(
-            "This is a default caption with content-based width sizing that adapts "
+            "This is a caption with content-based width sizing that adapts "
             "to the caption text length.",
             width="content",
         )

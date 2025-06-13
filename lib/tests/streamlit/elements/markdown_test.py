@@ -93,16 +93,16 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
                 assert str(exc.value) == expected_error_message
 
     def test_st_markdown_default_width(self):
-        """Test that st.markdown defaults to content width."""
+        """Test that st.markdown defaults to stretch width."""
         st.markdown("some markdown")
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "some markdown"
         assert (
             el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
+            == WidthConfigFields.USE_STRETCH.value
         )
-        assert el.width_config.use_content is True
+        assert el.width_config.use_stretch is True
 
     def test_works_with_element_replay(self):
         """Test that element replay works for a markdown element."""
@@ -190,16 +190,16 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
                 assert str(exc.value) == expected_error_message
 
     def test_st_caption_default_width(self):
-        """Test that st.caption defaults to content width."""
+        """Test that st.caption defaults to stretch width."""
         st.caption("some caption")
 
         el = self.get_delta_from_queue().new_element
         assert el.markdown.body == "some caption"
         assert (
             el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
+            == WidthConfigFields.USE_STRETCH.value
         )
-        assert el.width_config.use_content is True
+        assert el.width_config.use_stretch is True
 
 
 class StLatexAPITest(DeltaGeneratorTestCase):
