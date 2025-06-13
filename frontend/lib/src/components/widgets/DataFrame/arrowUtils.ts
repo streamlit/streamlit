@@ -121,6 +121,14 @@ export function applyPandasStylerCss(
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
   if (fontColor) {
     themeOverride.textDark = fontColor
+
+    // Apply text color also for cells that don't use textDark:
+    if (cell.kind === GridCellKind.Bubble) {
+      themeOverride.textBubble = fontColor
+    }
+    if (cell.kind === GridCellKind.Uri) {
+      themeOverride.linkColor = fontColor
+    }
   }
 
   // Extract and apply the background color
