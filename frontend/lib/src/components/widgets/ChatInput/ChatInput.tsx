@@ -484,7 +484,7 @@ function ChatInput({
                   style: {
                     lineHeight: theme.lineHeights.inputWidget,
                     "::placeholder": {
-                      opacity: "0.7",
+                      color: theme.colors.fadedText60,
                     },
                     height: isInputExtended
                       ? `${scrollHeight + ROUNDING_OFFSET}px`

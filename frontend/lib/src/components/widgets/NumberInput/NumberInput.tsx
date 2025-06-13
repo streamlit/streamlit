@@ -431,6 +431,9 @@ const NumberInput: React.FC<Props> = ({
                 paddingLeft: theme.spacing.md,
                 paddingBottom: theme.spacing.sm,
                 paddingTop: theme.spacing.sm,
+                "::placeholder": {
+                  color: theme.colors.fadedText60,
+                },
               },
             },
             InputContainer: {
