@@ -94,7 +94,7 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
       <StyledStackTraceTitle>Traceback:</StyledStackTraceTitle>
       <StyledStackTrace>
         <StyledStackTraceContent>
-          <StyledCode>
+          <StyledCode wrapLines={false}>
             {stackTrace.map((row: string, index: number) => (
               <StyledStackTraceRow
                 // TODO: Update to match React best practices

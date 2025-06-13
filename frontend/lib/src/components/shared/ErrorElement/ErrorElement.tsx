@@ -49,7 +49,7 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
       {message}
       {stack ? (
         <StyledStackTrace data-testid="stErrorElementStack">
-          <StyledCode>{cleanedStack}</StyledCode>
+          <StyledCode wrapLines={false}>{cleanedStack}</StyledCode>
         </StyledStackTrace>
       ) : null}
     </AlertContainer>

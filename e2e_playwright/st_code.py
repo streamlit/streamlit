@@ -128,3 +128,8 @@ print(processed)
 
 st.code(long_code, width=400, wrap_lines=True)
 st.code(long_code, width="stretch")
+
+long_single_word_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
+
+st.code(long_single_word_string)
+st.code(long_single_word_string, wrap_lines=True)
