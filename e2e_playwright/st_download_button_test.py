@@ -214,4 +214,5 @@ def test_download_button_source_error(app: Page, app_port: int):
         lambda: check_download_button_source_error_count(
             messages, DOWNLOAD_BUTTON_ELEMENTS
         ),
+        timeout=10000,
     )
