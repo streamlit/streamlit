@@ -21,6 +21,7 @@ const header = balloons - 10
 const bottom = sidebar - 1
 const sidebarMobile = balloons - 5
 const fullscreenWrapper = balloons + 50
+const headerDecoration = balloons - 1
 // Used for popup menus, chart tooltips, and other aspects
 // that need to be shown above the fullscreen wrapper
 const popup = fullscreenWrapper + 10
@@ -50,4 +51,5 @@ export const zIndices = {
   bottom,
   cacheSpinner,
   toast,
+  headerDecoration,
 }

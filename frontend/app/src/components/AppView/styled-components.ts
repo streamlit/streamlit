@@ -49,6 +49,7 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
     width: theme.sizes.full,
     overflow: disableScrolling ? "hidden" : "auto",
     alignItems: "center",
+    height: `100vh`,
 
     "&:focus": {
       outline: "none",
@@ -63,6 +64,7 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
         left: 0,
         right: 0,
         bottom: 0,
+        height: "100vh",
       },
     },
 
@@ -117,36 +119,37 @@ const applyWideModePadding = (theme: EmotionTheme): CSSObject => {
 }
 
 export interface StyledAppViewBlockContainerProps {
-  hasSidebar: boolean
-  isEmbedded: boolean
   isWideMode: boolean
-  showPadding: boolean
-  addPaddingForHeader: boolean
   hasBottom: boolean
+  showPadding: boolean
+  hasHeader: boolean
+  showToolbar: boolean
 }
 
 export const StyledAppViewBlockContainer =
   styled.div<StyledAppViewBlockContainerProps>(
     ({
-      hasSidebar,
       hasBottom,
-      isEmbedded,
       isWideMode,
       showPadding,
-      addPaddingForHeader,
+      hasHeader,
+      showToolbar,
       theme,
     }) => {
       const littlePadding = "2.25rem"
-      let topEmbedPadding: string = showPadding ? "6rem" : littlePadding
-      if (
-        (addPaddingForHeader && !showPadding) ||
-        (isEmbedded && hasSidebar)
-      ) {
-        // Use parseFloat vs. calc to allow for JS unit test
-        topEmbedPadding = `${
-          parseFloat(theme.sizes.headerHeight) + parseFloat(theme.spacing.md)
-        }rem`
-      }
+
+      // Top padding logic per specification:
+      // - 6rem by default (non-embedded)
+      // - 6rem if embedded with show_padding OR show_toolbar
+      // - 2.25rem if embedded with no header and no toolbar
+      // - 4.5rem if embedded with header but no toolbar
+      const topPadding =
+        showPadding || showToolbar
+          ? "6rem"
+          : hasHeader
+            ? "4.5rem"
+            : littlePadding
+
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
 
@@ -154,7 +157,7 @@ export const StyledAppViewBlockContainer =
         width: theme.sizes.full,
         paddingLeft: theme.spacing.lg,
         paddingRight: theme.spacing.lg,
-        paddingTop: topEmbedPadding,
+        paddingTop: topPadding,
         paddingBottom: bottomEmbedPadding,
         maxWidth: theme.sizes.contentMaxWidth,
         ...(isWideMode && applyWideModePadding(theme)),
@@ -211,3 +214,10 @@ export const StyledIFrameResizerAnchor = styled.div(({ theme }) => ({
   position: "relative",
   bottom: theme.spacing.none,
 }))
+
+export const StyledMainContent = styled.div({
+  width: "100%",
+  height: "100vh",
+  display: "flex",
+  flexDirection: "column",
+})

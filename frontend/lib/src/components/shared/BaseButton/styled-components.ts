@@ -357,16 +357,15 @@ export const StyledHeaderButton = styled(
   return {
     backgroundColor: theme.colors.transparent,
     border: "none",
-    padding: theme.spacing.sm,
+    padding: `0 ${theme.spacing.sm}`,
     fontSize: theme.fontSizes.sm,
     marginLeft: theme.spacing.threeXS,
     marginRight: theme.spacing.threeXS,
 
     lineHeight: theme.lineHeights.none,
 
-    // Override buttons min width and height, to ensure the hover state for icon buttons on the header is square
-    minWidth: theme.spacing.threeXL,
-    minHeight: theme.spacing.threeXL,
+    minWidth: theme.sizes.headerItemHeight,
+    minHeight: theme.sizes.headerItemHeight,
 
     "&:focus": {
       outline: "none",
@@ -375,6 +374,9 @@ export const StyledHeaderButton = styled(
       boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
     },
     "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&:active": {
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
@@ -489,6 +491,9 @@ export const StyledElementToolbarButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&:active": {
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {

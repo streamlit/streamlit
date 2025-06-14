@@ -16,8 +16,6 @@
 
 import React, { MouseEvent, ReactElement } from "react"
 
-import { transparentize } from "color2k"
-
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { DynamicIcon, isMaterialIcon, useEmotionTheme } from "@streamlit/lib"
 
@@ -33,6 +31,7 @@ export interface SidebarNavLinkProps {
   pageUrl: string
   icon: string | undefined | null
   onClick: (e: MouseEvent) => void
+  isTopNav?: boolean
   children: string
 }
 
@@ -41,6 +40,7 @@ const SidebarNavLink = ({
   pageUrl,
   icon,
   onClick,
+  isTopNav,
   children,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
@@ -59,17 +59,18 @@ const SidebarNavLink = ({
         disabled={disableSidebarNavLinks}
         href={pageUrl}
         onClick={onClick}
+        aria-current={isActive ? "page" : undefined}
       >
         {icon?.length ? (
           <StyledSidebarNavIcon isActive={isActive}>
             <DynamicIcon
-              size="md"
+              size="base"
               iconValue={icon}
               color={
                 !isActive && isMaterialIcon(icon)
                   ? // Apply color with opacity on material icons
                     // But we don't want to apply opacity on emoji icons
-                    transparentize(theme.colors.bodyText, 0.5)
+                    theme.colors.fadedText60
                   : theme.colors.bodyText
               }
             />
@@ -78,6 +79,8 @@ const SidebarNavLink = ({
         <StyledSidebarLinkText
           isActive={isActive}
           disabled={disableSidebarNavLinks}
+          isTopNav={isTopNav}
+          label={children}
         >
           {children}
         </StyledSidebarLinkText>

@@ -637,7 +637,7 @@ def expand_sidebar(app: Page) -> Locator:
     Locator
         The sidebar element.
     """
-    app.get_by_test_id("stSidebarCollapsedControl").click()
+    app.get_by_test_id("stExpandSidebarButton").click()
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_visible()
     return sidebar

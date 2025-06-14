@@ -151,7 +151,7 @@ def _mpa_v1(main_script_path: str) -> None:
         StreamlitPage(pages_folder / page.name) for page in pages
     ]
     # Initialize the navigation with all the pages:
-    position: Literal["sidebar", "hidden"] = (
+    position: Literal["sidebar", "hidden", "top"] = (
         "hidden"
         if config.get_option("client.showSidebarNavigation") is False
         else "sidebar"

@@ -43,6 +43,7 @@
     "lodash": "^4.17.21",
     "loglevel": "^1.9.2",
     "moment": "^2.29.4",
+    "rc-overflow": "^1.4.1",
     "re-resizable": "^6.11.2",
     "react": "^18.2.0",
     "react-device-detect": "^2.2.2",

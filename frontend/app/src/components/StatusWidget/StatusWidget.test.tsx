@@ -71,24 +71,6 @@ describe("StatusWidget element", () => {
     expect(screen.getByTestId("stTooltipHoverTarget")).toBeInTheDocument()
   })
 
-  it("renders its tooltip when running and minimized", async () => {
-    vi.useFakeTimers()
-    render(<StatusWidget {...getProps()} />)
-    expect(
-      screen.queryByTestId("stTooltipHoverTarget")
-    ).not.toBeInTheDocument()
-
-    // Set scrollY so shouldMinimize returns true
-    global.scrollY = 50
-
-    render(<StatusWidget {...getProps()} />)
-    vi.runAllTimers()
-    expect(await screen.findByTestId("stTooltipHoverTarget")).toBeVisible()
-
-    // Reset scrollY for following tests not impacted
-    global.scrollY = 0
-  })
-
   it("does not render its tooltip when connected", () => {
     render(
       <StatusWidget

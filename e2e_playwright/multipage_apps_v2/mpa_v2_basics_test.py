@@ -407,19 +407,6 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     )
     assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
 
-    # Collapse the sidebar
-    app.get_by_test_id("stSidebarContent").hover()
-    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
-    app.wait_for_timeout(500)
-
-    # Collapsed logo
-    expect(
-        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
-    ).to_have_attribute("href", "https://www.example.com")
-    assert_snapshot(
-        app.get_by_test_id("stSidebarCollapsedControl"), name="collapsed-logo"
-    )
-
 
 def test_page_link_with_path(app: Page):
     """Test st.page_link works with a path."""
@@ -576,16 +563,20 @@ def test_logo_source_errors(app: Page, app_port: int):
     app.goto(f"http://localhost:{app_port}")
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
-    # for the logo in the main app area and the sidebar
-    wait_until(
-        app,
-        lambda: any(
-            "Client Error: Logo source error" in message for message in messages
-        ),
-    )
     wait_until(
         app,
         lambda: any(
             "Client Error: Sidebar Logo source error" in message for message in messages
+        ),
+    )
+
+    app.get_by_test_id("stSidebarContent").hover()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: Header Logo source error" in message for message in messages
         ),
     )
