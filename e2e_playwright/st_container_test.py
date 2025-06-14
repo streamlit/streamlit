@@ -139,3 +139,24 @@ def test_empty_containers(app: Page):
     expect(
         empty_outer_container.get_by_test_id("stVerticalBlockBorderWrapper")
     ).to_have_count(0)
+
+
+def test_nested_containers(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that nested containers render correctly with different height configurations."""
+    # Test first nested container example (outer: height=200, inner: height=250)
+    nested_container_1 = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)
+    nested_container_1.scroll_into_view_if_needed()
+    assert_snapshot(nested_container_1, name="st_container-nested_overflow")
+
+    # Test second nested container example (outer: height=200, inner: no height)
+    nested_container_2 = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(7)
+    nested_container_2.scroll_into_view_if_needed()
+    assert_snapshot(nested_container_2, name="st_container-nested_content")
+
+
+def test_containers_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that containers render correctly within columns."""
+    # Get the columns container and snapshot the entire columns layout
+    columns_container = app.get_by_test_id("stHorizontalBlock").last
+    columns_container.scroll_into_view_if_needed()
+    assert_snapshot(columns_container, name="st_container-columns")

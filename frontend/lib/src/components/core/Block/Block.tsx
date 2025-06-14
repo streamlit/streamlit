@@ -131,6 +131,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
 
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
+  height: React.CSSProperties["height"]
 }
 
 export const ContainerContentsWrapper = (
@@ -140,6 +141,7 @@ export const ContainerContentsWrapper = (
     direction: Direction.VERTICAL,
     flex: 1,
     gap: streamlit.GapSize.SMALL,
+    height: props.height,
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
@@ -215,9 +217,14 @@ export const FlexBoxContainer = (
     ? ScrollToBottomBlockWrapper
     : StyledBlockWrapper
 
+  const outerHeight = getHeightBackwardsCompatible(props.node.deltaBlock)
+  // TODO(lawilby): This styling will be incorporated into useLayoutStyles
+  // when height/width extensions for containers is rolled out.
+  const flex = outerHeight ? `0 0 ${outerHeight}px` : undefined
   const blockBorderWrapperProps = {
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    height: getHeightBackwardsCompatible(props.node.deltaBlock),
+    height: outerHeight,
+    flex,
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
@@ -237,6 +244,7 @@ export const FlexBoxContainer = (
           convertKeyToClassName(userKey)
         )}
         data-testid={getClassnamePrefix(direction)}
+        height="100%"
       >
         <ChildRenderer {...props} />
       </StyledFlexContainerBlock>
@@ -289,6 +297,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     <ContainerContentsWrapper
       {...childProps}
       disableFullscreenMode={disableFullscreenMode}
+      height="100%"
     />
   )
 
