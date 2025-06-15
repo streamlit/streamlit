@@ -132,6 +132,38 @@ class FormMixin:
                 there's another border (e.g. because of an expander) or the form is small
                 (e.g. just a text input and a submit button).
 
+        width : "stretch", "content", or int
+            The width of the form container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - ``"content"``: The width of the container matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the form container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the container is not in a parent container, the height
+              of the container matches the height of its content.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+            .. note::
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
+
         Examples
         --------
         Inserting elements using ``with`` notation:

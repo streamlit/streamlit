@@ -117,10 +117,17 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        width : int or "stretch" or "content"
-            The width of the markdown element. Can be an integer (pixels),
-            "stretch" (default) to use the full width of the container, or "content"
-            to size based on the content.
+        width : "stretch", "content", or int
+            The width of the Markdown element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -205,10 +212,17 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        width : int or "stretch" or "content"
-            The width of the caption. Can be an integer (pixels), "stretch"
-            (default) to use the full width of the container, or "content" to
-            size based on the content.
+        width : "stretch", "content", or int
+            The width of the caption element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -261,11 +275,17 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        width : int or "stretch" or "content"
-            The width of the LaTeX expression. If "stretch" (default), the
-            expression will take up the full width of the container. If "content",
-            the expression will take up only as much width as needed. If an integer,
-            the width will be set to that number of pixels.
+        width : "stretch", "content", or int
+            The width of the LaTeX element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -299,16 +319,21 @@ class MarkdownMixin:
     def divider(self, *, width: WidthWithoutContent = "stretch") -> DeltaGenerator:
         """Display a horizontal rule.
 
-        Parameters
-        ----------
-        width : int or "stretch"
-            The width of the divider. If "stretch" (default), the divider will
-            take up the full width of the container. If an integer, the width
-            will be set to that number of pixels.
-
         .. note::
             You can achieve the same effect with st.write("---") or
             even just "---" in your script (via magic).
+
+        Parameters
+        ----------
+        width : "stretch" or int
+            The width of the divider element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -398,10 +423,18 @@ class MarkdownMixin:
             ``"primary"``, Streamlit will use the default primary accent color
             unless you set the ``theme.primaryColor`` configuration option.
 
-        width : int or "stretch" or "content"
-            The width of the badge. Can be an integer (pixels), "stretch" to
-            use the full width of the container, or "content" (default) to size
-            based on the content.
+        width : "content", "stretch", or int
+            The width of the badge element. This can be one of the following:
+
+            - ``"content"`` (default): The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------

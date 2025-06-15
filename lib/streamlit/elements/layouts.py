@@ -74,10 +74,11 @@ class LayoutsMixin:
             to visually separate its scroll surface from the rest of the app.
 
             .. note::
-                Use containers with scroll sparingly. If you do, try to keep
-                the height small (below 500 pixels). Otherwise, the scroll
-                surface of the container might cover the majority of the screen
-                on mobile devices, which makes it hard to scroll the rest of the app.
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         border : bool or None
             Whether to show a border around the container. If ``None`` (default), a
@@ -221,7 +222,16 @@ class LayoutsMixin:
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", "large", or None
-            The size of the gap between the columns. The default is ``"small"``.
+            The size of the gap between the columns. This can be one of the
+            following:
+
+            - ``"small"`` (default): 1rem gap between the columns.
+            - ``"medium"``: 2rem gap between the columns.
+            - ``"large"``: 4rem gap between the columns.
+            - ``None``: No gap between the columns.
+
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
 
         vertical_alignment : "top", "center", or "bottom"
             The vertical alignment of the content inside the columns. The
@@ -447,6 +457,16 @@ class LayoutsMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
+        width : "stretch" or int
+            The width of the tab container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
+
         Returns
         -------
         list of containers
@@ -575,6 +595,16 @@ class LayoutsMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+        width : "stretch" or int
+            The width of the expander container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Examples
         --------
@@ -825,10 +855,18 @@ class LayoutsMixin:
             shown:
 
             - ``running`` (default): A spinner icon is shown.
-
             - ``complete``: A checkmark icon is shown.
-
             - ``error``: An error icon is shown.
+
+        width : "stretch" or int
+            The width of the status container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
