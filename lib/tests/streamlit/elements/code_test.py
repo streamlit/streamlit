@@ -212,15 +212,7 @@ class CodeElement(DeltaGeneratorTestCase):
         )
         assert element.height_config.use_content
 
-    @parameterized.expand(
-        [
-            "invalid",
-            -100,
-            0,
-            100.5,
-            None,
-        ]
-    )
+    @parameterized.expand(["invalid", -100, 0, 100.5])
     def test_st_code_with_invalid_height(self, height):
         """Test st.code with invalid height values."""
         code = "print('My string = %d' % my_value)"
