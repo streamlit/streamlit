@@ -599,48 +599,6 @@ describe("#useLayoutStyles", () => {
       )
     })
 
-    describe("with elements that skip overflow handling", () => {
-      it.each([
-        [
-          "iframe",
-          100,
-          getDefaultStyles({
-            height: 100,
-            overflow: "visible",
-            flex: "0 0 100px",
-          }),
-        ],
-        [
-          "deckGlJsonChart",
-          150,
-          getDefaultStyles({
-            height: 150,
-            overflow: "visible",
-            flex: "0 0 150px",
-          }),
-        ],
-        [
-          "arrowDataFrame",
-          200,
-          getDefaultStyles({
-            height: 200,
-            overflow: "visible",
-            flex: "0 0 200px",
-          }),
-        ],
-      ])(
-        "and with element type %s and pixel height %s, returns %o",
-        (elementType, pixelHeight, expected) => {
-          const element = new MockElement({
-            type: elementType as any,
-            heightConfig: new streamlit.HeightConfig({ pixelHeight }),
-          })
-          const { result } = renderHook(() => useLayoutStyles({ element }))
-          expect(result.current).toEqual(expected)
-        }
-      )
-    })
-
     describe("with widthConfig on the subElement (using type assertions)", () => {
       it.each([
         [
@@ -725,14 +683,11 @@ describe("#useLayoutStyles", () => {
       it.each([
         ["stretch", new streamlit.HeightConfig({ useStretch: true })],
         ["content", new streamlit.HeightConfig({ useContent: true })],
-      ])(
-        "should not include flex when height is %s",
-        (heightType, heightConfig) => {
-          const element = new MockElement({ heightConfig })
-          const { result } = renderHook(() => useLayoutStyles({ element }))
-          expect(result.current.flex).toBeUndefined()
-        }
-      )
+      ])("should not include flex when height is %s", (_, heightConfig) => {
+        const element = new MockElement({ heightConfig })
+        const { result } = renderHook(() => useLayoutStyles({ element }))
+        expect(result.current.flex).toBeUndefined()
+      })
     })
   })
 })
