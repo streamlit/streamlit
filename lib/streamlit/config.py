@@ -676,12 +676,11 @@ _create_section("server", "Settings for the Streamlit server")
 _create_option(
     "server.folderWatchList",
     description="""
-        List of folders to watch for changes.
+        List of directories to watch for changes.
 
-        By default, Streamlit watches for files in the current working directory.
-        Use this parameter to specify additional folders to watch.
-
-        Note: This is a list of absolute paths.
+        By default, Streamlit watches files in the current working directory
+        and its subdirectories. Use this option to specify additional
+        directories to watch. Paths must be absolute.
     """,
     default_val=[],
     multiple=True,
@@ -690,9 +689,12 @@ _create_option(
 _create_option(
     "server.folderWatchBlacklist",
     description="""
-        List of folders that should not be watched for changes.
+        List of directories to ignore for changes.
 
-        Relative paths will be taken as relative to the current working directory.
+        By default, Streamlit watches files in the current working directory
+        and its subdirectories. Use this option to specify exceptions within
+        watched directories. Paths can be absolute or relative to the current
+        working directory.
 
         Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
