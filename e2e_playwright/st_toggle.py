@@ -57,3 +57,7 @@ with st.expander("Grouped toggles", expanded=True):
 st.toggle(
     "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 )
+
+st.toggle("toggle with content width", width="content")
+st.toggle("toggle with stretch width", width="stretch")
+st.toggle("toggle with 150px width", width=150)

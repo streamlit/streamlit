@@ -168,20 +168,31 @@ message CustomThemeConfig {
   // DEPRECATED: This color is not applied anymore:
   string skeleton_background_color = 17;
   optional string base_radius = 18;
+  optional string button_radius = 26;
   optional string border_color = 19;
+  optional string dataframe_border_color = 27;
   optional bool show_widget_border = 20;
   optional string link_color = 21;
   optional int32 base_font_size = 22;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
+
+  // Next ID: 28
 }
 
 message FontFace {
   string url = 1;
+  // Equivalent to font-family @font-face CSS property.
   string family = 2;
-  int32 weight = 3;
+  // DEPRECATED: Use weight_range instead which supports single weights & weight ranges.
+  int32 weight = 3 [deprecated = true];
+  // Equivalent to font-weight @font-face CSS property.
+  string weight_range = 5;
+  // Equivalent to font-style @font-face CSS property.
   string style = 4;
+  // Equivalent to unicode-range @font-face CSS property.
+  string unicode_range = 6;
 }
 
 // DEPRECATED: Please use the base_radius theme config instead.

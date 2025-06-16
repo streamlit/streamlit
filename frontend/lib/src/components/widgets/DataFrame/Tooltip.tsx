@@ -16,12 +16,12 @@
 
 import React, { memo, ReactElement, useCallback, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "~lib/components/shared/Tooltip/styled-components"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 export interface TooltipProps {
   // The top position of the tooltip.
@@ -56,7 +56,7 @@ function Tooltip({
   clearTooltip,
 }: TooltipProps): ReactElement {
   const [open, setOpen] = useState(true)
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const { colors, fontSizes, radii, fontWeights } = theme
 
   const closeTooltip = useCallback((): void => {

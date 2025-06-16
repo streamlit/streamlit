@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useMemo } from "react"
+import React, { FC, memo, useCallback, useContext, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
@@ -25,10 +25,10 @@ import {
 } from "baseui/select"
 import without from "lodash/without"
 import { isMobile } from "react-device-detect"
-import { useTheme } from "@emotion/react"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
 import { Placement } from "~lib/components/shared/Tooltip"
@@ -38,7 +38,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
@@ -96,7 +96,8 @@ const updateWidgetMgrState = (
 const Multiselect: FC<Props> = props => {
   const { element, widgetMgr, fragmentId } = props
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -226,6 +227,18 @@ const Multiselect: FC<Props> = props => {
   // If that's true, we show the keyboard on mobile. If not, we hide it.
   const showKeyboardOnMobile = options.length > 10
 
+  // Calculate the max height of the selectbox based on the baseFontSize
+  // to better support advanced theming
+  const maxHeight = useMemo(() => {
+    // Option height = lineHeight (1.6 * baseFontSize) + margin/padding (14px total)
+    const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
+    // Allow up to 4 options tall before scrolling + show small portion
+    // of the next row so its clear the user can scroll
+    const pxMaxHeight = Math.round(optionHeight * 4.25)
+    // Return value in px
+    return `${pxMaxHeight}px`
+  }, [theme.fontSizes.baseFontSize])
+
   return (
     <div className="stMultiSelect" data-testid="stMultiSelect">
       <WidgetLabel
@@ -265,6 +278,7 @@ const Multiselect: FC<Props> = props => {
           overrides={{
             Popover: {
               props: {
+                ignoreBoundary: isInSidebar,
                 overrides: {
                   Body: {
                     style: () => ({
@@ -277,6 +291,9 @@ const Multiselect: FC<Props> = props => {
             SelectArrow: {
               component: ChevronDown,
               props: {
+                style: {
+                  cursor: "pointer",
+                },
                 overrides: {
                   Svg: {
                     style: () => ({
@@ -295,6 +312,7 @@ const Multiselect: FC<Props> = props => {
             },
             ControlContainer: {
               style: {
+                maxHeight: maxHeight,
                 minHeight: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderLeftWidth: theme.sizes.borderWidth,
@@ -313,6 +331,7 @@ const Multiselect: FC<Props> = props => {
             },
             ValueContainer: {
               style: () => ({
+                overflowY: "auto",
                 paddingLeft: theme.spacing.sm,
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,

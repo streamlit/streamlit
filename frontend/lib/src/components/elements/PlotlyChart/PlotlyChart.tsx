@@ -24,22 +24,23 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
-import { EmotionTheme } from "~lib/theme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
+// Default height for Plotly charts when no height is specified
+const DEFAULT_PLOTLY_HEIGHT = 450
 
 // Custom icon used in the fullscreen expand toolbar button:
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
@@ -79,7 +80,7 @@ export function PlotlyChart({
   fragmentId,
   disableFullscreenMode,
 }: Readonly<PlotlyChartProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
     width: elWidth,
@@ -304,11 +305,14 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
+  // Get the initial height, using a default if not specified
   let calculatedHeight = initialFigureSpec.layout.height
 
   if (isFullScreen) {
     calculatedWidth = width
     calculatedHeight = height
+  } else if (calculatedHeight === undefined) {
+    calculatedHeight = DEFAULT_PLOTLY_HEIGHT
   }
 
   if (
@@ -455,7 +459,6 @@ export function PlotlyChart({
   return (
     <div className="stPlotlyChart" data-testid="stPlotlyChart">
       <Plot
-        key={isFullScreen ? "fullscreen" : "original"}
         data={plotlyFigure.data}
         layout={plotlyFigure.layout}
         config={plotlyConfig}

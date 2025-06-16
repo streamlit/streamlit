@@ -191,7 +191,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: Literal["small", "medium", "large", "none"] = "small",
+        gap: Literal["small", "medium", "large"] | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
     ) -> list[DeltaGenerator]:
@@ -220,7 +220,7 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "small", "medium", "large", or "none"
+        gap : "small", "medium", "large", or None
             The size of the gap between the columns. The default is ``"small"``.
 
         vertical_alignment : "top", "center", or "bottom"
@@ -361,12 +361,11 @@ class LayoutsMixin:
                 vertical_alignment=vertical_alignment
             )
 
-        def column_gap(gap: str) -> GapSize.ValueType:
+        def column_gap(gap: str | None) -> GapSize.ValueType:
             gap_mapping = {
                 "small": GapSize.SMALL,
                 "medium": GapSize.MEDIUM,
                 "large": GapSize.LARGE,
-                "none": GapSize.NONE,
             }
 
             if isinstance(gap, str):
@@ -375,6 +374,8 @@ class LayoutsMixin:
 
                 if gap_size in valid_sizes:
                     return gap_mapping[gap_size]
+            elif gap is None:
+                return GapSize.NONE
 
             raise StreamlitInvalidColumnGapError(gap=gap)
 
@@ -778,6 +779,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
+        width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
 
@@ -880,7 +882,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state
+            self.dg, label, expanded=expanded, state=state, width=width
         )
 
     def _dialog(

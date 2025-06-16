@@ -788,6 +788,52 @@ class ScriptRunnerTest(AsyncTestCase):
         assert shutdown_data["client_state"].query_string == "foo=bar"
         assert shutdown_data["client_state"].page_script_hash == "hash1"
 
+    def test_context_info_saved_in_shutdown(self):
+        """Test that context_info is preserved in the SHUTDOWN event."""
+        from streamlit.proto.ClientState_pb2 import ContextInfo
+
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        # Create context info
+        context_info = ContextInfo()
+        context_info.timezone = "Europe/Berlin"
+        context_info.locale = "de-DE"
+        context_info.url = "http://localhost:8501"
+        context_info.is_embedded = False
+
+        scriptrunner.request_rerun(
+            RerunData(
+                query_string="foo=bar",
+                page_script_hash="hash1",
+                context_info=context_info,
+            )
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        shutdown_data = scriptrunner.event_data[-1]
+        client_state = shutdown_data["client_state"]
+        assert client_state.query_string == "foo=bar"
+        assert client_state.page_script_hash == "hash1"
+
+        # Verify context_info is preserved
+        assert client_state.HasField("context_info")
+        assert client_state.context_info.timezone == "Europe/Berlin"
+        assert client_state.context_info.locale == "de-DE"
+        assert client_state.context_info.url == "http://localhost:8501"
+        assert client_state.context_info.is_embedded is False
+
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
         scriptrunner = TestScriptRunner("good_script.py")

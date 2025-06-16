@@ -23,7 +23,6 @@ import React, {
   useMemo,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
 import {
@@ -36,7 +35,7 @@ import BaseButton, {
   BaseButtonSize,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   StyledWidgetLabelHelpInline,
@@ -49,6 +48,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { EmotionTheme } from "~lib/theme"
 
 export interface Props {
   disabled: boolean
@@ -297,7 +297,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     labelVisibility,
     help,
   } = element
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,

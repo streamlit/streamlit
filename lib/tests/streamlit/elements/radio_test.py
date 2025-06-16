@@ -32,6 +32,7 @@ from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
 )
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class RadioTest(DeltaGeneratorTestCase):
@@ -253,6 +254,71 @@ class RadioTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_radio_with_width(self):
+        """Test st.radio with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for index, (
+            width_value,
+            expected_width_spec,
+            field_name,
+            field_value,
+        ) in enumerate(test_cases):
+            with self.subTest(width_value=width_value):
+                st.radio(
+                    f"test label {index}", ["option 1", "option 2"], width=width_value
+                )
+
+                el = self.get_delta_from_queue().new_element
+                assert el.radio.label == f"test label {index}"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_radio_with_invalid_width(self):
+        """Test st.radio with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.radio("test label", ["option 1", "option 2"], width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    def test_radio_default_width(self):
+        """Test that st.radio defaults to content width."""
+        st.radio("test label", ["option 1", "option 2"])
+
+        el = self.get_delta_from_queue().new_element
+        assert el.radio.label == "test label"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
 
 
 def test_radio_interaction():

@@ -230,23 +230,8 @@ class MapMixin:
            height: 600px
 
         """
-        # This feature was turned off while we investigate why different
-        # map styles cause DeckGL to crash.
-        #
-        # For reference, this was the docstring for map_style:
-        #
-        #   map_style : str, None
-        #       One of Mapbox's map style URLs. A full list can be found here:
-        #       https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-        #
-        #       This feature requires a Mapbox token. See the top of these docs
-        #       for information on how to get one and set it up in Streamlit.
-        #
-        map_style = None
         map_proto = DeckGlJsonChartProto()
-        deck_gl_json = to_deckgl_json(
-            data, latitude, longitude, size, color, map_style, zoom
-        )
+        deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
         marshall(
             map_proto, deck_gl_json, use_container_width, width=width, height=height
         )
@@ -264,7 +249,6 @@ def to_deckgl_json(
     lon: str | None,
     size: None | str | float,
     color: None | str | Collection[float],
-    map_style: str | None,
     zoom: int | None,
 ) -> str:
     if data is None:
@@ -317,14 +301,6 @@ def to_deckgl_json(
             "data": df.to_dict("records"),
         }
     ]
-
-    if map_style:
-        if not config.get_option("mapbox.token"):
-            raise StreamlitAPIException(
-                "You need a Mapbox token in order to select a map type. "
-                "Refer to the docs for st.map for more information."
-            )
-        default["mapStyle"] = map_style
 
     return json.dumps(default)
 
@@ -502,3 +478,7 @@ def marshall(
         pydeck_proto.height = height
 
     pydeck_proto.id = ""
+
+    mapbox_token = config.get_option("mapbox.token")
+    if mapbox_token:
+        pydeck_proto.mapbox_token = mapbox_token

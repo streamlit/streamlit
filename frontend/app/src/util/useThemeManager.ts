@@ -42,7 +42,9 @@ export interface ThemeManager {
 export function useThemeManager(): [ThemeManager, object[]] {
   const defaultTheme = getDefaultTheme()
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
-  const [fontFaces, setFontFaces] = useState<object[]>([])
+  const [fontFaces, setFontFaces] = useState<object[]>(
+    defaultTheme.themeInput?.fontFaces ?? []
+  )
   const [availableThemes, setAvailableThemes] = useState<ThemeConfig[]>(() => [
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),

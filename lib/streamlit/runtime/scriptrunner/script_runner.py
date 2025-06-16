@@ -151,7 +151,7 @@ def _mpa_v1(main_script_path: str) -> None:
         StreamlitPage(pages_folder / page.name) for page in pages
     ]
     # Initialize the navigation with all the pages:
-    position: Literal["sidebar", "hidden"] = (
+    position: Literal["sidebar", "hidden", "top"] = (
         "hidden"
         if config.get_option("client.showSidebarNavigation") is False
         else "sidebar"
@@ -388,6 +388,8 @@ class ScriptRunner:
         client_state = ClientState()
         client_state.query_string = ctx.query_string
         client_state.page_script_hash = ctx.page_script_hash
+        if ctx.context_info:
+            client_state.context_info.CopyFrom(ctx.context_info)
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
         )

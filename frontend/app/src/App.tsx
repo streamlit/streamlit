@@ -49,6 +49,7 @@ import {
   getUrl,
   handleFavicon,
   hashString,
+  hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
   isColoredLineDisplayed,
@@ -111,7 +112,6 @@ import StatusWidget from "@streamlit/app/src/components/StatusWidget"
 import MainMenu from "@streamlit/app/src/components/MainMenu"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
 import DeployButton from "@streamlit/app/src/components/DeployButton"
-import Header from "@streamlit/app/src/components/Header"
 import {
   ConnectionErrorProps,
   DialogProps,
@@ -127,6 +127,7 @@ import {
   DefaultStreamlitEndpoints,
   IHostConfigResponse,
   LibConfig,
+  parseUriIntoBaseParts,
   StreamlitEndpoints,
 } from "@streamlit/connection"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
@@ -137,6 +138,7 @@ import { StyledApp } from "@streamlit/app/src/styled-components"
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
+import { useViewportSize } from "@streamlit/app/src/hooks/useViewportSize"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
@@ -153,6 +155,7 @@ export interface Props {
   screenCast: ScreenCastHOC
   theme: ThemeManager
   streamlitExecutionStartedAt: number
+  isMobileViewport: boolean
 }
 
 interface State {
@@ -178,6 +181,7 @@ interface State {
   hideColoredLine: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
+  navigationPosition: Navigation.Position
   appPages: IAppPage[]
   navSections: string[]
   // The hash of the current page executing
@@ -325,6 +329,7 @@ export class App extends PureComponent<Props, State> {
       appConfig: {},
       autoReruns: [],
       inputsDisabled: false,
+      navigationPosition: Navigation.Position.SIDEBAR,
     }
 
     this.connectionManager = null
@@ -575,6 +580,12 @@ export class App extends PureComponent<Props, State> {
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState: this.state.scriptRunState,
       })
+    }
+    // Rerun script if the theme changed
+    if (
+      _prevProps.theme.activeTheme.name !== this.props.theme.activeTheme.name
+    ) {
+      this.sendRerunBackMsg()
     }
   }
 
@@ -957,8 +968,9 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  handleNavigation = (navigationMsg: Navigation): void => {
-    this.maybeSetState(this.appNavigation.handleNavigation(navigationMsg))
+  handleNavigation = (navigation: Navigation): void => {
+    this.setState({ navigationPosition: navigation.position })
+    this.maybeSetState(this.appNavigation.handleNavigation(navigation))
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -1071,13 +1083,15 @@ export class App extends PureComponent<Props, State> {
   ): void => {
     const baseUriParts = this.getBaseUriParts()
 
-    // TODO(vdonato): Support the situation where window.__STREAMLIT_BACKEND_BASE_URL
-    // is set, so the Streamlit backend URL is set to be different from where
-    // we loaded index.html. Until this is done, the browser's back/forward
-    // buttons may not work correctly with multipage apps when
-    // window.__STREAMLIT_BACKEND_BASE_URL is set.
-    if (baseUriParts && !window.__STREAMLIT_BACKEND_BASE_URL) {
-      const { pathname } = baseUriParts
+    if (baseUriParts) {
+      let pathname
+      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+        pathname = parseUriIntoBaseParts(
+          window.__streamlit.MAIN_PAGE_BASE_URL
+        ).pathname
+      } else {
+        pathname = baseUriParts.pathname
+      }
 
       const prevPageNameInPath = extractPageNameFromPathName(
         document.location.pathname,
@@ -1226,12 +1240,6 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Handler called when the history state changes, e.g. `popstate` event.
-   *
-   * TODO(vdonato): Support the situation where window.__STREAMLIT_BACKEND_BASE_URL
-   * is set, so the Streamlit backend URL is set to be different from where
-   * we loaded index.html. Until this is done, the browser's back/forward
-   * buttons may not work correctly with multipage apps when
-   * window.__STREAMLIT_BACKEND_BASE_URL is set.
    */
   onHistoryChange = (): void => {
     const { currentPageScriptHash } = this.state
@@ -1634,7 +1642,6 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    const { pathname } = baseUriParts
     let queryString = this.getQueryString()
     let pageName = ""
 
@@ -1644,6 +1651,7 @@ export class App extends PureComponent<Props, State> {
       locale: getLocaleLanguage(),
       url: getUrl(),
       isEmbedded: isEmbed(),
+      colorScheme: this.getThemeColorScheme(),
     }
 
     if (pageScriptHash) {
@@ -1662,17 +1670,16 @@ export class App extends PureComponent<Props, State> {
       // click the "Rerun" button in the main menu. In this case, we
       // rerun the current page.
       pageScriptHash = currentPageScriptHash
-    } else if (window.__STREAMLIT_BACKEND_BASE_URL) {
-      // We currently don't support navigating directly to a subpage of a
-      // multipage app when setting the backend URL of an app to be a different
-      // location from where we load index.html. In this case, we set both
-      // pageName and pageScriptHash to the empty string, which will result in
-      // the app's main page being run.
-      // TODO(vdonato): Support this case or decide we can do without it when
-      // setting a different backend URL.
-      pageName = ""
-      pageScriptHash = ""
     } else {
+      let pathname
+      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+        pathname = parseUriIntoBaseParts(
+          window.__streamlit.MAIN_PAGE_BASE_URL
+        ).pathname
+      } else {
+        pathname = baseUriParts.pathname
+      }
+
       // We must be in the case where the user is navigating directly to a
       // non-main page of this app. Since we haven't received the list of the
       // app's pages from the server at this point, we fall back to requesting
@@ -1956,6 +1963,15 @@ export class App extends PureComponent<Props, State> {
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }
 
+  getThemeColorScheme = (): string => {
+    const { activeTheme } = this.props.theme
+
+    if (hasLightBackgroundColor(activeTheme.emotion)) {
+      return "light"
+    }
+    return "dark"
+  }
+
   isInCloudEnvironment = (): boolean => {
     const { hostMenuItems } = this.state
     return hostMenuItems && hostMenuItems?.length > 0
@@ -2047,7 +2063,14 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled,
       appPages,
       navSections,
+      navigationPosition,
     } = this.state
+
+    // Always use sidebar navigation on mobile, regardless of the server setting
+    const effectiveNavigationPosition = this.props.isMobileViewport
+      ? Navigation.Position.SIDEBAR
+      : navigationPosition
+
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
       this.state.toolbarMode
@@ -2072,7 +2095,6 @@ export class App extends PureComponent<Props, State> {
     const showToolbar = !isEmbed() || isToolbarDisplayed()
     const showColoredLine =
       (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
-    const showHeader = isEmbed() ? showToolbar || showColoredLine : true
     const showPadding = !isEmbed() || isPaddingDisplayed()
     const disableScrolling = isScrollingHidden()
 
@@ -2107,6 +2129,8 @@ export class App extends PureComponent<Props, State> {
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
+        showToolbar={showToolbar}
+        showColoredLine={showColoredLine}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2121,13 +2145,32 @@ export class App extends PureComponent<Props, State> {
             }
             data-test-connection-state={connectionState}
           >
-            {showHeader && (
-              <Header
-                showToolbar={showToolbar}
-                showColoredLine={showColoredLine}
-              >
-                {!hideTopBar && (
-                  <>
+            <AppView
+              endpoints={this.endpoints}
+              sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
+              elements={elements}
+              widgetMgr={this.widgetMgr}
+              uploadClient={this.uploadClient}
+              appLogo={elements.logo}
+              appPages={appPages}
+              navSections={navSections}
+              onPageChange={this.onPageChange}
+              hideSidebarNav={
+                hideSidebarNav ||
+                hostHideSidebarNav ||
+                effectiveNavigationPosition === Navigation.Position.TOP
+              }
+              expandSidebarNav={expandSidebarNav}
+              navigationPosition={effectiveNavigationPosition}
+              pageLinkBaseUrl={this.state.pageLinkBaseUrl}
+              wideMode={userSettings.wideMode}
+              embedded={isEmbed()}
+              showPadding={showPadding}
+              disableScrolling={disableScrolling}
+              currentPageScriptHash={currentPageScriptHash}
+              topRightContent={
+                <>
+                  {!hideTopBar && (
                     <StatusWidget
                       connectionState={connectionState}
                       sessionEventDispatcher={this.sessionEventDispatcher}
@@ -2136,6 +2179,8 @@ export class App extends PureComponent<Props, State> {
                       stopScript={this.stopScript}
                       allowRunOnSave={allowRunOnSave}
                     />
+                  )}
+                  {!hideTopBar && (
                     <ToolbarActions
                       hostToolbarItems={hostToolbarItems}
                       sendMessageToHost={
@@ -2143,48 +2188,32 @@ export class App extends PureComponent<Props, State> {
                       }
                       metricsMgr={this.metricsMgr}
                     />
-                  </>
-                )}
-                {this.showDeployButton() && (
-                  <DeployButton
-                    onClick={this.deployButtonClicked.bind(this)}
-                  />
-                )}
-                <MainMenu
-                  isServerConnected={this.isServerConnected()}
-                  quickRerunCallback={this.rerunScript}
-                  clearCacheCallback={this.openClearCacheDialog}
-                  settingsCallback={this.settingsCallback}
-                  aboutCallback={this.aboutCallback}
-                  printCallback={this.printCallback}
-                  screencastCallback={this.screencastCallback}
-                  screenCastState={this.props.screenCast.currentState}
-                  hostMenuItems={hostMenuItems}
-                  developmentMode={developmentMode}
-                  sendMessageToHost={
-                    this.hostCommunicationMgr.sendMessageToHost
-                  }
-                  menuItems={menuItems}
-                  metricsMgr={this.metricsMgr}
-                  toolbarMode={this.state.toolbarMode}
-                />
-              </Header>
-            )}
-
-            <AppView
-              endpoints={this.endpoints}
-              sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
-              elements={elements}
-              widgetMgr={this.widgetMgr}
-              uploadClient={this.uploadClient}
-              appLogo={elements.logo}
-              multiplePages={appPages.length > 1}
-              wideMode={userSettings.wideMode}
-              embedded={isEmbed()}
-              addPaddingForHeader={showToolbar || showColoredLine}
-              showPadding={showPadding}
-              disableScrolling={disableScrolling}
-              hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+                  )}
+                  {this.showDeployButton() && (
+                    <DeployButton onClick={this.deployButtonClicked} />
+                  )}
+                  {!hideTopBar && (
+                    <MainMenu
+                      isServerConnected={this.isServerConnected()}
+                      quickRerunCallback={this.rerunScript}
+                      clearCacheCallback={this.openClearCacheDialog}
+                      settingsCallback={this.settingsCallback}
+                      aboutCallback={this.aboutCallback}
+                      printCallback={this.printCallback}
+                      screencastCallback={this.screencastCallback}
+                      screenCastState={this.props.screenCast.currentState}
+                      hostMenuItems={hostMenuItems}
+                      developmentMode={developmentMode}
+                      sendMessageToHost={
+                        this.hostCommunicationMgr.sendMessageToHost
+                      }
+                      menuItems={menuItems}
+                      metricsMgr={this.metricsMgr}
+                      toolbarMode={this.state.toolbarMode}
+                    />
+                  )}
+                </>
+              }
             />
             {renderedDialog}
           </StyledApp>
@@ -2195,4 +2224,13 @@ export class App extends PureComponent<Props, State> {
 }
 
 const AppWithScreenCast = withScreencast(App)
-export default AppWithScreenCast
+
+// Wrapper component to handle viewport size
+const AppWrapper: React.FC<
+  Omit<Props, "isMobileViewport" | "screenCast">
+> = props => {
+  const { isMobile } = useViewportSize()
+  return <AppWithScreenCast {...props} isMobileViewport={isMobile} />
+}
+
+export default AppWrapper

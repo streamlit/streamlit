@@ -22,7 +22,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOGGLE_ELEMENTS = 12
+TOGGLE_ELEMENTS = 15
 
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -39,6 +39,11 @@ def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFu
     assert_snapshot(toggle_elements.nth(6), name="st_toggle-hidden_label")
     assert_snapshot(toggle_elements.nth(7), name="st_toggle-collapsed_label")
     assert_snapshot(toggle_elements.nth(11), name="st_toggle-markdown_label")
+
+    # Width examples
+    assert_snapshot(toggle_elements.nth(12), name="st_toggle-width_content")
+    assert_snapshot(toggle_elements.nth(13), name="st_toggle-width_stretch")
+    assert_snapshot(toggle_elements.nth(14), name="st_toggle-width_150px")
 
 
 def test_toggle_initial_values(app: Page):

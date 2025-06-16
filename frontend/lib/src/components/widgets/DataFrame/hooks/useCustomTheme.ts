@@ -15,11 +15,11 @@
  */
 import { useMemo } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { mix, transparentize } from "color2k"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
@@ -52,7 +52,7 @@ export type CustomGridTheme = {
  * @return a glide-data-grid compatible theme.
  */
 function useCustomTheme(): Readonly<CustomGridTheme> {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const gridTheme: CustomGridTheme = useMemo<CustomGridTheme>(() => {
     const headerIcons = {
@@ -68,8 +68,8 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       accentColor: theme.colors.primary,
       accentFg: theme.colors.white,
       accentLight: transparentize(theme.colors.primary, 0.9),
-      borderColor: theme.colors.borderColorLight,
-      horizontalBorderColor: theme.colors.borderColorLight,
+      borderColor: theme.colors.dataframeBorderColor,
+      horizontalBorderColor: theme.colors.dataframeBorderColor,
       fontFamily: theme.genericFonts.bodyFont,
       bgSearchResult: transparentize(theme.colors.primary, 0.9),
       resizeIndicatorColor: theme.colors.primary,

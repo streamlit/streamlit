@@ -110,6 +110,7 @@ class ConfigTest(unittest.TestCase):
             "_test.simpleParam",
             description="Simple config option.",
             default_val=[12345],
+            multiple=True,
         )
 
         assert config_option.key == "_test.simpleParam"
@@ -439,6 +440,7 @@ class ConfigTest(unittest.TestCase):
             "_test.testMultipleValueOption",
             description="This option tests multiple values for an option",
             default_val=["Option 1", "Option 2"],
+            multiple=True,
         )
 
         assert option.multiple
@@ -485,11 +487,13 @@ class ConfigTest(unittest.TestCase):
                 "theme.textColor",
                 "theme.baseFontSize",
                 "theme.baseRadius",
+                "theme.buttonRadius",
                 "theme.font",
                 "theme.headingFont",
                 "theme.codeFont",
                 "theme.fontFaces",
                 "theme.borderColor",
+                "theme.dataframeBorderColor",
                 "theme.showWidgetBorder",
                 "theme.linkColor",
                 "theme.codeBackgroundColor",
@@ -499,10 +503,12 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.secondaryBackgroundColor",
                 "theme.sidebar.textColor",
                 "theme.sidebar.baseRadius",
+                "theme.sidebar.buttonRadius",
                 "theme.sidebar.font",
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
                 "theme.sidebar.borderColor",
+                "theme.sidebar.dataframeBorderColor",
                 "theme.sidebar.showWidgetBorder",
                 "theme.sidebar.linkColor",
                 "theme.sidebar.codeBackgroundColor",
@@ -657,10 +663,12 @@ class ConfigTest(unittest.TestCase):
             "base": None,
             "primaryColor": None,
             "baseRadius": None,
+            "buttonRadius": None,
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
             "textColor": None,
             "borderColor": None,
+            "dataframeBorderColor": None,
             "showWidgetBorder": None,
             "linkColor": None,
             "font": None,
@@ -681,9 +689,11 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.base", "dark", "test")
         config._set_option("theme.textColor", "#DFFDE0", "test")
         config._set_option("theme.baseRadius", "1.2rem", "test")
+        config._set_option("theme.buttonRadius", "medium", "test")
         config._set_option("theme.secondaryBackgroundColor", "#021A09", "test")
         config._set_option("theme.backgroundColor", "#001200", "test")
         config._set_option("theme.borderColor", "#0B4C0B", "test")
+        config._set_option("theme.dataframeBorderColor", "#280f63", "test")
         config._set_option("theme.showWidgetBorder", True, "test")
         config._set_option("theme.linkColor", "#2EC163", "test")
         config._set_option("theme.codeBackgroundColor", "#29361e", "test")
@@ -708,10 +718,12 @@ class ConfigTest(unittest.TestCase):
             "base": "dark",
             "primaryColor": "#1BD760",
             "baseRadius": "1.2rem",
+            "buttonRadius": "medium",
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
             "borderColor": "#0B4C0B",
+            "dataframeBorderColor": "#280f63",
             "showWidgetBorder": True,
             "linkColor": "#2EC163",
             "font": "Inter",
@@ -737,9 +749,11 @@ class ConfigTest(unittest.TestCase):
 
         config._set_option("theme.sidebar.textColor", "#DFFDE0", "test")
         config._set_option("theme.sidebar.baseRadius", "1.2rem", "test")
+        config._set_option("theme.sidebar.buttonRadius", "medium", "test")
         config._set_option("theme.sidebar.secondaryBackgroundColor", "#021A09", "test")
         config._set_option("theme.sidebar.backgroundColor", "#001200", "test")
         config._set_option("theme.sidebar.borderColor", "#0B4C0B", "test")
+        config._set_option("theme.sidebar.dataframeBorderColor", "#280f63", "test")
         config._set_option("theme.sidebar.showWidgetBorder", True, "test")
         config._set_option("theme.sidebar.linkColor", "#2EC163", "test")
         config._set_option("theme.sidebar.font", "Inter", "test")
@@ -750,10 +764,12 @@ class ConfigTest(unittest.TestCase):
         expected = {
             "primaryColor": "#FFF000",
             "baseRadius": "1.2rem",
+            "buttonRadius": "medium",
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
             "borderColor": "#0B4C0B",
+            "dataframeBorderColor": "#280f63",
             "showWidgetBorder": True,
             "linkColor": "#2EC163",
             "font": "Inter",

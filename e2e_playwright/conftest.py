@@ -71,6 +71,9 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "no_perf: mark test to not use performance profiling"
     )
+    config.addinivalue_line(
+        "markers", "app_hash(hash): mark test to open the app with a URL hash"
+    )
 
 
 def reorder_early_fixtures(metafunc: pytest.Metafunc) -> None:
@@ -293,11 +296,16 @@ def app_server(
 
 
 @pytest.fixture
-def app(page: Page, app_port: int) -> Page:
+def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
     """Fixture that opens the app."""
+    marker = request.node.get_closest_marker("app_hash")
+    hash_fragment = ""
+    if marker:
+        hash_fragment = f"#{marker.args[0]}"
+
     response: Response | None = None
     try:
-        response = page.goto(f"http://localhost:{app_port}/")
+        response = page.goto(f"http://localhost:{app_port}/{hash_fragment}")
     except Exception as e:
         print(e, flush=True)
 

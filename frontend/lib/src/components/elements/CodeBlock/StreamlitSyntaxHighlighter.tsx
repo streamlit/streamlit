@@ -77,7 +77,7 @@ function StreamlitSyntaxHighlighter({
 
   return (
     <StyledCodeBlock className="stCode" data-testid="stCode">
-      <StyledPre>
+      <StyledPre wrapLines={wrapLines ?? false}>
         <SyntaxHighlighter
           language={language}
           PreTag="div"

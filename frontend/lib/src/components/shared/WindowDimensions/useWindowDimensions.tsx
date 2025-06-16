@@ -16,8 +16,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import { useTheme } from "@emotion/react"
-
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
 export type WindowDimensions = {
@@ -26,7 +25,7 @@ export type WindowDimensions = {
 }
 
 export const useWindowDimensions = (): WindowDimensions => {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const [windowDimensions, setWindowDimensions] = useState<WindowDimensions>({
     fullWidth: 0,
     fullHeight: 0,

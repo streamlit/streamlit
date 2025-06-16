@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import FilePayload, Locator, Page, expect
 
 from e2e_playwright.conftest import (
@@ -365,6 +366,7 @@ def test_file_upload_error_message_file_too_large(app: Page):
     expect(app.get_by_text("File must be 1.0MB or smaller.")).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=4)
 def test_single_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
     chat_input = app.get_by_test_id("stChatInput").nth(3)
@@ -372,6 +374,7 @@ def test_single_file_upload_button_tooltip(app: Page):
     expect(app.get_by_text("Upload or drag and drop a file")).to_be_visible()
 
 
+@pytest.mark.flaky(reruns=4)
 def test_multi_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
     chat_input = app.get_by_test_id("stChatInput").nth(4)

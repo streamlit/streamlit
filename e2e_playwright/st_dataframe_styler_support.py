@@ -157,3 +157,24 @@ st.dataframe(
     },
     hide_index=True,
 )
+
+st.header("Pandas Styler: text color support")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "text": ["a", "b"],
+            "number": [1, 2],
+            "link": ["streamlit.io", "docs.streamlit.io"],
+            "list": [["a", "b", "c"], ["a", "d", "e"]],
+            "datetime": [pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-02")],
+        }
+    ).style.apply(
+        lambda x: x.apply(lambda _: "color: green"),
+    ),
+    column_config={
+        "list": st.column_config.ListColumn(),
+        "link": st.column_config.LinkColumn(),
+    },
+    hide_index=True,
+)

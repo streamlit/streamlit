@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
 
 import {
   fireEvent,
@@ -22,6 +22,7 @@ import {
   screen,
   within,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { mockEndpoints, render } from "@streamlit/lib"
 import { Logo, PageConfig } from "@streamlit/protobuf"
@@ -43,15 +44,30 @@ const mockEndpointProp = mockEndpoints({
   sendClientErrorToHost,
 })
 
-function renderSidebar(props: Partial<SidebarProps> = {}): RenderResult {
-  return render(
+function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
+  const context = StreamlitContextProviderModule.useAppContext()
+  return (
     <Sidebar
       endpoints={mockEndpointProp}
-      chevronDownshift={0}
       hasElements
+      // Props from context
+      appLogo={context.appLogo}
+      appPages={context.appPages}
+      navSections={context.navSections}
+      onPageChange={context.onPageChange}
+      currentPageScriptHash={context.currentPageScriptHash}
+      hideSidebarNav={context.hideSidebarNav}
+      expandSidebarNav={context.expandSidebarNav}
+      // Defaulted props for Sidebar itself
+      isCollapsed={false}
+      onToggleCollapse={vi.fn()}
       {...props}
     />
   )
+}
+
+function renderSidebar(props: Partial<SidebarProps> = {}): RenderResult {
+  return render(<SidebarWrapper {...props} />)
 }
 
 function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
@@ -68,6 +84,8 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     hideSidebarNav: false,
     widgetsDisabled: false,
     gitInfo: null,
+    showToolbar: true,
+    showColoredLine: true,
     ...context,
   }
 }
@@ -86,9 +104,12 @@ describe("Sidebar Component", () => {
   })
 
   it("should render expanded", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.EXPANDED,
-    })
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({
+        initialSidebarState: PageConfig.SidebarState.EXPANDED,
+      })
+    )
+    renderSidebar({ isCollapsed: false })
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
       "aria-expanded",
@@ -97,9 +118,12 @@ describe("Sidebar Component", () => {
   })
 
   it("should render collapsed", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({
+        initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+      })
+    )
+    renderSidebar({ isCollapsed: true })
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
       "aria-expanded",
@@ -107,9 +131,17 @@ describe("Sidebar Component", () => {
     )
   })
 
-  it("should collapse on toggle if expanded", () => {
+  it("should collapse on toggle if expanded", async () => {
+    const mockOnToggleCollapse = vi.fn()
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({
+        initialSidebarState: PageConfig.SidebarState.EXPANDED,
+      })
+    )
+    const user = userEvent.setup()
     renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.EXPANDED,
+      isCollapsed: false,
+      onToggleCollapse: mockOnToggleCollapse,
     })
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
@@ -117,26 +149,29 @@ describe("Sidebar Component", () => {
       "true"
     )
 
+    // Hover over the sidebar header so the collapse button is visible
+    await user.hover(screen.getByTestId("stSidebarHeader"))
+
     // Click the close sidebar <
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
     const sidebarCollapseButton = within(
       screen.getByTestId("stSidebarCollapseButton")
     ).getByRole("button")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(sidebarCollapseButton)
+    await user.click(sidebarCollapseButton)
 
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "false"
-    )
+    expect(mockOnToggleCollapse).toHaveBeenCalledWith(true)
   })
 
-  it("should expand on toggle if collapsed", () => {
+  it("should expand on toggle if collapsed", async () => {
+    const mockOnToggleCollapse = vi.fn()
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({
+        initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+      })
+    )
+    const user = userEvent.setup()
     renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+      isCollapsed: true,
+      onToggleCollapse: mockOnToggleCollapse,
     })
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
@@ -144,21 +179,19 @@ describe("Sidebar Component", () => {
       "false"
     )
 
-    // Click the expand sidebar > button
-    const expandButton = within(
-      screen.getByTestId("stSidebarCollapsedControl")
+    // When sidebar is collapsed, the collapse button should still be present
+    // and clicking it should call the toggle function to expand the sidebar
+    await userEvent.hover(screen.getByTestId("stSidebarHeader"))
+    const collapseButton = within(
+      screen.getByTestId("stSidebarCollapseButton")
     ).getByRole("button")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(expandButton)
+    await user.click(collapseButton)
 
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "true"
-    )
+    expect(mockOnToggleCollapse).toHaveBeenCalledWith(false)
   })
 
-  it("shows/hides the collapse arrow when hovering over top of sidebar", () => {
+  it("shows/hides the collapse arrow when hovering over top of sidebar", async () => {
+    const user = userEvent.setup()
     // Update the mock to return a context with appPages
     vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
       getContextOutput({
@@ -176,10 +209,8 @@ describe("Sidebar Component", () => {
       "display: none"
     )
 
-    // Hover over the sidebar header
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
+    // Hover over the sidebar header so the collapse button is visible
+    await user.hover(screen.getByTestId("stSidebarHeader"))
 
     // Displays the collapse <
     expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
@@ -215,28 +246,6 @@ describe("Sidebar Component", () => {
 
     expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
       "padding-top: 1.5rem"
-    )
-  })
-
-  it("uses the default chevron spacing if chevronDownshift is zero", () => {
-    renderSidebar({
-      chevronDownshift: 0,
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
-      "top: 1.25rem"
-    )
-  })
-
-  it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
-    renderSidebar({
-      chevronDownshift: 50,
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
-      "top: 50px"
     )
   })
 
@@ -344,14 +353,10 @@ describe("Sidebar Component", () => {
       )
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
       renderSidebar({
-        initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+        isCollapsed: true,
       })
 
-      const openSidebarContainer = screen.getByTestId(
-        "stSidebarCollapsedControl"
-      )
-      expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      const collapsedLogo = screen.getByTestId("stSidebarLogo")
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://docs.streamlit.io/logo.svg"
@@ -370,13 +375,9 @@ describe("Sidebar Component", () => {
       )
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
       renderSidebar({
-        initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+        isCollapsed: true,
       })
-      const openSidebarContainer = screen.getByTestId(
-        "stSidebarCollapsedControl"
-      )
-      expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      const collapsedLogo = screen.getByTestId("stSidebarLogo")
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
@@ -397,7 +398,9 @@ describe("Sidebar Component", () => {
       renderSidebar({})
       const sidebarLogoContainer = screen.getByTestId("stSidebarHeader")
       expect(sidebarLogoContainer).toBeInTheDocument()
-      const sidebarLogo = within(sidebarLogoContainer).getByTestId("stLogo")
+      const sidebarLogo = within(sidebarLogoContainer).getByTestId(
+        "stSidebarLogo"
+      )
       expect(sidebarLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
@@ -421,7 +424,7 @@ describe("Sidebar Component", () => {
       ).queryByTestId("stLogoLink")
       expect(sidebarLogoLink).not.toBeInTheDocument()
       const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
+        "stSidebarLogo"
       )
       expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
     })
@@ -443,7 +446,7 @@ describe("Sidebar Component", () => {
       ).getByTestId("stLogoLink")
       expect(sidebarLogoLink).toHaveAttribute("href", "www.example.com")
       const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
+        "stSidebarLogo"
       )
       expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
     })
@@ -461,33 +464,9 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
+        "stSidebarLogo"
       )
       expect(sidebarLogo).toHaveStyle({ height: "1.25rem" })
-    })
-
-    it("sets maxWidth of logo based on sidebar width", () => {
-      // Update the mock to return a context with appLogo
-      vi.spyOn(
-        StreamlitContextProviderModule,
-        "useAppContext"
-      ).mockReturnValue(
-        getContextOutput({
-          appLogo: imageWithLink,
-        })
-      )
-      renderSidebar()
-
-      const sidebarWidth = window.getComputedStyle(
-        screen.getByTestId("stSidebar")
-      ).width
-      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
-      )
-      // L & R sidebar padding + 8px margin for scrollbarGutter + R margin (sm) + collapse button (2.25rem)
-      expect(sidebarLogo).toHaveStyle(
-        `max-width: calc(${sidebarWidth} - 2 * calc(1rem + 2px) - (2 * 8px) - 0.5rem - 2.25rem)`
-      )
     })
 
     it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
@@ -504,9 +483,11 @@ describe("Sidebar Component", () => {
 
       const sidebarLogo = within(
         screen.getByTestId("stSidebarHeader")
-      ).getByTestId("stLogo")
+      ).getByTestId("stSidebarLogo")
       expect(sidebarLogo).toBeInTheDocument()
 
+      // Trigger the onerror event for the logo
+      // need lower level fireEvent here
       fireEvent.error(sidebarLogo)
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(

@@ -20,6 +20,11 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -71,6 +76,7 @@ class ColorPickerMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> str:
         r"""Display a color picker widget.
 
@@ -136,6 +142,11 @@ class ColorPickerMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
+        width : int or "stretch" or "content"
+            The width of the color picker. Can be an integer (pixels),
+            "stretch" to use the full width of the container, or "content"
+            (default) to size based on the content.
+
         Returns
         -------
         str
@@ -164,6 +175,7 @@ class ColorPickerMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
             ctx=ctx,
         )
 
@@ -179,6 +191,7 @@ class ColorPickerMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
@@ -191,6 +204,9 @@ class ColorPickerMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
@@ -199,6 +215,7 @@ class ColorPickerMixin:
             label=label,
             value=str(value),
             help=help,
+            width=width,
         )
 
         # set value default
@@ -251,7 +268,9 @@ like '#00FFAA' or '#000'.
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
 
-        self.dg._enqueue("color_picker", color_picker_proto)
+        self.dg._enqueue(
+            "color_picker", color_picker_proto, layout_config=layout_config
+        )
         return widget_state.value
 
     @property
