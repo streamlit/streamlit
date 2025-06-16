@@ -196,6 +196,24 @@ def test_set_page_config_properties_additive(app: Page):
     expect(app_view_container).to_have_attribute("data-layout", "wide")
 
 
+def test_set_page_config_layout_additive(app: Page):
+    click_button(app, "Layout Additive")
+    expect_no_exception(app)
+    expect(app).to_have_title("Updated")
+    app_view_container = app.get_by_test_id("stAppViewContainer")
+    # Layout set to None should inherit config from previous call
+    expect(app_view_container).to_have_attribute("data-layout", "wide")
+
+
+def test_set_page_config_sidebar_additive(app: Page):
+    click_button(app, "Sidebar Additive")
+    expect_no_exception(app)
+    expect(app).to_have_title("Updated")
+    sidebar = app.get_by_test_id("stSidebar")
+    # Sidebar set to None should inherit config from previous call
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
+
+
 # Webkit (safari) doesn't support screencast on linux machines, so menu item
 # indices not the same as other browsers
 @pytest.mark.skip_browser("webkit")
