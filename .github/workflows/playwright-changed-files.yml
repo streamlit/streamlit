@@ -12,6 +12,7 @@ concurrency:
 jobs:
   playwright-e2e-tests-changed-files:
     runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 20
 
     defaults:
       run:
