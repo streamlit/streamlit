@@ -115,17 +115,22 @@ def set_page_config(
     menu_items: MenuItems | None = None,
 ) -> None:
     """
-    Configures the default settings of the page.
+    Configure the default settings of the page.
 
-    .. note::
-        This must be the first Streamlit command used on an app page, and must only
-        be set once per page.
+    This command can be called multiple times in a script run to dynamically
+    change the page configuration. The last call will take precedence.
 
     Parameters
     ----------
     page_title: str or None
-        The page title, shown in the browser tab. If None, defaults to the
-        filename of the script ("app.py" would show "app • Streamlit").
+        The page title, shown in the browser tab. If this is ``None``
+        (default), the page title is inherited from the previous call of
+        ``st.set_page_config`` if present, or the name of the page source
+        otherwise.
+
+        If a page source is a Python file, its inferred title is derived from
+        the filename. If a page source is a callable object, its inferred title
+        is derived from the callable's name.
 
     page_icon : Anything supported by st.image (except list), str, or None
         The page favicon. If ``page_icon`` is ``None`` (default), the favicon
