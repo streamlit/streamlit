@@ -149,39 +149,18 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   }
 )
 
-export interface StyledBlockWrapperProps {
-  border: boolean
-  height?: number
-  flex?: React.CSSProperties["flex"]
-}
-
-export const StyledBlockWrapper = styled.div<StyledBlockWrapperProps>(
-  ({ theme, border, height, flex }) => ({
-    display: "block",
-    ...(border && {
-      border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-      borderRadius: theme.radii.default,
-      padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
-    }),
-    ...(height && {
-      height: `${height}px`,
-      overflow: "auto",
-    }),
-    flex,
-  })
-)
-
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
   gap?: streamlit.GapSize | undefined
   flex?: React.CSSProperties["flex"]
   wrap?: boolean
   height?: React.CSSProperties["height"]
+  border: boolean
 }
 
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
-    ({ theme, direction, gap, flex, wrap, height }) => {
+    ({ theme, direction, gap, flex, wrap, height, border }) => {
       let gapWidth
       if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
@@ -196,7 +175,15 @@ export const StyledFlexContainerBlock =
         flexDirection: direction,
         flex,
         flexWrap: wrap ? "wrap" : "nowrap",
-        overflow: "auto",
+        ...(border && {
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderRadius: theme.radii.default,
+          padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+        }),
+        ...(height && {
+          height: `${height}px`,
+          overflow: "auto",
+        }),
       }
     }
   )
