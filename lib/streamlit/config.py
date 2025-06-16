@@ -1187,7 +1187,7 @@ _create_theme_options(
         - "sans-serif"
         - "serif"
         - "monospace"
-        - Rhe `family` value for a custom font table under [[theme.fontFaces]]
+        - The `family` value for a custom font table under [[theme.fontFaces]]
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
