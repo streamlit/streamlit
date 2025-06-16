@@ -82,10 +82,16 @@ repos:
         language: node
         pass_filenames: false
       - id: license-headers
-        name: Checks that all files have the required license headers
+        name: Checks license headers
         entry: ./scripts/check_license_headers.py
         language: system
         always_run: true
+        pass_filenames: false
+      - id: copilot-instructions
+        name: Check copilot instructions
+        entry: ./scripts/generate_copilot_instructions.py
+        language: system
+        files: ^.cursor/.*\.(mdc)$
         pass_filenames: false
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5

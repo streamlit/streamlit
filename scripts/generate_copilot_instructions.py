@@ -19,11 +19,14 @@
 This script reads all .mdc files from the .cursor/rules directory
 and combines them into a single copilot-instructions.md file with markdown
 dividers (---) separating each rule.
+
+Only includes .mdc files that are not gitignored.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Final
@@ -35,6 +38,28 @@ OUTPUT_FILE = BASE_DIR / ".github" / "copilot-instructions.md"
 
 # Rule file extensions to process
 RULE_EXTENSIONS: Final[set[str]] = {".mdc"}
+
+
+def is_gitignored(file_path: Path) -> bool:
+    """Check if a file is gitignored using git check-ignore.
+
+    Returns True if the file is gitignored, False otherwise.
+    """
+    try:
+        # Run git check-ignore on the file
+        result = subprocess.run(
+            ["git", "check-ignore", str(file_path)],
+            cwd=BASE_DIR,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        # git check-ignore returns 0 if the file is ignored, 1 if not ignored
+        return result.returncode == 0
+    except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+        # If git command fails, assume file is not ignored
+        return False
 
 
 def convert_frontmatter_to_comment(content: str) -> str:
@@ -85,14 +110,18 @@ def indent_markdown_headings(content: str) -> str:
 
 
 def get_rule_files() -> list[Path]:
-    """Get all rule files from the .cursor/rules directory."""
+    """Get all rule files from the .cursor/rules directory that are not gitignored."""
     if not RULES_DIR.exists():
         raise FileNotFoundError(f"Rules directory not found: {RULES_DIR}")
 
     rule_files = []
     for file_path in RULES_DIR.iterdir():
         if file_path.is_file() and file_path.suffix in RULE_EXTENSIONS:
-            rule_files.append(file_path)
+            # Only include files that are not gitignored
+            if not is_gitignored(file_path):
+                rule_files.append(file_path)
+            else:
+                print(f"Skipping gitignored file: {file_path.name}")
 
     # Sort files by name for consistent output
     return sorted(rule_files)
