@@ -83,7 +83,7 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
 def navigation(
     pages: Sequence[PageType] | Mapping[SectionHeader, Sequence[PageType]],
     *,
-    position: Literal["sidebar", "hidden"] = "sidebar",
+    position: Literal["sidebar", "hidden", "top"] = "sidebar",
     expanded: bool = False,
 ) -> StreamlitPage:
     """
@@ -128,10 +128,11 @@ def navigation(
         path inferred from its path or filename. To customize these attributes
         for your page, initialize your page with ``st.Page``.
 
-    position : "sidebar" or "hidden"
+    position : "sidebar", "hidden", or "top"
         The position of the navigation menu. If this is ``"sidebar"``
         (default), the navigation widget appears at the top of the sidebar. If
-        this is ``"hidden"``, the navigation widget is not displayed.
+        this is ``"hidden"``, the navigation widget is not displayed. If this
+        is ``"top"``, the navigation appears in the top header of the app.
 
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
@@ -256,6 +257,13 @@ def navigation(
     .. _st.Page: https://docs.streamlit.io/develop/api-reference/navigation/st.page
 
     """
+    # Validate position parameter
+    if not isinstance(position, str) or position not in ["sidebar", "hidden", "top"]:
+        raise StreamlitAPIException(
+            f'Invalid position "{position}". '
+            'The position parameter must be one of "sidebar", "hidden", or "top".'
+        )
+
     # Disable the use of the pages feature (ie disregard v1 behavior of Multipage Apps)
     PagesManager.uses_pages_directory = False
 
@@ -265,7 +273,7 @@ def navigation(
 def _navigation(
     pages: Sequence[PageType] | Mapping[SectionHeader, Sequence[PageType]],
     *,
-    position: Literal["sidebar", "hidden"],
+    position: Literal["sidebar", "hidden", "top"],
     expanded: bool,
 ) -> StreamlitPage:
     if isinstance(pages, Sequence):
@@ -332,13 +340,17 @@ def _navigation(
             }
 
     msg = ForwardMsg()
-    if (
-        position == "hidden"
-        or config.get_option("client.showSidebarNavigation") is False
-    ):
+    # Handle position logic correctly
+    if position == "hidden":
         msg.navigation.position = NavigationProto.Position.HIDDEN
-    else:
-        msg.navigation.position = NavigationProto.Position.SIDEBAR
+    elif position == "top":
+        msg.navigation.position = NavigationProto.Position.TOP
+    elif position == "sidebar":
+        # Only apply config override if position is sidebar
+        if config.get_option("client.showSidebarNavigation") is False:
+            msg.navigation.position = NavigationProto.Position.HIDDEN
+        else:
+            msg.navigation.position = NavigationProto.Position.SIDEBAR
 
     msg.navigation.expanded = expanded
     msg.navigation.sections[:] = nav_sections.keys()

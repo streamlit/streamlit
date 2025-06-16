@@ -38,6 +38,7 @@ import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
+  StyledSidebarNavLinkListItem,
   StyledSidebarNavSeparator,
   StyledViewButton,
 } from "./styled-components"
@@ -47,6 +48,10 @@ export interface Props {
   appPages: IAppPage[]
   collapseSidebar: () => void
   hasSidebarElements: boolean
+  onPageChange: (pageName: string) => void
+  navSections: string[]
+  currentPageScriptHash: string
+  expandSidebarNav: boolean
 }
 
 // We make the sidebar nav collapsible when there are more than 12 pages.
@@ -70,7 +75,7 @@ function NavLink({
   const pageName = page.pageName as string
 
   return (
-    <li>
+    <StyledSidebarNavLinkListItem>
       <SidebarNavLink
         isActive={isActive}
         pageUrl={pageUrl}
@@ -79,7 +84,7 @@ function NavLink({
       >
         {pageName}
       </SidebarNavLink>
-    </li>
+    </StyledSidebarNavLinkListItem>
   )
 }
 
@@ -132,15 +137,13 @@ const SidebarNav = ({
   appPages,
   collapseSidebar,
   hasSidebarElements,
+  onPageChange,
+  navSections,
+  currentPageScriptHash,
+  expandSidebarNav,
 }: Props): ReactElement | null => {
   const [expanded, setExpanded] = useState(false)
-  const {
-    pageLinkBaseUrl,
-    expandSidebarNav,
-    currentPageScriptHash,
-    onPageChange,
-    navSections,
-  } = useAppContext()
+  const { pageLinkBaseUrl } = useAppContext()
 
   useEffect(() => {
     const cachedSidebarNavExpanded =
