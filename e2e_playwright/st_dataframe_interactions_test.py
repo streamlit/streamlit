@@ -351,6 +351,8 @@ def test_data_editor_keeps_state_after_unmounting(
     app.get_by_test_id("stButton").locator("button").click()
     wait_for_app_run(app, 4000)
 
+    expect(data_editor_element).to_be_visible()
+    expect_canvas_to_be_stable(data_editor_element)
     # Check the height again, the row should be still attached:
     expect(data_editor_element).to_have_css("height", "282px")
 

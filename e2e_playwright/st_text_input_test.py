@@ -19,6 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    expect_markdown,
     get_element_by_key,
 )
 
@@ -87,7 +88,11 @@ def test_text_input_shows_instructions_when_dirty(
     text_input = app.get_by_test_id("stTextInput").nth(9)
 
     text_input_field = text_input.locator("input").first
+    expect(text_input_field).to_be_visible()
     text_input_field.fill("123")
+    expect(text_input.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to apply3/5"
+    )
 
     assert_snapshot(text_input, name="st_text_input-input_instructions")
 
@@ -95,7 +100,7 @@ def test_text_input_shows_instructions_when_dirty(
 def test_text_input_limits_input_via_max_chars(app: Page):
     """Test that st.text_input correctly limits the number of characters via max_chars."""
     text_input_field = app.get_by_test_id("stTextInput").nth(9).locator("input").first
-    # Try typing in char by char:
+    expect(text_input_field).to_be_visible()
     text_input_field.clear()
     expect(text_input_field).to_have_value("")
     text_input_field.type("12345678")
@@ -110,9 +115,7 @@ def test_text_input_limits_input_via_max_chars(app: Page):
     text_input_field.fill("12345678")
     text_input_field.press("Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
-        "value 10: 12345", use_inner_text=True
-    )
+    expect_markdown(app, "value 10: 12345")
 
 
 def test_text_input_has_correct_value_on_blur(app: Page):

@@ -21,7 +21,7 @@ from typing import Literal, cast
 
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
@@ -788,6 +788,16 @@ def expect_connection_status(
     assert status == expected_status, status
 
 
+def expect_no_skeletons(
+    locator: Locator | Page | FrameLocator, timeout: int = 10000
+) -> None:
+    """Expect no skeletons to be visible on the page.
+
+    This is useful to check that all elements have fully loaded.
+    """
+    expect(locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=timeout)
+
+
 def wait_for_all_images_to_be_loaded(page: Page) -> None:
     # Wait to make sure that the images have been loaded
     page.wait_for_function("""() => {
@@ -918,3 +928,18 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     return locator.get_by_test_id(
         re.compile("stBaseButton-segmented_control(Active)?")
     ).filter(has_text=text)
+
+
+def goto_app(page: Page, url: str) -> None:
+    """Navigate to an app based on a given URL and wait for the app to be loaded.
+
+    Parameters
+    ----------
+    page : Page
+        The page to navigate to the given URL.
+
+    url : str
+        The URL to navigate to.
+    """
+    page.goto(url)
+    wait_for_app_loaded(page)

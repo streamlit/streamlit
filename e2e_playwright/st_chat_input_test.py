@@ -18,10 +18,13 @@ from playwright.sync_api import FilePayload, Locator, Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     rerun_app,
-    wait_for_app_loaded,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    goto_app,
+)
 
 
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
@@ -84,8 +87,7 @@ def test_embedded_app_with_bottom_chat_input(
     """Test that an embedded app with bottom chat input renders correctly."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    app.goto(f"http://localhost:{app_port}/?embed=true")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/?embed=true")
 
     app_view_block = app.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
@@ -369,16 +371,24 @@ def test_file_upload_error_message_file_too_large(app: Page):
 @pytest.mark.flaky(reruns=4)
 def test_single_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
-    chat_input = app.get_by_test_id("stChatInput").nth(3)
-    chat_input.get_by_role("button").nth(0).hover()
+    chat_input_upload_button = (
+        app.get_by_test_id("stChatInput").nth(3).get_by_role("button").first
+    )
+    expect(chat_input_upload_button).to_be_visible()
+    chat_input_upload_button.scroll_into_view_if_needed()
+    chat_input_upload_button.hover()
     expect(app.get_by_text("Upload or drag and drop a file")).to_be_visible()
 
 
 @pytest.mark.flaky(reruns=4)
 def test_multi_file_upload_button_tooltip(app: Page):
     """Test that the single file upload button tooltip renders correctly."""
-    chat_input = app.get_by_test_id("stChatInput").nth(4)
-    chat_input.get_by_role("button").nth(0).hover()
+    chat_input_upload_button = (
+        app.get_by_test_id("stChatInput").nth(4).get_by_role("button").first
+    )
+    expect(chat_input_upload_button).to_be_visible()
+    chat_input_upload_button.scroll_into_view_if_needed()
+    chat_input_upload_button.hover()
     expect(app.get_by_text("Upload or drag and drop files")).to_be_visible()
 
 
@@ -389,12 +399,14 @@ def test_chat_input_adjusts_for_long_placeholder(
     app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input = app.get_by_test_id("stChatInput").nth(7)
-    chat_input_area = chat_input.locator("textarea")
+    expect(chat_input).to_be_visible()
 
     # Take a snapshot of the initial state with the long placeholder
     assert_snapshot(chat_input, name="st_chat_input-long_placeholder")
 
     # Type some text to verify the input maintains proper height
+    chat_input_area = chat_input.locator("textarea")
+    expect(chat_input_area).to_be_visible()
     chat_input_area.type("Some input text")
     assert_snapshot(chat_input, name="st_chat_input-long_placeholder_with_text")
 
