@@ -37,8 +37,9 @@ def test_sidebar_date_input_popover(
     """Handles z-index of date input popover correctly."""
     date_inputs = themed_app.get_by_test_id("stSidebar").get_by_test_id("stDateInput")
     expect(date_inputs).to_have_count(2)
-
+    expect(date_inputs.first).to_be_visible()
     date_inputs.first.click()
+    expect(themed_app.locator("[data-baseweb='calendar']")).to_be_visible()
     assert_snapshot(
         themed_app.get_by_test_id("stSidebar"), name="st_sidebar-date_popover"
     )
