@@ -19,7 +19,8 @@
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
-    "typesync:ci": "typesync --dry=fail"
+    "typesync:ci": "typesync --dry=fail",
+    "setup-pdfjs": "node setup-pdfjs.js"
   },
   "dependencies": {
     "@emotion-icons/emotion-icon": "^4.1.0",
@@ -115,6 +116,7 @@
     "typesync": "^0.14.3",
     "util": "^0.12.5",
     "vite": "^6.3.5",
+    "vite-plugin-static-copy": "^3.0.2",
     "vite-plugin-svgr": "^4.3.0",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.3",

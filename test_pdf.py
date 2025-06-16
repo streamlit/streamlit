@@ -142,10 +142,10 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Renderer Options")
 
 
-hide_toolbar = st.sidebar.checkbox(
-    "Hide Toolbar",
+use_ext_module = st.sidebar.checkbox(
+    "Use External Module",
     value=False,
-    help="Hides the toolbar (zoom, download, etc.)",
+    help="Use the external module to render the PDF",
 )
 
 
@@ -159,7 +159,7 @@ if pdf_to_display:
             pdf_to_display,
             width=width_value,
             height=height_value,
-            hide_toolbar=hide_toolbar,
+            use_ext_module=use_ext_module,
         )
 
     except Exception as e:

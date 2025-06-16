@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { defineConfig } from "vite"
+import { defineConfig, normalizePath } from "vite"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"

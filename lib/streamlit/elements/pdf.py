@@ -50,7 +50,6 @@ class PdfMixin:
         height: HeightWithoutContent = 500,
         width: WidthWithoutContent = "stretch",
         use_ext_module: bool = False,
-        hide_toolbar: bool = True,
     ) -> DeltaGenerator:
         """Display a PDF viewer.
 
@@ -68,8 +67,6 @@ class PdfMixin:
             Desired width of the PDF viewer. Can be "stretch" for full width or an integer for pixel width.
         use_ext_module : bool
             If True, uses react-pdf for rendering. If False, uses iframe (default behavior).
-        hide_toolbar : bool
-            If True, hides the PDF toolbar in iframe mode (default is True).
 
         Returns
         -------
@@ -81,7 +78,6 @@ class PdfMixin:
         >>> st.pdf("https://example.com/sample.pdf")
         >>> st.pdf("https://example.com/sample.pdf", width=500)
         >>> st.pdf("https://example.com/sample.pdf", use_ext_module=True)
-        >>> st.pdf("https://example.com/sample.pdf", hide_toolbar=False)
         """
         # Validate height and width parameters
         validate_height(height, allow_content=False)
@@ -97,7 +93,6 @@ class PdfMixin:
             height=height,
             width=width,
             use_ext_module=use_ext_module,
-            hide_toolbar=hide_toolbar,
         )
 
         pdf_proto = PdfProto()
@@ -110,7 +105,6 @@ class PdfMixin:
             pdf_proto,
             data,
             use_ext_module=use_ext_module,
-            hide_toolbar=hide_toolbar,
         )
 
         return self.dg._enqueue("pdf", pdf_proto, layout_config=layout_config)
@@ -126,13 +120,11 @@ def _marshall_pdf(
     data: PdfData,
     *,
     use_ext_module: bool = False,
-    hide_toolbar: bool = True,
 ) -> None:
     """Marshall a PDF protobuf element."""
 
-    # Set use_ext_module and hide_toolbar
+    # Set use_ext_module
     proto.use_ext_module = use_ext_module
-    proto.hide_toolbar = hide_toolbar
 
     # Handle the PDF data
     if isinstance(data, Path):

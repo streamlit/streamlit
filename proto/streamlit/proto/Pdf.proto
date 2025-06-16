@@ -26,5 +26,4 @@ message Pdf {
     bytes file_data = 7;
   }
   bool use_ext_module = 5;
-  bool hide_toolbar = 6;
 }

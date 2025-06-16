@@ -21,7 +21,7 @@ import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
 
-import { IPdf } from "@streamlit/protobuf"
+import { IPdf, streamlit } from "@streamlit/protobuf"
 
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
@@ -31,19 +31,21 @@ import {
   StyledReactPdfPage,
 } from "./styled-components"
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).toString()
+// Configure PDF.js worker to use local assets served by the app
+pdfjs.GlobalWorkerOptions.workerSrc = "/src/assets/pdf.worker.min.mjs"
 
 export interface PdfProps {
   element: IPdf
   endpoints: StreamlitEndpoints
+  widthConfig?: streamlit.IWidthConfig
 }
 
-function Pdf({ element, endpoints }: Readonly<PdfProps>): ReactElement {
-  const { widthConfig, useExtModule, hideToolbar } = element
+function Pdf({
+  element,
+  endpoints,
+  widthConfig,
+}: Readonly<PdfProps>): ReactElement {
+  const { useExtModule } = element
 
   // State for react-pdf
   const [numPages, setNumPages] = useState<number>(0)
@@ -95,29 +97,17 @@ function Pdf({ element, endpoints }: Readonly<PdfProps>): ReactElement {
     }
   }, [blobUrl])
 
-  // Add toolbar parameter to URL for iframe rendering
+  // Use the PDF URL directly for iframe rendering
   const iframePdfUrl = useMemo(() => {
-    if (!pdfUrl) return ""
+    return pdfUrl || ""
+  }, [pdfUrl])
 
-    // Add toolbar parameter if hideToolbar is true and we're not using external module
-    if (hideToolbar && !useExtModule) {
-      // For blob URLs, we can't add fragments, but that's okay since hideToolbar
-      // is mainly for iframe mode with external URLs
-      if (pdfUrl.startsWith("blob:")) {
-        return pdfUrl
-      }
-      return `${pdfUrl}#toolbar=0`
-    }
-    return pdfUrl
-  }, [pdfUrl, hideToolbar, useExtModule])
-
-  // Memoize options to prevent re-renders
+  // Memoize options to prevent re-renders - using local assets
   const options = useMemo(
     () => ({
-      cMapUrl: "https://unpkg.com/pdfjs-dist@" + pdfjs.version + "/cmaps/",
+      cMapUrl: "/src/assets/cmaps/",
       cMapPacked: true,
-      standardFontDataUrl:
-        "https://unpkg.com/pdfjs-dist@" + pdfjs.version + "/standard_fonts/",
+      standardFontDataUrl: "/src/assets/standard_fonts/",
     }),
     []
   )
