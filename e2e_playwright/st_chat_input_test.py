@@ -372,6 +372,7 @@ def test_single_file_upload_button_tooltip(app: Page):
     chat_input_upload_button = (
         app.get_by_test_id("stChatInput").nth(3).get_by_role("button").first
     )
+    expect(chat_input_upload_button).to_be_visible()
     chat_input_upload_button.scroll_into_view_if_needed()
     chat_input_upload_button.hover()
     expect(app.get_by_text("Upload or drag and drop a file")).to_be_visible()
