@@ -319,6 +319,6 @@ def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
 def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that forms render correctly within containers with fixed height."""
     # Get the container with height and snapshot the entire container
-    height_container = app.get_by_test_id("stVerticalBlockBorderWrapper").last
+    height_container = app.get_by_test_id("stVerticalBlock").last
     height_container.scroll_into_view_if_needed()
     assert_snapshot(height_container, name="st_form-height_container")
