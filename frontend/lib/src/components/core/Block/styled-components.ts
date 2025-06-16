@@ -196,6 +196,7 @@ export const StyledFlexContainerBlock =
         flexDirection: direction,
         flex,
         flexWrap: wrap ? "wrap" : "nowrap",
+        overflow: "auto",
       }
     }
   )
