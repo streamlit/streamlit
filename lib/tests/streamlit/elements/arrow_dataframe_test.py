@@ -28,6 +28,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
+    is_pandas_version_less_than,
 )
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
@@ -363,9 +364,15 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             success = "Success status"
 
         df = pd.DataFrame({"pipeline": ["Success"], "status": [Status.success]})
-        styler = df.style.applymap(
-            lambda v: "color: red" if v == Status.success else "", subset=["status"]
-        )
+
+        def apply_color(v: Status) -> str:
+            return "color: red" if v == Status.success else ""
+
+        if is_pandas_version_less_than("2.2.0"):
+            styler = df.style.applymap(apply_color, subset=["status"])
+        else:
+            styler = df.style.map(apply_color, subset=["status"])
+
         st.dataframe(styler)
 
         expected = pd.DataFrame(
