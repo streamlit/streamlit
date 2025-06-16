@@ -683,7 +683,7 @@ class ButtonMixin:
         Parameters
         ----------
         page : str, Path, or StreamlitPage
-            The file path (relative to the main script) or an ``StreamlitPage``
+            The file path (relative to the main script) or a ``StreamlitPage``
             indicating the page to switch to. Alternatively, this can be the
             URL to an external page (must start with "http://" or "https://").
 

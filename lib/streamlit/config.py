@@ -1201,8 +1201,8 @@ _create_theme_options(
     description="""
         An array of fonts to use in your app.
 
-        Each font in the array is a table (dictionary) that can have the following
-        attributes, closely resembling CSS font-face definitions:
+        Each font in the array is a table (dictionary) that can have the
+        following attributes, closely resembling CSS font-face definitions:
         - family
         - url
         - weight (optional)
