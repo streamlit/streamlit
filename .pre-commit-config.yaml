@@ -77,7 +77,7 @@ repos:
         # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
         # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
-        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier ../../.github --write
+        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.github/**/*.{yml,yaml}" --write
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false

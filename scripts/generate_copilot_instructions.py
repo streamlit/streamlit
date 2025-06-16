@@ -144,7 +144,7 @@ def combine_rule_files() -> None:
                 combined_content.append("")
 
     # Write combined content to output file
-    output_content = "\n".join(combined_content)
+    output_content = "\n".join(combined_content) + "\n"
     OUTPUT_FILE.write_text(output_content, encoding="utf-8")
 
     print(f"Successfully combined {len(rule_files)} rule files into {OUTPUT_FILE}")
