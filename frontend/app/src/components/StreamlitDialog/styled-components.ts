@@ -18,12 +18,6 @@ import styled from "@emotion/styled"
 import { darken } from "color2k"
 import { ChevronLeft } from "react-feather"
 
-export const StyledShortcutLabel = styled.span({
-  "&::first-letter": {
-    textDecoration: "underline",
-  },
-})
-
 export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
   cursor: "pointer",
   marginRight: theme.spacing.lg,

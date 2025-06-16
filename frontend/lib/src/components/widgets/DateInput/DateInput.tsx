@@ -26,7 +26,6 @@ import React, {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { format } from "date-fns"
 import moment from "moment"
-import { useTheme } from "@emotion/react"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 
@@ -51,7 +50,8 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibContext } from "~lib/components/core/LibContext"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { useIntlLocale } from "./useIntlLocale"
 
@@ -90,7 +90,7 @@ function DateInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
 
   /**
@@ -113,7 +113,7 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { colors, fontSizes, lineHeights, spacing, sizes } = useTheme()
+  const { colors, fontSizes, lineHeights, spacing, sizes } = useEmotionTheme()
 
   const { locale } = useContext(LibContext)
   const loadedLocale = useIntlLocale(locale)
@@ -420,6 +420,10 @@ function DateInput({
                     paddingBottom: spacing.sm,
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,
+
+                    "::placeholder": {
+                      color: theme.colors.fadedText60,
+                    },
 
                     // Change input value text color in error state - matches st.error in light and dark mode
                     ...(error && {

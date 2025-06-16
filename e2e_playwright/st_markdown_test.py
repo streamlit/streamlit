@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     expand_sidebar,
     expect_help_tooltip,
     get_element_by_key,
+    get_expander,
     get_markdown,
     wait_for_all_images_to_be_loaded,
 )
@@ -59,7 +60,7 @@ def test_displays_individual_markdowns(app: Page):
     text = [
         "This markdown is awesome! 😎",
         "This <b>HTML tag</b> is escaped!",
-        "This HTML tag is not escaped!",
+        "info This HTML tag is not escaped!",
         "[text]",
         "link",
         "[][]",
@@ -186,6 +187,9 @@ def test_match_snapshot_for_column_beside_widget(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the st.markdown columns beside widget snapshot is correct."""
+    # Wait for the labels to be visible, or else the snapshot tests will flake
+    expect(app.get_by_text("This is a label")).to_have_count(2)
+
     container = _get_container_of_text(app, "Headers in column beside widget")
     assert_snapshot(container, name="st_markdown-headers_beside_widget")
 
@@ -304,3 +308,100 @@ def test_markdown_rendering_performance(app: Page):
 
     app.get_by_text("Run element").click()
     expect(app.get_by_text("DONE")).to_be_attached()
+
+
+def test_markdown_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that markdown elements with different width configurations are displayed correctly."""
+    markdown_expander = get_expander(themed_app, "Markdown Width Examples")
+
+    expect(markdown_expander).to_be_visible()
+    markdown_expander.scroll_into_view_if_needed()
+
+    # Get all markdown elements within the expander
+    markdown_elements = markdown_expander.get_by_test_id("stMarkdown")
+    expect(markdown_elements).to_have_count(3)
+
+    # Test each markdown element individually
+    assert_snapshot(
+        markdown_elements.nth(0),
+        name="st_markdown-width_content",
+    )
+
+    assert_snapshot(
+        markdown_elements.nth(1),
+        name="st_markdown-width_200px",
+    )
+
+    assert_snapshot(
+        markdown_elements.nth(2),
+        name="st_markdown-width_stretch",
+    )
+
+
+def test_caption_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that caption elements with different width configurations are displayed correctly."""
+    caption_expander = get_expander(themed_app, "Caption Width Examples")
+
+    expect(caption_expander).to_be_visible()
+    caption_expander.scroll_into_view_if_needed()
+
+    # Get all caption elements (which use stMarkdown test id) within the expander
+    caption_elements = caption_expander.get_by_test_id("stMarkdown")
+    expect(caption_elements).to_have_count(3)
+
+    # Test each caption element individually
+    assert_snapshot(
+        caption_elements.nth(0),
+        name="st_caption-width_content",
+    )
+
+    assert_snapshot(
+        caption_elements.nth(1),
+        name="st_caption-width_300px",
+    )
+
+    assert_snapshot(
+        caption_elements.nth(2),
+        name="st_caption-width_stretch",
+    )
+
+
+def test_badge_width_examples(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that badge elements with different width configurations are displayed correctly."""
+    badge_expander = get_expander(themed_app, "Badge Width Examples")
+
+    expect(badge_expander).to_be_visible()
+    badge_expander.scroll_into_view_if_needed()
+
+    # Get all badge elements (which use stMarkdown test id) within the expander
+    badge_elements = badge_expander.get_by_test_id("stMarkdown")
+    expect(badge_elements).to_have_count(3)
+
+    # Test each badge element individually
+    assert_snapshot(
+        badge_elements.nth(0),
+        name="st_badge-width_content",
+    )
+
+    assert_snapshot(
+        badge_elements.nth(1),
+        name="st_badge-width_100px",
+    )
+
+    assert_snapshot(
+        badge_elements.nth(2),
+        name="st_badge-width_stretch",
+    )
+
+
+def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that unsafe allow html works correctly."""
+    markdown_element = app.get_by_test_id("stMarkdown").get_by_text(
+        "info This HTML tag is not escaped!"
+    )
+    expect(markdown_element).to_be_visible()
+    assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")

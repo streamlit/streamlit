@@ -38,5 +38,8 @@ message Navigation {
 
     // display navigation in the sidebar
     SIDEBAR = 1;
+
+    // display navigation in the top header
+    TOP = 2;
   }
 }

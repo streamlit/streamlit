@@ -931,6 +931,7 @@ function DataFrame({
             }
           }}
           showSearch={showSearch}
+          searchResults={!showSearch ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
@@ -941,6 +942,11 @@ function DataFrame({
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
               return
+            }
+
+            // Hide search before sorting to clear search results
+            if (showSearch) {
+              setShowSearch(false)
             }
 
             if (isRowSelectionActivated && isRowSelected) {
@@ -955,6 +961,7 @@ function DataFrame({
               // which can be confusing. So we clear all cell selections before sorting.
               clearSelection(true, true)
             }
+
             sortColumn(columnIdx, "auto")
           }}
           gridSelection={gridSelection}
@@ -1125,6 +1132,11 @@ function DataFrame({
             onSortColumn={
               isSortingEnabled
                 ? (direction: "asc" | "desc" | undefined) => {
+                    // Hide search before sorting to clear search results
+                    if (showSearch) {
+                      setShowSearch(false)
+                    }
+
                     if (isRowSelectionActivated && isRowSelected) {
                       // Keeping row selections when sorting columns is not supported at the moment.
                       // So we need to clear the selected rows before we do the sorting (Issue #11345).
@@ -1135,6 +1147,7 @@ function DataFrame({
                       // which can be confusing. So we clear all cell selections before sorting.
                       clearSelection(true, true)
                     }
+
                     sortColumn(showMenu.columnIdx, direction, true)
                   }
                 : undefined

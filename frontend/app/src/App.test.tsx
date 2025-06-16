@@ -234,6 +234,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     setImportedTheme: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
+  isMobileViewport: false,
   ...extend,
 })
 
@@ -1289,8 +1290,7 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      // Header/main menu should not render
-      expect(screen.queryByTestId("stHeader")).toBeNull()
+      // main menu should not render
       expect(screen.queryByTestId("stMainMenu")).toBeNull()
     })
 

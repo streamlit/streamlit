@@ -16,7 +16,8 @@
 
 import React from "react"
 
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import {
   darkTheme,
@@ -76,7 +77,8 @@ describe("Opened ThemeCreatorDialog", () => {
     vi.clearAllMocks()
   })
 
-  it("should update theme on color change", () => {
+  it("should update theme on color change", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     renderWithContexts(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
@@ -89,20 +91,21 @@ describe("Opened ThemeCreatorDialog", () => {
     const primaryColorPicker = within(themeColorPickers[0]).getByTestId(
       "stColorPickerBlock"
     )
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(primaryColorPicker)
 
+    // Open the color picker
+    await user.click(primaryColorPicker)
+
+    // Change the color
     const newColor = "#e91e63"
     const colorInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(colorInput, { target: { value: newColor } })
-    // Close out of the popover
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(primaryColorPicker)
 
+    await user.clear(colorInput)
+    await user.type(colorInput, newColor)
+
+    // Close out of the popover
+    await user.click(primaryColorPicker)
+
+    // Verify the color has been updated
     expect(mockAddThemes).toHaveBeenCalled()
     expect(mockAddThemes.mock.calls[0][0][0].emotion.colors.primary).toBe(
       newColor
@@ -112,7 +115,8 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe(newColor)
   })
 
-  it("should call backToSettings if back button has been clicked", () => {
+  it("should call backToSettings if back button has been clicked", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     renderWithContexts(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
@@ -120,13 +124,14 @@ describe("Opened ThemeCreatorDialog", () => {
     })
 
     const backButton = screen.getByTestId("stThemeCreatorBack")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(backButton)
+    await user.click(backButton)
     expect(props.backToSettings).toHaveBeenCalled()
   })
 
   it("should copy to clipboard", async () => {
+    const user = userEvent.setup()
+    const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText")
+
     const props = getProps()
     renderWithContexts(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
@@ -137,15 +142,12 @@ describe("Opened ThemeCreatorDialog", () => {
     const copyBtn = screen.getByRole("button", {
       name: "Copy theme to clipboard",
     })
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(copyBtn)
 
-    await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
+    await user.click(copyBtn)
+
+    expect(writeTextSpy).toHaveBeenCalledWith(`[theme]
 base="light"
 `)
-    })
 
     expect(await screen.findByText("Copied to clipboard")).toBeInTheDocument()
   })

@@ -24,7 +24,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { getLogger } from "loglevel"
 import queryString from "query-string"
 import { flushSync } from "react-dom"
@@ -41,7 +40,7 @@ import { Skeleton } from "~lib/components/elements/Skeleton"
 import ErrorElement from "~lib/components/shared/ErrorElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
 import useTimeout from "~lib/hooks/useTimeout"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -186,7 +185,7 @@ function compareDataframeArgs(
  * by {@link COMPONENT_READY_WARNING_TIME_MS}, a warning element is rendered instead.
  */
 function ComponentInstance(props: Props): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const { componentRegistry: registry } = useContext(LibContext)
 
   const [componentError, setComponentError] = useState<Error>()

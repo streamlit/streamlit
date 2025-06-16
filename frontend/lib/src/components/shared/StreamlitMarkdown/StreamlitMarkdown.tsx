@@ -31,7 +31,6 @@ import { type Element, type Root } from "hast"
 import xxhash from "xxhashjs"
 import slugify from "@sindresorhus/slugify"
 import { visit } from "unist-util-visit"
-import { useTheme } from "@emotion/react"
 import ReactMarkdown, {
   Components,
   Options as ReactMarkdownProps,
@@ -61,6 +60,7 @@ import {
   getMarkdownTextColors,
 } from "~lib/theme"
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledHeadingActionElements,
@@ -195,7 +195,7 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
   help,
   hideAnchor,
 }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   if (!help && hideAnchor) {
     return <></>
   }
@@ -529,18 +529,17 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
             // this would break the icon display in the UI.
             // https://github.com/streamlit/streamlit/issues/10168
             translate: "no",
-            style: {
-              display: "inline-block",
-              fontFamily: theme.genericFonts.iconFont,
-              fontWeight: theme.fontWeights.normal,
-              // Disable selection for copying it as text.
-              // Allowing this leads to copying the underlying icon name,
-              // which can be confusing / unexpected.
-              userSelect: "none",
-              verticalAlign: "bottom",
-              whiteSpace: "nowrap",
-              wordWrap: "normal",
-            },
+            // We need to use string-style CSS here so that it works
+            // correctly with the rehype-raw plugin.
+            style: `
+            display: inline-block;
+            font-family: ${theme.genericFonts.iconFont};
+            font-weight: ${theme.fontWeights.normal};
+            user-select: none;
+            vertical-align: bottom;
+            white-space: nowrap;
+            word-wrap: normal;
+            `,
           },
           hChildren: [{ type: "text", value: iconName }],
         },
@@ -572,19 +571,11 @@ function createRemarkStreamlitLogo() {
           hProperties: {
             src: streamlitLogo,
             alt: "Streamlit logo",
-            style: {
-              display: "inline-block",
-              // Disable selection for copying it as text.
-              // Allowing this leads to copying the alt text,
-              // which can be confusing / unexpected.
-              userSelect: "none",
-              height: "0.75em",
-              verticalAlign: "baseline",
-              // The base of the Streamlit logo is curved, so move it down a bit to
-              // make it look aligned with the text.
-              // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-              marginBottom: "-0.05ex",
-            },
+            // We need to use string-style CSS here so that it works
+            // correctly with the rehype-raw plugin.
+            // The base of the Streamlit logo is curved, so move it down a bit to
+            // make it look aligned with the text.
+            style: `display: inline-block; user-select: none; height: 0.75em; vertical-align: baseline; margin-bottom: -0.05ex;`,
           },
         },
       }
@@ -717,7 +708,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   isLabel,
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const colorMapping = useMemo(() => createColorMapping(theme), [theme])
 

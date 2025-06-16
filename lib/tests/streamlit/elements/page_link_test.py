@@ -153,3 +153,65 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert not c.disabled
         assert c.icon == ""
         assert c.help == ""
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_icon_passed_to_page_link_takes_precedence(self):
+        """Test that st.page_link icon param overrides page icon"""
+        page = st.Page("foo.py", title="Bar Test", icon="🎈")
+        st.page_link(page=page, icon="🌟")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Bar Test"
+        assert c.page_script_hash == page._script_hash
+        assert c.page == "foo"
+        assert not c.external
+        assert not c.disabled
+        assert c.icon == "🌟"  # Icon parameter of st.page_link takes precedence
+        assert c.help == ""
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_with_icon(self):
+        """Test that st.page_link accepts an st.Page, will use its icon"""
+        page = st.Page("foo.py", title="Bar Test", icon="🎈")
+        st.page_link(page=page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Bar Test"
+        assert c.page_script_hash == page._script_hash
+        assert c.page == "foo"
+        assert not c.external
+        assert not c.disabled
+        assert c.icon == "🎈"
+        assert c.help == ""
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_with_none_icon(self):
+        """Test that st.page_link handles None icon from StreamlitPage correctly"""
+        # None icon defaults to empty string in StreamlitPage
+        page = st.Page("foo.py", title="Bar Test", icon=None)
+        st.page_link(page=page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Bar Test"
+        assert c.page_script_hash == page._script_hash
+        assert c.page == "foo"
+        assert not c.external
+        assert not c.disabled
+        assert c.icon == ""  # None icon should become empty string (default st st.Page)
+        assert c.help == ""
+
+    def test_empty_string_icon_for_external_page_should_raise_exception(self):
+        """Test that st.page_link with empty string icon raises an exception for external pages."""
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.page_link(page="https://example.com", label="Test", icon="")
+
+        assert 'The value "" is not a valid emoji' in str(exc_info.value)
+
+    def test_whitespace_only_icon_for_external_page_should_raise_exception(self):
+        """Test that st.page_link with whitespace-only icon raises an exception for external pages."""
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.page_link(page="https://example.com", label="Test", icon="   ")
+
+        assert 'The value "   " is not a valid emoji' in str(exc_info.value)
