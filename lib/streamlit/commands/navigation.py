@@ -253,7 +253,7 @@ def navigation(
     ...     ],
     ... }
     >>>
-    >>> pg = st.navigation(pages, position=True)
+    >>> pg = st.navigation(pages, position="top")
     >>> pg.run()
 
     .. output::
