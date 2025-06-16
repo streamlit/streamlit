@@ -221,7 +221,7 @@ export const StyledMainContent = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
 
-  // Only apply relative positioning in mobile mode to prevent sidebar overlap
+  // Only apply relative positioning when NOT in mobile mode to prevent sidebar overlap
   [`@media (min-width: ${theme.breakpoints.md})`]: {
     position: "relative",
   },
