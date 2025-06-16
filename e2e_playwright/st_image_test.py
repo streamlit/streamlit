@@ -24,6 +24,7 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_no_skeletons,
     get_element_by_key,
     get_image,
 )
@@ -107,6 +108,7 @@ def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunc
     )
     expect(columns_container).to_be_visible()
     columns_container.scroll_into_view_if_needed()
+    expect_no_skeletons(columns_container)
     assert_snapshot(columns_container, name="st_image-use_column_width")
 
     expect(app.get_by_test_id("stMainBlockContainer")).to_contain_text(
@@ -125,6 +127,7 @@ def test_st_image_use_container_width_parameter(
     )
     expect(columns_container).to_be_visible()
     columns_container.scroll_into_view_if_needed()
+    expect_no_skeletons(columns_container)
     assert_snapshot(columns_container, name="st_image-use_container_width")
 
 

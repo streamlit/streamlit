@@ -17,10 +17,10 @@ import json
 import os
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_font
+from e2e_playwright.shared.app_utils import expect_font, expect_no_skeletons
 
 
 @pytest.fixture(scope="module")
@@ -105,7 +105,7 @@ def configure_snowflake_dark_theme():
 @pytest.mark.usefixtures("configure_snowflake_dark_theme")
 def test_snowflake_dark_theme(app: Page, assert_snapshot: ImageCompareFunction):
     # Make sure that all elements are rendered and no skeletons are shown:
-    expect(app.get_by_test_id("stSkeleton")).to_have_count(0, timeout=25000)
+    expect_no_skeletons(app, timeout=25000)
     # Add some additional timeout to ensure that fonts can load without
     # creating flakiness:
     app.wait_for_timeout(5000)

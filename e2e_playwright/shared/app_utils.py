@@ -788,6 +788,16 @@ def expect_connection_status(
     assert status == expected_status, status
 
 
+def expect_no_skeletons(
+    locator: Locator | Page | FrameLocator, timeout: int = 10000
+) -> None:
+    """Expect no skeletons to be visible on the page.
+
+    This is useful to check that all elements have fully loaded.
+    """
+    expect(locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=timeout)
+
+
 def wait_for_all_images_to_be_loaded(page: Page) -> None:
     # Wait to make sure that the images have been loaded
     page.wait_for_function("""() => {

@@ -318,7 +318,7 @@ class KeyIdMapper:
         self._key_id_mapping = key_id_mapping
         self._id_key_mapping = {v: k for k, v in key_id_mapping.items()}
 
-    def get_id_from_key(self, key: str, default: Any = None) -> str:
+    def get_id_from_key(self, key: str, default: str) -> str:
         return self._key_id_mapping.get(key, default)
 
     def get_key_from_id(self, widget_id: str) -> str:
