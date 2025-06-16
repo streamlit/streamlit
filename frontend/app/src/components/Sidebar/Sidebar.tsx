@@ -250,6 +250,24 @@ const Sidebar: React.FC<SidebarProps> = ({
       isCollapsed={isCollapsed}
       sidebarWidth={sidebarWidth}
     >
+      <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
+        {renderLogoContent()}
+        <StyledCollapseSidebarButton
+          showSidebarCollapse={showSidebarCollapse}
+          data-testid="stSidebarCollapseButton"
+        >
+          <BaseButton
+            kind={BaseButtonKind.HEADER_NO_PADDING}
+            onClick={toggleCollapse}
+          >
+            <DynamicIcon
+              size="xl"
+              iconValue={":material/keyboard_double_arrow_left:"}
+              color={theme.colors.fadedText60}
+            />
+          </BaseButton>
+        </StyledCollapseSidebarButton>
+      </StyledSidebarHeaderContainer>
       <StyledSidebarContent
         data-testid="stSidebarContent"
         ref={sidebarRef}
@@ -258,24 +276,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         // Safari fix: hide scrollbars when not hovered. See globalStyles.ts
         className={"hideScrollbar"}
       >
-        <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
-          {renderLogoContent()}
-          <StyledCollapseSidebarButton
-            showSidebarCollapse={showSidebarCollapse}
-            data-testid="stSidebarCollapseButton"
-          >
-            <BaseButton
-              kind={BaseButtonKind.HEADER_NO_PADDING}
-              onClick={toggleCollapse}
-            >
-              <DynamicIcon
-                size="xl"
-                iconValue={":material/keyboard_double_arrow_left:"}
-                color={theme.colors.fadedText60}
-              />
-            </BaseButton>
-          </StyledCollapseSidebarButton>
-        </StyledSidebarHeaderContainer>
         {hasPageNavAbove && (
           <SidebarNav
             endpoints={endpoints}

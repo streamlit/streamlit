@@ -215,9 +215,14 @@ export const StyledIFrameResizerAnchor = styled.div(({ theme }) => ({
   bottom: theme.spacing.none,
 }))
 
-export const StyledMainContent = styled.div({
+export const StyledMainContent = styled.div(({ theme }) => ({
   width: "100%",
   height: "100vh",
   display: "flex",
   flexDirection: "column",
-})
+
+  // Only apply relative positioning in mobile mode to prevent sidebar overlap
+  [`@media (min-width: ${theme.breakpoints.md})`]: {
+    position: "relative",
+  },
+}))
