@@ -186,7 +186,7 @@ export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
-  const { colors, genericFonts } = baseThemeConfig.emotion
+  const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
   const {
     baseFontSize,
     baseRadius,
@@ -201,15 +201,29 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
+      let isInvalidColor = true
       // @ts-expect-error
       if (isColor(color)) {
+        isInvalidColor = false
         // @ts-expect-error
         colorsArg[key] = color
         // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
       } else if (isColor(`#${color}`)) {
+        isInvalidColor = false
         // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
         colorsArg[key] = `#${color}`
       }
+
+      const isAColorConfig = key.toLowerCase().includes("color")
+      if (isAColorConfig && isInvalidColor) {
+        const themeSection = inSidebar ? "theme.sidebar" : "theme"
+        // Provide warning logging for invalid colors passed to theme color configs
+        LOG.warn(
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
+          `Invalid color passed for ${key} in ${themeSection}: "${color}"`
+        )
+      }
+
       return colorsArg
     },
     {}
@@ -223,6 +237,7 @@ export const createEmotionTheme = (
     backgroundColor: bgColor,
     primaryColor: primary,
     textColor: bodyText,
+    dataframeBorderColor,
     widgetBorderColor,
     borderColor,
     linkColor,
@@ -252,10 +267,17 @@ export const createEmotionTheme = (
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
-    conditionalOverrides.colors.borderColorLight = transparentize(
-      borderColor,
-      0.55
-    )
+
+    const borderColorLight = transparentize(borderColor, 0.55)
+    // Used for tabs border and expander when stale
+    conditionalOverrides.colors.borderColorLight = borderColorLight
+    // Set the fallback here for dataframe & table border color
+    conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+  }
+
+  if (notNullOrUndefined(dataframeBorderColor)) {
+    // If dataframeBorderColor explicitly set, override borderColorLight fallback
+    conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
   if (showWidgetBorder || widgetBorderColor) {

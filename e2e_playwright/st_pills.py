@@ -116,7 +116,7 @@ st.write(
 st.header("Pills in fragment")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     s5 = st.pills(
         "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_fragment"

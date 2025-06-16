@@ -17,7 +17,6 @@
 import React from "react"
 
 import {
-  CUSTOM_THEME_NAME,
   PortalProvider,
   RootStyleProvider,
   WindowDimensionsProvider,
@@ -36,15 +35,15 @@ const ThemedApp = ({
 }: ThemedAppProps): JSX.Element => {
   const [themeManager, fontFaces] = useThemeManager()
   const { activeTheme } = themeManager
-  const hasCustomFonts =
-    activeTheme.name === CUSTOM_THEME_NAME && fontFaces.length > 0
 
   return (
     <RootStyleProvider theme={activeTheme}>
       <WindowDimensionsProvider>
         {/* The data grid requires one root level portal element for rendering cell overlays */}
         <PortalProvider>
-          {hasCustomFonts && <FontFaceDeclaration fontFaces={fontFaces} />}
+          {fontFaces.length > 0 && (
+            <FontFaceDeclaration fontFaces={fontFaces} />
+          )}
           <AppWithScreencast
             theme={themeManager}
             streamlitExecutionStartedAt={streamlitExecutionStartedAt}

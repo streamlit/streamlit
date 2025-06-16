@@ -43,7 +43,7 @@ _subheader_divider_filter_text = re.compile(r"[a-zA-Z]+ Subheader Divider:")
 def test_correct_number_and_content_of_title_elements(app: Page):
     """Test that correct number of st.title (=> h1) exist with the right content."""
     titles = _get_title_elements(app)
-    expect(titles).to_have_count(6)
+    expect(titles).to_have_count(9)
 
     expect(titles.nth(0)).to_have_text("info This title is awesome!")
     expect(titles.nth(1)).to_have_text("This title is awesome too!")
@@ -56,7 +56,7 @@ def test_correct_number_and_content_of_title_elements(app: Page):
 def test_correct_number_and_content_of_header_elements(app: Page):
     """Test that correct number of st.header (=> h2) exist with the right content."""
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
-    expect(headers).to_have_count(5)
+    expect(headers).to_have_count(8)
 
     expect(headers.nth(0)).to_have_text("info This header is awesome!")
     expect(headers.nth(1)).to_have_text("This header is awesome too!")
@@ -70,7 +70,7 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
     subheaders = _get_subheader_elements(app).filter(
         has_not_text=_subheader_divider_filter_text
     )
-    expect(subheaders).to_have_count(8)
+    expect(subheaders).to_have_count(11)
 
     expect(subheaders.nth(0)).to_have_text("info This subheader is awesome!")
     expect(subheaders.nth(1)).to_have_text("This subheader is awesome too!")
@@ -288,3 +288,55 @@ def test_not_scrolled_on_empty_anchor_tag(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stHeading")
+
+
+def test_heading_widths_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that headings with different width configurations render correctly."""
+
+    # Get the width example elements (they appear at the end of the page)
+    # Title width examples
+    title_400px = _get_title_elements(themed_app).filter(
+        has_text="Title with 400px width"
+    )
+    title_stretch = _get_title_elements(themed_app).filter(
+        has_text="Title with stretch width"
+    )
+    title_content = _get_title_elements(themed_app).filter(
+        has_text="Title with content width"
+    )
+
+    assert_snapshot(title_400px, name="st_title-width_400px")
+    assert_snapshot(title_stretch, name="st_title-width_stretch")
+    assert_snapshot(title_content, name="st_title-width_content")
+
+    # Header width examples
+    header_400px = _get_header_elements(themed_app).filter(
+        has_text="Header with 400px width"
+    )
+    header_stretch = _get_header_elements(themed_app).filter(
+        has_text="Header with stretch width"
+    )
+    header_content = _get_header_elements(themed_app).filter(
+        has_text="Header with content width"
+    )
+
+    assert_snapshot(header_400px, name="st_header-width_400px")
+    assert_snapshot(header_stretch, name="st_header-width_stretch")
+    assert_snapshot(header_content, name="st_header-width_content")
+
+    # Subheader width examples
+    subheader_300px = _get_subheader_elements(themed_app).filter(
+        has_text="Subheader with 300px width"
+    )
+    subheader_stretch = _get_subheader_elements(themed_app).filter(
+        has_text="Subheader with stretch width"
+    )
+    subheader_content = _get_subheader_elements(themed_app).filter(
+        has_text="Subheader with content width"
+    )
+
+    assert_snapshot(subheader_300px, name="st_subheader-width_300px")
+    assert_snapshot(subheader_stretch, name="st_subheader-width_stretch")
+    assert_snapshot(subheader_content, name="st_subheader-width_content")

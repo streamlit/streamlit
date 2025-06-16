@@ -14,6 +14,7 @@
 
 """Arrow DataFrame tests."""
 
+import enum
 import json
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -27,6 +28,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
+    is_pandas_version_less_than,
 )
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
@@ -354,6 +356,33 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         )
         el = self.get_delta_from_queue().new_element
         assert el.plotly_chart.selection_mode == []
+
+    def test_use_right_display_values(self):
+        """Test that _use_display_values gets correct value for "display_value" instead of the original one."""
+
+        class Status(str, enum.Enum):
+            success = "Success status"
+
+        df = pd.DataFrame({"pipeline": ["Success"], "status": [Status.success]})
+
+        def apply_color(v: Status) -> str:
+            return "color: red" if v == Status.success else ""
+
+        if is_pandas_version_less_than("2.2.0"):
+            styler = df.style.applymap(apply_color, subset=["status"])
+        else:
+            styler = df.style.map(apply_color, subset=["status"])
+
+        st.dataframe(styler)
+
+        expected = pd.DataFrame(
+            {"pipeline": ["Success"], "status": ["Success status"]},
+        )
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
+        )
 
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):

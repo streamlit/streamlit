@@ -37,7 +37,7 @@ HOSTFRAME_TEST_HTML: Final[str] = (TEST_ASSETS_DIR / "hostframe.html").read_text
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-HOSTFRAME_TOOLBAR_BUTTON_COUNT = 14
+HOSTFRAME_TOOLBAR_BUTTON_COUNT = 15
 
 
 def _load_html_and_get_locators(
@@ -241,6 +241,13 @@ def test_context_url_is_correct_when_hosted_in_iframe(
     expect_prefixed_markdown(frame_locator, "Full url:", f"http://localhost:{app_port}")
 
 
+def test_st_context_theme_respects_dark_theme_message(iframed_app: IframedPage):
+    frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
+    expect_prefixed_markdown(frame_locator, "Theme type:", "light")
+    toolbar_buttons.get_by_text("Send Dark Theme").click()
+    expect_prefixed_markdown(frame_locator, "Theme type:", "dark")
+
+
 def test_handles_host_stop_script_message(iframed_app: IframedPage):
     frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
     # Make sure script is running
@@ -310,10 +317,6 @@ def test_handles_sidebar_downshift_message(iframed_app: IframedPage):
     frame_locator.get_by_test_id("stSidebarContent").hover()
     # Close the sidebar
     frame_locator.get_by_test_id("stSidebar").locator("button").click()
-    # Check chevron positioning
-    expect(frame_locator.get_by_test_id("stSidebarCollapsedControl")).to_have_css(
-        "top", "50px"
-    )
 
 
 def test_handles_host_terminate_and_restart_websocket_connection_messages(

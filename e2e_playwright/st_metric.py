@@ -55,3 +55,9 @@ st.metric(
     123,
     123,
 )
+
+st.metric("Stretch width", 123, 123, width="stretch")
+
+st.metric("Pixel width (300px)", 123, 123, width=300)
+
+st.metric("Content width", 123, 123, width="content")

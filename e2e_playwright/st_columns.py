@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import numpy as np
+import numpy.typing as npt
 
 import streamlit as st
 
@@ -22,7 +22,7 @@ LOREM_IPSUM = (
     "incididunt ut labore et dolore magna aliqua."
 )
 
-BLACK_IMG = np.repeat(0, 601350).reshape(633, 950)
+BLACK_IMG: npt.NDArray[np.int_] = np.repeat(0, 601350).reshape(633, 950)
 
 # Basic columns:
 c1, c2, c3 = st.columns(3)

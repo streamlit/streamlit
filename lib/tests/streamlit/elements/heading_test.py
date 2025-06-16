@@ -17,6 +17,7 @@ import pytest
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class StHeaderTest(DeltaGeneratorTestCase):
@@ -93,6 +94,66 @@ class StHeaderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.header("some header", divider="corgi")
 
+    def test_st_header_with_width(self):
+        """Test st.header with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                st.header("some header", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.heading.body == "some header"
+                assert el.heading.tag == "h2"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_st_header_with_invalid_width(self):
+        """Test st.header with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.header("some header", width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    def test_st_header_default_width(self):
+        """Test that st.header defaults to stretch width."""
+        st.header("some header")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
 
 class StSubheaderTest(DeltaGeneratorTestCase):
     """Test ability to marshall subheader protos."""
@@ -168,6 +229,66 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.subheader("some header", divider="corgi")
 
+    def test_st_subheader_with_width(self):
+        """Test st.subheader with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                st.subheader("some subheader", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.heading.body == "some subheader"
+                assert el.heading.tag == "h3"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_st_subheader_with_invalid_width(self):
+        """Test st.subheader with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.subheader("some subheader", width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    def test_st_subheader_default_width(self):
+        """Test that st.subheader defaults to stretch width."""
+        st.subheader("some subheader")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
 
 class StTitleTest(DeltaGeneratorTestCase):
     """Test ability to marshall title protos."""
@@ -231,3 +352,63 @@ class StTitleTest(DeltaGeneratorTestCase):
             st.title("some header", divider=True)
         with pytest.raises(TypeError):
             st.title("some header", divider="blue")
+
+    def test_st_title_with_width(self):
+        """Test st.title with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                st.title("some title", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.heading.body == "some title"
+                assert el.heading.tag == "h1"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    def test_st_title_with_invalid_width(self):
+        """Test st.title with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.title("some title", width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    def test_st_title_default_width(self):
+        """Test that st.title defaults to stretch width."""
+        st.title("some title")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "some title"
+        assert el.heading.tag == "h1"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True

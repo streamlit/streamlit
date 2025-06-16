@@ -172,8 +172,9 @@ class CliTest(unittest.TestCase):
     def test_run_command_with_flag_config_options(self):
         with (
             patch("streamlit.url_util.is_url", return_value=False),
-            patch("streamlit.web.cli._main_run"),
+            patch("streamlit.web.bootstrap.run"),
             patch("os.path.exists", return_value=True),
+            patch("streamlit.web.cli.check_credentials"),
         ):
             result = self.runner.invoke(
                 cli, ["run", "file_name.py", "--server.port=8502"]
@@ -187,8 +188,9 @@ class CliTest(unittest.TestCase):
     def test_run_command_with_multiple_secrets_path_single_value(self):
         with (
             patch("streamlit.url_util.is_url", return_value=False),
-            patch("streamlit.web.cli._main_run"),
+            patch("streamlit.web.bootstrap.run"),
             patch("os.path.exists", return_value=True),
+            patch("streamlit.web.cli.check_credentials"),
         ):
             result = self.runner.invoke(
                 cli, ["run", "file_name.py", "--secrets.files=secrets1.toml"]
@@ -202,8 +204,9 @@ class CliTest(unittest.TestCase):
     def test_run_command_with_multiple_secrets_path_multiple_value(self):
         with (
             patch("streamlit.url_util.is_url", return_value=False),
-            patch("streamlit.web.cli._main_run"),
+            patch("streamlit.web.bootstrap.run"),
             patch("os.path.exists", return_value=True),
+            patch("streamlit.web.cli.check_credentials"),
         ):
             result = self.runner.invoke(
                 cli,
@@ -398,8 +401,9 @@ class CliTest(unittest.TestCase):
     def test_hello_command_with_flag_config_options(self):
         with (
             patch("streamlit.url_util.is_url", return_value=False),
-            patch("streamlit.web.cli._main_run"),
+            patch("streamlit.web.bootstrap.run"),
             patch("os.path.exists", return_value=True),
+            patch("streamlit.web.cli.check_credentials"),
         ):
             result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
 

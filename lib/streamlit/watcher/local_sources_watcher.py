@@ -230,7 +230,7 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # __file__ is the pathname of the file from which the module was loaded
         # if it was loaded from a file.
         # The __file__ attribute may be missing for certain types of modules
-        lambda m: [m.__file__],
+        lambda m: [m.__file__] if hasattr(m, "__file__") else [],
         # https://docs.python.org/3/reference/import.html#__spec__
         # The __spec__ attribute is set to the module spec that was used
         # when importing the module. one exception is __main__,
@@ -240,12 +240,20 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # (or resource within a system) from which a module originates
         # ... It is up to the loader to decide on how to interpret
         # and use a module's origin, if at all.
-        lambda m: [m.__spec__.origin],  # type: ignore[union-attr]
+        lambda m: [m.__spec__.origin]
+        if hasattr(m, "__spec__") and m.__spec__ is not None
+        else [],
         # https://www.python.org/dev/peps/pep-0420/
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: list(m.__path__._path),  # type: ignore[attr-defined]
+        lambda m: list(m.__path__._path)
+        if hasattr(m, "__path__")
+        # This check prevents issues with torch classes:
+        # https://github.com/streamlit/streamlit/issues/10992
+        and type(m.__path__).__name__ == "_NamespacePath"
+        and hasattr(m.__path__, "_path")
+        else [],
     ]
 
     all_paths = set()

@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
@@ -39,6 +39,7 @@ describe("ColorPicker widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<BaseColorPicker {...props} />)
+
     const colorPicker = screen.getByTestId("stColorPicker")
     expect(colorPicker).toBeInTheDocument()
     expect(colorPicker).toHaveClass("stColorPicker")
@@ -94,9 +95,13 @@ describe("ColorPicker widget", () => {
     await user.click(colorBlock)
 
     const colorInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(colorInput, { target: { value: "#333" } })
+
+    // Change the color to hex shorthand
+    await user.clear(colorInput)
+    await user.type(colorInput, "#333")
+
+    // Remove focus from the color input field
+    await user.click(document.body)
 
     expect(colorInput).toHaveValue("#333333")
     expect(colorBlock).toHaveStyle("background-color: #333333")

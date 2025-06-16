@@ -65,3 +65,7 @@ with st.expander("Grouped checkboxes", expanded=True):
 st.checkbox(
     "checkbox 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 )
+
+st.checkbox("checkbox with content width", width="content")
+st.checkbox("checkbox with stretch width", width="stretch")
+st.checkbox("checkbox with 200px width", width=200)

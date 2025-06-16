@@ -228,7 +228,7 @@ clean:
 	rm -rf ~/.cache/pre-commit
 	rm -rf e2e_playwright/test-results
 	rm -rf e2e_playwright/performance-results
-	find . -name .streamlit -not -path './e2e_playwright/.streamlit' -type d -exec rm -rfv {} \; || true
+	find . -name .streamlit -not \( -path './e2e_playwright/.streamlit' -o -path './e2e_playwright/config/.streamlit' \) -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
 .PHONY: protobuf
@@ -354,9 +354,9 @@ notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
 
-	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif/Source-Serif.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
 	./scripts/append_license.sh frontend/lib/src/vendor/bokeh/bokeh-LICENSE.txt

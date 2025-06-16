@@ -23,7 +23,10 @@ st.markdown(
 
 st.markdown("This <b>HTML tag</b> is escaped!")
 
-st.markdown("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
+st.markdown(
+    ":streamlit: :material/info: This <b>HTML tag</b> is :red[not] escaped!",
+    unsafe_allow_html=True,
+)
 
 st.markdown("[text]")
 
@@ -264,3 +267,65 @@ $$
 This is a repeating multiline string that wraps within purple background.]
 """
 )
+
+"---"
+
+# Performance test comparison between st.markdown and st.text
+
+element = st.radio("Element to use", ["st.markdown", "st.text"])
+text = "ABCabc" * 10000
+if st.button("Run element"):
+    if element == "st.text":
+        st.text(text)
+    else:
+        st.markdown(text)
+    st.write("DONE")
+
+
+# Width Examples
+with st.expander("Markdown Width Examples", expanded=True):
+    with st.container(border=True):
+        st.markdown(
+            "**Content width:** This is regular markdown text with "
+            "content-based sizing that adapts to its content width.",
+            width="content",
+        )
+
+        st.markdown(
+            "**Fixed width (200px):** This is markdown text with a fixed width of "
+            "200 pixels. The text will wrap to fit within this constrained width.",
+            width=200,
+        )
+
+        st.markdown(
+            "**Stretch width:** This is markdown text that stretches to fill the "
+            "full width of the container, regardless of content length.",
+            width="stretch",
+        )
+
+with st.expander("Caption Width Examples", expanded=True):
+    with st.container(border=True):
+        st.caption(
+            "This is a caption with content-based width sizing that adapts "
+            "to the caption text length.",
+            width="content",
+        )
+
+        st.caption(
+            "This is a caption with a fixed width of 300 pixels. Caption text will "
+            "wrap within this constraint.",
+            width=300,
+        )
+
+        st.caption(
+            "This is a caption that stretches to fill the full container width.",
+            width="stretch",
+        )
+
+with st.expander("Badge Width Examples", expanded=True):
+    with st.container(border=True):
+        st.badge("Default badge", width="content")
+
+        st.badge("Fixed 100px badge", width=100)
+
+        st.badge("Stretch badge", width="stretch")

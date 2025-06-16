@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Draft, default as produce } from "immer"
+import { Draft, produce } from "immer"
 import { Long, util } from "protobufjs"
 import { Signal, SignalConnection } from "typed-signals"
 

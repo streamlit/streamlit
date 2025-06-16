@@ -214,14 +214,20 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
     ::-webkit-scrollbar {
       background: transparent;
-      border-radius: 100px;
+    }
+
+    ::-webkit-scrollbar:vertical {
       width: 6px;
+    }
+
+    ::-webkit-scrollbar:horizontal {
+      height: 6px;
     }
 
     ::-webkit-scrollbar-thumb:vertical,
     ::-webkit-scrollbar-thumb:horizontal {
       background: ${theme.colors.fadedText40};
-      border-radius: 100px;
+      border-radius: ${theme.radii.full};
     }
   }
 `

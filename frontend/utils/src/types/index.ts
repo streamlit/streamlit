@@ -35,14 +35,26 @@ export function isNullOrUndefined<T>(
 }
 
 export interface StreamlitWindowObject {
-  // These window variables are used so that some deployments of Streamlit can
-  // edit the index.html served to the client so that a Streamlit server at an
-  // origin different from where the frontend static assets are served can be
-  // set. Note that we also need to have a separate `declare global` block here
-  // rather than adding to the one in App.tsx as these also need to be
-  // accessible within this package when no app exists.
+  // URL pointing to where the Streamlit server is running. This is useful in
+  // deployments of Streamlit where the server is running on a different origin
+  // from where index.html is served.
   BACKEND_BASE_URL?: string
+  // URL pointing to where the _stcore/host-config endpoint is being served.
   HOST_CONFIG_BASE_URL?: string
+  // URL pointing to the main page of this Streamlit app. Setting this is needed
+  // when setting BACKEND_BASE_URL so that handling page URLs in multipage apps
+  // works.
+  MAIN_PAGE_BASE_URL?: string
+
+  // When our Streamlit app is embedded in an iframe, this can be set by the
+  // parent frame of the app so that the Streamlit app is aware of its own
+  // Service Worker clientId. This has to be done when using Custom Components
+  // in an app deployed in a context where we use a Service Worker as `fetch`
+  // requests sent from the component iframe set `resultingClientId` but not
+  // `replacesClientId`, which means that without this we would be unable to
+  // associate a `fetch` request from a custom component iframe with its parent
+  // frame.
+  CUSTOM_COMPONENT_CLIENT_ID?: string
 
   // Theme related settings.
   LIGHT_THEME?: ICustomThemeConfig

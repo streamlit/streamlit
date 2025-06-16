@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
     from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
+from enum import Enum
+
 
 def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
     """Marshall pandas.Styler into an Arrow proto.
@@ -265,6 +267,12 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
             for cell in row:
                 if "id" in cell and (match := cell_selector_regex.match(cell["id"])):
                     r, c = map(int, match.groups())
-                    new_df.iloc[r, c] = str(cell["display_value"])
+                    # Check if the display value is an Enum type. Enum values need to be
+                    # converted to their `.value` attribute to ensure proper serialization
+                    # and display logic.
+                    if isinstance(cell["display_value"], Enum):
+                        new_df.iloc[r, c] = str(cell["display_value"].value)
+                    else:
+                        new_df.iloc[r, c] = str(cell["display_value"])
 
     return new_df

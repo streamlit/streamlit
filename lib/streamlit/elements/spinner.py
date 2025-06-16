@@ -19,6 +19,11 @@ import threading
 from typing import TYPE_CHECKING, Final
 
 import streamlit as st
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 if TYPE_CHECKING:
@@ -35,6 +40,7 @@ def spinner(
     *,
     show_time: bool = False,
     _cache: bool = False,
+    width: Width = "content",
 ) -> Iterator[None]:
     """Display a loading spinner while executing a block of code.
 
@@ -59,6 +65,11 @@ def spinner(
         elapsed time is displayed with a precision of 0.1 seconds. The time
         format is not configurable.
 
+    width : "content", "stretch", or int
+        The width of the spinner. Can be "content" (default) to size the spinner
+        to its content, "stretch" to fill the container width, or an integer
+        number of pixels.
+
     Example
     -------
     >>> import streamlit as st
@@ -77,6 +88,9 @@ def spinner(
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
     from streamlit.string_util import clean_text
 
+    validate_width(width, allow_content=True)
+    layout_config = LayoutConfig(width=width)
+
     message = st.empty()
 
     display_message = True
@@ -91,7 +105,9 @@ def spinner(
                     spinner_proto.text = clean_text(text)
                     spinner_proto.cache = _cache
                     spinner_proto.show_time = show_time
-                    message._enqueue("spinner", spinner_proto)
+                    message._enqueue(
+                        "spinner", spinner_proto, layout_config=layout_config
+                    )
 
         add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
 

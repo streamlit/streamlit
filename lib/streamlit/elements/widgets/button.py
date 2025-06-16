@@ -932,6 +932,10 @@ class ButtonMixin:
             page_link_proto.page = page.url_path
             if label is None:
                 page_link_proto.label = page.title
+            if icon is None:
+                page_link_proto.icon = page.icon
+                # Here the StreamlitPage's icon is already validated
+                # (using validate_icon_or_emoji) during its initialization
         else:
             # Convert Path to string if necessary
             if isinstance(page, Path):

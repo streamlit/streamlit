@@ -244,7 +244,7 @@ export const StyledStreamlitMarkdown =
         },
 
         tr: {
-          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
         th: {
@@ -253,16 +253,17 @@ export const StyledStreamlitMarkdown =
 
         "th, td": {
           padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
-        "span.has-background-color": {
+        "span.stMarkdownColoredBackground": {
           borderRadius: theme.radii.md,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
+          boxDecorationBreak: "clone",
         },
 
-        "span.is-badge": {
+        "span.stMarkdownBadge": {
           borderRadius: theme.radii.md,
           // Since we're using inline-block below, we're not using vertical padding here,
           // because inline-block already makes the element look a bit taller.

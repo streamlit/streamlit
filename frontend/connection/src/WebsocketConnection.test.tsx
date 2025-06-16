@@ -148,7 +148,7 @@ describe("doInitPings", () => {
       .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
 
-    const uriIndex = await doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -156,6 +156,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.sendClientError,
       MOCK_PING_DATA.setAllowedOrigins
     )
+    const uriIndex = await promise
     expect(uriIndex).toEqual(0)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
@@ -169,7 +170,7 @@ describe("doInitPings", () => {
       .mockResolvedValueOnce(MOCK_HEALTH_RESPONSE)
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
 
-    const uriIndex = await doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -177,6 +178,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.sendClientError,
       MOCK_PING_DATA.setAllowedOrigins
     )
+    const uriIndex = await promise
     expect(uriIndex).toEqual(0)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
@@ -194,7 +196,7 @@ describe("doInitPings", () => {
       .mockResolvedValueOnce("")
       .mockResolvedValueOnce(MOCK_HOST_CONFIG_RESPONSE)
 
-    const uriIndex = await doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -202,6 +204,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.sendClientError,
       MOCK_PING_DATA.setAllowedOrigins
     )
+    const uriIndex = await promise
     expect(uriIndex).toEqual(0)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
@@ -220,7 +223,7 @@ describe("doInitPings", () => {
 
     const retryCallback = createTimerAdvancingRetryCallback()
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -231,7 +234,7 @@ describe("doInitPings", () => {
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    const uriIndex = await pingPromise
+    const uriIndex = await promise
 
     expect(uriIndex).toEqual(1)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
@@ -255,7 +258,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -266,7 +269,7 @@ describe("doInitPings", () => {
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
@@ -291,7 +294,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -302,7 +305,7 @@ describe("doInitPings", () => {
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
@@ -331,7 +334,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -342,7 +345,7 @@ describe("doInitPings", () => {
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
@@ -369,7 +372,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -380,7 +383,7 @@ describe("doInitPings", () => {
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
@@ -427,7 +430,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA_LOCALHOST.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA_LOCALHOST.uri,
       MOCK_PING_DATA_LOCALHOST.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -438,7 +441,7 @@ describe("doInitPings", () => {
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA_LOCALHOST.retryCallback).toHaveBeenCalledWith(
       1,
@@ -471,7 +474,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       MOCK_PING_DATA.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -482,7 +485,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
@@ -512,7 +515,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       MOCK_PING_DATA.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -523,7 +526,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
@@ -561,7 +564,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       MOCK_PING_DATA.retryCallback
     )
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -572,7 +575,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledTimes(5)
   })
@@ -612,7 +615,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       vi.advanceTimersByTime(timeout)
     }
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       [
         {
           hostname: "not.a.real.host",
@@ -629,7 +632,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(timeouts.length).toEqual(5)
     expect(timeouts[0]).toEqual(10)
@@ -678,7 +681,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       vi.advanceTimersByTime(timeout)
     }
 
-    const pingPromise = doInitPings(
+    const { promise } = doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
@@ -689,7 +692,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise
+    await promise
 
     expect(timeouts.length).toEqual(5)
     expect(timeouts[0]).toEqual(10)
@@ -733,7 +736,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       vi.advanceTimersByTime(timeout)
     }
 
-    const pingPromise1 = doInitPings(
+    const { promise: promise1 } = doInitPings(
       [
         {
           hostname: "not.a.real.host",
@@ -750,7 +753,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise1
+    await promise1
 
     const timeouts2: number[] = []
     const retryCallback2 = (
@@ -763,7 +766,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       vi.advanceTimersByTime(timeout)
     }
 
-    const pingPromise2 = doInitPings(
+    const { promise: promise2 } = doInitPings(
       [
         {
           hostname: "not.a.real.host",
@@ -780,7 +783,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
     // Run any remaining timers to complete the ping process
     await vi.runAllTimersAsync()
-    await pingPromise2
+    await promise2
 
     expect(timeouts[0]).toEqual(10)
     expect(timeouts[1]).toBeGreaterThan(timeouts[0])
@@ -804,7 +807,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       const retryCallback = createTimerAdvancingRetryCallback()
 
-      const pingPromise = doInitPings(
+      const { promise } = doInitPings(
         MOCK_PING_DATA.uri,
         MOCK_PING_DATA.timeoutMs,
         MOCK_PING_DATA.maxTimeoutMs,
@@ -815,7 +818,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       // Run any remaining timers to complete the ping process
       await vi.runAllTimersAsync()
-      await pingPromise
+      await promise
 
       // Verify that sendClientError was called with the expected arguments
       expect(sendClientErrorSpy).toHaveBeenCalledWith(
@@ -841,7 +844,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       const retryCallback = createTimerAdvancingRetryCallback()
 
-      const pingPromise = doInitPings(
+      const { promise } = doInitPings(
         MOCK_PING_DATA.uri,
         MOCK_PING_DATA.timeoutMs,
         MOCK_PING_DATA.maxTimeoutMs,
@@ -852,7 +855,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       // Run any remaining timers to complete the ping process
       await vi.runAllTimersAsync()
-      await pingPromise
+      await promise
 
       expect(sendClientErrorSpy).toHaveBeenCalledWith(
         403,
@@ -877,7 +880,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       const retryCallback = createTimerAdvancingRetryCallback()
 
-      const pingPromise = doInitPings(
+      const { promise } = doInitPings(
         MOCK_PING_DATA.uri,
         MOCK_PING_DATA.timeoutMs,
         MOCK_PING_DATA.maxTimeoutMs,
@@ -888,7 +891,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       // Run any remaining timers to complete the ping process
       await vi.runAllTimersAsync()
-      await pingPromise
+      await promise
 
       expect(sendClientErrorSpy).toHaveBeenCalledWith(
         500,
@@ -909,7 +912,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       const retryCallback = createTimerAdvancingRetryCallback()
 
-      const pingPromise = doInitPings(
+      const { promise } = doInitPings(
         MOCK_PING_DATA.uri,
         MOCK_PING_DATA.timeoutMs,
         MOCK_PING_DATA.maxTimeoutMs,
@@ -920,7 +923,7 @@ If you are trying to access a Streamlit app running on another server, this coul
 
       // Run any remaining timers to complete the ping process
       await vi.runAllTimersAsync()
-      await pingPromise
+      await promise
 
       expect(sendClientErrorSpy).toHaveBeenCalledWith(
         "No response received from server",
@@ -957,6 +960,7 @@ describe("WebsocketConnection", () => {
       // @ts-expect-error
       client.websocket.close()
     }
+    client.disconnect()
     server.close()
   })
 
