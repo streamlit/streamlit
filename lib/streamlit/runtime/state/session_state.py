@@ -318,11 +318,8 @@ class KeyIdMapper:
         self._key_id_mapping = key_id_mapping
         self._id_key_mapping = {v: k for k, v in key_id_mapping.items()}
 
-    def get_id_from_key(self, key: str, default: str | None = None) -> str:
-        # TODO(lukasmasuch): related code cannot handle None as return here. Therefore,
-        # we are returning unknown-id as default. Returning this value should never happen
-        # but it might still need some investigation if there is a better way to handle this.
-        return self._key_id_mapping.get(key, default or "unknown-id")
+    def get_id_from_key(self, key: str, default: str | None = None) -> str | None:
+        return self._key_id_mapping.get(key, default)
 
     def get_key_from_id(self, widget_id: str) -> str:
         return self._id_key_mapping[widget_id]
@@ -673,7 +670,7 @@ class SessionState:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
         """
-        return self._key_id_mapper.get_id_from_key(k, k)
+        return cast("str", self._key_id_mapper.get_id_from_key(k, k))
 
     def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapper[user_key] = widget_id
