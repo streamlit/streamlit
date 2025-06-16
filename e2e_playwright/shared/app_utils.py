@@ -21,7 +21,7 @@ from typing import Literal, cast
 
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
@@ -928,3 +928,18 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     return locator.get_by_test_id(
         re.compile("stBaseButton-segmented_control(Active)?")
     ).filter(has_text=text)
+
+
+def goto_app(page: Page, url: str) -> None:
+    """Navigate to an app based on a given URL and wait for the app to be loaded.
+
+    Parameters
+    ----------
+    page : Page
+        The page to navigate to the given URL.
+
+    url : str
+        The URL to navigate to.
+    """
+    page.goto(url)
+    wait_for_app_loaded(page)

@@ -17,11 +17,11 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
-from e2e_playwright.conftest import wait_for_app_loaded
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_toggle,
     fill_number_input,
+    goto_app,
 )
 
 if TYPE_CHECKING:
@@ -127,8 +127,7 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     # Register websocket handler
     page.on("websocket", on_web_socket)
 
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}/")
     # Wait until all dependent resources are loaded:
     page.wait_for_load_state()
 

@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import IframedPage, wait_for_app_loaded, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_no_skeletons
+from e2e_playwright.conftest import IframedPage, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_no_skeletons, goto_app
 
 if TYPE_CHECKING:
     from playwright.sync_api import ConsoleMessage, FrameLocator, Page
@@ -81,8 +81,8 @@ def test_no_console_errors(page: Page, app_port: int, browser_name: str):
             )
 
     page.on("console", on_console_message)
-    page.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(page)
+    goto_app(page, f"http://localhost:{app_port}")
+
     page.wait_for_load_state()
 
     # Make sure that all elements are rendered and no skeletons are shown:

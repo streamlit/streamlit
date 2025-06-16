@@ -49,6 +49,7 @@ from playwright.sync_api import (
 )
 from typing_extensions import Self
 
+from e2e_playwright.shared.app_utils import goto_app
 from e2e_playwright.shared.git_utils import get_git_root
 from e2e_playwright.shared.performance import (
     is_supported_browser,
@@ -355,8 +356,7 @@ def app_with_query_params(
     query_params = request.param
     query_string = parse.urlencode(query_params, doseq=True)
     url = f"http://localhost:{app_port}/?{query_string}"
-    page.goto(url)
-    wait_for_app_loaded(page)
+    goto_app(page, url)
 
     return page, query_params
 

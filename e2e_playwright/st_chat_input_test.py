@@ -18,10 +18,13 @@ from playwright.sync_api import FilePayload, Locator, Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     rerun_app,
-    wait_for_app_loaded,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    goto_app,
+)
 
 
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
@@ -84,8 +87,7 @@ def test_embedded_app_with_bottom_chat_input(
     """Test that an embedded app with bottom chat input renders correctly."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    app.goto(f"http://localhost:{app_port}/?embed=true")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/?embed=true")
 
     app_view_block = app.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
