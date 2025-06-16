@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import NumpyShape
 
 
 MediaData: TypeAlias = Union[
@@ -701,7 +700,7 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
 
     transformed_data: npt.NDArray[Any] = np.array(data, dtype=float)
 
-    if len(cast("NumpyShape", transformed_data.shape)) == 1:
+    if len(transformed_data.shape) == 1:
         nchan = 1
     elif len(transformed_data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,

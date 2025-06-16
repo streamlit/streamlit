@@ -41,7 +41,6 @@ from typing_extensions import TypeAlias, TypeGuard
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
-    NumpyShape,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -1167,7 +1166,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
     if isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     if isinstance(input_data, np.ndarray):
-        if len(cast("NumpyShape", input_data.shape)) == 1:
+        if len(input_data.shape) == 1:
             # For technical reasons, we need to distinguish one
             # one-dimensional numpy array from multidimensional ones.
             return DataFormat.NUMPY_LIST
