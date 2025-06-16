@@ -40,7 +40,7 @@ class CodeMixin:
         *,
         line_numbers: bool = False,
         wrap_lines: bool = False,
-        height: int | Literal["content"] = "content",
+        height: int | Literal["content"] | None = "content",
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.
@@ -117,7 +117,10 @@ class CodeMixin:
         code_proto.show_line_numbers = line_numbers
         code_proto.wrap_lines = wrap_lines
 
-        validate_height(height, allow_content=True)
+        if height is None:
+            height = "content"
+        else:
+            validate_height(height, allow_content=True)
         validate_width(width)
         layout_config = LayoutConfig(height=height, width=width)
 
