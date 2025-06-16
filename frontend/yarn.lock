@@ -3220,7 +3220,7 @@ __metadata:
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.0.0"
     iframe-resizer: "npm:4.3.11"
-    immer: "npm:^9.0.19"
+    immer: "npm:^10.1.1"
     jsdom: "npm:24.1.3"
     lighthouse: "npm:^12.6.0"
     lodash: "npm:^4.17.21"
@@ -3352,7 +3352,7 @@ __metadata:
     eslint: "npm:^9.29.0"
     eslint-plugin-streamlit-custom: "workspace:^"
     hoist-non-react-statics: "npm:^3.3.2"
-    immer: "npm:^9.0.19"
+    immer: "npm:^10.1.1"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.22"
     lodash: "npm:^4.17.21"
@@ -11881,10 +11881,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"immer@npm:^9.0.19":
-  version: 9.0.21
-  resolution: "immer@npm:9.0.21"
-  checksum: 10c0/03ea3ed5d4d72e8bd428df4a38ad7e483ea8308e9a113d3b42e0ea2cc0cc38340eb0a6aca69592abbbf047c685dbda04e3d34bf2ff438ab57339ed0a34cc0a05
+"immer@npm:^10.1.1":
+  version: 10.1.1
+  resolution: "immer@npm:10.1.1"
+  checksum: 10c0/b749e10d137ccae91788f41bd57e9387f32ea6d6ea8fd7eb47b23fd7766681575efc7f86ceef7fe24c3bc9d61e38ff5d2f49c2663b2b0c056e280a4510923653
   languageName: node
   linkType: hard
 

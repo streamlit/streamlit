@@ -18,7 +18,7 @@ import React, { PureComponent, ReactNode } from "react"
 
 import moment from "moment"
 import Hotkeys from "react-hot-keys"
-import { enableAllPlugins as enableImmerPlugins } from "immer"
+import { enableMapSet, enablePatches } from "immer"
 import classNames from "classnames"
 import without from "lodash/without"
 import { getLogger } from "loglevel"
@@ -266,7 +266,8 @@ export class App extends PureComponent<Props, State> {
     super(props)
 
     // Initialize immerjs
-    enableImmerPlugins()
+    enablePatches()
+    enableMapSet()
 
     // Theme hashes are only created for custom theme, and the custom theme
     // may come from localStorage. We need to create the hash here to ensure
