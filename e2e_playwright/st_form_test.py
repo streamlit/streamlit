@@ -305,9 +305,7 @@ def test_form_height_configurations(app: Page, assert_snapshot: ImageCompareFunc
     expect(form_16.get_by_test_id("stFormSubmitButton").first).to_be_visible()
     assert_snapshot(form_16, name="st_form-content_height")
 
-    form_17 = app.get_by_test_id("stForm").nth(16)
-    expect(form_17.get_by_test_id("stFormSubmitButton").first).to_be_visible()
-    assert_snapshot(form_17, name="st_form-stretch_height")
+    # Stretch height is tested inside containers and columns below.
 
 
 def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
