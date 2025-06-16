@@ -206,7 +206,8 @@ class LayoutsMixin:
         examples below.
 
         .. note::
-            We recommend against nesting columns more than once since it might look bad on smaller devices.
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest columns more than once.
 
         Parameters
         ----------
@@ -432,9 +433,12 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
-        .. warning::
-            All the content of every tab is always sent to and rendered on the frontend.
-            Conditional rendering is currently not supported.
+        .. note::
+            All content within every tab is computed and sent to the frontend,
+            regardless of which tab is selected. Tabs do not currently support
+            conditional rendering. If you have a slow-loading tab, consider
+            using a widget like ``st.segmented_control`` to conditionally
+            render content instead.
 
         Parameters
         ----------
@@ -555,6 +559,13 @@ class LayoutsMixin:
         To add elements to the returned container, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
+
+        .. note::
+            All content within the expander is computed and sent to the
+            frontend, even if the expander is closed.
+
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest expanders.
 
         Parameters
         ----------
@@ -685,8 +696,8 @@ class LayoutsMixin:
         notation (preferred) or just call methods directly on the returned object.
         See examples below.
 
-        .. warning::
-            We strongly advise against nesting popovers.
+        .. note::
+            To follow best design practices, don't nest popovers.
 
         Parameters
         ----------
@@ -826,6 +837,13 @@ class LayoutsMixin:
         By default, ``st.status()`` initializes in the "running" state. When called using
         ``with`` notation, it automatically updates to the "complete" state at the end
         of the "with" block. See examples below for more details.
+
+        .. note::
+            All content within the status container is computed and sent to the
+            frontend, even if the status container is closed.
+
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest status containers.
 
         Parameters
         ----------

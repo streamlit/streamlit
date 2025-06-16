@@ -237,6 +237,10 @@ class ChatMixin:
         (preferred) or just call methods directly on the returned object. See the
         examples below.
 
+        .. note::
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest chat message containers.
+
         Parameters
         ----------
         name : "user", "assistant", "ai", "human", or str
