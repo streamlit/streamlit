@@ -189,6 +189,7 @@ export const createEmotionTheme = (
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
   const {
     baseFontSize,
+    baseFontWeight,
     baseRadius,
     buttonRadius,
     showWidgetBorder,
@@ -351,6 +352,21 @@ export const createEmotionTheme = (
 
     // Set the root font size to the configured value (used on global styles):
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
+  }
+
+  // TODO: Update handling of font weight validity check
+  if (baseFontWeight && 100 <= baseFontWeight && baseFontWeight <= 900) {
+    conditionalOverrides.fontWeights = {
+      ...baseThemeConfig.emotion.fontWeights,
+    }
+
+    // Set each of the font weights based on the base weight provided, with a max of 900
+    conditionalOverrides.fontWeights.normal = baseFontWeight
+    conditionalOverrides.fontWeights.bold = Math.min(baseFontWeight + 200, 900)
+    conditionalOverrides.fontWeights.extrabold = Math.min(
+      baseFontWeight + 300,
+      900
+    )
   }
 
   if (notNullOrUndefined(showSidebarBorder)) {

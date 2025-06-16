@@ -1301,6 +1301,19 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "baseFontWeight",
+    categories=["theme"],
+    description="""
+        Sets the root font weight for the app.
+
+        This determines the overall weight of text and UI elements.
+
+        When unset, the font weight will be set to normal 400.
+    """,
+    type_=int,
+)
+
+_create_theme_options(
     "showSidebarBorder",
     categories=["theme"],
     description="""

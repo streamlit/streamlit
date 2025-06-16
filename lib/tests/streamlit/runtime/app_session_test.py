@@ -723,6 +723,7 @@ def _mock_get_options_for_section(
         "backgroundColor": "white",
         "base": "dark",
         "baseFontSize": 14,
+        "baseFontWeight": 300,
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
         "borderColor": "#ff0000",
@@ -1194,6 +1195,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "backgroundColor": None,
                     "base": None,
                     "baseFontSize": None,
+                    "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
                     "borderColor": None,
@@ -1228,6 +1230,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "backgroundColor": None,
                     "base": None,
                     "baseFontSize": None,
+                    "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
                     "borderColor": None,
@@ -1266,6 +1269,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "baseRadius": None,
                     "buttonRadius": None,
                     "baseFontSize": None,
+                    "baseFontWeight": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -1320,6 +1324,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField("show_widget_border")
         assert not new_session_msg.custom_theme.HasField("link_color")
         assert not new_session_msg.custom_theme.HasField("base_font_size")
+        assert not new_session_msg.custom_theme.HasField("base_font_weight")
         assert not new_session_msg.custom_theme.HasField("code_background_color")
         assert not new_session_msg.custom_theme.HasField("show_sidebar_border")
 
@@ -1365,6 +1370,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.show_widget_border is True
         assert new_session_msg.custom_theme.link_color == "#2EC163"
         assert new_session_msg.custom_theme.base_font_size == 14
+        assert new_session_msg.custom_theme.base_font_weight == 300
         assert new_session_msg.custom_theme.code_background_color == "blue"
         assert new_session_msg.custom_theme.show_sidebar_border is True
         # The value from `theme.font` will be placed in body_font since
@@ -1411,6 +1417,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.sidebar.base == 0
         assert not new_session_msg.custom_theme.sidebar.font_faces
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
 
     @patch("streamlit.runtime.app_session._LOGGER")
