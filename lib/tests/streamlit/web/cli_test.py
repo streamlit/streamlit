@@ -357,7 +357,89 @@ class CliTest(unittest.TestCase):
                 result = self.runner.invoke(cli, ["run", "file_name.py"])
 
             assert result.exit_code != 0
-            assert ("Collecting usage statistics" in result.output) == headless_mode
+            assert ("Collecting usage statistics" in result.output) == headless_mode, (
+                f"Telemetry message mode is {headless_mode} "
+                f"yet output is: {result.output}"
+            )
+
+    @parameterized.expand([(False, False), (False, True), (True, False), (True, True)])
+    def test_prompt_welcome_message(self, prompt_mode, headless_mode):
+        """If prompt is true, show a welcome prompt, unless headless."""
+
+        with testutil.patch_config_options(
+            {"server.showEmailPrompt": prompt_mode, "server.headless": headless_mode}
+        ):
+            with (
+                patch("streamlit.url_util.is_url", return_value=False),
+                patch("os.path.exists", return_value=True),
+                patch("streamlit.config.is_manually_set", return_value=False),
+                patch(
+                    "streamlit.runtime.credentials._check_credential_file_exists",
+                    return_value=False,
+                ),
+            ):
+                result = self.runner.invoke(cli, ["run", "file_name.py"])
+
+            assert result.exit_code != 0
+            assert (prompt_mode and not headless_mode) == (
+                "like to receive helpful onboarding emails, news, offers, promotions,"
+                in result.output
+            ), (
+                f"Welcome message mode is {prompt_mode} "
+                f"and headless mode is {headless_mode} "
+                f"yet output is: {result.output}"
+            )
+
+    def test_streamlit_folder_not_created_when_show_email_prompt_false(self):
+        """Test that ~/.streamlit directory is not created when server.showEmailPrompt=False."""
+        with testutil.patch_config_options(
+            {"server.showEmailPrompt": False, "server.headless": False}
+        ):
+            with (
+                patch("streamlit.url_util.is_url", return_value=False),
+                patch("os.path.exists", return_value=True),
+                patch("streamlit.config.is_manually_set", return_value=False),
+                patch(
+                    "streamlit.runtime.credentials._check_credential_file_exists",
+                    return_value=False,
+                ),
+                patch("streamlit.runtime.credentials.os.makedirs") as mock_makedirs,
+                patch("streamlit.web.bootstrap.run"),
+            ):
+                result = self.runner.invoke(cli, ["run", "file_name.py"])
+
+            # Assert that makedirs was never called to create ~/.streamlit directory
+            mock_makedirs.assert_not_called()
+            assert result.exit_code != 0
+
+    def test_streamlit_folder_created_when_show_email_prompt_true(self):
+        """Test that ~/.streamlit directory is created when server.showEmailPrompt=True."""
+        with testutil.patch_config_options(
+            {"server.showEmailPrompt": True, "server.headless": False}
+        ):
+            with (
+                patch("streamlit.url_util.is_url", return_value=False),
+                patch("os.path.exists", return_value=True),
+                patch("streamlit.config.is_manually_set", return_value=False),
+                patch(
+                    "streamlit.runtime.credentials._check_credential_file_exists",
+                    return_value=False,
+                ),
+                patch("streamlit.runtime.credentials.os.makedirs") as mock_makedirs,
+                patch("streamlit.web.bootstrap.run"),
+                patch("click.prompt", return_value="test@example.com") as mock_prompt,
+                patch(
+                    "streamlit.runtime.credentials.open", mock.mock_open(), create=True
+                ),
+                patch("streamlit.runtime.credentials._send_email"),
+            ):
+                result = self.runner.invoke(cli, ["run", "file_name.py"])
+
+            # Assert that makedirs was called to create ~/.streamlit directory
+            mock_makedirs.assert_called_once()
+            # Assert that the email prompt was shown
+            mock_prompt.assert_called_once()
+            assert result.exit_code == 0
 
     def test_help_command(self):
         """Tests the help command redirects to using the --help flag"""

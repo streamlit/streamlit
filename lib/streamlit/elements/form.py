@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import (
-    Height,
     Width,
     get_height_config,
     get_width_config,
@@ -76,7 +75,7 @@ class FormMixin:
         enter_to_submit: bool = True,
         border: bool = True,
         width: Width = "stretch",
-        height: Height = "content",
+        height: int | Literal["content"] = "content",
     ) -> DeltaGenerator:
         """Create a form that batches elements together with a "Submit" button.
 
