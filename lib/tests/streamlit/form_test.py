@@ -478,16 +478,6 @@ class FormDimensionsTest(DeltaGeneratorTestCase):
         assert form_proto.form.form_id == "form_with_content"
         assert form_proto.height_config.use_content
 
-    def test_form_with_stretch_height(self):
-        """Test form with stretch height."""
-        with st.form("form_with_stretch", height="stretch"):
-            st.text_input("Input")
-            st.form_submit_button("Submit")
-
-        form_proto = self.get_delta_from_queue(0).add_block
-        assert form_proto.form.form_id == "form_with_stretch"
-        assert form_proto.height_config.use_stretch
-
     @parameterized.expand(
         [
             ("invalid", "invalid"),

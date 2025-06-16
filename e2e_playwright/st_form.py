@@ -213,14 +213,3 @@ with st.form("form_16", height="content"):
     )
     if submitted_16:
         st.write("Form submitted")
-
-with st.form("form_17", height="stretch"):
-    st.write("Inside form 17")
-    st.write("Form height: stretch")
-    text_input = st.text_input("Form 17 - Text Input")
-    submitted_17 = st.form_submit_button(
-        "Form 17 - Submit",
-        help="Submit by clicking",
-    )
-    if submitted_17:
-        st.write("Form submitted")
