@@ -105,6 +105,7 @@ repos:
           |^vendor/
           |^component-lib/declarations/apache-arrow
           |^frontend/app/src/assets/css/variables\.scss
+          |^frontend/lib/src/assets/
           |^lib/tests/streamlit/elements/test_html\.js
           |^lib/tests/streamlit/elements/test_html\.css
           |^e2e_playwright/test_assets/
@@ -122,6 +123,7 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
+          |^frontend/lib/src/assets/
           |^proto/streamlit/proto/openmetrics_data_model\.proto
       - id: insert-license
         name: Add license for all shell files
@@ -137,6 +139,7 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
+          |^frontend/lib/src/assets/
       - id: insert-license
         name: Add license for all Python files
         files: \.py$|\.pyi$
@@ -151,6 +154,7 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
+          |^frontend/lib/src/assets/
       - id: insert-license
         name: Add license for all HTML files
         files: \.html$
@@ -165,6 +169,7 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
+          |^frontend/lib/src/assets/
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -172,10 +177,16 @@ repos:
         exclude: |
           (?x)
           ^frontend/app/src/assets/
+          |^frontend/lib/src/assets/
           |^NOTICES$
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
       - id: check-added-large-files
+        exclude: |
+          (?x)
+          ^frontend/lib/src/assets/pdf\.worker\.min\.mjs$
+          |^frontend/lib/src/assets/cmaps/
+          |^frontend/lib/src/assets/standard_fonts/
       - id: check-json
         exclude: .vscode/launch.json
       - id: check-toml
@@ -189,6 +200,7 @@ repos:
         exclude: |
           (?x)
           /vendor/
+          |^frontend/lib/src/assets/
           |^NOTICES$
           |^e2e_playwright/test_assets/
           |^LICENSE$
@@ -196,4 +208,5 @@ repos:
         args: [--fix=lf]
         exclude: |
           (?x)
-          ^NOTICES$
+          ^frontend/lib/src/assets/
+          |^NOTICES$
