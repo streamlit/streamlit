@@ -363,7 +363,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             success = "Success status"
 
         df = pd.DataFrame({"pipeline": ["Success"], "status": [Status.success]})
-        styler = df.style.applymap(
+        styler = df.style.map(
             lambda v: "color: red" if v == Status.success else "", subset=["status"]
         )
         st.dataframe(styler)
