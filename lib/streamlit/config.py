@@ -746,6 +746,17 @@ def _server_headless() -> bool:
 
 
 _create_option(
+    "server.showEmailPrompt",
+    description="""
+        Whether to show a terminal prompt for the user to enter their email
+        address when they run Streamlit for the first time. If you set
+        `server.headless=True`, Streamlit will not show this prompt.
+    """,
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
     "server.runOnSave",
     description="""
         Automatically rerun script when the file is modified on disk.
