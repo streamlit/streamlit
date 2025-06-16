@@ -212,19 +212,6 @@ class CodeElement(DeltaGeneratorTestCase):
         )
         assert element.height_config.use_content
 
-    def test_st_code_with_height_stretch(self):
-        """Test st.code with stretch height."""
-        code = "print('My string = %d' % my_value)"
-        st.code(code, height="stretch")
-
-        element = self.get_delta_from_queue().new_element
-        assert element.code.code_text == code
-        assert (
-            element.height_config.WhichOneof("height_spec")
-            == HeightConfigFields.USE_STRETCH.value
-        )
-        assert element.height_config.use_stretch
-
     @parameterized.expand(
         [
             "invalid",

@@ -15,10 +15,9 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.elements.lib.layout_utils import (
-    Height,
     LayoutConfig,
     WidthWithoutContent,
     validate_height,
@@ -41,7 +40,7 @@ class CodeMixin:
         *,
         line_numbers: bool = False,
         wrap_lines: bool = False,
-        height: Height = "content",
+        height: int | Literal["content"] = "content",
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.

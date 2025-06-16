@@ -304,7 +304,3 @@ def test_form_height_configurations(app: Page, assert_snapshot: ImageCompareFunc
     form_16 = app.get_by_test_id("stForm").nth(15)
     expect(form_16.get_by_test_id("stFormSubmitButton").first).to_be_visible()
     assert_snapshot(form_16, name="st_form-content_height")
-
-    form_17 = app.get_by_test_id("stForm").nth(16)
-    expect(form_17.get_by_test_id("stFormSubmitButton").first).to_be_visible()
-    assert_snapshot(form_17, name="st_form-stretch_height")
