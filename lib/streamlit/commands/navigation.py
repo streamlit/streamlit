@@ -120,7 +120,7 @@ def navigation(
         To create labeled sections or page groupings within the navigation
         menu, ``pages`` must be a dictionary. Each key is the label of a
         section and each value is the list of page-like objects for
-        that section. If you use ``position="top"``, each groupings will be a
+        that section. If you use ``position="top"``, each grouping will be a
         collapsible item in the navigation menu.
 
         When you use a string or path as a page-like object, they are
