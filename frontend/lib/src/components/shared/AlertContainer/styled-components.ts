@@ -40,7 +40,6 @@ export const StyledAlertContent = styled.div(({ theme }) => ({
     color: "inherit",
   },
 
-  // TODO: confirm whether link color/underline should apply here
   a: {
     color: "inherit",
     textDecoration: "underline",

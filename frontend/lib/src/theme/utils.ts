@@ -358,7 +358,7 @@ export const createEmotionTheme = (
     conditionalOverrides.showSidebarBorder = showSidebarBorder
   }
 
-  if (linkUnderline === false) {
+  if (notNullOrUndefined(linkUnderline)) {
     conditionalOverrides.linkUnderline = linkUnderline
   }
 

@@ -1144,7 +1144,7 @@ _create_theme_options(
     "linkUnderline",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        Whether or not to show underline on links.
+        Whether or not links should be displayed with an underline.
     """,
     type_=bool,
 )
