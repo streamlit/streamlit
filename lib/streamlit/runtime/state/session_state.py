@@ -670,7 +670,7 @@ class SessionState:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
         """
-        # Its guaranteed that the key is a string since the default is string,
+        # It's guaranteed that the key is a string since the default is string,
         # so we can cast it to str here:
         return cast("str", self._key_id_mapper.get_id_from_key(k, k))
 
