@@ -79,7 +79,7 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
+        divider : bool, “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
             Shows a colored divider below the header. If True, successive
             headers will cycle through divider colors. That is, the first
             header will have a blue line, the second header will have a
@@ -87,10 +87,17 @@ class HeadingMixin:
             the following: blue, green, orange, red, violet, gray/grey, or
             rainbow.
 
-        width : int or "stretch" or "content"
-            The width of the header. Can be an integer (pixels), "stretch" to
-            use the full width of the container, or "content" (default) to size
-            based on the content.
+        width : "stretch", "content", or int
+            The width of the header element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -169,10 +176,17 @@ class HeadingMixin:
             the following: blue, green, orange, red, violet, gray/grey, or
             rainbow.
 
-        width : int or "stretch" or "content"
-            The width of the subheader. Can be an integer (pixels), "stretch" to
-            use the full width of the container, or "content" (default) to size
-            based on the content.
+        width : "stretch", "content", or int
+            The width of the subheader element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -245,10 +259,17 @@ class HeadingMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        width : int or "stretch" or "content"
-            The width of the title. Can be an integer (pixels), "stretch" to
-            use the full width of the container, or "content" (default) to size
-            based on the content.
+        width : "stretch", "content", or int
+            The width of the title element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------

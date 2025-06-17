@@ -115,21 +115,29 @@ def set_page_config(
     menu_items: MenuItems | None = None,
 ) -> None:
     """
-    Configures the default settings of the page.
+    Configure the default settings of the page.
 
-    .. note::
-        This must be the first Streamlit command used on an app page, and must only
-        be set once per page.
+    This command can be called multiple times in a script run to dynamically
+    change the page configuration. The calls are additive, with each successive
+    call overriding only the parameters that are specified.
 
     Parameters
     ----------
     page_title: str or None
-        The page title, shown in the browser tab. If None, defaults to the
-        filename of the script ("app.py" would show "app • Streamlit").
+        The page title, shown in the browser tab. If this is ``None``
+        (default), the page title is inherited from the previous call of
+        ``st.set_page_config``. If this is ``None`` and no previous call
+        exists, the page title is inferred from the page source.
+
+        If a page source is a Python file, its inferred title is derived from
+        the filename. If a page source is a callable object, its inferred title
+        is derived from the callable's name.
 
     page_icon : Anything supported by st.image (except list), str, or None
-        The page favicon. If ``page_icon`` is ``None`` (default), the favicon
-        will be a monochrome Streamlit logo.
+        The page favicon. If ``page_icon`` is ``None`` (default), the page icon
+        is inherited from the previous call of ``st.set_page_config``. If this
+        is ``None`` and no previous call exists, the favicon is a monochrome
+        Streamlit logo.
 
         In addition to the types supported by |st.image|_ (except list), the
         following strings are valid:
@@ -160,17 +168,29 @@ def set_page_config(
         .. |st.image| replace:: ``st.image``
         .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
-    layout: "centered" or "wide"
-        How the page content should be laid out. Defaults to "centered",
-        which constrains the elements into a centered column of fixed width;
-        "wide" uses the entire screen.
+    layout: "centered", "wide", or None
+        How the page content should be laid out. If this is ``None`` (default),
+        the page layout is inherited from the previous call of
+        ``st.set_page_config``. If this is ``None`` and no previous call
+        exists, the page layout is ``"centered"``.
 
-    initial_sidebar_state: "auto", "expanded", or "collapsed"
-        How the sidebar should start out. Defaults to "auto",
-        which hides the sidebar on small devices and shows it otherwise.
-        "expanded" shows the sidebar initially; "collapsed" hides it.
-        In most cases, you should just use "auto", otherwise the app will
-        look bad when embedded and viewed on mobile.
+        ``"centered"`` constrains the elements into a centered column of fixed
+        width. ``"wide"`` uses the entire screen.
+
+    initial_sidebar_state: "auto", "expanded", "collapsed", or None
+        How the sidebar should start out. If this is ``None`` (default), the
+        sidebar state is inherited from the previous call of
+        ``st.set_page_config``. If no previous call exists, the sidebar state
+        is ``"auto"``.
+
+        The folowing states are supported:
+
+        - ``"auto"``: The sidebar is hidden on small devices and shown otherwise.
+        - ``"expanded"``: The sidebar is shown initially.
+        - ``"collapsed"``: The sidebar is hidden initially.
+
+        In most cases, ``"auto"`` provides the best user experience across
+        devices of different sizes.
 
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
@@ -187,6 +207,8 @@ def set_page_config(
             If None, only shows Streamlit's default About text.
 
         The URL may also refer to an email address e.g. ``mailto:john@example.com``.
+        To remove an item that was specified in a previous call to
+        ``st.set_page_config``, set its value to ``None`` in the dictionary.
 
     Example
     -------

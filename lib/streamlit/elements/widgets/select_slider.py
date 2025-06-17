@@ -245,9 +245,15 @@ class SelectSliderMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "stretch" or int
-            The width of the slider. If "stretch", the slider will stretch to
-            fill the available space. If an integer, the slider will have a fixed
-            width in pixels.
+            The width of the slider widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------

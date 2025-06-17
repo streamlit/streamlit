@@ -123,9 +123,15 @@ class ProgressMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        width : int or str
-            The width of the progress bar. Can be either "stretch" to use the full
-            container width, or an integer for a fixed width in pixels.
+        width : "stretch" or int
+            The width of the progress element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------

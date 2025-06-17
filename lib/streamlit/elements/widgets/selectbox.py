@@ -374,9 +374,15 @@ class SelectboxMixin:
             adding a new item.
 
         width : "stretch" or int
-            The width of the selectbox. If "stretch", the selectbox will stretch
-            to fill the available space. If a number, the selectbox will have a
-            fixed width of that many pixels. Defaults to "stretch".
+            The width of the selectbox widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------

@@ -68,16 +68,31 @@ class CodeMixin:
             An optional boolean indicating whether to wrap lines. This defaults
             to ``False``.
 
-        height : int or None
-            Desired height of the code block expressed in pixels. If ``height``
-            is ``None`` (default), Streamlit sets the element's height to fit
-            its content. Vertical scrolling within the element is enabled when
-            the height does not accommodate all lines.
+        height : "content" or int
+            The height of the code block element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+            .. note::
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         width : "stretch" or int
-            The width of the code block. This can be either:
-            - "stretch" (default): The code block will stretch to fill the container width
-            - An integer: The code block will have a fixed width in pixels
+            The width of the code block element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------

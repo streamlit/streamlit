@@ -682,10 +682,10 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str, Path, or st.Page
-            The file path (relative to the main script) or an st.Page indicating
-            the page to switch to. Alternatively, this can be the URL to an
-            external page (must start with "http://" or "https://").
+        page : str, Path, or StreamlitPage
+            The file path (relative to the main script) or a ``StreamlitPage``
+            indicating the page to switch to. Alternatively, this can be the
+            URL to an external page (must start with "http://" or "https://").
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -706,8 +706,9 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         icon : str or None
-            An optional emoji or icon to display next to the button label. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            An optional emoji or icon to display next to the button label. If
+            ``icon`` is ``None`` (default), the icon is inferred from the
+            ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``

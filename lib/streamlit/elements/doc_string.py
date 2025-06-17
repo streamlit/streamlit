@@ -59,8 +59,14 @@ class HelpMixin:
             The object whose information should be displayed. If left
             unspecified, this call will display help for Streamlit itself.
         width : "stretch" or int
-            The width of the help element. Can be "stretch" to fill the container
-            width, or an integer to specify a fixed width in pixels.
+            The width of the help element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------

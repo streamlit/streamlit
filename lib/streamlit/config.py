@@ -676,12 +676,11 @@ _create_section("server", "Settings for the Streamlit server")
 _create_option(
     "server.folderWatchList",
     description="""
-        List of folders to watch for changes.
+        List of directories to watch for changes.
 
-        By default, Streamlit watches for files in the current working directory.
-        Use this parameter to specify additional folders to watch.
-
-        Note: This is a list of absolute paths.
+        By default, Streamlit watches files in the current working directory
+        and its subdirectories. Use this option to specify additional
+        directories to watch. Paths must be absolute.
     """,
     default_val=[],
     multiple=True,
@@ -690,9 +689,12 @@ _create_option(
 _create_option(
     "server.folderWatchBlacklist",
     description="""
-        List of folders that should not be watched for changes.
+        List of directories to ignore for changes.
 
-        Relative paths will be taken as relative to the current working directory.
+        By default, Streamlit watches files in the current working directory
+        and its subdirectories. Use this option to specify exceptions within
+        watched directories. Paths can be absolute or relative to the current
+        working directory.
 
         Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
@@ -840,9 +842,11 @@ _create_option(
 _create_option(
     "server.corsAllowedOrigins",
     description="""
-        If CORS protection is enabled (when server.enableCORS=True), allows an
-        app developer to set a list of allowed origins that the Streamlit server
-        will accept traffic from.
+        Allowed list of origins.
+
+        If CORS protection is enabled (`server.enableCORS=True`), use this
+        option to set a list of allowed origins that the Streamlit server will
+        accept traffic from.
 
         This config option does nothing if CORS protection is disabled.
 
@@ -1152,14 +1156,14 @@ _create_theme_options(
     "font",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        The font family for all text, except code blocks. This can be one of
-        the following:
+        The font family for all text, except code blocks.
 
+        This can be one of the following:
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `family` value for a custom font table under [[theme.fontFaces]]
-        - a comma-separated list of these (as a single string) to specify
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A comma-separated list of these (as a single string) to specify
           fallbacks
 
         For example, you can use the following:
@@ -1172,14 +1176,14 @@ _create_theme_options(
     "codeFont",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        The font family to use for code (monospace) in the sidebar. This can be
-        one of the following:
+        The font family to use for code (monospace) in the sidebar.
 
+        This can be one of the following:
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `family` value for a custom font table under [[theme.fontFaces]]
-        - a comma-separated list of these (as a single string) to specify
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A comma-separated list of these (as a single string) to specify
           fallbacks
     """,
 )
@@ -1201,13 +1205,14 @@ _create_theme_options(
     "headingFont",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        The font family to use for headings. This can be one of the following:
+        The font family to use for headings.
 
+        This can be one of the following:
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `family` value for a custom font table under [[theme.fontFaces]]
-        - a comma-separated list of these (as a single string) to specify
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A comma-separated list of these (as a single string) to specify
           fallbacks
 
         If no heading font is set, Streamlit uses `theme.font` for headings.
@@ -1220,21 +1225,27 @@ _create_theme_options(
     description="""
         An array of fonts to use in your app.
 
-        Each font in the array is a table (dictionary) with the following three
-        attributes: family, url, weight, and style.
+        Each font in the array is a table (dictionary) that can have the
+        following attributes, closely resembling CSS font-face definitions:
+        - family
+        - url
+        - weight (optional)
+        - style (optional)
+        - unicodeRange (optional)
 
         To host a font with your app, enable static file serving with
         `server.enableStaticServing=true`.
 
-        You can define multiple [[theme.fontFaces]] tables.
+        You can define multiple [[theme.fontFaces]] tables, including multiple
+        tables with the same family if your font is defined by multiple files.
 
-        For example, each font is defined in a [[theme.fontFaces]] table as
-        follows:
+        For example, a font hosted with your app may have a [[theme.fontFaces]]
+        table as follows:
 
             [[theme.fontFaces]]
             family = "font_name"
             url = "app/static/font_file.woff"
-            weight = 400
+            weight = "400"
             style = "normal"
     """,
 )
@@ -1251,9 +1262,10 @@ _create_theme_options(
         - "medium"
         - "large"
         - "full"
-        - ...or the number in pixels or rem. For example, you can use "10px",
-          "0.5rem", or "2rem". To follow best practices, use rem instead of
-          pixels when specifying a numeric size.
+        - The number in pixels or rem.
+
+        For example, you can use "10px", "0.5rem", or "2rem". To follow best
+        practices, use rem instead of pixels when specifying a numeric size.
     """,
 )
 
@@ -1269,9 +1281,12 @@ _create_theme_options(
         - "medium"
         - "large"
         - "full"
-        - ...or the number in pixels or rem. For example, you can use "10px",
-          "0.5rem", or "2rem". To follow best practices, use rem instead of
-          pixels when specifying a numeric size.
+        - The number in pixels or rem.
+
+        For example, you can use "10px", "0.5rem", or "2rem". To follow best
+        practices, use rem instead of pixels when specifying a numeric size.
+
+        If no button radius is set, Streamlit uses `theme.baseRadius` instead.
     """,
 )
 
@@ -1288,6 +1303,9 @@ _create_theme_options(
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         The color of the border around dataframes and tables.
+
+        If no dataframe border color is set, Streamlit uses `theme.borderColor`
+        instead.
     """,
 )
 

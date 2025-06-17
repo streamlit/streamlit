@@ -120,7 +120,8 @@ def navigation(
         To create labeled sections or page groupings within the navigation
         menu, ``pages`` must be a dictionary. Each key is the label of a
         section and each value is the list of page-like objects for
-        that section.
+        that section. If you use ``position="top"``, each grouping will be a
+        collapsible item in the navigation menu.
 
         When you use a string or path as a page-like object, they are
         internally passed to ``st.Page`` and converted to ``StreamlitPage``
@@ -128,11 +129,11 @@ def navigation(
         path inferred from its path or filename. To customize these attributes
         for your page, initialize your page with ``st.Page``.
 
-    position : "sidebar", "hidden", or "top"
+    position : "sidebar", "top", or "hidden"
         The position of the navigation menu. If this is ``"sidebar"``
         (default), the navigation widget appears at the top of the sidebar. If
-        this is ``"hidden"``, the navigation widget is not displayed. If this
-        is ``"top"``, the navigation appears in the top header of the app.
+        this is ``"top"``, the navigation appears in the top header of the app.
+        If this is ``"hidden"``, the navigation widget is not displayed.
 
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
@@ -147,6 +148,8 @@ def navigation(
         If ``st.navigation`` changes from ``expanded=True`` to
         ``expanded=False`` on a rerun, the menu will stay expanded and a
         collapse button will be displayed.
+
+        The parameter is only used when ``position="sidebar"``.
 
     Returns
     -------
@@ -226,7 +229,38 @@ def navigation(
         https://doc-navigation-example-2.streamlit.app/
         height: 300px
 
-    **Example 3: Stateful widgets across multiple pages**
+
+    **Example 3: Use top navigation**
+
+    You can use the ``position`` parameter to place the navigation at the top
+    of the app. This is useful for apps with a lot of pages because it allows
+    you to create collapsible sections for each group of pages. The following
+    example uses the same directory structure as Example 2 and shows how to
+    create a top navigation menu.
+
+    ``streamlit_app.py``:
+
+    >>> import streamlit as st
+    >>>
+    >>> pages = {
+    ...     "Your account": [
+    ...         st.Page("create_account.py", title="Create your account"),
+    ...         st.Page("manage_account.py", title="Manage your account"),
+    ...     ],
+    ...     "Resources": [
+    ...         st.Page("learn.py", title="Learn about us"),
+    ...         st.Page("trial.py", title="Try it out"),
+    ...     ],
+    ... }
+    >>>
+    >>> pg = st.navigation(pages, position="top")
+    >>> pg.run()
+
+    .. output::
+        https://doc-navigation-top.streamlit.app/
+        height: 300px
+
+    **Example 4: Stateful widgets across multiple pages**
 
     Call widget functions in your entrypoint file when you want a widget to be
     stateful across pages. Assign keys to your common widgets and access their

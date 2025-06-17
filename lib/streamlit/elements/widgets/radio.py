@@ -253,9 +253,18 @@ class RadioMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "content", "stretch", or int
-            The width of the widget. Can be "content" (default) to size the widget
-            to its content, "stretch" to fill the container width, or an integer
-            number of pixels.
+            The width of the radio button widget. This can be one of the
+            following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
