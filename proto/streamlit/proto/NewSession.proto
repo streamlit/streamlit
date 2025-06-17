@@ -174,11 +174,12 @@ message CustomThemeConfig {
   optional bool show_widget_border = 20;
   optional string link_color = 21;
   optional int32 base_font_size = 22;
+  optional string code_font_size = 28;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
 
-  // Next ID: 28
+  // Next ID: 29
 }
 
 message FontFace {
