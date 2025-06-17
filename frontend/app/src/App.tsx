@@ -906,7 +906,10 @@ export class App extends PureComponent<Props, State> {
 
     // Only change layout/sidebar when the page config has changed.
     // This preserves the user's previous choice/default, and prevents extra re-renders.
-    if (layout !== this.state.layout && layout !== PageConfig.Layout.UNSET) {
+    if (
+      layout !== this.state.layout &&
+      layout !== PageConfig.Layout.LAYOUT_UNSET
+    ) {
       this.setState((prevState: State) => ({
         layout,
         userSettings: {
@@ -918,7 +921,7 @@ export class App extends PureComponent<Props, State> {
 
     if (
       initialSidebarState !== this.state.initialSidebarState &&
-      initialSidebarState !== PageConfig.SidebarState.NONE
+      initialSidebarState !== PageConfig.SidebarState.SIDEBAR_UNSET
     ) {
       this.setState(() => ({
         initialSidebarState,

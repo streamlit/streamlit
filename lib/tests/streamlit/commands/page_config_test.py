@@ -91,7 +91,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
     def test_set_page_config_layout_none(self):
         st.set_page_config(layout=None)
         c = self.get_message_from_queue().page_config_changed
-        assert c.layout == PageConfigProto.UNSET
+        assert c.layout == PageConfigProto.LAYOUT_UNSET
 
     def test_set_page_config_layout_invalid(self):
         with pytest.raises(StreamlitAPIException):
@@ -115,7 +115,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
     def test_set_page_config_sidebar_none(self):
         st.set_page_config(initial_sidebar_state=None)
         c = self.get_message_from_queue().page_config_changed
-        assert c.initial_sidebar_state == PageConfigProto.NONE
+        assert c.initial_sidebar_state == PageConfigProto.SIDEBAR_UNSET
 
     def test_set_page_config_sidebar_invalid(self):
         with pytest.raises(StreamlitInvalidSidebarStateError):

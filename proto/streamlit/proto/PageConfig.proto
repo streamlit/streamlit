@@ -46,7 +46,7 @@ message PageConfig {
 
     // Unset distinguishes that config was not provided - on initial call, will
     // set to centered as default. Otherwise, inherit value from previous call
-    UNSET = 2;
+    LAYOUT_UNSET = 2;
   }
 
   enum SidebarState {
@@ -59,8 +59,8 @@ message PageConfig {
     // Force the sidebar to be hidden.
     COLLAPSED = 2;
 
-    // None distinguishes that config was not provided - on initial call, will
+    // Unset distinguishes that config was not provided - on initial call, will
     // set to auto as default. Otherwise, inherit value from previous call
-    NONE = 3;
+    SIDEBAR_UNSET = 3;
   }
 }

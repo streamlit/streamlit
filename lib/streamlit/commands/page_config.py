@@ -220,7 +220,7 @@ def set_page_config(
         pb_layout = PageConfigProto.WIDE
     elif layout is None:
         # Allows for multiple (additive) calls to set_page_config
-        pb_layout = PageConfigProto.UNSET
+        pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidPageLayoutError(layout=layout)
@@ -236,7 +236,7 @@ def set_page_config(
         pb_sidebar_state = PageConfigProto.COLLAPSED
     elif initial_sidebar_state is None:
         # Allows for multiple (additive) calls to set_page_config
-        pb_sidebar_state = PageConfigProto.NONE
+        pb_sidebar_state = PageConfigProto.SIDEBAR_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidSidebarStateError(
