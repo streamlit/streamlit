@@ -22,11 +22,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString()
 
-// PDF.js options for cMaps and standard fonts
+// PDF.js options - cmaps and standard fonts removed to reduce bundle size
+// This optimizes for English/Latin-script PDFs and smaller bundle size
+// Note: Non-Latin characters (CJK, Arabic, Hebrew) may not display correctly
+// Note: PDFs without embedded fonts may fall back to system fonts
 export const pdfOptions = {
-  cMapUrl: "/src/assets/cmaps/",
-  cMapPacked: true,
-  standardFontDataUrl: "/src/assets/standard_fonts/",
+  cMapUrl: null, // Removed: ~1.6MB savings, no non-Latin character support
+  cMapPacked: false,
+  standardFontDataUrl: null, // Removed: ~940KB savings, relies on system fonts
 }
 
 // Export pdfjs for additional configuration if needed

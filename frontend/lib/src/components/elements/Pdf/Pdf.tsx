@@ -105,9 +105,9 @@ function Pdf({
   // Memoize options to prevent re-renders - using local assets
   const options = useMemo(
     () => ({
-      cMapUrl: "/src/assets/cmaps/",
-      cMapPacked: true,
-      standardFontDataUrl: "/src/assets/standard_fonts/",
+      cMapUrl: null,
+      cMapPacked: false,
+      standardFontDataUrl: null,
     }),
     []
   )
@@ -175,9 +175,9 @@ function Pdf({
         ) : (
           <Document
             file={pdfFileData || pdfUrl || undefined}
+            options={options}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
-            options={options}
             loading={
               <div style={{ padding: "20px", textAlign: "center" }}>
                 Loading PDF...

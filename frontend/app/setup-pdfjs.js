@@ -14,51 +14,42 @@
  * limitations under the License.
  */
 
-import path from "node:path"
-import fs from "node:fs"
-import { createRequire } from "node:module"
+import fs from "fs"
+import path from "path"
+import { fileURLToPath } from "url"
 
-const require = createRequire(import.meta.url)
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-// Get the pdfjs-dist path
-const pdfjsDistPath = path.dirname(require.resolve("pdfjs-dist/package.json"))
+// Paths
+const pdfjsDistPath = path.join(__dirname, "..", "node_modules", "pdfjs-dist")
+const workerPath = path.join(pdfjsDistPath, "build", "pdf.worker.min.mjs")
+const assetsDir = path.join(__dirname, "src", "assets")
+const destWorkerPath = path.join(assetsDir, "pdf.worker.min.mjs")
 
-// Define source and destination paths
-const cMapsDir = path.join(pdfjsDistPath, "cmaps")
-const standardFontsDir = path.join(pdfjsDistPath, "standard_fonts")
-const workerFile = path.join(pdfjsDistPath, "build", "pdf.worker.min.mjs")
-
-// Define destination paths in src/assets directory
-const assetsDir = path.join(process.cwd(), "src", "assets")
-const destCMapsDir = path.join(assetsDir, "cmaps")
-const destStandardFontsDir = path.join(assetsDir, "standard_fonts")
-const destWorkerFile = path.join(assetsDir, "pdf.worker.min.mjs")
-
-// Ensure assets directory exists
+// Create assets directory if it doesn't exist
 if (!fs.existsSync(assetsDir)) {
   fs.mkdirSync(assetsDir, { recursive: true })
 }
 
-// Copy cMaps
-console.log("Copying cMaps...")
-if (fs.existsSync(destCMapsDir)) {
-  fs.rmSync(destCMapsDir, { recursive: true })
-}
-fs.cpSync(cMapsDir, destCMapsDir, { recursive: true })
+console.log("Setting up PDF.js files...")
 
-// Copy standard fonts
-console.log("Copying standard fonts...")
-if (fs.existsSync(destStandardFontsDir)) {
-  fs.rmSync(destStandardFontsDir, { recursive: true })
-}
-fs.cpSync(standardFontsDir, destStandardFontsDir, { recursive: true })
-
-// Copy worker file
+// Copy worker
 console.log("Copying PDF.js worker...")
-fs.cpSync(workerFile, destWorkerFile)
+if (fs.existsSync(destWorkerPath)) {
+  fs.unlinkSync(destWorkerPath)
+}
+fs.copyFileSync(workerPath, destWorkerPath)
 
-console.log("PDF.js files copied successfully!")
-console.log("Files copied to:")
-console.log("- cMaps:", destCMapsDir)
-console.log("- Standard fonts:", destStandardFontsDir)
-console.log("- Worker:", destWorkerFile)
+console.log("PDF.js setup complete!")
+console.log("Files copied:")
+console.log("- Worker:", destWorkerPath)
+console.log("")
+console.log(
+  "Note: CMaps and standard fonts have been excluded to reduce bundle size."
+)
+console.log("This optimizes for English/Latin-script PDFs.")
+console.log(
+  "Non-Latin characters (CJK, Arabic, Hebrew) may not display correctly."
+)
+console.log("PDFs without embedded fonts will fall back to system fonts.")

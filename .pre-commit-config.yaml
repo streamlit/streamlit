@@ -190,9 +190,8 @@ repos:
       - id: check-added-large-files
         exclude: |
           (?x)
-          ^frontend/lib/src/assets/pdf\.worker\.min\.mjs$
-          |^frontend/lib/src/assets/cmaps/
-          |^frontend/lib/src/assets/standard_fonts/
+          ^frontend/app/src/assets/pdf\.worker\.min\.mjs$
+          |^frontend/lib/src/assets/pdf\.worker\.min\.mjs$
       - id: check-json
         exclude: .vscode/launch.json
       - id: check-toml
