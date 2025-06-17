@@ -172,6 +172,7 @@ export const StyledFlexContainerBlock =
         width: "100%",
         maxWidth: "100%",
         height: height ?? "auto",
+        overflow: height ? "auto" : "visible",
         flexDirection: direction,
         flex,
         flexWrap: wrap ? "wrap" : "nowrap",
@@ -179,10 +180,6 @@ export const StyledFlexContainerBlock =
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,
           padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
-        }),
-        ...(height && {
-          height: `${height}px`,
-          overflow: "auto",
         }),
       }
     }
