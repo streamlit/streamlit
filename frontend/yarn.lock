@@ -2695,8 +2695,8 @@ __metadata:
   linkType: hard
 
 "@rollup/pluginutils@npm:^5.1.3, @rollup/pluginutils@npm:^5.1.4":
-  version: 5.1.4
-  resolution: "@rollup/pluginutils@npm:5.1.4"
+  version: 5.2.0
+  resolution: "@rollup/pluginutils@npm:5.2.0"
   dependencies:
     "@types/estree": "npm:^1.0.0"
     estree-walker: "npm:^2.0.2"
@@ -2706,7 +2706,7 @@ __metadata:
   peerDependenciesMeta:
     rollup:
       optional: true
-  checksum: 10c0/6d58fbc6f1024eb4b087bc9bf59a1d655a8056a60c0b4021d3beaeec3f0743503f52467fd89d2cf0e7eccf2831feb40a05ad541a17637ea21ba10b21c2004deb
+  checksum: 10c0/794890d512751451bcc06aa112366ef47ea8f9125dac49b1abf72ff8b079518b09359de9c60a013b33266541634e765ae61839c749fae0edb59a463418665c55
   languageName: node
   linkType: hard
 
@@ -8671,9 +8671,9 @@ __metadata:
   linkType: hard
 
 "electron-to-chromium@npm:^1.5.160":
-  version: 1.5.167
-  resolution: "electron-to-chromium@npm:1.5.167"
-  checksum: 10c0/eba07d2d8ae99e1e29f1af380d005c378f71608617ca904cbe4e2b5b72b102b46c5687bdbef855e2214876729655661b2c20248cce425d54c8d40f0785cb998a
+  version: 1.5.169
+  resolution: "electron-to-chromium@npm:1.5.169"
+  checksum: 10c0/942b0fe95e05df8ae6c4a76e36a94788659927a9f7d4d718defbfff34153b98e9f9d8e028f424535a578a9775029442c1832ec681a4c0a85fdf76f3fa0360d75
   languageName: node
   linkType: hard
 
@@ -9314,8 +9314,8 @@ __metadata:
   linkType: hard
 
 "eslint-plugin-prettier@npm:^5.4.1":
-  version: 5.4.1
-  resolution: "eslint-plugin-prettier@npm:5.4.1"
+  version: 5.5.0
+  resolution: "eslint-plugin-prettier@npm:5.5.0"
   dependencies:
     prettier-linter-helpers: "npm:^1.0.0"
     synckit: "npm:^0.11.7"
@@ -9329,7 +9329,7 @@ __metadata:
       optional: true
     eslint-config-prettier:
       optional: true
-  checksum: 10c0/bdd9e9473bf3f995521558eb5e2ee70dd4f06cb8b9a6192523cfed76511924fad31ec9af9807cd99f693dc59085e0a1db8a1d3ccc283e98ab30eb32cc7469649
+  checksum: 10c0/d739940d5f5ea9b4c3a52836b24907b273a46909cdd1def5526f8934e54082fe5aac13512eb2c27d538ca79e16916ca54c651e3372aa53b7d4297afb4c156d47
   languageName: node
   linkType: hard
 
@@ -11176,9 +11176,9 @@ __metadata:
   linkType: hard
 
 "hotkeys-js@npm:^3.13.2":
-  version: 3.13.12
-  resolution: "hotkeys-js@npm:3.13.12"
-  checksum: 10c0/e965e4c244ea328850decea513f42518586e9a891a31d5a6cd784c7a3d758f822a052af63f9edae6007f5be1c86c6a638d5b122a7794b810e5298f9753f8c7a2
+  version: 3.13.14
+  resolution: "hotkeys-js@npm:3.13.14"
+  checksum: 10c0/d610ab86f1ce565cae450f951875927b1e2dd4e69f823b6b0e1c4f6f3d040509cf04ee60ed350b05ee909a53ffa83a58913ab0f7a40c1dd533f6f2249f29fd46
   languageName: node
   linkType: hard
 
@@ -17893,10 +17893,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"third-party-web@npm:^0.26.6, third-party-web@npm:latest":
+"third-party-web@npm:^0.26.6":
   version: 0.26.7
   resolution: "third-party-web@npm:0.26.7"
   checksum: 10c0/e3cd48d34552d82bc60089b2ee33ad3fe7f8323720e7748444c5044dd34cee781c2b6e5ba360fa5091e06f879b48073f0d842c516f9bc972ffc7b6fcc498dda4
+  languageName: node
+  linkType: hard
+
+"third-party-web@npm:latest":
+  version: 0.27.0
+  resolution: "third-party-web@npm:0.27.0"
+  checksum: 10c0/908fce5d9904f482eded9bae74d7f79944cfa4b54ae326d1e18c21fcf078e9ed1ff68e8c204009404ed3b5858b514632eb6abb2981d59fcf1da05dfa9ee58c76
   languageName: node
   linkType: hard
 
@@ -20147,9 +20154,9 @@ __metadata:
   linkType: hard
 
 "zod@npm:^3.22.4, zod@npm:^3.24.1, zod@npm:^3.25.63":
-  version: 3.25.64
-  resolution: "zod@npm:3.25.64"
-  checksum: 10c0/00d76093a999e377e4ffd037fa7185e861c35917e8c4272f514115c206a0654995168f57fb71708b11e0a9243206d988b7f63b543404e1796402e50d346a6bd7
+  version: 3.25.67
+  resolution: "zod@npm:3.25.67"
+  checksum: 10c0/80a0cab3033272c4ab9312198081f0c4ea88e9673c059aa36dc32024906363729db54bdb78f3dc9d5529bd1601f74974d5a56c0a23e40c6f04a9270c9ff22336
   languageName: node
   linkType: hard
 
