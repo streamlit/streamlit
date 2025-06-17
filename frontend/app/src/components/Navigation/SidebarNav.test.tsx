@@ -33,20 +33,44 @@ vi.mock("~lib/util/Hooks", async () => ({
   useIsOverflowing: vi.fn(),
 }))
 
-const getProps = (props: Partial<Props> = {}): Props => ({
-  appPages: [
+const generateAppPages = (
+  totalPages: number,
+  options: {
+    sectionHeaders?: string[]
+    icons?: boolean
+  } = {}
+): IAppPage[] => {
+  const { sectionHeaders, icons } = options
+  const pages: IAppPage[] = [
     {
       pageScriptHash: "main_page_hash",
       pageName: "streamlit app",
       urlPathname: "streamlit_app",
       isDefault: true,
+      ...(sectionHeaders && { sectionHeader: sectionHeaders[0] }),
     },
-    {
-      pageScriptHash: "other_page_hash",
-      pageName: "my other page",
-      urlPathname: "my_other_page",
-    },
-  ],
+  ]
+
+  for (let i = 0; i < totalPages - 1; i++) {
+    // For the first additional page (i=0), maintain original naming for backward compatibility
+    const suffix = i === 0 && totalPages === 2 ? "" : i.toString()
+    pages.push({
+      pageScriptHash: `other_page_hash${suffix}`,
+      pageName: `my other page${suffix}`,
+      urlPathname: `my_other_page${suffix}`,
+      isDefault: false,
+      ...(sectionHeaders && {
+        sectionHeader: sectionHeaders[(i + 1) % sectionHeaders.length],
+      }),
+      ...(icons && i === 0 && { icon: "🐧" }),
+    })
+  }
+
+  return pages
+}
+
+const getProps = (props: Partial<Props> = {}): Props => ({
+  appPages: generateAppPages(2),
   collapseSidebar: vi.fn(),
   hasSidebarElements: false,
   endpoints: mockEndpoints(),
@@ -159,21 +183,7 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 12 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(13),
         })}
       />
     )
@@ -190,21 +200,7 @@ describe("SidebarNav", () => {
         {...getProps({
           hasSidebarElements: true,
           expandSidebarNav: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 12 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(13),
         })}
       />
     )
@@ -220,21 +216,7 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 13 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(14),
         })}
       />
     )
@@ -250,21 +232,7 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 11 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(12),
         })}
       />
     )
@@ -281,21 +249,7 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 13 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(14),
         })}
       />
     )
@@ -314,21 +268,7 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 13 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(14),
         })}
       />
     )
@@ -344,21 +284,7 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 13 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(14),
         })}
       />
     )
@@ -373,21 +299,7 @@ describe("SidebarNav", () => {
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-            },
-          ].concat(
-            Array.from({ length: 13 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-            }))
-          ),
+          appPages: generateAppPages(14),
         })}
       />
     )
@@ -410,23 +322,9 @@ describe("SidebarNav", () => {
         {...getProps({
           hasSidebarElements: true,
           navSections: ["section 1", "section 2"],
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-              sectionHeader: "section 1",
-            },
-          ].concat(
-            Array.from({ length: 13 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-              sectionHeader: `section ${(index % 2) + 1}`,
-            }))
-          ),
+          appPages: generateAppPages(14, {
+            sectionHeaders: ["section 1", "section 2"],
+          }),
         })}
       />
     )
@@ -455,23 +353,9 @@ describe("SidebarNav", () => {
         {...getProps({
           hasSidebarElements: true,
           navSections: ["section 1", "section 2", "section 3"],
-          appPages: [
-            {
-              pageScriptHash: "main_page_hash",
-              pageName: "streamlit app",
-              urlPathname: "streamlit_app",
-              isDefault: true,
-              sectionHeader: "section 1",
-            },
-          ].concat(
-            Array.from({ length: 13 }, (_, index) => ({
-              pageScriptHash: `other_page_hash${index}`,
-              pageName: `my other page${index}`,
-              urlPathname: `my_other_page${index}`,
-              isDefault: false,
-              sectionHeader: `section ${(index % 3) + 1}`,
-            }))
-          ),
+          appPages: generateAppPages(14, {
+            sectionHeaders: ["section 1", "section 2", "section 3"],
+          }),
         })}
       />
     )
@@ -524,21 +408,22 @@ describe("SidebarNav", () => {
 
   it("handles default and custom page icons", () => {
     const props = getProps({
-      appPages: [
-        { pageName: "streamlit_app" },
-        { pageName: "my_other_page", icon: "🦈" },
-      ],
+      appPages: generateAppPages(2, { icons: true }),
     })
 
     render(<SidebarNav {...props} />)
 
     const links = screen.getAllByTestId("stSidebarNavLink")
     expect(links).toHaveLength(2)
-    expect(links[1]).toHaveTextContent("🦈")
+    expect(links[1]).toHaveTextContent("🐧")
   })
 
   it("indicates the current page as active", () => {
-    const props = getProps({ currentPageScriptHash: "other_page_hash" })
+    const appPages = generateAppPages(2)
+    const props = getProps({
+      appPages,
+      currentPageScriptHash: appPages[1].pageScriptHash as string,
+    })
     render(<SidebarNav {...props} />)
 
     const links = screen.getAllByTestId("stSidebarNavLink")
