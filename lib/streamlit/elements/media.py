@@ -475,7 +475,7 @@ def _marshall_av_media(
             return
         data_or_filename = read_data
     elif type_util.is_type(data, "numpy.ndarray"):
-        data_or_filename = cast("npt.NDArray[Any]", data).tobytes()
+        data_or_filename = data.tobytes()
     else:
         raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
@@ -750,7 +750,7 @@ def _make_wav(data: npt.NDArray[Any], sample_rate: int) -> bytes:
 def _maybe_convert_to_wav_bytes(data: MediaData, sample_rate: int | None) -> MediaData:
     """Convert data to wav bytes if the data type is numpy array."""
     if type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
-        data = _make_wav(data, sample_rate)
+        data = _make_wav(cast("npt.NDArray[Any]", data), sample_rate)
     return data
 
 
