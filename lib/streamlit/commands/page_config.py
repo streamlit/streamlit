@@ -110,8 +110,8 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
 def set_page_config(
     page_title: str | None = None,
     page_icon: PageIcon | None = None,
-    layout: Layout = "centered",
-    initial_sidebar_state: InitialSideBarState = "auto",
+    layout: Layout | None = None,
+    initial_sidebar_state: InitialSideBarState | None = None,
     menu_items: MenuItems | None = None,
 ) -> None:
     """
@@ -240,6 +240,9 @@ def set_page_config(
         pb_layout = PageConfigProto.CENTERED
     elif layout == "wide":
         pb_layout = PageConfigProto.WIDE
+    elif layout is None:
+        # Allows for multiple (additive) calls to set_page_config
+        pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidPageLayoutError(layout=layout)
@@ -253,6 +256,9 @@ def set_page_config(
         pb_sidebar_state = PageConfigProto.EXPANDED
     elif initial_sidebar_state == "collapsed":
         pb_sidebar_state = PageConfigProto.COLLAPSED
+    elif initial_sidebar_state is None:
+        # Allows for multiple (additive) calls to set_page_config
+        pb_sidebar_state = PageConfigProto.SIDEBAR_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
         raise StreamlitInvalidSidebarStateError(

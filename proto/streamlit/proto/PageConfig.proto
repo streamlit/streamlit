@@ -43,6 +43,10 @@ message PageConfig {
 
     // Use the full browser width to render elements.
     WIDE = 1;
+
+    // Unset distinguishes that config was not provided - on initial call, will
+    // set to centered as default. Otherwise, inherit value from previous call
+    LAYOUT_UNSET = 2;
   }
 
   enum SidebarState {
@@ -54,5 +58,9 @@ message PageConfig {
 
     // Force the sidebar to be hidden.
     COLLAPSED = 2;
+
+    // Unset distinguishes that config was not provided - on initial call, will
+    // set to auto as default. Otherwise, inherit value from previous call
+    SIDEBAR_UNSET = 3;
   }
 }
