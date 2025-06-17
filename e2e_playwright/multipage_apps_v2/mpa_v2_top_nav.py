@@ -12,9 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Any, Literal
 
+from PIL import Image
+
 import streamlit as st
+
+# Define image paths for logo testing
+PARENT_DIR = Path(__file__).parent.parent / "multipage_apps"
+LOGO_FULL = Image.open(str(PARENT_DIR / "full-streamlit.png"))
+LOGO_SMALL = Image.open(str(PARENT_DIR / "small-streamlit.png"))
 
 
 # Define page functions inline
@@ -48,6 +56,8 @@ test_overflow = st.checkbox("Test Overflow (5 pages)", key="test_overflow")
 test_sections = st.checkbox("Test Sections", key="test_sections")
 test_hidden = st.checkbox("Test Hidden Navigation", key="test_hidden")
 test_switching = st.checkbox("Test Navigation Switching", key="test_switching")
+test_sidebar = st.checkbox("Test Sidebar Content", key="test_sidebar")
+test_logo = st.checkbox("Test Logo", key="test_logo")
 
 # Initialize navigation position in session state
 if "nav_position" not in st.session_state:
@@ -108,6 +118,34 @@ elif test_switching:
     position = st.session_state.nav_position
 else:
     position = "top"
+
+# Add logo if enabled
+if test_logo:
+    st.logo(LOGO_FULL, link="https://www.streamlit.io", icon_image=LOGO_SMALL)
+
+# Add sidebar content if enabled
+if test_sidebar:
+    with st.sidebar:
+        st.header("Sidebar Content")
+        st.write("This is some static sidebar content for testing.")
+        st.write(
+            "Use this to test how the top navigation behaves when the sidebar is present."
+        )
+
+        st.subheader("Sample Controls")
+        st.slider("Sample Slider", 0, 100, 50)
+        st.selectbox("Sample Selectbox", ["Option 1", "Option 2", "Option 3"])
+        st.text_input("Sample Text Input", "Default text")
+
+        st.subheader("Sample Info")
+        st.info("This sidebar helps test top nav behavior")
+        st.success("Sidebar is working correctly!")
+
+        # Add some spacing
+        st.write("---")
+        st.write(
+            "Toggle this checkbox to test sidebar expand/collapse behavior with the top navigation."
+        )
 
 # Create navigation
 pg = st.navigation(pages, position=position)

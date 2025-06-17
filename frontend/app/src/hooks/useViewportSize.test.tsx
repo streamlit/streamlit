@@ -27,7 +27,7 @@ const mockContextValue = {
   activeTheme: {
     emotion: {
       breakpoints: {
-        sm: "576px",
+        md: "768px",
       },
     },
   },
@@ -46,8 +46,8 @@ describe("useViewportSize", () => {
   })
 
   it("should return isMobile=true when window width is below theme breakpoint", () => {
-    // Set window width below the sm breakpoint (576px)
-    vi.spyOn(window, "innerWidth", "get").mockReturnValue(575)
+    // Set window width below the md breakpoint (768px)
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(767)
 
     const { result } = renderHook(() => useViewportSize(), { wrapper })
 
@@ -55,8 +55,8 @@ describe("useViewportSize", () => {
   })
 
   it("should return isMobile=false when window width is at theme breakpoint", () => {
-    // Set window width exactly at the sm breakpoint (576px)
-    vi.spyOn(window, "innerWidth", "get").mockReturnValue(576)
+    // Set window width exactly at the md breakpoint (768px)
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(768)
 
     const { result } = renderHook(() => useViewportSize(), { wrapper })
 
@@ -64,7 +64,7 @@ describe("useViewportSize", () => {
   })
 
   it("should return isMobile=false when window width is above theme breakpoint", () => {
-    // Set window width above the sm breakpoint (576px)
+    // Set window width above the md breakpoint (768px)
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1024)
 
     const { result } = renderHook(() => useViewportSize(), { wrapper })
@@ -84,7 +84,7 @@ describe("useViewportSize", () => {
 
     // Resize to mobile width
     act(() => {
-      innerWidthSpy.mockReturnValue(500)
+      innerWidthSpy.mockReturnValue(700)
       window.dispatchEvent(new Event("resize"))
     })
 

@@ -28,6 +28,6 @@ export const useViewportSize = (): { isMobile: boolean } => {
     return (): void => window.removeEventListener("resize", handleResize)
   }, [])
 
-  const breakpoint = parseInt(activeTheme.emotion.breakpoints.sm, 10)
+  const breakpoint = parseInt(activeTheme.emotion.breakpoints.md, 10)
   return { isMobile: width < breakpoint }
 }
