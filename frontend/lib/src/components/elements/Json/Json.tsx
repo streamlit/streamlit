@@ -88,7 +88,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
         enableClipboard={handleCopy}
         style={{
           fontFamily: theme.genericFonts.codeFont,
-          fontSize: theme.fontSizes.sm,
+          fontSize: theme.fontSizes.codeFontSize,
           backgroundColor: theme.colors.bgColor,
           whiteSpace: "pre-wrap", // preserve whitespace
         }}

@@ -102,6 +102,7 @@ FD = FieldDescriptor
                 ("heading_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("body_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("code_font_size", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("font_faces", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("font_sizes", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("skeleton_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),

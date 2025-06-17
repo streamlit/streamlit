@@ -33,8 +33,9 @@ export const StyledInlineCode = styled.code(({ theme }) => ({
   background: theme.colors.codeBackgroundColor,
   color: theme.colors.codeTextColor,
   fontFamily: theme.genericFonts.codeFont,
-  // Use em here so that it works correctly within captions
-  fontSize: "0.75em",
+  // Use em here so that it works correctly within headers, captions,
+  // sidebar, etc.
+  fontSize: theme.fontSizes.inlineCodeFontSize,
 
   ...codeLink,
 }))
@@ -52,7 +53,7 @@ const codeBlockStyle = (
   color: "inherit",
   display: "inline",
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.codeFontSize,
   lineHeight: "inherit",
   margin: 0,
   overflowX: "auto",
