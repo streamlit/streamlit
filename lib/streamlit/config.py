@@ -1190,9 +1190,10 @@ _create_theme_options(
     description="""
         Sets the font size (in pixels or rem) for code blocks and code text.
 
-        This applies to inline code, code blocks (ex: `st.code`), as well as font in `st.json` and `st.help`.
+        This applies to code blocks (ex: `st.code`), as well as font in `st.json` and `st.help`.
+        It does not apply to inline code, which is set by default to 0.75em.
 
-        When unset, the font size will be 0.875rem.
+        When unset, the code font size will be 0.875rem.
     """,
 )
 

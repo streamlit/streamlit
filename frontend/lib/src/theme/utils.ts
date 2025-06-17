@@ -48,7 +48,7 @@ import {
   createEmotionColors,
   DerivedColors,
 } from "./getColors"
-import { fonts, fontSizes } from "./primitives/typography"
+import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -216,33 +216,6 @@ export const parseFontSize = (
   LOG.warn(
     `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
   )
-}
-
-/**
- * Calculate an em value for inline code based on the configured code font size
- * This ensures inline code scales properly relative to its parent while respecting the configured size
- * @param codeFontSize: the configured code font size (e.g. "14px", "0.875rem")
- * @param baseFontSize: the base font size in pixels
- * @returns em value as a string (e.g. "0.875em")
- */
-export const calculateInlineCodeFontSize = (
-  codeFontSize: string,
-  baseFontSize: number
-): string => {
-  const processedFontSize = codeFontSize.trim().toLowerCase()
-
-  if (processedFontSize.endsWith("rem")) {
-    // Simply replace "rem" with "em" since both are relative units
-    return processedFontSize.replace("rem", "em")
-  } else if (processedFontSize.endsWith("px")) {
-    // Convert px to em using baseFontSize
-    const emValue = parseFloat(processedFontSize) / baseFontSize
-    return `${emValue.toFixed(3)}em`
-  }
-
-  // This should never happen (parseFontSize has already returned px/rem value for
-  // parsedCodeFontSize, this called after checking parsedCodeFontSize not undefined)
-  return fontSizes.inlineCodeFontSize
 }
 
 export const createEmotionTheme = (
@@ -433,16 +406,9 @@ export const createEmotionTheme = (
     )
     if (parsedCodeFontSize) {
       conditionalOverrides.fontSizes.codeFontSize = parsedCodeFontSize
-
-      // Calculate inline code font size as em value for proper scaling
-      conditionalOverrides.fontSizes.inlineCodeFontSize =
-        calculateInlineCodeFontSize(
-          parsedCodeFontSize,
-          conditionalOverrides.fontSizes.baseFontSize
-        )
     }
     // codeFontSize default (fallback) set in typography primitives (0.875rem)
-    // inlineCodeFontSize fallback set in typography primitives (0.75em)
+    // inlineCodeFontSize set in typography primitives (0.75em)
   }
 
   if (notNullOrUndefined(showSidebarBorder)) {

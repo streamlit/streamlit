@@ -937,12 +937,12 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test valid codeFontSize values
-    ["0.875rem", "0.875rem", "0.875em"],
-    ["0.875REM", "0.875rem", "0.875em"],
-    ["14px", "14px", "0.875em"],
-    ["14PX", "14px", "0.875em"],
-    // Rounded to 3 decimal places
-    ["15", "15px", "0.938em"],
+    // Inline code font size unaffected, set to 0.75em
+    ["0.875rem", "0.875rem", "0.75em"],
+    ["0.875REM", "0.875rem", "0.75em"],
+    ["14px", "14px", "0.75em"],
+    ["14PX", "14px", "0.75em"],
+    ["15", "15px", "0.75em"],
   ])(
     "correctly applies codeFontSize and inlineCodeFontSize '%s'",
     (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
