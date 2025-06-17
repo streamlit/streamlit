@@ -138,8 +138,8 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
+  paddingLeft: getSidebarHorizontalSpacing(theme),
+  paddingRight: getSidebarHorizontalSpacing(theme),
   marginBottom: theme.spacing.lg,
   height: theme.sizes.headerHeight,
 }))
