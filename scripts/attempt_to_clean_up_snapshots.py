@@ -324,8 +324,14 @@ def main() -> None:
         print("Proceeding with deletion...")
 
         for filepath in orphaned_files:
-            os.remove(filepath)
-
+            try:
+                os.remove(filepath)
+            except FileNotFoundError:
+                print(f"Warning: File not found and could not be deleted: {filepath}")
+            except PermissionError:
+                print(f"Warning: Permission denied when trying to delete: {filepath}")
+            except Exception as e:
+                print(f"Warning: An unexpected error occurred while deleting {filepath}: {e}")
         print(f"\n✅ Successfully deleted {len(orphaned_files)} orphaned snapshots.")
 
 
