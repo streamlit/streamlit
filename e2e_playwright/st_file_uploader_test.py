@@ -20,7 +20,11 @@ from e2e_playwright.conftest import (
     wait_for_app_run,
     wait_until,
 )
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    goto_app,
+)
 
 
 def test_file_uploader_render_correctly(
@@ -510,7 +514,7 @@ def test_file_uploader_upload_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
 
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
@@ -561,7 +565,7 @@ def test_file_uploader_delete_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
 
     file_name1 = "file1.txt"
     file_content1 = b"file1content"

@@ -88,6 +88,11 @@ class PageConfigTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue().page_config_changed
         assert c.layout == PageConfigProto.CENTERED
 
+    def test_set_page_config_layout_none(self):
+        st.set_page_config(layout=None)
+        c = self.get_message_from_queue().page_config_changed
+        assert c.layout == PageConfigProto.LAYOUT_UNSET
+
     def test_set_page_config_layout_invalid(self):
         with pytest.raises(StreamlitAPIException):
             st.set_page_config(layout="invalid")
@@ -106,6 +111,11 @@ class PageConfigTest(DeltaGeneratorTestCase):
         st.set_page_config(initial_sidebar_state="collapsed")
         c = self.get_message_from_queue().page_config_changed
         assert c.initial_sidebar_state == PageConfigProto.COLLAPSED
+
+    def test_set_page_config_sidebar_none(self):
+        st.set_page_config(initial_sidebar_state=None)
+        c = self.get_message_from_queue().page_config_changed
+        assert c.initial_sidebar_state == PageConfigProto.SIDEBAR_UNSET
 
     def test_set_page_config_sidebar_invalid(self):
         with pytest.raises(StreamlitInvalidSidebarStateError):
