@@ -18,34 +18,9 @@ import styled from "@emotion/styled"
 
 import { streamlit } from "@streamlit/protobuf"
 
-interface StyledPdfProps {
-  widthConfig?: streamlit.IWidthConfig
-}
-
 interface StyledReactPdfContainerProps {
   widthConfig?: streamlit.IWidthConfig
 }
-
-export const StyledPdf = styled.div<StyledPdfProps>(
-  ({ theme, widthConfig }) => ({
-    width: widthConfig?.useStretch
-      ? "100%"
-      : widthConfig?.pixelWidth
-        ? `${widthConfig.pixelWidth}px`
-        : "100%",
-    height: "100%", // Let the layout system control height
-    // For stretch mode, use viewport height to ensure it actually stretches
-    // The layout system will set height to 100%, but we need a fallback
-    minHeight: "80vh", // Use viewport height for better stretch behavior
-    display: "flex",
-    flexDirection: "column",
-    colorScheme: "normal",
-    border: `1px solid ${theme.colors.borderColor}`,
-    borderRadius: theme.radii.default,
-    padding: theme.spacing.none,
-    margin: theme.spacing.none,
-  })
-)
 
 export const StyledReactPdfContainer =
   styled.div<StyledReactPdfContainerProps>(({ theme, widthConfig }) => ({
@@ -131,6 +106,7 @@ export const StyledReactPdfContainer =
       },
     },
   }))
+
 export const StyledReactPdfPage = styled.div(({ theme }) => ({
   position: "relative",
   marginBottom: theme.spacing.sm,

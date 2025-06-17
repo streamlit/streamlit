@@ -23,7 +23,6 @@ message Pdf {
   string id = 1;
   oneof data {
     string url = 2;
-    bytes file_data = 7;
+    bytes file_data = 3;
   }
-  bool use_ext_module = 5;
 }

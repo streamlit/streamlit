@@ -19,8 +19,7 @@
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
-    "typesync:ci": "typesync --dry=fail",
-    "setup-pdfjs": "node setup-pdfjs.js"
+    "typesync:ci": "typesync --dry=fail"
   },
   "dependencies": {
     "@emotion-icons/emotion-icon": "^4.1.0",

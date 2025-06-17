@@ -29,11 +29,8 @@ st.markdown(
 This app is a **prototype** demonstrating a proposed `st.pdf` element. This feature would allow
 developers to natively display PDF documents from a URL or uploaded file directly within a Streamlit app.
 
-This prototype allows testing two different rendering methods:
-1.  **Browser's Built-in Renderer**: The default, fast, and reliable option that
-    uses your browser's own PDF viewing capabilities.
-2.  **External `react-pdf` Module**: A JavaScript library that renders the PDF pages
-    as images, offering a consistent look across all platforms.
+The PDF viewer uses a React-based PDF rendering library that displays PDF pages as interactive elements
+with full text selection and link support, offering a consistent experience across all browsers and platforms.
 """
 )
 
@@ -124,51 +121,99 @@ st.sidebar.subheader("Display Options")
 width_type = st.sidebar.radio(
     "Width type:", options=["stretch", "custom"], index=0, horizontal=True
 )
-width_value = (
-    "stretch"
-    if width_type == "stretch"
-    else st.sidebar.slider(
-        "Width (pixels):", min_value=300, max_value=1200, value=700, step=50
+
+if width_type == "stretch":
+    width = "stretch"
+else:
+    width = st.sidebar.number_input(
+        "Width (pixels):",
+        min_value=100,
+        max_value=2000,
+        value=700,
+        step=50,
     )
+
+# Height options
+height_type = st.sidebar.radio(
+    "Height type:", options=["custom", "stretch"], index=0, horizontal=True
 )
 
-# Height control
-height_value = st.sidebar.slider(
-    "Height (pixels):", min_value=300, max_value=1500, value=800, step=50
+if height_type == "stretch":
+    height = "stretch"
+else:
+    height = st.sidebar.number_input(
+        "Height (pixels):",
+        min_value=100,
+        max_value=2000,
+        value=500,
+        step=50,
+    )
+
+# --- Main Content ---
+if pdf_source_type and pdf_to_display:
+    st.markdown(f"### {selected_option}")
+
+    # Display the PDF
+    st.pdf(
+        pdf_to_display,
+        width=width,
+        height=height,
+    )
+
+    # --- Code Example ---
+    st.markdown("---")
+    st.subheader("Code Example")
+    st.markdown("Here's how you can display this PDF in your Streamlit app:")
+
+    if pdf_source_type == "Sample URLs":
+        code_example = f"""
+```python
+import streamlit as st
+
+# Display a PDF from a URL
+st.pdf(
+    "{pdf_to_display}",
+    width={width},
+    height={height}
 )
+```
+"""
+    else:  # Upload File
+        code_example = f"""
+```python
+import streamlit as st
 
-# --- Renderer Specific Options ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("Renderer Options")
+# Upload a PDF file
+uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
+if uploaded_file is not None:
+    # Display the uploaded PDF
+    st.pdf(
+        uploaded_file,
+        width={width},
+        height={height}
+    )
+```
+"""
 
-use_ext_module = st.sidebar.checkbox(
-    "Use External Module",
-    value=False,
-    help="Use the external module to render the PDF",
-)
+    st.markdown(code_example)
 
+    # Add information about the viewer
+    with st.expander("About the PDF Viewer"):
+        st.markdown(
+            """
+            The `st.pdf` element provides a modern PDF viewing experience with:
 
-# --- PDF Display Area ---
-if pdf_to_display:
-    st.subheader(f"Displaying: {selected_option}")
+            - **Text Selection**: Select and copy text from the PDF
+            - **Clickable Links**: Links in the PDF are interactive
+            - **Multi-page Support**: All pages are displayed in a scrollable view
+            - **Responsive Design**: Adapts to different screen sizes
+            - **Cross-browser Compatibility**: Works consistently across all modern browsers
 
-    try:
-        # The core of the demo: calling the prototype st.pdf function
-        st.pdf(
-            pdf_to_display,
-            width=width_value,
-            height=height_value,
-            use_ext_module=use_ext_module,
+            The viewer uses React PDF technology to render PDFs directly in the browser,
+            ensuring a consistent experience regardless of the user's device or browser.
+            """
         )
 
-    except Exception as e:
-        st.error(f"An error occurred while loading the PDF: {e}")
-        if pdf_source_type == "Sample URLs":
-            st.write(f"Attempted to load from URL: {pdf_to_display}")
-        else:
-            st.write(f"Attempted to load uploaded file: {selected_option}")
-elif pdf_source_type == "Sample URLs":
-    st.info("Select a sample PDF or enter a custom URL in the sidebar to get started.")
 else:
-    st.info("Upload a PDF file in the sidebar to get started.")
+    st.info("👈 Select a PDF source type and choose a file to display in the sidebar.")

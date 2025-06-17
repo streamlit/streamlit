@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useMemo, useState, useEffect } from "react"
+import React, { memo, ReactElement, useMemo, useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 
 // Import react-pdf stylesheets for proper text and annotation layer rendering
@@ -26,13 +26,12 @@ import { IPdf, streamlit } from "@streamlit/protobuf"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 import {
-  StyledPdf,
   StyledReactPdfContainer,
   StyledReactPdfPage,
 } from "./styled-components"
 
-// Configure PDF.js worker to use local assets served by the app
-pdfjs.GlobalWorkerOptions.workerSrc = "/src/assets/pdf.worker.min.mjs"
+// Configure PDF.js worker using CDN (more reliable than local files)
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 export interface PdfProps {
   element: IPdf
@@ -45,12 +44,9 @@ function Pdf({
   endpoints,
   widthConfig,
 }: Readonly<PdfProps>): ReactElement {
-  const { useExtModule } = element
-
   // State for react-pdf
   const [numPages, setNumPages] = useState<number>(0)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
 
   // Determine the PDF source
   const { pdfUrl, pdfFileData } = useMemo((): {
@@ -64,43 +60,14 @@ function Pdf({
         : endpoints.buildMediaURL(element.url)
       return { pdfUrl: url, pdfFileData: null }
     } else if (element.fileData) {
-      if (useExtModule) {
-        // For react-pdf, return the raw data wrapped in the expected format
-        return { pdfUrl: null, pdfFileData: { data: element.fileData } }
-      } else {
-        // For object, create blob URL
-        try {
-          const blob = new Blob([element.fileData], {
-            type: "application/pdf",
-          })
-          const url = URL.createObjectURL(blob)
-          setBlobUrl(url)
-          return { pdfUrl: url, pdfFileData: null }
-        } catch (error) {
-          console.error("Error creating blob:", error)
-          return { pdfUrl: null, pdfFileData: null }
-        }
-      }
+      // For react-pdf, return the raw data wrapped in the expected format
+      return { pdfUrl: null, pdfFileData: { data: element.fileData } }
     }
     return { pdfUrl: null, pdfFileData: null }
-  }, [element.url, element.fileData, endpoints, useExtModule])
+  }, [element.url, element.fileData, endpoints])
 
   // Legacy pdfSource for compatibility
   const pdfSource = pdfUrl || (pdfFileData ? "file-data" : "")
-
-  // Cleanup blob URL when component unmounts or source changes
-  useEffect(() => {
-    return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl)
-      }
-    }
-  }, [blobUrl])
-
-  // Use the PDF URL directly for iframe rendering
-  const iframePdfUrl = useMemo(() => {
-    return pdfUrl || ""
-  }, [pdfUrl])
 
   // Memoize options to prevent re-renders - using local assets
   const options = useMemo(
@@ -149,86 +116,57 @@ function Pdf({
     )
   }
 
-  if (useExtModule) {
-    // Use react-pdf for rendering
-    return (
-      <StyledReactPdfContainer
-        className="stPdf"
-        data-testid="stPdf"
-        widthConfig={widthConfig || undefined}
-      >
-        {loadError ? (
-          <div
-            style={{
-              padding: "20px",
-              color: "#ff4b4b",
-              backgroundColor: "#fff2f2",
-              border: "1px solid #ffcccb",
-              borderRadius: "4px",
-              margin: "10px",
-            }}
-          >
-            <strong>Error loading PDF:</strong>
-            <br />
-            {loadError}
-          </div>
-        ) : (
-          <Document
-            file={pdfFileData || pdfUrl || undefined}
-            options={options}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={
-              <div style={{ padding: "20px", textAlign: "center" }}>
-                Loading PDF...
-              </div>
-            }
-            error={
-              <div style={{ padding: "20px", color: "#ff4b4b" }}>
-                Failed to load PDF file.
-              </div>
-            }
-          >
-            {Array.from(new Array(numPages), (el, index) => (
-              <StyledReactPdfPage key={`page_${index + 1}`}>
-                <Page
-                  pageNumber={index + 1}
-                  renderAnnotationLayer={true}
-                  renderTextLayer={true}
-                />
-              </StyledReactPdfPage>
-            ))}
-          </Document>
-        )}
-      </StyledReactPdfContainer>
-    )
-  }
-
+  // Use react-pdf for rendering
   return (
-    <StyledPdf
+    <StyledReactPdfContainer
       className="stPdf"
       data-testid="stPdf"
       widthConfig={widthConfig || undefined}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-      }}
     >
-      <iframe
-        src={iframePdfUrl}
-        title="PDF Viewer"
-        style={{
-          width: "100%",
-          height: "100%",
-          border: "none",
-          flex: 1,
-          minHeight: 0,
-        }}
-        onError={() => {
-          console.error("Failed to load PDF in iframe")
-        }}
-      />
-    </StyledPdf>
+      {loadError ? (
+        <div
+          style={{
+            padding: "20px",
+            color: "#ff4b4b",
+            backgroundColor: "#fff2f2",
+            border: "1px solid #ffcccb",
+            borderRadius: "4px",
+            margin: "10px",
+          }}
+        >
+          <strong>Error loading PDF:</strong>
+          <br />
+          {loadError}
+        </div>
+      ) : (
+        <Document
+          file={pdfFileData || pdfUrl || undefined}
+          options={options}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+          loading={
+            <div style={{ padding: "20px", textAlign: "center" }}>
+              Loading PDF...
+            </div>
+          }
+          error={
+            <div style={{ padding: "20px", color: "#ff4b4b" }}>
+              Failed to load PDF file.
+            </div>
+          }
+        >
+          {Array.from(new Array(numPages), (el, index) => (
+            <StyledReactPdfPage key={`page_${index + 1}`}>
+              <Page
+                pageNumber={index + 1}
+                renderAnnotationLayer={true}
+                renderTextLayer={true}
+              />
+            </StyledReactPdfPage>
+          ))}
+        </Document>
+      )}
+    </StyledReactPdfContainer>
   )
 }
 

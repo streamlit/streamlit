@@ -49,7 +49,6 @@ class PdfMixin:
         *,
         height: HeightWithoutContent = 500,
         width: WidthWithoutContent = "stretch",
-        use_ext_module: bool = False,
     ) -> DeltaGenerator:
         """Display a PDF viewer.
 
@@ -65,8 +64,6 @@ class PdfMixin:
             Height of the PDF viewer. Can be "stretch" for full height or an integer for pixel height.
         width : int or "stretch"
             Desired width of the PDF viewer. Can be "stretch" for full width or an integer for pixel width.
-        use_ext_module : bool
-            If True, uses react-pdf for rendering. If False, uses iframe (default behavior).
 
         Returns
         -------
@@ -77,7 +74,6 @@ class PdfMixin:
         -------
         >>> st.pdf("https://example.com/sample.pdf")
         >>> st.pdf("https://example.com/sample.pdf", width=500)
-        >>> st.pdf("https://example.com/sample.pdf", use_ext_module=True)
         """
         # Validate height and width parameters
         validate_height(height, allow_content=False)
@@ -92,7 +88,6 @@ class PdfMixin:
             data=str(data) if isinstance(data, (str, Path)) else "binary_data",
             height=height,
             width=width,
-            use_ext_module=use_ext_module,
         )
 
         pdf_proto = PdfProto()
@@ -104,7 +99,6 @@ class PdfMixin:
         _marshall_pdf(
             pdf_proto,
             data,
-            use_ext_module=use_ext_module,
         )
 
         return self.dg._enqueue("pdf", pdf_proto, layout_config=layout_config)
@@ -118,13 +112,8 @@ class PdfMixin:
 def _marshall_pdf(
     proto: PdfProto,
     data: PdfData,
-    *,
-    use_ext_module: bool = False,
 ) -> None:
     """Marshall a PDF protobuf element."""
-
-    # Set use_ext_module
-    proto.use_ext_module = use_ext_module
 
     # Handle the PDF data
     if isinstance(data, Path):
