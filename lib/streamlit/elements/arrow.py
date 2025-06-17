@@ -645,7 +645,7 @@ class ArrowMixin:
                 value_type="string_value",
             )
             self.dg._enqueue("arrow_data_frame", proto)
-            return cast("DataframeState", widget_state.value)
+            return widget_state.value
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")

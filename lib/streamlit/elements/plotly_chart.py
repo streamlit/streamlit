@@ -537,7 +537,7 @@ class PlotlyMixin:
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
-            return cast("PlotlyState", widget_state.value)
+            return widget_state.value
         return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property

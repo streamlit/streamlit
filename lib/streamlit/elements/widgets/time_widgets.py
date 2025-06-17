@@ -893,10 +893,7 @@ class TimeWidgetsMixin:
         if value == "today":
             parsed = None
         elif isinstance(value, Sequence):
-            parsed = [
-                parse_date_deterministic_for_id(cast("NullableScalarDateValue", v))
-                for v in value
-            ]
+            parsed = [parse_date_deterministic_for_id(v) for v in value]
         else:
             parsed = parse_date_deterministic_for_id(value)
 
