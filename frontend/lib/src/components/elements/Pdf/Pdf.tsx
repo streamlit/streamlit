@@ -121,8 +121,7 @@ function Pdf({
     console.error("PDF load error:", error)
     if (error.message.includes("CORS") || error.message.includes("fetch")) {
       setLoadError(
-        "CORS Error: This PDF cannot be loaded due to cross-origin restrictions. " +
-          "Try with another PDF instead or uncheck 'Use external module'."
+        "CORS Error: This PDF cannot be loaded due to cross-origin restrictions. "
       )
     } else if (error.message.includes("Unexpected server response (0)")) {
       setLoadError(

@@ -72,6 +72,9 @@ IGNORE_PATTERN = re.compile(
     # Exclude vendored files.
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
+    # Exclude PDF.js assets from frontend directories.
+    r"|^frontend/app/src/assets/"
+    r"|^frontend/lib/src/assets/"
     # Exclude patch files.
     r"|\.patch$",
     re.IGNORECASE,
