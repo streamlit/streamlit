@@ -61,7 +61,7 @@ def test_mobile_fallback_to_sidebar(app: Page):
     expect(sidebar).to_be_visible()
 
     # Wait for sidebar to expand by checking if links are visible
-    nav_links = app.get_by_test_id("stTopNavLink")
+    nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links.first).to_be_visible()
 
     # The sidebar might have overflow or positioning issues on mobile
@@ -226,7 +226,7 @@ def test_mobile_sidebar_overlay_visual(
     expect(sidebar).to_be_visible()
 
     # Verify navigation has moved into the sidebar
-    nav_links = app.get_by_test_id("stTopNavLink")
+    nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links).to_have_count(3)
     expect(nav_links.first).to_be_visible()
 
