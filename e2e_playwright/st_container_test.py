@@ -142,12 +142,12 @@ def test_empty_containers(app: Page):
 def test_nested_containers(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that nested containers render correctly with different height configurations."""
     # Test first nested container example (outer: height=200, inner: height=250)
-    nested_container_1 = app.get_by_test_id("stVerticalBlock").nth(7)
+    nested_container_1 = app.get_by_test_id("stVerticalBlock").nth(17)
     nested_container_1.scroll_into_view_if_needed()
     assert_snapshot(nested_container_1, name="st_container-nested_overflow")
 
     # Test second nested container example (outer: height=200, inner: no height)
-    nested_container_2 = app.get_by_test_id("stVerticalBlock").nth(8)
+    nested_container_2 = app.get_by_test_id("stVerticalBlock").nth(19)
     nested_container_2.scroll_into_view_if_needed()
     assert_snapshot(nested_container_2, name="st_container-nested_content")
 
