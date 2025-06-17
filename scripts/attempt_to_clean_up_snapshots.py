@@ -15,6 +15,12 @@
 """A script to clean up orphaned e2e snapshots.
 NOTE: This script is not perfect and may identify some
 snapshots as orphans when they aren't actually so manually review results.
+
+MANUAL VERIFICATION REQUIRED:
+The following snapshots are not detected by this script's static analysis but
+are actually in use. This disallow list should be manually updated whenever the
+script incorrectly identifies a snapshot as orphaned. Not a perfect solution
+but follows the 80/20 rule.
 """
 
 import os
@@ -22,6 +28,63 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
+
+# Snapshots that are not detected by static analysis but are actually in use.
+# This list should be manually updated when the script incorrectly flags snapshots.
+DISALLOWED_SNAPSHOTS = {
+    "st_map-fullscreen_expanded[webkit].png",
+    "st_map-fullscreen_collapsed[webkit].png",
+    "st_pydeck_chart-fullscreen_expanded[light_theme-webkit].png",
+    "st_pydeck_chart-fullscreen_collapsed[light_theme-webkit].png",
+    "st_dataframe-fullscreen_expanded[chromium].png",
+    "st_dataframe-fullscreen_collapsed[chromium].png",
+    "st_dataframe-fullscreen_expanded[webkit].png",
+    "st_dataframe-fullscreen_collapsed[webkit].png",
+    "st_map-fullscreen_expanded[chromium].png",
+    "st_map-fullscreen_collapsed[chromium].png",
+    "st_pydeck_chart-fullscreen_expanded[dark_theme-webkit].png",
+    "st_pydeck_chart-fullscreen_collapsed[dark_theme-webkit].png",
+    "st_pydeck_chart-fullscreen_expanded[light_theme-chromium].png",
+    "st_pydeck_chart-fullscreen_collapsed[light_theme-chromium].png",
+    "st_pydeck_chart-fullscreen_expanded[dark_theme-chromium].png",
+    "st_pydeck_chart-fullscreen_collapsed[dark_theme-chromium].png",
+    # st_data_editor Firefox snapshots that are not detected by static analysis
+    "st_data_editor-input_data_0[firefox].png",
+    "st_data_editor-input_data_1[firefox].png",
+    "st_data_editor-input_data_2[firefox].png",
+    "st_data_editor-input_data_3[firefox].png",
+    "st_data_editor-input_data_4[firefox].png",
+    "st_data_editor-input_data_5[firefox].png",
+    "st_data_editor-input_data_6[firefox].png",
+    "st_data_editor-input_data_7[firefox].png",
+    "st_data_editor-input_data_8[firefox].png",
+    "st_data_editor-input_data_9[firefox].png",
+    "st_data_editor-input_data_10[firefox].png",
+    "st_data_editor-input_data_11[firefox].png",
+    "st_data_editor-input_data_12[firefox].png",
+    "st_data_editor-input_data_13[firefox].png",
+    "st_data_editor-input_data_14[firefox].png",
+    "st_data_editor-input_data_15[firefox].png",
+    "st_data_editor-input_data_16[firefox].png",
+    "st_data_editor-input_data_17[firefox].png",
+    "st_data_editor-input_data_18[firefox].png",
+    "st_data_editor-input_data_19[firefox].png",
+    "st_data_editor-input_data_20[firefox].png",
+    "st_data_editor-input_data_21[firefox].png",
+    "st_data_editor-input_data_22[firefox].png",
+    "st_data_editor-input_data_23[firefox].png",
+    "st_data_editor-input_data_24[firefox].png",
+    "st_data_editor-input_data_25[firefox].png",
+    "st_data_editor-input_data_26[firefox].png",
+    "st_data_editor-input_data_27[firefox].png",
+    "st_data_editor-input_data_28[firefox].png",
+    "st_data_editor-input_data_29[firefox].png",
+    "st_data_editor-input_data_30[firefox].png",
+    "st_data_editor-input_data_31[firefox].png",
+    "st_data_editor-input_data_32[firefox].png",
+    "st_data_editor-input_data_33[firefox].png",
+    "st_data_editor-input_data_34[firefox].png",
+}
 
 
 def get_used_snapshots() -> dict[str, tuple[set[str], set[str]]]:
@@ -205,6 +268,11 @@ def main() -> None:
                 searched_snapshots += 1
             else:
                 reason = "Not found in assert_snapshot or codebase"
+
+        # Check if this snapshot is in the disallow list
+        if not is_used and filename in DISALLOWED_SNAPSHOTS:
+            is_used = True
+            reason = "Protected by disallow list (manually verified as in-use)"
 
         if debug and "--test" in sys.argv and test_name == debug_test:
             print(f"\n{filename}: {'USED' if is_used else 'ORPHANED'} - {reason}")
