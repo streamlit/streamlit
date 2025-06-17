@@ -30,8 +30,11 @@ import {
   StyledReactPdfPage,
 } from "./styled-components"
 
-// Configure PDF.js worker using CDN (more reliable than local files)
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+// Configure PDF.js worker to use the worker from node_modules
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString()
 
 export interface PdfProps {
   element: IPdf
