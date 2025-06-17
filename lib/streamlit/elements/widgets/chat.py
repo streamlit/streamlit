@@ -34,6 +34,7 @@ from streamlit.elements.lib.file_uploader_utils import (
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
 from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
     Width,
     WidthWithoutContent,
     validate_width,
@@ -123,7 +124,7 @@ def _process_avatar_input(
     Tuple[AvatarType, str]
         The detected avatar type and the prepared avatar data.
     """
-    AvatarType = BlockProto.ChatMessage.AvatarType
+    AvatarType = BlockProto.ChatMessage.AvatarType  # noqa: N806
 
     if avatar is None:
         return AvatarType.ICON, ""
@@ -236,6 +237,10 @@ class ChatMixin:
         (preferred) or just call methods directly on the returned object. See the
         examples below.
 
+        .. note::
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest chat message containers.
+
         Parameters
         ----------
         name : "user", "assistant", "ai", "human", or str
@@ -279,13 +284,17 @@ class ChatMixin:
             .. |st.image| replace:: ``st.image``
             .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
-        width: int, "auto", or "stretch"
-            The width of the chat message. This can be one of the following:
+        width : "stretch", "content", or int
+            The width of the chat message container. This can be one of the following:
 
-            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
-            - ``"auto"``: Expands to fit the content.
-            - ``"stretch"``: The default value. The chat message stretches to fill
-              available space in its container.
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - ``"content"``: The width of the container matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
@@ -350,11 +359,11 @@ class ChatMixin:
             width_config.use_content = True
         else:
             width_config.use_stretch = True
-        message_container_proto.width_config.CopyFrom(width_config)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
+        block_proto.width_config.CopyFrom(width_config)
 
         return self.dg._block(block_proto=block_proto)
 
@@ -468,12 +477,16 @@ class ChatMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        width: int or "stretch"
-            The width of the chat input widget. This can be one of the following:
+        width : "stretch" or int
+            The width of the chat input widget. This can be one of the
+            following:
 
-            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
-            - ``"stretch"``: The default value. The chat input stretches to fill
-              available space in its container.
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -582,8 +595,6 @@ class ChatMixin:
             writes_allowed=False,
         )
 
-        validate_width(width)
-
         if accept_file not in {True, False, "multiple"}:
             raise StreamlitAPIException(
                 "The `accept_file` parameter must be a boolean or 'multiple'."
@@ -596,6 +607,7 @@ class ChatMixin:
             user_key=key,
             # chat_input is not allowed to be used in a form.
             form_id=None,
+            dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
             accept_file=accept_file,
@@ -644,13 +656,6 @@ class ChatMixin:
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
 
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        chat_input_proto.width_config.CopyFrom(width_config)
-
         serde = ChatInputSerde(
             accept_files=bool(accept_file),
             allowed_types=file_type,
@@ -666,6 +671,9 @@ class ChatMixin:
             value_type="chat_input_value",
         )
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:
             chat_input_proto.value = widget_state.value
@@ -677,10 +685,12 @@ class ChatMixin:
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input", chat_input_proto
+                "chat_input", chat_input_proto, layout_config=layout_config
             )
         else:
-            self.dg._enqueue("chat_input", chat_input_proto)
+            self.dg._enqueue(
+                "chat_input", chat_input_proto, layout_config=layout_config
+            )
 
         return widget_state.value if not widget_state.value_changed else None
 

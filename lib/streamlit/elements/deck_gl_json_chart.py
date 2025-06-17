@@ -29,7 +29,6 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import config
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -41,6 +40,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
 )
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -508,6 +508,7 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
+                dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
@@ -528,7 +529,7 @@ class PydeckMixin:
 
             self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
-            return cast("PydeckState", widget_state.value)
+            return widget_state.value
 
         return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 

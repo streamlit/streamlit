@@ -41,7 +41,7 @@ class TypeUtilTest(unittest.TestCase):
         data = [trace0, trace1]
 
         res = type_util.is_plotly_chart(data)
-        self.assertTrue(res)
+        assert res
 
     def test_data_dict_is_plotly_chart(self):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
@@ -49,7 +49,7 @@ class TypeUtilTest(unittest.TestCase):
         d = {"data": [trace0, trace1]}
 
         res = type_util.is_plotly_chart(d)
-        self.assertTrue(res)
+        assert res
 
     def test_dirty_data_dict_is_not_plotly_chart(self):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
@@ -57,7 +57,7 @@ class TypeUtilTest(unittest.TestCase):
         d = {"data": [trace0, trace1], "foo": "bar"}  # Illegal property!
 
         res = type_util.is_plotly_chart(d)
-        self.assertFalse(res)
+        assert not res
 
     def test_layout_dict_is_not_plotly_chart(self):
         d = {
@@ -66,7 +66,7 @@ class TypeUtilTest(unittest.TestCase):
         }
 
         res = type_util.is_plotly_chart(d)
-        self.assertFalse(res)
+        assert not res
 
     def test_fig_is_plotly_chart(self):
         trace1 = go.Scatter(x=[1, 2, 3, 4], y=[16, 5, 11, 9])
@@ -78,14 +78,14 @@ class TypeUtilTest(unittest.TestCase):
             fig = go.Figure(data=[trace1])
 
         res = type_util.is_plotly_chart(fig)
-        self.assertTrue(res)
+        assert res
 
     def test_is_namedtuple(self):
         Boy = namedtuple("Boy", ("name", "age"))  # noqa: PYI024
         John = Boy("John", "29")
 
         res = type_util.is_namedtuple(John)
-        self.assertTrue(res)
+        assert res
 
     @pytest.mark.require_integration
     def test_is_pydantic_model(self):
@@ -99,22 +99,22 @@ class TypeUtilTest(unittest.TestCase):
             foo: int
             bar: str
 
-        self.assertTrue(type_util.is_pydantic_model(BarModel(foo=1, bar="test")))
-        self.assertFalse(type_util.is_pydantic_model(BarModel))
-        self.assertFalse(type_util.is_pydantic_model(OtherObject))
+        assert type_util.is_pydantic_model(BarModel(foo=1, bar="test"))
+        assert not type_util.is_pydantic_model(BarModel)
+        assert not type_util.is_pydantic_model(OtherObject)
 
     def test_to_bytes(self):
         bytes_obj = b"some bytes"
-        self.assertTrue(type_util.is_bytes_like(bytes_obj))
-        self.assertIsInstance(type_util.to_bytes(bytes_obj), bytes)
+        assert type_util.is_bytes_like(bytes_obj)
+        assert isinstance(type_util.to_bytes(bytes_obj), bytes)
 
         bytearray_obj = bytearray("a bytearray string", "utf-8")
-        self.assertTrue(type_util.is_bytes_like(bytearray_obj))
-        self.assertIsInstance(type_util.to_bytes(bytearray_obj), bytes)
+        assert type_util.is_bytes_like(bytearray_obj)
+        assert isinstance(type_util.to_bytes(bytearray_obj), bytes)
 
         string_obj = "a normal string"
-        self.assertFalse(type_util.is_bytes_like(string_obj))
-        with self.assertRaises(RuntimeError):
+        assert not type_util.is_bytes_like(string_obj)
+        with pytest.raises(RuntimeError):
             type_util.to_bytes(string_obj)  # type: ignore
 
     @parameterized.expand(
@@ -142,14 +142,11 @@ class TypeUtilTest(unittest.TestCase):
         """Test that `check_python_comparable` raises an exception if ndarray."""
         with pytest.raises(StreamlitAPIException) as exception_message:
             type_util.check_python_comparable(sequence)
-        self.assertEqual(
-            (
-                "Invalid option type provided. Options must be comparable, returning a "
-                f"boolean when used with *==*. \n\nGot **{type_str}**, which cannot be "
-                "compared. Refactor your code to use elements of comparable types as "
-                "options, e.g. use indices instead."
-            ),
-            str(exception_message.value),
+        assert (
+            "Invalid option type provided. Options must be comparable, returning a "
+            f"boolean when used with *==*. \n\nGot **{type_str}**, which cannot be "
+            "compared. Refactor your code to use elements of comparable types as options, e.g. use indices instead."
+            == str(exception_message.value)
         )
 
     def test_has_callable_attr(self):

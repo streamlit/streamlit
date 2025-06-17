@@ -16,15 +16,14 @@
 
 import React, { ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
-  ProgressBarOverrides,
+  type ProgressBarOverrides,
   ProgressBar as UIProgressBar,
 } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
 
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export enum Size {
   EXTRASMALL = "xs",
@@ -46,7 +45,7 @@ function ProgressBar({
   size = Size.SMALL,
   overrides,
 }: ProgressBarProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const heightMap = {
     xs: theme.spacing.twoXS,
     sm: theme.spacing.sm,

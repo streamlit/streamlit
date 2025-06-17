@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
     LabelVisibility,
@@ -58,6 +59,7 @@ class MetricMixin:
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -121,6 +123,18 @@ class MetricMixin:
             Whether to show a border around the metric container. If this is
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown.
+
+        width : "stretch", "content", or int
+            The width of the metric element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -204,7 +218,10 @@ class MetricMixin:
             label_visibility
         )
 
-        return self.dg._enqueue("metric", metric_proto)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

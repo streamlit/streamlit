@@ -307,7 +307,6 @@ class FileUploader extends PureComponent<InnerProps, State> {
 
   public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
-    // eslint-disable-next-line import/no-named-as-default-member -- TODO: Utilize AbortController instead
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
       file.name,
@@ -391,6 +390,7 @@ class FileUploader extends PureComponent<InnerProps, State> {
     }
 
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
 

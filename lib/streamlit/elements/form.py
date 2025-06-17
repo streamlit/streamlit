@@ -17,6 +17,13 @@ import textwrap
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
+from streamlit.elements.lib.layout_utils import (
+    Width,
+    get_height_config,
+    get_width_config,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_session_state_rules,
@@ -67,6 +74,8 @@ class FormMixin:
         *,
         enter_to_submit: bool = True,
         border: bool = True,
+        width: Width = "stretch",
+        height: int | Literal["content"] = "content",
     ) -> DeltaGenerator:
         """Create a form that batches elements together with a "Submit" button.
 
@@ -121,6 +130,34 @@ class FormMixin:
                 widget in the form will do nothing. You should only remove the border if
                 there's another border (e.g. because of an expander) or the form is small
                 (e.g. just a text input and a submit button).
+
+        width : "stretch", "content", or int
+            The width of the form container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - ``"content"``: The width of the container matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
+
+        height : "content" or int
+            The height of the form container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+            .. note::
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         Examples
         --------
@@ -181,6 +218,10 @@ class FormMixin:
         block_proto.form.clear_on_submit = clear_on_submit
         block_proto.form.enter_to_submit = enter_to_submit
         block_proto.form.border = border
+        validate_width(width, allow_content=True)
+        block_proto.width_config.CopyFrom(get_width_config(width))
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
         block_dg = self.dg._block(block_proto)
 
         # Attach the form's button info to the newly-created block's

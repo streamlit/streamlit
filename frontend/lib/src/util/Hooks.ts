@@ -30,8 +30,6 @@ export const usePrevious = (value: any): any => {
     ref.current = value
   }, [value])
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   return ref.current
 }
 
@@ -55,7 +53,7 @@ export const useIsOverflowing = (
   useEffect(() => {
     checkOverflowing()
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expanded, current?.clientHeight])
 

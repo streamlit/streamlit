@@ -131,8 +131,14 @@ jobs:
         timeout-minutes: 120
         run: |
           sudo apt update
-          sudo apt install rsync
+          sudo apt install rsync jq
           make package
+          INDEX_NAME=$(jq '."index.html".name' lib/streamlit/static/manifest.json | tr -d '"')
+          if [[ "${INDEX_NAME}" != "index" ]]
+          then
+            echo 'lib/streamlit/static/manifest.json is missing or malformatted!'
+            exit 1
+          fi
       - name: Store Whl File
         uses: actions/upload-artifact@v4
         with:

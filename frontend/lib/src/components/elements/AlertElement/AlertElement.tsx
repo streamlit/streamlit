@@ -16,12 +16,10 @@
 
 import React, { memo, ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
-
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledAlertContent } from "./styled-components"
 
@@ -39,7 +37,7 @@ function AlertElement({
   body,
   kind,
 }: Readonly<AlertElementProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const markdownWidth = {
     // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present
     width: icon

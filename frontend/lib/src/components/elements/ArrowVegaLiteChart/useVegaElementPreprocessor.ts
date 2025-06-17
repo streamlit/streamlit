@@ -16,12 +16,9 @@
 
 import { useMemo } from "react"
 
-import { useTheme } from "@emotion/react"
-
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { VegaLiteChartElement } from "./arrowUtils"
@@ -106,6 +103,20 @@ const generateSpec = (
     spec.config = applyThemeDefaults(spec.config, theme)
   }
 
+  if (spec.title) {
+    if (typeof spec.title === "string") {
+      spec.title = { text: spec.title }
+    }
+
+    spec.title.limit =
+      // Preserve existing limit if it exists,
+      spec.title.limit ??
+      // Otherwise, calculate the width - 40px to give some padding, especially
+      // for the ... menu button. If the width is less than 40px, we set it to
+      // 0 to avoid negative values.
+      Math.max(width - 40, 0)
+  }
+
   if (isFullScreen) {
     spec.width = width
     spec.height = height
@@ -151,14 +162,12 @@ const generateSpec = (
  * and avoids further processing if unnecessary.
  */
 export const useVegaElementPreprocessor = (
-  element: VegaLiteChartElement
+  element: VegaLiteChartElement,
+  isFullScreen: boolean,
+  width: number,
+  height: number
 ): VegaLiteChartElement => {
-  const theme = useTheme()
-  const {
-    expanded: isFullScreen,
-    width,
-    height,
-  } = useRequiredContext(ElementFullscreenContext)
+  const theme = useEmotionTheme()
 
   const {
     id,
@@ -175,8 +184,8 @@ export const useVegaElementPreprocessor = (
   // change, not the reference itself (since each forward message would be a new
   // reference).
   const selectionMode = useMemo(() => {
-    return inputSelectionMode as string[]
-    // eslint-disable-next-line react-compiler/react-compiler
+    return inputSelectionMode
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(inputSelectionMode)])
 

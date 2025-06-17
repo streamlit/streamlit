@@ -374,9 +374,11 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        assert not (existing_session_id and session_id_override), (
-            "Only one of existing_session_id and session_id_override should be set!"
-        )
+        if existing_session_id and session_id_override:
+            raise RuntimeError(
+                "Only one of existing_session_id and session_id_override should be set. "
+                "This should never happen."
+            )
 
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")

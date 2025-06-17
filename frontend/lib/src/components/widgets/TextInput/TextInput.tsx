@@ -18,7 +18,6 @@ import React, { memo, ReactElement, useCallback, useState } from "react"
 
 import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
-import { useTheme } from "@emotion/react"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
@@ -40,6 +39,7 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledTextInput } from "./styled-components"
 
@@ -97,7 +97,7 @@ function TextInput({
    */
   const [focused, setFocused] = useState(false)
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const [id] = useState(() => uniqueId("text_input_"))
   const { placeholder, formId, icon, maxChars } = element
 
@@ -199,15 +199,15 @@ function TextInput({
               // unless the line below is provided.
               // See https://stackoverflow.com/a/33811151
               minWidth: 0,
-              "::placeholder": {
-                opacity: "0.7",
-              },
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
               paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
             },
           },
           Root: {

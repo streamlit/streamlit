@@ -130,14 +130,14 @@ def _mpa_v1(main_script_path: str) -> None:
     from streamlit.navigation.page import StreamlitPage
 
     # Select the folder that should be used for the pages:
-    MAIN_SCRIPT_PATH = Path(main_script_path).resolve()
-    PAGES_FOLDER = MAIN_SCRIPT_PATH.parent / "pages"
+    resolved_main_script_path: Final = Path(main_script_path).resolve()
+    pages_folder: Final = resolved_main_script_path.parent / "pages"
 
     # Read out the my_pages folder and create a page for every script:
     pages = sorted(
         [
             page
-            for page in PAGES_FOLDER.glob("*.py")
+            for page in pages_folder.glob("*.py")
             if page.name.endswith(".py")
             and not page.name.startswith(".")
             and page.name != "__init__.py"
@@ -146,12 +146,12 @@ def _mpa_v1(main_script_path: str) -> None:
     )
 
     # Use this script as the main page and
-    main_page = StreamlitPage(MAIN_SCRIPT_PATH, default=True)
+    main_page = StreamlitPage(resolved_main_script_path, default=True)
     all_pages = [main_page] + [
-        StreamlitPage(PAGES_FOLDER / page.name) for page in pages
+        StreamlitPage(pages_folder / page.name) for page in pages
     ]
     # Initialize the navigation with all the pages:
-    position: Literal["sidebar", "hidden"] = (
+    position: Literal["sidebar", "hidden", "top"] = (
         "hidden"
         if config.get_option("client.showSidebarNavigation") is False
         else "sidebar"
@@ -322,7 +322,10 @@ class ScriptRunner:
             If there is no ScriptRunContext for the current thread.
 
         """
-        assert self._is_in_script_thread()
+        if not self._is_in_script_thread():
+            raise RuntimeError(
+                "ScriptRunner._get_script_run_ctx must be called from the script thread."
+            )
 
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -342,7 +345,10 @@ class ScriptRunner:
         When the ScriptRequestQueue is empty, or when a SHUTDOWN request is
         dequeued, this function will exit and its thread will terminate.
         """
-        assert self._is_in_script_thread()
+        if not self._is_in_script_thread():
+            raise RuntimeError(
+                "ScriptRunner._run_script_thread must be called from the script thread."
+            )
 
         _LOGGER.debug("Beginning script thread")
 
@@ -372,13 +378,18 @@ class ScriptRunner:
             self._run_script(request.rerun_data)
             request = self._requests.on_scriptrunner_ready()
 
-        assert request.type == ScriptRequestType.STOP
+        if request.type != ScriptRequestType.STOP:
+            raise RuntimeError(
+                f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
+            )
 
         # Send a SHUTDOWN event before exiting, so some state can be saved
         # for use in a future script run when not triggered by the client.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
         client_state.page_script_hash = ctx.page_script_hash
+        if ctx.context_info:
+            client_state.context_info.CopyFrom(ctx.context_info)
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
         )
@@ -434,7 +445,10 @@ class ScriptRunner:
         if request.type == ScriptRequestType.RERUN:
             raise RerunException(request.rerun_data)
 
-        assert request.type == ScriptRequestType.STOP
+        if request.type != ScriptRequestType.STOP:
+            raise RuntimeError(
+                f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
+            )
         raise StopException()
 
     @contextmanager
@@ -462,7 +476,10 @@ class ScriptRunner:
 
         """
 
-        assert self._is_in_script_thread()
+        if not self._is_in_script_thread():
+            raise RuntimeError(
+                "ScriptRunner._run_script must be called from the script thread."
+            )
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
@@ -624,13 +641,14 @@ class ScriptRunner:
                                 # (see https://github.com/streamlit/streamlit/issues/9080).
                                 if not rerun_data.is_auto_rerun:
                                     _LOGGER.warning(
-                                        f"Couldn't find fragment with id {fragment_id}."
+                                        "Couldn't find fragment with id %s."
                                         " This can happen if the fragment does not"
                                         " exist anymore when this request is processed,"
                                         " for example because a full app rerun happened"
                                         " that did not register the fragment."
                                         " Usually this doesn't happen or no action is"
-                                        " required, so its mainly for debugging."
+                                        " required, so its mainly for debugging.",
+                                        fragment_id,
                                     )
                             except (RerunException, StopException):
                                 # The wrapped_fragment function is executed

@@ -22,5 +22,6 @@ import { EmotionTheme as StreamlitTheme } from "@streamlit/lib"
 // This declaration allows us to extend our type declarations for emotion's
 // theme (an empty object) to be our type
 declare module "@emotion/react" {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   export interface Theme extends StreamlitTheme {}
 }

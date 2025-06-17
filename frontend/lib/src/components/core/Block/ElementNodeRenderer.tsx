@@ -67,7 +67,6 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
-import { Quiver } from "~lib/dataframes/Quiver"
 // Load (non-lazy) elements.
 import AlertElement, {
   getAlertElementKind,
@@ -82,7 +81,6 @@ import Metric from "~lib/components/elements/Metric"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
 import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "~lib/components/elements/ArrowVegaLiteChart"
 import Maybe from "~lib/components/core/Maybe"
 import { FormSubmitContent } from "~lib/components/widgets/Form"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
@@ -114,8 +112,6 @@ const Toast = lazy(() => import("~lib/components/elements/Toast"))
 // when the sidebar is toggled, which significantly slows down the app.
 const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
 
-// RTL ESLint triggers a false positive on this render function
-// eslint-disable-next-line testing-library/render-result-naming-convention
 const DebouncedBokehChart = withCalculatedWidth(
   debounceRender(BokehChart, 100)
 )
@@ -212,9 +208,7 @@ const RawElementNodeRenderer = (
     }
 
     case "arrowTable":
-      return (
-        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
-      )
+      return <ArrowTable element={node.quiverElement} {...elementProps} />
 
     case "audio":
       return (
@@ -249,7 +243,6 @@ const RawElementNodeRenderer = (
           language={codeProto.language}
           showLineNumbers={codeProto.showLineNumbers}
           wrapLines={codeProto.wrapLines}
-          height={codeProto.height}
         >
           {codeProto.codeText}
         </StreamlitSyntaxHighlighter>
@@ -421,14 +414,14 @@ const RawElementNodeRenderer = (
           // be undefined.
           key={arrowProto.id || undefined}
           element={arrowProto}
-          data={node.quiverElement as Quiver}
+          data={node.quiverElement}
           {...widgetProps}
         />
       )
     }
 
     case "arrowVegaLiteChart": {
-      const vegaLiteElement = node.vegaLiteChartElement as VegaLiteChartElement
+      const vegaLiteElement = node.vegaLiteChartElement
       return (
         <ArrowVegaLiteChart
           element={vegaLiteElement}

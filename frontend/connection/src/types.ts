@@ -23,20 +23,13 @@
 import { CancelToken } from "axios"
 
 import { IAppPage } from "@streamlit/protobuf"
+import type { StreamlitWindowObject } from "@streamlit/utils"
 
 import { ConnectionState } from "./ConnectionState"
 
-// eslint-disable-next-line
 declare global {
-  // These window variables are used so that some deployments of Streamlit can
-  // edit the index.html served to the client so that a Streamlit server at an
-  // origin different from where the frontend static assets are served can be
-  // set. Note that we also need to have a separate `declare global` block here
-  // rather than adding to the one in App.tsx as these also need to be
-  // accessible within this package when no app exists.
   interface Window {
-    __STREAMLIT_BACKEND_BASE_URL?: string
-    __STREAMLIT_HOST_CONFIG_BASE_URL?: string
+    __streamlit?: StreamlitWindowObject
   }
 }
 
@@ -232,6 +225,7 @@ export type MetricsConfig = {
    * Setting to "off" disables metrics collection.
    * If undefined, metricsUrl requested from centralized config file.
    */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   metricsUrl?: string | "postMessage" | "off"
 }
 

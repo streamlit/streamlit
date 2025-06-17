@@ -26,7 +26,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
@@ -56,6 +55,7 @@ import { FileUploadClient } from "~lib/FileUploadClient"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledChatInput,
@@ -103,7 +103,7 @@ function ChatInput({
   fragmentId,
   uploadClient,
 }: Props): React.ReactElement {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const { placeholder, maxChars } = element
 
@@ -166,6 +166,7 @@ function ChatInput({
           file.status.type === "uploaded" &&
           file.status.fileUrls.deleteUrl
         ) {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
           uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
         }
 
@@ -338,7 +339,7 @@ function ChatInput({
     if (element.setValue) {
       // We are intentionally setting this to avoid regularly calling this effect.
       // TODO: Update to match React best practices
-      // eslint-disable-next-line react-compiler/react-compiler
+      // eslint-disable-next-line react-hooks/react-compiler
       element.setValue = false
       const val = element.value || ""
       setValue(val)
@@ -483,7 +484,7 @@ function ChatInput({
                   style: {
                     lineHeight: theme.lineHeights.inputWidget,
                     "::placeholder": {
-                      opacity: "0.7",
+                      color: theme.colors.fadedText60,
                     },
                     height: isInputExtended
                       ? `${scrollHeight + ROUNDING_OFFSET}px`

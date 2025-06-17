@@ -15,7 +15,7 @@
 from typing import Any
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
@@ -29,7 +29,7 @@ information.
 """
 
 
-@pytest.fixture(scope="function", params=["en-US", "de-DE", "ja-JP", "ar-EG"])
+@pytest.fixture(params=["en-US", "de-DE", "ja-JP", "ar-EG"])
 def browser_context_args(
     request: pytest.FixtureRequest,
     browser_context_args: dict[str, Any],
@@ -49,8 +49,14 @@ def test_range_date_calendar_picker_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the range calendar picker renders correctly via screenshots matching."""
-    themed_app.get_by_test_id("stDateInput").nth(0).click()
+    date_input = themed_app.get_by_test_id("stDateInput").first
+    expect(date_input).to_be_visible()
+    date_input.click()
+
+    calendar_popover = themed_app.locator('[data-baseweb="calendar"]').first
+    expect(calendar_popover).to_be_visible()
+
     assert_snapshot(
-        themed_app.locator('[data-baseweb="calendar"]').first,
+        calendar_popover,
         name="st_date_input-range_two_dates_calendar",
     )

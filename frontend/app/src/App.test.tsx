@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
@@ -233,6 +234,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     setImportedTheme: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
+  isMobileViewport: false,
   ...extend,
 })
 
@@ -549,7 +551,6 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
 
-      // @ts-expect-error
       window.__streamlit = {
         ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION: true,
       }
@@ -1289,8 +1290,7 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      // Header/main menu should not render
-      expect(screen.queryByTestId("stHeader")).toBeNull()
+      // main menu should not render
       expect(screen.queryByTestId("stMainMenu")).toBeNull()
     })
 
@@ -1633,8 +1633,15 @@ describe("App", () => {
   })
 
   describe("App.sendRerunBackMsg", () => {
+    let originalStreamlitWindowObj: typeof window.__streamlit
+
+    beforeEach(() => {
+      originalStreamlitWindowObj = window.__streamlit
+    })
+
     afterEach(() => {
       window.history.pushState({}, "", "/")
+      window.__streamlit = originalStreamlitWindowObj
     })
 
     it("sends the currentPageScriptHash if no pageScriptHash is given", () => {
@@ -1765,6 +1772,38 @@ describe("App", () => {
         port: "8501",
       } as URL)
 
+      window.history.pushState({}, "", "/foo/bar/baz")
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
+      ).toBe("baz")
+    })
+
+    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (main page)", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
+      window.history.pushState({}, "", "/foo/bar/")
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
+      ).toBe("")
+    })
+
+    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (non-main page)", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
       window.history.pushState({}, "", "/foo/bar/baz")
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
@@ -2138,7 +2177,7 @@ describe("App", () => {
         }
       )
 
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
     })
 
     it("MPA V2 - will remove logo if activeScriptHash does not match", async () => {
@@ -2169,7 +2208,7 @@ describe("App", () => {
           activeScriptHash: "other_page_script_hash",
         }
       )
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
 
       // Trigger a new session with a different pageScriptHash
       sendForwardMessage("newSession", {
@@ -2180,7 +2219,7 @@ describe("App", () => {
       // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
       // Cleanup for MPA V2 in filterMainScriptElements
       await waitFor(() => {
-        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
       })
     })
 
@@ -2198,7 +2237,7 @@ describe("App", () => {
         }
       )
 
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
 
       // Trigger a new scriptRunId via new session
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -2212,7 +2251,7 @@ describe("App", () => {
       // Since no logo is sent in this script run, logo must not be present in the script anymore
       // Stale logo should be removed
       await waitFor(() => {
-        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
       })
     })
 
@@ -2249,7 +2288,7 @@ describe("App", () => {
         ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
       )
       await waitFor(() => {
-        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+        expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
       })
 
       // Fragment run - logo is not sent, but should persist (triggers scriptRunId to be updated)
@@ -2262,7 +2301,7 @@ describe("App", () => {
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
       )
       await waitFor(() => {
-        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+        expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
       })
 
       // Full re-run - logo is not sent, should be removed as stale (scriptRunId is different)
@@ -2275,7 +2314,7 @@ describe("App", () => {
         ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
       )
       await waitFor(() => {
-        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
       })
     })
   })
@@ -2453,6 +2492,7 @@ describe("App", () => {
             timezone: "UTC",
             timezoneOffset: 0,
             url: "http://localhost:3000/",
+            colorScheme: "light",
           },
         },
       })
@@ -2594,7 +2634,7 @@ describe("App", () => {
       ["remoteHost", true, Config.ToolbarMode.VIEWER, false],
     ])(
       "should render or not render dev menu depending on hostname, host ownership, toolbarMode[%s, %s, %s]",
-      async (hostname, hostIsOwnr, toolbarMode, expectedResult) => {
+      (hostname, hostIsOwnr, toolbarMode, expectedResult) => {
         mockWindowLocation(hostname)
 
         const result = showDevelopmentOptions(hostIsOwnr, toolbarMode)
@@ -3030,6 +3070,7 @@ describe("App", () => {
             timezone: "UTC",
             timezoneOffset: 0,
             url: "http://localhost:3000/",
+            colorScheme: "light",
           },
         },
       })
@@ -3246,12 +3287,13 @@ describe("App", () => {
             timezone: "UTC",
             timezoneOffset: 0,
             url: "http://localhost:3000/",
+            colorScheme: "light",
           },
         },
       })
     })
 
-    it("clears fragment auto rerun intervals when page changes", async () => {
+    it("clears fragment auto rerun intervals when page changes", () => {
       prepareHostCommunicationManager()
 
       // autoRerun uses setInterval under-the-hood, so use fake timers
@@ -3322,7 +3364,6 @@ describe("App", () => {
       it("shows hostMenuItems", () => {
         mockWindowLocation("https://devel.streamlit.test")
         // We need this to use the Main Menu Button
-        // eslint-disable-next-line testing-library/render-result-naming-convention
         const app = renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -3636,16 +3677,19 @@ describe("App", () => {
   describe("page change URL handling", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     let pushStateSpy: any
+    let originalStreamlitWindowObj: typeof window.__streamlit
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
       pushStateSpy = vi.spyOn(window.history, "pushState")
+      originalStreamlitWindowObj = window.__streamlit
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
       window.localStorage.clear()
+      window.__streamlit = originalStreamlitWindowObj
     })
 
     it("can switch to the main page from a different page", () => {
@@ -3799,6 +3843,43 @@ describe("App", () => {
         hostname: "",
         port: "8501",
       } as URL)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        appPages: [],
+        pageScriptHash: "hash2",
+      })
+
+      sendForwardMessage("navigation", {
+        appPages: [
+          {
+            pageScriptHash: "page_script_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+            isDefault: true,
+          },
+          {
+            pageScriptHash: "hash2",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
+        ],
+        pageScriptHash: "hash2",
+        position: Navigation.Position.SIDEBAR,
+        sections: [],
+      })
+
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/foo/page2"
+      )
+    })
+
+    it("works with window.__streamlit.MAIN_PAGE_BASE_URL", () => {
+      renderApp(getProps())
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://example.com/foo" }
 
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,

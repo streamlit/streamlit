@@ -29,45 +29,45 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         st.download_button("the label", data=data)
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.type, "secondary")
-        self.assertEqual(c.disabled, False)
-        self.assertEqual(c.ignore_rerun, False)
+        assert c.label == "the label"
+        assert c.type == "secondary"
+        assert not c.disabled
+        assert not c.ignore_rerun
 
     def test_emoji_icon(self):
         """Test that it can be called with emoji icon."""
         st.download_button("the label", icon="⚡", data="juststring")
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.icon, "⚡")
+        assert c.icon == "⚡"
 
     def test_material_icon(self):
         """Test that it can be called with material icon."""
         st.download_button("the label", icon=":material/thumb_up:", data="juststring")
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.icon, ":material/thumb_up:")
+        assert c.icon == ":material/thumb_up:"
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.download_button("the label", data="juststring", disabled=True)
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     def test_url_exist(self):
         """Test that file url exist in proto."""
         st.download_button("the label", data="juststring")
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertTrue("/media/" in c.url)
+        assert "/media/" in c.url
 
     def test_sets_ignore_rerun(self):
         """Test that it can be called with on_click="ignore"."""
         st.download_button("the label", data="juststring", on_click="ignore")
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.ignore_rerun, True)
+        assert c.ignore_rerun
 
     @parameterized.expand(["primary", "secondary", "tertiary"])
     def test_type(self, type):
@@ -75,21 +75,21 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         st.download_button("the label", data="Streamlit", type=type)
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.type, type)
+        assert c.type == type
 
     def test_use_container_width_can_be_set_to_true(self):
         """Test use_container_width can be set to true."""
         st.download_button("the label", data="juststring", use_container_width=True)
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.use_container_width, True)
+        assert c.use_container_width
 
     def test_use_container_width_is_false_by_default(self):
         """Test use_container_width is false by default."""
         st.download_button("the label", data="juststring")
 
         c = self.get_delta_from_queue().new_element.download_button
-        self.assertEqual(c.use_container_width, False)
+        assert not c.use_container_width
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -97,5 +97,5 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning

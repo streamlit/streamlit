@@ -23,6 +23,7 @@ import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
+import type { StreamlitWindowObject } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -54,11 +55,7 @@ export const CUSTOM_THEME_NAME = "Custom Theme"
 
 declare global {
   interface Window {
-    __streamlit?: {
-      LIGHT_THEME: ICustomThemeConfig
-      DARK_THEME: ICustomThemeConfig
-      ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
-    }
+    __streamlit?: StreamlitWindowObject
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -149,14 +146,88 @@ export const parseFont = (font: string): string => {
   return font
 }
 
+/**
+ * Helper function to parse the baseRadius & buttonRadius options which allow the same possible values
+ * @param radius: a string - "none", "small", "medium", "large", "full", a number in pixels or rem
+ * @returns radius value and css unit
+ */
+export const parseRadius = (
+  radius: string
+): [number | undefined, "px" | "rem"] => {
+  let cssUnit: "px" | "rem" = "rem"
+  let radiusValue: number | undefined = undefined
+  const processedRadius = radius.trim().toLowerCase()
+
+  if (processedRadius === "none") {
+    radiusValue = 0
+  } else if (processedRadius === "small") {
+    radiusValue = 0.35
+  } else if (processedRadius === "medium") {
+    radiusValue = 0.5
+  } else if (processedRadius === "large") {
+    radiusValue = 1
+  } else if (processedRadius === "full") {
+    radiusValue = 1.4
+  } else if (processedRadius.endsWith("rem")) {
+    radiusValue = parseFloat(processedRadius)
+  } else if (processedRadius.endsWith("px")) {
+    radiusValue = parseFloat(processedRadius)
+    cssUnit = "px"
+  } else if (!isNaN(parseFloat(processedRadius))) {
+    // Fallback: if the value can be parsed as a number, treat it as pixels
+    radiusValue = parseFloat(processedRadius)
+    cssUnit = "px"
+  }
+
+  return [radiusValue, cssUnit]
+}
+
+/**
+ * Helper function to parse fontSize options which allow the same possible values
+ * @param fontSize a string number in pixels or rem; handles number values as pixels
+ * (e.g. "15px", "0.875rem", "15")
+ * @returns font size in em (e.g. "0.875em")
+ */
+export const parseFontSize = (
+  configName: string,
+  fontSize: string | number,
+  inSidebar: boolean
+): string | undefined => {
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  if (typeof fontSize === "string") {
+    // If string, check its valid (ends with "rem" or "px")
+    // and can be parsed as a number
+    const processedFontSize = fontSize.trim().toLowerCase()
+    const parsedFontSize = parseFloat(processedFontSize)
+    if (
+      parsedFontSize &&
+      (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
+    ) {
+      return processedFontSize
+    }
+
+    // Fallback: if the value can be parsed as a number, treat it as pixels
+    if (parsedFontSize.toString() === processedFontSize) {
+      return `${processedFontSize}px`
+    }
+  }
+  // If invalid, log warning and return undefined
+  LOG.warn(
+    `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
+  )
+}
+
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
-  const { colors, genericFonts } = baseThemeConfig.emotion
+  const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
   const {
     baseFontSize,
     baseRadius,
+    buttonRadius,
+    codeFontSize,
     showWidgetBorder,
     headingFont,
     bodyFont,
@@ -167,13 +238,29 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
+      let isInvalidColor = true
       // @ts-expect-error
       if (isColor(color)) {
+        isInvalidColor = false
         // @ts-expect-error
         colorsArg[key] = color
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
       } else if (isColor(`#${color}`)) {
+        isInvalidColor = false
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
         colorsArg[key] = `#${color}`
       }
+
+      const isAColorConfig = key.toLowerCase().includes("color")
+      if (isAColorConfig && isInvalidColor) {
+        const themeSection = inSidebar ? "theme.sidebar" : "theme"
+        // Provide warning logging for invalid colors passed to theme color configs
+        LOG.warn(
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
+          `Invalid color passed for ${key} in ${themeSection}: "${color}"`
+        )
+      }
+
       return colorsArg
     },
     {}
@@ -187,6 +274,7 @@ export const createEmotionTheme = (
     backgroundColor: bgColor,
     primaryColor: primary,
     textColor: bodyText,
+    dataframeBorderColor,
     widgetBorderColor,
     borderColor,
     linkColor,
@@ -216,10 +304,17 @@ export const createEmotionTheme = (
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
-    conditionalOverrides.colors.borderColorLight = transparentize(
-      borderColor,
-      0.55
-    )
+
+    const borderColorLight = transparentize(borderColor, 0.55)
+    // Used for tabs border and expander when stale
+    conditionalOverrides.colors.borderColorLight = borderColorLight
+    // Set the fallback here for dataframe & table border color
+    conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+  }
+
+  if (notNullOrUndefined(dataframeBorderColor)) {
+    // If dataframeBorderColor explicitly set, override borderColorLight fallback
+    conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
   if (showWidgetBorder || widgetBorderColor) {
@@ -234,33 +329,16 @@ export const createEmotionTheme = (
     conditionalOverrides.radii = {
       ...baseThemeConfig.emotion.radii,
     }
-    let cssUnit: "px" | "rem" = "rem"
-    let radiusValue: number | undefined = undefined
-    const processedBaseRadius = baseRadius.trim().toLowerCase()
 
-    if (processedBaseRadius === "none") {
-      radiusValue = 0
-    } else if (processedBaseRadius === "small") {
-      radiusValue = 0.35
-    } else if (processedBaseRadius === "medium") {
-      radiusValue = 0.5
-    } else if (processedBaseRadius === "large") {
-      radiusValue = 1
-    } else if (processedBaseRadius === "full") {
-      radiusValue = 1.4
-    } else if (processedBaseRadius.endsWith("rem")) {
-      radiusValue = parseFloat(processedBaseRadius)
-    } else if (processedBaseRadius.endsWith("px")) {
-      radiusValue = parseFloat(processedBaseRadius)
-      cssUnit = "px"
-    } else if (!isNaN(parseFloat(processedBaseRadius))) {
-      // Fallback: if the value can be parsed as a number, treat it as pixels
-      radiusValue = parseFloat(processedBaseRadius)
-      cssUnit = "px"
-    }
+    const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
     if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
-      conditionalOverrides.radii.default = addCssUnit(radiusValue, cssUnit)
+      const radiusWithCssUnit = addCssUnit(radiusValue, cssUnit)
+      conditionalOverrides.radii.default = radiusWithCssUnit
+
+      // Set the fallback button radius if baseRadius is set
+      conditionalOverrides.radii.button = radiusWithCssUnit
+
       // Adapt all the other radii sizes based on the base radii:
       // We make sure that the value is rounded to 2 decimal places to avoid
       // floating point precision issues.
@@ -283,6 +361,26 @@ export const createEmotionTheme = (
     }
   }
 
+  if (notNullOrUndefined(buttonRadius)) {
+    // Handles case where buttonRadius is the only radius set in the themeInput
+    if (!conditionalOverrides.radii) {
+      conditionalOverrides.radii = {
+        ...baseThemeConfig.emotion.radii,
+      }
+    }
+
+    const [radiusValue, cssUnit] = parseRadius(buttonRadius)
+
+    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+      // If valid buttonRadius set, override baseRadius fallback
+      conditionalOverrides.radii.button = addCssUnit(radiusValue, cssUnit)
+    } else {
+      LOG.warn(
+        `Invalid button radius: ${buttonRadius}. Falling back to default button radius.`
+      )
+    }
+  }
+
   if (baseFontSize && baseFontSize > 0) {
     conditionalOverrides.fontSizes = {
       ...baseThemeConfig.emotion.fontSizes,
@@ -290,6 +388,27 @@ export const createEmotionTheme = (
 
     // Set the root font size to the configured value (used on global styles):
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
+  }
+
+  if (codeFontSize) {
+    // Handles case where codeFontSize is set, but not baseFontSize
+    if (!conditionalOverrides.fontSizes) {
+      conditionalOverrides.fontSizes = {
+        ...baseThemeConfig.emotion.fontSizes,
+      }
+    }
+
+    // Returns font size as a string, or undefined if invalid
+    const parsedCodeFontSize = parseFontSize(
+      "codeFontSize",
+      codeFontSize,
+      inSidebar
+    )
+    if (parsedCodeFontSize) {
+      conditionalOverrides.fontSizes.codeFontSize = parsedCodeFontSize
+    }
+    // codeFontSize default (fallback) set in typography primitives (0.875rem)
+    // inlineCodeFontSize set in typography primitives (0.75em)
   }
 
   if (notNullOrUndefined(showSidebarBorder)) {
@@ -396,14 +515,14 @@ export const createTheme = (
   // theme's backgroundColor instead of picking them using themeInput.base.
   // This way, things will look good even if a user sets
   // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
-  const bgColor = completedThemeInput.backgroundColor as string
+  const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
       baseThemeConfig
         ? baseThemeConfig
         : getLuminance(bgColor) > 0.5
-        ? lightTheme
-        : darkTheme
+          ? lightTheme
+          : darkTheme
     ),
     { emotion: { inSidebar } }
   )

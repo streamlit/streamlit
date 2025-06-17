@@ -52,3 +52,8 @@ tabs = st.tabs(["HTML Tab 1", "HTML Tab 2", "HTML Tab 3"])
 
 for i, tab in enumerate(tabs):
     tab.html(f"<h1>Hello</h1><p>This is HTML tab {i + 1}</p>")
+
+fixed_width_tabs = st.tabs(["width_test_1", "width_test_2", "width_test_3"], width=200)
+
+for i, tab in enumerate(fixed_width_tabs):
+    tab.write(f"Hello {i}")

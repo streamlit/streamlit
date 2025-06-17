@@ -136,15 +136,15 @@ def prepare_polars_data():
 
 class HashTest(unittest.TestCase):
     def test_string(self):
-        self.assertEqual(get_hash("hello"), get_hash("hello"))
-        self.assertNotEqual(get_hash("hello"), get_hash("hellö"))
+        assert get_hash("hello") == get_hash("hello")
+        assert get_hash("hello") != get_hash("hellö")
 
     def test_int(self):
-        self.assertEqual(get_hash(145757624235), get_hash(145757624235))
-        self.assertNotEqual(get_hash(10), get_hash(11))
-        self.assertNotEqual(get_hash(-1), get_hash(1))
-        self.assertNotEqual(get_hash(2**7), get_hash(2**7 - 1))
-        self.assertNotEqual(get_hash(2**7), get_hash(2**7 + 1))
+        assert get_hash(145757624235) == get_hash(145757624235)
+        assert get_hash(10) != get_hash(11)
+        assert get_hash(-1) != get_hash(1)
+        assert get_hash(2**7) != get_hash(2**7 - 1)
+        assert get_hash(2**7) != get_hash(2**7 + 1)
 
     def test_uuid(self):
         uuid1 = uuid.uuid4()
@@ -158,22 +158,22 @@ class HashTest(unittest.TestCase):
         uuid3_copy = uuid.UUID(uuid3.hex)
         uuid4 = uuid.uuid5(uuid.NAMESPACE_DNS, "snowflake.com")
 
-        self.assertEqual(get_hash(uuid1), get_hash(uuid1_copy))
-        self.assertNotEqual(id(uuid1), id(uuid1_copy))
-        self.assertNotEqual(get_hash(uuid1), get_hash(uuid2))
+        assert get_hash(uuid1) == get_hash(uuid1_copy)
+        assert id(uuid1) != id(uuid1_copy)
+        assert get_hash(uuid1) != get_hash(uuid2)
 
-        self.assertEqual(get_hash(uuid3), get_hash(uuid3_copy))
-        self.assertNotEqual(id(uuid3), id(uuid3_copy))
-        self.assertNotEqual(get_hash(uuid3), get_hash(uuid4))
+        assert get_hash(uuid3) == get_hash(uuid3_copy)
+        assert id(uuid3) != id(uuid3_copy)
+        assert get_hash(uuid3) != get_hash(uuid4)
 
     def test_datetime_naive(self):
         naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
         naive_datetime1_copy = datetime.datetime(2007, 12, 23, 15, 45, 55)
         naive_datetime3 = datetime.datetime(2011, 12, 21, 15, 45, 55)
 
-        self.assertEqual(get_hash(naive_datetime1), get_hash(naive_datetime1_copy))
-        self.assertNotEqual(id(naive_datetime1), id(naive_datetime1_copy))
-        self.assertNotEqual(get_hash(naive_datetime1), get_hash(naive_datetime3))
+        assert get_hash(naive_datetime1) == get_hash(naive_datetime1_copy)
+        assert id(naive_datetime1) != id(naive_datetime1_copy)
+        assert get_hash(naive_datetime1) != get_hash(naive_datetime3)
 
     def test_datetime_aware(self):
         tz_info = datetime.timezone.utc
@@ -187,10 +187,10 @@ class HashTest(unittest.TestCase):
         # but without timezone info. They should have different hashes.
         naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
 
-        self.assertEqual(get_hash(aware_datetime1), get_hash(aware_datetime1_copy))
-        self.assertNotEqual(id(aware_datetime1), id(aware_datetime1_copy))
-        self.assertNotEqual(get_hash(aware_datetime1), get_hash(aware_datetime2))
-        self.assertNotEqual(get_hash(aware_datetime1), get_hash(naive_datetime1))
+        assert get_hash(aware_datetime1) == get_hash(aware_datetime1_copy)
+        assert id(aware_datetime1) != id(aware_datetime1_copy)
+        assert get_hash(aware_datetime1) != get_hash(aware_datetime2)
+        assert get_hash(aware_datetime1) != get_hash(naive_datetime1)
 
     @parameterized.expand(
         [
@@ -206,9 +206,9 @@ class HashTest(unittest.TestCase):
         timestamp1_copy = pd.Timestamp("2017-01-01T12", tz=tz_info)
         timestamp2 = pd.Timestamp("2019-01-01T12", tz=tz_info)
 
-        self.assertEqual(get_hash(timestamp1), get_hash(timestamp1_copy))
-        self.assertNotEqual(id(timestamp1), id(timestamp1_copy))
-        self.assertNotEqual(get_hash(timestamp1), get_hash(timestamp2))
+        assert get_hash(timestamp1) == get_hash(timestamp1_copy)
+        assert id(timestamp1) != id(timestamp1_copy)
+        assert get_hash(timestamp1) != get_hash(timestamp2)
 
     def test_mocks_do_not_result_in_infinite_recursion(self):
         try:
@@ -218,16 +218,16 @@ class HashTest(unittest.TestCase):
             self.fail("get_hash raised an exception")
 
     def test_list(self):
-        self.assertEqual(get_hash([1, 2]), get_hash([1, 2]))
-        self.assertNotEqual(get_hash([1, 2]), get_hash([2, 2]))
-        self.assertNotEqual(get_hash([1]), get_hash(1))
+        assert get_hash([1, 2]) == get_hash([1, 2])
+        assert get_hash([1, 2]) != get_hash([2, 2])
+        assert get_hash([1]) != get_hash(1)
 
         # test that we can hash self-referencing lists
         a = [1, 2, 3]
         a.append(a)
         b = [1, 2, 3]
         b.append(b)
-        self.assertEqual(get_hash(a), get_hash(b))
+        assert get_hash(a) == get_hash(b)
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -244,24 +244,24 @@ class HashTest(unittest.TestCase):
         def foo(x):
             return x
 
-        self.assertEqual(foo(1), foo(1))
+        assert foo(1) == foo(1)
         # Note: We're able to break the recursive cycle caused by the identity
         # hash func but it causes all cycles to hash to the same thing.
         # https://github.com/streamlit/streamlit/issues/1659
 
     def test_tuple(self):
-        self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
-        self.assertNotEqual(get_hash((1, 2)), get_hash((2, 2)))
-        self.assertNotEqual(get_hash((1,)), get_hash(1))
-        self.assertNotEqual(get_hash((1,)), get_hash([1]))
+        assert get_hash((1, 2)) == get_hash((1, 2))
+        assert get_hash((1, 2)) != get_hash((2, 2))
+        assert get_hash((1,)) != get_hash(1)
+        assert get_hash((1,)) != get_hash([1])
 
     def test_mappingproxy(self):
         a = types.MappingProxyType({"a": 1})
         b = types.MappingProxyType({"a": 1})
         c = types.MappingProxyType({"c": 1})
 
-        self.assertEqual(get_hash(a), get_hash(b))
-        self.assertNotEqual(get_hash(a), get_hash(c))
+        assert get_hash(a) == get_hash(b)
+        assert get_hash(a) != get_hash(c)
 
     def test_dict_items(self):
         a = types.MappingProxyType({"a": 1}).items()
@@ -269,8 +269,8 @@ class HashTest(unittest.TestCase):
         c = types.MappingProxyType({"c": 1}).items()
 
         assert is_type(a, "builtins.dict_items")
-        self.assertEqual(get_hash(a), get_hash(b))
-        self.assertNotEqual(get_hash(a), get_hash(c))
+        assert get_hash(a) == get_hash(b)
+        assert get_hash(a) != get_hash(c)
 
     def test_getset_descriptor(self):
         class A:
@@ -283,59 +283,59 @@ class HashTest(unittest.TestCase):
         b = B.__dict__["__dict__"]
         assert is_type(a, "builtins.getset_descriptor")
 
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
+        assert get_hash(a) == get_hash(a)
+        assert get_hash(a) != get_hash(b)
 
     def test_dict(self):
-        self.assertEqual(get_hash({1: 1}), get_hash({1: 1}))
-        self.assertNotEqual(get_hash({1: 1}), get_hash({1: 2}))
-        self.assertNotEqual(get_hash({1: 1}), get_hash([(1, 1)]))
+        assert get_hash({1: 1}) == get_hash({1: 1})
+        assert get_hash({1: 1}) != get_hash({1: 2})
+        assert get_hash({1: 1}) != get_hash([(1, 1)])
 
         dict_gen = {1: (x for x in range(1))}
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(dict_gen)
 
     def test_self_reference_dict(self):
         d1 = {"cat": "hat"}
         d2 = {"things": [1, 2]}
 
-        self.assertEqual(get_hash(d1), get_hash(d1))
-        self.assertNotEqual(get_hash(d1), get_hash(d2))
+        assert get_hash(d1) == get_hash(d1)
+        assert get_hash(d1) != get_hash(d2)
 
         # test that we can hash self-referencing dictionaries
         d2 = {"book": d1}
-        self.assertNotEqual(get_hash(d2), get_hash(d1))
+        assert get_hash(d2) != get_hash(d1)
 
     def test_float(self):
-        self.assertEqual(get_hash(0.1), get_hash(0.1))
-        self.assertNotEqual(get_hash(23.5234), get_hash(23.5235))
+        assert get_hash(0.1) == get_hash(0.1)
+        assert get_hash(23.5234) != get_hash(23.5235)
 
     def test_bool(self):
-        self.assertEqual(get_hash(True), get_hash(True))
-        self.assertNotEqual(get_hash(True), get_hash(False))
+        assert get_hash(True) == get_hash(True)
+        assert get_hash(True) != get_hash(False)
 
     def test_none(self):
-        self.assertEqual(get_hash(None), get_hash(None))
-        self.assertNotEqual(get_hash(None), get_hash(False))
+        assert get_hash(None) == get_hash(None)
+        assert get_hash(None) != get_hash(False)
 
     def test_builtins(self):
-        self.assertEqual(get_hash(abs), get_hash(abs))
-        self.assertNotEqual(get_hash(abs), get_hash(type))
+        assert get_hash(abs) == get_hash(abs)
+        assert get_hash(abs) != get_hash(type)
 
     def test_regex(self):
         p2 = re.compile(".*")
         p1 = re.compile(".*")
         p3 = re.compile(".*", re.IGNORECASE)
-        self.assertEqual(get_hash(p1), get_hash(p2))
-        self.assertNotEqual(get_hash(p1), get_hash(p3))
+        assert get_hash(p1) == get_hash(p2)
+        assert get_hash(p1) != get_hash(p3)
 
     def test_pandas_large_dataframe(self):
         df1 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
         df2 = pd.DataFrame(np.ones((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
         df3 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
 
-        self.assertEqual(get_hash(df1), get_hash(df3))
-        self.assertNotEqual(get_hash(df1), get_hash(df2))
+        assert get_hash(df1) == get_hash(df3)
+        assert get_hash(df1) != get_hash(df2)
 
     @pytest.mark.usefixtures("benchmark")
     def test_pandas_large_dataframe_performance(self):
@@ -417,20 +417,20 @@ class HashTest(unittest.TestCase):
     )
     def test_pandas_dataframe(self, df1, df2, expected):
         result = get_hash(df1) == get_hash(df2)
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_pandas_series(self):
         series1 = pd.Series([1, 2])
         series2 = pd.Series([1, 3])
         series3 = pd.Series([1, 2])
 
-        self.assertEqual(get_hash(series1), get_hash(series3))
-        self.assertNotEqual(get_hash(series1), get_hash(series2))
+        assert get_hash(series1) == get_hash(series3)
+        assert get_hash(series1) != get_hash(series2)
 
         series4 = pd.Series(range(_PANDAS_ROWS_LARGE))
         series5 = pd.Series(range(_PANDAS_ROWS_LARGE))
 
-        self.assertEqual(get_hash(series4), get_hash(series5))
+        assert get_hash(series4) == get_hash(series5)
 
     @pytest.mark.require_integration
     def test_polars_series(self):
@@ -440,19 +440,19 @@ class HashTest(unittest.TestCase):
         series2 = pl.Series([1, 3])
         series3 = pl.Series([1, 2])
 
-        self.assertEqual(get_hash(series1), get_hash(series3))
-        self.assertNotEqual(get_hash(series1), get_hash(series2))
+        assert get_hash(series1) == get_hash(series3)
+        assert get_hash(series1) != get_hash(series2)
 
         series4 = pl.Series(range(_PANDAS_ROWS_LARGE))
         series5 = pl.Series(range(_PANDAS_ROWS_LARGE))
 
-        self.assertEqual(get_hash(series4), get_hash(series5))
+        assert get_hash(series4) == get_hash(series5)
 
     @pytest.mark.require_integration
     @parameterized.expand(prepare_polars_data(), skip_on_empty=True)
     def test_polars_dataframe(self, df1, df2, expected):
         result = get_hash(df1) == get_hash(df2)
-        self.assertEqual(result, expected)
+        assert result == expected
 
     @pytest.mark.require_integration
     def test_polars_large_dataframe(self):
@@ -462,8 +462,8 @@ class HashTest(unittest.TestCase):
         df2 = pl.DataFrame(np.ones((_PANDAS_ROWS_LARGE, 4)), schema=list("abcd"))
         df3 = pl.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), schema=list("abcd"))
 
-        self.assertEqual(get_hash(df1), get_hash(df3))
-        self.assertNotEqual(get_hash(df1), get_hash(df2))
+        assert get_hash(df1) == get_hash(df3)
+        assert get_hash(df1) != get_hash(df2)
 
     @pytest.mark.usefixtures("benchmark")
     def test_polars_large_dataframe_performance(self):
@@ -483,20 +483,20 @@ class HashTest(unittest.TestCase):
         series1 = pd.Series([1, 2], dtype="UInt64")
         series2 = pd.Series([1, 2], dtype="Int64")
 
-        self.assertNotEqual(get_hash(series1), get_hash(series2))
+        assert get_hash(series1) != get_hash(series2)
 
     def test_numpy(self):
         np1 = np.zeros(10)
         np2 = np.zeros(11)
         np3 = np.zeros(10)
 
-        self.assertEqual(get_hash(np1), get_hash(np3))
-        self.assertNotEqual(get_hash(np1), get_hash(np2))
+        assert get_hash(np1) == get_hash(np3)
+        assert get_hash(np1) != get_hash(np2)
 
         np4 = np.zeros(_NP_SIZE_LARGE)
         np5 = np.zeros(_NP_SIZE_LARGE)
 
-        self.assertEqual(get_hash(np4), get_hash(np5))
+        assert get_hash(np4) == get_hash(np5)
 
     def test_numpy_similar_dtypes(self):
         np1 = np.ones(10, dtype="u8")
@@ -505,16 +505,16 @@ class HashTest(unittest.TestCase):
         np3 = np.ones(10, dtype=[("a", "u8"), ("b", "i8")])
         np4 = np.ones(10, dtype=[("a", "i8"), ("b", "u8")])
 
-        self.assertNotEqual(get_hash(np1), get_hash(np2))
-        self.assertNotEqual(get_hash(np3), get_hash(np4))
+        assert get_hash(np1) != get_hash(np2)
+        assert get_hash(np3) != get_hash(np4)
 
     def test_PIL_image(self):
         im1 = Image.new("RGB", (50, 50), (220, 20, 60))
         im2 = Image.new("RGB", (50, 50), (30, 144, 255))
         im3 = Image.new("RGB", (50, 50), (220, 20, 60))
 
-        self.assertEqual(get_hash(im1), get_hash(im3))
-        self.assertNotEqual(get_hash(im1), get_hash(im2))
+        assert get_hash(im1) == get_hash(im3)
+        assert get_hash(im1) != get_hash(im2)
 
         # Check for big PIL images, they converted to numpy array with size
         # bigger than _NP_SIZE_LARGE
@@ -524,10 +524,10 @@ class HashTest(unittest.TestCase):
         im6 = Image.new("RGB", (1000, 1000), (101, 21, 61))
 
         im4_np_array = np.frombuffer(im4.tobytes(), dtype="uint8")
-        self.assertGreater(im4_np_array.size, _NP_SIZE_LARGE)
+        assert im4_np_array.size > _NP_SIZE_LARGE
 
-        self.assertEqual(get_hash(im4), get_hash(im5))
-        self.assertNotEqual(get_hash(im5), get_hash(im6))
+        assert get_hash(im4) == get_hash(im5)
+        assert get_hash(im5) != get_hash(im6)
 
     @parameterized.expand(
         [
@@ -540,13 +540,13 @@ class HashTest(unittest.TestCase):
         io2 = io_type(io_data2)
         io3 = io_type(io_data3)
 
-        self.assertEqual(get_hash(io1), get_hash(io3))
-        self.assertNotEqual(get_hash(io1), get_hash(io2))
+        assert get_hash(io1) == get_hash(io3)
+        assert get_hash(io1) != get_hash(io2)
 
         # Changing the stream position should change the hash
         io1.seek(1)
         io3.seek(0)
-        self.assertNotEqual(get_hash(io1), get_hash(io3))
+        assert get_hash(io1) != get_hash(io3)
 
     def test_uploaded_file_io(self):
         rec1 = UploadedFileRec("file1", "name", "type", b"123")
@@ -562,21 +562,21 @@ class HashTest(unittest.TestCase):
             rec3, FileURLs(file_id=rec3.file_id, upload_url="u3", delete_url="u3")
         )
 
-        self.assertEqual(get_hash(io1), get_hash(io3))
-        self.assertNotEqual(get_hash(io1), get_hash(io2))
+        assert get_hash(io1) == get_hash(io3)
+        assert get_hash(io1) != get_hash(io2)
 
         # Changing the stream position should change the hash
         io1.seek(1)
         io3.seek(0)
-        self.assertNotEqual(get_hash(io1), get_hash(io3))
+        assert get_hash(io1) != get_hash(io3)
 
     def test_partial(self):
         p1 = functools.partial(int, base=2)
         p2 = functools.partial(int, base=3)
         p3 = functools.partial(int, base=2)
 
-        self.assertEqual(get_hash(p1), get_hash(p3))
-        self.assertNotEqual(get_hash(p1), get_hash(p2))
+        assert get_hash(p1) == get_hash(p3)
+        assert get_hash(p1) != get_hash(p2)
 
     def test_files(self):
         temp1 = tempfile.NamedTemporaryFile()
@@ -584,27 +584,27 @@ class HashTest(unittest.TestCase):
 
         with open(__file__) as f:
             with open(__file__) as g:
-                self.assertEqual(get_hash(f), get_hash(g))
+                assert get_hash(f) == get_hash(g)
 
-            self.assertNotEqual(get_hash(f), get_hash(temp1))
+            assert get_hash(f) != get_hash(temp1)
 
-        self.assertEqual(get_hash(temp1), get_hash(temp1))
-        self.assertNotEqual(get_hash(temp1), get_hash(temp2))
+        assert get_hash(temp1) == get_hash(temp1)
+        assert get_hash(temp1) != get_hash(temp2)
 
     def test_file_position(self):
         with open(__file__) as f:
             h1 = get_hash(f)
-            self.assertEqual(h1, get_hash(f))
+            assert h1 == get_hash(f)
             f.readline()
-            self.assertNotEqual(h1, get_hash(f))
+            assert h1 != get_hash(f)
             f.seek(0)
-            self.assertEqual(h1, get_hash(f))
+            assert h1 == get_hash(f)
 
     def test_magic_mock(self):
         """MagicMocks never hash to the same thing."""
         # (This also tests that MagicMock can hash at all, without blowing the
         # stack due to an infinite recursion.)
-        self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
+        assert get_hash(MagicMock()) != get_hash(MagicMock())
 
     def test_dataclass(self):
         @dataclass(frozen=True, eq=True)
@@ -624,10 +624,10 @@ class HashTest(unittest.TestCase):
             ENUM_2 = auto()
 
         # Hash values should be stable
-        self.assertEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_1))
+        assert get_hash(EnumClass.ENUM_1) == get_hash(EnumClass.ENUM_1)
 
         # Different enum values should produce different hashes
-        self.assertNotEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_2))
+        assert get_hash(EnumClass.ENUM_1) != get_hash(EnumClass.ENUM_2)
 
     def test_different_enums(self):
         """Different enum classes should have different hashes, even when the enum
@@ -642,14 +642,14 @@ class HashTest(unittest.TestCase):
         enum_a = EnumClassA.ENUM_1
         enum_b = EnumClassB.ENUM_1
 
-        self.assertNotEqual(get_hash(enum_a), get_hash(enum_b))
+        assert get_hash(enum_a) != get_hash(enum_b)
 
     def test_reduce_not_hashable(self):
         class A:
             def __init__(self):
                 self.x = [1, 2, 3]
 
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(A().__reduce__())
 
     def test_reduce_fallback(self):
@@ -667,10 +667,10 @@ class HashTest(unittest.TestCase):
         obj3 = CustomClass(43)
 
         # Same objects should hash to the same value
-        self.assertEqual(get_hash(obj1), get_hash(obj2))
+        assert get_hash(obj1) == get_hash(obj2)
 
         # Different objects should hash to different values
-        self.assertNotEqual(get_hash(obj1), get_hash(obj3))
+        assert get_hash(obj1) != get_hash(obj3)
 
         # Test with a more complex object
         class ComplexClass:
@@ -685,19 +685,19 @@ class HashTest(unittest.TestCase):
         complex_obj2 = ComplexClass("test", [1, 2, 3])
         complex_obj3 = ComplexClass("test", [1, 2, 4])
 
-        self.assertEqual(get_hash(complex_obj1), get_hash(complex_obj2))
-        self.assertNotEqual(get_hash(complex_obj1), get_hash(complex_obj3))
+        assert get_hash(complex_obj1) == get_hash(complex_obj2)
+        assert get_hash(complex_obj1) != get_hash(complex_obj3)
 
 
 class NotHashableTest(unittest.TestCase):
     """Tests for various unhashable types."""
 
     def test_lambdas_not_hashable(self):
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(lambda x: x.lower())
 
     def test_generator_not_hashable(self):
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(x for x in range(1))
 
     def test_hash_funcs_acceptable_keys(self):
@@ -706,16 +706,15 @@ class NotHashableTest(unittest.TestCase):
         """
         test_generator = (x for x in range(1))
 
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(test_generator)
 
-        self.assertEqual(
-            get_hash(test_generator, hash_funcs={types.GeneratorType: id}),
-            get_hash(test_generator, hash_funcs={"builtins.generator": id}),
-        )
+        assert get_hash(
+            test_generator, hash_funcs={types.GeneratorType: id}
+        ) == get_hash(test_generator, hash_funcs={"builtins.generator": id})
 
     def test_hash_funcs_error(self):
-        with self.assertRaises(UserHashError) as ctx:
+        with pytest.raises(UserHashError) as ctx:
             get_hash(1, cache_type=CacheType.DATA, hash_funcs={int: lambda x: "a" + x})
 
         expected_message = """can only concatenate str (not "int") to str
@@ -735,7 +734,7 @@ Object of type builtins.int: 1
 
 If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
-        self.assertEqual(str(ctx.exception), expected_message)
+        assert str(ctx.value) == expected_message
 
     def test_non_hashable(self):
         """Test user provided hash functions."""
@@ -743,34 +742,32 @@ If you think this is actually a Streamlit bug, please
         g = (x for x in range(1))
 
         # Unhashable object raises an error
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(g)
 
         id_hash_func = {types.GeneratorType: id}
 
-        self.assertEqual(
-            get_hash(g, hash_funcs=id_hash_func),
-            get_hash(g, hash_funcs=id_hash_func),
+        assert get_hash(g, hash_funcs=id_hash_func) == get_hash(
+            g, hash_funcs=id_hash_func
         )
 
         unique_hash_func = {types.GeneratorType: lambda x: time.time()}
 
-        self.assertNotEqual(
-            get_hash(g, hash_funcs=unique_hash_func),
-            get_hash(g, hash_funcs=unique_hash_func),
+        assert get_hash(g, hash_funcs=unique_hash_func) != get_hash(
+            g, hash_funcs=unique_hash_func
         )
 
     def test_override_streamlit_hash_func(self):
         """Test that a user provided hash function has priority over a streamlit one."""
 
         hash_funcs = {int: lambda x: "hello"}
-        self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
+        assert get_hash(1) != get_hash(1, hash_funcs=hash_funcs)
 
     def test_function_not_hashable(self):
         def foo():
             pass
 
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(foo)
 
     def test_reduce_not_hashable(self):
@@ -778,5 +775,5 @@ If you think this is actually a Streamlit bug, please
             def __init__(self):
                 self.x = [1, 2, 3]
 
-        with self.assertRaises(UnhashableTypeError):
+        with pytest.raises(UnhashableTypeError):
             get_hash(A().__reduce__())

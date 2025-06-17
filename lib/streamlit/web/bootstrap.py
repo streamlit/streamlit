@@ -21,7 +21,6 @@ import sys
 from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
-from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
 from streamlit.watcher import report_watchdog_availability, watch_file
@@ -210,7 +209,7 @@ def _print_url(is_running_hello: bool) -> None:
                 named_urls.append(("External URL", server_util.get_url(external_ip)))
 
     cli_util.print_to_cli("")
-    cli_util.print_to_cli("  %s" % title_message, fg="blue", bold=True)
+    cli_util.print_to_cli(f"  {title_message}", fg="blue", bold=True)
     cli_util.print_to_cli("")
 
     for url_name, url in named_urls:
@@ -291,7 +290,7 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
     def on_config_changed(_path: str) -> None:
         load_config_options(flag_options)
 
-    for filename in CONFIG_FILENAMES:
+    for filename in config.get_config_files("config.toml"):
         if os.path.exists(filename):
             watch_file(filename, on_config_changed)
 
@@ -308,6 +307,7 @@ def run(
 
     This starts a blocking asyncio eventloop.
     """
+
     _fix_sys_path(main_script_path)
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)

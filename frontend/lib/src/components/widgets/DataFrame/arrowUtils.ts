@@ -121,6 +121,14 @@ export function applyPandasStylerCss(
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
   if (fontColor) {
     themeOverride.textDark = fontColor
+
+    // Apply text color also for cells that don't use textDark:
+    if (cell.kind === GridCellKind.Bubble) {
+      themeOverride.textBubble = fontColor
+    }
+    if (cell.kind === GridCellKind.Uri) {
+      themeOverride.linkColor = fontColor
+    }
   }
 
   // Extract and apply the background color
@@ -438,7 +446,6 @@ export function getCellFromArrow(
       parsedDate = convertTimeToDate(arrowCell.content, arrowCell.field)
     } else {
       // All other datetime related values are assumed to be in milliseconds
-      // eslint-disable-next-line import/no-named-as-default-member
       parsedDate = moment.utc(Number(arrowCell.content)).toDate()
     }
 

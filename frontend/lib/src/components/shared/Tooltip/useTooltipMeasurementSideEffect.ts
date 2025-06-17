@@ -99,6 +99,6 @@ export function useTooltipMeasurementSideEffect(
       }
     }
 
-    handleMeasurement()
+    void handleMeasurement()
   }, [tooltipElement, isOpen])
 }

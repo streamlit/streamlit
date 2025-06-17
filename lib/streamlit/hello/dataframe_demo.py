@@ -24,8 +24,8 @@ from streamlit.hello.utils import show_code
 def data_frame_demo() -> None:
     @st.cache_data
     def get_un_data() -> pd.DataFrame:
-        AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
-        df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
+        aws_bucket_url = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
+        df = pd.read_csv(aws_bucket_url + "/agri.csv.gz")
         return df.set_index("Region")
 
     try:

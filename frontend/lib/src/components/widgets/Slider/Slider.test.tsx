@@ -178,6 +178,7 @@ describe("Slider widget", () => {
       const slider = screen.getByRole("slider")
       expect(slider).toHaveAttribute(
         "aria-valuetext",
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         `${props.element.default}`
       )
       expect(slider).toHaveAttribute("aria-valuemin", `${props.element.min}`)

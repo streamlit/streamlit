@@ -90,6 +90,7 @@ function Video({
     // Since there is no onerror event for track elements, we can't use the onerror event
     // to catch src url load errors. Catch with direct check instead.
     subtitleSrcArr.forEach(subtitleSrc => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       endpoints.checkSourceUrlResponse(subtitleSrc, "Video Subtitle")
     })
   }, [subtitleSrcArrString, endpoints])
@@ -136,6 +137,7 @@ function Video({
         if (loop) {
           // If loop is true and we reached 'endTime', reset to 'startTime'
           videoNode.currentTime = startTime || 0
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
           videoNode.play()
         } else if (!stoppedByEndTime) {
           stoppedByEndTime = true
@@ -166,6 +168,7 @@ function Video({
     const handleVideoEnd = (): void => {
       if (loop) {
         videoNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         videoNode.play()
       }
     }
@@ -242,6 +245,7 @@ function Video({
   // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
   // when streamlit frontend and backend are running on different ports
   return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption
     <video
       className="stVideo"
       data-testid="stVideo"

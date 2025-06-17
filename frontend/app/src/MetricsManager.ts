@@ -193,6 +193,7 @@ export class MetricsManager {
     } else if (this.metricsUrl === "postMessage") {
       this.postMessageEvent(evName, data)
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.track(data)
     }
   }
@@ -204,7 +205,6 @@ export class MetricsManager {
     this.pendingEvents = []
   }
 
-  // eslint-disable-next-line class-methods-use-this
   private async track(data: MetricsEvent): Promise<void> {
     // Send the event to the metrics URL
     // @ts-expect-error - send func calls track & checks metricsUrl defined

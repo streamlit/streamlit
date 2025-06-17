@@ -984,6 +984,7 @@ class ButtonGroupMixin:
             widget_name,
             user_key=key,
             form_id=form_id,
+            dg=self.dg,
             options=formatted_options,
             default=default,
             click_mode=parsed_selection_mode,

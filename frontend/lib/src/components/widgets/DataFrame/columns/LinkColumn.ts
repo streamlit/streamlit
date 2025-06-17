@@ -52,6 +52,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       validateRegex = new RegExp(parameters.validate, "us")
     } catch (error) {
       // Put error message in validateRegex so we can display it in the cell
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       validateRegex = `Invalid validate regex: ${parameters.validate}.\nError: ${error}`
     }
   }
@@ -65,6 +66,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   ) {
     try {
       displayTextRegex = new RegExp(parameters.display_text, "us")
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // The regex is invalid, interpret it as static display text.
       displayTextRegex = undefined

@@ -38,11 +38,9 @@ function OverflowTooltip({
   inline,
   style,
 }: OverflowTooltipProps): ReactElement {
-  // eslint-disable-next-line import/no-named-as-default-member
   const childRef = React.useRef<HTMLDivElement>(null)
   const [allowTooltip, setAllowTooltip] = useState(false)
 
-  // eslint-disable-next-line import/no-named-as-default-member
   React.useEffect(() => {
     const newAllowTooltip = childRef?.current
       ? childRef.current.offsetWidth < childRef.current.scrollWidth

@@ -40,6 +40,8 @@ message Block {
 
   bool allow_empty = 8;
   optional string id = 12;
+  optional streamlit.HeightConfig height_config = 14;
+  optional streamlit.WidthConfig width_config = 15;
 
   message Vertical {
     bool border = 1;
@@ -53,19 +55,17 @@ message Block {
 
   message FlexContainer {
     bool border = 1;
-    streamlit.HeightConfig height_config = 2;
-    streamlit.WidthConfig width_config = 3;
 
-    streamlit.GapConfig gap_config = 4;
-    float scale = 5;
+    streamlit.GapConfig gap_config = 2;
+    float scale = 3;
 
     enum Direction {
       DIRECTION_UNDEFINED = 0;
       VERTICAL = 1;
       HORIZONTAL = 2;
     }
-    Direction direction = 6;
-    bool wrap = 7;
+    Direction direction = 4;
+    bool wrap = 5;
   }
 
   message Column {
@@ -136,7 +136,6 @@ message Block {
     string name = 1;
     string avatar = 2;
     AvatarType avatar_type = 3;
-    optional streamlit.WidthConfig width_config = 4;
   }
 
   // Next ID: 14

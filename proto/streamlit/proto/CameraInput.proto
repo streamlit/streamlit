@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "CameraInputProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
-import "streamlit/proto/WidthConfig.proto";
 
 message CameraInput {
   string id = 1;
@@ -29,5 +28,4 @@ message CameraInput {
   string form_id = 4;
   bool disabled = 5;
   LabelVisibilityMessage label_visibility = 6;
-  optional streamlit.WidthConfig width_config = 7;
 }

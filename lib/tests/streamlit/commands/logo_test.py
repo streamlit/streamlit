@@ -35,11 +35,11 @@ class LogoTest(DeltaGeneratorTestCase):
         st.logo(streamlit)
 
         c = self.get_message_from_queue().logo
-        self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
-        self.assertEqual(c.link, "")
-        self.assertEqual(c.icon_image, "")
-        self.assertEqual(c.size, "medium")
+        assert c.image.startswith(MEDIA_ENDPOINT)
+        assert c.image.endswith(get_extension_for_mimetype("image/png"))
+        assert c.link == ""
+        assert c.icon_image == ""
+        assert c.size == "medium"
 
     def test_image_and_link(self):
         """Test that it can be called with image & link."""
@@ -49,11 +49,11 @@ class LogoTest(DeltaGeneratorTestCase):
         st.logo(streamlit, link="http://www.example.com")
 
         c = self.get_message_from_queue().logo
-        self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
-        self.assertEqual(c.link, "http://www.example.com")
-        self.assertEqual(c.icon_image, "")
-        self.assertEqual(c.size, "medium")
+        assert c.image.startswith(MEDIA_ENDPOINT)
+        assert c.image.endswith(get_extension_for_mimetype("image/png"))
+        assert c.link == "http://www.example.com"
+        assert c.icon_image == ""
+        assert c.size == "medium"
 
     def test_invalid_link(self):
         """Test that it can be only be called with a valid link."""
@@ -77,12 +77,12 @@ class LogoTest(DeltaGeneratorTestCase):
         png_extension = get_extension_for_mimetype("image/png")
 
         c = self.get_message_from_queue().logo
-        self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(c.image.endswith(png_extension))
-        self.assertEqual(c.link, "https://www.example.com")
-        self.assertTrue(c.icon_image.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(c.icon_image.endswith(png_extension))
-        self.assertEqual(c.size, "medium")
+        assert c.image.startswith(MEDIA_ENDPOINT)
+        assert c.image.endswith(png_extension)
+        assert c.link == "https://www.example.com"
+        assert c.icon_image.startswith(MEDIA_ENDPOINT)
+        assert c.icon_image.endswith(png_extension)
+        assert c.size == "medium"
 
     def test_small_image_size(self):
         """Test that it can be called with small image size."""
@@ -92,11 +92,11 @@ class LogoTest(DeltaGeneratorTestCase):
         st.logo(streamlit, size="small")
 
         c = self.get_message_from_queue().logo
-        self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
-        self.assertEqual(c.link, "")
-        self.assertEqual(c.icon_image, "")
-        self.assertEqual(c.size, "small")
+        assert c.image.startswith(MEDIA_ENDPOINT)
+        assert c.image.endswith(get_extension_for_mimetype("image/png"))
+        assert c.link == ""
+        assert c.icon_image == ""
+        assert c.size == "small"
 
     def test_large_image_size(self):
         """Test that it can be called with large image size."""
@@ -106,11 +106,11 @@ class LogoTest(DeltaGeneratorTestCase):
         st.logo(streamlit, size="large")
 
         c = self.get_message_from_queue().logo
-        self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
-        self.assertEqual(c.link, "")
-        self.assertEqual(c.icon_image, "")
-        self.assertEqual(c.size, "large")
+        assert c.image.startswith(MEDIA_ENDPOINT)
+        assert c.image.endswith(get_extension_for_mimetype("image/png"))
+        assert c.link == ""
+        assert c.icon_image == ""
+        assert c.size == "large"
 
     def test_invalid_image_size(self):
         """Test that it can be only be called with a valid image size."""

@@ -38,13 +38,13 @@ if TYPE_CHECKING:
 #   2. Writing two new @overloads for connection_factory (one for the case where the
 #      only the connection name is specified and another when both name and type are).
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
-FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
+_FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
     "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
-MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
-MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
+_MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
+_MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
     "MySQLdb": "mysqlclient",
     "psycopg2": "psycopg2-binary",
     "sqlalchemy": "sqlalchemy",
@@ -52,6 +52,7 @@ MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
     "snowflake.connector": "snowflake-connector-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
+_USE_ENV_PREFIX: Final = "env:"
 
 # The BaseConnection bound is parameterized to `Any` below as subclasses of
 # BaseConnection are responsible for binding the type parameter of BaseConnection to a
@@ -104,12 +105,12 @@ def _create_connection(
 
 
 def _get_first_party_connection(connection_class: str) -> type[BaseConnection[Any]]:
-    if connection_class in FIRST_PARTY_CONNECTIONS:
-        return FIRST_PARTY_CONNECTIONS[connection_class]
+    if connection_class in _FIRST_PARTY_CONNECTIONS:
+        return _FIRST_PARTY_CONNECTIONS[connection_class]
 
     raise StreamlitAPIException(
         f"Invalid connection '{connection_class}'. "
-        f"Supported connection classes: {FIRST_PARTY_CONNECTIONS}"
+        f"Supported connection classes: {_FIRST_PARTY_CONNECTIONS}"
     )
 
 
@@ -366,12 +367,11 @@ def connection_factory(  # type: ignore
     >>> conn = st.connection("my_sql_connection", type=SQLConnection)
 
     """
-    USE_ENV_PREFIX = "env:"
 
-    if name.startswith(USE_ENV_PREFIX):
+    if name.startswith(_USE_ENV_PREFIX):
         # It'd be nice to use str.removeprefix() here, but we won't be able to do that
         # until the minimum Python version we support is 3.9.
-        envvar_name = name[len(USE_ENV_PREFIX) :]
+        envvar_name = name[len(_USE_ENV_PREFIX) :]
         name = os.environ[envvar_name]
 
     # type is a nice kwarg name for the st.connection user but is annoying to work with
@@ -380,7 +380,7 @@ def connection_factory(  # type: ignore
     connection_class = type
 
     if connection_class is None:
-        if name in FIRST_PARTY_CONNECTIONS:
+        if name in _FIRST_PARTY_CONNECTIONS:
             # We allow users to simply write `st.connection("sql")` instead of
             # `st.connection("sql", type="sql")`.
             connection_class = _get_first_party_connection(name)
@@ -424,11 +424,11 @@ def connection_factory(  # type: ignore
         return conn
     except ModuleNotFoundError as e:
         err_string = str(e)
-        missing_module = re.search(MODULE_EXTRACTION_REGEX, err_string)
+        missing_module = re.search(_MODULE_EXTRACTION_REGEX, err_string)
 
         extra_info = "You may be missing a dependency required to use this connection."
         if missing_module:
-            pypi_package = MODULES_TO_PYPI_PACKAGES.get(missing_module.group(1))
+            pypi_package = _MODULES_TO_PYPI_PACKAGES.get(missing_module.group(1))
             if pypi_package:
                 extra_info = f"You need to install the '{pypi_package}' package to use this connection."
 

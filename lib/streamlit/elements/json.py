@@ -19,7 +19,11 @@ import types
 from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
@@ -72,9 +76,14 @@ class JsonMixin:
             expand any key-value pair to show or hide any part of the object.
 
         width : "stretch" or int
-            The width of the JSON element. This can be either:
-            - "stretch" (default): The element will stretch to fill the container width
-            - An integer: The element will have a fixed width in pixels
+            The width of the JSON element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -139,12 +148,9 @@ class JsonMixin:
             )
 
         validate_width(width)
-        if isinstance(width, int):
-            json_proto.width_config.pixel_width = width
-        else:
-            json_proto.width_config.use_stretch = True
+        layout_config = LayoutConfig(width=width)
 
-        return self.dg._enqueue("json", json_proto)
+        return self.dg._enqueue("json", json_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -179,22 +179,55 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     display: none !important;
   }
 
-  // Make scrollbars awesome in Chrome
-
-  ::-webkit-scrollbar {
-    background: transparent;
-    border-radius: 100px;
-    height: 6px;
-    width: 6px;
+  // Tell browser to render a thin scrollbar that only appears when the
+  // container is hovered. (This is ignored in OSes that render overlay
+  // scrollbars, which is exactly what we want.)
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
   }
 
-  ::-webkit-scrollbar:active {
-    background: ${theme.colors.fadedText10};
+  *:hover {
+    scrollbar-color: ${theme.colors.fadedText40} transparent;
   }
 
-  :hover::-webkit-scrollbar-thumb:vertical,
-  :hover::-webkit-scrollbar-thumb:horizontal {
-    background: ${theme.colors.fadedText40};
-    border-radius: 100px;
+  // Safari doesn't support scrollbar colors so we style the scrollbar
+  // using the old webkit-only properties and hide it manually through
+  // the clip-path property when not hovered.
+  @supports not (scrollbar-color: transparent transparent) {
+    .hideScrollbar {
+      clip-path: inset(0px var(--scrollbar-width) 0px 0px);
+    }
+
+    .hideScrollbar:hover {
+      clip-path: none;
+    }
+
+    * {
+      scrollbar-width: unset;
+      scrollbar-color: unset;
+    }
+
+    *:hover {
+      scrollbar-color: unset;
+    }
+
+    ::-webkit-scrollbar {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar:vertical {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar:horizontal {
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb:vertical,
+    ::-webkit-scrollbar-thumb:horizontal {
+      background: ${theme.colors.fadedText40};
+      border-radius: ${theme.radii.full};
+    }
   }
 `

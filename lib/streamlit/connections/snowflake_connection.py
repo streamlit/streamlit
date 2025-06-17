@@ -41,6 +41,10 @@ if TYPE_CHECKING:
         SnowflakeConnection as InternalSnowflakeConnection,
     )
 
+# the ANSI-compliant SQL code for "connection was not established"
+# (see docs: https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#id6)
+SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED: Final = "08001"
+
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     """A connection to Snowflake using the Snowflake Connector for Python.
@@ -334,9 +338,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         """
         from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
-
-        # the ANSI-compliant SQL code for "connection was not established" (see docs: https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#id6)
-        SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED = "08001"
 
         @retry(
             after=lambda _: self.reset(),

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from authlib.integrations.base_client import (  # type: ignore[import-untyped]
+from authlib.integrations.base_client import (
     FrameworkIntegration,
 )
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from streamlit.web.server.oidc_mixin import TornadoOAuth
 
 
-class TornadoIntegration(FrameworkIntegration):  # type: ignore[misc]
+class TornadoIntegration(FrameworkIntegration):
     def update_token(
         self,
         token: dict[str, Any],
@@ -41,7 +41,7 @@ class TornadoIntegration(FrameworkIntegration):  # type: ignore[misc]
         """
 
     @staticmethod
-    def load_config(
+    def load_config(  # type: ignore[override]
         oauth: TornadoOAuth, name: str, params: Sequence[str]
     ) -> dict[str, Any]:
         """Configure Authlib integration with provider parameters

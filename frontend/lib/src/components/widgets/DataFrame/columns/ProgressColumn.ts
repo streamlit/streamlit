@@ -76,6 +76,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
       parameters.max_value as number,
       parameters.format
     )
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     measureLabel = toSafeString(parameters.max_value)
   }
@@ -93,9 +94,13 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
     readonly: true,
     data: {
       kind: "range-cell",
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       min: parameters.min_value!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       max: parameters.max_value!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       step: parameters.step!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       value: parameters.min_value!,
       label: String(parameters.min_value),
       measureLabel,
@@ -162,8 +167,10 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(
           toSafeString(cellData),
           notNullOrUndefined(parameters.format)
-            ? `Failed to format the number based on the provided format configuration: (${parameters.format}). Error: ${error}`
-            : `Failed to format the number. Error: ${error}`
+            ? // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+              `Failed to format the number based on the provided format configuration: (${parameters.format}). Error: ${error}`
+            : // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+              `Failed to format the number. Error: ${error}`
         )
       }
 

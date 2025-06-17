@@ -53,7 +53,7 @@ class AuthCache:
 def is_authlib_installed() -> bool:
     """Check if Authlib is installed."""
     try:
-        import authlib  # type: ignore[import-untyped]
+        import authlib
 
         authlib_version = authlib.__version__
         authlib_version_tuple = tuple(map(int, authlib_version.split(".")))
@@ -87,7 +87,7 @@ def get_secrets_auth_section() -> AttrDict:
 def encode_provider_token(provider: str) -> str:
     """Returns a signed JWT token with the provider and expiration time."""
     try:
-        from authlib.jose import jwt  # type: ignore[import-untyped]
+        from authlib.jose import jwt
     except ImportError:
         raise StreamlitAuthError(
             """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
@@ -116,7 +116,7 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     # the 'exp' (and it is not expired), and 'provider' field exists.
     claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
     try:
-        payload: JWTClaims = jwt.decode(
+        payload: JWTClaims = jwt.decode(  # type: ignore[no-untyped-call]
             provider_token, get_signing_secret(), claims_options=claim_options
         )
         payload.validate()

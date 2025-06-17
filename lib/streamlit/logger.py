@@ -46,7 +46,7 @@ def set_log_level(level: str | int) -> None:
     elif level in {"DEBUG", logging.DEBUG}:
         log_level = logging.DEBUG
     else:
-        msg = 'undefined log level "%s"' % level
+        msg = f'undefined log level "{level}"'
         logger.critical(msg)
         sys.exit(1)
 

@@ -19,8 +19,6 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ChatInputProto";
 
-import "streamlit/proto/WidthConfig.proto";
-
 message ChatInput {
   string id = 1;
   string placeholder = 2;
@@ -48,7 +46,4 @@ message ChatInput {
 
   // Max file size allowed by server config
   int32 max_upload_size_mb = 11;
-
-  // Optional width configuration for the ChatInput
-  optional streamlit.WidthConfig width_config = 12;
 }

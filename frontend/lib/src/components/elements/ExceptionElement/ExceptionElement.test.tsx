@@ -97,6 +97,7 @@ describe("ExceptionElement Element", () => {
       windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
       render(<ExceptionElement {...getProps()} />)
 
+      expect(screen.getByText("Copy")).toBeInTheDocument()
       expect(screen.getByText("Ask Google")).toBeInTheDocument()
       expect(screen.getByText("Ask ChatGPT")).toBeInTheDocument()
     })
@@ -105,6 +106,7 @@ describe("ExceptionElement Element", () => {
       windowSpy.mockReturnValue({ ...originalLocation, hostname: "foo.com" })
       render(<ExceptionElement {...getProps()} />)
 
+      expect(screen.queryByText("Copy")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
       expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
     })

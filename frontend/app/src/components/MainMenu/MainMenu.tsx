@@ -19,7 +19,6 @@ import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { useTheme } from "@emotion/react"
 
 import {
   BaseButton,
@@ -29,6 +28,7 @@ import {
   Icon,
   IGuestToHostMessage,
   IMenuItem,
+  useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -124,7 +124,7 @@ export interface SubMenuProps {
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
+  StyledMenuItemType: typeof StyledCoreItem,
   metricsMgr: MetricsManager
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
@@ -201,7 +201,7 @@ function buildMenuItemComponent(
 }
 
 const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors, sizes, spacing }: EmotionTheme = useTheme()
+  const { colors, sizes, spacing } = useEmotionTheme()
   const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
 
   return (
@@ -335,7 +335,7 @@ function getPreferredMenuOrder(
 }
 
 function MainMenu(props: Readonly<Props>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const isServerDisconnected = !props.isServerConnected
 

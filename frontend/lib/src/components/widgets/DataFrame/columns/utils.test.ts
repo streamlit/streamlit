@@ -315,6 +315,10 @@ describe("formatNumber", () => {
     [10.123, "euro", "€10.12"],
     [-1234.456789, "euro", "-€1,234.46"],
     [0.00000001, "euro", "€0.00"],
+    // yen
+    [10.123, "yen", "¥10"],
+    [-1234.456789, "yen", "-¥1,234"],
+    [0.00000001, "yen", "¥0"],
     // localized
     [10.123, "localized", "10.123"],
     [-1234.456789, "localized", "-1,234.457"],
@@ -533,10 +537,10 @@ describe("countDecimals", () => {
     [0.0000000000000000001, 19],
     [-0.12345, 5],
     [123456789432, 0],
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [123456789876543212312313, 0],
     // It is expected that very large and small numbers won't work correctly:
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [1234567898765432.1, 0],
     [0.0000000000000000000001, 0],
     [1.234567890123456e-20, 20],
@@ -559,6 +563,8 @@ describe("truncateDecimals", () => {
     [42, 0, 42],
     [-42, 0, -42],
     [0.1 + 0.2, 2, 0.3],
+    [4.52, 2, 4.52],
+    [0.0099999, 2, 0.0],
   ])(
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {

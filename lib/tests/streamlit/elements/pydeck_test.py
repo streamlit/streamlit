@@ -18,6 +18,7 @@ from unittest import mock
 
 import pandas as pd
 import pydeck as pdk
+import pytest
 
 import streamlit as st
 from streamlit.elements import deck_gl_json_chart
@@ -44,17 +45,14 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         actual = json.loads(el.deck_gl_json_chart.json)
 
-        self.assertEqual(actual["layers"][0]["@@type"], "ScatterplotLayer")
-        self.assertEqual(
-            actual["layers"][0]["data"],
-            [
-                {"lat": 1, "lon": 10},
-                {"lat": 2, "lon": 20},
-                {"lat": 3, "lon": 30},
-                {"lat": 4, "lon": 40},
-            ],
-        )
-        self.assertEqual(el.deck_gl_json_chart.tooltip, "")
+        assert actual["layers"][0]["@@type"] == "ScatterplotLayer"
+        assert actual["layers"][0]["data"] == [
+            {"lat": 1, "lon": 10},
+            {"lat": 2, "lon": 20},
+            {"lat": 3, "lon": 30},
+            {"lat": 4, "lon": 40},
+        ]
+        assert el.deck_gl_json_chart.tooltip == ""
 
     def test_with_tooltip(self):
         """Test that pydeck object with tooltip works."""
@@ -75,7 +73,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         actual = json.loads(el.deck_gl_json_chart.tooltip)
 
-        self.assertEqual(actual, tooltip)
+        assert actual == tooltip
 
     def test_pydeck_with_tooltip_pydeck_0_7_1(self):
         """Test that pydeck object with tooltip created by pydeck v0.7.1 works."""
@@ -94,7 +92,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         actual = json.loads(el.deck_gl_json_chart.tooltip)
 
-        self.assertEqual(actual, tooltip)
+        assert actual == tooltip
 
     def test_pydeck_with_tooltip_pydeck_0_8_1(self):
         """Test that pydeck object with tooltip created by pydeck v0.8.1 works."""
@@ -116,7 +114,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         actual = json.loads(el.deck_gl_json_chart.tooltip)
 
-        self.assertEqual(actual, tooltip)
+        assert actual == tooltip
 
     def test_no_args(self):
         """Test that it can be called with no args."""
@@ -125,7 +123,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         actual = json.loads(el.deck_gl_json_chart.json)
 
-        self.assertEqual(actual, deck_gl_json_chart.EMPTY_MAP)
+        assert actual == deck_gl_json_chart.EMPTY_MAP
 
     def test_on_select_ignore(self):
         """
@@ -144,7 +142,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        self.assertEqual(el.deck_gl_json_chart.selection_mode, [])
+        assert el.deck_gl_json_chart.selection_mode == []
 
     def test_on_select_rerun(self):
         """
@@ -163,10 +161,9 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        self.assertEqual(
-            el.deck_gl_json_chart.selection_mode,
-            [PydeckProto.SelectionMode.SINGLE_OBJECT],
-        )
+        assert el.deck_gl_json_chart.selection_mode == [
+            PydeckProto.SelectionMode.SINGLE_OBJECT
+        ]
 
     def test_selection_mode_multiselect(self):
         """
@@ -186,10 +183,9 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        self.assertEqual(
-            el.deck_gl_json_chart.selection_mode,
-            [PydeckProto.SelectionMode.MULTI_OBJECT],
-        )
+        assert el.deck_gl_json_chart.selection_mode == [
+            PydeckProto.SelectionMode.MULTI_OBJECT
+        ]
 
     def test_unknown_selection_mode_raises_exception(self):
         """
@@ -197,7 +193,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         selection_mode is given
         """
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -208,7 +204,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
                 selection_mode="multi-row",
             )
 
-        self.assertTrue("Invalid selection mode: multi-row" in str(e.exception))
+        assert "Invalid selection mode: multi-row" in str(e.value)
 
     def test_selection_mode_set(self):
         """
@@ -216,7 +212,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         selection_mode
         """
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -227,7 +223,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
                 selection_mode={"multi-object"},
             )
 
-        self.assertTrue("Invalid selection mode: {'multi-object'}." in str(e.exception))
+        assert "Invalid selection mode: {'multi-object'}." in str(e.value)
 
     @patch_config_options({"mapbox.token": "MOCK_CONFIG_KEY"})
     def test_mapbox_token_config(self):
@@ -246,7 +242,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.deck_gl_json_chart.mapbox_token, "MOCK_CONFIG_KEY")
+        assert el.deck_gl_json_chart.mapbox_token == "MOCK_CONFIG_KEY"
 
         if old_value:
             os.environ["MAPBOX_API_KEY"] = old_value
@@ -266,7 +262,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.deck_gl_json_chart.mapbox_token, "MOCK_ENV_KEY")
+        assert el.deck_gl_json_chart.mapbox_token == "MOCK_ENV_KEY"
 
         if old_value:
             os.environ["MAPBOX_API_KEY"] = old_value
@@ -289,7 +285,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.deck_gl_json_chart.mapbox_token, "MOCK_API_KEY")
+        assert el.deck_gl_json_chart.mapbox_token == "MOCK_API_KEY"
 
         if old_value:
             os.environ["MAPBOX_API_KEY"] = old_value
@@ -313,7 +309,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.deck_gl_json_chart.mapbox_token, "MOCK_API_KEY")
+        assert el.deck_gl_json_chart.mapbox_token == "MOCK_API_KEY"
 
         if old_value:
             os.environ["MAPBOX_API_KEY"] = old_value

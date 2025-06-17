@@ -93,7 +93,7 @@ export class ConnectionManager {
     this.props = props
 
     // This method returns a promise, but we don't care about its result.
-    this.connect()
+    void this.connect()
   }
 
   /**
@@ -122,6 +122,7 @@ export class ConnectionManager {
       this.websocketConnection.sendMessage(obj)
     } else {
       // Don't need to make a big deal out of this. Just print to console.
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Cannot send message when server is disconnected: ${obj}`)
     }
   }
@@ -169,6 +170,7 @@ export class ConnectionManager {
 
     if (staticAppId) {
       // Establish a static connection
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       establishStaticConnection(
         staticAppId,
         this.setConnectionState,
@@ -182,8 +184,10 @@ export class ConnectionManager {
     } else {
       // Establish a websocket connection
       try {
+        // eslint-disable-next-line @typescript-eslint/await-thenable -- TODO: Fix this
         this.websocketConnection = await this.connectToRunningServer()
       } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
         const err = e instanceof Error ? e : new Error(`${e}`)
         LOG.error(`Client Error: Websocket connection - ${err.message}`)
         this.props.sendClientError(

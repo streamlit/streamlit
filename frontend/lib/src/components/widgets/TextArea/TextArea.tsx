@@ -17,7 +17,6 @@
 import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import { useTheme } from "@emotion/react"
 import uniqueId from "lodash/uniqueId"
 
 import { TextArea as TextAreaProto } from "@streamlit/protobuf"
@@ -34,12 +33,12 @@ import {
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { EmotionTheme } from "~lib/theme"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export interface Props {
   disabled: boolean
@@ -80,8 +79,6 @@ const updateWidgetMgrState = (
 }
 
 const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   const id = useRef(uniqueId("text_area_")).current
 
   const [width, elementRef] = useCalculatedWidth()
@@ -93,7 +90,6 @@ const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
   /**
    * Whether the area is currently focused.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [focused, setFocused] = useState(false)
 
   /**
@@ -125,7 +121,7 @@ const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
@@ -209,14 +205,14 @@ const TextArea: FC<Props> = ({ disabled, element, widgetMgr, fragmentId }) => {
               height: height ? `${height}px` : "",
               minHeight: theme.sizes.largestElementHeight,
               resize: "vertical",
-              "::placeholder": {
-                opacity: "0.7",
-              },
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.md,
               paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.md,
               paddingTop: theme.spacing.md,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
             },
           },
           Root: {

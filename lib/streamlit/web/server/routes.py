@@ -15,12 +15,13 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import tornado.web
 
 from streamlit import config, file_util
 from streamlit.web.server.server_util import (
+    allowlisted_origins,
     emit_endpoint_deprecation_notice,
     is_xsrf_enabled,
 )
@@ -29,17 +30,24 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Sequence
 
 
-def allow_cross_origin_requests() -> bool:
-    """True if cross-origin requests are allowed.
+def allow_all_cross_origin_requests() -> bool:
+    """True if cross-origin requests from any origin are allowed.
 
-    We only allow cross-origin requests when CORS protection has been disabled
-    with server.enableCORS=False or if using the Node server. When using the
-    Node server, we have a dev and prod port, which count as two origins.
-
+    We only allow ALL cross-origin requests when CORS protection has been
+    disabled with server.enableCORS=False or if using the Node server in dev
+    mode. When in dev mode, we have a dev and prod port, which count as two
+    origins.
     """
+
     return not config.get_option("server.enableCORS") or config.get_option(
         "global.developmentMode"
     )
+
+
+def is_allowed_origin(origin: Any) -> bool:
+    if not isinstance(origin, str):
+        return False
+    return origin in allowlisted_origins()
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
@@ -111,8 +119,10 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
     def set_default_headers(self) -> None:
         self.set_header("Cache-Control", "no-cache")
-        if allow_cross_origin_requests():
+        if allow_all_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
+        elif is_allowed_origin(origin := self.request.headers.get("Origin")):
+            self.set_header("Access-Control-Allow-Origin", cast("str", origin))
 
     def options(self) -> None:
         """/OPTIONS handler for preflight CORS checks.

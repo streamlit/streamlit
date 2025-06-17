@@ -124,6 +124,7 @@ function withScreencast<P extends InjectedProps>(
       try {
         await recorderRef.current.initialize()
       } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         LOG.warn(`ScreenCastRecorder.initialize error: ${e}`)
         setCurrentState("UNSUPPORTED")
         return
@@ -154,7 +155,7 @@ function withScreencast<P extends InjectedProps>(
     )
 
     // Called when countdown ends (the actual start of the recording)
-    const onCountdownEnd = useCallback(async () => {
+    const onCountdownEnd = useCallback(() => {
       if (isNullOrUndefined(recorderRef.current)) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
@@ -179,6 +180,7 @@ function withScreencast<P extends InjectedProps>(
       currentState,
       toggleRecordAudio,
       startRecording: showDialog, // triggers the setup/showDialog process
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       stopRecording,
     }
 
@@ -194,6 +196,7 @@ function withScreencast<P extends InjectedProps>(
           <ScreencastDialog
             recordAudio={recordAudio}
             onClose={closeDialog}
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             startRecording={startActualRecording}
             toggleRecordAudio={toggleRecordAudio}
           />

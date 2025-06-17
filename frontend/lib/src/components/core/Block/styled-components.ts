@@ -41,17 +41,21 @@ function translateGapWidth(
 export interface StyledElementContainerProps {
   isStale: boolean
   width: React.CSSProperties["width"]
+  height: React.CSSProperties["height"]
   elementType: string
+  overflow: React.CSSProperties["overflow"]
 }
 
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, width, elementType }) => ({
+  ({ theme, isStale, width, height, elementType, overflow }) => ({
     width,
+    height,
     maxWidth: "100%",
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
+    overflow,
 
     "@media print": {
       overflow: "visible",
@@ -193,12 +197,14 @@ export const StyledFlexContainerBlock =
 
 export interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
+  height?: React.CSSProperties["height"]
 }
 
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width }) => ({
+  ({ width, height }) => ({
     display: "flex",
     width,
     maxWidth: "100%",
+    height,
   })
 )

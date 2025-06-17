@@ -28,7 +28,7 @@ st.set_page_config(layout="wide")
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=("col_%d" % i for i in range(5)),
+    columns=(f"col_{i}" for i in range(5)),
 )
 
 
@@ -568,7 +568,7 @@ st.dataframe(
                 ("a", "b", "c"),
                 ("a", "b", "d"),
                 ("e", "f", "c"),
-                ("g", "h", "d"),
+                ("g", "h", "d (Test)"),
                 ("", "h", "i"),
                 ("j", "", ""),
             ],
@@ -580,7 +580,7 @@ st.dataframe(
 
 df = pd.DataFrame(
     np.random.randn(5, 25),
-    columns=("col_%d" % i for i in range(25)),
+    columns=(f"col_{i}" for i in range(25)),
 )
 st.header("Pinned columns:")
 st.dataframe(
@@ -635,6 +635,7 @@ st.dataframe(
             "plain": [0.0123123, -1234.567, 12, 0],
             "dollar": [0.0123123, -1234.567, 12, 0],
             "euro": [0.0123123, -1234.567, 12, 0],
+            "yen": [0.0123123, -1234.567, 12, 0],
             "localized": [0.0123123, -1234.567, 12, 0],
             "accounting": [0.0123123, -1234.567, 12, 0],
             "custom format": [0.0123123, -1234.567, 12, 0],
@@ -648,6 +649,7 @@ st.dataframe(
         "plain": st.column_config.NumberColumn(format="plain"),
         "dollar": st.column_config.NumberColumn(format="dollar"),
         "euro": st.column_config.NumberColumn(format="euro"),
+        "yen": st.column_config.NumberColumn(format="yen"),
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
         "custom format": st.column_config.NumberColumn(format="%.2f"),

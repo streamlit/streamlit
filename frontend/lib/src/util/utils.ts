@@ -228,6 +228,7 @@ export function getUrl(): string {
     } else {
       url = document.location.href
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     // CSP error might occur when trying to access parent frame
     url = document.location.href
@@ -271,8 +272,8 @@ export function getLoadingScreenType(): LoadingScreenType {
   return params.has(EMBED_HIDE_LOADING_SCREEN)
     ? LoadingScreenType.NONE
     : params.has(EMBED_SHOW_LOADING_SCREEN_V1)
-    ? LoadingScreenType.V1
-    : LoadingScreenType.V2
+      ? LoadingScreenType.V1
+      : LoadingScreenType.V2
 }
 
 /** Return an info Element protobuf with the given text. */
@@ -307,7 +308,6 @@ export function makeAppSkeletonElement(): Element {
  * Seed used: 0xDEADBEEF
  */
 export function hashString(s: string): string {
-  // eslint-disable-next-line import/no-named-as-default-member
   return xxhash.h32(s, 0xdeadbeef).toString(16)
 }
 
@@ -470,6 +470,7 @@ export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
     const doc = iframe.contentDocument || iframe.contentWindow.document
     const html = doc.body.innerHTML
     return html !== null && html !== ""
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {
     return false
   }
@@ -488,9 +489,8 @@ export function getIFrameEnclosingApp(
   }
   const embeddingIdClassName = getEmbeddingIdClassName(embeddingId)
   const qsStreamlitAppStr = 'iframe[title="streamlitApp"]'
-  let qs = window.document.querySelectorAll(
-    qsStreamlitAppStr
-  ) as NodeListOf<HTMLIFrameElement>
+  let qs: NodeListOf<HTMLIFrameElement> =
+    window.document.querySelectorAll(qsStreamlitAppStr)
   let foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -508,9 +508,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  let htmlCollection = window.document.getElementsByTagName(
-    "iframe"
-  ) as HTMLCollectionOf<HTMLIFrameElement>
+  let htmlCollection = window.document.getElementsByTagName("iframe")
   foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -595,26 +593,29 @@ export function keysToSnakeCase(
   obj: Record<string, any>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): Record<string, any> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const newKey = decamelize(key, {
-      preserveConsecutiveUppercase: true,
-    }).replace(".", "_")
-    let value = obj[key]
+  return Object.keys(obj).reduce(
+    (acc, key) => {
+      const newKey = decamelize(key, {
+        preserveConsecutiveUppercase: true,
+      }).replace(".", "_")
+      let value = obj[key]
 
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      value = keysToSnakeCase(value)
-    }
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        value = keysToSnakeCase(value)
+      }
 
-    if (Array.isArray(value)) {
-      value = value.map(item =>
-        typeof item === "object" ? keysToSnakeCase(item) : item
-      )
-    }
+      if (Array.isArray(value)) {
+        value = value.map(item =>
+          typeof item === "object" ? keysToSnakeCase(item) : item
+        )
+      }
 
-    acc[newKey] = value
-    return acc
+      acc[newKey] = value
+      return acc
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  }, {} as Record<string, any>)
+    {} as Record<string, any>
+  )
 }
 
 // TODO: Update all imports to use @streamlit/utils and remove this line.

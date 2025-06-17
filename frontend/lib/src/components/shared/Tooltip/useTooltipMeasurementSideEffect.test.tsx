@@ -112,7 +112,7 @@ describe("useTooltipMeasurementSideEffect", () => {
             transform: MOCK_TRANSFORM,
             getPropertyValue: (prop: string) =>
               prop === "transform" ? MOCK_TRANSFORM : "",
-          } as unknown as CSSStyleDeclaration)
+          }) as unknown as CSSStyleDeclaration
       )
 
     innerWidthSpy = vi
@@ -159,7 +159,6 @@ describe("useTooltipMeasurementSideEffect", () => {
     // Wait for the position to be adjusted and verify
     await waitFor(() => {
       // The overflow is 100 (900 + 200 - 1000), so the transform should adjust X by -100
-      // eslint-disable-next-line testing-library/no-node-access
       expect(parentElement.parentElement?.style.transform).toBe(
         "translate3d(800px, 10px, 0px)"
       )

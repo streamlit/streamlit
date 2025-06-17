@@ -46,6 +46,19 @@ st.code(
     language="diff",
 )
 
+code_with_leading_whitespace = """
+    def hello():
+        print("Hello, Streamlit!")
+"""
+
+st.code(code_with_leading_whitespace, language="python")
+
+st.markdown("```python\n" + code_with_leading_whitespace + "\n```")
+
+st.code("\n" + code_with_leading_whitespace + "\n", language="python")
+
+st.markdown("```python\n\n" + code_with_leading_whitespace + "\n\n```")
+
 with st.expander("`st.code` usage", expanded=True):
     st.code(code, language="python")
     st.code(code, language="python")
@@ -99,7 +112,6 @@ st.code(code, height=200)
 # width tests
 long_code = """
 def process_data(data):
-    # This is a longer function to demonstrate width behavior
     result = []
     for item in data:
         if item % 2 == 0:
@@ -116,3 +128,8 @@ print(processed)
 
 st.code(long_code, width=400, wrap_lines=True)
 st.code(long_code, width="stretch")
+
+long_single_word_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
+
+st.code(long_single_word_string)
+st.code(long_single_word_string, wrap_lines=True)

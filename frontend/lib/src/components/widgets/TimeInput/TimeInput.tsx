@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import React, { memo, ReactElement, useCallback, useContext } from "react"
 
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { StyledClearIcon } from "baseui/input/styled-components"
 import { ChevronDown } from "baseui/icon"
-import { useTheme } from "@emotion/react"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
@@ -28,6 +27,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
@@ -38,6 +38,7 @@ import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledClearIconContainer } from "./styled-components"
 
@@ -66,9 +67,10 @@ function TimeInput({
     widgetMgr,
     fragmentId,
   })
+  const isInSidebar = useContext(IsSidebarContext)
 
   const clearable = isNullOrUndefined(element.default) && !disabled
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const selectOverrides = {
     Select: {
@@ -133,6 +135,7 @@ function TimeInput({
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
                   style: () => ({
@@ -142,6 +145,13 @@ function TimeInput({
               },
             },
           },
+
+          Placeholder: {
+            style: () => ({
+              color: theme.colors.fadedText60,
+            }),
+          },
+
           SelectArrow: {
             component: ChevronDown,
 

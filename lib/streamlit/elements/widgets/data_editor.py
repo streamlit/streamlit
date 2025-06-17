@@ -270,8 +270,11 @@ def _apply_cell_edits(
                 # The edited cell is part of the index
                 # TODO(lukasmasuch): To support multi-index in the future:
                 # use a tuple of values here instead of a single value
-                df.index.to_numpy()[row_pos] = _parse_value(
-                    value, dataframe_schema[INDEX_IDENTIFIER]
+                old_idx_value = df.index[row_pos]
+                new_idx_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
+                df.rename(
+                    index={old_idx_value: new_idx_value},
+                    inplace=True,  # noqa: PD002
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
@@ -370,8 +373,8 @@ def _apply_row_additions(
         # Row cannot be added -> skip it and log a warning.
         _LOGGER.warning(
             "Cannot automatically add row for the index "
-            f"of type {type(df.index).__name__} without an explicit index value. "
-            "Row addition skipped."
+            "of type %s without an explicit index value. Row addition skipped.",
+            type(df.index).__name__,
         )
 
 
@@ -697,7 +700,7 @@ class DataEditorMixin:
             - A string to set the display label of the column.
 
             - One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
               and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
@@ -933,6 +936,7 @@ class DataEditorMixin:
             "data_editor",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             data=arrow_bytes,
             width=width,
             height=height,

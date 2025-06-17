@@ -42,7 +42,6 @@ from streamlit.elements.lib.built_in_chart_utils import (
     generate_chart,
     maybe_raise_stack_warning,
 )
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -53,7 +52,7 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import calc_md5
+from streamlit.util import AttributeDictionary, calc_md5
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -250,6 +249,30 @@ class VegaLiteStateSerde:
         return json.dumps(selection_state, default=str)
 
 
+def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
+    """Patches null legend titles in the 'color' channel of the spec.
+    This is a fix for the Vega-Lite bug where null legend titles
+    cause a wrong formatting of the chart as shown on the issue #9339.
+    """
+
+    encoding = spec.get("encoding")
+    if not isinstance(encoding, dict):
+        return
+
+    color_spec = encoding.get("color")
+    if not isinstance(color_spec, dict):
+        return
+
+    if "title" in color_spec and color_spec.get("title") is None:
+        # Patch legend title given null value directly in the encoding
+        color_spec["title"] = " "
+
+    legend = color_spec.get("legend")
+    if isinstance(legend, dict) and "title" in legend and legend.get("title") is None:
+        # Patch legend title given null value in the legend
+        legend["title"] = " "
+
+
 def _prepare_vega_lite_spec(
     spec: VegaLiteSpec,
     use_container_width: bool,
@@ -277,6 +300,8 @@ def _prepare_vega_lite_spec(
             spec["autosize"] = {"type": "fit-x", "contains": "padding"}
         else:
             spec["autosize"] = {"type": "fit", "contains": "padding"}
+
+    _patch_null_legend_titles(spec)
 
     return spec
 
@@ -742,6 +767,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -983,6 +1009,7 @@ class VegaChartsMixin:
             width=width,
             height=height,
             stack=stack,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -1248,7 +1275,9 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            use_container_width=use_container_width,
             stack=stack,
+            horizontal=horizontal,
         )
         return cast(
             "DeltaGenerator",
@@ -1459,6 +1488,7 @@ class VegaChartsMixin:
             size_from_user=size,
             width=width,
             height=height,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -1942,6 +1972,7 @@ class VegaChartsMixin:
                 "arrow_vega_lite_chart",
                 user_key=key,
                 form_id=vega_lite_proto.form_id,
+                dg=self.dg,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data
                 # or in a named dataset in vega_lite_proto.datasets
@@ -1970,7 +2001,7 @@ class VegaChartsMixin:
                 vega_lite_proto,
                 add_rows_metadata=add_rows_metadata,
             )
-            return cast("VegaLiteState", widget_state.value)
+            return widget_state.value
         # If its not used with selections activated, just return
         # the delta generator related to this element.
         return self.dg._enqueue(

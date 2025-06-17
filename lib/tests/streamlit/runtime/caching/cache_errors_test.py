@@ -14,6 +14,8 @@
 
 import threading
 
+import pytest
+
 import streamlit as st
 from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
@@ -41,13 +43,13 @@ class CacheErrorsTest(DeltaGeneratorTestCase):
         def unhashable_type_func(lock: threading.Lock):
             return str(lock)
 
-        with self.assertRaises(UnhashableParamError) as cm:
+        with pytest.raises(UnhashableParamError) as cm:
             unhashable_type_func(threading.Lock())
 
         ep = ExceptionProto()
-        exception.marshall(ep, cm.exception)
+        exception.marshall(ep, cm.value)
 
-        self.assertEqual(ep.type, "UnhashableParamError")
+        assert ep.type == "UnhashableParamError"
 
         expected_message = """
 Cannot hash argument 'lock' (of type `_thread.lock`) in 'unhashable_type_func'.
@@ -62,25 +64,25 @@ def unhashable_type_func(_lock, ...):
 ```
                     """
 
-        self.assertEqual(
-            testutil.normalize_md(expected_message), testutil.normalize_md(ep.message)
+        assert testutil.normalize_md(expected_message) == testutil.normalize_md(
+            ep.message
         )
-        self.assertEqual(ep.message_is_markdown, True)
-        self.assertEqual(ep.is_warning, False)
+        assert ep.message_is_markdown
+        assert not ep.is_warning
 
     def test_unserializable_return_value_error(self):
         @st.cache_data
         def unserializable_return_value_func():
             return threading.Lock()
 
-        with self.assertRaises(UnserializableReturnValueError) as cm:
+        with pytest.raises(UnserializableReturnValueError) as cm:
             unserializable_return_value_func()
 
         ep = ExceptionProto()
-        exception.marshall(ep, cm.exception)
+        exception.marshall(ep, cm.value)
 
-        self.assertEqual(ep.type, "UnserializableReturnValueError")
+        assert ep.type == "UnserializableReturnValueError"
 
-        self.assertIn("Cannot serialize the return value", ep.message)
-        self.assertEqual(ep.message_is_markdown, True)
-        self.assertEqual(ep.is_warning, False)
+        assert "Cannot serialize the return value" in ep.message
+        assert ep.message_is_markdown
+        assert not ep.is_warning

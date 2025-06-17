@@ -19,6 +19,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
+import pytest
 from testfixtures import TempDirectory
 
 from streamlit.runtime.caching.storage import (
@@ -97,11 +98,11 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         with patch.object(
             persist_storage, "get", wraps=persist_storage.get
         ) as mock_persist_get:
-            self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+            assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_called_once_with("some-key")
 
             # Call get again to make that underlying storage is not called again
-            self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+            assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_called_once()
 
     def test_in_memory_cache_storage_wrapper_get_key_in_memory_storage(self):
@@ -120,7 +121,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         with patch.object(
             persist_storage, "get", wraps=persist_storage.get
         ) as mock_persist_get:
-            self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+            assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_not_called()
 
     def test_in_memory_cache_storage_wrapper_set(self):
@@ -141,7 +142,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             wrapped_storage.set("some-key", b"some-value")
             mock_persist_set.assert_called_once_with("some-key", b"some-value")
 
-        self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+        assert wrapped_storage.get("some-key") == b"some-value"
 
     def test_in_memory_cache_storage_wrapper_delete(self):
         """
@@ -161,7 +162,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             wrapped_storage.delete("some-key")
             mock_persist_delete.assert_called_once_with("some-key")
 
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             wrapped_storage.get("some-key")
 
     def test_in_memory_cache_storage_wrapper_close(self):

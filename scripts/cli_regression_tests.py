@@ -160,9 +160,10 @@ class TestCLIRegressions:
         reason="Skip version verification when `SKIP_VERSION_CHECK` env var is set",
     )
     def test_streamlit_version(self) -> None:
-        assert (
-            STREAMLIT_RELEASE_VERSION is not None and STREAMLIT_RELEASE_VERSION != ""
-        ), "You must set the $STREAMLIT_RELEASE_VERSION env variable"
+        assert STREAMLIT_RELEASE_VERSION is not None
+        assert STREAMLIT_RELEASE_VERSION != "", (
+            "You must set the $STREAMLIT_RELEASE_VERSION env variable"
+        )
         assert STREAMLIT_RELEASE_VERSION in self.run_command("streamlit version"), (
             f"Package version does not match the desired version of {STREAMLIT_RELEASE_VERSION}"
         )

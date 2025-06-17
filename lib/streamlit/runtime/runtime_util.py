@@ -79,8 +79,8 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
 
         msg_size_error = MessageSizeError(msg_str)
         _LOGGER.warning(
-            "Websocket message size limit exceeded. "
-            f"Showing error to the user: {msg_size_error}"
+            "Websocket message size limit exceeded. Showing error to the user: %s",
+            msg_size_error,
         )
         exception.marshall(msg.delta.new_element.exception, msg_size_error)
         # Deactivate caching for this error message:

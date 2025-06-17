@@ -33,7 +33,7 @@ VERSION = "1.45.1"  # PEP-440
 INSTALL_REQUIRES = [
     "altair>=4.0, <6",
     "blinker>=1.5.0, <2",
-    "cachetools>=4.0, <6",
+    "cachetools>=4.0, <7",
     "click>=7.0, <9",
     "numpy>=1.23, <3",
     "packaging>=20, <26",
@@ -66,7 +66,9 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython>=3.0.7, <4, !=3.1.19",
     "pydeck>=0.8.0b4, <1",
     # Tornado 6.0.3 was the current version when Python 3.8 was released (Oct 14, 2019).
-    "tornado>=6.0.3, <7",
+    # Tornado 6.5.0 is skipped due to a bug with Unicode characters in the filename.
+    # See https://github.com/tornadoweb/tornado/commit/62c276434dc5b13e10336666348408bf8c062391
+    "tornado>=6.0.3, <7, !=6.5.0",
 ]
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):

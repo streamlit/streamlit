@@ -17,36 +17,29 @@
 import fs from "fs"
 import path from "path"
 
-// Current hashes for our preloaded font assets:
-const REGULAR_HASH = "DZLUzqI4"
-const SEMI_BOLD_HASH = "sKQIyTMz"
-const BOLD_HASH = "-6c9oR8J"
+// Current hash for our preloaded font asset:
+const SOURCE_SANS_REGULAR_HASH = "BsWL4Kly"
 
 // Render a copy of index.html file to test
 const HTML = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8")
 document.documentElement.innerHTML = HTML.toString()
 
-function getFontHref(index: number): string {
-  const fontPreloadElements: NodeList | null = document.querySelectorAll(
+test("index.html preloads expected font with expected hash", () => {
+  const preloadedFonts = document.querySelectorAll<HTMLLinkElement>(
     "link[rel='preload']"
   )
-  const fontElement: HTMLLinkElement | null = fontPreloadElements.item(
-    index
-  ) as HTMLLinkElement
-  return fontElement ? fontElement.href : ""
-}
 
-test("index.html preloads 3 expected fonts with expected hashes", () => {
-  const expectedfontHashes = [REGULAR_HASH, SEMI_BOLD_HASH, BOLD_HASH]
-  const preloadedFontsCount = document.querySelectorAll(
-    "link[rel='preload']"
-  ).length
-  expect(preloadedFontsCount).toBe(3)
+  // With variable font, we only preload one font
+  // instead of 3 separate font weight files
+  expect(preloadedFonts.length).toBe(1)
 
-  for (let i = 0; i < preloadedFontsCount; i++) {
-    const fontHref = getFontHref(i)
-    const fontFullName = fontHref.split("/").pop()
-    const fontHash = fontFullName ? fontFullName.split(".")[1] : ""
-    expect(fontHash).toBe(expectedfontHashes[i])
-  }
+  // Get the preloaded font's href
+  const fontElement = preloadedFonts.item(0)
+  const fontHref = fontElement.href
+
+  // 4 parts in full name split by "."
+  // <font>-<weight>.otf.<fontHash>.woff2
+  const fontFullName = fontHref.split("/").pop()
+  const fontHash = fontFullName ? fontFullName.split(".")[2] : ""
+  expect(fontHash).toBe(SOURCE_SANS_REGULAR_HASH)
 })

@@ -72,7 +72,8 @@ class SessionInfo:
         return self.client is not None
 
     def to_active(self) -> ActiveSessionInfo:
-        assert self.is_active(), "A SessionInfo with no client cannot be active!"
+        if not self.is_active():
+            raise RuntimeError("A SessionInfo with no client cannot be active!")
 
         # NOTE: The cast here (rather than copying this SessionInfo's fields into a new
         # ActiveSessionInfo) is important as the Runtime expects to be able to mutate

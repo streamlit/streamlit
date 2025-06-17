@@ -70,10 +70,13 @@ export function debounce(
         clearTimeout(timeout)
       }
 
-      timeout = setTimeout(() => {
-        fn(...args)
-        last = Date.now()
-      }, Math.max(0, ms - now + last))
+      timeout = setTimeout(
+        () => {
+          fn(...args)
+          last = Date.now()
+        },
+        Math.max(0, ms - now + last)
+      )
     }
   }
 }
@@ -105,8 +108,6 @@ export default function useScrollSpy(
 
   const debouncer = useMemo(
     () =>
-      // TODO: Update to match React best practices
-      // eslint-disable-next-line react-compiler/react-compiler
       debounce(event => {
         onEventRef.current(event)
       }, DEFAULT_DEBOUNCE_MS),

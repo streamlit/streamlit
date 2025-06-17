@@ -75,6 +75,7 @@
         },
         "files.trimTrailingWhitespace": true,
         "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
         "search.exclude": {
           "lib/build/**": true
         },
@@ -100,6 +101,7 @@
           "e2e_playwright/**/*"
         ],
         "python.analysis.extraPaths": ["./lib"],
+        "python.analysis.typeCheckingMode": "off",
         "python.terminal.activateEnvInCurrentTerminal": true,
         "python.testing.pytestEnabled": true,
         "terminal.integrated.profiles.linux": {
@@ -109,7 +111,8 @@
           }
         },
         "typescript.tsdk": "frontend/node_modules/typescript/lib",
-        "typescript.enablePromptUseWorkspaceTsdk": true
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "git.branchProtection": ["develop"]
       }
     }
   },

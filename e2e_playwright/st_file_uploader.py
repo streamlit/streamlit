@@ -109,7 +109,7 @@ st.file_uploader(
 st.text(st.session_state.counter)
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_file_fragment():
     file_uploader_in_fragment = st.file_uploader(label="file uploader")
     st.write("File uploader in Fragment:", bool(file_uploader_in_fragment))

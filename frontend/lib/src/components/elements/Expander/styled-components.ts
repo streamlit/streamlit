@@ -23,7 +23,9 @@ export interface StyledExpandableContainerProps {
   disabled: boolean
 }
 
-export const StyledExpandableContainer = styled.div({})
+export const StyledExpandableContainer = styled.div({
+  width: "100%",
+})
 interface StyledDetailsProps {
   isStale: boolean
 }

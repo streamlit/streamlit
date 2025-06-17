@@ -26,7 +26,6 @@ import React, {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { format } from "date-fns"
 import moment from "moment"
-import { useTheme } from "@emotion/react"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 
@@ -49,8 +48,10 @@ import Icon from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibContext } from "~lib/components/core/LibContext"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { useIntlLocale } from "./useIntlLocale"
 
@@ -74,7 +75,7 @@ function datesToStrings(dates: Date[]): string[] {
   if (!dates) {
     return []
   }
-  return dates.map((value: Date) => moment(value as Date).format(DATE_FORMAT))
+  return dates.map((value: Date) => moment(value).format(DATE_FORMAT))
 }
 
 // Types for date validation
@@ -89,7 +90,8 @@ function DateInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
 
   /**
    * An array with start and end date specified by the user via the UI. If the user
@@ -111,7 +113,7 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { colors, fontSizes, lineHeights, spacing, sizes } = useTheme()
+  const { colors, fontSizes, lineHeights, spacing, sizes } = useEmotionTheme()
 
   const { locale } = useContext(LibContext)
   const loadedLocale = useIntlLocale(locale)
@@ -244,6 +246,7 @@ function DateInput({
         overrides={{
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               placement: PLACEMENT.bottomLeft,
               overrides: {
                 Body: {
@@ -296,6 +299,15 @@ function DateInput({
               "::after": {
                 borderColor: colors.transparent,
               },
+              //Apply background color only when hovering over a date in the range in light theme
+              ...(hasLightBackgroundColor(theme) &&
+              $isHovered &&
+              $pseudoSelected &&
+              !$selected
+                ? {
+                    color: colors.secondaryBg,
+                  }
+                : {}),
             }),
           },
           PrevButton: {
@@ -408,6 +420,10 @@ function DateInput({
                     paddingBottom: spacing.sm,
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,
+
+                    "::placeholder": {
+                      color: theme.colors.fadedText60,
+                    },
 
                     // Change input value text color in error state - matches st.error in light and dark mode
                     ...(error && {

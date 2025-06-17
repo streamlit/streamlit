@@ -17,9 +17,8 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { PLACEMENT, ToasterContainer } from "baseui/toast"
-import { useTheme } from "@emotion/react"
 
-import { EmotionTheme } from "@streamlit/lib"
+import { useEmotionTheme } from "@streamlit/lib"
 
 export interface EventContainerProps {
   children?: ReactNode
@@ -28,7 +27,7 @@ export interface EventContainerProps {
 function EventContainer({
   children,
 }: Readonly<EventContainerProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   return (
     <>

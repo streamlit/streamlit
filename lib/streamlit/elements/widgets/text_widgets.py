@@ -19,7 +19,11 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -34,7 +38,6 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -238,8 +241,16 @@ class TextWidgetsMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-        width : WidthWithoutContent
-            The width of the text input. Defaults to "stretch".
+        width : "stretch" or int
+            The width of the text input widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -308,7 +319,6 @@ class TextWidgetsMixin:
             default_value=None if value == "" else value,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
@@ -317,6 +327,7 @@ class TextWidgetsMixin:
             "text_input",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             value=value,
             max_chars=max_chars,
@@ -355,22 +366,13 @@ class TextWidgetsMixin:
         if icon is not None:
             text_input_proto.icon = validate_icon_or_emoji(icon)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        text_input_proto.width_config.CopyFrom(width_config)
-
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT
         elif type == "password":
             text_input_proto.type = TextInputProto.PASSWORD
         else:
             raise StreamlitAPIException(
-                "'%s' is not a valid text_input type. Valid types are 'default' and 'password'."
-                % type
+                f"'{type}' is not a valid text_input type. Valid types are 'default' and 'password'."
             )
 
         # Marshall the autocomplete param. If unspecified, this will be
@@ -397,7 +399,10 @@ class TextWidgetsMixin:
                 text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
-        self.dg._enqueue("text_input", text_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue("text_input", text_input_proto, layout_config=layout_config)
         return widget_state.value
 
     @overload
@@ -534,8 +539,16 @@ class TextWidgetsMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
-        width : WidthWithoutContent
-            The width of the text area. Defaults to "stretch".
+        width : "stretch" or int
+            The width of the text area widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -614,7 +627,6 @@ class TextWidgetsMixin:
             default_value=None if value == "" else value,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         value = str(value) if value is not None else None
 
@@ -622,6 +634,7 @@ class TextWidgetsMixin:
             "text_area",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             value=value,
             height=height,
@@ -658,14 +671,6 @@ class TextWidgetsMixin:
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        text_area_proto.width_config.CopyFrom(width_config)
-
         serde = TextAreaSerde(value)
         widget_state = register_widget(
             text_area_proto.id,
@@ -683,7 +688,10 @@ class TextWidgetsMixin:
                 text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
-        self.dg._enqueue("text_area", text_area_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

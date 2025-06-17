@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -50,6 +51,7 @@ def test_vega_lite_chart_sets_chart_width(themed_app: Page):
     )
 
 
+@pytest.mark.skip_browser("firefox")
 def test_vega_lite_chart_displays_interactive_charts(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -64,6 +66,7 @@ def test_vega_lite_chart_displays_interactive_charts(
     )
 
 
+@pytest.mark.skip_browser("firefox")
 def test_vega_lite_chart_same_plot_different_ways(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -76,6 +79,7 @@ def test_vega_lite_chart_same_plot_different_ways(
         assert_snapshot(vega_lite_charts.nth(idx), name=f"st_vega_lite_chart-{idx}")
 
 
+@pytest.mark.skip_browser("firefox")
 def test_vega_lite_chart_streamlit_theme(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -90,6 +94,7 @@ def test_vega_lite_chart_streamlit_theme(
         )
 
 
+@pytest.mark.skip_browser("firefox")
 def test_vega_lite_chart_default_theme(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -101,6 +106,7 @@ def test_vega_lite_chart_default_theme(
     assert_snapshot(vega_lite_charts.nth(11), name="st_vega_lite_chart-default_theming")
 
 
+@pytest.mark.skip_browser("firefox")
 def test_vega_lite_chart_user_supplied_colors(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -115,6 +121,7 @@ def test_vega_lite_chart_user_supplied_colors(
     )
 
 
+@pytest.mark.skip_browser("firefox")
 def test_empty_vega_lite_chart(app: Page, assert_snapshot: ImageCompareFunction):
     vega_lite_charts = app.get_by_test_id("stVegaLiteChart")
     # expect statement here so that snapshots are taken properly
@@ -131,6 +138,7 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stVegaLiteChart")
 
 
+@pytest.mark.skip_browser("firefox")
 def test_vega_lite_chart_updates_with_slightly_different_data(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

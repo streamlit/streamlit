@@ -84,7 +84,7 @@ def show_config(
             continue
 
         out.append("")
-        append_section("[%s]" % section)
+        append_section(f"[{section}]")
         out.append("")
 
         for option in section_options.values():
@@ -125,8 +125,7 @@ def show_config(
                     append_comment(line)
                 append_comment("")
                 append_comment(
-                    "This option will be removed on or after %s."
-                    % option.expiration_date
+                    f"This option will be removed on or after {option.expiration_date}."
                 )
 
             import toml
@@ -138,7 +137,7 @@ def show_config(
                 # Ensure a line break before appending "Default" comment, if not already there
                 if out[-1] != "#":
                     append_comment("")
-                append_comment("Default: %s" % toml_default)
+                append_comment(f"Default: {toml_default}")
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
@@ -151,7 +150,7 @@ def show_config(
             if option_is_manually_set:
                 if out[-1] != "# ":
                     append_comment("")
-                append_comment("The value below was set in %s" % option.where_defined)
+                append_comment(f"The value below was set in {option.where_defined}")
 
             toml_setting = toml.dumps({key: option.value})
 

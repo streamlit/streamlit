@@ -67,9 +67,11 @@ class WebsocketSessionManager(SessionManager):
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
-        assert not (existing_session_id and session_id_override), (
-            "Only one of existing_session_id and session_id_override should be truthy"
-        )
+        if existing_session_id and session_id_override:
+            raise RuntimeError(
+                "Only one of existing_session_id and session_id_override should be truthy. "
+                "This should never happen."
+            )
 
         if existing_session_id in self._active_session_info_by_id:
             _LOGGER.warning(
@@ -109,9 +111,11 @@ class WebsocketSessionManager(SessionManager):
             "Created new session for client %s. Session ID: %s", id(client), session.id
         )
 
-        assert session.id not in self._active_session_info_by_id, (
-            f"session.id '{session.id}' registered multiple times!"
-        )
+        if session.id in self._active_session_info_by_id:
+            raise RuntimeError(
+                f"session.id '{session.id}' registered multiple times. "
+                "This should never happen."
+            )
 
         self._active_session_info_by_id[session.id] = ActiveSessionInfo(client, session)
         return session.id

@@ -115,7 +115,7 @@ export function BokehChart({
   }
 
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/react-compiler
   const memoizedUpdateChart = useCallback(updateChart, [
     chartId,
     getChartDimensions,

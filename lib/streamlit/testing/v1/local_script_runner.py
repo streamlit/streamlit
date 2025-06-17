@@ -48,7 +48,8 @@ class LocalScriptRunner(ScriptRunner):
     ) -> None:
         """Initializes the ScriptRunner for the given script_path."""
 
-        assert os.path.isfile(script_path), f"File not found at {script_path}"
+        if not os.path.isfile(script_path):
+            raise FileNotFoundError(f"File not found at {script_path}")
 
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
@@ -77,9 +78,8 @@ class LocalScriptRunner(ScriptRunner):
         ) -> None:
             # Assert that we're not getting unexpected `sender` params
             # from ScriptRunner.on_event
-            assert sender is None or sender == self, (
-                "Unexpected ScriptRunnerEvent sender!"
-            )
+            if sender is not None and sender != self:
+                raise RuntimeError("Unexpected ScriptRunnerEvent sender!")
 
             self.events.append(event)
             self.event_data.append(kwargs)

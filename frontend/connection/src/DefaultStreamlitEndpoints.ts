@@ -226,7 +226,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   public async uploadFileUploaderFile(
     fileUploadUrl: string,
     file: File,
-    sessionId: string,
+    _sessionId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
@@ -250,6 +250,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       // If the request succeeds, we don't care about the response body
     } catch (error: unknown) {
       // Send error info on failure
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Client Error: File uploader error on file upload - ${error}`)
       const message = error instanceof Error ? error.message : "Unknown Error"
       this.sendClientErrorToHost(
@@ -294,6 +295,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       // If the request succeeds, we don't care about the response body
     } catch (error: unknown) {
       // Send error info on failure
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Client Error: File uploader error on file delete - ${error}`)
       const message = error instanceof Error ? error.message : "Unknown Error"
       this.sendClientErrorToHost(

@@ -108,6 +108,7 @@ function BaseDateTimeColumn(
     try {
       defaultTimezoneOffset =
         applyTimezone(moment(), parameters.timezone)?.utcOffset() || undefined
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // Do nothing
     }
@@ -220,6 +221,7 @@ function BaseDateTimeColumn(
           // The moment date should never be invalid here.
           return getErrorCell(
             toSafeString(cellData),
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `Invalid moment date. This should never happen. Please report this bug. \nError: ${momentDate.toString()}`
           )
         }
@@ -230,6 +232,7 @@ function BaseDateTimeColumn(
           } catch (error) {
             return getErrorCell(
               momentDate.toISOString(),
+              // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
               `Failed to adjust to the provided timezone: ${parameters.timezone}. \nError: ${error}`
             )
           }
@@ -246,6 +249,7 @@ function BaseDateTimeColumn(
         } catch (error) {
           return getErrorCell(
             momentDate.toISOString(),
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             `Failed to format the date for rendering with: ${parameters.format}. \nError: ${error}`
           )
         }

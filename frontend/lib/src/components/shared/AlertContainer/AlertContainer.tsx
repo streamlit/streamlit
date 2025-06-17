@@ -17,9 +17,8 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { KIND, Notification } from "baseui/notification"
-import { useTheme } from "@emotion/react"
 
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledAlertContent } from "./styled-components"
 
@@ -47,6 +46,7 @@ function getNotificationKind(
     case Kind.WARNING:
       return KIND.warning
     default:
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Unexpected alert type: ${kind}`)
   }
 }
@@ -72,7 +72,7 @@ export default function AlertContainer({
   width,
   children,
 }: AlertContainerProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const testid = kind.charAt(0).toUpperCase() + kind.slice(1)
   return (

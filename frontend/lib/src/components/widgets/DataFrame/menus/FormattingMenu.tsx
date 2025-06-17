@@ -16,11 +16,11 @@
 
 import React, { memo, ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
 import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledMenuList, StyledMenuListItem } from "./styled-components"
 
@@ -58,6 +58,11 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     format: "euro",
     label: "Euro",
     icon: ":material/euro:",
+  },
+  {
+    format: "yen",
+    label: "Yen",
+    icon: ":material/currency_yen:",
   },
   {
     format: "percent",
@@ -178,7 +183,7 @@ function FormattingMenu({
   onCloseMenu,
   children,
 }: FormattingMenuProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const { colors, fontSizes, radii, fontWeights } = theme
 
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []

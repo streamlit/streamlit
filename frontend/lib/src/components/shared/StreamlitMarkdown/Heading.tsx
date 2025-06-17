@@ -16,7 +16,7 @@
 
 import React, { Fragment, ReactElement, useContext } from "react"
 
-import type { Components } from "react-markdown/lib/ast-to-react"
+import { Components } from "react-markdown"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 
@@ -40,12 +40,15 @@ export interface HeadingProtoProps {
 
 function makeMarkdownHeading(tag: string, markdown: string): string {
   switch (tag.toLowerCase()) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
     case Tags.H1: {
       return `# ${markdown}`
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
     case Tags.H2: {
       return `## ${markdown}`
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
     case Tags.H3: {
       return `### ${markdown}`
     }

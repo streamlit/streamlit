@@ -18,6 +18,7 @@ from enum import Enum
 from pathlib import Path
 from unittest import mock
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -81,7 +82,7 @@ class MediaTest(DeltaGeneratorTestCase):
             if is_url:
                 # URLs should be returned as-is, and should not result in a call to
                 # MediaFileManager.add
-                self.assertEqual(media_data, element_url)
+                assert media_data == element_url
                 mock_mfm_add.assert_not_called()
             else:
                 # Other strings, Path objects, and audio/video data, should be passed to
@@ -94,7 +95,7 @@ class MediaTest(DeltaGeneratorTestCase):
                     mimetype,
                     str(make_delta_path(RootContainer.MAIN, (), 0)),
                 )
-                self.assertEqual("https://mockoutputurl.com", element_url)
+                assert element_url == "https://mockoutputurl.com"
 
     def test_audio_width_config_default(self):
         """Test that default width is 'stretch' for audio."""
@@ -108,11 +109,11 @@ class MediaTest(DeltaGeneratorTestCase):
             st.audio("foo.wav", "audio/wav")
             c = self.get_delta_from_queue().new_element.audio
 
-            self.assertEqual(
-                c.width_config.WhichOneof("width_spec"),
-                WidthConfigFields.USE_STRETCH.value,
+            assert (
+                c.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_STRETCH.value
             )
-            self.assertTrue(c.width_config.use_stretch)
+            assert c.width_config.use_stretch
 
     def test_video_width_config_default(self):
         """Test that default width is 'stretch' for video."""
@@ -126,11 +127,11 @@ class MediaTest(DeltaGeneratorTestCase):
             st.video("foo.mp4", "video/mp4")
             c = self.get_delta_from_queue().new_element.video
 
-            self.assertEqual(
-                c.width_config.WhichOneof("width_spec"),
-                WidthConfigFields.USE_STRETCH.value,
+            assert (
+                c.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_STRETCH.value
             )
-            self.assertTrue(c.width_config.use_stretch)
+            assert c.width_config.use_stretch
 
     def test_audio_width_config_pixel(self):
         """Test that pixel width works properly for audio."""
@@ -144,11 +145,11 @@ class MediaTest(DeltaGeneratorTestCase):
             st.audio("foo.wav", "audio/wav", width=200)
             c = self.get_delta_from_queue().new_element.audio
 
-            self.assertEqual(
-                c.width_config.WhichOneof("width_spec"),
-                WidthConfigFields.PIXEL_WIDTH.value,
+            assert (
+                c.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.PIXEL_WIDTH.value
             )
-            self.assertEqual(c.width_config.pixel_width, 200)
+            assert c.width_config.pixel_width == 200
 
     def test_video_width_config_pixel(self):
         """Test that pixel width works properly for video."""
@@ -162,11 +163,11 @@ class MediaTest(DeltaGeneratorTestCase):
             st.video("foo.mp4", "video/mp4", width=200)
             c = self.get_delta_from_queue().new_element.video
 
-            self.assertEqual(
-                c.width_config.WhichOneof("width_spec"),
-                WidthConfigFields.PIXEL_WIDTH.value,
+            assert (
+                c.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.PIXEL_WIDTH.value
             )
-            self.assertEqual(c.width_config.pixel_width, 200)
+            assert c.width_config.pixel_width == 200
 
     def test_audio_width_config_stretch(self):
         """Test that 'stretch' width works properly for audio."""
@@ -180,11 +181,11 @@ class MediaTest(DeltaGeneratorTestCase):
             st.audio("foo.wav", "audio/wav", width="stretch")
             c = self.get_delta_from_queue().new_element.audio
 
-            self.assertEqual(
-                c.width_config.WhichOneof("width_spec"),
-                WidthConfigFields.USE_STRETCH.value,
+            assert (
+                c.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_STRETCH.value
             )
-            self.assertTrue(c.width_config.use_stretch)
+            assert c.width_config.use_stretch
 
     def test_video_width_config_stretch(self):
         """Test that 'stretch' width works properly for video."""
@@ -198,11 +199,11 @@ class MediaTest(DeltaGeneratorTestCase):
             st.video("foo.mp4", "video/mp4", width="stretch")
             c = self.get_delta_from_queue().new_element.video
 
-            self.assertEqual(
-                c.width_config.WhichOneof("width_spec"),
-                WidthConfigFields.USE_STRETCH.value,
+            assert (
+                c.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_STRETCH.value
             )
-            self.assertTrue(c.width_config.use_stretch)
+            assert c.width_config.use_stretch
 
     @parameterized.expand(
         [
@@ -215,7 +216,7 @@ class MediaTest(DeltaGeneratorTestCase):
     )
     def test_audio_invalid_width(self, width):
         """Test that invalid width values raise exceptions for audio."""
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.audio("foo.wav", "audio/wav", width=width)
 
     @parameterized.expand(
@@ -229,5 +230,5 @@ class MediaTest(DeltaGeneratorTestCase):
     )
     def test_video_invalid_width(self, width):
         """Test that invalid width values raise exceptions for video."""
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.video("foo.mp4", "video/mp4", width=width)

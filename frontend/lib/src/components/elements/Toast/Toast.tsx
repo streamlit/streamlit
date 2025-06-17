@@ -23,14 +23,14 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
-import { toaster, ToastOverrides } from "baseui/toast"
+import { toaster, type ToastOverrides } from "baseui/toast"
 
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Kind } from "~lib/components/shared/AlertContainer"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledMessageWrapper,
@@ -112,7 +112,7 @@ export function shortenMessage(fullMessage: string): string {
 }
 
 function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const displayMessage = shortenMessage(body)
   const shortened = body !== displayMessage
 
@@ -180,7 +180,7 @@ function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
 
     // Array must be empty to run as mount/cleanup
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
