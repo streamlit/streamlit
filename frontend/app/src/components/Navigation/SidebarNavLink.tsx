@@ -48,13 +48,18 @@ const SidebarNavLink = ({
   // disable sidebar nav links
   const { widgetsDisabled: disableSidebarNavLinks } = useAppContext()
 
+  const navLinkTestId = isTopNav ? "stTopNavLink" : "stSidebarNavLink"
+  const navLinkContainerTestId = isTopNav
+    ? "stTopNavLinkContainer"
+    : "stSidebarNavLinkContainer"
+
   return (
     <StyledSidebarNavLinkContainer
       disabled={disableSidebarNavLinks}
-      data-testid="stSidebarNavLinkContainer"
+      data-testid={navLinkContainerTestId}
     >
       <StyledSidebarNavLink
-        data-testid="stSidebarNavLink"
+        data-testid={navLinkTestId}
         isActive={isActive}
         disabled={disableSidebarNavLinks}
         href={pageUrl}
