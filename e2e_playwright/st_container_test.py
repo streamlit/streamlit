@@ -119,3 +119,23 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the container can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "first container")).to_be_visible()
+
+
+def test_empty_containers(app: Page):
+    # Test that an empty container with a border is rendered.
+    border_outer_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)
+    expect(
+        border_outer_container.get_by_test_id("stVerticalBlockBorderWrapper").first
+    ).to_be_visible()
+
+    # Test that an empty container with height is rendered.
+    height_outer_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(8)
+    expect(
+        height_outer_container.get_by_test_id("stVerticalBlockBorderWrapper").first
+    ).to_be_visible()
+
+    # Test that an empty container without height or border is not rendered.
+    empty_outer_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(10)
+    expect(
+        empty_outer_container.get_by_test_id("stVerticalBlockBorderWrapper")
+    ).to_have_count(0)

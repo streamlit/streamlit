@@ -78,7 +78,7 @@ def test_expander_collapses_and_expands(app: Page):
 
 def test_empty_expander_not_rendered(app: Page):
     """Test that an empty expander is not rendered."""
-    expect(app.get_by_text("Empty expander")).not_to_be_attached()
+    expect(app.get_by_text("Empty expander")).to_be_visible()
 
 
 def test_expander_session_state_set(app: Page):

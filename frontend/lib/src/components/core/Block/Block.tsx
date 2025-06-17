@@ -308,7 +308,6 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   if (node.deltaBlock.expandable) {
     containerElement = (
       <Expander
-        empty={node.isEmpty}
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
       >
