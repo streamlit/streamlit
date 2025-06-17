@@ -331,7 +331,9 @@ def main() -> None:
             except PermissionError:
                 print(f"Warning: Permission denied when trying to delete: {filepath}")
             except Exception as e:
-                print(f"Warning: An unexpected error occurred while deleting {filepath}: {e}")
+                print(
+                    f"Warning: An unexpected error occurred while deleting {filepath}: {e}"
+                )
         print(f"\n✅ Successfully deleted {len(orphaned_files)} orphaned snapshots.")
 
 
