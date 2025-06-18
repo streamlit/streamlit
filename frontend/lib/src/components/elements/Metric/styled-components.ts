@@ -22,6 +22,7 @@ import { Metric as MetricProto } from "@streamlit/protobuf"
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { EmotionTheme } from "~lib/theme"
 
 export interface StyledMetricContainerProps {
   showBorder: boolean
@@ -83,8 +84,7 @@ export interface StyledMetricDeltaTextProps {
 }
 
 const getMetricColor = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  theme: any,
+  theme: EmotionTheme,
   color: MetricProto.MetricColor
 ): string => {
   switch (color) {
@@ -102,8 +102,7 @@ const getMetricColor = (
 // TODO: We should refactor this and probably move it somewhere else (e.g. getColors.ts)
 // when we work on text/background colors for advanced theming.
 const getMetricBackgroundColor = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  theme: any,
+  theme: EmotionTheme,
   color: MetricProto.MetricColor
 ): string => {
   const lightTheme = hasLightBackgroundColor(theme)
