@@ -86,7 +86,7 @@
     "numbro": "^2.5.0",
     "plotly.js": "^3.0.1",
     "protobufjs": "^7.5.3",
-    "query-string": "^9.2.0",
+    "query-string": "^9.2.1",
     "re-resizable": "^6.11.2",
     "react-color": "^2.18.1",
     "react-debounce-render": "^8.0.2",
@@ -170,7 +170,7 @@
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-svgr": "^4.3.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.3",
+    "vitest": "^3.2.4",
     "vitest-canvas-mock": "^0.3.3",
     "vitest-fetch-mock": "^0.4.5"
   }

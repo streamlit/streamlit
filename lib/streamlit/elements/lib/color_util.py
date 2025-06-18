@@ -225,7 +225,7 @@ def _normalize_tuple(
         return r, g, b
 
     if len(color) == 4:
-        color_4tuple = cast("Color4Tuple", color)
+        color_4tuple = color
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)

@@ -66,9 +66,17 @@ def spinner(
         format is not configurable.
 
     width : "content", "stretch", or int
-        The width of the spinner. Can be "content" (default) to size the spinner
-        to its content, "stretch" to fill the container width, or an integer
-        number of pixels.
+        The width of the spinner element. This can be one of the following:
+
+        - ``"content"`` (default): The width of the element matches the
+          width of its content, but doesn't exceed the width of the parent
+          container.
+        - ``"stretch"``: The width of the element matches the width of the
+          parent container.
+        - An integer specifying the width in pixels: The element has a
+          fixed width. If the specified width is greater than the width of
+          the parent container, the width of the element matches the width
+          of the parent container.
 
     Example
     -------

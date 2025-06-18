@@ -253,6 +253,8 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             and self.module_name == other.module_name
         )
 
+    __hash__ = BaseCustomComponent.__hash__
+
     def __ne__(self, other: object) -> bool:
         """Inequality operator."""
 
