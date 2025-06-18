@@ -139,6 +139,28 @@ s6 = st.pills("Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sl
 st.write("pills-after-sleep:", str(s6))
 
 
+st.header("Pills - width examples")
+st.pills(
+    "Pills with content width (default)",
+    ["Option 1", "Option 2", "Option 3"],
+    width="content",
+    key="pills_content_width",
+)
+
+st.pills(
+    "Pills with stretch width",
+    ["Option 1", "Option 2", "Option 3"],
+    width="stretch",
+    key="pills_stretch_width",
+)
+
+st.pills(
+    "Pills with 300px width",
+    ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+    width=300,
+    key="pills_300px_width",
+)
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1

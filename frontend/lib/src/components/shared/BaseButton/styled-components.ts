@@ -290,10 +290,12 @@ const StyledButtonGroupBaseButton = styled(
 
 export const StyledPillsButton = styled(
   StyledButtonGroupBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => {
+)<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
   return {
     borderRadius: theme.radii.full,
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
+    // When containerWidth is true, the buttons will stretch to fill the container.
+    flex: containerWidth ? "1 0 fit-content" : "",
   }
 })
 
@@ -314,11 +316,12 @@ export const StyledPillsButtonActive = styled(
 
 export const StyledSegmentedControlButton = styled(
   StyledButtonGroupBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => {
+)<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
   return {
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
     borderRadius: "0",
-    flex: "1 0 fit-content",
+    // When containerWidth is true, the buttons will stretch to fill the container.
+    flex: containerWidth ? "1 0 fit-content" : "",
     maxWidth: "100%",
     marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
 

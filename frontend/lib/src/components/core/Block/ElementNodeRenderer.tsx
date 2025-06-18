@@ -192,6 +192,7 @@ const RawElementNodeRenderer = (
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
+    widthConfig: node.element.widthConfig,
   }
 
   switch (node.element.type) {
