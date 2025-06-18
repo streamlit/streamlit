@@ -237,6 +237,10 @@ class ChatMixin:
         (preferred) or just call methods directly on the returned object. See the
         examples below.
 
+        .. note::
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest chat message containers.
+
         Parameters
         ----------
         name : "user", "assistant", "ai", "human", or str
@@ -280,13 +284,17 @@ class ChatMixin:
             .. |st.image| replace:: ``st.image``
             .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
-        width: int, "auto", or "stretch"
-            The width of the chat message. This can be one of the following:
+        width : "stretch", "content", or int
+            The width of the chat message container. This can be one of the following:
 
-            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
-            - ``"auto"``: Expands to fit the content.
-            - ``"stretch"``: The default value. The chat message stretches to fill
-              available space in its container.
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - ``"content"``: The width of the container matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
@@ -469,12 +477,16 @@ class ChatMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        width: int or "stretch"
-            The width of the chat input widget. This can be one of the following:
+        width : "stretch" or int
+            The width of the chat input widget. This can be one of the
+            following:
 
-            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
-            - ``"stretch"``: The default value. The chat input stretches to fill
-              available space in its container.
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------

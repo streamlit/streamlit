@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import NumpyShape
 
 
 MediaData: TypeAlias = Union[
@@ -109,7 +108,7 @@ class MediaMixin:
             For more information about MIME types, see
             https://www.iana.org/assignments/media-types/media-types.xhtml.
 
-        start_time: int, float, timedelta, str, or None
+        start_time : int, float, timedelta, str, or None
             The time from which the element should start playing. This can be
             one of the following:
 
@@ -122,10 +121,10 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        sample_rate: int or None
+        sample_rate : int or None
             The sample rate of the audio data in samples per second. This is
             only required if ``data`` is a NumPy array.
-        end_time: int, float, timedelta, str, or None
+        end_time : int, float, timedelta, str, or None
             The time at which the element should stop playing. This can be
             one of the following:
 
@@ -138,18 +137,22 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        loop: bool
+        loop : bool
             Whether the audio should loop playback.
-        autoplay: bool
+        autoplay : bool
             Whether the audio file should start playing automatically. This is
             ``False`` by default. Browsers will not autoplay audio files if the
             user has not interacted with the page by clicking somewhere.
-        width: int or "stretch"
-            The width of the audio player. This can be one of the following:
+        width : "stretch" or int
+            The width of the audio player element. This can be one of the
+            following:
 
-            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
-            - ``"stretch"``: The default value. The audio player stretches to fill
-              available space in its container.
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -254,7 +257,7 @@ class MediaMixin:
             For more information about MIME types, see
             https://www.iana.org/assignments/media-types/media-types.xhtml.
 
-        start_time: int, float, timedelta, str, or None
+        start_time : int, float, timedelta, str, or None
             The time from which the element should start playing. This can be
             one of the following:
 
@@ -267,7 +270,7 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        subtitles: str, bytes, Path, io.BytesIO, or dict
+        subtitles : str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
 
             - ``None`` (default): No subtitles.
@@ -293,7 +296,7 @@ class MediaMixin:
             in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
-        end_time: int, float, timedelta, str, or None
+        end_time : int, float, timedelta, str, or None
             The time at which the element should stop playing. This can be
             one of the following:
 
@@ -306,24 +309,28 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        loop: bool
+        loop : bool
             Whether the video should loop playback.
-        autoplay: bool
+        autoplay : bool
             Whether the video should start playing automatically. This is
             ``False`` by default. Browsers will not autoplay unmuted videos
             if the user has not interacted with the page by clicking somewhere.
             To enable autoplay without user interaction, you must also set
             ``muted=True``.
-        muted: bool
+        muted : bool
             Whether the video should play with the audio silenced. This is
             ``False`` by default. Use this in conjunction with ``autoplay=True``
             to enable autoplay without user interaction.
-        width: int or "stretch"
-            The width of the video player. This can be one of the following:
+        width : "stretch" or int
+            The width of the video player element. This can be one of the
+            following:
 
-            - An int: The width in pixels, e.g. ``200`` for a width of 200 pixels.
-            - ``"stretch"``: The default value. The video player stretches to fill
-              available space in its container.
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -476,7 +483,7 @@ def _marshall_av_media(
             return
         data_or_filename = read_data
     elif type_util.is_type(data, "numpy.ndarray"):
-        data_or_filename = cast("npt.NDArray[Any]", data).tobytes()
+        data_or_filename = data.tobytes()
     else:
         raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
@@ -701,7 +708,7 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
 
     transformed_data: npt.NDArray[Any] = np.array(data, dtype=float)
 
-    if len(cast("NumpyShape", transformed_data.shape)) == 1:
+    if len(transformed_data.shape) == 1:
         nchan = 1
     elif len(transformed_data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,
