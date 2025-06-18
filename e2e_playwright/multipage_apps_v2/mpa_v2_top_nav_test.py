@@ -28,7 +28,7 @@ def test_desktop_top_nav(app: Page):
 
     # The top nav is rendered using rc-overflow component
     # Check that navigation links exist and are visible
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links).to_have_count(3)  # 3 pages
 
     # Verify no sidebar is visible
@@ -83,7 +83,7 @@ def test_overflow_behavior(app: Page):
     app.set_viewport_size({"width": 800, "height": 600})
 
     # Verify we have 5 nav links total
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links).to_have_count(5)
 
     # Note: Due to our mock of rc-overflow in the JS tests, all links will be visible
@@ -137,7 +137,7 @@ def test_hidden_navigation_mode(app: Page):
     expect(app.get_by_test_id("stSidebar")).not_to_be_visible()
 
     # No nav links should be visible
-    expect(app.get_by_test_id("stSidebarNavLink")).not_to_be_visible()
+    expect(app.get_by_test_id("stTopNavLink")).not_to_be_visible()
 
     # Only first page content should be visible - check header
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 1")).to_be_visible()
@@ -166,7 +166,7 @@ def test_switching_navigation_modes(app: Page):
 
     # Verify switched to top nav - sidebar hidden, nav links visible at top
     expect(app.get_by_test_id("stSidebar")).not_to_be_visible()
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links).to_have_count(3)
     expect(nav_links.first).to_be_visible()
 
@@ -186,7 +186,7 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     wait_for_app_run(app)
 
     # Wait for app to stabilize
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links.first).to_be_visible()
 
     # Take screenshot of the navigation area
