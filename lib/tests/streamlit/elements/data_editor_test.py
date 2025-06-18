@@ -161,7 +161,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col5": [
                     Decimal("1.1"),
                     Decimal("-12.3456"),
-                    Decimal("123456"),
+                    Decimal(123456),
                 ],
             }
         )
