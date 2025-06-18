@@ -79,6 +79,7 @@ export const StyledAppStatusLabel = styled.label<StyledAppStatusLabelProps>(
 export const StyledAppButtonContainer = styled.span(({ theme }) => ({
   marginLeft: theme.spacing.md,
   whiteSpace: "nowrap",
+  color: theme.colors.bodyText,
 }))
 
 export interface StyledAppRunningIconProps {

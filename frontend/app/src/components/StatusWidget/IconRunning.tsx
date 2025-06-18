@@ -26,7 +26,7 @@ import {
   Rowing,
 } from "@emotion-icons/material-outlined"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import { EmotionTheme } from "@streamlit/lib"
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
 
 const icons = [
@@ -47,7 +47,6 @@ type IconRunningProps = {
 
 const IconRunning: React.FC<IconRunningProps> = ({
   speed = 200,
-  color,
   isNewYears = false,
 }) => {
   const [index, setIndex] = useState(0)
@@ -78,11 +77,7 @@ const IconRunning: React.FC<IconRunningProps> = ({
 
   const currentIcon = icons[index]
   const IconComponent = currentIcon.component
-  const resolvedColor = color
-    ? color
-    : hasLightBackgroundColor(theme)
-      ? theme.colors.fadedText60
-      : theme.colors.bodyText
+  const resolvedColor = theme.colors.fadedText60
   const ariaLabel = `Running ${currentIcon.name} icon`
   const sizeIcon = theme.sizes.appRunningMen
 
