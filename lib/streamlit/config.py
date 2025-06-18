@@ -1288,6 +1288,16 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "showSidebarBorder",
+    categories=["theme"],
+    description="""
+        Whether to show a vertical separator between the sidebar and the main
+        content area.
+    """,
+    type_=bool,
+)
+
+_create_theme_options(
     "baseFontSize",
     categories=["theme"],
     description="""
@@ -1302,7 +1312,7 @@ _create_theme_options(
 
 _create_theme_options(
     "baseFontWeight",
-    categories=["theme"],
+    categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Sets the root font weight for the app.
 
@@ -1311,16 +1321,6 @@ _create_theme_options(
         When unset, the font weight will be set to normal 400.
     """,
     type_=int,
-)
-
-_create_theme_options(
-    "showSidebarBorder",
-    categories=["theme"],
-    description="""
-        Whether to show a vertical separator between the sidebar and the main
-        content area.
-    """,
-    type_=bool,
 )
 
 # Config Section: Secrets #

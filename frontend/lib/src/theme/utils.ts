@@ -182,6 +182,40 @@ export const parseRadius = (
   return [radiusValue, cssUnit]
 }
 
+/**
+ * Helper function to set the normal, bold, and extrabold font weights based
+ * on the baseFontWeight option
+ * @param conditionalOverrides: the emotion theme object to update
+ * @param baseFontWeight: the base font weight to set
+ * @returns the updated emotion theme object
+ */
+export const setFontWeights = (
+  fontWeights: EmotionTheme["fontWeights"],
+  baseFontWeight: number,
+  isSidebar: boolean
+): EmotionTheme["fontWeights"] => {
+  // Validate the baseFontWeight provided is an integer, increment of 100, and between 100 and 600
+  const isInteger = Number.isInteger(baseFontWeight)
+  const isIncrementOf100 = baseFontWeight % 100 === 0
+  const isInRange = baseFontWeight >= 100 && baseFontWeight <= 600
+  if (!isInteger || !isIncrementOf100 || !isInRange) {
+    const themeSection = isSidebar ? "theme.sidebar" : "theme"
+    LOG.warn(
+      `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights in ${themeSection}.`
+    )
+    return fontWeights
+  }
+
+  // Set each of the font weights based on the base weight provided
+  // The provided baseFontWeight sets the normal weight
+  fontWeights.normal = baseFontWeight
+  // The bold weight is set to the baseFontWeight + 200
+  fontWeights.bold = baseFontWeight + 200
+  // The extrabold weight is set to the baseFontWeight + 300
+  fontWeights.extrabold = baseFontWeight + 300
+  return fontWeights
+}
+
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
@@ -354,18 +388,16 @@ export const createEmotionTheme = (
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
   }
 
-  // TODO: Update handling of font weight validity check
-  if (baseFontWeight && 100 <= baseFontWeight && baseFontWeight <= 900) {
+  if (notNullOrUndefined(baseFontWeight)) {
     conditionalOverrides.fontWeights = {
       ...baseThemeConfig.emotion.fontWeights,
     }
 
-    // Set each of the font weights based on the base weight provided, with a max of 900
-    conditionalOverrides.fontWeights.normal = baseFontWeight
-    conditionalOverrides.fontWeights.bold = Math.min(baseFontWeight + 200, 900)
-    conditionalOverrides.fontWeights.extrabold = Math.min(
-      baseFontWeight + 300,
-      900
+    // Set the font weights based on the baseFontWeight provided
+    conditionalOverrides.fontWeights = setFontWeights(
+      conditionalOverrides.fontWeights,
+      baseFontWeight,
+      inSidebar
     )
   }
 
