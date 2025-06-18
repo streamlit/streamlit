@@ -19,7 +19,6 @@ import streamlit as st
 st.set_page_config(
     page_title="st.pdf Prototype",
     page_icon="📄",
-    layout="wide",
 )
 
 # --- App Title and Introduction ---
@@ -86,7 +85,7 @@ if pdf_source_type == "Sample URLs":
     selected_option = st.sidebar.selectbox(
         "Select a sample PDF to test:",
         options=list(TEST_URLS.keys()),
-        index=0,
+        index=1,
         help="Choose a pre-selected PDF or enter your own URL below.",
     )
 
@@ -119,7 +118,7 @@ st.sidebar.subheader("Display Options")
 
 # Width options
 width_type = st.sidebar.radio(
-    "Width type:", options=["stretch", "custom"], index=0, horizontal=True
+    "Width type:", options=["custom", "stretch"], index=0, horizontal=True
 )
 
 if width_type == "stretch":
@@ -145,7 +144,7 @@ else:
         "Height (pixels):",
         min_value=100,
         max_value=2000,
-        value=500,
+        value=700,
         step=50,
     )
 
