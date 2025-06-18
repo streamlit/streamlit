@@ -416,6 +416,9 @@ export const StyledBorderlessIconButton = styled(
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
 
+    // Keeps the buttons from stacking when in containerWidth mode.
+    flex: "1 0 fit-content",
+
     border: "none",
     display: "flex",
     minHeight: "unset",
