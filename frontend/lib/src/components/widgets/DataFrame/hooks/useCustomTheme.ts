@@ -18,8 +18,8 @@ import { useMemo } from "react"
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { mix, transparentize } from "color2k"
 
-import { convertRemToPx } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
@@ -83,6 +83,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
       headerFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
+      headerIconSize: Math.round(convertRemToPx("1.125rem")),
       // Cell styling:
       baseFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
       editorFontSize: theme.fontSizes.sm,
@@ -102,9 +103,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       drilldownBorder: theme.colors.darkenedBgMix25,
       // Unused settings:
       // lineHeight
-      // headerIconSize: number;
       // markerFontStyle: string;
-      // resizeIndicatorColor?: string;
       // headerBottomBorderColor?: string;
     }
 
