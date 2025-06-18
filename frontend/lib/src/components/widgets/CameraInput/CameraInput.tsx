@@ -48,7 +48,6 @@ import {
   UploadFileInfo,
   UploadingStatus,
 } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
@@ -65,7 +64,6 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   disabled: boolean
-  width: number
   fragmentId?: string
   // Allow for unit testing
   testOverride?: WebcamPermission
@@ -352,7 +350,7 @@ class CameraInput extends PureComponent<Props, State> {
   }
 
   public override render(): React.ReactNode {
-    const { element, widgetMgr, disabled, width } = this.props
+    const { element, widgetMgr, disabled } = this.props
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -381,7 +379,7 @@ class CameraInput extends PureComponent<Props, State> {
         </WidgetLabel>
         {this.state.imgSrc ? (
           <>
-            <StyledBox width={width}>
+            <StyledBox>
               {this.state.imgSrc !== this.RESTORED_FROM_WIDGET_STRING && (
                 <StyledImg
                   src={this.state.imgSrc}
@@ -391,8 +389,6 @@ class CameraInput extends PureComponent<Props, State> {
                       ? "50%"
                       : "100%"
                   }
-                  width={width}
-                  height={(width * 9) / 16}
                 />
               )}
             </StyledBox>
@@ -414,7 +410,6 @@ class CameraInput extends PureComponent<Props, State> {
           <WebcamComponent
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             handleCapture={this.handleCapture}
-            width={width}
             disabled={disabled}
             clearPhotoInProgress={this.state.clearPhotoInProgress}
             setClearPhotoInProgress={this.setClearPhotoInProgress}
@@ -596,9 +591,4 @@ function urltoFile(url: string, filename: string): Promise<File> {
     .then(buf => new File([buf], filename, { type: "image/jpeg" }))
 }
 
-/**
- * This component should be refactored to remove the width calculation from JS
- * entirely and instead utilize width: 100%; height: 100%; aspect-ratio: 16 / 9;
- * on the StyledBox CSS instead.
- */
-export default withCalculatedWidth(CameraInput)
+export default CameraInput

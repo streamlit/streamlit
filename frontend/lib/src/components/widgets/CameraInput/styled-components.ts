@@ -69,15 +69,11 @@ export const StyledCameraInput = styled.div({
   objectFit: "contain",
 })
 
-export interface StyledBoxProps {
-  width: number
-}
-
-export const StyledBox = styled.div<StyledBoxProps>(({ theme, width }) => ({
+export const StyledBox = styled.div(({ theme }) => ({
   backgroundColor: theme.colors.secondaryBg,
   borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
   width: "100%",
-  height: (width * 9) / 16,
+  aspectRatio: "16 / 9",
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
@@ -96,6 +92,8 @@ export interface StyledImgProps {
 export const StyledImg = styled.img<StyledImgProps>(({ theme, opacity }) => ({
   borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
   objectFit: "contain",
+  width: "100%",
+  height: "100%",
   opacity,
 }))
 

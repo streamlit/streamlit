@@ -35,7 +35,6 @@ vi.mock("react-device-detect", () => {
 const getProps = (props: Partial<Props> = {}): Props => {
   return {
     handleCapture: vi.fn(),
-    width: 500,
     disabled: false,
     setClearPhotoInProgress: vi.fn(),
     clearPhotoInProgress: false,

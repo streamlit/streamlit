@@ -14,20 +14,12 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
+import React, { memo, ReactElement, useRef, useState } from "react"
 
 import { Video } from "@emotion-icons/open-iconic"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
 
-import { debounce } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
@@ -44,7 +36,6 @@ import {
 
 export interface Props {
   handleCapture: (capturedPhoto: string | null) => void
-  width: number
   disabled: boolean
   clearPhotoInProgress: boolean
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
@@ -60,15 +51,9 @@ export enum WebcamPermission {
   ERROR = "error",
 }
 
-interface AskForCameraPermissionProps {
-  width: number
-}
-
-export const AskForCameraPermission = ({
-  width,
-}: AskForCameraPermissionProps): ReactElement => {
+export const AskForCameraPermission = (): ReactElement => {
   return (
-    <StyledBox width={width}>
+    <StyledBox>
       <Icon size="threeXL" color={themeColors.gray60} content={Video} />
       <StyledDescription>
         This app would like to use your camera.
@@ -86,7 +71,6 @@ export const AskForCameraPermission = ({
 
 const WebcamComponent = ({
   handleCapture,
-  width,
   disabled,
   clearPhotoInProgress,
   setClearPhotoInProgress,
@@ -98,20 +82,6 @@ const WebcamComponent = ({
     testOverride || WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
-
-  const [debouncedWidth, setDebouncedWidth] = useState(width)
-
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const memoizedSetDebouncedCallback = useCallback(
-    debounce(1000, setDebouncedWidth),
-    []
-  )
-
-  useEffect(() => {
-    memoizedSetDebouncedCallback(width)
-  }, [width, memoizedSetDebouncedCallback])
 
   function capture(): void {
     if (videoRef.current !== null) {
@@ -127,7 +97,7 @@ const WebcamComponent = ({
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
       !clearPhotoInProgress ? (
-        <AskForCameraPermission width={debouncedWidth} />
+        <AskForCameraPermission />
       ) : (
         isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
       )}
@@ -138,7 +108,6 @@ const WebcamComponent = ({
           !disabled &&
           !clearPhotoInProgress
         }
-        width={debouncedWidth}
       >
         {!disabled && (
           <Webcam
@@ -146,12 +115,11 @@ const WebcamComponent = ({
             ref={videoRef}
             screenshotFormat="image/jpeg"
             screenshotQuality={1}
-            width={debouncedWidth}
-            // We keep Aspect ratio of container always equal 16 / 9.
-            // The aspect ration of video stream may be different depending on a camera.
-            height={(debouncedWidth * 9) / 16}
             style={{
               borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
             }}
             onUserMediaError={() => {
               setWebcamPermissionState(WebcamPermission.ERROR)
@@ -161,7 +129,6 @@ const WebcamComponent = ({
               setClearPhotoInProgress(false)
             }}
             videoConstraints={{
-              width: { ideal: debouncedWidth },
               facingMode,
             }}
           />
