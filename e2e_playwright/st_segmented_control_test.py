@@ -220,25 +220,19 @@ def test_help_tooltip(app: Page):
 
 
 def test_segmented_control_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test segmented control with different width configurations."""
 
-    content_segmented_control = get_button_group(
-        themed_app, "segmented_control_content_width"
-    )
+    content_segmented_control = get_button_group(app, "segmented_control_content_width")
     assert_snapshot(
         content_segmented_control, name="st_segmented_control-width_content"
     )
 
-    stretch_segmented_control = get_button_group(
-        themed_app, "segmented_control_stretch_width"
-    )
+    stretch_segmented_control = get_button_group(app, "segmented_control_stretch_width")
     assert_snapshot(
         stretch_segmented_control, name="st_segmented_control-width_stretch"
     )
 
-    segmented_control_300px = get_button_group(
-        themed_app, "segmented_control_300px_width"
-    )
+    segmented_control_300px = get_button_group(app, "segmented_control_300px_width")
     assert_snapshot(segmented_control_300px, name="st_segmented_control-width_300px")

@@ -178,17 +178,15 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "faces_feedback")).to_be_visible()
 
 
-def test_feedback_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test feedback widgets with different width configurations."""
 
     # Test thumbs width examples
-    thumbs_content = get_element_by_key(themed_app, "thumbs_content_width")
+    thumbs_content = get_element_by_key(app, "thumbs_content_width")
     assert_snapshot(thumbs_content, name="st_feedback-thumbs_width_content")
 
-    thumbs_stretch = get_element_by_key(themed_app, "thumbs_stretch_width")
+    thumbs_stretch = get_element_by_key(app, "thumbs_stretch_width")
     assert_snapshot(thumbs_stretch, name="st_feedback-thumbs_width_stretch")
 
-    thumbs_300px = get_element_by_key(themed_app, "thumbs_300px_width")
+    thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
     assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")
