@@ -153,8 +153,7 @@ def download_artifact(artifact_url: str, token: str, download_path: str) -> None
         )
 
     with open(download_path, "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
+        f.writelines(response.iter_content(chunk_size=8192))
 
 
 def extract_and_merge_snapshots(zip_path: str, destination_folder: str) -> None:

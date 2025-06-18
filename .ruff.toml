@@ -93,6 +93,7 @@ ignore = [
   "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
+  "PLC0415", # Enforces imports to be at the top-level of the file.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
