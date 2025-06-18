@@ -45,7 +45,7 @@
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-svgr": "^4.3.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.3",
+    "vitest": "^3.2.4",
     "vitest-websocket-mock": "^0.5.0"
   },
   "browserslist": [
