@@ -1348,6 +1348,7 @@ _create_theme_options(
         Sets the root font weight for the app.
 
         This determines the overall weight of text and UI elements.
+        Valid values are 100-600, in increments of 100.
 
         When unset, the font weight will be set to normal 400.
     """,
