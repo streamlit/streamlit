@@ -16,9 +16,9 @@
 
 import React from "react"
 
-import * as reactDeviceDetect from "react-device-detect"
 import { screen } from "@testing-library/react"
 
+import * as isMobile from "@streamlit/lib"
 import { mockEndpoints, render } from "@streamlit/lib"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
@@ -81,11 +81,11 @@ describe("SidebarNav", () => {
     vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
       getContextOutput({})
     )
+
+    vi.spyOn(isMobile, "isMobile").mockReturnValue(false)
   })
 
   afterEach(() => {
-    // @ts-expect-error
-    reactDeviceDetect.isMobile = false
     window.localStorage.clear()
   })
 
