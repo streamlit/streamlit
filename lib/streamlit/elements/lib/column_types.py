@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Literal, TypedDict
 from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -769,6 +770,8 @@ def LinkColumn(
         https://doc-link-column.streamlit.app/
         height: 300px
     """
+    if display_text and display_text.startswith(":material/"):
+        display_text = validate_material_icon(display_text)
 
     return ColumnConfig(
         label=label,
