@@ -22,6 +22,7 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
+import { isInteger } from "lodash"
 
 function translateGapWidth(
   gap: streamlit.GapSize | undefined,
@@ -172,7 +173,7 @@ export const StyledFlexContainerBlock =
         width: "100%",
         maxWidth: "100%",
         height: height ?? "auto",
-        overflow: height ? "auto" : "visible",
+        overflow: isInteger(height) ? "auto" : "visible",
         flexDirection: direction,
         flex,
         flexWrap: wrap ? "wrap" : "nowrap",
