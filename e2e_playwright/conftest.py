@@ -692,7 +692,11 @@ def assert_snapshot(
     """Fixture that compares a screenshot with screenshot from a past run."""
 
     # Check if reruns are enabled for this test run
-    configured_reruns = pytestconfig.getoption("reruns", 0)
+    flaky_marker = request.node.get_closest_marker("flaky")
+    if flaky_marker and "reruns" in flaky_marker.kwargs:
+        configured_reruns = flaky_marker.kwargs["reruns"]
+    else:
+        configured_reruns = pytestconfig.getoption("reruns", 0)
     # Get the current execution count:
     execution_count = getattr(request.node, "execution_count", 1)
     # True if this is the last rerun (or the only test run)
