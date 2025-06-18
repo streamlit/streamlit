@@ -44,7 +44,7 @@ pills_options = [
     "🏗️ App builders",
     "🔌 Integrations with other tools",
     "📦 Collections of components",
-    "📦 Very very long text" * 20,  # pill with very long text
+    "📦 Very very long text" * 21,  # pill with very long text
 ]
 s1 = st.pills(
     "Select some options",

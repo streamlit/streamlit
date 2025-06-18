@@ -55,6 +55,8 @@ s1 = st.segmented_control(
         "🎥 Video",
         "📝 Text",
         "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝"
+        ", yes, long long long long text"
+        ", yes, long long long long text"
         ", yes, long long long long text",
     ],
     key="segmented_control_multi_selection",
