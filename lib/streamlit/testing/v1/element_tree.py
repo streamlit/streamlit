@@ -241,7 +241,7 @@ class ElementList(Generic[El_co]):
         return self._list == other
 
     def __hash__(self) -> int:
-        return hash(self._list)
+        return hash(tuple(self._list))
 
     @property
     def values(self) -> Sequence[Any]:
