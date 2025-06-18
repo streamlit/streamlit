@@ -133,12 +133,12 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     color: getMetricColor(theme, metricColor),
     backgroundColor: getMetricBackgroundColor(theme, metricColor),
     fontSize: theme.fontSizes.sm,
-    display: "flex",
+    display: "inline-flex",
     flexDirection: "row",
     alignItems: "center",
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
     padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
-    width: "fit-content",
+    maxWidth: "100%",
   })
 )
