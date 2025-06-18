@@ -69,12 +69,8 @@ _LOGGER: Final = get_logger(__name__)
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
     "compress_response": True,
-    # Ping every 1s to keep WS alive.
-    # 2021.06.22: this value was previously 20s, and was causing
-    # connection instability for a small number of users. This smaller
-    # ping_interval fixes that instability.
-    # https://github.com/streamlit/streamlit/issues/3196
-    "websocket_ping_interval": 1,
+    # Ping every 30s to keep WS alive.
+    "websocket_ping_interval": 30,
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
