@@ -26,9 +26,9 @@ import WebcamComponent, { Props, WebcamPermission } from "./WebcamComponent"
 
 vi.mock("react-webcam")
 
-vi.mock("react-device-detect", () => {
+vi.mock("~lib/util/isMobile", () => {
   return {
-    isMobile: true,
+    isMobile: () => true,
   }
 })
 

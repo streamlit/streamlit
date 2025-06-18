@@ -23,7 +23,6 @@ import React, {
   useState,
 } from "react"
 
-import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
 import {
   type OnChangeParams,
@@ -43,6 +42,7 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { isMobile } from "~lib/util/isMobile"
 
 export interface Props {
   value: string | null
@@ -269,7 +269,8 @@ const Selectbox: React.FC<Props> = ({
           Input: {
             props: {
               // Change the 'readonly' prop to hide the mobile keyboard if options < 10
-              readOnly: isMobile && !showKeyboardOnMobile ? "readonly" : null,
+              readOnly:
+                isMobile() && !showKeyboardOnMobile ? "readonly" : null,
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,

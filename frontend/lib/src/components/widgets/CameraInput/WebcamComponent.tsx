@@ -24,9 +24,9 @@ import React, {
 } from "react"
 
 import { Video } from "@emotion-icons/open-iconic"
-import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
 
+import { isMobile } from "~lib/util/isMobile"
 import { debounce } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -129,7 +129,9 @@ const WebcamComponent = ({
       !clearPhotoInProgress ? (
         <AskForCameraPermission width={debouncedWidth} />
       ) : (
-        isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
+        isMobile() && (
+          <SwitchFacingModeButton switchFacingMode={setFacingMode} />
+        )
       )}
       <StyledBox
         data-testid="stCameraInputWebcamStyledBox"

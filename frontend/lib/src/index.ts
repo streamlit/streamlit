@@ -111,6 +111,7 @@ export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export { fonts, spacing } from "./theme/primitives"
 export { ensureError } from "./util/ErrorHandling"
 export { useIsOverflowing } from "./util/Hooks"
+export { isMobile } from "./util/isMobile"
 export {
   mark,
   measure,

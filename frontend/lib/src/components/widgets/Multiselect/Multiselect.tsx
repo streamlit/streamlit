@@ -24,10 +24,10 @@ import {
   Select as UISelect,
 } from "baseui/select"
 import without from "lodash/without"
-import { isMobile } from "react-device-detect"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
+import { isMobile } from "~lib/util/isMobile"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
@@ -423,7 +423,7 @@ const Multiselect: FC<Props> = props => {
               props: {
                 // Change the 'readonly' prop to hide the mobile keyboard if options < 10
                 readOnly:
-                  isMobile && showKeyboardOnMobile === false
+                  isMobile() && showKeyboardOnMobile === false
                     ? "readonly"
                     : null,
               },
