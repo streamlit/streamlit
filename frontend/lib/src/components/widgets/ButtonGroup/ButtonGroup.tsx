@@ -199,14 +199,13 @@ function getButtonGroupOverridesStyle(
         rowGap: spacing.threeXS,
       }
     case ButtonGroupProto.Style.PILLS:
-      const styles = {
+      return {
         ...baseStyle,
         columnGap: spacing.twoXS,
         rowGap: spacing.twoXS,
         width,
         maxWidth: width,
       }
-      return styles
     case ButtonGroupProto.Style.SEGMENTED_CONTROL:
       return {
         ...baseStyle,
