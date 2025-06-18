@@ -295,7 +295,7 @@ export const StyledPillsButton = styled(
     borderRadius: theme.radii.full,
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
     // When containerWidth is true, the buttons will stretch to fill the container.
-    flex: containerWidth ? "1 0 fit-content" : "",
+    flex: containerWidth ? "1 1 fit-content" : "",
   }
 })
 
@@ -321,7 +321,7 @@ export const StyledSegmentedControlButton = styled(
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
     borderRadius: "0",
     // When containerWidth is true, the buttons will stretch to fill the container.
-    flex: containerWidth ? "1 0 fit-content" : "",
+    flex: containerWidth ? "1 1 fit-content" : "",
     maxWidth: "100%",
     marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
 
@@ -417,7 +417,7 @@ export const StyledBorderlessIconButton = styled(
     marginRight: theme.spacing.none,
 
     // Keeps the buttons from stacking when in containerWidth mode.
-    flex: "1 0 fit-content",
+    flex: "1 1 fit-content",
 
     border: "none",
     display: "flex",
