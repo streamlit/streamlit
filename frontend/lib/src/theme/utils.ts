@@ -230,10 +230,12 @@ export const setFontWeights = (
   baseFontWeight: number,
   isSidebar: boolean
 ): EmotionTheme["fontWeights"] => {
-  // Validate the baseFontWeight provided is an integer, increment of 100, and between 100 and 600
+  // Validate the baseFontWeight provided is an integer between 100 and 600
+  // (in increments of 100)
   const isInteger = Number.isInteger(baseFontWeight)
   const isIncrementOf100 = baseFontWeight % 100 === 0
   const isInRange = baseFontWeight >= 100 && baseFontWeight <= 600
+
   if (!isInteger || !isIncrementOf100 || !isInRange) {
     const themeSection = isSidebar ? "theme.sidebar" : "theme"
     LOG.warn(
@@ -249,6 +251,7 @@ export const setFontWeights = (
   fontWeights.bold = baseFontWeight + 200
   // The extrabold weight is set to the baseFontWeight + 300
   fontWeights.extrabold = baseFontWeight + 300
+
   return fontWeights
 }
 

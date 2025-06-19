@@ -101,7 +101,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     margin: 0 0 1rem 0;
     padding: 0;
     font-size: 1rem;
-    font-weight: ${theme.fontWeights.normal};
   }
 
   ol ol,

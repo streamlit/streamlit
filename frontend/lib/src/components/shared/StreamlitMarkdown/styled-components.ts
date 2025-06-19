@@ -249,6 +249,8 @@ export const StyledStreamlitMarkdown =
         },
 
         th: {
+          // TODO: check whether this should be adjusted
+          // defaults to font-weight: "bold" (700)
           textAlign: "inherit",
         },
 
