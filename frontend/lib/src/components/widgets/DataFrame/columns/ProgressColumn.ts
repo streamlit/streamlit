@@ -62,8 +62,11 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
     {
       min_value: 0,
       max_value: isInteger ? 100 : 1,
-      step: isInteger ? 1 : 0.01,
-      format: isInteger ? "%3d%%" : "percent",
+      ...(isNullOrUndefined(props.columnTypeOptions?.step) && {
+        // Only set default percentage format if step is not set:
+        format: isInteger ? "%3d%%" : "percent",
+        step: isInteger ? 1 : 0.01,
+      }),
     } as ProgressColumnParams,
     // User parameters:
     props.columnTypeOptions

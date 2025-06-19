@@ -588,27 +588,27 @@ export function formatNumber(
   } else if (format === "percent") {
     return formatIntlNumberWithLocales(value, {
       style: "percent",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: maxPrecision ?? 0,
+      maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "dollar") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "USD",
       currencyDisplay: "narrowSymbol",
-      maximumFractionDigits: 2,
+      maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "euro") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
-      maximumFractionDigits: 2,
+      maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "yen") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "JPY",
-      maximumFractionDigits: 0,
+      maximumFractionDigits: maxPrecision ?? 0,
     })
   } else if (["compact", "scientific", "engineering"].includes(format)) {
     return formatIntlNumberWithLocales(value, {
@@ -619,7 +619,7 @@ export function formatNumber(
     return numbro(value).format({
       thousandSeparated: true,
       negative: "parenthesis",
-      mantissa: 2,
+      mantissa: maxPrecision ?? 2,
       trimMantissa: false,
     })
   }
