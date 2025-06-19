@@ -101,7 +101,7 @@ export const StyledImg = styled.img<StyledImgProps>(({ theme, opacity }) => ({
 
 export const StyledLink = styled.a(({ theme }) => ({
   color: theme.colors.link,
-  textDecoration: "underline",
+  textDecoration: theme.linkUnderline ? "underline" : "none",
   display: "block",
 }))
 
