@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto } from "@streamlit/protobuf"
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 export enum Direction {
   HORIZONTAL = "row",
@@ -35,4 +35,12 @@ export function getDirectionOfBlock(block: BlockProto): Direction {
     return Direction.HORIZONTAL
   }
   return Direction.VERTICAL
+}
+
+export function shouldChildrenStretch(
+  widthConfig: streamlit.WidthConfig | undefined
+): boolean {
+  // Some elements (e.g. LinkButton, ButtonGroup) need styles applied to the element itself, to support
+  // the width configuration.
+  return !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
 }

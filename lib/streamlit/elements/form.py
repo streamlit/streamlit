@@ -247,6 +247,7 @@ class FormMixin:
         icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
+        width: Width = "content",
     ) -> bool:
         r"""Display a form submit button.
 
@@ -336,6 +337,17 @@ class FormMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
+        width : int, "stretch", or "content"
+            An optional width for the submit button. This can be one of the
+            following:
+
+            - An integer which corresponds to the desired button width in
+              pixels.
+            - ``"stretch"``: The button's width expands to fill its parent
+              container.
+            - ``"content"`` (default): The button's width is set to fit its
+              contents.
+
         Returns
         -------
         bool
@@ -361,6 +373,7 @@ class FormMixin:
             disabled=disabled,
             use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     def _form_submit_button(
@@ -376,6 +389,7 @@ class FormMixin:
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
+        width: Width = "content",
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = f"FormSubmitter:{form_id}-{label}"
@@ -392,6 +406,7 @@ class FormMixin:
             disabled=disabled,
             use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     @property

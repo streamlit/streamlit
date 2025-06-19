@@ -16,7 +16,7 @@
 
 import React, { memo, ReactElement, useContext } from "react"
 
-import { PageLink as PageLinkProto } from "@streamlit/protobuf"
+import { PageLink as PageLinkProto, streamlit } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
@@ -31,17 +31,22 @@ import {
   StyledNavLinkContainer,
   StyledNavLinkText,
 } from "./styled-components"
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   disabled: boolean
   element: PageLinkProto
+  widthConfig?: streamlit.WidthConfig
 }
 
 function shouldUseContainerWidth(
   useContainerWidth: boolean | null | undefined,
-  isInSidebar: boolean
+  isInSidebar: boolean,
+  widthConfig?: streamlit.WidthConfig
 ): boolean {
-  if (useContainerWidth === null && isInSidebar) {
+  if (shouldChildrenStretch(widthConfig)) {
+    return true
+  } else if (useContainerWidth === null && isInSidebar) {
     return true
   } else if (useContainerWidth === null && !isInSidebar) {
     return false
@@ -55,11 +60,12 @@ function PageLink(props: Readonly<Props>): ReactElement {
 
   const { colors } = useEmotionTheme()
 
-  const { disabled, element } = props
+  const { disabled, element, widthConfig } = props
 
   const useContainerWidth = shouldUseContainerWidth(
     element.useContainerWidth,
-    isInSidebar
+    isInSidebar,
+    widthConfig
   )
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash

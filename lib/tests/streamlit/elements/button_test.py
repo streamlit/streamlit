@@ -14,10 +14,67 @@
 
 """button unit test."""
 
+from __future__ import annotations
+
+from typing import Any, Callable
+
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+
+
+def get_button_command_matrix(
+    test_args: list[Any] | None = None,
+) -> list[tuple[Any, ...]]:
+    """Return a test matrix for the different button commands and the passed arguments.
+
+    This function creates a cartesian product of the button commands and the
+    provided `test_args`.
+
+    Parameters
+    ----------
+    test_args
+        A list of test cases. Each item in the list will be treated as a set of
+        arguments for a single test run. If an item is not a tuple, it will be
+        wrapped in one.
+
+    """
+    # The callables are wrapped in a list of tuples with a name for better test
+    # case naming.
+    commands: list[tuple[str, Callable[..., Any]]] = [
+        ("button", lambda **kwargs: st.button("the label", **kwargs)),
+        (
+            "download_button",
+            lambda **kwargs: st.download_button("the label", "data", **kwargs),
+        ),
+        (
+            "link_button",
+            lambda **kwargs: st.link_button(
+                "the label", "https://example.com", **kwargs
+            ),
+        ),
+        (
+            "page_link",
+            lambda **kwargs: st.page_link(
+                "https://example.com", label="Test", **kwargs
+            ),
+        ),
+    ]
+
+    if not test_args:
+        return commands
+
+    matrix: list[tuple[Any, ...]] = []
+    for command_tuple in commands:
+        for args in test_args:
+            # The arguments for a single test case are always wrapped in a tuple.
+            args_tuple = args if isinstance(args, tuple) else (args,)
+            matrix.append(command_tuple + args_tuple)
+    return matrix
 
 
 class ButtonTest(DeltaGeneratorTestCase):
@@ -86,3 +143,64 @@ class ButtonTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_button_width_content(self):
+        """Test button elements with width set to content."""
+        for button_type, button_func in get_button_command_matrix():
+            with self.subTest(button_type):
+                button_func(width="content")
+                el = self.get_delta_from_queue().new_element
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.USE_CONTENT.value
+                )
+                assert el.width_config.use_content is True
+
+    def test_button_width_stretch(self):
+        """Test button elements with width set to stretch."""
+        for button_type, button_func in get_button_command_matrix():
+            with self.subTest(button_type):
+                button_func(width="stretch")
+                el = self.get_delta_from_queue().new_element
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.USE_STRETCH.value
+                )
+                assert el.width_config.use_stretch is True
+
+    def test_button_width_pixels(self):
+        """Test button elements with width set to pixels."""
+        test_cases = get_button_command_matrix()
+        for button_type, button_func in test_cases:
+            with self.subTest(f"{button_type} with fixed width"):
+                button_func(width=200)
+
+                el = self.get_delta_from_queue().new_element
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.PIXEL_WIDTH.value
+                )
+                assert el.width_config.pixel_width == 200
+
+    def test_button_width_default(self):
+        """Test button elements use content width by default."""
+        for button_type, button_func in get_button_command_matrix():
+            with self.subTest(button_type):
+                button_func()
+
+                el = self.get_delta_from_queue().new_element
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.USE_CONTENT.value
+                )
+                assert el.width_config.use_content is True
+
+    def test_button_invalid_width(self):
+        """Test button elements with invalid width values."""
+        test_cases = get_button_command_matrix(
+            test_args=["invalid", -100, 0, 100.5, None]
+        )
+        for button_type, button_func, width in test_cases:
+            with self.subTest(f"{button_type} with width {width}"):
+                with pytest.raises(StreamlitAPIException):
+                    button_func(width=width)

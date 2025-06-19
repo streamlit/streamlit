@@ -16,7 +16,7 @@
 
 import React, { memo, ReactElement } from "react"
 
-import { Button as ButtonProto } from "@streamlit/protobuf"
+import { Button as ButtonProto, streamlit } from "@streamlit/protobuf"
 
 import BaseButton, {
   BaseButtonKind,
@@ -26,16 +26,18 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { Box } from "~lib/components/shared/Base/styled-components"
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  widthConfig?: streamlit.WidthConfig
 }
 
 function Button(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, fragmentId } = props
+  const { disabled, element, widgetMgr, fragmentId, widthConfig } = props
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -44,17 +46,19 @@ function Button(props: Props): ReactElement {
     kind = BaseButtonKind.TERTIARY
   }
 
+  const containerWidth = shouldChildrenStretch(widthConfig)
+
   return (
     <Box className="stButton" data-testid="stButton">
       <BaseButtonTooltip
         help={element.help}
-        containerWidth={element.useContainerWidth}
+        containerWidth={element.useContainerWidth || containerWidth}
       >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
-          containerWidth={element.useContainerWidth}
+          containerWidth={element.useContainerWidth || containerWidth}
           onClick={() =>
             widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
           }

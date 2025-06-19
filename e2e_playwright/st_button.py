@@ -98,3 +98,31 @@ for i in range(len(conn_types)):
 st.button("Foo :blue[bar] baz", type="primary")
 st.button("Foo :blue[bar] baz")
 st.button("Foo :blue[bar] baz", type="tertiary")
+
+with st.expander("Button Width Examples", expanded=True):
+    st.button("Content Width (Default)", width="content")
+    st.button("Stretch Width", width="stretch")
+    st.button("200px Width", width=200)
+
+with st.expander("Download Button Width Examples", expanded=True):
+    st.download_button("Content Width (Default)", "data", width="content")
+    st.download_button("Stretch Width", "data", width="stretch")
+    st.download_button("300px Width", "data", width=300)
+
+with st.expander("Link Button Width Examples", expanded=True):
+    st.link_button("Content Width (Default)", "https://example.com", width="content")
+    st.link_button("Stretch Width", "https://example.com", width="stretch")
+    st.link_button("400px Width", "https://example.com", width=400)
+
+with st.expander("Page Link Width Examples", expanded=True):
+    st.page_link(
+        "https://example.com", label="Content Width (Default)", width="content"
+    )
+    st.page_link("https://example.com", label="Stretch Width", width="stretch")
+    st.page_link("https://example.com", label="500px Width", width=500)
+
+with st.form("width_form", expanded=True):
+    st.write("Form Submit Button Width Examples:")
+    st.form_submit_button("Content Width (Default)", width="content")
+    st.form_submit_button("Stretch Width", width="stretch")
+    st.form_submit_button("250px Width", width=250)

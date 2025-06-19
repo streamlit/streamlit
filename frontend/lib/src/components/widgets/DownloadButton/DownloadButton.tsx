@@ -16,7 +16,10 @@
 
 import React, { memo, ReactElement, useContext, useEffect } from "react"
 
-import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
+import {
+  DownloadButton as DownloadButtonProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import BaseButton, {
@@ -28,6 +31,7 @@ import BaseButton, {
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { LibContext } from "~lib/components/core/LibContext"
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -35,6 +39,7 @@ export interface Props {
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  widthConfig?: streamlit.WidthConfig
 }
 
 export function createDownloadLink(
@@ -50,7 +55,8 @@ export function createDownloadLink(
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, endpoints, fragmentId } = props
+  const { disabled, element, widgetMgr, endpoints, fragmentId, widthConfig } =
+    props
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
@@ -83,19 +89,20 @@ function DownloadButton(props: Props): ReactElement {
     )
     link.click()
   }
+  const containerWidth = shouldChildrenStretch(widthConfig)
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
       <BaseButtonTooltip
         help={element.help}
-        containerWidth={element.useContainerWidth}
+        containerWidth={element.useContainerWidth || containerWidth}
       >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
-          containerWidth={element.useContainerWidth}
+          containerWidth={element.useContainerWidth || containerWidth}
         >
           <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>

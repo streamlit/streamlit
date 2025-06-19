@@ -20,9 +20,10 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     get_element_by_key,
+    get_expander,
 )
 
-TOTAL_BUTTONS = 25
+TOTAL_BUTTONS = 28
 
 
 def test_button_widget_rendering(
@@ -185,3 +186,81 @@ def test_colored_text_hover(app: Page):
     expect(tertiary_button_element.locator("span")).to_have_css(
         "color", "rgb(255, 75, 75)"
     )
+
+
+def test_button_width_examples(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test button width examples via screenshot matching."""
+    # Button width examples
+    button_expander = get_expander(themed_app, "Button Width Examples")
+    button_expander.click()
+
+    button_elements = button_expander.get_by_test_id("stButton")
+    expect(button_elements).to_have_count(3)
+
+    assert_snapshot(button_elements.nth(0), name="st_button-width_content")
+    assert_snapshot(button_elements.nth(1), name="st_button-width_stretch")
+    assert_snapshot(button_elements.nth(2), name="st_button-width_200px")
+
+
+def test_download_button_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test download button width examples via screenshot matching."""
+    # Download button width examples
+    download_expander = get_expander(themed_app, "Download Button Width Examples")
+    download_expander.click()
+
+    download_elements = download_expander.get_by_test_id("stDownloadButton")
+    expect(download_elements).to_have_count(3)
+
+    assert_snapshot(download_elements.nth(0), name="st_download_button-width_content")
+    assert_snapshot(download_elements.nth(1), name="st_download_button-width_stretch")
+    assert_snapshot(download_elements.nth(2), name="st_download_button-width_300px")
+
+
+def test_link_button_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test link button width examples via screenshot matching."""
+    # Link button width examples
+    link_expander = get_expander(themed_app, "Link Button Width Examples")
+    link_expander.click()
+
+    link_elements = link_expander.get_by_test_id("stLinkButton")
+    expect(link_elements).to_have_count(3)
+
+    assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
+    assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
+    assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
+
+
+def test_page_link_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test page link width examples via screenshot matching."""
+    # Page link width examples
+    page_expander = get_expander(themed_app, "Page Link Width Examples")
+    page_expander.click()
+
+    page_elements = page_expander.get_by_test_id("stPageLink")
+    expect(page_elements).to_have_count(3)
+
+    assert_snapshot(page_elements.nth(0), name="st_page_link-width_content")
+    assert_snapshot(page_elements.nth(1), name="st_page_link-width_stretch")
+    assert_snapshot(page_elements.nth(2), name="st_page_link-width_500px")
+
+
+def test_form_submit_button_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test form submit button width examples via screenshot matching."""
+    # Form submit button width examples
+    form = themed_app.get_by_test_id("stForm")
+    expect(form).to_have_count(1)
+
+    submit_elements = form.get_by_test_id("stFormSubmitButton")
+    expect(submit_elements).to_have_count(3)
+
+    assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
+    assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
+    assert_snapshot(submit_elements.nth(2), name="st_form_submit_button-width_250px")

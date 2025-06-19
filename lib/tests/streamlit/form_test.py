@@ -25,6 +25,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.session_state import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 NO_FORM_ID = ""
 
@@ -508,3 +509,67 @@ class FormDimensionsTest(DeltaGeneratorTestCase):
             with st.form(f"form_with_invalid_{name}", height=value):
                 st.text_input("Input")
                 st.form_submit_button("Submit")
+
+    # Tests for st.form_submit_button width
+    def test_form_submit_button_with_content_width(self):
+        """Test st.form_submit_button with width='content'."""
+        with st.form("test_form"):
+            st.form_submit_button("Submit", width="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_form_submit_button_with_stretch_width(self):
+        """Test st.form_submit_button with width='stretch'."""
+        with st.form("test_form"):
+            st.form_submit_button("Submit", width="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_form_submit_button_with_pixel_width(self):
+        """Test st.form_submit_button with pixel width."""
+        with st.form("test_form"):
+            st.form_submit_button("Submit", width=250)
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 250
+
+    def test_form_submit_button_with_default_width(self):
+        """Test st.form_submit_button uses content width by default."""
+        with st.form("test_form"):
+            st.form_submit_button("Submit")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_form_submit_button_with_invalid_width(self, value):
+        """Test st.form_submit_button with invalid width values."""
+        with pytest.raises(StreamlitAPIException):
+            with st.form("test_form"):
+                st.form_submit_button("Submit", width=value)

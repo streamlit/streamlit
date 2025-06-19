@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useEffect } from "react"
 
-import { Button as ButtonProto } from "@streamlit/protobuf"
+import { Button as ButtonProto, streamlit } from "@streamlit/protobuf"
 
 import { FormsContext } from "~lib/components/core/FormsContext"
 import { Box } from "~lib/components/shared/Base/styled-components"
@@ -28,16 +28,18 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  widthConfig?: streamlit.WidthConfig
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, fragmentId } = props
+  const { disabled, element, widgetMgr, fragmentId, widthConfig } = props
   const { formId } = element
 
   const { formsData } = useRequiredContext(FormsContext)
@@ -55,16 +57,18 @@ export function FormSubmitButton(props: Props): ReactElement {
     return () => widgetMgr.removeSubmitButton(formId, element)
   }, [widgetMgr, formId, element])
 
+  const containerWidth = shouldChildrenStretch(widthConfig)
+
   return (
     <Box className="stFormSubmitButton" data-testid="stFormSubmitButton">
       <BaseButtonTooltip
         help={element.help}
-        containerWidth={element.useContainerWidth}
+        containerWidth={element.useContainerWidth || containerWidth}
       >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          containerWidth={element.useContainerWidth}
+          containerWidth={element.useContainerWidth || containerWidth}
           disabled={disabled || hasInProgressUpload}
           onClick={() => {
             widgetMgr.submitForm(element.formId, fragmentId, element)

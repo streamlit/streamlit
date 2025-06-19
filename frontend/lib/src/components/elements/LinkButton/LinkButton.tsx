@@ -16,7 +16,7 @@
 
 import React, { memo, MouseEvent, ReactElement } from "react"
 
-import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
+import { LinkButton as LinkButtonProto, streamlit } from "@streamlit/protobuf"
 
 import {
   BaseButtonKind,
@@ -27,13 +27,15 @@ import {
 import { Box } from "~lib/components/shared/Base/styled-components"
 
 import BaseLinkButton from "./BaseLinkButton"
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   element: LinkButtonProto
+  widthConfig?: streamlit.WidthConfig
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
-  const { element } = props
+  const { element, widthConfig } = props
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -49,11 +51,13 @@ function LinkButton(props: Readonly<Props>): ReactElement {
     }
   }
 
+  const containerWidth = shouldChildrenStretch(widthConfig)
+
   return (
     <Box className="stLinkButton" data-testid="stLinkButton">
       <BaseButtonTooltip
         help={element.help}
-        containerWidth={element.useContainerWidth}
+        containerWidth={element.useContainerWidth || containerWidth}
       >
         {/* We use separate BaseLinkButton instead of BaseButton here, because
         link behavior requires tag <a> instead of <button>.*/}
@@ -62,7 +66,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           size={BaseButtonSize.SMALL}
           disabled={element.disabled}
           onClick={handleClick}
-          containerWidth={element.useContainerWidth}
+          containerWidth={element.useContainerWidth || containerWidth}
           href={element.url}
           target="_blank"
           rel="noreferrer"
