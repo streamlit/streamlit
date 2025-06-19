@@ -540,8 +540,8 @@ function formatIntlNumberWithLocales(
  * Formats the given number to a string based on a provided format or the default format.
  *
  * @param format - The format to use. If not provided, the default format is used.
- * @param maxPrecision - The maximum number of decimals to show. This is only used by the default format.
- *                     If not provided, the default is 4 decimals and trailing zeros are hidden.
+ * @param maxPrecision - The maximum number of decimals to show. If not provided,
+ *                     a reasonable default is used based on the configured default.
  *
  * @returns The formatted number as a string.
  */
