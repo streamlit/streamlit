@@ -100,7 +100,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgBubble: theme.colors.secondaryBg,
       bgBubbleSelected: theme.colors.secondaryBg,
       bubbleHeight: Math.round(convertRemToPx("1.25rem")),
-      bubblePadding: Math.round(convertRemToPx(theme.spacing.xs)),
+      bubblePadding: Math.round(convertRemToPx(theme.spacing.sm)),
       bubbleMargin: Math.round(convertRemToPx(theme.spacing.twoXS)),
       linkColor: theme.colors.link,
       drilldownBorder: theme.colors.darkenedBgMix25,
