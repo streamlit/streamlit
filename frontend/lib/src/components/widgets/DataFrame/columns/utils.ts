@@ -586,7 +586,10 @@ export function formatNumber(
       trimMantissa: true,
     })
   } else if (format === "localized") {
-    return formatIntlNumberWithLocales(value)
+    return formatIntlNumberWithLocales(value, {
+      minimumFractionDigits: maxPrecision ?? undefined,
+      maximumFractionDigits: maxPrecision ?? undefined,
+    })
   } else if (format === "percent") {
     return formatIntlNumberWithLocales(value, {
       style: "percent",
@@ -598,18 +601,21 @@ export function formatNumber(
       style: "currency",
       currency: "USD",
       currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: maxPrecision ?? 0,
       maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "euro") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
+      minimumFractionDigits: maxPrecision ?? 0,
       maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "yen") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "JPY",
+      minimumFractionDigits: maxPrecision ?? 0,
       maximumFractionDigits: maxPrecision ?? 0,
     })
   } else if (["compact", "scientific", "engineering"].includes(format)) {
