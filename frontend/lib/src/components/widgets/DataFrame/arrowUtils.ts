@@ -73,18 +73,6 @@ import {
 } from "./columns"
 
 /**
- * Checks if a CSS style string contains a specific CSS ID.
- *
- * @param cssStyle - The CSS style string to check.
- * @param cssId - The CSS ID to check for.
- *
- * @return true if the CSS style string contains the CSS ID, false otherwise.
- */
-function hasCssId(cssStyle: string, cssId: string): boolean {
-  return cssStyle.includes(cssId)
-}
-
-/**
  * Extracts a CSS property value from a given CSS style string by using a regex.
  *
  * @param htmlElementId - The ID of the HTML element to extract the property for.
@@ -136,7 +124,7 @@ export function applyPandasStylerCss(
   cssStyles: string
 ): GridCell {
   const themeOverride = {} as Partial<GlideTheme>
-  if (!hasCssId(cssStyles, cssId)) {
+  if (!cssStyles.includes(cssId)) {
     // If the CSS styles don't contain the CSS ID, we can skip applying the styles.
     // This is an performance optimization to avoid running a regex if the
     // property or element is not even in the style string.
