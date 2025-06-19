@@ -166,7 +166,7 @@ export function applyPandasStylerCss(
   // Extract and apply the font weight:
   const fontWeight = extractCssProperty(cssId, "font-weight", cssStyles)
   if (fontWeight) {
-    // Its not recommended to directly use the theme primitives. However,
+    // It's not recommended to directly use the theme primitives. However,
     // we don't change our fontsize primitives (since they are already in rem)
     // and we don't have access to the theme here (would be quite a big refectoring to
     // get access to the theme)
