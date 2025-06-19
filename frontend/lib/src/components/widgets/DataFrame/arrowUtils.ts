@@ -73,15 +73,15 @@ import {
 } from "./columns"
 
 /**
- * Checks if a CSS style string contains a specific HTML element ID.
+ * Checks if a CSS style string contains a specific CSS ID.
  *
  * @param cssStyle - The CSS style string to check.
- * @param htmlElementId - The HTML element ID to check for.
+ * @param cssId - The CSS ID to check for.
  *
- * @return true if the CSS style string contains the HTML element ID, false otherwise.
+ * @return true if the CSS style string contains the CSS ID, false otherwise.
  */
-function hasCssId(cssStyle: string, htmlElementId: string): boolean {
-  return cssStyle.includes(htmlElementId)
+function hasCssId(cssStyle: string, cssId: string): boolean {
+  return cssStyle.includes(cssId)
 }
 
 /**
