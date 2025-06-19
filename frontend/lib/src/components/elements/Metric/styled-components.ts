@@ -137,7 +137,10 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     alignItems: "center",
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
-    padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    // Using only twoXS (4px) on the left side because the arrow icon has an additional
+    // 2px padding. Note that this should be adjusted in case we change the arrow icon
+    // or don't show it (right now it's always shown).
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
     maxWidth: "100%",
   })
 )
