@@ -46,7 +46,6 @@
     "rc-overflow": "^1.4.1",
     "re-resizable": "^6.11.2",
     "react": "^18.2.0",
-    "react-device-detect": "^2.2.2",
     "react-dom": "^18.2.0",
     "react-feather": "^2.0.10",
     "react-hot-keys": "^2.7.3",
@@ -137,7 +136,7 @@
     "query-string": "^8.1.0",
     "set-value": "^4.0.1",
     "static-eval": "^2.0.5",
-    "ua-parser-js": "^1.0.33",
+    "ua-parser-js": "^1.0.40",
     "ws": "^8.11.0",
     "y18n": "^5.0.8"
   },

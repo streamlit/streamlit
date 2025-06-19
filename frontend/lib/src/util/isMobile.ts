@@ -14,37 +14,17 @@
  * limitations under the License.
  */
 
-import { createEmotionColors } from "~lib/theme/getColors"
-import {
-  breakpoints,
-  fonts,
-  fontSizes,
-  fontWeights,
-  genericFonts,
-  iconSizes,
-  lineHeights,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "~lib/theme/primitives"
+import UAParser from "ua-parser-js"
 
-import genericColors from "./themeColors"
+const parser = new UAParser()
 
-export default {
-  inSidebar: false,
-  showSidebarBorder: false,
-  linkUnderline: true,
-  breakpoints,
-  colors: createEmotionColors(genericColors),
-  fonts,
-  fontSizes,
-  fontWeights,
-  genericFonts,
-  iconSizes,
-  lineHeights,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
+/**
+ * Utilizes user agent to determine if the user is on a mobile device.
+ * Note: This is a simple heuristic and may not be 100% accurate.
+ *
+ * @returns true if the user is on a mobile device, false otherwise
+ */
+export function isMobile(): boolean {
+  const result = parser.getResult()
+  return result.device.type === "mobile"
 }
