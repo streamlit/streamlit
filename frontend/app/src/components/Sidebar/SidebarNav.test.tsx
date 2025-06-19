@@ -16,10 +16,10 @@
 
 import React from "react"
 
-import * as reactDeviceDetect from "react-device-detect"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import * as isMobile from "@streamlit/lib"
 import { mockEndpoints, render } from "@streamlit/lib"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
@@ -83,11 +83,11 @@ describe("SidebarNav", () => {
     vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
       getContextOutput({})
     )
+
+    vi.spyOn(isMobile, "isMobile").mockReturnValue(false)
   })
 
   afterEach(() => {
-    // @ts-expect-error
-    reactDeviceDetect.isMobile = false
     window.localStorage.clear()
   })
 
@@ -509,8 +509,7 @@ describe("SidebarNav", () => {
   it("collapses sidebar on page change when on mobile", async () => {
     const onPageChange = vi.fn()
     const user = userEvent.setup()
-    // @ts-expect-error
-    reactDeviceDetect.isMobile = true
+    vi.spyOn(isMobile, "isMobile").mockReturnValue(true)
 
     const props = getProps({ onPageChange })
     render(<SidebarNav {...props} />)
