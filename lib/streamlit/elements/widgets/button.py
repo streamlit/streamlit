@@ -32,6 +32,10 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import runtime
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.elements.lib.policies import check_widget_policies
@@ -99,7 +103,7 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         width: Width = "content",
     ) -> bool:
         r"""Display a button widget.
@@ -179,6 +183,12 @@ class ButtonMixin:
             The default is ``False``.
 
         use_container_width : bool
+            .. deprecated:: 1.0.0
+                This parameter will be removed in a future version. Use the
+                ``width`` parameter instead. For ``use_container_width=True``,
+                use ``width="stretch"``. For ``use_container_width=False``,
+                use ``width="content"``.
+
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -246,6 +256,18 @@ class ButtonMixin:
         key = to_key(key)
         ctx = get_script_run_ctx()
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-10-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                )
+            )
+            width = "stretch" if use_container_width else width
+
         # Checks whether the entered button type is one of the allowed options
         if type not in ["primary", "secondary", "tertiary"]:
             raise StreamlitAPIException(
@@ -264,7 +286,6 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
-            use_container_width=use_container_width,
             ctx=ctx,
             width=width,
         )
@@ -285,7 +306,7 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         width: Width = "content",
     ) -> bool:
         r"""Display a download button widget.
@@ -413,6 +434,12 @@ class ButtonMixin:
             ``True``. The default is ``False``.
 
         use_container_width : bool
+            .. deprecated:: 1.0.0
+                This parameter will be removed in a future version. Use the
+                ``width`` parameter instead. For ``use_container_width=True``,
+                use ``width="stretch"``. For ``use_container_width=False``,
+                use ``width="content"``.
+
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -545,6 +572,18 @@ class ButtonMixin:
         """
         ctx = get_script_run_ctx()
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-10-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
         if type not in ["primary", "secondary", "tertiary"]:
             raise StreamlitAPIException(
                 'The type argument to st.download_button must be "primary", "secondary", or "tertiary". \n'
@@ -564,7 +603,6 @@ class ButtonMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
             width=width,
         )
@@ -688,6 +726,18 @@ class ButtonMixin:
                 f'\nThe argument passed was "{type}".'
             )
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-10-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
         return self._link_button(
             label=label,
             url=url,
@@ -695,7 +745,6 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
-            use_container_width=use_container_width,
             width=width,
         )
 
@@ -822,13 +871,24 @@ class ButtonMixin:
             height: 350px
 
         """
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-10-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
         return self._page_link(
             page=page,
             label=label,
             icon=icon,
             help=help,
             disabled=disabled,
-            use_container_width=use_container_width,
             width=width,
         )
 
@@ -847,7 +907,6 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> bool:
@@ -879,7 +938,6 @@ class ButtonMixin:
             mime=mime,
             help=help,
             type=type,
-            use_container_width=use_container_width,
             width=width,
         )
 
@@ -890,7 +948,6 @@ class ButtonMixin:
 
         download_button_proto = DownloadButtonProto()
         download_button_proto.id = element_id
-        download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
         download_button_proto.type = type
@@ -939,14 +996,12 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         width: Width = "content",
     ) -> DeltaGenerator:
         link_button_proto = LinkButtonProto()
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
-        link_button_proto.use_container_width = use_container_width
         link_button_proto.disabled = disabled
 
         if help is not None:
@@ -969,7 +1024,6 @@ class ButtonMixin:
         icon: str | None = None,
         help: str | None = None,
         disabled: bool = False,
-        use_container_width: bool | None = None,
         width: Width = "content",
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
@@ -992,9 +1046,6 @@ class ButtonMixin:
 
         if help is not None:
             page_link_proto.help = dedent(help)
-
-        if use_container_width is not None:
-            page_link_proto.use_container_width = use_container_width
 
         if isinstance(page, StreamlitPage):
             page_link_proto.page_script_hash = page._script_hash
@@ -1068,7 +1119,6 @@ class ButtonMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> bool:
@@ -1096,7 +1146,6 @@ class ButtonMixin:
             help=help,
             is_form_submitter=is_form_submitter,
             type=type,
-            use_container_width=use_container_width,
             width=width,
         )
 
@@ -1122,7 +1171,6 @@ class ButtonMixin:
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = form_id
         button_proto.type = type
-        button_proto.use_container_width = use_container_width
         button_proto.disabled = disabled
 
         if help is not None:

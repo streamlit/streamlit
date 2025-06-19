@@ -363,15 +363,6 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         last_delta = self.get_delta_from_queue()
         assert last_delta.new_element.button.icon == ":material/thumb_up:"
 
-    def test_submit_button_can_use_container_width_by_default(self):
-        """Test that a submit button can be called with use_container_width=True."""
-
-        form = st.form("foo")
-        form.form_submit_button(type="primary", use_container_width=True)
-
-        last_delta = self.get_delta_from_queue()
-        assert last_delta.new_element.button.use_container_width
-
     def test_submit_button_does_not_use_container_width_by_default(self):
         """Test that a submit button does not use_use_container width by default."""
 
@@ -409,6 +400,84 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    @patch("streamlit.elements.form.show_deprecation_warning")
+    def test_use_container_width_true(self, mock_show_deprecation_warning):
+        """Test use_container_width=True is mapped to width='stretch'."""
+        for width in ["stretch", "content", 200]:
+            with self.subTest(f"width={width}"):
+                with st.form(f"test_form {width} use_container_width = true"):
+                    st.form_submit_button(
+                        "Submit use_container_width=true",
+                        use_container_width=True,
+                        width=width,
+                    )
+
+                el = self.get_delta_from_queue().new_element
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.USE_STRETCH.value
+                )
+                assert el.width_config.use_stretch is True
+
+        with self.subTest("no width"):
+            with st.form("test_form no width and use_container_width = true"):
+                st.form_submit_button(
+                    "Submit no width but use_container_width=true",
+                    use_container_width=True,
+                )
+            el = self.get_delta_from_queue().new_element
+            assert (
+                el.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_STRETCH.value
+            )
+            assert el.width_config.use_stretch is True
+
+        assert mock_show_deprecation_warning.call_count == 4
+
+    @patch("streamlit.elements.form.show_deprecation_warning")
+    def test_use_container_width_false(self, mock_show_deprecation_warning):
+        """Test use_container_width=False is mapped to width='content'."""
+        for test_params in [
+            ("stretch", "use_stretch", WidthConfigFields.USE_STRETCH.value, True),
+            ("content", "use_content", WidthConfigFields.USE_CONTENT.value, True),
+            (200, "pixel_width", WidthConfigFields.PIXEL_WIDTH.value, 200),
+        ]:
+            with self.subTest(
+                f"width={test_params[0]} use_container_width={test_params[1]}"
+            ):
+                with st.form(
+                    f"test_form {test_params[0]} use_container_width = {test_params[1]}"
+                ):
+                    width = test_params[0]
+                    width_spec = test_params[1]
+                    expected_width_spec = test_params[2]
+                    expected_width_value = test_params[3]
+
+                    st.form_submit_button(
+                        "Submit use_container_width = false",
+                        use_container_width=False,
+                        width=width,
+                    )
+
+                el = self.get_delta_from_queue().new_element
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, width_spec) == expected_width_value
+
+        with self.subTest("no width"):
+            with st.form("test_form no width and use_container_width = false"):
+                st.form_submit_button(
+                    "Submit no width and use_container_width = false",
+                    use_container_width=False,
+                )
+            el = self.get_delta_from_queue().new_element
+            assert (
+                el.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_CONTENT.value
+            )
+            assert el.width_config.use_content is True
+
+        assert mock_show_deprecation_warning.call_count == 4
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
