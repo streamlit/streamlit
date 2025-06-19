@@ -145,7 +145,7 @@ describe("SidebarNavLink", () => {
     it("renders successfully with isTopNav prop", () => {
       render(<SidebarNavLink {...getProps({ isTopNav: true })} />)
 
-      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      const sidebarNavLink = screen.getByTestId("stTopNavLink")
       expect(sidebarNavLink).toHaveTextContent("Test")
     })
 
@@ -154,7 +154,7 @@ describe("SidebarNavLink", () => {
         <SidebarNavLink {...getProps({ isTopNav: true, isActive: true })} />
       )
 
-      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      const sidebarNavLink = screen.getByTestId("stTopNavLink")
       expect(sidebarNavLink).toHaveAttribute("aria-current", "page")
     })
 
@@ -166,8 +166,8 @@ describe("SidebarNavLink", () => {
 
       render(<SidebarNavLink {...getProps({ isTopNav: true })} />)
 
-      screen.getByTestId("stSidebarNavLinkContainer")
-      const sidebarNavLink = screen.getByTestId("stSidebarNavLink")
+      screen.getByTestId("stTopNavLinkContainer")
+      const sidebarNavLink = screen.getByTestId("stTopNavLink")
       expect(sidebarNavLink).toHaveStyle("pointer-events: none")
     })
   })
