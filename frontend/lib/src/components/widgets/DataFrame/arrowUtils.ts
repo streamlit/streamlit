@@ -168,7 +168,7 @@ export function applyPandasStylerCss(
   if (fontWeight) {
     // It's not recommended to directly use the theme primitives. However,
     // we don't change our fontsize primitives (since they are already in rem)
-    // and we don't have access to the theme here (would be quite a big refectoring to
+    // and we don't have access to the theme here (would be quite a big refactoring to
     // get access to the theme)
     themeOverride.baseFontStyle = `${fontWeight} ${fontSizes.sm}`
   }
