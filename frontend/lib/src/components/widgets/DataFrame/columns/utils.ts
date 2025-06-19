@@ -200,12 +200,14 @@ export function getEmptyCell(missingCell = false): LoadingCell {
       kind: GridCellKind.Loading,
       allowOverlay: false,
       isMissingValue: true,
+      copyData: "",
     } as LoadingCell
   }
 
   return {
     kind: GridCellKind.Loading,
     allowOverlay: false,
+    copyData: "",
   } as LoadingCell
 }
 
