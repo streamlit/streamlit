@@ -233,6 +233,7 @@ export const createEmotionTheme = (
     bodyFont,
     codeFont,
     showSidebarBorder,
+    linkUnderline,
     ...customColors
   } = themeInput
 
@@ -413,6 +414,10 @@ export const createEmotionTheme = (
 
   if (notNullOrUndefined(showSidebarBorder)) {
     conditionalOverrides.showSidebarBorder = showSidebarBorder
+  }
+
+  if (notNullOrUndefined(linkUnderline)) {
+    conditionalOverrides.linkUnderline = linkUnderline
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

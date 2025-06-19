@@ -41,6 +41,7 @@ def configure_sidebar_custom_theme():
     os.environ["STREAMLIT_THEME_SIDEBAR_PRIMARY_COLOR"] = "blue"
     os.environ["STREAMLIT_THEME_SIDEBAR_SECONDARY_BACKGROUND_COLOR"] = "#222222"
     os.environ["STREAMLIT_THEME_SIDEBAR_TEXT_COLOR"] = "white"
+    os.environ["STREAMLIT_THEME_SIDEBAR_LINK_UNDERLINE"] = "False"
     os.environ["STREAMLIT_CLIENT_TOOLBAR_MODE"] = "minimal"
     yield
     del os.environ["STREAMLIT_THEME_BASE"]
@@ -58,6 +59,7 @@ def configure_sidebar_custom_theme():
     del os.environ["STREAMLIT_THEME_SIDEBAR_PRIMARY_COLOR"]
     del os.environ["STREAMLIT_THEME_SIDEBAR_SECONDARY_BACKGROUND_COLOR"]
     del os.environ["STREAMLIT_THEME_SIDEBAR_TEXT_COLOR"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_LINK_UNDERLINE"]
     del os.environ["STREAMLIT_CLIENT_TOOLBAR_MODE"]
 
 
