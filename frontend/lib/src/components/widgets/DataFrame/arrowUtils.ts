@@ -49,6 +49,7 @@ import {
   isTimeType,
 } from "~lib/dataframes/arrowTypeUtils"
 import { StyledCell } from "~lib/dataframes/pandasStylerUtils"
+import { fontSizes } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -72,6 +73,18 @@ import {
 } from "./columns"
 
 /**
+ * Checks if a CSS style string contains a specific HTML element ID.
+ *
+ * @param cssStyle - The CSS style string to check.
+ * @param htmlElementId - The HTML element ID to check for.
+ *
+ * @return true if the CSS style string contains the HTML element ID, false otherwise.
+ */
+function hasCssId(cssStyle: string, htmlElementId: string): boolean {
+  return cssStyle.includes(htmlElementId)
+}
+
+/**
  * Extracts a CSS property value from a given CSS style string by using a regex.
  *
  * @param htmlElementId - The ID of the HTML element to extract the property for.
@@ -85,6 +98,13 @@ export function extractCssProperty(
   property: string,
   cssStyle: string
 ): string | undefined {
+  // Check if the css even includes the property we are looking for.
+  // The html element ID already gets checked in applyPandasStylerCss
+  // we don't check it again for performance reasons.
+  if (!cssStyle.includes(property)) {
+    return undefined
+  }
+
   // This regex is supposed to extract the value of a CSS property
   // for a specified HTML element ID from a CSS style string:
   const regex = new RegExp(
@@ -116,6 +136,12 @@ export function applyPandasStylerCss(
   cssStyles: string
 ): GridCell {
   const themeOverride = {} as Partial<GlideTheme>
+  if (!hasCssId(cssStyles, cssId)) {
+    // If the CSS styles don't contain the CSS ID, we can skip applying the styles.
+    // This is an performance optimization to avoid running a regex if the
+    // property or element is not even in the style string.
+    return cell
+  }
 
   // Extract and apply the font color
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
@@ -147,6 +173,16 @@ export function applyPandasStylerCss(
     // Therefore, we are overriding the font color to our dark font color which
     // always works well with yellow background.
     themeOverride.textDark = "#31333F"
+  }
+
+  // Extract and apply the font weight:
+  const fontWeight = extractCssProperty(cssId, "font-weight", cssStyles)
+  if (fontWeight) {
+    // Its not recommended to directly use the theme primitives. However,
+    // we don't change our fontsize primitives (since they are already in rem)
+    // and we don't have access to the theme here (would be quite a big refectoring to
+    // get access to the theme)
+    themeOverride.baseFontStyle = `${fontWeight} ${fontSizes.sm}`
   }
 
   if (themeOverride) {
