@@ -126,7 +126,7 @@ export function applyPandasStylerCss(
   const themeOverride = {} as Partial<GlideTheme>
   if (!cssStyles.includes(cssId)) {
     // If the CSS styles don't contain the CSS ID, we can skip applying the styles.
-    // This is an performance optimization to avoid running a regex if the
+    // This is a performance optimization to avoid running a regex if the
     // property or element is not even in the style string.
     return cell
   }
