@@ -76,7 +76,7 @@ def test_expander_collapses_and_expands(app: Page):
     expect(toggle).to_be_visible()
 
 
-def test_empty_expander_not_rendered(app: Page, assert_snapshot: ImageCompareFunction):
+def test_empty_expander_rendered(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that an empty expander is not rendered."""
     empty_expander = app.get_by_text("Empty expander")
     expect(empty_expander).to_be_visible()

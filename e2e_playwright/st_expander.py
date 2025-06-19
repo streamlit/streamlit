@@ -91,4 +91,4 @@ with st.expander("Fixed width expander", width=200):
 with st.expander("Stretch width expander", width="stretch"):
     st.write("Hello")
 
-st.expander("Empty expander")
+st.expander("Empty expander", expanded=True)
