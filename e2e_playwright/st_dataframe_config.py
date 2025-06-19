@@ -32,7 +32,7 @@ df = pd.DataFrame(
 )
 
 
-st.header("Hide index parameter:")
+st.header(":material/visibility_off: Hide index parameter:")
 st.dataframe(df, hide_index=True, use_container_width=False)
 st.dataframe(df, hide_index=False, use_container_width=False)
 
