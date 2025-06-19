@@ -188,8 +188,17 @@ function getButtonGroupOverridesStyle(
   containerWidth: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): Record<string, any> {
-  const baseStyle = { flexWrap: "wrap", maxWidth: "fit-content" }
-  const width = !containerWidth ? "fit-content" : "100%"
+  const baseStyle = {
+    flexWrap: "wrap",
+    maxWidth: "100%",
+    // This ensures that the button
+    // group does not overflow the container due
+    // to the negative margins that BaseWeb adds.
+    // When maxWidth is set to 100%, without this,
+    // the buttons will wrap to the next line.
+    margin: "0 0",
+  }
+  const width = containerWidth ? "100%" : "auto"
 
   switch (style) {
     case ButtonGroupProto.Style.BORDERLESS:
@@ -204,7 +213,6 @@ function getButtonGroupOverridesStyle(
         columnGap: spacing.twoXS,
         rowGap: spacing.twoXS,
         width,
-        maxWidth: width,
       }
     case ButtonGroupProto.Style.SEGMENTED_CONTROL:
       return {
@@ -212,7 +220,6 @@ function getButtonGroupOverridesStyle(
         columnGap: spacing.none,
         rowGap: spacing.twoXS,
         width,
-        maxWidth: width,
       }
     default:
       return baseStyle
@@ -361,7 +368,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     <div
       className="stButtonGroup"
       data-testid="stButtonGroup"
-      style={{ width: "100%" }}
+      style={{ width: containerWidth ? "100%" : "auto" }}
     >
       <WidgetLabel
         label={label}
