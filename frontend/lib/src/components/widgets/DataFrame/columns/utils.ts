@@ -594,7 +594,12 @@ export function formatNumber(
     return formatIntlNumberWithLocales(value, {
       style: "percent",
       minimumFractionDigits: maxPrecision ?? 0,
-      maximumFractionDigits: maxPrecision ?? 2,
+      maximumFractionDigits: notNullOrUndefined(maxPrecision)
+        ? // Percentage already gets multiplied by 100 by the formatter,
+          // so we need to reduce the precision by 2 to get the
+          // correct format based on the raw value.
+          Math.max(maxPrecision - 2, 0)
+        : 2,
     })
   } else if (format === "dollar") {
     return formatIntlNumberWithLocales(value, {
