@@ -64,23 +64,24 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   }
 
   let usesDisplayIcon = false
+  let configuredDisplayText = parameters.display_text
   // Determine if the user's provided display text is a regexp pattern or not.
   let displayTextRegex: RegExp | undefined = undefined
-  if (!isNullOrUndefined(parameters.display_text)) {
+  if (!isNullOrUndefined(configuredDisplayText)) {
     if (
-      parameters.display_text.startsWith(":material/") &&
-      isMaterialIcon(parameters.display_text)
+      configuredDisplayText.startsWith(":material/") &&
+      isMaterialIcon(configuredDisplayText)
     ) {
-      parameters.display_text = parseIconPackEntry(
-        parameters.display_text
-      ).icon
+      // We need to only use the icon name in the display text so
+      // that the icon font can correctly resolve the icon.
+      configuredDisplayText = parseIconPackEntry(configuredDisplayText).icon
       usesDisplayIcon = true
     } else if (
-      parameters.display_text.includes("(") &&
-      parameters.display_text.includes(")")
+      configuredDisplayText.includes("(") &&
+      configuredDisplayText.includes(")")
     ) {
       try {
-        displayTextRegex = new RegExp(parameters.display_text, "us")
+        displayTextRegex = new RegExp(configuredDisplayText, "us")
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
         // The regex is invalid, interpret it as static display text.
@@ -179,7 +180,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         } else {
           // Use user provided display_text unless it's null, undefined, or an empty string.
           // If it's any of those falsy values, use the href.
-          displayText = parameters.display_text || href
+          displayText = configuredDisplayText || href
         }
       }
 
