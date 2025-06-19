@@ -1145,6 +1145,15 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "linkUnderline",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Whether or not links should be displayed with an underline.
+    """,
+    type_=bool,
+)
+
+_create_theme_options(
     "codeBackgroundColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""

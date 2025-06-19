@@ -173,6 +173,7 @@ message CustomThemeConfig {
   optional string dataframe_border_color = 27;
   optional bool show_widget_border = 20;
   optional string link_color = 21;
+  optional bool link_underline = 29;
   optional int32 base_font_size = 22;
   optional int32 base_font_weight = 30;
   optional string code_font_size = 28;

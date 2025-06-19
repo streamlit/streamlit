@@ -24,10 +24,8 @@ import React, {
 } from "react"
 
 import groupBy from "lodash/groupBy"
-// We import react-device-detect in this way so that tests can mock its
-// isMobile field sanely.
-import * as reactDeviceDetect from "react-device-detect"
 
+import { isMobile } from "@streamlit/lib"
 import { localStorageAvailable } from "@streamlit/utils"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import { IAppPage } from "@streamlit/protobuf"
@@ -181,7 +179,7 @@ const SidebarNav = ({
           onClick={e => {
             e.preventDefault()
             onPageChange(page.pageScriptHash as string)
-            if (reactDeviceDetect.isMobile) {
+            if (isMobile()) {
               collapseSidebar()
             }
           }}
