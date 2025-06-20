@@ -33,7 +33,7 @@ export interface Props {
   element: ButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig?: streamlit.WidthConfig
+  widthConfig?: streamlit.WidthConfig | null | undefined
 }
 
 function Button(props: Props): ReactElement {
