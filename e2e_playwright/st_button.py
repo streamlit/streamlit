@@ -121,7 +121,7 @@ with st.expander("Page Link Width Examples", expanded=True):
     st.page_link("https://example.com", label="Stretch Width", width="stretch")
     st.page_link("https://example.com", label="500px Width", width=500)
 
-with st.form("width_form", expanded=True):
+with st.form("width_form"):
     st.write("Form Submit Button Width Examples:")
     st.form_submit_button("Content Width (Default)", width="content")
     st.form_submit_button("Stretch Width", width="stretch")

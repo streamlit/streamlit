@@ -255,7 +255,7 @@ def test_form_submit_button_width_examples(
 ):
     """Test form submit button width examples via screenshot matching."""
     # Form submit button width examples
-    form = themed_app.get_by_test_id("stForm")
+    form = themed_app.get_by_test_id("stForm").first
     expect(form).to_have_count(1)
 
     submit_elements = form.get_by_test_id("stFormSubmitButton")
