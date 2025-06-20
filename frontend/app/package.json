@@ -9,7 +9,7 @@
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "vite",
     "build": "env NODE_OPTIONS=--max_old_space_size=8192 vite build",
-    "buildWithProfiler": "env IS_PROFILER_BUILD=1 vite build",
+    "buildWithProfiler": "env NODE_OPTIONS=--max_old_space_size=8192 IS_PROFILER_BUILD=1 vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "testWatch": "vitest",
