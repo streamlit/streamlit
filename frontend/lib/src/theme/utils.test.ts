@@ -576,6 +576,10 @@ describe("isColor", () => {
 })
 
 describe("createEmotionTheme", () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("sets to light when matchMedia does not match dark", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       headingFont: "serif",
@@ -632,6 +636,58 @@ describe("createEmotionTheme", () => {
     expect(theme.genericFonts.headingFont).toBe(theme.fonts.monospace)
   })
 
+  it.each([
+    // Test valid codeFontSize values
+    // Inline code font size unaffected, set to 0.75em
+    ["0.875rem", "0.875rem", "0.75em"],
+    ["0.875REM", "0.875rem", "0.75em"],
+    ["14px", "14px", "0.75em"],
+    ["14PX", "14px", "0.75em"],
+    ["15", "15px", "0.75em"],
+  ])(
+    "correctly applies codeFontSize and inlineCodeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid codeFontSize values
+    ["invalid", "0.875rem", "0.75em"],
+    ["rem", "0.875rem", "0.75em"],
+    ["px", "0.875rem", "0.75em"],
+    [" ", "0.875rem", "0.75em"],
+  ])(
+    "logs a warning and falls back to default for any invalid codeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error with the actual codeFontSize value
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for codeFontSize in theme: ${codeFontSize}. Falling back to default codeFontSize.`
+      )
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
+    }
+  )
+
   it("adapts the radii theme props if baseRadius is provided", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       baseRadius: "1.2rem",
@@ -685,9 +741,8 @@ describe("createEmotionTheme", () => {
     "invalid",
     "rem", // Missing number
     "px", // Missing number
-    "", // Empty string
   ])(
-    "logs an warning and falls back to default for invalid baseRadius '%s'",
+    "logs a warning and falls back to default for invalid baseRadius '%s'",
     invalidBaseRadius => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -845,7 +900,7 @@ describe("createEmotionTheme", () => {
     ["linkColor", "red", "orange", "blue", "pink", "invalid", "green"],
     ["borderColor", "red", "orange", "blue", "pink", "purple", "invalid"],
   ])(
-    "logs an warning and falls back to default for any invalid color configs '%s'",
+    "logs a warning and falls back to default for any invalid color configs '%s'",
     (
       invalidColorConfig,
       primary,
@@ -930,6 +985,26 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
     expect(theme.colors.borderColor).toBe("red")
     expect(theme.colors.dataframeBorderColor).toBe("green")
+  })
+
+  it("showSidebarBorder config is set to false by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.showSidebarBorder).toBe(false)
+  })
+
+  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: true })
+    expect(theme.showSidebarBorder).toBe(true)
+  })
+
+  it("linkUnderline config is set to true by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.linkUnderline).toBe(true)
+  })
+
+  it("sets the linkUnderline config to false if linkUnderline=false", () => {
+    const theme = createEmotionTheme({ linkUnderline: false })
+    expect(theme.linkUnderline).toBe(false)
   })
 })
 

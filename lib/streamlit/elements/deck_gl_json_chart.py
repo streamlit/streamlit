@@ -529,7 +529,7 @@ class PydeckMixin:
 
             self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
-            return cast("PydeckState", widget_state.value)
+            return widget_state.value
 
         return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 

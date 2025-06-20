@@ -213,8 +213,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
     @staticmethod
     def missing_key_error_message(key: str) -> str:
+        """Returns a formatted error message for missing keys."""
         return f'st.query_params has no key "{key}".'
 
     @staticmethod
     def missing_attr_error_message(key: str) -> str:
+        """Returns a formatted error message for missing attributes."""
         return f'st.query_params has no attribute "{key}".'

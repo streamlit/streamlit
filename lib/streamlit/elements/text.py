@@ -56,10 +56,18 @@ class TextMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        width : int or "stretch" or "content"
-            The width of the text element. Can be an integer (pixels), "stretch" to
-            use the full width of the container, or "content" (default) to size
-            based on the content.
+        width : "content", "stretch", or int
+            The width of the text element. This can be one of the following:
+
+            - ``"content"`` (default): The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------

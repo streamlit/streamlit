@@ -182,6 +182,42 @@ export const parseRadius = (
   return [radiusValue, cssUnit]
 }
 
+/**
+ * Helper function to parse fontSize options which allow the same possible values
+ * @param fontSize a string number in pixels or rem; handles number values as pixels
+ * (e.g. "15px", "0.875rem", "15")
+ * @returns font size in em (e.g. "0.875em")
+ */
+export const parseFontSize = (
+  configName: string,
+  fontSize: string | number,
+  inSidebar: boolean
+): string | undefined => {
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  if (typeof fontSize === "string") {
+    // If string, check its valid (ends with "rem" or "px")
+    // and can be parsed as a number
+    const processedFontSize = fontSize.trim().toLowerCase()
+    const parsedFontSize = parseFloat(processedFontSize)
+    if (
+      parsedFontSize &&
+      (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
+    ) {
+      return processedFontSize
+    }
+
+    // Fallback: if the value can be parsed as a number, treat it as pixels
+    if (parsedFontSize.toString() === processedFontSize) {
+      return `${processedFontSize}px`
+    }
+  }
+  // If invalid, log warning and return undefined
+  LOG.warn(
+    `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
+  )
+}
+
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
@@ -191,11 +227,13 @@ export const createEmotionTheme = (
     baseFontSize,
     baseRadius,
     buttonRadius,
+    codeFontSize,
     showWidgetBorder,
     headingFont,
     bodyFont,
     codeFont,
     showSidebarBorder,
+    linkUnderline,
     ...customColors
   } = themeInput
 
@@ -353,8 +391,33 @@ export const createEmotionTheme = (
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
   }
 
+  if (codeFontSize) {
+    // Handles case where codeFontSize is set, but not baseFontSize
+    if (!conditionalOverrides.fontSizes) {
+      conditionalOverrides.fontSizes = {
+        ...baseThemeConfig.emotion.fontSizes,
+      }
+    }
+
+    // Returns font size as a string, or undefined if invalid
+    const parsedCodeFontSize = parseFontSize(
+      "codeFontSize",
+      codeFontSize,
+      inSidebar
+    )
+    if (parsedCodeFontSize) {
+      conditionalOverrides.fontSizes.codeFontSize = parsedCodeFontSize
+    }
+    // codeFontSize default (fallback) set in typography primitives (0.875rem)
+    // inlineCodeFontSize set in typography primitives (0.75em)
+  }
+
   if (notNullOrUndefined(showSidebarBorder)) {
     conditionalOverrides.showSidebarBorder = showSidebarBorder
+  }
+
+  if (notNullOrUndefined(linkUnderline)) {
+    conditionalOverrides.linkUnderline = linkUnderline
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

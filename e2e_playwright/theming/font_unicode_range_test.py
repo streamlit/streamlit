@@ -17,10 +17,10 @@ import json
 import os
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_font
+from e2e_playwright.shared.app_utils import expect_font, expect_no_skeletons
 
 
 @pytest.fixture(scope="module")
@@ -82,7 +82,7 @@ def configure_tagesschrift_font():
 @pytest.mark.usefixtures("configure_tagesschrift_font")
 def test_font_unicode_ranges(app: Page, assert_snapshot: ImageCompareFunction):
     # Make sure that all elements are rendered and no skeletons are shown
-    expect(app.get_by_test_id("stSkeleton")).to_have_count(0, timeout=25000)
+    expect_no_skeletons(app, timeout=25000)
 
     # Verify Tagesschrift font is loaded
     expect_font(app, "Tagesschrift")

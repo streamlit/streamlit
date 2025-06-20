@@ -311,7 +311,7 @@ def image_to_url(
         image = _clip_image(_verify_np_shape(image), clamp)
 
         if channels == "BGR":
-            if len(cast("NumpyShape", image.shape)) == 3:
+            if len(image.shape) == 3:
                 image = image[:, :, [2, 1, 0]]
             else:
                 raise StreamlitAPIException(
@@ -397,7 +397,7 @@ def marshall_images(
     images: Sequence[AtomicImage]
     if isinstance(image, (list, set, tuple)):
         images = list(image)
-    elif isinstance(image, np.ndarray) and len(cast("NumpyShape", image.shape)) == 4:
+    elif isinstance(image, np.ndarray) and len(image.shape) == 4:
         images = _4d_to_list_3d(image)
     else:
         images = cast("Sequence[AtomicImage]", [image])
@@ -406,9 +406,7 @@ def marshall_images(
         captions: Sequence[str | None] = caption
     elif isinstance(caption, str):
         captions = [caption]
-    elif (
-        isinstance(caption, np.ndarray) and len(cast("NumpyShape", caption.shape)) == 1
-    ):
+    elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
         captions = caption.tolist()
     elif caption is None:
         captions = [None] * len(images)

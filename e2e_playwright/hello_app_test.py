@@ -175,7 +175,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     # when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("stBaseButton-headerNoPadding").click()
+    app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
@@ -216,7 +216,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     # when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("stBaseButton-headerNoPadding").click()
+    app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")

@@ -169,3 +169,19 @@ def set_page_config_menu_items_overwrite():
 
 st.button("Set Initial Menu Items", on_click=set_initial_menu_items)
 st.button("Menu Items Overwrite", on_click=set_page_config_menu_items_overwrite)
+
+
+def set_page_config_layout_additive():
+    st.set_page_config(page_title="Initial", layout="wide")
+    st.set_page_config(page_title="Updated", layout=None)
+
+
+st.button("Layout Additive", on_click=set_page_config_layout_additive)
+
+
+def set_page_config_sidebar_additive():
+    st.set_page_config(page_title="Initial", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title="Updated", initial_sidebar_state=None)
+
+
+st.button("Sidebar Additive", on_click=set_page_config_sidebar_additive)

@@ -124,10 +124,17 @@ class MetricMixin:
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown.
 
-        width : int or "stretch" or "content"
-            The width of the metric. Can be either an integer (pixels), "stretch", or "content".
-            Defaults to "stretch". If "stretch", the metric will stretch to fill the available
-            space. If "content", the metric will adjust its width to fit its content.
+        width : "stretch", "content", or int
+            The width of the metric element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------

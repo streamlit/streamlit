@@ -98,6 +98,9 @@ class BaseCustomComponent(ABC):
     def __str__(self) -> str:
         return f"'{self.name}': {self.path if self.path is not None else self.url}"
 
+    def __hash__(self) -> int:
+        return hash((self.name, self.path, self.url, self.module_name))
+
     @abstractmethod
     def __eq__(self, other: object) -> bool:
         """Equality operator."""
