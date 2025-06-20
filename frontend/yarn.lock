@@ -3167,7 +3167,7 @@ __metadata:
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^10.0.0"
+    "@swc/plugin-emotion": "npm:^10.0.1"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.6.3"
     "@testing-library/react": "npm:^16.3.0"
@@ -3225,7 +3225,6 @@ __metadata:
     rc-overflow: "npm:^1.4.1"
     re-resizable: "npm:^6.11.2"
     react: "npm:^18.2.0"
-    react-device-detect: "npm:^2.2.2"
     react-dom: "npm:^18.2.0"
     react-feather: "npm:^2.0.10"
     react-hot-keys: "npm:^2.7.3"
@@ -3304,7 +3303,7 @@ __metadata:
     "@sindresorhus/slugify": "npm:^2.2.1"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^10.0.0"
+    "@swc/plugin-emotion": "npm:^10.0.1"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.6.3"
     "@testing-library/react": "npm:^16.3.0"
@@ -3325,6 +3324,7 @@ __metadata:
     "@types/react-syntax-highlighter": "npm:^15.5.5"
     "@types/react-window": "npm:~1.8.8"
     "@types/sprintf-js": "npm:^1.1.4"
+    "@types/ua-parser-js": "npm:^0.7.39"
     "@types/uuid": "npm:^10.0.0"
     "@types/wavesurfer.js": "npm:^6.0.12"
     "@types/xxhashjs": "npm:^0.2.2"
@@ -3367,7 +3367,6 @@ __metadata:
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
     react-debounce-render: "npm:^8.0.2"
-    react-device-detect: "npm:^2.2.2"
     react-dropzone: "npm:^14.3.8"
     react-feather: "npm:^2.0.10"
     react-json-view: "npm:^1.19.1"
@@ -3390,6 +3389,7 @@ __metadata:
     tsc-alias: "npm:^1.8.16"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
+    ua-parser-js: "npm:^1.0.40"
     unified: "npm:^11.0.5"
     unist-util-visit: "npm:^5.0.0"
     urlpattern-polyfill: "npm:^10.1.0"
@@ -3704,12 +3704,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/plugin-emotion@npm:^10.0.0":
-  version: 10.0.0
-  resolution: "@swc/plugin-emotion@npm:10.0.0"
+"@swc/plugin-emotion@npm:^10.0.1":
+  version: 10.0.1
+  resolution: "@swc/plugin-emotion@npm:10.0.1"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/15ad7dd26d348350907ffaab0b80a66e8c67485b20f23b946f4fc89d64820b6aab84d6eb23a56d9059966e7bef2f50ae980c7b2ef85090d31380222e645b1405
+  checksum: 10c0/fae75378ee380efe0fce6044248910bb68834568d5c6834fcefd1f4a5fb9c2d03a561cb360eed69617aca3a7c1a98bc29d2515d28d877270558e4f0df178309d
   languageName: node
   linkType: hard
 
@@ -16426,18 +16426,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-device-detect@npm:^2.2.2":
-  version: 2.2.3
-  resolution: "react-device-detect@npm:2.2.3"
-  dependencies:
-    ua-parser-js: "npm:^1.0.33"
-  peerDependencies:
-    react: ">= 0.14.0"
-    react-dom: ">= 0.14.0"
-  checksum: 10c0/396bbeeab0cb21da084c67434d204c9cf502fad6c683903313084d3f6487950a36a34f9bf67ccf5c1772a1bb5b79a2a4403fcfe6b51d93877db4c2d9f3a3a925
-  languageName: node
-  linkType: hard
-
 "react-dom@npm:^18.2.0":
   version: 18.3.1
   resolution: "react-dom@npm:18.3.1"
@@ -19296,7 +19284,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ua-parser-js@npm:^1.0.33, ua-parser-js@npm:^1.0.35":
+"ua-parser-js@npm:^1.0.35":
   version: 1.0.39
   resolution: "ua-parser-js@npm:1.0.39"
   bin:

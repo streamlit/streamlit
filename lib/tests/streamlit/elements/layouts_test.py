@@ -305,6 +305,12 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert expander_block.add_block.expandable.label == "label"
         assert not expander_block.add_block.expandable.expanded
 
+    def test_allow_empty(self):
+        """Test that it correctly applies allow_empty param."""
+        st.expander("label")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.allow_empty
+
     def test_width_config(self):
         """Test that width configuration works correctly"""
         st.expander("label", width=200)
@@ -377,6 +383,18 @@ class ContainerTest(DeltaGeneratorTestCase):
         st.container(border=True)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.border
+
+    def test_allow_empty_with_border(self):
+        """Test that it allows empty when the container has a border."""
+        st.container(border=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.allow_empty
+
+    def test_disallow_empty_without_border_or_height(self):
+        """Test that it disallows empty when no border or height is set."""
+        st.container()
+        container_block = self.get_delta_from_queue()
+        assert not container_block.add_block.allow_empty
 
     def test_without_parameters(self):
         """Test that it can be called without any parameters."""
