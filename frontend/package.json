@@ -14,7 +14,6 @@
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
     "buildWithProfiler": "yarn workspace @streamlit/app buildWithProfiler",
-    "dev": "concurrently \"yarn workspaces foreach --all --parallel --exclude @streamlit/app --exclude @streamlit/lib run buildWatch\" \"yarn workspace @streamlit/app start\"",
     "test": "vitest run",
     "testWatch": "vitest",
     "testCoverage": "vitest run --coverage"

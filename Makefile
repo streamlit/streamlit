@@ -44,7 +44,7 @@ all: init frontend install
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop pre-commit-install frontend-dependencies
+all-devel: init develop pre-commit-install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -54,7 +54,7 @@ all-devel: init develop pre-commit-install frontend-dependencies
 
 .PHONY: mini-devel
 # Get minimal dependencies for development and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init frontend-dependencies
+mini-devel: mini-init
 
 .PHONY: build-deps
 # An even smaller installation than mini-devel. Installs the bare minimum necessary to build Streamlit (by leaving out some dependencies necessary for the development process). Does not build the frontend.
@@ -276,6 +276,7 @@ frontend:
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
 
+
 .PHONY: frontend-dependencies
 # Build frontend dependent libraries (excluding app and lib)
 frontend-dependencies:
@@ -296,9 +297,9 @@ frontend-fast:
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-dev
-# Build frontend dependencies and start the dev server.
-frontend-dev: frontend-dependencies
-	cd frontend/ ; yarn dev
+# Start the frontend dev server.
+frontend-dev:
+	cd frontend/ ; yarn start
 
 .PHONY: frontend-lib
 # Build the frontend library.
@@ -307,13 +308,13 @@ frontend-lib:
 
 .PHONY: jslint
 # Verify that our JS/TS code is formatted and that there are no lint errors.
-jslint: frontend-dependencies
+jslint:
 	cd frontend/ ; yarn workspaces foreach --all run formatCheck
 	cd frontend/ ; yarn workspaces foreach --all run lint
 
 .PHONY: tstypecheck
 # Typecheck the JS/TS code.
-tstypecheck: frontend-dependencies
+tstypecheck:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
 	cd frontend/ ; yarn workspaces foreach --all run typecheck
 
@@ -324,12 +325,12 @@ jsformat:
 
 .PHONY: jstest
 # Run JS unit tests.
-jstest: frontend-dependencies
+jstest:
 	cd frontend; TESTPATH=$(TESTPATH) yarn test
 
 .PHONY: jstestcoverage
 # Run JS unit tests and generate a coverage report.
-jstestcoverage: frontend-dependencies
+jstestcoverage:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: update-snapshots
