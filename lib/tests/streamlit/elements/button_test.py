@@ -30,16 +30,16 @@ from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 def get_button_command_matrix(
-    test_args: list[Any] | None = None,
+    test_params: list[Any] | None = None,
 ) -> list[tuple[Any, ...]]:
     """Return a test matrix for the different button commands and the passed arguments.
 
     This function creates a cartesian product of the button commands and the
-    provided `test_args`.
+    provided `test_params`.
 
     Parameters
     ----------
-    test_args
+    test_params
         A list of test cases. Each item in the list will be treated as a set of
         arguments for a single test run. If an item is not a tuple, it will be
         wrapped in one.
@@ -48,31 +48,36 @@ def get_button_command_matrix(
     # The callables are wrapped in a list of tuples with a name for better test
     # case naming.
     commands: list[tuple[str, Callable[..., Any]]] = [
-        ("button", lambda **kwargs: st.button("the label", **kwargs)),
+        (
+            "button",
+            lambda label="test_label_button", **kwargs: st.button(label, **kwargs),
+        ),
         (
             "download_button",
-            lambda **kwargs: st.download_button("the label", "data", **kwargs),
+            lambda label="test_label_download_button", **kwargs: st.download_button(
+                label, "data", **kwargs
+            ),
         ),
         (
             "link_button",
-            lambda **kwargs: st.link_button(
-                "the label", "https://example.com", **kwargs
+            lambda label="test_label_link_button", **kwargs: st.link_button(
+                label, "https://example.com", **kwargs
             ),
         ),
         (
             "page_link",
-            lambda **kwargs: st.page_link(
-                "https://example.com", label="Test", **kwargs
+            lambda label="test_label_page_link", **kwargs: st.page_link(
+                "https://example.com", label=label, **kwargs
             ),
         ),
     ]
 
-    if not test_args:
+    if not test_params:
         return commands
 
     matrix: list[tuple[Any, ...]] = []
     for command_tuple in commands:
-        for args in test_args:
+        for args in test_params:
             # The arguments for a single test case are always wrapped in a tuple.
             args_tuple = args if isinstance(args, tuple) else (args,)
             matrix.append(command_tuple + args_tuple)
@@ -127,10 +132,14 @@ class ButtonTest(DeltaGeneratorTestCase):
     def test_use_container_width_true(self, mock_show_deprecation_warning):
         """Test use_container_width=True is mapped to width='stretch'."""
         for button_type, button_func, width in get_button_command_matrix(
-            test_args=["stretch", "content", 200]
+            test_params=["stretch", "content", 200]
         ):
             with self.subTest(button_type, width=width):
-                button_func(use_container_width=True, width=width)
+                button_func(
+                    label=f"test_use_container_width_true {button_type} {width}",
+                    use_container_width=True,
+                    width=width,
+                )
                 el = self.get_delta_from_queue().new_element
                 assert (
                     el.width_config.WhichOneof("width_spec")
@@ -149,14 +158,15 @@ class ButtonTest(DeltaGeneratorTestCase):
                     )
                     assert el.width_config.use_stretch is True
 
-        assert mock_show_deprecation_warning.call_count == 8
+        assert mock_show_deprecation_warning.call_count == 16
         mock_show_deprecation_warning.assert_called_with(
             make_deprecated_name_warning(
                 "use_container_width",
                 "width",
-                "2025-10-31",
+                "2025-12-31",
                 "For `use_container_width=True`, use `width='stretch'`. "
                 "For `use_container_width=False`, use `width='content'`.",
+                include_st_prefix=False,
             )
         )
 
@@ -164,10 +174,18 @@ class ButtonTest(DeltaGeneratorTestCase):
     def test_use_container_width_false(self, mock_show_deprecation_warning):
         """Test use_container_width=False is mapped to width='content'."""
         for button_type, button_func, width in get_button_command_matrix(
-            test_args=["stretch", "content", 200]
+            test_params=[
+                "stretch",
+                "content",
+                200,
+            ]
         ):
             with self.subTest(button_type, width=width):
-                button_func(use_container_width=False, width=width)
+                button_func(
+                    label=f"test_use_container_width_false {button_type} {width}",
+                    use_container_width=False,
+                    width=width,
+                )
                 el = self.get_delta_from_queue().new_element
                 assert (
                     el.width_config.WhichOneof("width_spec")
@@ -185,14 +203,15 @@ class ButtonTest(DeltaGeneratorTestCase):
                         == WidthConfigFields.USE_CONTENT.value
                     )
                     assert el.width_config.use_content is True
-        assert mock_show_deprecation_warning.call_count == 8
+        assert mock_show_deprecation_warning.call_count == 16
         mock_show_deprecation_warning.assert_called_with(
             make_deprecated_name_warning(
                 "use_container_width",
                 "width",
-                "2025-10-31",
+                "2025-12-31",
                 "For `use_container_width=True`, use `width='stretch'`. "
                 "For `use_container_width=False`, use `width='content'`.",
+                include_st_prefix=False,
             )
         )
 
@@ -259,7 +278,7 @@ class ButtonTest(DeltaGeneratorTestCase):
     def test_button_invalid_width(self):
         """Test button elements with invalid width values."""
         test_cases = get_button_command_matrix(
-            test_args=["invalid", -100, 0, 100.5, None]
+            test_params=["invalid", -100, 0, 100.5, None]
         )
         for button_type, button_func, width in test_cases:
             with self.subTest(f"{button_type} with width {width}"):

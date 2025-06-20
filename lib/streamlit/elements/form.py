@@ -370,12 +370,13 @@ class FormMixin:
                 make_deprecated_name_warning(
                     "use_container_width",
                     "width",
-                    "2025-10-31",
+                    "2025-12-31",
                     "For `use_container_width=True`, use `width='stretch'`. "
                     "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
                 )
             )
-            width = "stretch" if use_container_width else width
+            width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
         if type not in ["primary", "secondary", "tertiary"]:

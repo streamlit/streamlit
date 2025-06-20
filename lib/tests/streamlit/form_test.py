@@ -22,6 +22,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.session_state import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -434,26 +435,23 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             assert el.width_config.use_stretch is True
 
         assert mock_show_deprecation_warning.call_count == 4
+        mock_show_deprecation_warning.assert_called_with(
+            make_deprecated_name_warning(
+                "use_container_width",
+                "width",
+                "2025-12-31",
+                "For `use_container_width=True`, use `width='stretch'`. "
+                "For `use_container_width=False`, use `width='content'`.",
+                include_st_prefix=False,
+            )
+        )
 
     @patch("streamlit.elements.form.show_deprecation_warning")
     def test_use_container_width_false(self, mock_show_deprecation_warning):
         """Test use_container_width=False is mapped to width='content'."""
-        for test_params in [
-            ("stretch", "use_stretch", WidthConfigFields.USE_STRETCH.value, True),
-            ("content", "use_content", WidthConfigFields.USE_CONTENT.value, True),
-            (200, "pixel_width", WidthConfigFields.PIXEL_WIDTH.value, 200),
-        ]:
-            with self.subTest(
-                f"width={test_params[0]} use_container_width={test_params[1]}"
-            ):
-                with st.form(
-                    f"test_form {test_params[0]} use_container_width = {test_params[1]}"
-                ):
-                    width = test_params[0]
-                    width_spec = test_params[1]
-                    expected_width_spec = test_params[2]
-                    expected_width_value = test_params[3]
-
+        for width in ["stretch", "content", 200]:
+            with self.subTest(f"width={width}"):
+                with st.form(f"test_form {width} use_container_width = false"):
                     st.form_submit_button(
                         "Submit use_container_width = false",
                         use_container_width=False,
@@ -461,8 +459,11 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
                     )
 
                 el = self.get_delta_from_queue().new_element
-                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
-                assert getattr(el.width_config, width_spec) == expected_width_value
+                assert (
+                    el.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.USE_CONTENT.value
+                )
+                assert el.width_config.use_content is True
 
         with self.subTest("no width"):
             with st.form("test_form no width and use_container_width = false"):
@@ -478,6 +479,16 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             assert el.width_config.use_content is True
 
         assert mock_show_deprecation_warning.call_count == 4
+        mock_show_deprecation_warning.assert_called_with(
+            make_deprecated_name_warning(
+                "use_container_width",
+                "width",
+                "2025-12-31",
+                "For `use_container_width=True`, use `width='stretch'`. "
+                "For `use_container_width=False`, use `width='content'`.",
+                include_st_prefix=False,
+            )
+        )
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
