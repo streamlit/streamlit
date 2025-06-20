@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from e2e_playwright.conftest import wait_for_app_run
 # run of the app. Adding more tests to this file will break this assumption.
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 def test_widget_does_not_trigger_callbacks(app: Page):
-    """Tests the widget state does not trigger callbacks"""
+    """Tests the widget state does not trigger callbacks."""
     expect(app.get_by_text("test_value: False")).to_be_attached()
 
     app.get_by_text("Checkbox 2").click()

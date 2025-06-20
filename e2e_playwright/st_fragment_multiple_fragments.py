@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ raise_exception = st.checkbox("Raise Exception in Fragment", value=False)
 
 
 @st.fragment
-def my_fragment(n):
+def my_fragment(n: int) -> None:
     with st.container(border=True):
         st.button("rerun this fragment", key=n)
         st.write(f"uuid in fragment {n}: {uuid4()}")

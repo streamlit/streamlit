@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useContext } from "react"
+
+import { getLuminance } from "color2k"
 
 import {
   createTheme,
@@ -22,35 +24,56 @@ import {
   ThemeConfig,
   ThemeProvider,
 } from "@streamlit/lib"
-import { AppContext } from "@streamlit/app/src/components/AppContext"
+import { notNullOrUndefined } from "@streamlit/utils"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 
-const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
+export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
+  let sidebarOverride = {}
+  if (notNullOrUndefined(theme.themeInput?.sidebar)) {
+    sidebarOverride = theme.themeInput.sidebar
+  }
+
+  // Either use the configured background color or secondary background from main theme:
+  const sidebarBackground =
+    theme.themeInput?.sidebar?.backgroundColor ||
+    theme.emotion.colors.secondaryBg
+
+  // Either use the configured secondary background color or background from main theme:
+  const secondaryBackgroundColor =
+    theme.themeInput?.sidebar?.secondaryBackgroundColor ||
+    theme.emotion.colors.bgColor
+
+  // Override the background and secondary background colors in sidebar overwrites:
+  sidebarOverride = {
+    ...sidebarOverride,
+    backgroundColor: sidebarBackground,
+    secondaryBackgroundColor: secondaryBackgroundColor,
+  }
+
+  const baseTheme =
+    getLuminance(sidebarBackground) > 0.5
+      ? CustomThemeConfig.BaseTheme.LIGHT
+      : CustomThemeConfig.BaseTheme.DARK
+
   return createTheme(
     "Sidebar",
     {
-      secondaryBackgroundColor: theme.emotion.colors.bgColor,
-      backgroundColor: theme.emotion.colors.secondaryBg,
-
-      // Explictly pass these props to the sidebar theming as well.
-      // This ensures custom fonts passed through postMessage propagate to the sidebar as well.
-      bodyFont: theme.emotion.genericFonts.bodyFont,
-      codeFont: theme.emotion.genericFonts.codeFont,
+      ...theme.themeInput, // Use the theme props from the main theme as basis
+      base: baseTheme,
+      ...sidebarOverride,
     },
-    theme,
-    // inSidebar
-    true
+    undefined, // Creating a new theme from scratch
+    true // inSidebar
   )
 }
 
 const ThemedSidebar = ({
   children,
   ...sidebarProps
-}: Omit<SidebarProps, "chevronDownshift" | "theme">): ReactElement => {
-  const { sidebarChevronDownshift: chevronDownshift } =
-    React.useContext(AppContext)
-  const { activeTheme } = React.useContext(LibContext)
+}: Omit<SidebarProps, "chevronDownshift">): ReactElement => {
+  const { activeTheme } = useContext(LibContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
@@ -58,9 +81,7 @@ const ThemedSidebar = ({
       theme={sidebarTheme.emotion}
       baseuiTheme={sidebarTheme.basewebTheme}
     >
-      <Sidebar {...sidebarProps} chevronDownshift={chevronDownshift}>
-        {children}
-      </Sidebar>
+      <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )
 }

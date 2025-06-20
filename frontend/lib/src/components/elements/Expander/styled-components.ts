@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@
 
 import styled from "@emotion/styled"
 
+import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
+
 export interface StyledExpandableContainerProps {
   empty: boolean
   disabled: boolean
 }
 
-export const StyledExpandableContainer = styled.div({})
+export const StyledExpandableContainer = styled.div({
+  width: "100%",
+})
 interface StyledDetailsProps {
   isStale: boolean
 }
@@ -39,7 +43,7 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
     ...(isStale
       ? {
           borderColor: theme.colors.borderColorLight,
-          transition: "border 1s ease-in 0.5s",
+          transition: `border ${STALE_TRANSITION_PARAMS}`,
         }
       : {}),
   })
@@ -54,10 +58,11 @@ export const StyledSummaryHeading = styled.span(({ theme }) => ({
 
 interface StyledSummaryProps {
   empty: boolean
+  isStale: boolean
 }
 
 export const StyledSummary = styled.summary<StyledSummaryProps>(
-  ({ theme, empty }) => ({
+  ({ theme, empty, isStale }) => ({
     position: "relative",
     display: "flex",
     width: "100%",
@@ -85,6 +90,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     ...(empty && {
       cursor: "default",
     }),
+    ...(isStale && STALE_STYLES),
   })
 )
 

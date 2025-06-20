@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,8 +56,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             "/not/a/script.py",
             is_hello=False,
         )
-        app = self.server._create_app()
-        return app
+        return self.server._create_app()
 
     def get_ws_url(self, path):
         """Return a ws:// URL with the given path for our test server."""

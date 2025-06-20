@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,6 @@ import React, {
   useState,
 } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
-import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
 import { SignalConnection } from "typed-signals"
@@ -32,18 +29,19 @@ import { SignalConnection } from "typed-signals"
 import {
   BaseButton,
   BaseButtonKind,
+  DynamicIcon,
   Icon,
-  isNullOrUndefined,
-  notNullOrUndefined,
   Placement,
   ScriptRunState,
-  SessionEvent,
   Timer,
   Tooltip,
+  useEmotionTheme,
 } from "@streamlit/lib"
+import { SessionEvent } from "@streamlit/protobuf"
+import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 import iconRunning from "@streamlit/app/src/assets/img/icon_running.gif"
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
-import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
+import { ConnectionState } from "@streamlit/connection"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 
 import {
@@ -56,6 +54,7 @@ import {
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
+import { getConnectionStateUI } from "./getConnectionStateUI"
 
 /** Component props */
 export interface StatusWidgetProps {
@@ -84,19 +83,6 @@ export interface StatusWidgetProps {
   allowRunOnSave: boolean
 }
 
-interface ConnectionStateUI {
-  icon: EmotionIcon
-  label: string
-  tooltip: string
-}
-
-// Amount of time to display the "Script Changed. Rerun?" prompt when it first appears.
-const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000
-
-// Amount of time to display the Script Changed prompt after the user has hovered
-// and then unhovered on it.
-const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
-
 // Delay time for displaying running man animation.
 const RUNNING_MAN_DISPLAY_DELAY_TIME_MS = 500
 
@@ -104,16 +90,15 @@ interface PromptButtonProps {
   title: ReactNode
   disabled: boolean
   onClick: () => void
-  isMinimized: boolean
 }
 
 const PromptButton = (props: PromptButtonProps): ReactElement => {
   return (
-    <StyledAppButtonContainer isMinimized={props.isMinimized}>
+    <StyledAppButtonContainer>
       <BaseButton
         kind={BaseButtonKind.HEADER_BUTTON}
         disabled={props.disabled}
-        fluidWidth
+        containerWidth
         onClick={props.onClick}
       >
         {props.title}
@@ -134,20 +119,14 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   stopScript,
   allowRunOnSave,
 }) => {
-  const shouldMinimize = useCallback((): boolean => {
-    return window.scrollY > 32
-  }, [])
-  const [statusMinimized, setStatusMinimized] = useState(shouldMinimize())
   const [scriptChangedOnDisk, setScriptChangedOnDisk] = useState(false)
-  const [promptMinimized, setPromptMinimized] = useState(false)
-  const [promptHovered, setPromptHovered] = useState(false)
   const [showRunningMan, setShowRunningMan] = useState(false)
   const minimizePromptTimer: React.MutableRefObject<Timer | null> =
     useRef(null)
-  const showRunningManTimer: React.MutableRefObject<Timer | null> =
+  const delayShowRunningManTimer: React.MutableRefObject<Timer | null> =
     useRef(null)
   const sessionEventConn = useRef<SignalConnection>()
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const handleAlwaysRerunClick = (): void => {
     if (allowRunOnSave) {
@@ -164,54 +143,22 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const isConnected = connectionState === ConnectionState.CONNECTED
 
-  const minimizePromptAfterTimeout = useCallback((timeout: number): void => {
-    // Don't cut an existing timer short. If our timer is already
-    // running, and is due to expire later than the new timeout
-    // value, leave the timer alone.
-    if (minimizePromptTimer.current !== null) {
-      if (timeout > minimizePromptTimer.current.remainingTime) {
-        minimizePromptTimer.current.setTimeout(() => {
-          setPromptMinimized(true)
-        }, timeout)
-      }
+  const handleSessionEvent = useCallback((event: SessionEvent): void => {
+    if (event.type === "scriptChangedOnDisk") {
+      setScriptChangedOnDisk(true)
     }
   }, [])
 
-  const handleSessionEvent = useCallback(
-    (event: SessionEvent): void => {
-      if (event.type === "scriptChangedOnDisk") {
-        setScriptChangedOnDisk(true)
-        setPromptMinimized(false)
-        minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
-      }
-    },
-    [minimizePromptAfterTimeout]
-  )
-
   const showRunningManAfterInitialDelay = useCallback(
     (delay: number): void => {
-      if (showRunningManTimer.current !== null) {
-        showRunningManTimer.current.setTimeout(() => {
+      if (delayShowRunningManTimer.current !== null) {
+        delayShowRunningManTimer.current.setTimeout(() => {
           setShowRunningMan(true)
         }, delay)
       }
     },
     []
   )
-
-  const handleScroll = useCallback((): void => {
-    setStatusMinimized(shouldMinimize())
-  }, [shouldMinimize])
-
-  const onAppPromptHover = (): void => {
-    setPromptHovered(true)
-  }
-
-  const onAppPromptUnhover = (): void => {
-    setPromptHovered(false)
-    setPromptMinimized(false)
-    minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
-  }
 
   const handleStopScriptClick = (): void => {
     stopScript()
@@ -233,30 +180,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     return false
   }
 
-  function getConnectionStateUI(
-    state: ConnectionState
-  ): ConnectionStateUI | undefined {
-    switch (state) {
-      case ConnectionState.INITIAL:
-      case ConnectionState.PINGING_SERVER:
-      case ConnectionState.CONNECTING:
-        return {
-          icon: Ellipses,
-          label: "Connecting",
-          tooltip: "Connecting to Streamlit server",
-        }
-      case ConnectionState.CONNECTED:
-        return undefined
-      case ConnectionState.DISCONNECTED_FOREVER:
-      default:
-        return {
-          icon: Warning,
-          label: "Error",
-          tooltip: "Unable to connect to Streamlit server",
-        }
-    }
-  }
-
   useEffect(() => {
     sessionEventConn.current =
       sessionEventDispatcher.onSessionEvent.connect(handleSessionEvent)
@@ -272,30 +195,22 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     if (minimizePromptTimer.current === null) {
       minimizePromptTimer.current = new Timer()
     }
-    if (showRunningManTimer.current === null) {
-      showRunningManTimer.current = new Timer()
+    if (delayShowRunningManTimer.current === null) {
+      delayShowRunningManTimer.current = new Timer()
     }
 
     const minimizePromptTimerCurr = minimizePromptTimer.current
-    const showRunningManTimerCurr = minimizePromptTimer.current
+    const delayShowRunningManTimerCurr = minimizePromptTimer.current
 
     return () => {
       minimizePromptTimerCurr.cancel()
-      showRunningManTimerCurr.cancel()
+      delayShowRunningManTimerCurr.cancel()
     }
   }, [])
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll)
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-    }
-  }, [handleScroll])
-
-  useEffect(() => {
     if (scriptRunState === ScriptRunState.RUNNING) {
       setScriptChangedOnDisk(false)
-      setPromptHovered(false)
     }
   }, [scriptRunState])
 
@@ -314,7 +229,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }, [scriptRunState, showRunningManAfterInitialDelay, isConnected])
 
   const renderScriptIsRunning = (): ReactNode => {
-    const minimized = statusMinimized
     const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
     const isNewYear = isNewYears()
     const runningSrc = isNewYear ? newYearsRunning : iconRunning
@@ -327,21 +241,8 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     )
     return showRunningMan ? (
       <StyledAppStatus>
-        {minimized ? (
-          <Tooltip
-            placement={Placement.BOTTOM}
-            content="This script is currently running"
-          >
-            {runningIcon}
-          </Tooltip>
-        ) : (
-          runningIcon
-        )}
-        <StyledAppStatusLabel isMinimized={statusMinimized} isPrompt={false}>
-          Running...
-        </StyledAppStatusLabel>
+        {runningIcon}
         <PromptButton
-          isMinimized={statusMinimized}
           title={stopRequested ? "Stopping..." : "Stop"}
           disabled={stopRequested}
           onClick={handleStopScriptClick}
@@ -354,32 +255,28 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const renderRerunScriptPrompt = (): ReactNode => {
     const rerunRequested = scriptRunState === ScriptRunState.RERUN_REQUESTED
-    const minimized = promptMinimized && !promptHovered
-    const { colors } = theme
     return (
       <Hotkeys keyName="a" onKeyDown={handleKeyDown}>
-        <div onMouseEnter={onAppPromptHover} onMouseLeave={onAppPromptUnhover}>
-          <StyledAppStatus>
-            <Icon content={Info} margin="0 sm 0 0" color={colors.bodyText} />
-            <StyledAppStatusLabel isMinimized={minimized} isPrompt>
-              Source file changed.
-            </StyledAppStatusLabel>
+        <StyledAppStatus>
+          <DynamicIcon
+            size="lg"
+            iconValue={":material/info:"}
+            color={theme.colors.fadedText60}
+          />
+          <StyledAppStatusLabel isPrompt>File change.</StyledAppStatusLabel>
+          <PromptButton
+            title={<StyledShortcutLabel>Rerun</StyledShortcutLabel>}
+            disabled={rerunRequested}
+            onClick={handleRerunClick}
+          />
+          {allowRunOnSave && (
             <PromptButton
-              isMinimized={minimized}
-              title={<StyledShortcutLabel>Rerun</StyledShortcutLabel>}
+              title={<StyledShortcutLabel>Always rerun</StyledShortcutLabel>}
               disabled={rerunRequested}
-              onClick={handleRerunClick}
+              onClick={handleAlwaysRerunClick}
             />
-            {allowRunOnSave && (
-              <PromptButton
-                isMinimized={minimized}
-                title={<StyledShortcutLabel>Always rerun</StyledShortcutLabel>}
-                disabled={rerunRequested}
-                onClick={handleAlwaysRerunClick}
-              />
-            )}
-          </StyledAppStatus>
-        </div>
+          )}
+        </StyledAppStatus>
       </Hotkeys>
     )
   }
@@ -396,9 +293,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
           data-testid="stConnectionStatus"
         >
           <Icon size="sm" content={ui.icon} />
-          <StyledConnectionStatusLabel isMinimized={statusMinimized}>
-            {ui.label}
-          </StyledConnectionStatusLabel>
+          <StyledConnectionStatusLabel>{ui.label}</StyledConnectionStatusLabel>
         </StyledConnectionStatus>
       </Tooltip>
     )
@@ -430,27 +325,17 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
   const curView = useRef<ReactNode>()
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   const prevView = curView.current
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   curView.current = renderWidget()
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   if (isNullOrUndefined(curView.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   if (notNullOrUndefined(curView.current)) {
     animateIn = true
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
     renderView = curView.current
   } else {
     animateIn = false

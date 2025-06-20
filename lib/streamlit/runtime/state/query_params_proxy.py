@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, Iterator, MutableMapping, overload
+from collections.abc import Iterable, Iterator, MutableMapping
+from typing import TYPE_CHECKING, Any, overload
 
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.state.query_params import missing_key_error_message
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
 if TYPE_CHECKING:
@@ -45,14 +45,17 @@ class QueryParamsProxy(MutableMapping[str, str]):
     @gather_metrics("query_params.get_item")
     def __getitem__(self, key: str) -> str:
         with get_session_state().query_params() as qp:
-            return qp[key]
+            try:
+                return qp[key]
+            except KeyError:
+                raise KeyError(self.missing_key_error_message(key))
 
     def __delitem__(self, key: str) -> None:
         with get_session_state().query_params() as qp:
             del qp[key]
 
     @gather_metrics("query_params.set_item")
-    def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
+    def __setitem__(self, key: str, value: Any) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
@@ -62,29 +65,29 @@ class QueryParamsProxy(MutableMapping[str, str]):
             try:
                 return qp[key]
             except KeyError:
-                raise AttributeError(missing_key_error_message(key))
+                raise AttributeError(self.missing_attr_error_message(key))
 
     def __delattr__(self, key: str) -> None:
         with get_session_state().query_params() as qp:
             try:
                 del qp[key]
             except KeyError:
-                raise AttributeError(missing_key_error_message(key))
+                raise AttributeError(self.missing_key_error_message(key))
 
     @overload
     def update(
-        self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]], /, **kwds: str
+        self, params: SupportsKeysAndGetItem[str, str | Iterable[str]], /, **kwds: str
     ) -> None: ...
 
     @overload
     def update(
-        self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]], /, **kwds: str
+        self, params: Iterable[tuple[str, str | Iterable[str]]], /, **kwds: str
     ) -> None: ...
 
     @overload
     def update(self, **kwds: str | Iterable[str]) -> None: ...
 
-    def update(self, other=(), /, **kwds):
+    def update(self, params=(), /, **kwds) -> None:  # type: ignore
         """
         Update one or more values in query_params at once from a dictionary or
         dictionary-like object.
@@ -99,10 +102,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
             Additional key/value pairs to update passed as keyword arguments.
         """
         with get_session_state().query_params() as qp:
-            qp.update(other, **kwds)
+            qp.update(params, **kwds)
 
     @gather_metrics("query_params.set_attr")
-    def __setattr__(self, key: str, value: str | Iterable[str]) -> None:
+    def __setattr__(self, key: str, value: Any) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
@@ -156,23 +159,25 @@ class QueryParamsProxy(MutableMapping[str, str]):
         Returns
         -------
         Dict[str,str]
-            A dictionary of the current query paramters in the app's URL.
+            A dictionary of the current query parameters in the app's URL.
         """
         with get_session_state().query_params() as qp:
             return qp.to_dict()
 
     @overload
-    def from_dict(
-        self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]]
-    ) -> None: ...
+    def from_dict(self, params: Iterable[tuple[str, str | Iterable[str]]]) -> None: ...
 
     @overload
     def from_dict(
-        self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]]
+        self, params: SupportsKeysAndGetItem[str, str | Iterable[str]]
     ) -> None: ...
 
     @gather_metrics("query_params.from_dict")
-    def from_dict(self, params):
+    def from_dict(
+        self,
+        params: SupportsKeysAndGetItem[str, str | Iterable[str]]
+        | Iterable[tuple[str, str | Iterable[str]]],
+    ) -> None:
         """
         Set all of the query parameters from a dictionary or dictionary-like object.
 
@@ -205,3 +210,13 @@ class QueryParamsProxy(MutableMapping[str, str]):
         """
         with get_session_state().query_params() as qp:
             return qp.from_dict(params)
+
+    @staticmethod
+    def missing_key_error_message(key: str) -> str:
+        """Returns a formatted error message for missing keys."""
+        return f'st.query_params has no key "{key}".'
+
+    @staticmethod
+    def missing_attr_error_message(key: str) -> str:
+        """Returns a formatted error message for missing attributes."""
+        return f'st.query_params has no attribute "{key}".'

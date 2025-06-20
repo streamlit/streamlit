@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,8 @@ import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment, { Moment } from "moment-timezone"
 
-import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
@@ -82,7 +80,7 @@ export interface DateTimeColumnParams {
  * @returns A BaseColumn object
  */
 function BaseDateTimeColumn(
-  kind: string,
+  kind: "date" | "time" | "datetime",
   props: BaseColumnProps,
   defaultFormat: string, // used for rendering and copy data
   defaultStep: number,
@@ -110,6 +108,7 @@ function BaseDateTimeColumn(
     try {
       defaultTimezoneOffset =
         applyTimezone(moment(), parameters.timezone)?.utcOffset() || undefined
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // Do nothing
     }
@@ -125,7 +124,7 @@ function BaseDateTimeColumn(
     maxDate = toSafeDate(parameters.max_value) || undefined
   }
 
-  const cellTemplate = {
+  const cellTemplate: DatePickerType = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
     copyData: "",
@@ -142,8 +141,9 @@ function BaseDateTimeColumn(
       min: minDate,
       max: maxDate,
     },
-  } as DatePickerType
+  }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const validateInput = (data?: any): boolean | Date => {
     const cellData: Date | null | undefined = toSafeDate(data)
     if (cellData === null) {
@@ -185,6 +185,7 @@ function BaseDateTimeColumn(
     kind,
     sortMode: "default",
     validateInput,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       if (validate === true) {
         const validationResult = validateInput(data)
@@ -220,6 +221,7 @@ function BaseDateTimeColumn(
           // The moment date should never be invalid here.
           return getErrorCell(
             toSafeString(cellData),
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `Invalid moment date. This should never happen. Please report this bug. \nError: ${momentDate.toString()}`
           )
         }
@@ -230,6 +232,7 @@ function BaseDateTimeColumn(
           } catch (error) {
             return getErrorCell(
               momentDate.toISOString(),
+              // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
               `Failed to adjust to the provided timezone: ${parameters.timezone}. \nError: ${error}`
             )
           }
@@ -240,16 +243,18 @@ function BaseDateTimeColumn(
         try {
           displayDate = formatMoment(
             momentDate,
-            parameters.format || defaultFormat
+            parameters.format || defaultFormat,
+            kind
           )
         } catch (error) {
           return getErrorCell(
             momentDate.toISOString(),
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             `Failed to format the date for rendering with: ${parameters.format}. \nError: ${error}`
           )
         }
         // Copy data should always use the default format
-        copyData = formatMoment(momentDate, defaultFormat)
+        copyData = formatMoment(momentDate, defaultFormat, kind)
       }
 
       return {
@@ -288,7 +293,7 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     defaultFormat = "YYYY-MM-DD HH:mm:ss.SSS"
   }
 
-  const timezone: string | undefined = props.arrowType?.meta?.timezone
+  const timezone = getTimezone(props.arrowType)
   const hasTimezone: boolean =
     notNullOrUndefined(timezone) ||
     // Timezone can also be configure by the user:

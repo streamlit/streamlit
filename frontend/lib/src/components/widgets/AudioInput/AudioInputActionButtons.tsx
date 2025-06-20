@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,8 @@ import {
 } from "@emotion-icons/material-rounded"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
-import BaseButton, {
-  BaseButtonKind,
-} from "@streamlit/lib/src/components/shared/BaseButton"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
+import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
+import Icon from "~lib/components/shared/Icon"
 
 import {
   StyledActionButtonContainerDiv,
@@ -56,7 +54,7 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
-    fluidWidth
+    containerWidth
     data-testid="stAudioInputActionButton"
   >
     <Icon content={iconContent} size="lg" color="inherit" />

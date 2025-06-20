@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from streamlit import runtime
 # st.session_state can only be used in streamlit
 if runtime.exists():
 
-    def on_click(x, y):
+    def on_click(x: int, y: int) -> None:
         if "click_count" not in st.session_state:
             st.session_state.click_count = 0
 
@@ -61,11 +61,22 @@ st.button(
     ":material/search: _button 7_ (**styled** :green[label]) :material/arrow_forward:"
 )
 
+st.button(
+    "button 8 (just help)",
+    help="help text",
+)
+
 st.button("Like Button", icon=":material/thumb_up:")
 st.button("Star Button", icon="⭐")
 
 st.button("Tertiary Button", type="tertiary")
 st.button("Disabled Tertiary Button", type="tertiary", disabled=True)
+
+# We add this to test a regression that was happened previously
+# because of unused icon name processing
+# See: https://github.com/streamlit/streamlit/pull/10247#issuecomment-2612956073
+st.button("Button with material icon containing a digit", icon=":material/1k:")
+st.button("Button with material icon containing a digit in label :material/1k:")
 
 
 cols = st.columns(3)
@@ -83,3 +94,7 @@ conn_types = [
 ]
 for i in range(len(conn_types)):
     cols[i % 3].button(conn_types[i], use_container_width=True)
+
+st.button("Foo :blue[bar] baz", type="primary")
+st.button("Foo :blue[bar] baz")
+st.button("Foo :blue[bar] baz", type="tertiary")

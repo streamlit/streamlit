@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -96,7 +96,8 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
 
 def test_feedback_buttons_are_disabled(app: Page):
     """Test that feedback buttons are disabled when `disabled=True` and that
-    they cannot be interacted with."""
+    they cannot be interacted with.
+    """
 
     container = get_element_by_key(app, "stars_container")
     expect(container).to_be_attached()

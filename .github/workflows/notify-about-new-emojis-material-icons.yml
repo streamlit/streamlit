@@ -1,0 +1,61 @@
+name: Notify about new assets (Emojis, Material Icons)
+
+on:
+  schedule:
+    # Run job at 10.30pm PST or 11.30pm PDT every Tuesday
+    - cron: "30 6 * * Tue"
+  workflow_dispatch:
+
+jobs:
+  notify-about-new-material-icons:
+    runs-on: ubuntu-latest
+
+    if: github.repository == 'streamlit/streamlit'
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+
+      - name: Run make develop
+        run: |
+          source venv/bin/activate
+          make develop
+      - name: Install newest version of emoji package
+        run: pip install emoji --upgrade
+
+      - name: Check new Material Icons
+        id: check-material-icons
+        continue-on-error: true
+        run: python scripts/check_new_material_symbols.py
+
+      - name: New Material Icons Release Slack Message
+        if: steps.check-material-icons.outcome == 'failure'
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py assets new_icons
+
+      - name: Check new Emojis
+        id: check-emojis
+        continue-on-error: true
+        run: python scripts/check_new_emojis.py
+
+      - name: New Emojis Release Slack Message
+        if: steps.check-emojis.outcome == 'failure'
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py assets new_emojis

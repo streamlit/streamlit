@@ -5,55 +5,83 @@ on:
     types: [opened, labeled, unlabeled, synchronize]
 
 jobs:
-  security-assessment:
+  check-required-labels:
     runs-on: ubuntu-latest
 
     permissions:
       pull-requests: read
 
     steps:
-      # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@388fd6af37b34cdfe5a23b37060e763217e58b03
+      - name: Check required labels
+        uses: actions/github-script@v7
         with:
-          mode: exactly
-          count: 1
-          labels: "security-assessment-completed"
-  do-not-merge-guardrail:
-    runs-on: ubuntu-latest
+          script: |
+            const requiredLabels = {
+              'security-assessment': {
+                mode: 'exactly',
+                count: 1,
+                labels: ['security-assessment-completed']
+              },
+              'do-not-merge': {
+                mode: 'exactly',
+                count: 0,
+                labels: ['do-not-merge']
+              },
+              'change-description': {
+                mode: 'exactly',
+                count: 1,
+                labels: ['change:feature', 'change:bugfix', 'change:refactor', 'change:chore', 'change:docs', 'change:other']
+              },
+              'impact-defined': {
+                mode: 'exactly',
+                count: 1,
+                labels: ['impact:users', 'impact:internal']
+              }
+            };
 
-    permissions:
-      pull-requests: read
+            const prNumber = context.payload.pull_request.number;
+            const { data: prLabels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
 
-    steps:
-      # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@388fd6af37b34cdfe5a23b37060e763217e58b03
-        with:
-          mode: exactly
-          count: 0
-          labels: "do-not-merge"
-  change-description:
-    runs-on: ubuntu-latest
+            const prLabelNames = prLabels.map(label => label.name);
+            console.log(`PR #${prNumber} has labels: ${prLabelNames.join(', ')}`);
 
-    permissions:
-      pull-requests: read
+            let hasErrors = false;
+            let errorMessages = [];
 
-    steps:
-      # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@388fd6af37b34cdfe5a23b37060e763217e58b03
-        with:
-          mode: exactly
-          count: 1
-          labels: "change:feature,change:bugfix,change:refactor,change:chore,change:docs,change:other"
-  impact-defined:
-    runs-on: ubuntu-latest
+            for (const [checkName, check] of Object.entries(requiredLabels)) {
+              const { mode, count, labels } = check;
+              const matchedLabels = prLabelNames.filter(name => labels.includes(name));
 
-    permissions:
-      pull-requests: read
+              if (mode === 'exactly' && matchedLabels.length !== count) {
+                if (count === 0 && matchedLabels.length > 0) {
+                  // Forbidden label is present
+                  errorMessages.push(`❌ ${checkName}: Label "${matchedLabels.join(', ')}" should not be present`);
+                } else if (count === 1 && matchedLabels.length === 0) {
+                  // Required label is missing
+                  errorMessages.push(`❌ ${checkName}: Missing one of these labels: [${labels.join(', ')}]`);
+                } else if (count === 1 && matchedLabels.length > 1) {
+                  // Too many labels from a group
+                  errorMessages.push(`❌ ${checkName}: Too many labels selected. Choose only one of: [${labels.join(', ')}]`);
+                } else {
+                  // Generic error message
+                  errorMessages.push(`❌ ${checkName}: Expected exactly ${count} of [${labels.join(', ')}], but found ${matchedLabels.length}`);
+                }
+                hasErrors = true;
+              } else {
+                // Success message for logging
+                errorMessages.push(`✅ ${checkName}: Requirement satisfied`);
+              }
+            }
 
-    steps:
-      # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@388fd6af37b34cdfe5a23b37060e763217e58b03
-        with:
-          mode: exactly
-          count: 1
-          labels: "impact:users,impact:internal"
+            // Log all messages for visibility
+            errorMessages.forEach(msg => console.log(msg));
+
+            if (hasErrors) {
+              const failMessage = 'PR label requirements not met:\n' +
+                errorMessages.filter(msg => msg.startsWith('❌')).join('\n');
+              core.setFailed(failMessage);
+            }

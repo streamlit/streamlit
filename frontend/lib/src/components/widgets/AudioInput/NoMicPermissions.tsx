@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
-import { ENABLE_PERIPHERALS_DOCS_URL } from "@streamlit/lib/src/urls"
+import { ENABLE_PERIPHERALS_DOCS_URL } from "~lib/urls"
 
 import {
   StyledErrorContainerDiv,
@@ -30,11 +30,15 @@ const NoMicPermissions = (): ReactElement => {
       <StyledErrorTextSpan>
         This app would like to use your microphone.
       </StyledErrorTextSpan>{" "}
-      <StyledNoMicInputLearnMoreLink href={ENABLE_PERIPHERALS_DOCS_URL}>
+      <StyledNoMicInputLearnMoreLink
+        href={ENABLE_PERIPHERALS_DOCS_URL}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
         Learn how to allow access.
       </StyledNoMicInputLearnMoreLink>
     </StyledErrorContainerDiv>
   )
 }
 
-export default NoMicPermissions
+export default memo(NoMicPermissions)

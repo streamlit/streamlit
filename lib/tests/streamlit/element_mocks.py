@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,7 +67,6 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("color_picker", lambda: st.color_picker("Pick a color")),
     # media manager
     ("audio_input", lambda: st.audio_input("Record me")),
-    ("experimental_audio_input", lambda: st.experimental_audio_input("Record me")),
     ("camera_input", lambda: st.camera_input("Take a picture")),
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
@@ -152,7 +151,6 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
                 ],
             ),
             use_container_width=True,
-            key="mocked_pydeck_chart",
             on_select="rerun",
             selection_mode="single-object",
         ),
@@ -165,6 +163,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("title", lambda: st.title("Title")),
     ("subheader", lambda: st.subheader("Subheader")),
     ("caption", lambda: st.caption("Caption")),
+    ("badge", lambda: st.badge("Badge")),
     ("divider", lambda: st.divider()),
     ("text", lambda: st.text("Hello")),
     ("code", lambda: st.code("Hello")),

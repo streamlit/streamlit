@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,25 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Column types that can be configured via the ``column_config`` parameter of ``st.dataframe`` and ``st.data_editor``."""
+"""Column types that can be configured via the ``column_config`` parameter of
+``st.dataframe`` and ``st.data_editor``.
+"""
 
 from __future__ import annotations
 
 __all__ = [
     "AreaChartColumn",
-    "Column",
-    "TextColumn",
-    "NumberColumn",
     "BarChartColumn",
     "CheckboxColumn",
+    "Column",
+    "DateColumn",
     "DatetimeColumn",
     "ImageColumn",
-    "SelectboxColumn",
-    "ProgressColumn",
-    "LinkColumn",
+    "JsonColumn",
     "LineChartColumn",
+    "LinkColumn",
     "ListColumn",
-    "DateColumn",
+    "NumberColumn",
+    "ProgressColumn",
+    "SelectboxColumn",
+    "TextColumn",
     "TimeColumn",
 ]
 
@@ -43,6 +46,7 @@ from streamlit.elements.lib.column_types import (
     DateColumn,
     DatetimeColumn,
     ImageColumn,
+    JsonColumn,
     LineChartColumn,
     LinkColumn,
     ListColumn,

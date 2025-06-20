@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 
 import React, {
+  memo,
   ReactElement,
   useCallback,
   useEffect,
@@ -23,15 +24,14 @@ import React, {
 } from "react"
 
 import { Video } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
-import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
 
-import { debounce } from "@streamlit/lib/src/util/utils"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import themeColors from "@streamlit/lib/src/theme/emotionBaseTheme/themeColors"
-import { CAMERA_PERMISSION_URL } from "@streamlit/lib/src/urls"
+import { isMobile } from "~lib/util/isMobile"
+import { debounce } from "~lib/util/utils"
+import Icon from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
+import { CAMERA_PERMISSION_URL } from "~lib/urls"
 
 import CameraInputButton from "./CameraInputButton"
 import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
@@ -102,7 +102,7 @@ const WebcamComponent = ({
   const [debouncedWidth, setDebouncedWidth] = useState(width)
 
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/react-compiler
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoizedSetDebouncedCallback = useCallback(
     debounce(1000, setDebouncedWidth),
@@ -120,7 +120,7 @@ const WebcamComponent = ({
     }
   }
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   return (
     <StyledCameraInput data-testid="stCameraInputWebcamComponent">
@@ -129,7 +129,9 @@ const WebcamComponent = ({
       !clearPhotoInProgress ? (
         <AskForCameraPermission width={debouncedWidth} />
       ) : (
-        isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
+        isMobile() && (
+          <SwitchFacingModeButton switchFacingMode={setFacingMode} />
+        )
       )}
       <StyledBox
         data-testid="stCameraInputWebcamStyledBox"
@@ -181,4 +183,4 @@ const WebcamComponent = ({
   )
 }
 
-export default WebcamComponent
+export default memo(WebcamComponent)

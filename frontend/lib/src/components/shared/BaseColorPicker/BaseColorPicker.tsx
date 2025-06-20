@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo, useCallback, useEffect, useState } from "react"
 
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
+import SaturationComponent from "react-color/es/components/common/Saturation"
 
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
-import { logWarning } from "@streamlit/lib/src/util/log"
+} from "~lib/components/widgets/BaseWidget"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
   StyledChromePicker,
@@ -36,6 +37,33 @@ import {
   StyledColorValue,
 } from "./styled-components"
 
+/* When closing the color picker popover, react-color triggers a security error
+ * if the app is in an iframe with a different origin. That security error shows up as
+ * an exception within the app and stops the app from working. This isn't a problem on
+ * Community Cloud anymore (because it uses same origin) but it can be in an
+ * embedded app or in Notebooks. We're applying this fix here to prevent that:
+ * https://github.com/uiwjs/react-color/issues/81#issuecomment-2208219820
+ */
+SaturationComponent.prototype.getContainerRenderWindow = function () {
+  const container = this.container
+  let renderWindow: Window & typeof globalThis = window
+  let lastRenderWindow: Window & typeof globalThis = window
+
+  try {
+    while (
+      !renderWindow.document.contains(container) &&
+      renderWindow.parent !== renderWindow
+    ) {
+      lastRenderWindow = renderWindow
+      renderWindow = renderWindow.parent as Window & typeof globalThis
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    renderWindow = lastRenderWindow
+  }
+  return renderWindow
+}
+
 export interface BaseColorPickerProps {
   disabled: boolean
   width?: number
@@ -43,117 +71,108 @@ export interface BaseColorPickerProps {
   showValue?: boolean
   label: string
   labelVisibility?: LabelVisibilityOptions
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onChange: (value: string) => any
   help?: string
 }
 
-interface State {
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: string
-}
+const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
+  const {
+    disabled,
+    value: propValue,
+    showValue,
+    label,
+    labelVisibility,
+    onChange,
+    help,
+  } = props
+  const [value, setValue] = useState(propValue)
+  const theme = useEmotionTheme()
 
-class BaseColorPicker extends React.PureComponent<
-  BaseColorPickerProps,
-  State
-> {
-  public state: State = {
-    value: this.props.value,
-  }
-
-  public componentDidUpdate(prevProps: BaseColorPickerProps): void {
-    if (
-      prevProps.value !== this.props.value &&
-      this.props.value !== this.state.value
-    ) {
-      this.setState((_, prevProps) => {
-        return { value: prevProps.value }
-      })
-    }
-  }
+  // Reset the value when the prop value changes
+  useEffect(() => {
+    setValue(propValue)
+  }, [propValue])
 
   // Note: This is a "local" onChange handler used to update the color preview
   // (allowing the user to click and drag). this.props.onChange is only called
   // when the ColorPicker popover is closed.
-  private onColorChange = (color: ColorResult): void => {
-    this.setState({ value: color.hex })
+  const onColorChange = useCallback((color: ColorResult): void => {
+    setValue(color.hex)
+  }, [])
+
+  const onColorClose = useCallback((): void => {
+    onChange(value)
+  }, [onChange, value])
+
+  const customChromePickerStyles = {
+    default: {
+      picker: {
+        borderRadius: theme.radii.default,
+        // Remove the box shadow from the color picker component since we're already
+        // applying a shadow to the popover that contains the color picker.
+        boxShadow: "none",
+        backgroundColor: theme.colors.bgColor,
+      },
+      saturation: {
+        borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
+        // Prevent text selection while the mouse is clicked to select a color. This
+        // can be annoying if you select a color and then move the mouse outside the
+        // color picker.
+        // We need the `as const` here to prevent a typing error (even though it
+        // also works correctly without it).
+        userSelect: "none" as const,
+      },
+      body: {
+        padding: theme.spacing.xl,
+      },
+    },
   }
 
-  private onColorClose = (): void => {
-    this.props.onChange(this.state.value)
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  public componentDidCatch(error: Error): void {
-    if (error?.name === "SecurityError") {
-      // 2021.06.30 - on Streamlit Sharing, ColorPicker throws a cross-origin
-      // error when its popover window is closed. There's an issue open in the
-      // react-color repo https://github.com/casesandberg/react-color/issues/806 -
-      // but it's months old and hasn't had a developer response.
-      logWarning(
-        `Swallowing ColorPicker SecurityError '${error.name}: ${error.message}'`
-      )
-
-      // We force an update after this error, to re-mount the UIPopover -
-      // because the error sometimes cause it to be unmounted. This is an
-      // unfortunate hack.
-      this.forceUpdate()
-    } else {
-      throw error
-    }
-  }
-
-  public render(): React.ReactNode {
-    const { width, showValue, label, labelVisibility, help, disabled } =
-      this.props
-    const { value } = this.state
-
-    return (
-      <StyledColorPicker
-        className="stColorPicker"
-        data-testid="stColorPicker"
-        width={width}
+  return (
+    <StyledColorPicker
+      className="stColorPicker"
+      data-testid="stColorPicker"
+      disabled={disabled}
+    >
+      <WidgetLabel
+        label={label}
         disabled={disabled}
+        labelVisibility={labelVisibility}
       >
-        <WidgetLabel
-          label={label}
-          disabled={disabled}
-          labelVisibility={labelVisibility}
-        >
-          {help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-            </StyledWidgetLabelHelpInline>
-          )}
-        </WidgetLabel>
-        <UIPopover
-          onClose={this.onColorClose}
-          content={() => (
-            <StyledChromePicker data-testid="stColorPickerPopover">
-              <ChromePicker
-                color={value}
-                onChange={this.onColorChange}
-                disableAlpha={true}
-              />
-            </StyledChromePicker>
-          )}
-        >
-          <StyledColorPreview disabled={disabled}>
-            <StyledColorBlock
-              data-testid="stColorPickerBlock"
-              backgroundColor={value}
-              disabled={disabled}
+        {help && (
+          <StyledWidgetLabelHelpInline>
+            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+          </StyledWidgetLabelHelpInline>
+        )}
+      </WidgetLabel>
+      <UIPopover
+        onClose={onColorClose}
+        placement="bottomLeft"
+        content={() => (
+          <StyledChromePicker data-testid="stColorPickerPopover">
+            <ChromePicker
+              color={value}
+              onChange={onColorChange}
+              disableAlpha={true}
+              styles={customChromePickerStyles}
             />
-            {showValue && (
-              <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
-            )}
-          </StyledColorPreview>
-        </UIPopover>
-      </StyledColorPicker>
-    )
-  }
+          </StyledChromePicker>
+        )}
+      >
+        <StyledColorPreview disabled={disabled}>
+          <StyledColorBlock
+            data-testid="stColorPickerBlock"
+            backgroundColor={value}
+            disabled={disabled}
+          />
+          {showValue && (
+            <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
+          )}
+        </StyledColorPreview>
+      </UIPopover>
+    </StyledColorPicker>
+  )
 }
 
-export default BaseColorPicker
+export default memo(BaseColorPicker)

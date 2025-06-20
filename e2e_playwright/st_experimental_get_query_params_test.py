@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -24,7 +26,9 @@ test_dicts = [
 
 
 @pytest.mark.parametrize("app_with_query_params", test_dicts, indirect=True)
-def test_app_with_experimental_get_query_params(app_with_query_params: Page):
+def test_app_with_experimental_get_query_params(
+    app_with_query_params: tuple[Page, dict[str, Any]],
+):
     page, test_dict = app_with_query_params
     expect(page.get_by_test_id("stMarkdownContainer").nth(0)).to_contain_text(
         "Please replace st.experimental_get_query_params with st.query_params. "

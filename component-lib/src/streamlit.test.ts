@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -252,7 +252,7 @@ describe("Streamlit", () => {
 
     expect(
       document.getElementById(Streamlit.INJECTED_STYLE_ELEMENT_ID)
-    ).toBeInstanceOf(HTMLStyleElement)
+    ).toBeInstanceOf(HTMLStyleElement);
     expect(
       document.querySelectorAll(`style#${Streamlit.INJECTED_STYLE_ELEMENT_ID}`)
     ).toHaveLength(1);

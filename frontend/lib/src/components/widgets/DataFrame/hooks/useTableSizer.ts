@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
 
 // TODO: fix incorrect hook usage and delete this lint suppression
 // TODO: Update to match React best practices
-// eslint-disable-next-line react-compiler/react-compiler
+// eslint-disable-next-line react-hooks/react-compiler
 /* eslint-disable react-hooks/exhaustive-deps */
 
-import React from "react"
+import React, { useLayoutEffect, useState } from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { Arrow as ArrowProto } from "@streamlit/protobuf"
+
+import { notNullOrUndefined } from "~lib/util/utils"
 
 import { CustomGridTheme } from "./useCustomTheme"
 
@@ -66,7 +67,7 @@ function useTableSizer(
   containerHeight?: number,
   isFullScreen?: boolean
 ): AutoSizerReturn {
-  const rowHeight = gridTheme.defaultRowHeight
+  const rowHeight = element.rowHeight ?? gridTheme.defaultRowHeight
   // Min height for the resizable table container:
   // Based on header + one column, and border threshold
   const minHeight =
@@ -144,7 +145,7 @@ function useTableSizer(
     maxWidth = Math.min(Math.max(element.width, maxWidth), availableWidth)
   }
 
-  const [resizableSize, setResizableSize] = React.useState<ResizableSize>({
+  const [resizableSize, setResizableSize] = useState<ResizableSize>({
     // If user hasn't specified a width via `width` or `use_container_width`,
     // we configure the table to 100%. Which will cause the data grid to
     // calculate the best size on the content and use that.
@@ -152,7 +153,7 @@ function useTableSizer(
     height: initialHeight,
   })
 
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     // This prevents weird table resizing behavior if the container width
     // changes and the table uses the full container width.
     if (element.useContainerWidth && resizableSize.width === "100%") {
@@ -164,7 +165,7 @@ function useTableSizer(
   }, [availableWidth])
 
   // Reset the width if the element width parameter was changed:
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,
       width: initialWidth || "100%",
@@ -173,7 +174,7 @@ function useTableSizer(
 
   // Reset the height if the element height parameter was changed or
   // if the number of rows changes (e.g. via add_rows):
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,
       height: initialHeight,
@@ -181,7 +182,7 @@ function useTableSizer(
   }, [initialHeight, numRows])
 
   // Change sizing if the fullscreen mode is activated or deactivated:
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     if (isFullScreen) {
       const stretchColumns: boolean =
         element.useContainerWidth ||

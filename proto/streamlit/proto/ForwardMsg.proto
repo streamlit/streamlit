@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import "streamlit/proto/PagesChanged.proto";
 import "streamlit/proto/ParentMessage.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionStatus.proto";
+import "streamlit/proto/AuthRedirect.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -76,20 +77,22 @@ message ForwardMsg {
     // Other messages.
     Navigation navigation = 23;
     PageNotFound page_not_found = 15;
-    PagesChanged pages_changed = 16;
+    PagesChanged pages_changed = 16 [deprecated = true];
     FileURLsResponse file_urls_response = 19;
     AutoRerun auto_rerun = 21;
 
     // App logo message
     Logo logo = 22;
 
+    // Auth redirect message
+    AuthRedirect auth_redirect = 24;
+
     // Platform - message to host
     ParentMessage parent_message = 20;
 
-    // A reference to a ForwardMsg that has already been delivered.
-    // The client should substitute the message with the given hash
-    // for this one. If the client does not have the referenced message
-    // in its cache, it can retrieve it from the server.
+    // A reference to a ForwardMsg that has already been delivered
+    // and cached in the frontend. The client should substitute the message
+    // with the given hash for this one.
     string ref_hash = 11;
   }
 
@@ -99,7 +102,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 24
+  // Next: 25
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
@@ -108,8 +111,7 @@ message ForwardMsg {
 // dataframe appear in different places across multiple reruns - or even appear
 // multiple times in a single run - and only send its dataframe bytes once.
 message ForwardMsgMetadata {
-  // If this is set, the server will have cached this message,
-  // and a client that receives it should do the same.
+  // Marks a message as cacheable for the frontend.
   bool cacheable = 1;
 
   // The path that identifies a delta's location in the report tree.
@@ -133,4 +135,13 @@ message ElementDimensionSpec {
 
   // height in pixels
   uint32 height = 2;
+}
+
+// This is a list of ForwardMessages used to have a single protobuf message
+// that encapsulates multiple ForwardMessages. This is used in static streamlit app
+// generation in replaying all of the protobuf messages of a streamlit app. The
+// ForwardMsgList allows us to leverage the built-ins of protobuf in delimiting the ForwardMsgs
+// instead of needing to do that ourselves.
+message ForwardMsgList {
+  repeated ForwardMsg messages = 1;
 }

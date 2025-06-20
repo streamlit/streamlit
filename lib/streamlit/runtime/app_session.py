@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,13 +15,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final
+
+from google.protobuf.json_format import ParseDict
 
 import streamlit.elements.exception as exception_utils
-from streamlit import config, runtime
+from streamlit import config, env_util, runtime
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
@@ -30,6 +34,7 @@ from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import (
     Config,
     CustomThemeConfig,
+    FontFace,
     NewSession,
     UserInfo,
 )
@@ -46,7 +51,6 @@ from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg
-    from streamlit.proto.PagesChanged_pb2 import PagesChanged
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
@@ -85,7 +89,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
-        user_info: dict[str, str | None],
+        user_info: dict[str, str | bool | None],
         session_id_override: str | None = None,
     ) -> None:
         """Initialize the AppSession.
@@ -147,7 +151,7 @@ class AppSession:
         self._client_state = ClientState()
 
         self._local_sources_watcher: LocalSourcesWatcher | None = None
-        self._stop_config_listener: Callable[[], bool] | None = None
+        self._stop_config_listener: Callable[[], None] | None = None
         self._stop_pages_listener: Callable[[], None] | None = None
 
         if config.get_option("server.fileWatcherType") != "none":
@@ -178,7 +182,7 @@ class AppSession:
 
         Files that we watch include:
           - source files that already exist (for edits)
-          - `.py` files in the the main script's `pages/` directory (for file additions
+          - `.py` files in the main script's `pages/` directory (for file additions
             and deletions)
           - project and user-level config.toml files
           - the project-level secrets.toml files
@@ -195,9 +199,6 @@ class AppSession:
         )
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
-        )
-        self._stop_pages_listener = self._pages_manager.register_pages_changed_callback(
-            self._on_pages_changed
         )
         secrets_singleton.file_change_listener.connect(self._on_secrets_file_changed)
 
@@ -283,7 +284,6 @@ class AppSession:
         """Process a BackMsg."""
         try:
             msg_type = msg.WhichOneof("type")
-
             if msg_type == "rerun_script":
                 if msg.debug_last_backmsg_id:
                     self._debug_last_backmsg_id = msg.debug_last_backmsg_id
@@ -305,7 +305,7 @@ class AppSession:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
         except Exception as ex:
-            _LOGGER.error(ex)
+            _LOGGER.exception("Error processing back message")
             self.handle_backmsg_exception(ex)
 
     def handle_backmsg_exception(self, e: BaseException) -> None:
@@ -350,6 +350,7 @@ class AppSession:
             to use previous client state.
 
         """
+
         if self._state == AppSessionState.SHUTDOWN_REQUESTED:
             _LOGGER.warning("Discarding rerun request after shutdown")
             return
@@ -357,13 +358,41 @@ class AppSession:
         if client_state:
             fragment_id = client_state.fragment_id
 
+            # Early check whether this fragment still exists in the fragment storage or
+            # might have been removed by a full app run. This is not merely a
+            # performance optimization, but also fixes following potential situation:
+            # A fragment run might create a new ScriptRunner when the current
+            # ScriptRunner is in state STOPPED (in this case, the 'success' variable
+            # below is false and the new ScriptRunner is created). This will lead to all
+            # events that were not sent / received from the previous script runner to be
+            # ignored in _handle_scriptrunner_event_on_event_loop, because the
+            # _script_runner changed. When the full app rerun ScriptRunner is done
+            # (STOPPED) but its events are not processed before the new ScriptRunner is
+            # created, its finished message is not sent to the frontend and no
+            # full-app-run cleanup is happening. This scenario can be triggered by the
+            # example app described in
+            # https://github.com/streamlit/streamlit/issues/9921, where the dialog
+            # sometimes stays open.
+            if fragment_id and not self._fragment_storage.contains(fragment_id):
+                _LOGGER.info(
+                    "The fragment with id %s does not exist anymore - "
+                    "it might have been removed during a preceding full-app rerun.",
+                    fragment_id,
+                )
+                return
+
+            if client_state.HasField("context_info"):
+                self._client_state.context_info.CopyFrom(client_state.context_info)
+
             rerun_data = RerunData(
-                client_state.query_string,
-                client_state.widget_states,
-                client_state.page_script_hash,
-                client_state.page_name,
+                query_string=client_state.query_string,
+                widget_states=client_state.widget_states,
+                page_script_hash=client_state.page_script_hash,
+                page_name=client_state.page_name,
                 fragment_id=fragment_id if fragment_id else None,
                 is_auto_rerun=client_state.is_auto_rerun,
+                cached_message_hashes=set(client_state.cached_message_hashes),
+                context_info=client_state.context_info,
             )
         else:
             rerun_data = RerunData()
@@ -399,6 +428,10 @@ class AppSession:
         """
         if self._scriptrunner is not None:
             self._scriptrunner.request_stop()
+
+    def clear_user_info(self) -> None:
+        """Clear the user info for this session."""
+        self._user_info.clear()
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
@@ -448,7 +481,7 @@ class AppSession:
         else:
             self._enqueue_forward_msg(self._create_file_change_message())
 
-    def _on_secrets_file_changed(self, _) -> None:
+    def _on_secrets_file_changed(self, _: Any) -> None:
         """Called when `secrets.file_change_listener` emits a Signal."""
 
         # NOTE: At the time of writing, this function only calls
@@ -459,14 +492,6 @@ class AppSession:
         # thus `_`), and introducing an unnecessary argument to
         # `_on_source_file_changed` just for this purpose sounded finicky.
         self._on_source_file_changed()
-
-    def _on_pages_changed(self, _) -> None:
-        msg = ForwardMsg()
-        self._populate_app_pages(msg.pages_changed, self._pages_manager.get_pages())
-        self._enqueue_forward_msg(msg)
-
-        if self._local_sources_watcher is not None:
-            self._local_sources_watcher.update_watched_pages()
 
     def _clear_queue(self, fragment_ids_this_run: list[str] | None = None) -> None:
         self._browser_queue.clear(
@@ -554,9 +579,11 @@ class AppSession:
             browser. Set only for the SCRIPT_STARTED event.
         """
 
-        assert (
-            self._event_loop == asyncio.get_running_loop()
-        ), "This function must only be called on the eventloop thread the AppSession was created on."
+        if self._event_loop != asyncio.get_running_loop():
+            raise RuntimeError(
+                "This function must only be called on the eventloop thread the AppSession was created on. "
+                "This should never happen."
+            )
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
@@ -572,10 +599,10 @@ class AppSession:
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
-
-            assert (
-                page_script_hash is not None
-            ), "page_script_hash must be set for the SCRIPT_STARTED event"
+            if page_script_hash is None:
+                raise RuntimeError(
+                    "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
+                )
 
             # Update the client state with the new page_script_hash if
             # necessary. This handles an edge case where a script is never
@@ -586,17 +613,17 @@ class AppSession:
 
             self._clear_queue(fragment_ids_this_run)
 
-            self._enqueue_forward_msg(
-                self._create_new_session_message(
-                    page_script_hash, fragment_ids_this_run, pages
-                )
+            msg = self._create_new_session_message(
+                page_script_hash, fragment_ids_this_run, pages
             )
 
-        elif (
-            event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
-            or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
-            or event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
-        ):
+            self._enqueue_forward_msg(msg)
+
+        elif event in {
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+            ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+        }:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_NOT_RUNNING
 
@@ -610,10 +637,10 @@ class AppSession:
             self._enqueue_forward_msg(self._create_script_finished_message(status))
             self._debug_last_backmsg_id = None
 
-            if (
-                event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
-                or event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
-            ):
+            if event in {
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+            }:
                 # The script completed successfully: update our
                 # LocalSourcesWatcher to account for any source code changes
                 # that change which modules should be watched.
@@ -623,9 +650,11 @@ class AppSession:
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
-                assert (
-                    exception is not None
-                ), "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event"
+                if exception is None:
+                    raise RuntimeError(
+                        "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. "
+                        "This should never happen."
+                    )
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
@@ -643,9 +672,10 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            assert (
-                client_state is not None
-            ), "client_state must be set for the SHUTDOWN event"
+            if client_state is None:
+                raise RuntimeError(
+                    "client_state must be set for the SHUTDOWN event. This should never happen."
+                )
 
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
@@ -656,9 +686,10 @@ class AppSession:
             self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
-            assert (
-                forward_msg is not None
-            ), "null forward_msg in ENQUEUE_FORWARD_MSG event"
+            if forward_msg is None:
+                raise RuntimeError(
+                    "null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen."
+                )
             self._enqueue_forward_msg(forward_msg)
 
         # Send a message if our run state changed
@@ -705,6 +736,10 @@ class AppSession:
         )
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
+        _populate_theme_msg(
+            msg.new_session.custom_theme.sidebar,
+            f"theme.{config.CustomThemeCategories.SIDEBAR.value}",
+        )
 
         # Immutable session data. We send this every time a new session is
         # started, to avoid having to track whether the client has already
@@ -716,6 +751,10 @@ class AppSession:
 
         imsg.environment_info.streamlit_version = STREAMLIT_VERSION_STRING
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
+        imsg.environment_info.server_os = env_util.SYSTEM
+        imsg.environment_info.has_display = (
+            "DISPLAY" in os.environ or "WAYLAND_DISPLAY" in os.environ
+        )
 
         imsg.session_status.run_on_save = self._run_on_save
         imsg.session_status.script_is_running = (
@@ -755,20 +794,18 @@ class AppSession:
 
             repository_name, branch, module = repo_info
 
-            if repository_name.endswith(".git"):
-                # Remove the .git extension from the repository name
-                repository_name = repository_name[:-4]
+            repository_name = repository_name.removesuffix(".git")
 
             msg.git_info_changed.repository = repository_name
             msg.git_info_changed.branch = branch
             msg.git_info_changed.module = module
 
-            msg.git_info_changed.untracked_files[:] = repo.untracked_files
-            msg.git_info_changed.uncommitted_files[:] = repo.uncommitted_files
+            msg.git_info_changed.untracked_files[:] = repo.untracked_files or []
+            msg.git_info_changed.uncommitted_files[:] = repo.uncommitted_files or []
 
             if repo.is_head_detached:
                 msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
-            elif len(repo.ahead_commits) > 0:
+            elif repo.ahead_commits and len(repo.ahead_commits) > 0:
                 msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
@@ -853,7 +890,7 @@ class AppSession:
         self._enqueue_forward_msg(msg)
 
     def _populate_app_pages(
-        self, msg: NewSession | PagesChanged, pages: dict[PageHash, PageInfo]
+        self, msg: NewSession, pages: dict[PageHash, PageInfo]
     ) -> None:
         for page_script_hash, page_info in pages.items():
             page_proto = msg.app_pages.add()
@@ -876,7 +913,7 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
         Config.ToolbarMode, config_value.upper()
     )
     if enum_value is None:
-        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())
+        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())  # noqa: SIM118
         raise ValueError(
             f"Config {config_key!r} expects to have one of "
             f"the following values: {allowed_values}. "
@@ -895,15 +932,15 @@ def _populate_config_msg(msg: Config) -> None:
     msg.toolbar_mode = _get_toolbar_mode()
 
 
-def _populate_theme_msg(msg: CustomThemeConfig) -> None:
-    enum_encoded_options = {"base", "font"}
-    theme_opts = config.get_options_for_section("theme")
-
-    if not any(theme_opts.values()):
+def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
+    theme_opts = config.get_options_for_section(section)
+    if all(val is None for val in theme_opts.values()):
         return
 
     for option_name, option_val in theme_opts.items():
-        if option_name not in enum_encoded_options and option_val is not None:
+        # We need to ignore some config options here that need special handling
+        # and cannot directly be set on the protobuf.
+        if option_name not in {"base", "font", "fontFaces"} and option_val is not None:
             setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base and font will default to the protobuf enum zero
@@ -914,34 +951,56 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
         "light": msg.BaseTheme.LIGHT,
         "dark": msg.BaseTheme.DARK,
     }
-    base = theme_opts["base"]
+    base = theme_opts.get("base", None)
     if base is not None:
         if base not in base_map:
             _LOGGER.warning(
-                f'"{base}" is an invalid value for theme.base.'
-                f" Allowed values include {list(base_map.keys())}."
-                ' Setting theme.base to "light".'
+                '"%s" is an invalid value for theme.base. Allowed values include %s. '
+                'Setting theme.base to "light".',
+                base,
+                list(base_map.keys()),
             )
         else:
             msg.base = base_map[base]
 
-    font_map = {
-        "sans serif": msg.FontFamily.SANS_SERIF,
-        "serif": msg.FontFamily.SERIF,
-        "monospace": msg.FontFamily.MONOSPACE,
-    }
-    font = theme_opts["font"]
-    if font is not None:
-        if font not in font_map:
+    # Since the font field uses the deprecated enum, we need to put the font
+    # config into the body_font field instead:
+    body_font = theme_opts.get("font", None)
+    if body_font:
+        msg.body_font = body_font
+
+    font_faces = theme_opts.get("fontFaces", None)
+    # If fontFaces was configured via config.toml, it's already a parsed list of
+    # dictionaries. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that still needs to be parsed.
+    if isinstance(font_faces, str):
+        try:
+            font_faces = json.loads(font_faces)
+        except Exception as e:
             _LOGGER.warning(
-                f'"{font}" is an invalid value for theme.font.'
-                f" Allowed values include {list(font_map.keys())}."
-                ' Setting theme.font to "sans serif".'
+                "Failed to parse the theme.fontFaces config option with json.loads: %s.",
+                font_faces,
+                exc_info=e,
             )
-        else:
-            msg.font = font_map[font]
+            font_faces = None
+
+    if font_faces is not None:
+        for font_face in font_faces:
+            try:
+                if "weight" in font_face:
+                    font_face["weight_range"] = str(font_face["weight"])
+                    del font_face["weight"]
+                msg.font_faces.append(ParseDict(font_face, FontFace()))
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.fontFaces config option: %s.",
+                    font_face,
+                    exc_info=e,
+                )
 
 
 def _populate_user_info_msg(msg: UserInfo) -> None:
-    msg.installation_id = Installation.instance().installation_id
-    msg.installation_id_v3 = Installation.instance().installation_id_v3
+    inst = Installation.instance()
+    msg.installation_id = inst.installation_id
+    msg.installation_id_v3 = inst.installation_id_v3
+    msg.installation_id_v4 = inst.installation_id_v4

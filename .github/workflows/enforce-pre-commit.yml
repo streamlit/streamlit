@@ -51,6 +51,9 @@ jobs:
           pip install pre-commit
           pre-commit install-hooks
         shell: bash
+      - name: Enable Corepack
+        run: corepack enable
+        shell: bash
       - name: Install prettier
         run: cd frontend && yarn install
       - name: Run pre-commit hooks

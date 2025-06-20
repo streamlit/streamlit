@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import tornado.web
 
-from streamlit.web.server import allow_cross_origin_requests
+from streamlit.web.server import allow_all_cross_origin_requests, is_allowed_origin
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
 if TYPE_CHECKING:
@@ -30,11 +30,13 @@ class StatsRequestHandler(tornado.web.RequestHandler):
     def initialize(self, stats_manager: StatsManager) -> None:
         self._manager = stats_manager
 
-    def set_default_headers(self):
-        if allow_cross_origin_requests():
+    def set_default_headers(self) -> None:
+        if allow_all_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
+        elif is_allowed_origin(origin := self.request.headers.get("Origin")):
+            self.set_header("Access-Control-Allow-Origin", cast("str", origin))
 
-    def options(self):
+    def options(self) -> None:
         """/OPTIONS handler for preflight CORS checks."""
         self.set_status(204)
         self.finish()

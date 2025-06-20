@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   DataEditorProps,
@@ -26,7 +26,7 @@ import { useColumnSort as useGlideColumnSort } from "@glideapps/glide-data-grid-
 import {
   BaseColumn,
   toGlideColumn,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+} from "~lib/components/widgets/DataFrame/columns"
 
 /**
  * Configuration type for column sorting hook.
@@ -64,9 +64,17 @@ function updateSortingHeader(
   })
 }
 
-type ColumnSortReturn = {
+export type ColumnSortReturn = {
   columns: BaseColumn[]
-  sortColumn: (index: number) => void
+  sortColumn: (
+    index: number,
+    // If undefined, the sorting will be removed
+    // If "auto", the sorting will toggle from asc -> desc -> remove
+    direction?: "asc" | "desc" | "auto",
+    // If true, the sorting will be removed if the sortColumn is called
+    // with the same direction as the current sorting direction
+    autoReset?: boolean
+  ) => void
   getOriginalIndex: (index: number) => number
 } & Pick<DataEditorProps, "getCellContent">
 
@@ -75,6 +83,7 @@ type ColumnSortReturn = {
  *
  * @param numRows - The number of rows in the table.
  * @param columns - The columns of the table.
+ * @param getCellContent - A function that returns the content of the cell at the given column and row indices.
  *
  * @returns An object containing the following properties:
  * - `columns`: The updated list of columns.
@@ -87,7 +96,7 @@ function useColumnSort(
   columns: BaseColumn[],
   getCellContent: ([col, row]: readonly [number, number]) => GridCell
 ): ColumnSortReturn {
-  const [sort, setSort] = React.useState<ColumnSortConfig>()
+  const [sort, setSort] = useState<ColumnSortConfig>()
 
   const { getCellContent: getCellContentSorted, getOriginalIndex } =
     useGlideColumnSort({
@@ -97,32 +106,51 @@ function useColumnSort(
       sort,
     })
 
-  const updatedColumns = React.useMemo(() => {
+  const updatedColumns = useMemo(() => {
     return updateSortingHeader(columns, sort)
   }, [columns, sort])
 
-  const sortColumn = React.useCallback(
-    (index: number) => {
-      let sortDirection = "asc"
+  const sortColumn = useCallback(
+    (
+      index: number,
+      direction?: "asc" | "desc" | "auto",
+      autoReset?: boolean
+    ) => {
       const clickedColumn = updatedColumns[index]
+      let sortDirection: "asc" | "desc" | undefined
 
-      if (sort && sort.column.id === clickedColumn.id) {
-        // The clicked column is already sorted
-        if (sort.direction === "asc") {
-          // Sort column descending
-          sortDirection = "desc"
-        } else {
-          // Remove sorting of column
-          setSort(undefined)
-          return
+      if (direction === "auto") {
+        // Toggle from asc -> desc -> remove
+        sortDirection = "asc"
+        if (sort && sort.column.id === clickedColumn.id) {
+          // The clicked column is already sorted
+          if (sort.direction === "asc") {
+            // Sort column descending
+            sortDirection = "desc"
+          } else {
+            // Remove sorting of column
+            sortDirection = undefined
+          }
         }
+      } else {
+        sortDirection = direction
       }
 
-      setSort({
-        column: toGlideColumn(clickedColumn),
-        direction: sortDirection,
-        mode: clickedColumn.sortMode,
-      } as ColumnSortConfig)
+      if (sortDirection === undefined) {
+        // Remove sorting:
+        setSort(undefined)
+      } else if (autoReset && sortDirection === sort?.direction) {
+        // Remove sorting if autoReset is true and the new
+        // sortDirection is the same as the current sorting direction
+        setSort(undefined)
+      } else {
+        // Set the new sorting direction:
+        setSort({
+          column: toGlideColumn(clickedColumn),
+          direction: sortDirection,
+          mode: clickedColumn.sortMode,
+        } as ColumnSortConfig)
+      }
     },
     [sort, updatedColumns]
   )

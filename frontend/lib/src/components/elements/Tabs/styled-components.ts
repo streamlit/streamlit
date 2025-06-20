@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,11 @@ import { transparentize } from "color2k"
 export interface StyledTabContainerProps {
   isOverflowing: boolean
   tabHeight: string
+  width: React.CSSProperties["width"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ theme, isOverflowing, tabHeight }) => ({
+  ({ theme, isOverflowing, tabHeight, width }) => ({
     ...(isOverflowing
       ? {
           position: "relative",
@@ -43,5 +44,8 @@ export const StyledTabContainer = styled.div<StyledTabContainerProps>(
           },
         }
       : {}),
+    ...(width && {
+      width,
+    }),
   })
 )

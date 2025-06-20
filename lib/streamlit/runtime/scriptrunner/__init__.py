@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,12 +27,12 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 
 __all__ = [
     "RerunData",
-    "ScriptRunContext",
-    "add_script_run_ctx",
-    "get_script_run_ctx",
-    "enqueue_message",
     "RerunException",
+    "ScriptRunContext",
     "ScriptRunner",
     "ScriptRunnerEvent",
     "StopException",
+    "add_script_run_ctx",
+    "enqueue_message",
+    "get_script_run_ctx",
 ]

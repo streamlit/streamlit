@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,8 +78,11 @@ class WebsocketSessionManagerTests(unittest.TestCase):
 
         assert session_info.session.id == session_id
 
-    def test_connect_session_assert(self):
-        with pytest.raises(AssertionError):
+    def test_connect_session_check(self):
+        with pytest.raises(
+            RuntimeError,
+            match="Only one of existing_session_id and session_id_override should be truthy. This should never happen.",
+        ):
             self.connect_session(
                 existing_session_id="existing_session_id",
                 session_id_override="session_id_override",
@@ -114,11 +117,11 @@ class WebsocketSessionManagerTests(unittest.TestCase):
 
     def test_connect_session_explodes_if_ID_collission(self):
         session_id = self.connect_session()
-        with pytest.raises(AssertionError):
-            with patch(
-                "streamlit.runtime.app_session.uuid.uuid4", return_value=session_id
-            ):
-                self.connect_session()
+        with (
+            pytest.raises(RuntimeError),
+            patch("streamlit.runtime.app_session.uuid.uuid4", return_value=session_id),
+        ):
+            self.connect_session()
 
     @patch(
         "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ from queue import Queue
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock
 
+import pytest
+
 from streamlit.runtime import Runtime, RuntimeConfig
 
 
@@ -40,7 +42,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
             try:
                 # This function should be called in another thread, which
                 # should not already have an asyncio loop.
-                with self.assertRaises(RuntimeError):
+                with pytest.raises(RuntimeError):
                     asyncio.get_running_loop()
 
                 # Create a Runtime instance and put it in the (thread-safe) queue,

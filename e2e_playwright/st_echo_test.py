@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ def test_echo_msg(app: Page):
 
 
 def test_echo_msg_code_location(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that st.echo shows the correct location above and below"""
-    screen = app.get_by_test_id("stVerticalBlockBorderWrapper")
+    """Test that st.echo shows the correct location above and below."""
+    screen = app.get_by_test_id("stVerticalBlock")
 
     assert_snapshot(screen, name="st_echo-code_location_above_and_below")

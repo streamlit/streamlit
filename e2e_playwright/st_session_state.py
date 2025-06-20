@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ if runtime.exists():
     if "checkbox1" not in st.session_state:
         st.session_state.checkbox1 = True
 
-    def on_checkbox_change(changed_checkbox_number):
+    def on_checkbox_change(changed_checkbox_number: int) -> None:
         if changed_checkbox_number == 1:
             st.session_state.checkbox2 = False
         elif changed_checkbox_number == 2:

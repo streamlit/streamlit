@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { GridCell, GridCellKind, UriCell } from "@glideapps/glide-data-grid"
 
-import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
@@ -52,6 +52,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       validateRegex = new RegExp(parameters.validate, "us")
     } catch (error) {
       // Put error message in validateRegex so we can display it in the cell
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       validateRegex = `Invalid validate regex: ${parameters.validate}.\nError: ${error}`
     }
   }
@@ -65,13 +66,14 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   ) {
     try {
       displayTextRegex = new RegExp(parameters.display_text, "us")
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // The regex is invalid, interpret it as static display text.
       displayTextRegex = undefined
     }
   }
 
-  const cellTemplate = {
+  const cellTemplate: UriCell = {
     kind: GridCellKind.Uri,
     readonly: !props.isEditable,
     allowOverlay: true,
@@ -81,7 +83,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     data: "",
     displayData: "",
     copyData: "",
-  } as UriCell
+  }
 
   const validateInput = (href?: string): boolean => {
     if (isNullOrUndefined(href)) {
@@ -113,10 +115,12 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     kind: "link",
     sortMode: "default",
     validateInput,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
           data: null as any,
           isMissingValue: true,
           onClickUri: () => {},

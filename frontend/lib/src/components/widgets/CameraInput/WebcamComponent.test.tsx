@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@ import React from "react"
 import { screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { Props, WebcamPermission } from "./WebcamComponent"
 
 vi.mock("react-webcam")
 
-vi.mock("react-device-detect", () => {
+vi.mock("~lib/util/isMobile", () => {
   return {
-    isMobile: true,
+    isMobile: () => true,
   }
 })
 

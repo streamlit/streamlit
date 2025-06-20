@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Final, Iterator, MutableMapping
+from collections.abc import Iterator, MutableMapping
+from typing import Any, Final
 
 from streamlit import logger as _logger
 from streamlit import runtime
@@ -39,7 +40,7 @@ def get_session_state() -> SafeSessionState:
     directly. Instead, SessionState objects should be accessed via
     st.session_state.
     """
-    global _state_use_warning_already_displayed
+    global _state_use_warning_already_displayed  # noqa: PLW0603
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         get_script_run_ctx,
     )
@@ -56,7 +57,7 @@ def get_session_state() -> SafeSessionState:
                     "Session state does not function when running a script without `streamlit run`"
                 )
 
-        global _mock_session_state
+        global _mock_session_state  # noqa: PLW0603
 
         if _mock_session_state is None:
             # Lazy initialize the mock session state

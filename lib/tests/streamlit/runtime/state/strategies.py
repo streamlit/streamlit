@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ def as_keyed_widget_id(raw_wid, key):
 def mock_metadata(widget_id: str, default_value: int) -> WidgetMetadata:
     return WidgetMetadata(
         id=widget_id,
-        deserializer=lambda x, s: default_value if x is None else x,
+        deserializer=lambda x: default_value if x is None else x,
         serializer=lambda x: x,
         value_type="int_value",
     )

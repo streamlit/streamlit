@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,8 +36,6 @@ class DictToolsTest(unittest.TestCase):
     def test_remove_none_values(self, input: dict[str, Any], expected: dict[str, Any]):
         """Test remove_none_values."""
 
-        self.assertEqual(
-            remove_none_values(input),
-            expected,
-            f"Expected {input} to be transformed into {expected}.",
+        assert remove_none_values(input) == expected, (
+            f"Expected {input} to be transformed into {expected}."
         )

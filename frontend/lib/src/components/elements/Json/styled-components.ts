@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,12 @@
 
 import styled from "@emotion/styled"
 
-interface StyledJsonWrapperProps {
-  width: number
-}
-
-export const StyledJsonWrapper = styled.div<StyledJsonWrapperProps>(
-  ({ theme, width }) => ({
-    width: width,
-    overflowY: "auto",
-    ".react-json-view .copy-icon svg": {
-      // Make the copy icon responsive to the root font size.
-      fontSize: `1em !important`,
-      marginRight: `${theme.spacing.threeXS} !important`,
-      verticalAlign: "middle !important",
-    },
-  })
-)
+export const StyledJsonWrapper = styled.div(({ theme }) => ({
+  overflowY: "auto",
+  ".react-json-view .copy-icon svg": {
+    // Make the copy icon responsive to the root font size.
+    fontSize: `1em !important`,
+    marginRight: `${theme.spacing.threeXS} !important`,
+    verticalAlign: "middle !important",
+  },
+}))

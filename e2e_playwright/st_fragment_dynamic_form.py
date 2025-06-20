@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ def get_location():
 
         submit_enabled = city and state and country
         if st.button("Submit", type="primary", disabled=not submit_enabled):
-            if len(city) < 8:
+            if city and len(city) < 8:
                 st.warning(f"City name {city} must be at least 8 characters")
             else:
                 st.session_state.new_location = {

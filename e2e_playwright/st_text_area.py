@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,7 +90,12 @@ with st.form("form"):
     st.text_area("text area 14 (value from form)", key="text_area_14")
     st.form_submit_button("submit")
 
-form_value = (
-    st.session_state["text_area_14"] if "text_area_14" in st.session_state else None
-)
+form_value = st.session_state.get("text_area_14", None)
 st.write("text area 14 (value from form) - value: ", form_value)
+
+st.text_area(
+    "text area 15 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
+)
+
+st.text_area("text area 16 (width=200px)", "width test", width=200)
+st.text_area("text area 17 (width='stretch')", "width test", width="stretch")

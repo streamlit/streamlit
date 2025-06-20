@@ -1,12 +1,14 @@
 [run]
 omit =
     streamlit/proto/*
+    streamlit/vendor/*
     streamlit/hello/*
     streamlit/static/*
 
 [report]
 omit =
     streamlit/proto/*
+    streamlit/vendor/*
     streamlit/hello/*
     streamlit/static/*
 exclude_also =

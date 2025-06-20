@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 def create_default_cache_storage_manager() -> CacheStorageManager:
     """
     Get the cache storage manager.
-    It would be used both in server.py and in cli.py to have unified cache storage
+    It would be used both in server.py and in cli.py to have unified cache storage.
 
     Returns
     -------

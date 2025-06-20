@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,32 +23,32 @@ import React, {
   useMemo,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import BaseButton, {
-  BaseButtonKind,
-  BaseButtonSize,
-} from "@streamlit/lib/src/components/shared/BaseButton"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibilityMessage,
-} from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "@streamlit/protobuf"
+
+import BaseButton, {
+  BaseButtonKind,
+  BaseButtonSize,
+  DynamicButtonLabel,
+} from "~lib/components/shared/BaseButton"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+} from "~lib/components/widgets/BaseWidget"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,
-} from "@streamlit/lib/src/hooks/useBasicWidgetState"
+} from "~lib/hooks/useBasicWidgetState"
+import { EmotionTheme } from "~lib/theme"
 
 export interface Props {
   disabled: boolean
@@ -110,21 +110,27 @@ export function getContentElement(
     style === ButtonGroupProto.Style.PILLS
       ? BaseButtonKind.PILLS
       : style === ButtonGroupProto.Style.BORDERLESS
-      ? BaseButtonKind.BORDERLESS_ICON
-      : BaseButtonKind.SEGMENTED_CONTROL
+        ? BaseButtonKind.BORDERLESS_ICON
+        : BaseButtonKind.SEGMENTED_CONTROL
   const size =
     style === ButtonGroupProto.Style.BORDERLESS
       ? BaseButtonSize.XSMALL
       : BaseButtonSize.MEDIUM
 
+  // Use smaller font if kind is pills or segmented control
+  const useSmallerFont =
+    kind === BaseButtonKind.PILLS || kind === BaseButtonKind.SEGMENTED_CONTROL
+
   const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
 
   return {
     element: (
-      <>
-        {icon && <DynamicIcon size={iconSize} iconValue={icon} />}
-        {content && <StreamlitMarkdown source={content} allowHTML={false} />}
-      </>
+      <DynamicButtonLabel
+        icon={icon}
+        label={content}
+        iconSize={iconSize}
+        useSmallerFont={useSmallerFont}
+      />
     ),
     kind: kind,
     size: size,
@@ -177,6 +183,7 @@ function getButtonKindAndSize(
 function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
   spacing: EmotionTheme["spacing"]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): Record<string, any> {
   const baseStyle = { flexWrap: "wrap", maxWidth: "fit-content" }
 
@@ -235,6 +242,7 @@ function createOptionChild(
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
   return forwardRef(function BaseButtonGroup(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     props: any,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
@@ -289,7 +297,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     labelVisibility,
     help,
   } = element
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
@@ -330,6 +338,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           value,
           style
         )
+        // TODO: Update to match React best practices
+        // eslint-disable-next-line @eslint-react/no-array-index-key
         return <Element key={`${option.content}-${index}`} />
       }),
     [clickMode, options, selectionVisualization, style, value]

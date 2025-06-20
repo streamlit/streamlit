@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,33 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-import AlertContainer, {
-  Kind,
-} from "@streamlit/lib/src/components/shared/AlertContainer"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { Exception as ExceptionProto } from "@streamlit/lib/src/proto"
-import { StyledCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
-import { StyledStackTrace } from "@streamlit/lib/src/components/shared/ErrorElement/styled-components"
+import { getLogger } from "loglevel"
+
+import { Exception as ExceptionProto } from "@streamlit/protobuf"
+import { isLocalhost } from "@streamlit/utils"
+
+import { notNullOrUndefined } from "~lib/util/utils"
+import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
+import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
 
 import {
+  StyledExceptionCopyButton,
+  StyledExceptionLinks,
   StyledExceptionMessage,
+  StyledExceptionWrapper,
   StyledMessageType,
   StyledStackTraceContent,
   StyledStackTraceRow,
   StyledStackTraceTitle,
 } from "./styled-components"
 
+export const LOG = getLogger("ExceptionElement")
+
 export interface ExceptionElementProps {
-  width: number
   element: ExceptionProto
 }
 
@@ -84,13 +90,15 @@ function ExceptionMessage({
 function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
   // Build the stack trace display, if we got a stack trace.
   return (
-    <>
+    <div>
       <StyledStackTraceTitle>Traceback:</StyledStackTraceTitle>
       <StyledStackTrace>
         <StyledStackTraceContent>
-          <StyledCode>
+          <StyledCode wrapLines={false}>
             {stackTrace.map((row: string, index: number) => (
               <StyledStackTraceRow
+                // TODO: Update to match React best practices
+                // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={index}
                 data-testid="stExceptionTraceRow"
               >
@@ -100,34 +108,65 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
           </StyledCode>
         </StyledStackTraceContent>
       </StyledStackTrace>
-    </>
+    </div>
   )
 }
 
 /**
  * Functional element representing formatted text.
  */
-export default function ExceptionElement({
+function ExceptionElement({
   element,
-  width,
 }: Readonly<ExceptionElementProps>): ReactElement {
+  const formattedExceptionShort = `${element.type}: ${element.message}`
+  const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
+    "\n"
+  )}`
+
+  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+    formattedExceptionShort
+  )}`
+  const chatGptUrl = `https://chatgpt.com/?q=${encodeURIComponent(
+    formattedExceptionFull
+  )}`
+
+  const onCopyClick = (): void => {
+    navigator.clipboard.writeText(formattedExceptionFull).catch(error => {
+      LOG.error("Failed to copy exception details to clipboard:", error)
+    })
+  }
+
   return (
     <div className="stException" data-testid="stException">
-      <AlertContainer
-        kind={element.isWarning ? Kind.WARNING : Kind.ERROR}
-        width={width}
-      >
-        <StyledExceptionMessage data-testid="stExceptionMessage">
-          <ExceptionMessage
-            type={element.type}
-            message={element.message}
-            messageIsMarkdown={element.messageIsMarkdown}
-          />
-        </StyledExceptionMessage>
-        {element.stackTrace && element.stackTrace.length > 0 ? (
-          <StackTrace stackTrace={element.stackTrace} />
-        ) : null}
+      <AlertContainer kind={element.isWarning ? Kind.WARNING : Kind.ERROR}>
+        <StyledExceptionWrapper>
+          <StyledExceptionMessage data-testid="stExceptionMessage">
+            <ExceptionMessage
+              type={element.type}
+              message={element.message}
+              messageIsMarkdown={element.messageIsMarkdown}
+            />
+          </StyledExceptionMessage>
+          {element.stackTrace && element.stackTrace.length > 0 ? (
+            <StackTrace stackTrace={element.stackTrace} />
+          ) : null}
+          {isLocalhost() && (
+            <StyledExceptionLinks>
+              <StyledExceptionCopyButton onClick={onCopyClick}>
+                Copy
+              </StyledExceptionCopyButton>
+              <a href={searchUrl} target="_blank" rel="noopener noreferrer">
+                Ask Google
+              </a>
+              <a href={chatGptUrl} target="_blank" rel="noopener noreferrer">
+                Ask ChatGPT
+              </a>
+            </StyledExceptionLinks>
+          )}
+        </StyledExceptionWrapper>
       </AlertContainer>
     </div>
   )
 }
+
+export default memo(ExceptionElement)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback, useMemo } from "react"
 
 import {
   BaseDrawArgs,
@@ -36,7 +36,7 @@ import {
   CustomCells,
   isErrorCell,
   isMissingValueCell,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+} from "~lib/components/widgets/DataFrame/columns"
 
 // Token used for missing values (null, NaN, etc.)
 const NULL_VALUE_TOKEN = "None"
@@ -116,7 +116,7 @@ type CustomRendererReturn = Pick<
  *    that can be passed to the `DataEditor` component.
  */
 function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
-  const drawCell: DrawCellCallback = React.useCallback(
+  const drawCell: DrawCellCallback = useCallback(
     (args, draw) => {
       const { cell, theme, ctx, rect } = args
       const colPos = args.col
@@ -152,7 +152,7 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:
-  const customRenderers = React.useMemo(
+  const customRenderers = useMemo(
     () =>
       [
         SparklineCell,
@@ -163,9 +163,6 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
       ] as DataEditorProps["customRenderers"],
     // This doesn't change during the lifetime of the component,
     // so we can just run it once at creation time.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
     []
   )
 

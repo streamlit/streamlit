@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ class FileIsInFolderTest(unittest.TestCase):
         folder_black_list = FolderBlackList([])
         is_blacklisted = folder_black_list.is_blacklisted
 
-        self.assertTrue(is_blacklisted("/foo/miniconda2/script.py"))
-        self.assertTrue(is_blacklisted("/foo/miniconda3/script.py"))
-        self.assertTrue(is_blacklisted("/foo/anaconda2/script.py"))
-        self.assertTrue(is_blacklisted("/foo/anaconda3/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.virtualenv/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.venv/script.py"))
-        self.assertTrue(is_blacklisted("/foo/.random_hidden_folder/script.py"))
+        assert is_blacklisted("/foo/miniconda2/script.py")
+        assert is_blacklisted("/foo/miniconda3/script.py")
+        assert is_blacklisted("/foo/anaconda2/script.py")
+        assert is_blacklisted("/foo/anaconda3/script.py")
+        assert is_blacklisted("/foo/.virtualenv/script.py")
+        assert is_blacklisted("/foo/.venv/script.py")
+        assert is_blacklisted("/foo/.random_hidden_folder/script.py")
 
     def test_do_blacklist_user_configured_folders(self):
         """
@@ -43,7 +43,7 @@ class FileIsInFolderTest(unittest.TestCase):
         """
         folder_black_list = FolderBlackList(["/bar/some_folder"])
         is_blacklisted = folder_black_list.is_blacklisted
-        self.assertTrue(is_blacklisted("/bar/some_folder/script.py"))
+        assert is_blacklisted("/bar/some_folder/script.py")
 
     def test_do_not_blacklist(self):
         """
@@ -52,5 +52,5 @@ class FileIsInFolderTest(unittest.TestCase):
         folder_black_list = FolderBlackList([])
         is_blacklisted = folder_black_list.is_blacklisted
 
-        self.assertFalse(is_blacklisted("/foo/not_blacklisted/script.py"))
-        self.assertFalse(is_blacklisted("/foo/not_blacklisted/.hidden_script.py"))
+        assert not is_blacklisted("/foo/not_blacklisted/script.py")
+        assert not is_blacklisted("/foo/not_blacklisted/.hidden_script.py")

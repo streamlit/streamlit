@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback } from "react"
+import React, { memo, ReactElement, useCallback } from "react"
 
 import {
   createElement,
@@ -33,27 +33,30 @@ export interface StreamlitSyntaxHighlighterProps {
   language?: string
   showLineNumbers?: boolean
   wrapLines?: boolean
+  height?: number
 }
 
-export default function StreamlitSyntaxHighlighter({
+function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
   wrapLines,
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   const renderer = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     ({ rows, stylesheet, useInlineStyles }: any): any =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       rows.map((row: any, index: any): any => {
-        const children = row.children
+        const rowChildren = row.children
 
-        if (children) {
-          const lineNumberElement = children.shift()
+        if (rowChildren) {
+          const lineNumberElement = rowChildren.shift()
 
           if (lineNumberElement) {
             row.children = [
               lineNumberElement,
               {
-                children,
+                children: rowChildren,
                 properties: { className: [] },
                 tagName: "span",
                 type: "element",
@@ -74,7 +77,7 @@ export default function StreamlitSyntaxHighlighter({
 
   return (
     <StyledCodeBlock className="stCode" data-testid="stCode">
-      <StyledPre>
+      <StyledPre wrapLines={wrapLines ?? false}>
         <SyntaxHighlighter
           language={language}
           PreTag="div"
@@ -102,3 +105,5 @@ export default function StreamlitSyntaxHighlighter({
     </StyledCodeBlock>
   )
 }
+
+export default memo(StreamlitSyntaxHighlighter)

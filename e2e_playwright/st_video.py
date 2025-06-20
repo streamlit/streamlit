@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ webm_video_with_end_time_and_loop = "webm video with end time and loop"
 mp4_video_with_end_time_and_loop = "mp4 video with end time and loop"
 webm_video_with_autoplay = "webm video with autoplay"
 webm_video_muted = "webm video muted"
+webm_video_width_pixel = "webm video with pixel width"
+webm_video_width_stretch = "webm video with stretch width"
 
 video_to_show = st.radio(
     "Choose a video to show",
@@ -49,6 +51,8 @@ video_to_show = st.radio(
         mp4_video_with_end_time_and_loop,
         webm_video_with_autoplay,
         webm_video_muted,
+        webm_video_width_pixel,
+        webm_video_width_stretch,
     ],
     index=0,
 )
@@ -126,4 +130,18 @@ if video_to_show == webm_video_muted:
         str(WEBM_VIDEO_PATH),
         autoplay=True,
         muted=True,
+    )
+
+if video_to_show == webm_video_width_pixel:
+    # Test video with pixel width
+    st.video(
+        str(WEBM_VIDEO_PATH),
+        width=400,
+    )
+
+if video_to_show == webm_video_width_stretch:
+    # Test video with stretch width
+    st.video(
+        str(WEBM_VIDEO_PATH),
+        width="stretch",
     )

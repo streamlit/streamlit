@@ -11,6 +11,9 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Enable and Prepare Latest Yarn
+      run: corepack enable
+      shell: bash
     - name: Setup Node
       uses: actions/setup-node@v4
       with:

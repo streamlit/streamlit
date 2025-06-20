@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@ st.button("click to rerun")
 @st.cache_data(experimental_allow_widgets=True, show_spinner=False)
 def foo(i):
     options = ["foo", "bar", "baz", "qux"]
-    r = st.radio("radio", options, index=i)
-    return r
+    return st.radio("radio", options, index=i)
 
 
 r = foo(1)

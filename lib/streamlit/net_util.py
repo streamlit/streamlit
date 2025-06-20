@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ def get_external_ip() -> str | None:
         The external IPv4 address of the current machine.
 
     """
-    global _external_ip
+    global _external_ip  # noqa: PLW0603
 
     if _external_ip is not None:
         return _external_ip
@@ -73,7 +73,7 @@ def get_internal_ip() -> str | None:
         The local IPv4 address of the current machine.
 
     """
-    global _internal_ip
+    global _internal_ip  # noqa: PLW0603
 
     if _internal_ip is not None:
         return _internal_ip

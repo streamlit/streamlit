@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,8 +57,6 @@ export default function useStateRef<T>(
 ): [T, Dispatch<SetStateAction<T>>, MutableRefObject<T>] {
   const [state, setState] = useState<T>(initialState)
   const ref = useRef<T>(initialState)
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   ref.current = state
 
   return [state, setState, ref]

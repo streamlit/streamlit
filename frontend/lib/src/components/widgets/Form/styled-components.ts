@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,9 @@ export const StyledForm = styled.div<StyledFormProps>(({ theme, border }) => ({
     borderRadius: theme.radii.default,
     padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
   }),
+  width: "100%",
+  height: "100%",
+  overflow: "auto",
 }))
 
 export const StyledErrorContainer = styled.div(({ theme }) => ({

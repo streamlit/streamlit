@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,51 +109,22 @@ describe("ArrowTable", () => {
 
     expect(celContents).toEqual([
       ["", "First Name", "Last Name", "Age"],
-      [
-        BigInt(0),
-        "Jason",
-        "Miller",
-        BigInt(42),
-      ],
-      [
-        BigInt(1),
-        "Molly",
-        "Jacobson",
-        BigInt(52),
-      ],
-      [
-        BigInt(2),
-        "Tina",
-        "Ali",
-        BigInt(36),
-      ],
-      [
-        BigInt(3),
-        "Jake",
-        "Milner",
-        BigInt(24),
-      ],
-      [
-        BigInt(4),
-        "Amy",
-        "Smith",
-        BigInt(73),
-      ],
+      [BigInt(0), "Jason", "Miller", BigInt(42)],
+      [BigInt(1), "Molly", "Jacobson", BigInt(52)],
+      [BigInt(2), "Tina", "Ali", BigInt(36)],
+      [BigInt(3), "Jake", "Milner", BigInt(24)],
+      [BigInt(4), "Amy", "Smith", BigInt(73)],
     ]);
   });
 
   test("serialize should returns Uint8Array", () => {
-    const {data, index, columns} = table.serialize()
+    const { data, index, columns } = table.serialize();
 
     expect(data).toBeInstanceOf(Uint8Array);
     expect(index).toBeInstanceOf(Uint8Array);
     expect(columns).toBeInstanceOf(Uint8Array);
 
-    const new_table = new ArrowTable(
-      data,
-      index,
-      columns
-    );
+    const new_table = new ArrowTable(data, index, columns);
     expect(new_table.rows).toEqual(6);
     expect(new_table.columns).toEqual(4);
     expect(new_table.headerRows).toEqual(1);

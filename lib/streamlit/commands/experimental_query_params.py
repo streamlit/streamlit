@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-import urllib.parse as parse
 from typing import Any
+from urllib import parse
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -109,7 +109,7 @@ def set_query_params(**query_params: Any) -> None:
 def _exclude_keys_in_dict(
     d: dict[str, Any], keys_to_exclude: list[str]
 ) -> dict[str, Any]:
-    """Returns new object but without keys defined in keys_to_exclude"""
+    """Returns new object but without keys defined in keys_to_exclude."""
     return {
         key: value for key, value in d.items() if key.lower() not in keys_to_exclude
     }
@@ -123,7 +123,7 @@ def _extract_key_query_params(
         item.lower()
         for sublist in [
             [value.lower() for value in query_params[key]]
-            for key in query_params.keys()
+            for key in query_params
             if key.lower() == param_key and query_params.get(key)
         ]
         for item in sublist

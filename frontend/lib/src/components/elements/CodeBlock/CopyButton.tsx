@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useRef } from "react"
+import React, { memo, useEffect, useRef } from "react"
 
 import Clipboard from "clipboard"
 import { Copy as CopyIcon } from "react-feather"
-import { useTheme } from "@emotion/react"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledCopyButton } from "./styled-components"
 
@@ -29,7 +29,7 @@ interface Props {
 }
 
 const CopyButton: React.FC<Props> = ({ text }) => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const clipboardRef = useRef<Clipboard | null>(null)
 
@@ -62,9 +62,10 @@ const CopyButton: React.FC<Props> = ({ text }) => {
         right: 0,
       }}
     >
-      <CopyIcon size={theme.iconSizes.base} />
+      {/* Convert size to px because using rem works but logs a console error (at least on webkit) */}
+      <CopyIcon size={convertRemToPx(theme.iconSizes.base)} />
     </StyledCopyButton>
   )
 }
 
-export default CopyButton
+export default memo(CopyButton)

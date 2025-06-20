@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,41 +14,126 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING, Union
 
 from typing_extensions import assert_type
 
-# Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
+# Perform some "type checking testing"; mypy should flag any assignments that are
+# incorrect.
 if TYPE_CHECKING:
-    from datetime import date, timedelta
+    from datetime import date, datetime
 
-    from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
-
-    today: date = date.today()
-    past: date = today - timedelta(days=30)
+    from streamlit.elements.widgets.time_widgets import (
+        DateWidgetRangeReturn,
+        TimeWidgetsMixin,
+    )
 
     date_input = TimeWidgetsMixin().date_input
 
-    # Check single value
+    # Single date input
+    assert_type(date_input("foo", date(2024, 1, 1)), date)
+    assert_type(date_input("foo", datetime(2024, 1, 1)), date)
+    assert_type(date_input("foo", value="today"), date)
+    assert_type(date_input("foo", value="2024-01-01"), date)
+
+    # Should return date or None if value is None:
+    assert_type(date_input("foo", value=None), Union[date, None])
     assert_type(
-        date_input("foo", value=today),
-        Union[date, Tuple[()], Tuple[date], Tuple[date, date], None],
+        date_input(
+            "foo", value=None, min_value=date(2024, 1, 1), max_value=date(2024, 1, 31)
+        ),
+        Union[date, None],
     )
 
-    # Check single None
+    # Date range input with different sequence types
     assert_type(
-        date_input("bar", value=None),
-        Union[date, Tuple[()], Tuple[date], Tuple[date, date], None],
+        date_input("foo", (date(2024, 1, 1), date(2024, 1, 31))), DateWidgetRangeReturn
+    )
+    assert_type(
+        date_input("foo", (datetime(2024, 1, 1), datetime(2024, 1, 31))),
+        DateWidgetRangeReturn,
+    )
+    assert_type(
+        date_input("foo", [datetime(2024, 1, 1), datetime(2024, 1, 31)]),
+        DateWidgetRangeReturn,
+    )
+    assert_type(
+        date_input("foo", (datetime(2024, 1, 1),)),
+        DateWidgetRangeReturn,
+    )
+    assert_type(
+        date_input("foo", [datetime(2024, 1, 1)]),
+        DateWidgetRangeReturn,
     )
 
-    # Check not passing value (default is "today" string)
+    # Test with min_value and max_value
     assert_type(
-        date_input("buz"),
-        Union[date, Tuple[()], Tuple[date], Tuple[date, date], None],
+        date_input(
+            "foo",
+            date(2024, 1, 1),
+            min_value=date(2022, 1, 1),
+            max_value=date(2024, 12, 31),
+        ),
+        date,
+    )
+    assert_type(
+        date_input(
+            "foo",
+            (date(2024, 1, 1), date(2024, 12, 31)),
+            min_value=date(2022, 1, 1),
+            max_value=date(2024, 12, 31),
+        ),
+        DateWidgetRangeReturn,
     )
 
-    # Check range value
+    # Test with different formats
+    assert_type(date_input("foo", date(2024, 1, 1), format="MM/DD/YYYY"), date)
     assert_type(
-        date_input("foobar", value=(past, today)),
-        Union[date, Tuple[()], Tuple[date], Tuple[date, date], None],
+        date_input("foo", (date(2024, 1, 1), date(2024, 12, 31)), format="DD.MM.YYYY"),
+        DateWidgetRangeReturn,
+    )
+
+    # Test with disabled and label_visibility
+    assert_type(date_input("foo", date(2024, 1, 1), disabled=True), date)
+    assert_type(
+        date_input("foo", date(2024, 1, 1), label_visibility="hidden"),
+        date,
+    )
+
+    # Test with on_change, args, and kwargs
+    def on_change_callback(d: date | None) -> None:
+        pass
+
+    assert_type(date_input("foo", date(2024, 1, 1), on_change=on_change_callback), date)
+    assert_type(
+        date_input(
+            "foo",
+            date(2024, 1, 1),
+            on_change=on_change_callback,
+            args=(1,),
+            kwargs={"key": "value"},
+        ),
+        date,
+    )
+
+    # Test with key
+    assert_type(date_input("foo", date(2024, 1, 1), key="unique_key"), date)
+
+    # Test with help
+    assert_type(
+        date_input("foo", date(2024, 1, 1), help="This is a helpful tooltip"), date
+    )
+
+    # Edge cases
+    assert_type(date_input("foo", (None, date(2024, 12, 31))), DateWidgetRangeReturn)
+    assert_type(date_input("foo", (date(2024, 1, 1), None)), DateWidgetRangeReturn)
+
+    # Mixed input types
+    assert_type(
+        date_input("foo", (date(2024, 1, 1), datetime(2024, 12, 31))),
+        DateWidgetRangeReturn,
+    )
+    assert_type(
+        date_input("foo", (datetime(2024, 1, 1), date(2024, 12, 31))),
+        DateWidgetRangeReturn,
     )

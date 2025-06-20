@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,12 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 function sharedMarkdownStyle(theme: Theme): any {
   return {
     a: {
-      color: theme.colors.linkText,
-      textDecoration: "underline",
+      color: theme.colors.link,
+      textDecoration: theme.linkUnderline ? "underline" : "none",
     },
   }
 }
@@ -47,22 +48,23 @@ function sharedMarkdownStyle(theme: Theme): any {
 function convertFontSizes(
   fontSize: string,
   smallFontSize: string,
-  captionFontSize: string,
-  smallCaptionFontSize: string,
   useSmallerHeadings: boolean,
   isCaption: boolean
 ): string {
   if (useSmallerHeadings) {
-    return isCaption ? convertRemToEm(smallCaptionFontSize) : smallFontSize
+    // For headers in `st.caption`, we use `em` values, so the headers automatically
+    // become a bit smaller by adapting to the font size of the caption.
+    return isCaption ? convertRemToEm(smallFontSize) : smallFontSize
   }
 
-  return isCaption ? convertRemToEm(captionFontSize) : fontSize
+  return isCaption ? convertRemToEm(fontSize) : fontSize
 }
 
 function getMarkdownHeadingDefinitions(
   theme: Theme,
   useSmallerHeadings: boolean,
   isCaption: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
   return {
     "h1, h2, h3, h4, h5, h6": {
@@ -75,8 +77,6 @@ function getMarkdownHeadingDefinitions(
     h1: {
       fontSize: convertFontSizes(
         theme.fontSizes.fourXL,
-        theme.fontSizes.xl,
-        theme.fontSizes.threeXL,
         theme.fontSizes.xl,
         useSmallerHeadings,
         isCaption
@@ -96,8 +96,6 @@ function getMarkdownHeadingDefinitions(
       fontSize: convertFontSizes(
         theme.fontSizes.threeXL,
         theme.fontSizes.lg,
-        theme.fontSizes.twoXL,
-        theme.fontSizes.lg,
         useSmallerHeadings,
         isCaption
       ),
@@ -107,45 +105,37 @@ function getMarkdownHeadingDefinitions(
       fontSize: convertFontSizes(
         theme.fontSizes.twoXL,
         theme.fontSizes.mdLg,
-        theme.fontSizes.lg,
-        theme.fontSizes.mdLg,
-        useSmallerHeadings,
-        isCaption
-      ),
-      padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
-    },
-    h4: {
-      fontSize: convertFontSizes(
-        theme.fontSizes.xl,
-        theme.fontSizes.md,
-        theme.fontSizes.md,
-        theme.fontSizes.md,
         useSmallerHeadings,
         isCaption
       ),
       padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
-    h5: {
+    h4: {
       fontSize: convertFontSizes(
-        theme.fontSizes.lg,
-        theme.fontSizes.sm,
-        theme.fontSizes.md,
+        theme.fontSizes.xl,
         theme.fontSizes.md,
         useSmallerHeadings,
         isCaption
       ),
-      padding: `0 0 ${theme.spacing.lg} 0`,
+      padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
+    },
+    h5: {
+      fontSize: convertFontSizes(
+        theme.fontSizes.lg,
+        theme.fontSizes.sm,
+        useSmallerHeadings,
+        isCaption
+      ),
+      padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
       fontSize: convertFontSizes(
         theme.fontSizes.md,
         theme.fontSizes.twoSm,
-        theme.fontSizes.md,
-        theme.fontSizes.md,
         useSmallerHeadings,
         isCaption
       ),
-      padding: `0 0 ${theme.spacing.lg} 0`,
+      padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
   }
 }
@@ -162,7 +152,7 @@ export const StyledStreamlitMarkdown =
       isToast,
     }) => {
       // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
-      // Toasts also have smaller font size
+      // Toasts also have smaller font size as well as pills and segmented controls.
       const useSmallerFontSize =
         (isLabel && !largerLabel) || isToast || isCaption
 
@@ -178,6 +168,12 @@ export const StyledStreamlitMarkdown =
           isInSidebarOrDialog,
           isCaption
         ),
+
+        // This is required so that long Latex formulas in `st.latex` are scrollable
+        // when `help` is set (see below).
+        "&:has(.katex-display)": {
+          overflowX: "hidden",
+        },
 
         p: {
           wordBreak: "break-word",
@@ -198,18 +194,26 @@ export const StyledStreamlitMarkdown =
         },
 
         li: {
-          // TODO(lukasmasuch): We might want to refactor
-          // these settings to use our spacing props instead.
-          // But this would require some styling changes.
-          margin: "0.2em 0 0.2em 1.2em",
-          padding: "0 0 0 0.6em",
+          margin: "0.2em 0 0.2em 1.15em",
+          padding: "0 0 0 0.3em",
+        },
+
+        "li.task-list-item": {
+          listStyleType: "none",
+          padding: "0",
+          marginLeft: "0",
+          "input[type='checkbox']": {
+            verticalAlign: "middle",
+            margin: "0 0.35em 0.1em 0",
+          },
         },
 
         // Handles quotes:
         blockquote: {
           margin: "1em 0 1em 0",
-          padding: "0 0 0 1.2em",
-          borderLeft: `${theme.sizes.borderWidth} solid ${theme.colors.lightGray}`,
+          padding: `0 0 0 0.75em`,
+          borderLeft: `0.15em solid ${theme.colors.borderColor}`,
+          opacity: 0.6,
         },
 
         "b, strong": {
@@ -240,7 +244,7 @@ export const StyledStreamlitMarkdown =
         },
 
         tr: {
-          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
         th: {
@@ -249,17 +253,43 @@ export const StyledStreamlitMarkdown =
 
         "th, td": {
           padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
-        "span.has-background-color": {
+        "span.stMarkdownColoredBackground": {
+          borderRadius: theme.radii.md,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
+          boxDecorationBreak: "clone",
+        },
+
+        "span.stMarkdownBadge": {
           borderRadius: theme.radii.md,
+          // Since we're using inline-block below, we're not using vertical padding here,
+          // because inline-block already makes the element look a bit taller.
+          padding: `0 ${theme.spacing.twoXS}`,
+          // Add a small margin to separate it a bit from other text.
+          margin: `0 ${theme.spacing.px}`,
+
+          // Make badges not wrap and ellipsize them if they are too long for the
+          // parent container.
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: "100%",
+          display: "inline-block",
+          verticalAlign: "middle",
         },
 
         "p, ol, ul, dl, li": {
           fontSize: "inherit",
+        },
+
+        // Allow long Latex formulas that are not inline (i.e. either from `st.latex`
+        // or in their own paragraph inside `st.markdown`) to scroll horizontally.
+        ".katex-display": {
+          overflowX: "auto",
+          overflowY: "hidden",
         },
       }
     }
@@ -295,12 +325,14 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   textWrap: "pretty",
 
   // show link-icon when hovering somewhere over the heading
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledLinkIcon as any]: {
     visibility: "hidden",
   },
 
   // we have to set the hover here so that the link icon becomes visible when hovering anywhere over the heading
   "&:hover": {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     [StyledLinkIcon as any]: {
       visibility: "visible",
     },

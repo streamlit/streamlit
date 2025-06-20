@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Config } from "@streamlit/lib"
-import { isLocalhost } from "@streamlit/app/src/components/MainMenu"
+import { Config } from "@streamlit/protobuf"
+import { isLocalhost } from "@streamlit/utils"
 
 export const showDevelopmentOptions = (
   hostIsOwner: boolean | undefined,

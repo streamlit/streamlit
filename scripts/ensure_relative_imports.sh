@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ search_files() {
 
 # Set the folder path and the search string
 folder_path="frontend/lib/dist"
-search_string="@streamlit/lib/src"
+search_string="~lib"
 
 # Call the function to search for the string in .ts and .js files
 search_files "$folder_path" "$search_string"

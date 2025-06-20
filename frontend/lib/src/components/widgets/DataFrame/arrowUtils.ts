@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,21 +23,33 @@ import {
   UriCell,
 } from "@glideapps/glide-data-grid"
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import { Field, Null } from "apache-arrow"
 import moment from "moment"
 
-import { DataFrameCell, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import {
-  convertToSeconds,
+  convertTimeToDate,
   format as formatArrowCell,
-} from "@streamlit/lib/src/dataframes/arrowFormatUtils"
+} from "~lib/dataframes/arrowFormatUtils"
 import {
-  Type as ArrowType,
-  getTypeName,
-} from "@streamlit/lib/src/dataframes/arrowTypeUtils"
-import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+  ArrowType,
+  DataFrameCellType,
+  isBooleanType,
+  isBytesType,
+  isCategoricalType,
+  isDatetimeType,
+  isDateType,
+  isDecimalType,
+  isEmptyType,
+  isListType,
+  isNumericType,
+  isObjectType,
+  isRangeIndexType,
+  isStringType,
+  isTimeType,
+} from "~lib/dataframes/arrowTypeUtils"
+import { StyledCell } from "~lib/dataframes/pandasStylerUtils"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
@@ -109,6 +121,14 @@ export function applyPandasStylerCss(
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
   if (fontColor) {
     themeOverride.textDark = fontColor
+
+    // Apply text color also for cells that don't use textDark:
+    if (cell.kind === GridCellKind.Bubble) {
+      themeOverride.textBubble = fontColor
+    }
+    if (cell.kind === GridCellKind.Uri) {
+      themeOverride.linkColor = fontColor
+    }
   }
 
   // Extract and apply the background color
@@ -143,59 +163,31 @@ export function applyPandasStylerCss(
  * Maps the data type from Arrow to a column type.
  */
 export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
-  let typeName = arrowType ? getTypeName(arrowType) : null
-
-  if (!typeName) {
-    // Use object column as fallback
-    return ObjectColumn
-  }
-
-  typeName = typeName.toLowerCase().trim()
-  // Match based on arrow types
-  if (["unicode", "empty", "large_string[pyarrow]"].includes(typeName)) {
+  if (isStringType(arrowType) || isEmptyType(arrowType)) {
     return TextColumn
   }
-
-  if (["datetime", "datetimetz"].includes(typeName)) {
+  if (isDatetimeType(arrowType)) {
     return DateTimeColumn
   }
-  if (typeName === "time") {
+  if (isTimeType(arrowType)) {
     return TimeColumn
   }
-  if (typeName === "date") {
+  if (isDateType(arrowType)) {
     return DateColumn
   }
-  if (["object", "bytes"].includes(typeName)) {
+  if (isObjectType(arrowType) || isBytesType(arrowType)) {
     return ObjectColumn
   }
-  if (["bool"].includes(typeName)) {
+  if (isBooleanType(arrowType)) {
     return CheckboxColumn
   }
-  if (
-    [
-      "int8",
-      "int16",
-      "int32",
-      "int64",
-      "uint8",
-      "uint16",
-      "uint32",
-      "uint64",
-      "float16",
-      "float32",
-      "float64",
-      "float96",
-      "float128",
-      "range", // The default index in pandas uses a range type.
-      "decimal",
-    ].includes(typeName)
-  ) {
+  if (isNumericType(arrowType)) {
     return NumberColumn
   }
-  if (typeName === "categorical") {
+  if (isCategoricalType(arrowType)) {
     return SelectboxColumn
   }
-  if (typeName.startsWith("list")) {
+  if (isListType(arrowType)) {
     return ListColumn
   }
 
@@ -203,54 +195,19 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
 }
 
 /**
- * Creates the column props for an index column from the Arrow metadata.
+ * Parses the header names of a single column into a group and title.
  *
- * @param data - The Arrow data.
- * @param indexPosition - The numeric position of the index column.
+ * The group is only filled if there are more than one header for the column
+ * (multi-level headers).
  *
- * @return the column props for the index column.
+ * @param columnHeaderNames - The column header names.
+ *
+ * @return the group and title.
  */
-export function getIndexFromArrow(
-  data: Quiver,
-  indexPosition: number
-): BaseColumnProps {
-  const arrowType = data.types.index[indexPosition]
-  const title = data.indexNames[indexPosition]
-  let isEditable = true
-
-  if (getTypeName(arrowType) === "range") {
-    // Range indices are not editable
-    isEditable = false
-  }
-
-  return {
-    id: `index-${indexPosition}`,
-    name: title,
-    title,
-    isEditable,
-    arrowType,
-    isIndex: true,
-    isPinned: true,
-    isHidden: false,
-  } as BaseColumnProps
-}
-
-/**
- * Creates the column props for a data column from the Arrow metadata.
- *
- * @param data - The Arrow data.
- * @param columnPosition - The numeric position of the data column.
- *        Starts with 0 at the first non-index column.
- *
- * @return the column props for the data column.
- */
-export function getColumnFromArrow(
-  data: Quiver,
-  columnPosition: number
-): BaseColumnProps {
-  // data.columns refers to the header rows (not sure about why it is named this way)
-  // It is a matrix of column names.
-  const columnHeaderNames = data.columns.map(column => column[columnPosition])
+function parseColumnHeaderNames(columnHeaderNames: string[]): {
+  title: string
+  group: string | undefined
+} {
   const title =
     columnHeaderNames.length > 0
       ? columnHeaderNames[columnHeaderNames.length - 1]
@@ -272,94 +229,168 @@ export function getColumnFromArrow(
           .join(" / ")
       : undefined
 
-  let arrowType = data.types.data[columnPosition]
-
-  if (isNullOrUndefined(arrowType)) {
-    // Use empty column type as fallback
-    arrowType = {
-      meta: null,
-      numpy_type: "object",
-      pandas_type: "object",
-    } as ArrowType
-  }
-
-  let columnTypeOptions
-  if (getTypeName(arrowType) === "categorical") {
-    // Get the available categories and use it in column type metadata
-    const options = data.getCategoricalOptions(columnPosition)
-    if (notNullOrUndefined(options)) {
-      columnTypeOptions = {
-        options,
-      }
-    }
-  }
-
   return {
-    id: `column-${title}-${columnPosition}`,
-    name: title,
     title,
-    isEditable: true,
-    arrowType,
-    columnTypeOptions,
+    group,
+  }
+}
+
+/**
+ * Initialize the column props with default values.
+ *
+ * @param columnProps - The column props.
+ *
+ * @return the column props.
+ */
+function initColumn(
+  columnProps: Partial<BaseColumnProps> & {
+    id: BaseColumnProps["id"]
+    indexNumber: BaseColumnProps["indexNumber"]
+    name: BaseColumnProps["name"]
+    title: BaseColumnProps["title"]
+    arrowType: BaseColumnProps["arrowType"]
+  }
+): BaseColumnProps {
+  return {
+    group: undefined,
+    isEditable: false,
     isIndex: false,
     isPinned: false,
     isHidden: false,
-    group,
-  } as BaseColumnProps
+    isStretched: false,
+    ...columnProps,
+  }
 }
 
 /**
- * Creates the column props for an empty index column.
+ * Initialize an index column from the Arrow data.
+ *
+ * Index columns only exist if the data got processed by Pandas.
+ *
+ * @param data - The Arrow data.
+ * @param indexPosition - The numeric position of the index column.
+ *
+ * @return the column props for the index column.
+ */
+export function initIndexFromArrow(
+  data: Quiver,
+  indexPosition: number
+): BaseColumnProps {
+  // columnNames is a matrix of column names.
+  // Multi-level headers will have more than one row of column names.
+  // We need to extract the list of header names for this given index column
+  // and subsequently parse it into a title and group.
+  const columnHeaderNames = data.columnNames.map(
+    column => column[indexPosition]
+  )
+  const { title, group } = parseColumnHeaderNames(columnHeaderNames)
+
+  const arrowType = data.columnTypes[indexPosition]
+
+  let isEditable = true
+
+  if (isRangeIndexType(arrowType)) {
+    // Range indices are not editable
+    isEditable = false
+  }
+
+  return initColumn({
+    id: `_index-${indexPosition}`,
+    indexNumber: indexPosition,
+    name: title,
+    title,
+    group,
+    isEditable,
+    arrowType,
+    isIndex: true,
+    isPinned: true,
+  })
+}
+
+/**
+ * Initialize a data column from the Arrow data.
+ *
+ * @param data - The Arrow data.
+ * @param columnPosition - The numeric position of the data column.
+ *        Starts with 0 at the first non-index column.
+ *
+ * @return the column props for the data column.
+ */
+export function initColumnFromArrow(
+  data: Quiver,
+  columnPosition: number
+): BaseColumnProps {
+  // columnNames is a matrix of column names.
+  // Multi-level headers will have more than one row of column names.
+  // We need to extract the list of header names for this given index column
+  // and subsequently parse it into a title and group.
+  const columnHeaderNames = data.columnNames.map(
+    column => column[columnPosition]
+  )
+
+  const { title, group } = parseColumnHeaderNames(columnHeaderNames)
+
+  const arrowType = data.columnTypes[columnPosition]
+
+  return initColumn({
+    id: `_column-${title}-${columnPosition}`,
+    indexNumber: columnPosition,
+    name: title,
+    isEditable: true,
+    title,
+    arrowType,
+    group,
+  })
+}
+
+/**
+ * Initialize an empty index column.
  * This is used for DataFrames that don't have any index.
  * At least one column is required for glide.
  */
-export function getEmptyIndexColumn(): BaseColumnProps {
-  return {
-    id: `empty-index`,
-    title: "",
+export function initEmptyIndexColumn(): BaseColumnProps {
+  return initColumn({
+    id: `_empty-index`,
     indexNumber: 0,
+    title: "",
+    name: "",
     isEditable: false,
     isIndex: true,
     isPinned: true,
-  } as BaseColumnProps
+    arrowType: {
+      type: DataFrameCellType.INDEX,
+      arrowField: new Field("", new Null(), true),
+      pandasType: undefined,
+    },
+  })
 }
 
 /**
- * Creates the column props for all columns from the Arrow metadata.
+ * Creates the column props for all columns from the Arrow data.
  *
  * @param data - The Arrow data.
  * @return the column props for all columns.
  */
-export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
+export function initAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
   const { dimensions } = data
-  const numIndices = dimensions.headerColumns
-  const numColumns = dimensions.dataColumns
+  const numIndices = dimensions.numIndexColumns
+  const numColumns = dimensions.numDataColumns
 
   if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
     // As a workaround, we are adding an empty index column in this case.
-    columns.push(getEmptyIndexColumn())
+    columns.push(initEmptyIndexColumn())
     return columns
   }
 
   for (let i = 0; i < numIndices; i++) {
-    const column = {
-      ...getIndexFromArrow(data, i),
-      indexNumber: i,
-    } as BaseColumnProps
-
-    columns.push(column)
+    columns.push(initIndexFromArrow(data, i))
   }
 
   for (let i = 0; i < numColumns; i++) {
-    const column = {
-      ...getColumnFromArrow(data, i),
-      indexNumber: i + numIndices,
-    } as BaseColumnProps
-
-    columns.push(column)
+    columns.push(initColumnFromArrow(data, i + numIndices))
   }
   return columns
 }
@@ -369,7 +400,7 @@ export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
  * cell data from the Quiver (Arrow) object. Different types of data will
  * result in different cell types.
  *
- * @param column - The colum of the cell.
+ * @param column - The column of the cell.
  * @param arrowCell - The dataframe cell object from Arrow.
  * @param cssStyles - Optional css styles to apply on the cell.
  *
@@ -378,22 +409,21 @@ export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
 export function getCellFromArrow(
   column: BaseColumn,
   arrowCell: DataFrameCell,
+  styledCell: StyledCell | undefined,
   cssStyles: string | undefined = undefined
 ): GridCell {
-  const typeName = column.arrowType ? getTypeName(column.arrowType) : null
-
+  // We use arrowCell.contentType instead of column.arrowType here because
+  // to allow a bit more flexibility when data is loaded in chunks or added with
+  // add data to still work somewhat correctly even if the column arrow type
+  // (from the initial chunk) and the actual arrow type from the cell are different.
   let cellTemplate
-  if (column.kind === "object") {
+  if (column.kind === "object" || column.kind === "json") {
     // Always use display value from Quiver for object types
     // these are special types that the dataframe only support in read-only mode.
     cellTemplate = column.getCell(
       notNullOrUndefined(arrowCell.content)
         ? removeLineBreaks(
-            formatArrowCell(
-              arrowCell.content,
-              arrowCell.contentType,
-              arrowCell.field
-            )
+            formatArrowCell(arrowCell.content, arrowCell.contentType)
           )
         : null
     )
@@ -409,33 +439,24 @@ export function getCellFromArrow(
     // do some custom conversion here.
     let parsedDate
     if (
-      typeName === "time" &&
+      isTimeType(arrowCell.contentType) &&
       notNullOrUndefined(arrowCell.field?.type?.unit)
     ) {
       // Time values needs to be adjusted to seconds based on the unit
-      parsedDate = moment
-        .unix(
-          convertToSeconds(arrowCell.content, arrowCell.field?.type?.unit ?? 0)
-        )
-        .utc()
-        .toDate()
+      parsedDate = convertTimeToDate(arrowCell.content, arrowCell.field)
     } else {
       // All other datetime related values are assumed to be in milliseconds
       parsedDate = moment.utc(Number(arrowCell.content)).toDate()
     }
 
     cellTemplate = column.getCell(parsedDate)
-  } else if (typeName === "decimal") {
+  } else if (isDecimalType(arrowCell.contentType)) {
     // This is a special case where we want to already prepare a decimal value
     // to a number string based on the arrow field metadata. This is required
     // because we don't have access to the required scale in the number column.
     const decimalStr = isNullOrUndefined(arrowCell.content)
       ? null
-      : formatArrowCell(
-          arrowCell.content,
-          arrowCell.contentType,
-          arrowCell.field
-        )
+      : formatArrowCell(arrowCell.content, arrowCell.contentType)
     cellTemplate = column.getCell(decimalStr)
   } else {
     cellTemplate = column.getCell(arrowCell.content)
@@ -448,8 +469,8 @@ export function getCellFromArrow(
 
   if (!column.isEditable) {
     // Only apply display content and css styles to non-editable cells.
-    if (notNullOrUndefined(arrowCell.displayContent)) {
-      const displayData = removeLineBreaks(arrowCell.displayContent)
+    if (styledCell && notNullOrUndefined(styledCell?.displayContent)) {
+      const displayData = removeLineBreaks(styledCell.displayContent)
       // If the display content is set, use that instead of the content.
       // This is only supported for text, object, date, datetime, time and number cells.
       // Non-editable datetime cells will use the text cell kind
@@ -499,10 +520,10 @@ export function getCellFromArrow(
       }
     }
 
-    if (cssStyles && arrowCell.cssId) {
+    if (cssStyles && styledCell?.cssId) {
       cellTemplate = applyPandasStylerCss(
         cellTemplate,
-        arrowCell.cssId,
+        styledCell.cssId,
         cssStyles
       )
     }

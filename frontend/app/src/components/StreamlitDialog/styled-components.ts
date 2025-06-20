@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,6 @@
 
 import styled from "@emotion/styled"
 import { ChevronLeft } from "react-feather"
-
-export const StyledShortcutLabel = styled.span({
-  "&::first-letter": {
-    textDecoration: "underline",
-  },
-})
 
 export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
   cursor: "pointer",
@@ -89,7 +83,7 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   width: theme.fontSizes.md,
   height: theme.fontSizes.md,
-  borderRadius: theme.radii.md,
+  borderRadius: `min(${theme.radii.md}, ${theme.radii.maxCheckbox})`,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -114,7 +108,7 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
   },
 
   "&:disabled": {
-    backgroundColor: theme.colors.secondaryBg,
+    backgroundColor: theme.colors.darkenedBgMix15,
   },
 }))
 

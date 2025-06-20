@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,13 @@ import { RenderResult, screen, waitFor, within } from "@testing-library/react"
 import { PLACEMENT, ToasterContainer } from "baseui/toast"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Toast as ToastProto } from "@streamlit/lib/src/proto"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import { Toast as ToastProto } from "@streamlit/protobuf"
 
-import { shortenMessage, Toast, ToastProps } from "./Toast"
+import { render } from "~lib/test_util"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import ThemeProvider from "~lib/components/core/ThemeProvider"
+
+import Toast, { shortenMessage, ToastProps } from "./Toast"
 
 // A Toaster Container is required to render Toasts
 // Don't import the actual one from EventContainer as that lives on app side
@@ -44,17 +45,9 @@ const createContainer = (): ReactElement => (
   />
 )
 
-const getProps = (
-  elementProps: Partial<ToastProto> = {},
-  themeProps: Partial<EmotionTheme> = {}
-): ToastProps => ({
+const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   body: "This is a toast message",
   icon: "🐶",
-  theme: {
-    ...mockTheme.emotion,
-    ...themeProps,
-  },
-  width: 0,
   ...elementProps,
 })
 
@@ -153,9 +146,17 @@ describe("Toast Component", () => {
     await waitFor(() => expect(toast).not.toBeInTheDocument())
   })
 
-  test("throws an error when called via st.sidebar.toast", async () => {
-    const props = getProps({}, { inSidebar: true })
-    renderComponent(props)
+  test("throws an error when called via st.sidebar.toast", () => {
+    const props = getProps({})
+    render(
+      <ThemeProvider
+        theme={{ ...mockTheme.emotion, inSidebar: true }}
+        baseuiTheme={mockTheme.basewebTheme}
+      >
+        {createContainer()}
+        <Toast {...props} />
+      </ThemeProvider>
+    )
 
     const toastError = screen.getByRole("alert")
     expect(toastError).toBeInTheDocument()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
+import { useMemo } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
-import { transparentize } from "color2k"
+import { mix, transparentize } from "color2k"
 
-import { convertRemToPx, EmotionTheme } from "@streamlit/lib/src/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
@@ -32,6 +32,8 @@ export type CustomGridTheme = {
   defaultTableHeight: number
   // Configure custom SVG icons used in the column header:
   headerIcons: SpriteMap
+  // The background color of the row when it is hovered:
+  bgRowHovered: string
   // Min column width in pixels used for manual and automatic resizing
   minColumnWidth: number
   // Max column width in pixels used for manual resizing
@@ -50,9 +52,9 @@ export type CustomGridTheme = {
  * @return a glide-data-grid compatible theme.
  */
 function useCustomTheme(): Readonly<CustomGridTheme> {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
-  const gridTheme: CustomGridTheme = React.useMemo<CustomGridTheme>(() => {
+  const gridTheme: CustomGridTheme = useMemo<CustomGridTheme>(() => {
     const headerIcons = {
       // Material design icon `edit_note`:
       // https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Aedit_note%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048
@@ -66,8 +68,8 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       accentColor: theme.colors.primary,
       accentFg: theme.colors.white,
       accentLight: transparentize(theme.colors.primary, 0.9),
-      borderColor: theme.colors.borderColorLight,
-      horizontalBorderColor: theme.colors.borderColorLight,
+      borderColor: theme.colors.dataframeBorderColor,
+      horizontalBorderColor: theme.colors.dataframeBorderColor,
       fontFamily: theme.genericFonts.bodyFont,
       bgSearchResult: transparentize(theme.colors.primary, 0.9),
       resizeIndicatorColor: theme.colors.primary,
@@ -75,14 +77,14 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
       bgHeader: theme.colors.bgMix,
-      bgHeaderHasFocus: theme.colors.secondaryBg,
-      bgHeaderHovered: theme.colors.secondaryBg,
+      bgHeaderHasFocus: transparentize(theme.colors.darkenedBgMix100, 0.9),
+      bgHeaderHovered: transparentize(theme.colors.darkenedBgMix100, 0.9),
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
-      headerFontStyle: `${theme.fontSizes.sm}`,
+      headerFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:
-      baseFontStyle: theme.fontSizes.sm,
+      baseFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
       editorFontSize: theme.fontSizes.sm,
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),
@@ -96,7 +98,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       // Special cells:
       bgBubble: theme.colors.secondaryBg,
       bgBubbleSelected: theme.colors.secondaryBg,
-      linkColor: theme.colors.linkText,
+      linkColor: theme.colors.link,
       drilldownBorder: theme.colors.darkenedBgMix25,
       // Unused settings:
       // lineHeight
@@ -117,6 +119,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       maxColumnAutoWidth: Math.round(convertRemToPx("31.25rem")),
       defaultRowHeight: Math.round(convertRemToPx("2.1875rem")),
       defaultHeaderHeight: Math.round(convertRemToPx("2.1875rem")),
+      bgRowHovered: mix(theme.colors.bgColor, theme.colors.secondaryBg, 0.3),
       headerIcons,
     }
   }, [theme])

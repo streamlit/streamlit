@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
-import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
-import { PresetThemeName } from "@streamlit/lib/src/theme/types"
-import Resolver from "@streamlit/lib/src/util/Resolver"
+import { ICustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
+
+import { isValidOrigin } from "~lib/util/UriUtil"
+import { PresetThemeName } from "~lib/theme/types"
 
 import {
   AppConfig,
@@ -76,13 +76,13 @@ export default class HostCommunicationManager {
 
   private allowedOrigins: string[]
 
-  private deferredAuthToken: Resolver<string | undefined>
+  private deferredAuthToken: PromiseWithResolvers<string | undefined>
 
   constructor(props: HostCommunicationProps) {
     this.props = props
 
     this.allowedOrigins = []
-    this.deferredAuthToken = new Resolver()
+    this.deferredAuthToken = Promise.withResolvers<string | undefined>()
   }
 
   /**
@@ -112,7 +112,7 @@ export default class HostCommunicationManager {
    * This should be called in a .then() handler attached to deferredAuthToken.promise.
    */
   public resetAuthToken = (): void => {
-    this.deferredAuthToken = new Resolver()
+    this.deferredAuthToken = Promise.withResolvers<string | undefined>()
   }
 
   /**
@@ -143,6 +143,22 @@ export default class HostCommunicationManager {
 
   /**
    * Register a function to deliver a message to the Host
+   * that is on the same origin as the Guest
+   */
+  public sendMessageToSameOriginHost = (
+    message: IGuestToHostMessage
+  ): void => {
+    window.parent.postMessage(
+      {
+        stCommVersion: HOST_COMM_VERSION,
+        ...message,
+      } as VersionedMessage<IGuestToHostMessage>,
+      window.location.origin
+    )
+  }
+
+  /**
+   * Register a function to deliver a message to the Host
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
     window.parent.postMessage(
@@ -158,6 +174,7 @@ export default class HostCommunicationManager {
    * Register a function to handle a message from the Host
    */
   public receiveHostMessage = (event: MessageEvent): void => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
     const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
     // Messages coming from the parent frame of a deployed Streamlit app

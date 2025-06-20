@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,6 +66,22 @@ class StPagesTest(DeltaGeneratorTestCase):
         st.Page("page.py", icon="😱")
         # Provide an assertion to ensure no error
         assert True
+
+    def test_empty_string_icon_should_raise_exception(self):
+        """Test that passing an empty string icon raises an exception."""
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("page.py", icon="")
+
+        assert 'The value "" is not a valid emoji' in str(exc_info.value)
+
+    def test_whitespace_only_icon_should_raise_exception(self):
+        """Test that passing a whitespace-only icon raises an exception."""
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("page.py", icon="   ")
+
+        assert 'The value "   " is not a valid emoji' in str(exc_info.value)
 
     def test_script_hash_for_paths_are_different(self):
         """Tests that script hashes are different when url path (inferred or not) is unique"""

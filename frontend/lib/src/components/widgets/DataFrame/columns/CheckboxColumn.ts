@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
@@ -35,19 +35,20 @@ import {
  * by using checkboxes.
  */
 function CheckboxColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate = {
+  const cellTemplate: BooleanCell = {
     kind: GridCellKind.Boolean,
     data: false,
     allowOverlay: false, // no overlay possible
     contentAlign: props.contentAlignment,
     readonly: !props.isEditable,
     style: "normal",
-  } as BooleanCell
+  }
 
   return {
     ...props,
     kind: "checkbox",
     sortMode: "default",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       let cellData = null
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { screen } from "@testing-library/react"
 
-import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
-import { render } from "@streamlit/lib/src/test_util"
+import { Spinner as SpinnerProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 
 import Spinner, { SpinnerProps } from "./Spinner"
 
@@ -32,7 +33,6 @@ const getProps = (
     text: "Loading...",
     ...elementOverrides,
   }),
-  width: 0,
   ...propOverrides,
 })
 
@@ -52,16 +52,12 @@ describe("Spinner component", () => {
   it("sets the text and width correctly", () => {
     render(
       <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps({ width: 100 })} />
+        <Spinner {...getProps()} />
       </BaseProvider>
     )
 
     const markdownText = screen.getByText("Loading...")
     expect(markdownText).toBeInTheDocument()
-
-    // For the width, as it's a style attribute, we can test it this way:
-    const spinnerElement = screen.getByTestId("stSpinner")
-    expect(spinnerElement).toHaveStyle(`width: 100px`)
   })
 
   it("sets additional className/CSS for caching spinner", () => {
@@ -77,5 +73,17 @@ describe("Spinner component", () => {
     expect(spinnerContainer).toHaveClass("stSpinner")
     expect(spinnerContainer).toHaveClass("stCacheSpinner")
     expect(spinnerContainer).toHaveStyle("paddingBottom: 1rem")
+  })
+
+  it("shows timer when showTime is true", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { showTime: true })} />
+      </BaseProvider>
+    )
+
+    const spinnerContainer = screen.getByTestId("stSpinner")
+    expect(spinnerContainer).toBeInTheDocument()
+    expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
   })
 })

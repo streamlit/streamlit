@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,3 +49,15 @@ with col1:
 st.metric("Test 9", -4.56, 1.23, help="Test help with code `select * from table`")
 
 st.metric("Test 10", -4.56, 1.23, border=True, help="Test help text")
+
+st.metric(
+    "Test 11 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    123,
+    123,
+)
+
+st.metric("Stretch width", 123, 123, width="stretch")
+
+st.metric("Pixel width (300px)", 123, 123, width=300)
+
+st.metric("Content width", 123, 123, width="content")

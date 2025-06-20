@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,15 @@ import React, { ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { render } from "@streamlit/lib/src/test_util"
-import { BlockNode } from "@streamlit/lib/src/AppNode"
-import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import VerticalBlock from "./Block"
+import { renderWithContexts } from "~lib/test_util"
+import { BlockNode } from "~lib/AppNode"
+import { ScriptRunState } from "~lib/ScriptRunState"
+
+import { FlexBoxContainer, VerticalBlock } from "./Block"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
-class ResizeObserver {
-  observe(): void {}
-
-  unobserve(): void {}
-
-  disconnect(): void {}
-}
 
 function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
@@ -42,13 +36,21 @@ function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   )
 }
 
-function makeHorizontalBlock(numColumns: number): BlockNode {
+function makeHorizontalBlockWithColumns(numColumns: number): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
     FAKE_SCRIPT_HASH,
     Array.from({ length: numColumns }, () => makeColumn(weight)),
-    new BlockProto({ allowEmpty: true, horizontal: { gap: "small" } })
+    new BlockProto({
+      allowEmpty: true,
+      flexContainer: {
+        gapConfig: {
+          gapSize: streamlit.GapSize.SMALL,
+        },
+        direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+      },
+    })
   )
 }
 
@@ -65,7 +67,7 @@ function makeVerticalBlock(
 
 function makeVerticalBlockComponent(node: BlockNode): ReactElement {
   return (
-    <VerticalBlock
+    <FlexBoxContainer
       node={node}
       scriptRunId={""}
       scriptRunState={ScriptRunState.NOT_RUNNING}
@@ -74,19 +76,20 @@ function makeVerticalBlockComponent(node: BlockNode): ReactElement {
       widgetMgr={undefined}
       // @ts-expect-error
       uploadClient={undefined}
-      // @ts-expect-error
-      componentRegistry={undefined}
-      // @ts-expect-error
-      formsData={undefined}
     />
   )
 }
 
-describe("Vertical Block Component", () => {
-  window.ResizeObserver = ResizeObserver
+describe("FlexBoxContainer Block Component", () => {
   it("should render a horizontal block with empty columns", () => {
-    const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)])
-    render(makeVerticalBlockComponent(block))
+    const block: BlockNode = makeVerticalBlock([
+      makeHorizontalBlockWithColumns(4),
+    ])
+    renderWithContexts(makeVerticalBlockComponent(block), {})
+
+    const horizontalBlock = screen.getByTestId("stHorizontalBlock")
+    expect(horizontalBlock).toBeVisible()
+    expect(horizontalBlock).toHaveAttribute("direction", "row")
 
     expect(screen.getAllByTestId("stColumn")).toHaveLength(4)
     expect(
@@ -98,7 +101,7 @@ describe("Vertical Block Component", () => {
     const block: BlockNode = makeVerticalBlock([], {
       id: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
     })
-    render(makeVerticalBlockComponent(block))
+    renderWithContexts(makeVerticalBlockComponent(block), {})
 
     expect(screen.getByTestId("stVerticalBlock")).toBeVisible()
     expect(screen.getByTestId("stVerticalBlock")).toHaveClass(
@@ -107,11 +110,14 @@ describe("Vertical Block Component", () => {
   })
 
   it("should activate scrolling when height is set", () => {
-    const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)], {
-      vertical: { height: 100 },
-    })
+    const block: BlockNode = makeVerticalBlock(
+      [makeHorizontalBlockWithColumns(4)],
+      {
+        heightConfig: { pixelHeight: 100 },
+      }
+    )
 
-    render(makeVerticalBlockComponent(block))
+    renderWithContexts(makeVerticalBlockComponent(block), {})
 
     expect(
       screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
@@ -119,14 +125,37 @@ describe("Vertical Block Component", () => {
   })
 
   it("should show border when border is True", () => {
-    const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)], {
-      vertical: { border: true },
-    })
-
-    render(makeVerticalBlockComponent(block))
+    const block: BlockNode = makeVerticalBlock(
+      [makeHorizontalBlockWithColumns(4)],
+      {
+        flexContainer: { border: true },
+      }
+    )
+    renderWithContexts(makeVerticalBlockComponent(block), {})
 
     expect(
       screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
     ).toHaveStyle("border: 1px solid rgba(49, 51, 63, 0.2);")
+  })
+
+  describe("VerticalBlock", () => {
+    it("should render and be visible", () => {
+      const block = new BlockNode(FAKE_SCRIPT_HASH, [], new BlockProto())
+      renderWithContexts(
+        <VerticalBlock
+          node={block}
+          scriptRunId={""}
+          scriptRunState={ScriptRunState.NOT_RUNNING}
+          widgetsDisabled={false}
+          // @ts-expect-error
+          widgetMgr={undefined}
+          // @ts-expect-error
+          uploadClient={undefined}
+        />,
+        {}
+      )
+      const verticalBlock = screen.getByTestId("stVerticalBlock")
+      expect(verticalBlock).toBeVisible()
+    })
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
 
-import { TEN_BY_TEN, UNICODE, VERY_TALL } from "@streamlit/lib/src/mocks/arrow"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+import { Arrow as ArrowProto } from "@streamlit/protobuf"
+
+import { TEN_BY_TEN, UNICODE, VERY_TALL } from "~lib/mocks/arrow"
 
 import { CustomGridTheme } from "./useCustomTheme"
 import useTableSizer from "./useTableSizer"

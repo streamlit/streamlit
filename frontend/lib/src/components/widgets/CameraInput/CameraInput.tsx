@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
 import isEqual from "lodash/isEqual"
+import { getLogger } from "loglevel"
 
 import {
   CameraInput as CameraInputProto,
@@ -26,27 +27,28 @@ import {
   FileURLs as FileURLsProto,
   IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "@streamlit/lib/src/proto"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+} from "@streamlit/protobuf"
+
+import Icon from "~lib/components/shared/Icon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
-import { logError } from "@streamlit/lib/src/util/log"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "~lib/components/widgets/BaseWidget"
+import { FormClearHelper } from "~lib/components/widgets/Form"
+import { FileUploadClient } from "~lib/FileUploadClient"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
-} from "@streamlit/lib/src/util/utils"
+} from "~lib/util/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
+} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
@@ -103,8 +105,9 @@ export interface State {
 }
 
 const MIN_SHUTTER_EFFECT_TIME_MS = 150
+const LOG = getLogger("CameraInput")
 
-class CameraInput extends React.PureComponent<Props, State> {
+class CameraInput extends PureComponent<Props, State> {
   private localFileIdCounter = 1
 
   private RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
@@ -176,7 +179,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         })
       })
       .catch(err => {
-        logError(err)
+        LOG.error(err)
       })
   }
 
@@ -238,7 +241,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentWillUnmount(): void {
+  public override componentWillUnmount(): void {
     this.formClearHelper.disconnect()
   }
 
@@ -259,7 +262,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     return "ready"
   }
 
-  public componentDidUpdate = (): void => {
+  public override componentDidUpdate = (): void => {
     // If our status is not "ready", then we have uploads in progress.
     // We won't submit a new widgetValue until all uploads have resolved.
     if (this.status !== "ready") {
@@ -286,7 +289,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentDidMount(): void {
+  public override componentDidMount(): void {
     const newWidgetValue = this.createWidgetValue()
     const { element, widgetMgr, fragmentId } = this.props
 
@@ -348,7 +351,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     })
   }
 
-  public render(): React.ReactNode {
+  public override render(): React.ReactNode {
     const { element, widgetMgr, disabled, width } = this.props
 
     // Manage our form-clear event handler.
@@ -409,6 +412,7 @@ class CameraInput extends React.PureComponent<Props, State> {
           </>
         ) : (
           <WebcamComponent
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             handleCapture={this.handleCapture}
             width={width}
             disabled={disabled}
@@ -448,6 +452,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
 
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
     this.removeFile(fileId)
@@ -591,4 +596,9 @@ function urltoFile(url: string, filename: string): Promise<File> {
     .then(buf => new File([buf], filename, { type: "image/jpeg" }))
 }
 
-export default CameraInput
+/**
+ * This component should be refactored to remove the width calculation from JS
+ * entirely and instead utilize width: 100%; height: 100%; aspect-ratio: 16 / 9;
+ * on the StyledBox CSS instead.
+ */
+export default withCalculatedWidth(CameraInput)

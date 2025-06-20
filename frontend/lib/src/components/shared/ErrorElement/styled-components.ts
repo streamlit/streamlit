@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   whiteSpace: "pre-wrap",
   wordWrap: "break-word",
   color: "inherit",
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.codeFontSize,
   fontFamily: theme.genericFonts.codeFont,
   backgroundColor: theme.colors.transparent,
   overflowX: "auto",
-  margin: `0 0 ${theme.spacing.lg} 0`,
+  margin: 0,
   borderRadius: theme.radii.default,
   padding: theme.spacing.lg,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,

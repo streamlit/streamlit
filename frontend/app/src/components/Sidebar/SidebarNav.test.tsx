@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,21 @@
 
 import React from "react"
 
-import * as reactDeviceDetect from "react-device-detect"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { IAppPage, mockEndpoints, render } from "@streamlit/lib"
+import * as isMobile from "@streamlit/lib"
+import { mockEndpoints, render } from "@streamlit/lib"
+import { IAppPage, PageConfig } from "@streamlit/protobuf"
+import { AppContextProps } from "@streamlit/app/src/components/AppContext"
+import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import SidebarNav, {
+  Props,
+} from "@streamlit/app/src/components/Navigation/SidebarNav"
 
-import SidebarNav, { Props } from "./SidebarNav"
-
-vi.mock("@streamlit/lib/src/util/Hooks", async () => ({
+vi.mock("~lib/util/Hooks", async () => ({
   __esModule: true,
-  ...(await vi.importActual("@streamlit/lib/src/util/Hooks")),
+  ...(await vi.importActual("~lib/util/Hooks")),
   useIsOverflowing: vi.fn(),
 }))
 
@@ -44,20 +48,46 @@ const getProps = (props: Partial<Props> = {}): Props => ({
       urlPathname: "my_other_page",
     },
   ],
-  navSections: [],
   collapseSidebar: vi.fn(),
-  currentPageScriptHash: "",
   hasSidebarElements: false,
-  expandSidebarNav: false,
-  onPageChange: vi.fn(),
   endpoints: mockEndpoints(),
+  onPageChange: vi.fn(),
+  navSections: [],
+  currentPageScriptHash: "",
+  expandSidebarNav: false,
   ...props,
 })
 
+function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
+  return {
+    initialSidebarState: PageConfig.SidebarState.AUTO,
+    pageLinkBaseUrl: "",
+    currentPageScriptHash: "",
+    onPageChange: vi.fn(),
+    navSections: [],
+    appPages: [],
+    appLogo: null,
+    sidebarChevronDownshift: 0,
+    expandSidebarNav: false,
+    hideSidebarNav: false,
+    widgetsDisabled: false,
+    gitInfo: null,
+    showToolbar: true,
+    showColoredLine: true,
+    ...context,
+  }
+}
+
 describe("SidebarNav", () => {
+  beforeEach(() => {
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({})
+    )
+
+    vi.spyOn(isMobile, "isMobile").mockReturnValue(false)
+  })
+
   afterEach(() => {
-    // @ts-expect-error
-    reactDeviceDetect.isMobile = false
     window.localStorage.clear()
   })
 
@@ -74,19 +104,25 @@ describe("SidebarNav", () => {
     beforeEach(() => {
       // Replace window.location with a mutable object that otherwise has
       // the same contents so that we can change port below.
-      // @ts-expect-error
-      delete window.location
-      window.location = { ...originalLocation }
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     afterEach(() => {
-      window.location = originalLocation
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it("are added to each link", () => {
       const buildAppPageURL = vi
         .fn()
-        .mockImplementation((pageLinkBaseURL: string, page: IAppPage) => {
+        .mockImplementation((_pageLinkBaseURL: string, page: IAppPage) => {
           return `http://mock/app/page/${page.urlPathname}`
         })
       const props = getProps({ endpoints: mockEndpoints({ buildAppPageURL }) })
@@ -153,8 +189,8 @@ describe("SidebarNav", () => {
     render(
       <SidebarNav
         {...getProps({
-          expandSidebarNav: true,
           hasSidebarElements: true,
+          expandSidebarNav: true,
           appPages: [
             {
               pageScriptHash: "main_page_hash",
@@ -457,29 +493,32 @@ describe("SidebarNav", () => {
   })
 
   it("passes the pageScriptHash to onPageChange if a link is clicked", async () => {
+    const onPageChange = vi.fn()
     const user = userEvent.setup()
-    const props = getProps()
+    const props = getProps({ onPageChange })
     render(<SidebarNav {...props} />)
 
     const links = screen.getAllByTestId("stSidebarNavLink")
     await user.click(links[1])
 
-    expect(props.onPageChange).toHaveBeenCalledWith("other_page_hash")
+    // Check the onPageChange func from props is called with the correct pageScriptHash
+    expect(onPageChange).toHaveBeenCalledWith("other_page_hash")
     expect(props.collapseSidebar).not.toHaveBeenCalled()
   })
 
   it("collapses sidebar on page change when on mobile", async () => {
+    const onPageChange = vi.fn()
     const user = userEvent.setup()
-    // @ts-expect-error
-    reactDeviceDetect.isMobile = true
+    vi.spyOn(isMobile, "isMobile").mockReturnValue(true)
 
-    const props = getProps()
+    const props = getProps({ onPageChange })
     render(<SidebarNav {...props} />)
 
     const links = screen.getAllByTestId("stSidebarNavLink")
     await user.click(links[1])
 
-    expect(props.onPageChange).toHaveBeenCalledWith("other_page_hash")
+    // Check the onPageChange func from props is called with the correct pageScriptHash
+    expect(onPageChange).toHaveBeenCalledWith("other_page_hash")
     expect(props.collapseSidebar).toHaveBeenCalled()
   })
 

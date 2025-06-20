@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,31 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 
-import { useTheme } from "@emotion/react"
+import isArray from "lodash/isArray"
+import isEmpty from "lodash/isEmpty"
 import merge from "lodash/merge"
+import mergeWith from "lodash/mergeWith"
+import { getLogger } from "loglevel"
+
+import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
 import {
-  getAllColumnsFromArrow,
   getColumnTypeFromArrow,
-  getEmptyIndexColumn,
-} from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
+  initAllColumnsFromArrow,
+  initEmptyIndexColumn,
+} from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
   BaseColumn,
   BaseColumnProps,
   ColumnCreator,
   ColumnTypes,
   ObjectColumn,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { logError, logWarning } from "@streamlit/lib/src/util/log"
-import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+} from "~lib/components/widgets/DataFrame/columns"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 // Using this ID for column config will apply the config to all index columns
 export const INDEX_IDENTIFIER = "_index"
@@ -50,6 +51,8 @@ export const COLUMN_WIDTH_MAPPING = {
   medium: 200,
   large: 400,
 }
+
+const LOG = getLogger("useColumnLoader")
 
 /**
  * Options to configure columns.
@@ -93,6 +96,25 @@ function parseWidthConfig(
 }
 
 /**
+ * Custom merge function to merge column config objects.
+ */
+const mergeColumnConfig = (
+  target: ColumnConfigProps,
+  source: ColumnConfigProps
+): ColumnConfigProps => {
+  // Don't merge arrays, just overwrite the old value with the new value
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  const customMergeArrays = (_objValue: object, srcValue: object): any => {
+    // If the new value is an array, just return it as is (overwriting the old)
+    if (isArray(srcValue)) {
+      return srcValue
+    }
+  }
+
+  return mergeWith(target, source, customMergeArrays)
+}
+
+/**
  * Apply the user-defined column configuration if supplied.
  *
  * @param columnProps - The column properties to apply the config to.
@@ -109,32 +131,56 @@ export function applyColumnConfig(
     return columnProps
   }
 
-  let columnConfig
+  let columnConfig: ColumnConfigProps = {}
+
+  // Merge all possible ways to provide column config for a specific column:
+  // The order / priority of how this is merged is important!
+
+  // 1. Config is configured for the index column (or all index columns for multi-index)
+  if (columnProps.isIndex && columnConfigMapping.has(INDEX_IDENTIFIER)) {
+    columnConfig = mergeColumnConfig(
+      columnConfig,
+      columnConfigMapping.get(INDEX_IDENTIFIER) ?? {}
+    )
+  }
+
+  // 2. Config is configured based on the column position, e.g. _pos:0 -> first column
   if (
-    columnConfigMapping.has(columnProps.name) &&
-    columnProps.name !== INDEX_IDENTIFIER // "index" is not supported as name for normal columns
-  ) {
-    // Config is configured based on the column name
-    columnConfig = columnConfigMapping.get(columnProps.name)
-  } else if (
     columnConfigMapping.has(
       `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
     )
   ) {
-    // Config is configured based on the column position, e.g. col:0 -> first column
-    columnConfig = columnConfigMapping.get(
-      `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
+    columnConfig = mergeColumnConfig(
+      columnConfig,
+      columnConfigMapping.get(
+        `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
+      ) ?? {}
     )
-  } else if (
-    columnProps.isIndex &&
-    columnConfigMapping.has(INDEX_IDENTIFIER)
-  ) {
-    // Config is configured for the index column (or all index columns for multi-index)
-    columnConfig = columnConfigMapping.get(INDEX_IDENTIFIER)
   }
 
-  if (!columnConfig) {
-    // No column config found for this column
+  // 3. Config is configured based on the column name
+  if (
+    columnConfigMapping.has(columnProps.name) &&
+    columnProps.name !== INDEX_IDENTIFIER // "_index" is not supported as name for normal columns
+  ) {
+    columnConfig = mergeColumnConfig(
+      columnConfig,
+      columnConfigMapping.get(columnProps.name) ?? {}
+    )
+  }
+
+  // 4. Config is configured based on the column id
+  // This is mainly used by the frontend component to apply changes to columns
+  // based on user configuration on the UI.
+  if (columnConfigMapping.has(columnProps.id)) {
+    columnConfig = mergeColumnConfig(
+      columnConfig,
+      columnConfigMapping.get(columnProps.id) ?? {}
+    )
+  }
+
+  // No column config found for this column
+  if (isEmpty(columnConfig)) {
     return columnProps
   }
 
@@ -163,6 +209,7 @@ export function applyColumnConfig(
  *
  * @returns the user-defined column configuration.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function getColumnConfig(configJson: string): Map<string, any> {
   if (!configJson) {
     return new Map()
@@ -172,13 +219,21 @@ export function getColumnConfig(configJson: string): Map<string, any> {
   } catch (error) {
     // This is not expected to happen, but if it does, we'll return an empty map
     // and log the error to the console.
-    logError(error)
+    LOG.error(error)
     return new Map()
   }
 }
 
 type ColumnLoaderReturn = {
+  // All the visible columns:
   columns: BaseColumn[]
+  // All the columns of the dataframe, including hidden ones:
+  allColumns: BaseColumn[]
+  // Callback to set the column config state:
+  setColumnConfigMapping: Dispatch<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    SetStateAction<Map<string, any>>
+  >
 }
 
 /**
@@ -196,7 +251,7 @@ export function getColumnType(column: BaseColumnProps): ColumnCreator {
     if (ColumnTypes.has(customType)) {
       ColumnType = ColumnTypes.get(customType)
     } else {
-      logWarning(
+      LOG.warn(
         `Unknown column type configured in column configuration: ${customType}`
       )
     }
@@ -214,33 +269,115 @@ export function getColumnType(column: BaseColumnProps): ColumnCreator {
  * @param element - The proto message of the dataframe element
  * @param data - The Arrow data extracted from the proto message
  * @param disabled - Whether the widget is disabled
+ * @param columnOrder - The custom column order state. This is a list of column names or column ids.
+ *        If this is empty, the columns will be ordered by their position in the Arrow table.
  *
- * @returns the columns and the cell content getter compatible with glide-data-grid.
+ * @returns the columns and the cell content getter compatible with glide-data-grid
+ * and the parsed column config mapping.
  */
 function useColumnLoader(
   element: ArrowProto,
   data: Quiver,
-  disabled: boolean
+  disabled: boolean,
+  columnOrder: string[]
 ): ColumnLoaderReturn {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
-  const columnConfigMapping = React.useMemo(() => {
-    return getColumnConfig(element.columns)
-  }, [element.columns])
+  // Memoize the column config parsing to avoid unnecessary re-renders & re-parsing:
+  const parsedColumnConfig = useMemo(
+    () => getColumnConfig(element.columns),
+    [element.columns]
+  )
+
+  // Initialize state with the parsed column config:
+  // We need that to allow changing the column config state
+  // (e.g. via changes by the user in the UI)
+  const [columnConfigMapping, setColumnConfigMapping] =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    useState<Map<string, any>>(parsedColumnConfig)
+
+  // Resync state whenever the parsed column config from the proto changes:
+  useEffect(() => {
+    setColumnConfigMapping(parsedColumnConfig)
+  }, [parsedColumnConfig])
 
   const stretchColumns: boolean =
     element.useContainerWidth ||
     (notNullOrUndefined(element.width) && element.width > 0)
 
+  // Allow content wrapping if the configured row height is greater than 4rem.
+  // 4rem was arbitrarily chosen because it looks and feels good. Its using rem
+  // so that it adapts to changes in the root font size (configurable by the user).
+  const isWrappingAllowed: boolean =
+    notNullOrUndefined(element.rowHeight) &&
+    element.rowHeight > convertRemToPx("4rem")
+
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const columns: BaseColumn[] = React.useMemo(() => {
-    const visibleColumns = getAllColumnsFromArrow(data)
+  const allColumns: BaseColumn[] = useMemo(() => {
+    return initAllColumnsFromArrow(data).map(column => {
+      // Apply column configurations
+      let updatedColumn = {
+        ...column,
+        ...applyColumnConfig(column, columnConfigMapping),
+        isStretched: stretchColumns,
+      } as BaseColumnProps
+      const ColumnType = getColumnType(updatedColumn)
+
+      // Make sure editing is deactivated if the column is read-only, disabled,
+      // or a not editable type.
+      if (
+        element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+        disabled ||
+        ColumnType.isEditableType === false
+      ) {
+        updatedColumn = {
+          ...updatedColumn,
+          isEditable: false,
+        }
+      }
+
+      if (
+        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+        updatedColumn.isEditable == true
+      ) {
+        // Set editable icon for all editable columns:
+        updatedColumn = {
+          ...updatedColumn,
+          icon: "editable",
+        }
+
+        // Make sure that required columns are not hidden when editing mode is dynamic:
+        if (
+          updatedColumn.isRequired &&
+          element.editingMode === ArrowProto.EditingMode.DYNAMIC
+        ) {
+          updatedColumn = {
+            ...updatedColumn,
+            isHidden: false,
+          }
+        }
+      }
+
+      return ColumnType(updatedColumn, theme)
+    })
+  }, [
+    data,
+    columnConfigMapping,
+    stretchColumns,
+    element.editingMode,
+    disabled,
+    theme,
+  ])
+
+  const columns: BaseColumn[] = useMemo(() => {
+    const visibleColumns = initAllColumnsFromArrow(data)
       .map(column => {
         // Apply column configurations
         let updatedColumn = {
           ...column,
           ...applyColumnConfig(column, columnConfigMapping),
           isStretched: stretchColumns,
+          isWrappingAllowed: isWrappingAllowed,
         } as BaseColumnProps
         const ColumnType = getColumnType(updatedColumn)
 
@@ -289,13 +426,17 @@ function useColumnLoader(
     const pinnedColumns: BaseColumn[] = []
     const unpinnedColumns: BaseColumn[] = []
 
-    if (element.columnOrder?.length) {
+    if (columnOrder?.length) {
+      // The column order list can contain either column names - if configured by the user -
+      // or column ids - if configured by the frontend component.
+
       // Special case: index columns not part of the column order
       // are shown as the first columns in the table
       visibleColumns.forEach(column => {
         if (
           column.isIndex &&
-          !element.columnOrder.includes(column.name) &&
+          !columnOrder.includes(column.name) &&
+          !columnOrder.includes(column.id) &&
           // Don't add the index column if it is explicitly not pinned
           column.isPinned !== false
         ) {
@@ -304,9 +445,10 @@ function useColumnLoader(
       })
 
       // Reorder columns based on the configured column order:
-      element.columnOrder.forEach(columnName => {
+      columnOrder.forEach(columnName => {
         const column = visibleColumns.find(
-          column => column.name === columnName
+          columnArg =>
+            columnArg.name === columnName || columnArg.id === columnName
         )
         if (column) {
           if (column.isPinned) {
@@ -334,19 +476,22 @@ function useColumnLoader(
     // to prevent errors from glide-data-grid.
     return orderedColumns.length > 0
       ? orderedColumns
-      : [ObjectColumn(getEmptyIndexColumn())]
+      : [ObjectColumn(initEmptyIndexColumn())]
   }, [
     data,
     columnConfigMapping,
+    isWrappingAllowed,
     stretchColumns,
     disabled,
     element.editingMode,
-    element.columnOrder,
+    columnOrder,
     theme,
   ])
 
   return {
     columns,
+    allColumns,
+    setColumnConfigMapping,
   }
 }
 

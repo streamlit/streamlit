@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.layout_utils import (
+    WidthWithoutContent,
+    get_width_config,
+    validate_width,
+)
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
@@ -27,6 +33,8 @@ from streamlit.errors import (
     StreamlitInvalidVerticalAlignmentError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
+from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
 
@@ -59,7 +67,6 @@ class LayoutsMixin:
 
         Parameters
         ----------
-
         height : int or None
             Desired height of the container expressed in pixels. If ``None`` (default)
             the container grows to fit its content. If a fixed height, scrolling is
@@ -67,10 +74,11 @@ class LayoutsMixin:
             to visually separate its scroll surface from the rest of the app.
 
             .. note::
-                Use containers with scroll sparingly. If you do, try to keep
-                the height small (below 500 pixels). Otherwise, the scroll
-                surface of the container might cover the majority of the screen
-                on mobile devices, which makes it hard to scroll the rest of the app.
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         border : bool or None
             Whether to show a border around the container. If ``None`` (default), a
@@ -149,17 +157,23 @@ class LayoutsMixin:
         key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
-        block_proto.vertical.border = border or False
+        block_proto.flex_container.border = border or False
+        block_proto.flex_container.wrap = False
 
         if height:
             # Activate scrolling container behavior:
             block_proto.allow_empty = True
-            block_proto.vertical.height = height
+
+            height_config = HeightConfig()
+            height_config.pixel_height = height
+            # Use block-level height_config instead of flex_container
+            block_proto.height_config.CopyFrom(height_config)
+
             if border is None:
                 # If border is None, we activated the
                 # border as default setting for scrolling
                 # containers.
-                block_proto.vertical.border = True
+                block_proto.flex_container.border = True
 
         if key:
             # At the moment, the ID is only used for extracting the
@@ -178,7 +192,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: Literal["small", "medium", "large"] = "small",
+        gap: Literal["small", "medium", "large"] | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
     ) -> list[DeltaGenerator]:
@@ -191,11 +205,9 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
-        Columns can only be placed inside other columns up to one level of nesting.
-
-        .. warning::
-            Columns cannot be placed inside other columns in the sidebar. This
-            is only possible in the main area of the app.
+        .. note::
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest columns more than once.
 
         Parameters
         ----------
@@ -210,8 +222,17 @@ class LayoutsMixin:
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
-        gap : "small", "medium", or "large"
-            The size of the gap between the columns. The default is ``"small"``.
+        gap : "small", "medium", "large", or None
+            The size of the gap between the columns. This can be one of the
+            following:
+
+            - ``"small"`` (default): 1rem gap between the columns.
+            - ``"medium"``: 2rem gap between the columns.
+            - ``"large"``: 4rem gap between the columns.
+            - ``None``: No gap between the columns.
+
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
 
         vertical_alignment : "top", "center", or "bottom"
             The vertical alignment of the content inside the columns. The
@@ -229,7 +250,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         **Example 1: Use context management**
 
         You can use the ``with`` statement to insert any element into a column:
@@ -352,22 +372,32 @@ class LayoutsMixin:
                 vertical_alignment=vertical_alignment
             )
 
-        def column_gap(gap):
+        def column_gap(gap: str | None) -> GapSize.ValueType:
+            gap_mapping = {
+                "small": GapSize.SMALL,
+                "medium": GapSize.MEDIUM,
+                "large": GapSize.LARGE,
+            }
+
             if isinstance(gap, str):
                 gap_size = gap.lower()
-                valid_sizes = ["small", "medium", "large"]
+                valid_sizes = gap_mapping.keys()
 
                 if gap_size in valid_sizes:
-                    return gap_size
+                    return gap_mapping[gap_size]
+            elif gap is None:
+                return GapSize.NONE
 
             raise StreamlitInvalidColumnGapError(gap=gap)
 
         gap_size = column_gap(gap)
+        gap_config = GapConfig()
+        gap_config.gap_size = gap_size
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
-            col_proto.column.gap = gap_size
+            col_proto.column.gap_config.CopyFrom(gap_config)
             col_proto.column.vertical_alignment = vertical_alignment_mapping[
                 vertical_alignment
             ]
@@ -376,13 +406,23 @@ class LayoutsMixin:
             return col_proto
 
         block_proto = BlockProto()
-        block_proto.horizontal.gap = gap_size
+        block_proto.flex_container.direction = (
+            BlockProto.FlexContainer.Direction.HORIZONTAL
+        )
+        block_proto.flex_container.wrap = True
+        block_proto.flex_container.gap_config.CopyFrom(gap_config)
+        block_proto.flex_container.scale = 1
         row = self.dg._block(block_proto)
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
     @gather_metrics("tabs")
-    def tabs(self, tabs: Sequence[str]) -> Sequence[DeltaGenerator]:
+    def tabs(
+        self,
+        tabs: Sequence[str],
+        *,
+        width: WidthWithoutContent = "stretch",
+    ) -> Sequence[DeltaGenerator]:
         r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
@@ -393,9 +433,12 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
-        .. warning::
-            All the content of every tab is always sent to and rendered on the frontend.
-            Conditional rendering is currently not supported.
+        .. note::
+            All content within every tab is computed and sent to the frontend,
+            regardless of which tab is selected. Tabs do not currently support
+            conditional rendering. If you have a slow-loading tab, consider
+            using a widget like ``st.segmented_control`` to conditionally
+            render content instead.
 
         Parameters
         ----------
@@ -417,6 +460,16 @@ class LayoutsMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        width : "stretch" or int
+            The width of the tab container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
@@ -483,6 +536,8 @@ class LayoutsMixin:
 
         block_proto = BlockProto()
         block_proto.tab_container.SetInParent()
+        validate_width(width)
+        block_proto.width_config.CopyFrom(get_width_config(width))
         tab_container = self.dg._block(block_proto)
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
@@ -493,6 +548,7 @@ class LayoutsMixin:
         expanded: bool = False,
         *,
         icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -504,8 +560,12 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
-        .. warning::
-            Currently, you may not put expanders inside another expander.
+        .. note::
+            All content within the expander is computed and sent to the
+            frontend, even if the expander is closed.
+
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest expanders.
 
         Parameters
         ----------
@@ -546,6 +606,16 @@ class LayoutsMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+        width : "stretch" or int
+            The width of the expander container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Examples
         --------
@@ -598,6 +668,8 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.expandable.CopyFrom(expandable_proto)
+        validate_width(width)
+        block_proto.width_config.CopyFrom(get_width_config(width))
 
         return self.dg._block(block_proto=block_proto)
 
@@ -624,8 +696,8 @@ class LayoutsMixin:
         notation (preferred) or just call methods directly on the returned object.
         See examples below.
 
-        .. warning::
-            You may not put a popover inside another popover.
+        .. note::
+            To follow best design practices, don't nest popovers.
 
         Parameters
         ----------
@@ -647,9 +719,13 @@ class LayoutsMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        help : str
-            An optional tooltip that gets displayed when the popover button is
-            hovered over.
+        help : str or None
+            A tooltip that gets displayed when the popover button is hovered
+            over. If this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         icon : str
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -744,6 +820,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
+        width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
 
@@ -761,9 +838,15 @@ class LayoutsMixin:
         ``with`` notation, it automatically updates to the "complete" state at the end
         of the "with" block. See examples below for more details.
 
+        .. note::
+            All content within the status container is computed and sent to the
+            frontend, even if the status container is closed.
+
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest status containers.
+
         Parameters
         ----------
-
         label : str
             The initial label of the status container. The label can optionally
             contain GitHub-flavored Markdown of the following types: Bold, Italics,
@@ -790,21 +873,27 @@ class LayoutsMixin:
             shown:
 
             - ``running`` (default): A spinner icon is shown.
-
             - ``complete``: A checkmark icon is shown.
-
             - ``error``: An error icon is shown.
+
+        width : "stretch" or int
+            The width of the status container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
-
         StatusContainer
             A mutable status container that can hold multiple elements. The label, state,
             and expanded state can be updated after creation via ``.update()``.
 
         Examples
         --------
-
         You can use the ``with`` notation to insert any element into an status container:
 
         >>> import time
@@ -849,7 +938,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state
+            self.dg, label, expanded=expanded, state=state, width=width
         )
 
     def _dialog(

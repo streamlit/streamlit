@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,44 +14,55 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement, useEffect, useState } from "react"
 
 import classNames from "classnames"
 
-import { isPresetTheme } from "@streamlit/lib/src/theme"
-import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { Spinner as SpinnerProto } from "@streamlit/protobuf"
+
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 
 import {
   StyledSpinner,
   StyledSpinnerContainer,
+  StyledSpinnerTimer,
   ThemedStyledSpinner,
 } from "./styled-components"
+import { formatTime } from "./utils"
 
 export interface SpinnerProps {
-  width: number
   element: SpinnerProto
 }
 
-function Spinner({ width, element }: Readonly<SpinnerProps>): ReactElement {
-  const { activeTheme } = React.useContext(LibContext)
-  const usingCustomTheme = !isPresetTheme(activeTheme)
-  const { cache } = element
+function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
+  const { cache, showTime } = element
+  const [elapsedTime, setElapsedTime] = useState(0)
+
+  useEffect(() => {
+    if (!showTime) return
+
+    const timer = setInterval(() => {
+      setElapsedTime(prev => prev + 0.1)
+    }, 100)
+
+    return () => clearInterval(timer)
+  }, [showTime])
 
   return (
     <StyledSpinner
       className={classNames({ stSpinner: true, stCacheSpinner: cache })}
       data-testid="stSpinner"
-      width={width}
       cache={cache}
     >
       <StyledSpinnerContainer>
-        <ThemedStyledSpinner usingCustomTheme={usingCustomTheme} />
+        <ThemedStyledSpinner />
         <StreamlitMarkdown source={element.text} allowHTML={false} />
+        {showTime && (
+          <StyledSpinnerTimer>{formatTime(elapsedTime)}</StyledSpinnerTimer>
+        )}
       </StyledSpinnerContainer>
     </StyledSpinner>
   )
 }
 
-export default Spinner
+export default memo(Spinner)

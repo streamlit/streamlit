@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,7 @@ import React, { ReactElement, ReactNode } from "react"
 import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import {
-  BaseUILightTheme,
-  baseuiLightTheme,
-  EmotionTheme,
-} from "@streamlit/lib/src/theme"
+import { BaseUILightTheme, baseuiLightTheme, EmotionTheme } from "~lib/theme"
 
 export interface ThemeProviderProps {
   theme: EmotionTheme

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,15 @@
 
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
-/* eslint-disable import/no-extraneous-dependencies */
-import { RenderOptions, RenderResult } from "@testing-library/react"
 import {
   renderHook as reactTestingLibraryRenderHook,
   RenderHookOptions,
-} from "@testing-library/react-hooks"
+  RenderOptions,
+  RenderResult,
+} from "@testing-library/react"
 
-import ElementFullscreenWrapper from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenWrapper"
-import {
-  TestAppWrapper,
-  render as testUtilRender,
-} from "@streamlit/lib/src/test_util"
+import ElementFullscreenWrapper from "~lib/components/shared/ElementFullscreen/ElementFullscreenWrapper"
+import { TestAppWrapper, render as testUtilRender } from "~lib/test_util"
 
 /**
  * Reusable test harness for rendering components in a fullscreen context.
@@ -58,7 +55,6 @@ export function renderHook<Props, Result>(
   options: Omit<RenderHookOptions<Props>, "wrapper"> | undefined
 ) {
   return reactTestingLibraryRenderHook(hook, {
-    // @ts-expect-error This works but TS is being weird about it
     wrapper: FullscreenHarness,
     ...options,
   })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,12 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    expect_markdown,
+    fill_number_input,
     get_element_by_key,
 )
+
+NUMBER_INPUT_COUNT = 17
 
 
 def test_number_input_widget_display(
@@ -28,7 +32,7 @@ def test_number_input_widget_display(
 ):
     """Test that st.number_input renders correctly."""
     number_input_elements = themed_app.get_by_test_id("stNumberInput")
-    expect(number_input_elements).to_have_count(12)
+    expect(number_input_elements).to_have_count(NUMBER_INPUT_COUNT)
 
     assert_snapshot(number_input_elements.nth(0), name="st_number_input-default")
     assert_snapshot(number_input_elements.nth(1), name="st_number_input-value_1")
@@ -46,6 +50,13 @@ def test_number_input_widget_display(
     assert_snapshot(
         number_input_elements.nth(11), name="st_number_input-value_none_min_1"
     )
+    assert_snapshot(
+        number_input_elements.nth(12), name="st_number_input-markdown_label"
+    )
+    assert_snapshot(number_input_elements.nth(13), name="st_number_input-emoji_icon")
+    assert_snapshot(number_input_elements.nth(14), name="st_number_input-material_icon")
+    assert_snapshot(number_input_elements.nth(15), name="st_number_input-width_200px")
+    assert_snapshot(number_input_elements.nth(16), name="st_number_input-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):
@@ -55,7 +66,9 @@ def test_help_tooltip_works(app: Page):
 def test_number_input_has_correct_default_values(app: Page):
     """Test that st.number_input has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(13)
+    # 1 st.write for each number input value (inputs 1-12)
+    # + 1 extra st.write for number input 9 (on_change)
+    expect(markdown_elements).to_have_count(NUMBER_INPUT_COUNT - 4)
 
     expected = [
         "number input 1 (default) - value: 0.0",
@@ -89,15 +102,8 @@ def test_number_input_shows_instructions_when_dirty(
 
 def test_number_input_updates_value_correctly_on_enter(app: Page):
     """Test that st.number_input updates the value correctly on enter."""
-    first_number_input_field = (
-        app.get_by_test_id("stNumberInput").nth(0).locator("input")
-    )
-    first_number_input_field.fill("10")
-    first_number_input_field.press("Enter")
-
-    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
-        "number input 1 (default) - value: 10.0", use_inner_text=True
-    )
+    fill_number_input(app, "number input 1 (default)", 10)
+    expect_markdown(app, "number input 1 (default) - value: 10.0")
 
 
 def test_number_input_has_correct_value_on_increment_click(app: Page):
@@ -105,7 +111,8 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
     number_input_up_buttons = app.get_by_test_id("stNumberInput").get_by_test_id(
         "stNumberInputStepUp"
     )
-    expect(number_input_up_buttons).to_have_count(11)
+    # The small number input doesn't have the increment button
+    expect(number_input_up_buttons).to_have_count(NUMBER_INPUT_COUNT - 1)
     for i, button in enumerate(number_input_up_buttons.all()):
         if i not in [5, 9]:
             button.click()
@@ -197,6 +204,24 @@ def test_empty_number_input_behaves_correctly(
     expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
         "number input 12 (value from state & min=1) - value: 15", use_inner_text=True
     )
+
+
+def test_number_input_does_not_allow_wheel_events(app: Page):
+    """Test that st.number_input does not allow wheel events."""
+    number_input = app.locator(".stNumberInput input[type='number']").nth(1)
+
+    # Click/focus needed to bring mouse to center of input
+    number_input.click()
+    # Scroll a little at a time to see the effect of a wheel event
+    # Negative y delta scrolls up, would increase value if wheel event was allowed
+    app.mouse.wheel(0, -50)
+    number_input.focus()
+    app.mouse.wheel(0, -50)
+    number_input.focus()
+    app.mouse.wheel(0, -50)
+    number_input.press("Enter")
+
+    expect(number_input).to_have_value("1")
 
 
 def test_custom_css_class_via_key(app: Page):

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,9 +39,6 @@ export const StyledImageContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledCaption = styled.div(({ theme }) => ({
-  fontFamily: theme.genericFonts.bodyFont,
-  fontSize: theme.fontSizes.sm,
-  color: theme.colors.fadedText60,
   textAlign: "center",
   marginTop: theme.spacing.xs,
   wordWrap: "break-word",

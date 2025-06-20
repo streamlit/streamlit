@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -103,6 +103,15 @@ def test_label_visibility_set_to_collapse(
     )
 
 
+def test_markdown_label_support(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    assert_snapshot(
+        themed_app.get_by_test_id("stMetric").nth(11),
+        name="st_metric-markdown_label",
+    )
+
+
 def test_ellipses_and_help_shows_up_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -134,3 +143,38 @@ def test_code_in_help_shows_up_properly(
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stMetric")
+
+
+def test_stretch_width(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that stretch width works correctly."""
+    metric_element = themed_app.get_by_test_id("stMetric").nth(12)
+    expect(metric_element.get_by_test_id("stMetricLabel")).to_have_text("Stretch width")
+
+    assert_snapshot(
+        metric_element,
+        name="st_metric-stretch_width",
+    )
+
+
+def test_pixel_width(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that pixel width works correctly."""
+    metric_element = themed_app.get_by_test_id("stMetric").nth(13)
+    expect(metric_element.get_by_test_id("stMetricLabel")).to_have_text(
+        "Pixel width (300px)"
+    )
+
+    assert_snapshot(
+        metric_element,
+        name="st_metric-pixel_width",
+    )
+
+
+def test_content_width(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that content width works correctly."""
+    metric_element = themed_app.get_by_test_id("stMetric").nth(14)
+    expect(metric_element.get_by_test_id("stMetricLabel")).to_have_text("Content width")
+
+    assert_snapshot(
+        metric_element,
+        name="st_metric-content_width",
+    )

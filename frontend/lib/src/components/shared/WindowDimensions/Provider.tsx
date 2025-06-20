@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 import React, { FC, PropsWithChildren, useContext } from "react"
 
-import { useWindowDimensions } from "@streamlit/lib/src/components/shared/WindowDimensions/useWindowDimensions"
-import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
+import { useWindowDimensions } from "~lib/components/shared/WindowDimensions/useWindowDimensions"
+import { WindowDimensionsContext } from "~lib/components/shared/WindowDimensions"
 
 /**
  * Registers the current window dimensions in the context. A runtime error will

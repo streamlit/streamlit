@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ st.map()
 # Cast is needed due to mypy not understanding the outcome of dividing
 # an array by a list of numbers.
 np.random.seed(0)
-coords: "np.typing.NDArray[np.float64]" = cast(
-    Any,
+coords: "np.typing.NDArray[np.float64]" = cast(  # noqa: RUF005
+    "Any",
     np.random.randn(1000, 2) / [50, 50],
 ) + [37.76, -122.4]
 simple_map_df = pd.DataFrame(coords, columns=["lat", "lon"])

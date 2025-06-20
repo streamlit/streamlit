@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+
+st.title("Test st.exception")
 
 # Test a basic exception
 basic_exception = RuntimeError("This exception message is awesome!")
@@ -42,6 +44,15 @@ def my_func(...):
     """
 )
 st.exception(markdown_exception)
+
+# Test an exception with fixed pixel width
+st.exception(RuntimeError("This exception has a fixed width of 200 pixels"), width=200)
+
+# Test an exception with stretch width
+st.exception(
+    RuntimeError("This exception stretches to fill the container width"),
+    width="stretch",
+)
 
 # Test an exception that is raised without explicitly calling st.exception. This also
 # shows the stack trace (which `st.exception` doesn't show when called explicitly).

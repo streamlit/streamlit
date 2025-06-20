@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,18 @@ import React from "react"
 import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   BaseButtonKind,
   BaseButtonSize,
-} from "@streamlit/lib/src/components/shared/BaseButton"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+  DynamicButtonLabel,
+} from "~lib/components/shared/BaseButton"
 
 import ButtonGroup, { getContentElement, Props } from "./ButtonGroup"
 
@@ -41,7 +41,7 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect
+  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let expectCheck: any = expect(element)
   if (!should_exist) {
     expectCheck = expect.not
@@ -61,7 +61,7 @@ const materialIconOnlyOptions = [
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[1]}:`,
-    selectedContentIcon: ":material/icon2_selected:",
+    selectedContentIcon: ":material/icon_2_selected:",
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[2]}:`,
@@ -570,11 +570,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.BORDERLESS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0].type).toBe(DynamicIcon)
-    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: "bar",
+      iconSize: "lg",
+      useSmallerFont: false,
+    })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
   })
@@ -586,11 +588,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.BORDERLESS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0]).toBe(undefined)
-    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: undefined,
+      iconSize: "lg",
+      useSmallerFont: false,
+    })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
   })
@@ -602,11 +606,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.BORDERLESS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0].type).toBe(DynamicIcon)
-    expect(children[1]).toBe("")
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "",
+      icon: "foo",
+      iconSize: "lg",
+      useSmallerFont: false,
+    })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
   })
@@ -618,11 +624,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.PILLS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0].type).toBe(DynamicIcon)
-    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: "bar",
+      iconSize: "base",
+      useSmallerFont: true,
+    })
     expect(kind).toBe(BaseButtonKind.PILLS)
     expect(size).toBe(BaseButtonSize.MEDIUM)
   })

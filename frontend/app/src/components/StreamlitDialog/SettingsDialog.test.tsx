@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import { screen } from "@testing-library/react"
 
 import {
   createPresetThemes,
-  customRenderLibContext,
   darkTheme,
   LibContextProps,
   lightTheme,
   mockSessionInfo,
+  renderWithContexts,
 } from "@streamlit/lib"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
@@ -53,10 +53,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   developerMode: true,
   animateModal: true,
   openThemeCreator: vi.fn(),
-  metricsMgr: new MetricsManager(
-    // @ts-expect-error The mock seems to have a mismatched internal type to what's expected.
-    mockSessionInfo()
-  ),
+  metricsMgr: new MetricsManager(mockSessionInfo()),
   ...extend,
 })
 
@@ -66,7 +63,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.getByText("Settings")).toBeVisible()
   })
@@ -77,7 +74,7 @@ describe("SettingsDialog", () => {
       allowRunOnSave: true,
     })
     const context = getContext()
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     await user.click(screen.getByText("Run on save"))
 
@@ -91,7 +88,7 @@ describe("SettingsDialog", () => {
     const user = userEvent.setup()
     const props = getProps()
     const context = getContext()
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
     expect(screen.getByText("Wide mode")).toBeVisible()
 
     await user.click(screen.getByText("Wide mode"))
@@ -107,7 +104,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(
       screen.getByText("Choose app theme, colors and fonts")
@@ -123,7 +120,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length + 1)
@@ -136,7 +133,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
@@ -147,7 +144,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.getByTestId("edit-theme")).toBeVisible()
     expect(screen.getByText("Edit active theme")).toBeVisible()
@@ -159,7 +156,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.getByTestId("edit-theme")).toBeVisible()
     await user.click(screen.getByText("Edit active theme"))
@@ -171,7 +168,7 @@ describe("SettingsDialog", () => {
     const props = getProps({ developerMode: false })
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.queryByTestId("edit-theme")).not.toBeInTheDocument()
   })

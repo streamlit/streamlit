@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import { render } from "@testing-library/react";
 import { tick } from "./test_utils";
 import { EXAMPLE_DF } from "./mock_data";
 import { ArrowTable } from "./ArrowTable";
-import {Streamlit} from "./streamlit";
+import { Streamlit } from "./streamlit";
 
 class StaticComponent extends StreamlitComponentBase {
   render() {
@@ -83,7 +83,7 @@ describe("StreamlitReact", () => {
       firstArg: ArrowTable;
     }
     class DataframeComponent extends StreamlitComponentBase<ComponentArgument> {
-      render () {
+      render() {
         const firstArg = this.props.args.firstArg;
         const { content } = firstArg.getCell(1, 1);
         return <>{String(content)}</>;
@@ -119,11 +119,11 @@ describe("StreamlitReact", () => {
 
   test("the component error should be visible", async () => {
     class BrokenComponent extends StreamlitComponentBase {
-      render (): React.ReactNode {
-        throw new Error("Error in component")
+      render(): React.ReactNode {
+        throw new Error("Error in component");
       }
     }
-    jest.spyOn(console, 'error').mockImplementation(() => {})
+    jest.spyOn(console, "error").mockImplementation(() => {});
 
     const Component = withStreamlitConnection(BrokenComponent);
     const { getByText } = render(<Component />);
@@ -141,11 +141,11 @@ describe("StreamlitReact", () => {
     expect(jest.mocked(console.error).mock.calls).toHaveLength(2);
   });
 
-  test("the component should update the frame height intiailly", async () => {
-    jest.spyOn(Streamlit, 'setFrameHeight')
+  test("the component should update the frame height initially", async () => {
+    jest.spyOn(Streamlit, "setFrameHeight");
 
     const Component = withStreamlitConnection(StaticComponent);
-    const {getByText} = render(<Component />);
+    const { getByText } = render(<Component />);
     window.postMessage(
       {
         type: "streamlit:render",
@@ -159,17 +159,16 @@ describe("StreamlitReact", () => {
     expect(getByText("Static component")).toBeInTheDocument();
   });
 
-
   test("the component should update the frame height after updating the arguments", async () => {
-    jest.spyOn(Streamlit, 'setFrameHeight')
+    jest.spyOn(Streamlit, "setFrameHeight");
 
     const Component = withStreamlitConnection(StaticComponent);
     render(<Component />);
-    for (const value of  [1, 2, 3]){
+    for (const value of [1, 2, 3]) {
       window.postMessage(
         {
           type: "streamlit:render",
-          args: {value},
+          args: { value },
         },
         "*"
       );
@@ -178,6 +177,4 @@ describe("StreamlitReact", () => {
 
     expect(jest.mocked(Streamlit.setFrameHeight).mock.calls).toHaveLength(3);
   });
-
-
 });

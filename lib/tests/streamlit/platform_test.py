@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,4 +27,4 @@ class PlatformTest(DeltaGeneratorTestCase):
     def test_post_parent_message(self, message: str):
         post_parent_message(message)
         c = self.get_message_from_queue().parent_message
-        self.assertEqual(c.message, message)
+        assert c.message == message

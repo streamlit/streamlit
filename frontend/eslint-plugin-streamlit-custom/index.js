@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@
 
 const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
+const enforceMemo = require("./enforce-memo")
 
 module.exports = {
   rules: {
     "use-strict-null-equality-checks": useStrictNullEqualityChecks,
     "no-hardcoded-theme-values": noHardcodedThemeValues,
+    "enforce-memo": enforceMemo,
   },
 }

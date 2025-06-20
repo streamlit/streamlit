@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+import re
+from typing import TYPE_CHECKING, Literal, cast
 
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_height,
+    validate_width,
+)
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -34,6 +40,8 @@ class CodeMixin:
         *,
         line_numbers: bool = False,
         wrap_lines: bool = False,
+        height: int | Literal["content"] | None = "content",
+        width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.
 
@@ -59,6 +67,32 @@ class CodeMixin:
         wrap_lines : bool
             An optional boolean indicating whether to wrap lines. This defaults
             to ``False``.
+
+        height : "content" or int
+            The height of the code block element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+            .. note::
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
+
+        width : "stretch" or int
+            The width of the code block element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -93,11 +127,19 @@ class CodeMixin:
             height: 380px
         """
         code_proto = CodeProto()
-        code_proto.code_text = clean_text(body)
+        code_proto.code_text = re.sub(r"\n\Z", "", re.sub(r"\A\n", "", str(body)))
         code_proto.language = language or "plaintext"
         code_proto.show_line_numbers = line_numbers
         code_proto.wrap_lines = wrap_lines
-        return self.dg._enqueue("code", code_proto)
+
+        if height is None:
+            height = "content"
+        else:
+            validate_height(height, allow_content=True)
+        validate_width(width)
+        layout_config = LayoutConfig(height=height, width=width)
+
+        return self.dg._enqueue("code", code_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -1,29 +1,16 @@
 {
+  "files": [],
+  "references": [
+    { "path": "./app" },
+    { "path": "./lib" },
+    { "path": "./connection" },
+    { "path": "./utils" }
+  ],
   "compilerOptions": {
-    "allowJs": true,
-    "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
-    "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "module": "esnext",
-    "moduleResolution": "node",
-    "noEmit": true,
-    "noFallthroughCasesInSwitch": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "target": "es5",
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
-  },
-  "include": ["lib", "app"],
-  "exclude": [
-    "*/proto.js",
-    "*/proto.d.ts",
-    "eslint-plugin-streamlit-custom",
-    "./vitest.setup.ts"
-  ]
+    "composite": true,
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true
+  }
 }
