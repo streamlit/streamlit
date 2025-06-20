@@ -160,10 +160,11 @@ class LayoutsMixin:
         block_proto.flex_container.border = border or False
         block_proto.flex_container.wrap = False
 
-        if height:
-            # Activate scrolling container behavior:
+        if isinstance(height, int) or border:
             block_proto.allow_empty = True
 
+        if height:
+            # Activate scrolling container behavior:
             height_config = HeightConfig()
             height_config.pixel_height = height
             # Use block-level height_config instead of flex_container
@@ -666,7 +667,7 @@ class LayoutsMixin:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
-        block_proto.allow_empty = False
+        block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))

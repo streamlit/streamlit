@@ -57,12 +57,11 @@ export const StyledSummaryHeading = styled.span(({ theme }) => ({
 }))
 
 interface StyledSummaryProps {
-  empty: boolean
   isStale: boolean
 }
 
 export const StyledSummary = styled.summary<StyledSummaryProps>(
-  ({ theme, empty, isStale }) => ({
+  ({ theme, isStale }) => ({
     position: "relative",
     display: "flex",
     width: "100%",
@@ -82,14 +81,11 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       display: "none",
     },
     "&:hover": {
-      color: empty ? undefined : theme.colors.primary,
+      color: theme.colors.primary,
     },
     "&:hover svg": {
-      fill: empty ? undefined : theme.colors.primary,
+      fill: theme.colors.primary,
     },
-    ...(empty && {
-      cursor: "default",
-    }),
     ...(isStale && STALE_STYLES),
   })
 )

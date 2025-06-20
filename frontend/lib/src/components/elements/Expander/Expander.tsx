@@ -101,13 +101,11 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 export interface ExpanderProps {
   element: BlockProto.Expandable
   isStale: boolean
-  empty: boolean
 }
 
 const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
-  empty,
   children,
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
@@ -182,9 +180,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
 
   const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
     e.preventDefault()
-    if (empty) {
-      return
-    }
 
     setExpanded(!expanded)
     const detailsEl = detailsRef.current
@@ -240,37 +235,24 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
       <StyledDetails isStale={isStale} ref={detailsRef}>
-        <StyledSummary
-          onClick={toggle}
-          empty={empty}
-          ref={summaryRef}
-          isStale={isStale}
-        >
+        <StyledSummary onClick={toggle} ref={summaryRef} isStale={isStale}>
           <StyledSummaryHeading>
             {element.icon && <ExpanderIcon icon={element.icon} />}
             <StreamlitMarkdown source={label} allowHTML={false} isLabel />
           </StyledSummaryHeading>
-          {!empty ? (
-            <StyledIcon
-              as={expanded ? ExpandLess : ExpandMore}
-              color={"inherit"}
-              aria-hidden="true"
-              data-testid="stExpanderToggleIcon"
-              size="lg"
-              margin=""
-              padding=""
-            />
-          ) : (
-            <></>
-          )}
+          <StyledIcon
+            as={expanded ? ExpandLess : ExpandMore}
+            color={"inherit"}
+            aria-hidden="true"
+            data-testid="stExpanderToggleIcon"
+            size="lg"
+            margin=""
+            padding=""
+          />
         </StyledSummary>
-        {!empty ? (
-          <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
-            {children}
-          </StyledDetailsPanel>
-        ) : (
-          <></>
-        )}
+        <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
+          {children}
+        </StyledDetailsPanel>
       </StyledDetails>
     </StyledExpandableContainer>
   )
