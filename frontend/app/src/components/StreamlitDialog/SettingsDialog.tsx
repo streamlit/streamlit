@@ -207,6 +207,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
               source={`Made with Streamlit ${sessionInfo.current.streamlitVersion}`}
               allowHTML={false}
               isCaption
+              data-testid="stVersionInfo"
             />
           )}
         </StyledDialogBody>
