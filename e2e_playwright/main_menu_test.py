@@ -29,11 +29,10 @@ def test_renders_settings_dialog_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     themed_app.get_by_test_id("stMainMenu").click()
-
     themed_app.get_by_text("Settings").click()
     dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
-
+    expect(dialog).to_contain_text("Made with Streamlit")
     assert_snapshot(dialog.get_by_role("dialog"), name="settings_dialog")
 
 
@@ -74,11 +73,10 @@ def test_renders_screencast_recorded_dialog_properly(themed_app: Page):
 
 def test_renders_about_dialog_properly(themed_app: Page):
     themed_app.get_by_test_id("stMainMenu").click()
-
     themed_app.get_by_text("About").click()
     dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
-    expect(dialog).to_contain_text("Made with Streamlit v")
+    expect(dialog).to_contain_text("This can be markdown!")
 
 
 def test_renders_clear_cache_dialog_properly(
