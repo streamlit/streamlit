@@ -262,7 +262,7 @@ protobuf:
 react-init:
 	cd frontend/ ; \
 	if command -v "corepack" > /dev/null; then \
-		corepack install ; \
+		corepack enable; corepack install ; \
 	fi;\
 	yarn install --immutable
 
