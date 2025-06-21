@@ -492,6 +492,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.headingFont",
                 "theme.codeFont",
                 "theme.codeFontSize",
+                "theme.codeFontWeight",
                 "theme.fontFaces",
                 "theme.borderColor",
                 "theme.dataframeBorderColor",
@@ -681,6 +682,7 @@ class ConfigTest(unittest.TestCase):
             "headingFont": None,
             "codeFont": None,
             "codeFontSize": None,
+            "codeFontWeight": None,
             "fontFaces": None,
             "baseFontSize": None,
             "codeBackgroundColor": None,
@@ -720,6 +722,7 @@ class ConfigTest(unittest.TestCase):
         )
         config._set_option("theme.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.codeFontSize", "12px", "test")
+        config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.showSidebarBorder", True, "test")
 
@@ -740,6 +743,7 @@ class ConfigTest(unittest.TestCase):
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
+            "codeFontWeight": 300,
             "codeBackgroundColor": "#29361e",
             "fontFaces": [
                 {
