@@ -179,8 +179,9 @@ message CustomThemeConfig {
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
+  optional string dataframe_header_background_color = 100;
 
-  // Next ID: 30
+  // Next ID: <FILL IN HERE>
 }
 
 message FontFace {
