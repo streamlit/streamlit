@@ -508,7 +508,6 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.baseRadius",
                 "theme.sidebar.buttonRadius",
                 "theme.sidebar.font",
-                "theme.sidebar.baseFontWeight",
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
                 "theme.sidebar.codeFontSize",
@@ -774,7 +773,6 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.linkColor", "#2EC163", "test")
         config._set_option("theme.sidebar.linkUnderline", False, "test")
         config._set_option("theme.sidebar.font", "Inter", "test")
-        config._set_option("theme.sidebar.baseFontWeight", 300, "test")
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.sidebar.codeFontSize", "12px", "test")
@@ -793,7 +791,6 @@ class ConfigTest(unittest.TestCase):
             "linkColor": "#2EC163",
             "linkUnderline": False,
             "font": "Inter",
-            "baseFontWeight": 300,
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",

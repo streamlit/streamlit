@@ -1352,7 +1352,7 @@ _create_theme_options(
 
 _create_theme_options(
     "baseFontWeight",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=["theme"],
     description="""
         Sets the root font weight for the app.
 
