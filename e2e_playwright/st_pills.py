@@ -46,7 +46,7 @@ pills_options = [
     "📦 Collections of components",
     "📦 Very very long text" * 20,  # pill with very long text
 ]
-selection = st.pills(
+s1 = st.pills(
     "Select some options",
     pills_options,
     key="pills",
@@ -54,7 +54,7 @@ selection = st.pills(
     default=default,
     help="This is for choosing options",
 )
-st.write(f"Multi selection: {selection}")
+st.write(f"Multi selection: {s1}")
 
 
 st.header("Pills - starting with icons")
@@ -64,14 +64,14 @@ option_to_icon_map = {
     2: ":material/zoom_out:",
     3: ":material/zoom_out_map:",
 }
-selection = st.pills(
+s2 = st.pills(
     "Select a single option",
     options=[0, 1, 2, 3],
     format_func=lambda option: option_to_icon_map[option],
     key="icon_only_pills",
     selection_mode="single",
 )
-st.write(f"Single selection: {selection}")
+st.write(f"Single selection: {s2}")
 
 
 st.header("Pills - on_change callback")
@@ -87,18 +87,18 @@ st.pills(
 
 
 st.header("Pills - disabled")
-selection = st.pills(
+s3 = st.pills(
     "Elements",
     ["Water", "Fire", "Earth", "Air"],
     key="pills_disabled",
     disabled=True,
 )
-st.write("pills-disabled:", str(selection))
+st.write("pills-disabled:", str(s3))
 
 
 st.header("Pills in form")
 with st.form(key="my_form", clear_on_submit=True):
-    selection = st.pills(
+    st.pills(
         "Elements  (label hidden)",
         ["Water", "Fire", "Earth", "Air"],
         key="pills_in_form",
@@ -116,12 +116,12 @@ st.write(
 st.header("Pills in fragment")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
-    selection = st.pills(
+    s5 = st.pills(
         "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_fragment"
     )
-    st.write("pills-in-fragment:", str(selection))
+    st.write("pills-in-fragment:", str(s5))
 
 
 test_fragment()
@@ -135,10 +135,8 @@ if st.button("Create some elements to unmount component"):
         time.sleep(1)
         st.write("Another element")
 
-selection = st.pills(
-    "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sleep"
-)
-st.write("pills-after-sleep:", str(selection))
+s6 = st.pills("Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sleep")
+st.write("pills-after-sleep:", str(s6))
 
 
 if "runs" not in st.session_state:

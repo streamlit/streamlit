@@ -22,6 +22,7 @@ import React, {
   useContext,
   useEffect,
   useRef,
+  useState,
 } from "react"
 
 import {
@@ -88,11 +89,11 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   const libContext = useContext(LibContext)
   const activeSettings = useRef(settings)
   const isFirstRun = useRef(true)
-  const [state, setState] = React.useState<UserSettings>({ ...settings })
+  const [state, setState] = useState<UserSettings>({ ...settings })
 
   const changeSingleSetting = useCallback(
     (name: string, value: boolean): void => {
-      setState(state => ({ ...state, [name]: value }))
+      setState(prevState => ({ ...prevState, [name]: value }))
     },
     []
   )
@@ -115,8 +116,16 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   )
 
   const handleThemeChange = useCallback(
-    (index: number | null): void => {
-      const newTheme = libContext.availableThemes[index ?? 0]
+    (themeName: string | null): void => {
+      let newTheme = undefined
+      if (themeName) {
+        newTheme = libContext.availableThemes.find(
+          (theme: ThemeConfig) => theme.name === themeName
+        )
+      }
+      if (newTheme === undefined) {
+        newTheme = libContext.availableThemes[0]
+      }
 
       metricsMgr.enqueue("menuClick", {
         label: "changeTheme",
@@ -127,36 +136,30 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
     [libContext, metricsMgr]
   )
 
-  const themeIndex = libContext.availableThemes.findIndex(
-    (theme: ThemeConfig) => theme.name === libContext.activeTheme.name
-  )
-
   return (
     <Modal animate={animateModal} isOpen onClose={onClose}>
       <ModalHeader>Settings</ModalHeader>
       <ModalBody>
         <StyledDialogBody>
           {allowRunOnSave && (
-            <React.Fragment>
-              <StyledFullRow>
-                <StyledHeader>Development</StyledHeader>
-                <label>
-                  <StyledCheckbox
-                    disabled={!isServerConnected}
-                    type="checkbox"
-                    name="runOnSave"
-                    checked={state.runOnSave && isServerConnected}
-                    onChange={handleCheckboxChange}
-                  />{" "}
-                  Run on save
-                </label>
-                <StreamlitMarkdown
-                  source="Automatically updates the app when the underlying code is updated."
-                  allowHTML={false}
-                  isCaption
-                />
-              </StyledFullRow>
-            </React.Fragment>
+            <StyledFullRow>
+              <StyledHeader>Development</StyledHeader>
+              <label>
+                <StyledCheckbox
+                  disabled={!isServerConnected}
+                  type="checkbox"
+                  name="runOnSave"
+                  checked={state.runOnSave && isServerConnected}
+                  onChange={handleCheckboxChange}
+                />{" "}
+                Run on save
+              </label>
+              <StreamlitMarkdown
+                source="Automatically updates the app when the underlying code is updated."
+                allowHTML={false}
+                isCaption
+              />
+            </StyledFullRow>
           )}
 
           <StyledFullRow>
@@ -186,7 +189,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                 )}
                 disabled={false}
                 onChange={handleThemeChange}
-                value={themeIndex}
+                value={libContext.activeTheme.name}
               />
               {developerMode && (
                 <ThemeCreatorButton openThemeCreator={openThemeCreator} />

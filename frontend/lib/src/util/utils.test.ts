@@ -14,17 +14,26 @@
  * limitations under the License.
  */
 
-import { MockInstance } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  MockInstance,
+  vi,
+} from "vitest"
 
 import {
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
-  getCookie,
   getEmbedUrlParams,
   getLoadingScreenType,
+  getUrl,
   isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
+  isInChildFrame,
   isLightThemeInQueryParams,
   isPaddingDisplayed,
   isScrollingHidden,
@@ -34,54 +43,6 @@ import {
   preserveEmbedQueryParams,
   setCookie,
 } from "./utils"
-
-describe("getCookie", () => {
-  afterEach(() => {
-    document.cookie.split(";").forEach(cookie => {
-      const eqPos = cookie.indexOf("=")
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
-    })
-  })
-
-  it("get existing cookie", () => {
-    document.cookie = "flavor=chocolatechip"
-    const cookie = getCookie("flavor")
-    expect(cookie).toEqual("chocolatechip")
-  })
-
-  it("get missing cookie", () => {
-    document.cookie = "sweetness=medium;"
-    document.cookie = "flavor=chocolatechip;"
-    document.cookie = "type=darkchocolate;"
-    const cookie = getCookie("recipe")
-    expect(cookie).toEqual(undefined)
-  })
-
-  it("find cookie in the front", () => {
-    document.cookie = "flavor=chocolatechip;"
-    document.cookie = "sweetness=medium;"
-    document.cookie = "type=darkchocolate;"
-    const cookie = getCookie("flavor")
-    expect(cookie).toEqual("chocolatechip")
-  })
-
-  it("find cookie in the middle", () => {
-    document.cookie = "sweetness=medium;"
-    document.cookie = "flavor=chocolatechip;"
-    document.cookie = "type=darkchocolate;"
-    const cookie = getCookie("flavor")
-    expect(cookie).toEqual("chocolatechip")
-  })
-
-  it("find cookie in the end", () => {
-    document.cookie = "sweetness=medium;"
-    document.cookie = "type=darkchocolate;"
-    document.cookie = "flavor=chocolatechip;"
-    const cookie = getCookie("flavor")
-    expect(cookie).toEqual("chocolatechip")
-  })
-})
 
 describe("setCookie", () => {
   afterEach(() => {
@@ -414,7 +375,7 @@ describe("getLoadingScreenType", () => {
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
   })
 
-  it("should give precendence to 'hide'", () => {
+  it("should give precedence to 'hide'", () => {
     vi.stubGlobal("window", {
       location: {
         search:
@@ -457,41 +418,53 @@ describe("getLoadingScreenType", () => {
 
   describe("preserveEmbedQueryParams", () => {
     let prevWindowLocation: Location
+
+    beforeEach(() => {
+      prevWindowLocation = window.location
+    })
+
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it("should return an empty string if not in embed mode", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("")
     })
 
     it("should preserve embed query string even with no embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "embed=true&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "embed=true&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("embed=true")
     })
 
     it("should preserve embed query string with embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search:
-          "embed=true&embed_options=option1&embed_options=option2&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search:
+            "embed=true&embed_options=option1&embed_options=option2&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe(
         "embed=true&embed_options=option1&embed_options=option2"
       )
@@ -515,5 +488,159 @@ describe("keysToSnakeCase", () => {
 
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
+  })
+})
+
+// Mock isInChildFrame since getUrl depends on it
+vi.mock("./utils", async importOriginal => {
+  const actual = await importOriginal<typeof import("./utils")>()
+  return {
+    ...actual,
+    isInChildFrame: vi.fn(),
+  }
+})
+
+describe("getUrl", () => {
+  const mockIsInChildFrame = vi.mocked(isInChildFrame)
+  let topSpy: MockInstance<() => unknown>
+  let documentSpy: MockInstance<() => unknown>
+
+  beforeEach(() => {
+    documentSpy = vi.spyOn(global, "document", "get")
+    topSpy = vi.spyOn(global, "top", "get")
+
+    // Reset mocks
+    mockIsInChildFrame.mockReset()
+    documentSpy.mockReset()
+    topSpy.mockReset()
+  })
+
+  afterEach(() => {
+    // Restore original implementations
+    vi.restoreAllMocks()
+  })
+
+  it("should return document.location.href without query params when not in an iframe", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?param=value",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should return document.location.href without query params when in an iframe but window.top access throws error", () => {
+    mockIsInChildFrame.mockReturnValue(true)
+
+    // Simulate error when accessing top getter
+    topSpy.mockImplementation(() => {
+      throw new Error("CSP error simulation")
+    })
+
+    // Mock document location for the fallback
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://iframe.com/page?iframeparam=1",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://iframe.com/page")
+  })
+
+  it("should handle URLs with no query parameters correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should handle URLs ending with / correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main/?query=1",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main/")
+  })
+
+  it("should handle complex query parameters correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?foo=bar&baz=qux&embed=true",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should return document.location.href without query params or anchors when not in an iframe", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?param=value#section",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should return document.location.href without query params or anchors when in an iframe but window.top access throws error", () => {
+    mockIsInChildFrame.mockReturnValue(true)
+
+    // Simulate error when accessing top getter
+    topSpy.mockImplementation(() => {
+      throw new Error("CSP error simulation")
+    })
+
+    // Mock document location for the fallback
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://iframe.com/page?iframeparam=1#top",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://iframe.com/page")
+  })
+
+  it("should handle URLs with only an anchor correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main#section",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+
+  it("should handle URLs ending with / and an anchor correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main/#section?query=1",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main/")
+  })
+
+  it("should handle complex query parameters and an anchor correctly", () => {
+    mockIsInChildFrame.mockReturnValue(false)
+    documentSpy.mockImplementation(() => ({
+      location: {
+        href: "http://localhost:3000/main?foo=bar&baz=qux&embed=true#section",
+      },
+    }))
+
+    expect(getUrl()).toBe("http://localhost:3000/main")
   })
 })

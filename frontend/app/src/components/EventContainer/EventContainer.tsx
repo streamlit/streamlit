@@ -14,28 +14,20 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useEffect } from "react"
+import React, { ReactElement, ReactNode } from "react"
 
-import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
-import { useTheme } from "@emotion/react"
+import { PLACEMENT, ToasterContainer } from "baseui/toast"
 
-import { EmotionTheme } from "@streamlit/lib"
+import { useEmotionTheme } from "@streamlit/lib"
 
 export interface EventContainerProps {
-  scriptRunId: string
   children?: ReactNode
 }
 
 function EventContainer({
-  scriptRunId,
   children,
 }: Readonly<EventContainerProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
-
-  useEffect(() => {
-    // Ensure all toasts cleared on script re-run
-    toaster.getRef()?.clearAll()
-  }, [scriptRunId])
+  const theme = useEmotionTheme()
 
   return (
     <>

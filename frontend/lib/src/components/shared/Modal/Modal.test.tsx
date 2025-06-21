@@ -19,7 +19,7 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import Modal, { calculateModalSize } from "./Modal"
 

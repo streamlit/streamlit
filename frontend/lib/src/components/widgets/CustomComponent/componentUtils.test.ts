@@ -18,12 +18,14 @@ import { RefObject } from "react"
 
 import { Mock } from "vitest"
 
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
-} from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "@streamlit/protobuf"
+
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { toExportedTheme } from "~lib/theme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   createIframeMessageHandler,
@@ -36,7 +38,7 @@ import {
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // Mock our WidgetStateManager
-vi.mock("@streamlit/lib/src/WidgetStateManager")
+vi.mock("~lib/WidgetStateManager")
 
 describe("test componentUtils", () => {
   describe("createIframeMsgHandler", () => {
@@ -137,6 +139,7 @@ describe("test componentUtils", () => {
     it("should send message to iframe", () => {
       const handleAction = vi.fn()
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       const mockIframe: any = {
         contentWindow: {
           postMessage: handleAction,
@@ -161,7 +164,11 @@ describe("test componentUtils", () => {
           args,
           dfs: dataframeArgs,
           disabled,
-          theme: expect.any(Object),
+          theme: {
+            ...toExportedTheme(mockTheme.emotion),
+            // Should fill in the deprecated font property for backwards compatibility
+            font: mockTheme.emotion.genericFonts.bodyFont,
+          },
         },
         "*"
       )
@@ -170,6 +177,7 @@ describe("test componentUtils", () => {
     it("should not send message when iframe is undefined", () => {
       const handleAction = vi.fn()
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       const mockIframe: any = undefined
       sendRenderMessage({}, [], false, mockTheme.emotion, mockIframe)
       expect(handleAction).toBeCalledTimes(0)
@@ -178,6 +186,7 @@ describe("test componentUtils", () => {
     it("should not send message when iframe's content window is undefined", () => {
       const handleAction = vi.fn()
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       const mockIframe: any = {
         contentWindow: undefined,
       }

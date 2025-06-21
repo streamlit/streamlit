@@ -42,13 +42,17 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
-        run: make develop
+        run: |
+          source venv/bin/activate
+          make develop
       - name: Run make protobuf
         run: make protobuf
       - name: Run make frontend-lib
         run: make frontend-lib
       - name: Audit frontend licenses
         run: ./scripts/audit_frontend_licenses.py
+      - name: Run frontend-typesync
+        run: make frontend-typesync
       - name: Run type checks
         run: make tstypecheck
       - name: Run linters
@@ -70,14 +74,17 @@ jobs:
           fi
       - name: Run frontend tests
         run: make jstestcoverage
-      - name: Upload coverage report
+      - name: Upload coverage json-summary
         uses: actions/upload-artifact@v4
         with:
-          name: coverage_report_vitest
-          path: |
-            frontend/lib/coverage
-            frontend/app/coverage
-          retention-days: 7
+          name: vitest_coverage_json
+          path: frontend/coverage/coverage-summary.json
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest_coverage_html
+          path: frontend/coverage
+          retention-days: 30
 
   components-lib-tests:
     runs-on: ubuntu-latest
@@ -94,10 +101,8 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
-      - name: Enable and Prepare Latest Yarn
-        run: |
-          corepack enable
-          corepack prepare yarn@4.5.3 --activate
+      - name: Enable Corepack
+        run: corepack enable
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -113,3 +118,148 @@ jobs:
       - name: Build package
         working-directory: component-lib
         run: yarn build
+
+  js-coverage-comment:
+    needs:
+      - js-unit-tests
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for downloading artifacts
+      actions: read
+      # Required for creating/updating PR comments
+      pull-requests: write
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+
+      - name: Download coverage JSON
+        uses: actions/download-artifact@v4
+        with:
+          name: vitest_coverage_json
+          path: /tmp/current_coverage
+
+      - name: Get latest develop run ID
+        id: get-latest-run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'js-tests.yml',
+              branch: 'develop',
+              status: 'success',
+              per_page: 1
+            });
+
+            if (runs.workflow_runs.length === 0) {
+              throw new Error('No successful workflow runs found on develop branch');
+            }
+
+            core.setOutput('run_id', runs.workflow_runs[0].id);
+
+      - name: Download develop coverage
+        uses: actions/download-artifact@v4
+        with:
+          repository: streamlit/streamlit
+          run-id: ${{ steps.get-latest-run.outputs.run_id }}
+          name: vitest_coverage_json
+          path: /tmp/develop_coverage
+          # Needs a token to download the artifact from another
+          # workflow run:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check coverage changes and comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const COVERAGE_CHANGE_THRESHOLD = 0.03; // 0.03%
+            const fs = require('fs');
+
+            try {
+              // Read current coverage from the downloaded artifact
+              const currentCoverageData = JSON.parse(fs.readFileSync('/tmp/current_coverage/coverage-summary.json', 'utf8'));
+
+              // Read develop coverage from downloaded artifact
+              const developCoverageData = JSON.parse(fs.readFileSync('/tmp/develop_coverage/coverage-summary.json', 'utf8'));
+
+              // Calculate total coverage (focusing on lines as specified)
+              const currentTotal = currentCoverageData.total.lines.pct;
+              const developTotal = developCoverageData.total.lines.pct;
+
+              // Calculate percentage difference
+              const diffPercent = currentTotal - developTotal;
+              const absDiffPercent = Math.abs(diffPercent);
+
+              console.log(`Current frontend coverage: ${currentTotal.toFixed(4)}%`);
+              console.log(`Develop frontend coverage: ${developTotal.toFixed(4)}%`);
+              console.log(`Coverage difference: ${diffPercent.toFixed(4)}%`);
+
+              const changeType = diffPercent > 0 ? 'increased' : 'decreased';
+              const emoji = diffPercent > 0 ? '📈' : '📉';
+
+              // Get current coverage details
+              const currentLines = currentCoverageData.total.lines;
+              const developLines = developCoverageData.total.lines;
+
+              const commentBody = `### ${emoji} Frontend coverage change detected
+
+              The frontend unit test (vitest) coverage has **${changeType} by ${Math.abs(diffPercent).toFixed(4)}%**
+
+              - Current PR: ${currentTotal.toFixed(4)}% (${currentLines.total} lines, ${currentLines.total - currentLines.covered} missed)
+              - Latest develop: ${developTotal.toFixed(4)}% (${developLines.total} lines, ${developLines.total - developLines.covered} missed)
+
+              ${absDiffPercent >= COVERAGE_CHANGE_THRESHOLD
+                ? (diffPercent > 0
+                    ? '🎉 Great job on improving test coverage!'
+                    : '💡 Consider adding more unit tests to maintain or improve coverage.'
+                  )
+                : '✅ Coverage change is within normal range.'
+              }
+
+              📊 [View detailed coverage comparison](https://issues.streamlit.app/Test_Coverage_(Frontend)?pr=${context.issue.number})`;
+
+              // Unique identifier for our comment
+              const commentIdentifier = '<!-- STREAMLIT-JAVASCRIPT-COVERAGE-CHECK -->';
+              const fullCommentBody = `${commentIdentifier}\n${commentBody}`;
+
+              // Get all comments on the PR
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+
+              // Look for our previous coverage comment
+              const coverageComment = comments.find(comment => comment.body.includes(commentIdentifier));
+
+              if (coverageComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: coverageComment.id,
+                  body: fullCommentBody
+                });
+                console.log('Updated existing coverage comment');
+              } else if (absDiffPercent >= COVERAGE_CHANGE_THRESHOLD) {
+                // Only create new comment for significant changes
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: fullCommentBody
+                });
+                console.log('Created new coverage comment');
+              } else {
+                console.log('Coverage change is not significant and no existing comment found, skipping comment');
+              }
+            } catch (error) {
+              console.error(`Error checking coverage changes: ${error.message}`);
+            }

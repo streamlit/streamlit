@@ -19,17 +19,18 @@ import React from "react"
 import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   BaseButtonKind,
   BaseButtonSize,
   DynamicButtonLabel,
-} from "@streamlit/lib/src/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton"
 
 import ButtonGroup, { getContentElement, Props } from "./ButtonGroup"
 
@@ -40,7 +41,7 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect
+  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let expectCheck: any = expect(element)
   if (!should_exist) {
     expectCheck = expect.not
@@ -60,7 +61,7 @@ const materialIconOnlyOptions = [
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[1]}:`,
-    selectedContentIcon: ":material/icon2_selected:",
+    selectedContentIcon: ":material/icon_2_selected:",
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[2]}:`,
@@ -574,6 +575,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: "bar",
       iconSize: "lg",
+      useSmallerFont: false,
     })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
@@ -591,6 +593,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: undefined,
       iconSize: "lg",
+      useSmallerFont: false,
     })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
@@ -608,6 +611,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "",
       icon: "foo",
       iconSize: "lg",
+      useSmallerFont: false,
     })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
@@ -625,6 +629,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: "bar",
       iconSize: "base",
+      useSmallerFont: true,
     })
     expect(kind).toBe(BaseButtonKind.PILLS)
     expect(size).toBe(BaseButtonSize.MEDIUM)

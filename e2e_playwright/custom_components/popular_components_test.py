@@ -30,7 +30,9 @@ def _select_component(app: Page, component: str):
 
 
 def _expect_no_exception(app: Page):
-    """If there is an issue with importing / using the custom component, Streamlit throws an exception. So, expect that no exception was thrown."""
+    """If there is an issue with importing / using the custom component, Streamlit
+    throws an exception. So, expect that no exception was thrown.
+    """
     expect(app.get_by_test_id("stException")).not_to_be_visible()
 
 
@@ -40,7 +42,7 @@ def _expect_iframe_attached(app: Page):
 
 
 def test_components_html(app: Page):
-    """Test that components.html can be imported and used"""
+    """Test that components.html can be imported and used."""
     _select_component(app, "componentsHtml")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
@@ -57,9 +59,11 @@ def test_components_html(app: Page):
     ],
 )
 def test_components_import(app: Page, name: str, expected_text: str):
-    """Test that components.iframe and components.declare_component can be imported and used.
+    """Test that components.iframe and components.declare_component can be imported
+    and used.
 
-    We only make sure that they are importable but do not call them, so we don't have an iframe element in the DOM.
+    We only make sure that they are importable but do not call them, so we don't have
+    an iframe element in the DOM.
     """
     _select_component(app, name)
     _expect_no_exception(app)
@@ -70,74 +74,80 @@ def test_components_import(app: Page, name: str, expected_text: str):
 
 
 def test_ace(app: Page):
-    """Test that the ace component renders"""
+    """Test that the ace component renders."""
     _select_component(app, "ace")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
 
 def test_aggrid(app: Page):
-    """Test that the aggrid component renders"""
+    """Test that the aggrid component renders."""
     _select_component(app, "aggrid")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
 
 def test_antd(app: Page):
-    """Test that the ace component renders"""
+    """Test that the ace component renders."""
     _select_component(app, "antd")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
 
 def test_autorefresh(app: Page):
-    """Test that the autorefresh component renders"""
+    """Test that the autorefresh component renders."""
     _select_component(app, "autorefresh")
     _expect_no_exception(app)
 
 
 def test_chat(app: Page):
-    """Test that the chat component renders"""
+    """Test that the chat component renders."""
     _select_component(app, "chat")
     _expect_iframe_attached(app)
 
 
 def test_echarts(app: Page):
-    """Test that the echarts component renders"""
+    """Test that the echarts component renders."""
     _select_component(app, "echarts")
     _expect_no_exception(app)
 
 
 def test_extra_streamlit_components(app: Page):
-    """Test that the extra-strealit-components component renders"""
+    """Test that the extra-strealit-components component renders."""
     _select_component(app, "extraStreamlitComponents")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
 
 def test_folium(app: Page):
-    """Test that the folium component renders"""
+    """Test that the folium component renders."""
     _select_component(app, "folium")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
 
 def test_option_menu(app: Page):
-    """Test that the option-menu component renders"""
+    """Test that the option-menu component renders."""
     _select_component(app, "optionMenu")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
-    # TODO: uncomment the on_change callback as soon as streamlit-option-menu is updated and uses the new on_change callback
-    # frame_locator = app.frame_locator("iframe")
-    # frame_locator.locator("a", has_text="Home").click()
-    # expect(
-    #     app.get_by_test_id("stMarkdown").filter(has_text="Selection changed to Home")
-    # ).to_be_visible()
+    frame_locator = app.frame_locator("iframe")
+    frame_locator.locator("a", has_text="Home").click()
+    expect(
+        app.get_by_test_id("stMarkdown").filter(has_text="Selection changed to Home")
+    ).to_be_visible()
 
 
 def test_url_fragment(app: Page):
-    """Test that the url-fragment component renders"""
+    """Test that the url-fragment component renders."""
     _select_component(app, "urlFragment")
+    _expect_no_exception(app)
+    _expect_iframe_attached(app)
+
+
+def test_bokeh(app: Page):
+    """Test that the bokeh component renders."""
+    _select_component(app, "bokeh")
     _expect_no_exception(app)
     _expect_iframe_attached(app)

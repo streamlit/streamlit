@@ -18,13 +18,14 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
-import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
+import { BokehChart as BokehChartProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import Bokeh from "~lib/vendor/bokeh/bokeh.esm"
 
 import { BokehChart, BokehChartProps } from "./BokehChart"
 
-vi.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm", () => ({
+vi.mock("~lib/vendor/bokeh/bokeh.esm", () => ({
   // needed to parse correctly
   __esModule: true,
   default: {
@@ -290,7 +291,8 @@ expect.extend({
   toMatchBokehDimensions(data, width, height) {
     const plot =
       data && data.doc && data.doc.roots && data.doc.roots.references
-        ? data.doc.roots.references.find((e: any) => e.type === "Plot")
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+          data.doc.roots.references.find((e: any) => e.type === "Plot")
         : undefined
 
     if (!plot) {

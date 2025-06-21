@@ -25,9 +25,7 @@ from e2e_playwright.shared.app_utils import (
 
 @pytest.mark.performance
 def test_form_input_performance(app: Page):
-    """
-    Tests the re-render performance when typing in an input that is in a form.
-    """
+    """Tests the re-render performance when typing in an input that is in a form."""
     form_1 = app.get_by_test_id("stForm").nth(0)
     form_1.get_by_test_id("stTextArea").locator("textarea").press_sequentially(
         "this is some text", delay=100
@@ -151,6 +149,8 @@ def test_form_submit_with_emoji_icon(app: Page, assert_snapshot: ImageCompareFun
     """Tests if the form submit button with emoji icon renders correctly."""
     form_4 = app.get_by_test_id("stForm").nth(3)
 
+    expect(form_4.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+
     assert_snapshot(form_4, name="st_form_submit-emoji_icon")
 
 
@@ -159,6 +159,8 @@ def test_form_submit_with_material_icon(
 ):
     """Tests if the form submit button with material icon renders correctly."""
     form_5 = app.get_by_test_id("stForm").nth(4)
+
+    expect(form_5.get_by_test_id("stFormSubmitButton").first).to_be_visible()
 
     assert_snapshot(form_5, name="st_form_submit-material_icon")
 
@@ -249,6 +251,10 @@ def test_borderless_form(app: Page, assert_snapshot: ImageCompareFunction):
     """Tests if the borderless form (border=False) renders correctly."""
     form_3 = app.get_by_test_id("stForm").nth(2)
 
+    # Add an except before snapshot assert to ensure that there is time for painting
+    # to complete.
+    expect(form_3.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+
     assert_snapshot(form_3, name="st_form-borderless")
 
 
@@ -262,7 +268,39 @@ def test_check_form_submit_button_types(
 ):
     """Check that the form submit button types are correctly set."""
     form_9 = app.get_by_test_id("stForm").nth(8)
+    expect(form_9.get_by_test_id("stFormSubmitButton").first).to_be_visible()
     assert_snapshot(form_9, name="st_form-primary_submit_button")
 
     form_10 = app.get_by_test_id("stForm").nth(9)
+    expect(form_10.get_by_test_id("stFormSubmitButton").first).to_be_visible()
     assert_snapshot(form_10, name="st_form-tertiary_submit_button")
+
+    form_11 = app.get_by_test_id("stForm").nth(10)
+    expect(form_11.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_11, name="st_form-submit_button_just_help")
+
+
+def test_form_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Check that forms with different width configurations render correctly."""
+    form_12 = app.get_by_test_id("stForm").nth(11)
+    expect(form_12.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_12, name="st_form-pixel_width")
+
+    form_13 = app.get_by_test_id("stForm").nth(12)
+    expect(form_13.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_13, name="st_form-content_width")
+
+    form_14 = app.get_by_test_id("stForm").nth(13)
+    expect(form_14.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_14, name="st_form-stretch_width")
+
+
+def test_form_height_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Check that forms with different height configurations render correctly."""
+    form_15 = app.get_by_test_id("stForm").nth(14)
+    expect(form_15.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_15, name="st_form-pixel_height")
+
+    form_16 = app.get_by_test_id("stForm").nth(15)
+    expect(form_16.get_by_test_id("stFormSubmitButton").first).to_be_visible()
+    assert_snapshot(form_16, name="st_form-content_height")

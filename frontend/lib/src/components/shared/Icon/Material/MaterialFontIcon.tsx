@@ -16,9 +16,7 @@
 
 import React, { ReactElement } from "react"
 
-import snakeCase from "lodash/snakeCase"
-
-import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
+import { IconSize, ThemeColor } from "~lib/theme"
 
 import {
   StyledMaterialIcon,
@@ -55,8 +53,12 @@ const MaterialFontIcon = ({
     <StyledMaterialIcon
       {...getDefaultProps(props)}
       data-testid={props.testid || "stIconMaterial"}
+      // Prevent the icon text from being translated
+      // this would break the icon display in the UI.
+      // https://github.com/streamlit/streamlit/issues/10168
+      translate="no"
     >
-      {snakeCase(iconName)}
+      {iconName}
     </StyledMaterialIcon>
   )
 }

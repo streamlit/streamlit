@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import { Field, Utf8 } from "apache-arrow"
+import { Field } from "apache-arrow"
 import cloneDeep from "lodash/cloneDeep"
 
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { Quiver } from "~lib/dataframes/Quiver"
 import {
   CATEGORICAL,
-  CATEGORICAL_COLUMN,
   DATE,
   DIFFERENT_COLUMN_TYPES,
   DISPLAY_VALUES,
@@ -38,8 +37,9 @@ import {
   STYLER,
   UINT64,
   UNICODE,
-} from "@streamlit/lib/src/mocks/arrow"
-import { arrayFromVector } from "@streamlit/lib/src/test_util"
+} from "~lib/mocks/arrow"
+
+import { DataFrameCellType } from "./arrowTypeUtils"
 
 describe("Quiver", () => {
   describe("Public methods", () => {
@@ -71,9 +71,25 @@ describe("Quiver", () => {
       })
 
       test("indexNames", () => {
-        const mockElement = { data: NAMED_INDEX }
-        const q = new Quiver(mockElement)
-        expect(q.indexNames).toStrictEqual(["INDEX"])
+        const currMockElement = { data: NAMED_INDEX }
+        const currQ = new Quiver(currMockElement)
+        expect(currQ.columnTypes[0]).toStrictEqual({
+          type: DataFrameCellType.INDEX,
+          arrowField: expect.any(Field),
+          pandasType: {
+            field_name: "INDEX",
+            name: "INDEX",
+            numpy_type: "range",
+            pandas_type: "range",
+            metadata: {
+              kind: "range",
+              name: "INDEX",
+              start: 0,
+              step: 1,
+              stop: 2,
+            },
+          },
+        })
       })
     })
 
@@ -101,21 +117,6 @@ describe("Quiver", () => {
         expect(q.styler?.caption).toEqual("FAKE_CAPTION")
       })
 
-      describe("getCategoricalOptions", () => {
-        test("gets all categories for a categorical columns", () => {
-          const mockElement = { data: CATEGORICAL_COLUMN }
-          const q = new Quiver(mockElement)
-          // "foo" and "bar" are the two categories available in this column
-          expect(q.getCategoricalOptions(0)).toStrictEqual(["bar", "foo"])
-        })
-
-        test("returns undefined for a non-categorical column", () => {
-          const mockElement = { data: CATEGORICAL_COLUMN }
-          const q = new Quiver(mockElement)
-          expect(q.getCategoricalOptions(1)).toStrictEqual(undefined)
-        })
-      })
-
       test("dimensions", () => {
         expect(q.dimensions).toStrictEqual({
           numHeaderRows: 1,
@@ -132,54 +133,43 @@ describe("Quiver", () => {
       const mockElement = { data: UNICODE }
       const q = new Quiver(mockElement)
 
-      test("blank cell", () => {
-        expect(q.getCell(0, 0)).toStrictEqual({
-          type: "blank",
-          cssClass: "blank",
-          content: "",
-        })
-      })
-
       test("index cell", () => {
-        expect(q.getCell(1, 0)).toStrictEqual({
+        expect(q.getCell(0, 0)).toStrictEqual({
           type: "index",
-          cssClass: "row_heading level0 row0",
-          cssId: undefined,
           content: "i1",
-          field: new Field("__index_level_0__", new Utf8(), true, new Map([])),
           contentType: {
-            pandas_type: "unicode",
-            numpy_type: "object",
-            meta: null,
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
           },
-        })
-      })
-
-      test("columns cell", () => {
-        expect(q.getCell(0, 1)).toStrictEqual({
-          type: "columns",
-          cssClass: "col_heading level0 col0",
-          content: "c1",
-          contentType: {
-            pandas_type: "unicode",
-            numpy_type: "object",
-          },
+          field: expect.any(Field),
         })
       })
 
       test("data cell", () => {
-        expect(q.getCell(1, 2)).toStrictEqual({
+        expect(q.getCell(0, 2)).toStrictEqual({
           type: "data",
-          cssClass: "data row0 col1",
-          cssId: undefined,
           content: "1",
           contentType: {
-            pandas_type: "unicode",
-            numpy_type: "object",
-            meta: null,
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c2",
+              name: "c2",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
           },
-          field: new Field("c2", new Utf8(), true, new Map([])),
-          displayContent: undefined,
+          field: expect.any(Field),
         })
       })
 
@@ -201,306 +191,499 @@ describe("Quiver", () => {
         const mockElement = { data: CATEGORICAL }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([["i1", "i2"]])
-        expect(q.columnNames).toEqual([["c1", "c2"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual("i1")
+        expect(q.getCell(1, 0).content).toEqual("i2")
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual("foo")
+        expect(q.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(q.getCell(1, 1).content).toEqual("bar")
+        expect(q.getCell(1, 2).content).toEqual(BigInt(200))
+
+        expect(q.columnNames).toEqual([["", "c1", "c2"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "categorical",
               numpy_type: "int8",
-              meta: {
+              metadata: {
                 num_categories: 3,
                 ordered: false,
               },
             },
-          ],
-          data: [
-            {
+            categoricalOptions: ["i1", "i2", "i3"],
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c1",
+              name: "c1",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c2",
+              name: "c2",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("date", () => {
         const mockElement = { data: DATE }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([
-          [978220800000, 1009756800000],
-        ])
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual(978220800000)
+        expect(q.getCell(1, 0).content).toEqual(1009756800000)
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual(
+          new Date("2020-01-02T00:00:00.000Z").getTime()
+        )
+        expect(q.getCell(0, 2).content).toEqual(
+          new Date("2020-10-20T00:00:00.000Z").getTime()
+        )
+        expect(q.getCell(1, 1).content).toEqual(
+          new Date("2020-01-02T00:00:00.000Z").getTime()
+        )
+        expect(q.getCell(1, 2).content).toEqual(
+          new Date("2020-10-20T00:00:00.000Z").getTime()
+        )
+
         expect(q.columnNames).toEqual([
-          ["2000-12-31 00:00:00", "2001-12-31 00:00:00"],
+          ["", "2000-12-31 00:00:00", "2001-12-31 00:00:00"],
         ])
 
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          [
-            new Date("2020-01-02T00:00:00.000Z").getTime(),
-            new Date("2020-10-20T00:00:00.000Z").getTime(),
-          ],
-          [
-            new Date("2020-01-02T00:00:00.000Z").getTime(),
-            new Date("2020-10-20T00:00:00.000Z").getTime(),
-          ],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "datetime",
               numpy_type: "datetime64[ns]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2000-12-31 00:00:00",
+              name: "2000-12-31 00:00:00",
               pandas_type: "date",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2001-12-31 00:00:00",
+              name: "2001-12-31 00:00:00",
               pandas_type: "date",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("float64", () => {
         const mockElement = { data: FLOAT64 }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([[1.24, 2.35]])
-        expect(q.columnNames).toEqual([["1.24", "2.35"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          [1.2, 1.3],
-          [1.4, 1.5],
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual(1.24)
+        expect(q.getCell(1, 0).content).toEqual(2.35)
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual(1.2)
+        expect(q.getCell(0, 2).content).toEqual(1.3)
+        expect(q.getCell(1, 1).content).toEqual(1.4)
+        expect(q.getCell(1, 2).content).toEqual(1.5)
+
+        expect(q.columnNames).toEqual([["", "1.24", "2.35"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "float64",
+              numpy_type: "float64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1.24",
+              name: "1.24",
+              pandas_type: "float64",
+              numpy_type: "float64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2.35",
+              name: "2.35",
+              pandas_type: "float64",
+              numpy_type: "float64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "float64",
-              numpy_type: "float64",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "float64",
-              numpy_type: "float64",
-              meta: null,
-            },
-            {
-              pandas_type: "float64",
-              numpy_type: "float64",
-              meta: null,
-            },
-          ],
-        })
       })
 
       test("int64", () => {
         const mockElement = { data: INT64 }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([[BigInt(1), BigInt(2)]])
-        expect(q.columnNames).toEqual([["1", "2"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          [BigInt(0), BigInt(1)],
-          [BigInt(2), BigInt(3)],
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual(BigInt(1))
+        expect(q.getCell(1, 0).content).toEqual(BigInt(2))
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual(BigInt(0))
+        expect(q.getCell(0, 2).content).toEqual(BigInt(1))
+        expect(q.getCell(1, 1).content).toEqual(BigInt(2))
+        expect(q.getCell(1, 2).content).toEqual(BigInt(3))
+
+        expect(q.columnNames).toEqual([["", "1", "2"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "int64",
+              numpy_type: "int64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1",
+              name: "1",
+              pandas_type: "int64",
+              numpy_type: "int64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2",
+              name: "2",
+              pandas_type: "int64",
+              numpy_type: "int64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-          ],
-        })
       })
 
       test("interval datetime64[ns]", () => {
         const mockElement = { data: INTERVAL_DATETIME64 }
         const q = new Quiver(mockElement)
 
-        expect(q.indexData.toString()).toEqual(
-          '[{"left": 1483228800000, "right": 1483315200000},{"left": 1483315200000, "right": 1483401600000}]'
+        // Check index cells
+        expect(q.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 1483228800000, "right": 1483315200000}'
         )
+        expect(q.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1483315200000, "right": 1483401600000}'
+        )
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual("foo")
+        expect(q.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(q.getCell(1, 1).content).toEqual("bar")
+        expect(q.getCell(1, 2).content).toEqual(BigInt(200))
+
         expect(q.columnNames).toEqual([
-          ["(2017-01-01, 2017-01-02]", "(2017-01-02, 2017-01-03]"],
+          ["", "(2017-01-01, 2017-01-02]", "(2017-01-02, 2017-01-03]"],
         ])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[datetime64[ns], right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(2017-01-01, 2017-01-02]",
+              name: "(2017-01-01, 2017-01-02]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(2017-01-02, 2017-01-03]",
+              name: "(2017-01-02, 2017-01-03]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("interval float64", () => {
         const mockElement = { data: INTERVAL_FLOAT64 }
         const q = new Quiver(mockElement)
 
-        expect(q.indexData.toString()).toEqual(
-          '[{"left": 0, "right": 1.5},{"left": 1.5, "right": 3}]'
+        // Check index cells
+        expect(q.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1.5}'
         )
-        expect(q.columnNames).toEqual([["(0.0, 1.5]", "(1.5, 3.0]"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        expect(q.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1.5, "right": 3}'
+        )
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual("foo")
+        expect(q.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(q.getCell(1, 1).content).toEqual("bar")
+        expect(q.getCell(1, 2).content).toEqual(BigInt(200))
+
+        expect(q.columnNames).toEqual([["", "(0.0, 1.5]", "(1.5, 3.0]"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[float64, right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(0.0, 1.5]",
+              name: "(0.0, 1.5]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(1.5, 3.0]",
+              name: "(1.5, 3.0]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("interval int64", () => {
         const mockElement = { data: INTERVAL_INT64 }
         const q = new Quiver(mockElement)
 
-        expect(q.indexData.toString()).toEqual(
-          '[{"left": 0, "right": 1},{"left": 1, "right": 2}]'
+        // Check index cells
+        expect(q.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1}'
         )
-        expect(q.columnNames).toEqual([["(0, 1]", "(1, 2]"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        expect(q.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1, "right": 2}'
+        )
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual("foo")
+        expect(q.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(q.getCell(1, 1).content).toEqual("bar")
+        expect(q.getCell(1, 2).content).toEqual(BigInt(200))
+
+        expect(q.columnNames).toEqual([["", "(0, 1]", "(1, 2]"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[int64, right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(0, 1]",
+              name: "(0, 1]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(1, 2]",
+              name: "(1, 2]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("interval uint64", () => {
         const mockElement = { data: INTERVAL_UINT64 }
         const q = new Quiver(mockElement)
 
-        expect(q.indexData.toString()).toEqual(
-          '[{"left": 0, "right": 1},{"left": 1, "right": 2}]'
+        // Check index cells
+        expect(q.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1}'
         )
-        expect(q.columnNames).toEqual([["(0, 1]", "(1, 2]"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        expect(q.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1, "right": 2}'
+        )
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual("foo")
+        expect(q.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(q.getCell(1, 1).content).toEqual("bar")
+        expect(q.getCell(1, 2).content).toEqual(BigInt(200))
+
+        expect(q.columnNames).toEqual([["", "(0, 1]", "(1, 2]"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[uint64, right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(0, 1]",
+              name: "(0, 1]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(1, 2]",
+              name: "(1, 2]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("range", () => {
         const mockElement = { data: RANGE }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([[0, 1]])
-        expect(q.columnNames).toEqual([["0", "1"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", "1"],
-          ["bar", "2"],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual(0)
+        expect(q.getCell(1, 0).content).toEqual(1)
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual("foo")
+        expect(q.getCell(0, 2).content).toEqual("1")
+        expect(q.getCell(1, 1).content).toEqual("bar")
+        expect(q.getCell(1, 2).content).toEqual("2")
+
+        expect(q.columnNames).toEqual([["", "0", "1"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "",
+              name: "",
               pandas_type: "range",
               numpy_type: "range",
-              meta: {
+              metadata: {
                 start: 0,
                 step: 1,
                 stop: 2,
@@ -508,86 +691,143 @@ describe("Quiver", () => {
                 name: null,
               },
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "0",
+              name: "0",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1",
+              name: "1",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("uint64", () => {
         const mockElement = { data: UINT64 }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([[BigInt(1), BigInt(2)]])
-        expect(q.columnNames).toEqual([["1", "2"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          [BigInt(1), BigInt(2)],
-          [BigInt(3), BigInt(4)],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual(BigInt(1))
+        expect(q.getCell(1, 0).content).toEqual(BigInt(2))
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual(BigInt(1))
+        expect(q.getCell(0, 2).content).toEqual(BigInt(2))
+        expect(q.getCell(1, 1).content).toEqual(BigInt(3))
+        expect(q.getCell(1, 2).content).toEqual(BigInt(4))
+
+        expect(q.columnNames).toEqual([["", "1", "2"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "uint64",
               numpy_type: "uint64",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1",
+              name: "1",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2",
+              name: "2",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("unicode", () => {
         const mockElement = { data: UNICODE }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([["i1", "i2"]])
-        expect(q.columnNames).toEqual([["c1", "c2"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", "1"],
-          ["bar", "2"],
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual("i1")
+        expect(q.getCell(1, 0).content).toEqual("i2")
+
+        // Check data cells
+        expect(q.getCell(0, 1).content).toEqual("foo")
+        expect(q.getCell(0, 2).content).toEqual("1")
+        expect(q.getCell(1, 1).content).toEqual("bar")
+        expect(q.getCell(1, 2).content).toEqual("2")
+
+        expect(q.columnNames).toEqual([["", "c1", "c2"]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c1",
+              name: "c1",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c2",
+              name: "c2",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-        })
       })
     })
 
@@ -605,109 +845,93 @@ describe("Quiver", () => {
           numColumns: 1,
         })
 
-        expect(arrayFromVector(q.indexData)).toEqual([])
-        expect(q.columnNames).toEqual([])
-        expect(q.data.toArray()).toEqual([])
-        expect(q.columnTypes).toEqual({
-          index: [{ pandas_type: "empty", numpy_type: "object", meta: null }],
-          data: [],
-        })
+        expect(q.columnNames).toEqual([[""]])
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "empty",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("multi-index", () => {
         const mockElement = { data: MULTI }
         const q = new Quiver(mockElement)
 
-        expect(arrayFromVector(q.indexData)).toEqual([
-          [BigInt(1), BigInt(2)],
-          ["red", "blue"],
-        ])
+        // Check index cells
+        expect(q.getCell(0, 0).content).toEqual(BigInt(1))
+        expect(q.getCell(1, 0).content).toEqual(BigInt(2))
+        expect(q.getCell(0, 1).content).toEqual("red")
+        expect(q.getCell(1, 1).content).toEqual("blue")
+
+        // Check data cells
+        expect(q.getCell(0, 2).content).toEqual("foo")
+        expect(q.getCell(0, 3).content).toEqual("1")
+        expect(q.getCell(1, 2).content).toEqual("bar")
+        expect(q.getCell(1, 3).content).toEqual("2")
+
         expect(q.columnNames).toEqual([
-          ["1", "2"],
-          ["red", "blue"],
+          ["", "", "1", "2"],
+          ["number", "color", "red", "blue"],
         ])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", "1"],
-          ["bar", "2"],
-        ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
+        expect(q.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "number",
+              name: "number",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-        })
-      })
-
-      test("styler", () => {
-        const mockElement = {
-          data: STYLER,
-          styler: {
-            uuid: "FAKE_UUID",
-            styles: "FAKE_CSS",
-            caption: "FAKE_CAPTION",
-            displayValues: DISPLAY_VALUES,
+            categoricalOptions: undefined,
           },
-        }
-        const q = new Quiver(mockElement)
-
-        expect(arrayFromVector(q.indexData)).toEqual([[0, 1]])
-        expect(q.columnNames).toEqual([["0", "1"]])
-        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
-          [BigInt(1), BigInt(2)],
-          [BigInt(3), BigInt(4)],
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "color",
+              name: "color",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "('1', 'red')",
+              name: "('1', 'red')",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "('2', 'blue')",
+              name: "('2', 'blue')",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(q.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "range",
-              numpy_type: "range",
-              meta: {
-                start: 0,
-                step: 1,
-                stop: 2,
-                kind: "range",
-                name: null,
-              },
-            },
-          ],
-          data: [
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-          ],
-        })
-        // Check display values.
-        expect(q.getCell(1, 1).displayContent).toEqual("1")
-        expect(q.getCell(1, 2).displayContent).toEqual("2")
-        expect(q.getCell(2, 1).displayContent).toEqual("3")
-        expect(q.getCell(2, 2).displayContent).toEqual("4")
       })
     })
   })
@@ -720,40 +944,64 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([
-          ["i1", "i2", "i1", "i2"],
-        ])
-        expect(qq.columnNames).toEqual([["c1", "c2"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        // Check index cells
+        expect(qq.getCell(0, 0).content).toEqual("i1")
+        expect(qq.getCell(1, 0).content).toEqual("i2")
+        expect(qq.getCell(2, 0).content).toEqual("i1")
+        expect(qq.getCell(3, 0).content).toEqual("i2")
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual("foo")
+        expect(qq.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(1, 1).content).toEqual("bar")
+        expect(qq.getCell(1, 2).content).toEqual(BigInt(200))
+        expect(qq.getCell(2, 1).content).toEqual("foo")
+        expect(qq.getCell(2, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(3, 1).content).toEqual("bar")
+        expect(qq.getCell(3, 2).content).toEqual(BigInt(200))
+
+        expect(qq.columnNames).toEqual([["", "c1", "c2"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "categorical",
               numpy_type: "int8",
-              meta: {
+              metadata: {
                 num_categories: 3,
                 ordered: false,
               },
             },
-          ],
-          data: [
-            {
+            categoricalOptions: ["i1", "i2", "i3"],
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c1",
+              name: "c1",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c2",
+              name: "c2",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("date", () => {
@@ -762,51 +1010,79 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([
-          [978220800000, 1009756800000, 978220800000, 1009756800000],
-        ])
+        // Check index cells
+        expect(qq.getCell(0, 0).content).toEqual(978220800000)
+        expect(qq.getCell(1, 0).content).toEqual(1009756800000)
+        expect(qq.getCell(2, 0).content).toEqual(978220800000)
+        expect(qq.getCell(3, 0).content).toEqual(1009756800000)
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual(
+          new Date("2020-01-02T00:00:00.000Z").getTime()
+        )
+        expect(qq.getCell(0, 2).content).toEqual(
+          new Date("2020-10-20T00:00:00.000Z").getTime()
+        )
+        expect(qq.getCell(1, 1).content).toEqual(
+          new Date("2020-01-02T00:00:00.000Z").getTime()
+        )
+        expect(qq.getCell(1, 2).content).toEqual(
+          new Date("2020-10-20T00:00:00.000Z").getTime()
+        )
+        expect(qq.getCell(2, 1).content).toEqual(
+          new Date("2020-01-02T00:00:00.000Z").getTime()
+        )
+        expect(qq.getCell(2, 2).content).toEqual(
+          new Date("2020-10-20T00:00:00.000Z").getTime()
+        )
+        expect(qq.getCell(3, 1).content).toEqual(
+          new Date("2020-01-02T00:00:00.000Z").getTime()
+        )
+        expect(qq.getCell(3, 2).content).toEqual(
+          new Date("2020-10-20T00:00:00.000Z").getTime()
+        )
+
         expect(qq.columnNames).toEqual([
-          ["2000-12-31 00:00:00", "2001-12-31 00:00:00"],
+          ["", "2000-12-31 00:00:00", "2001-12-31 00:00:00"],
         ])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          [
-            new Date("2020-01-02T00:00:00.000Z").getTime(),
-            new Date("2020-10-20T00:00:00.000Z").getTime(),
-          ],
-          [
-            new Date("2020-01-02T00:00:00.000Z").getTime(),
-            new Date("2020-10-20T00:00:00.000Z").getTime(),
-          ],
-          [
-            new Date("2020-01-02T00:00:00.000Z").getTime(),
-            new Date("2020-10-20T00:00:00.000Z").getTime(),
-          ],
-          [
-            new Date("2020-01-02T00:00:00.000Z").getTime(),
-            new Date("2020-10-20T00:00:00.000Z").getTime(),
-          ],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "datetime",
               numpy_type: "datetime64[ns]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2000-12-31 00:00:00",
+              name: "2000-12-31 00:00:00",
               pandas_type: "date",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2001-12-31 00:00:00",
+              name: "2001-12-31 00:00:00",
               pandas_type: "date",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("float64", () => {
@@ -815,37 +1091,61 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([
-          [1.24, 2.35, 1.24, 2.35],
+        // Check index cells
+        expect(qq.getCell(0, 0).content).toEqual(1.24)
+        expect(qq.getCell(1, 0).content).toEqual(2.35)
+        expect(qq.getCell(2, 0).content).toEqual(1.24)
+        expect(qq.getCell(3, 0).content).toEqual(2.35)
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual(1.2)
+        expect(qq.getCell(0, 2).content).toEqual(1.3)
+        expect(qq.getCell(1, 1).content).toEqual(1.4)
+        expect(qq.getCell(1, 2).content).toEqual(1.5)
+        expect(qq.getCell(2, 1).content).toEqual(1.2)
+        expect(qq.getCell(2, 2).content).toEqual(1.3)
+        expect(qq.getCell(3, 1).content).toEqual(1.4)
+        expect(qq.getCell(3, 2).content).toEqual(1.5)
+
+        expect(qq.columnNames).toEqual([["", "1.24", "2.35"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "float64",
+              numpy_type: "float64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1.24",
+              name: "1.24",
+              pandas_type: "float64",
+              numpy_type: "float64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2.35",
+              name: "2.35",
+              pandas_type: "float64",
+              numpy_type: "float64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(qq.columnNames).toEqual([["1.24", "2.35"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          [1.2, 1.3],
-          [1.4, 1.5],
-          [1.2, 1.3],
-          [1.4, 1.5],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "float64",
-              numpy_type: "float64",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "float64",
-              numpy_type: "float64",
-              meta: null,
-            },
-            {
-              pandas_type: "float64",
-              numpy_type: "float64",
-              meta: null,
-            },
-          ],
-        })
       })
 
       test("int64", () => {
@@ -854,37 +1154,61 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([
-          [BigInt(1), BigInt(2), BigInt(1), BigInt(2)],
+        // Check index cells
+        expect(qq.getCell(0, 0).content).toEqual(BigInt(1))
+        expect(qq.getCell(1, 0).content).toEqual(BigInt(2))
+        expect(qq.getCell(2, 0).content).toEqual(BigInt(1))
+        expect(qq.getCell(3, 0).content).toEqual(BigInt(2))
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual(BigInt(0))
+        expect(qq.getCell(0, 2).content).toEqual(BigInt(1))
+        expect(qq.getCell(1, 1).content).toEqual(BigInt(2))
+        expect(qq.getCell(1, 2).content).toEqual(BigInt(3))
+        expect(qq.getCell(2, 1).content).toEqual(BigInt(0))
+        expect(qq.getCell(2, 2).content).toEqual(BigInt(1))
+        expect(qq.getCell(3, 1).content).toEqual(BigInt(2))
+        expect(qq.getCell(3, 2).content).toEqual(BigInt(3))
+
+        expect(qq.columnNames).toEqual([["", "1", "2"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "int64",
+              numpy_type: "int64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1",
+              name: "1",
+              pandas_type: "int64",
+              numpy_type: "int64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2",
+              name: "2",
+              pandas_type: "int64",
+              numpy_type: "int64",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(qq.columnNames).toEqual([["1", "2"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          [BigInt(0), BigInt(1)],
-          [BigInt(2), BigInt(3)],
-          [BigInt(0), BigInt(1)],
-          [BigInt(2), BigInt(3)],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-            {
-              pandas_type: "int64",
-              numpy_type: "int64",
-              meta: null,
-            },
-          ],
-        })
       })
 
       test("interval datetime64[ns]", () => {
@@ -893,39 +1217,72 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(qq.indexData.toString()).toEqual(
-          '[{"left": 1483228800000, "right": 1483315200000},{"left": 1483315200000, "right": 1483401600000},{"left": 1483228800000, "right": 1483315200000},{"left": 1483315200000, "right": 1483401600000}]'
+        // Check index cells
+
+        expect(qq.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 1483228800000, "right": 1483315200000}'
         )
+        expect(qq.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1483315200000, "right": 1483401600000}'
+        )
+        expect(qq.getCell(2, 0).content?.toString()).toEqual(
+          '{"left": 1483228800000, "right": 1483315200000}'
+        )
+        expect(qq.getCell(3, 0).content?.toString()).toEqual(
+          '{"left": 1483315200000, "right": 1483401600000}'
+        )
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual("foo")
+        expect(qq.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(1, 1).content).toEqual("bar")
+        expect(qq.getCell(1, 2).content).toEqual(BigInt(200))
+        expect(qq.getCell(2, 1).content).toEqual("foo")
+        expect(qq.getCell(2, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(3, 1).content).toEqual("bar")
+        expect(qq.getCell(3, 2).content).toEqual(BigInt(200))
+
         expect(qq.columnNames).toEqual([
-          ["(2017-01-01, 2017-01-02]", "(2017-01-02, 2017-01-03]"],
+          ["", "(2017-01-01, 2017-01-02]", "(2017-01-02, 2017-01-03]"],
         ])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[datetime64[ns], right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(2017-01-01, 2017-01-02]",
+              name: "(2017-01-01, 2017-01-02]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(2017-01-02, 2017-01-03]",
+              name: "(2017-01-02, 2017-01-03]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("interval float64", () => {
@@ -934,37 +1291,69 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(qq.indexData.toString()).toEqual(
-          '[{"left": 0, "right": 1.5},{"left": 1.5, "right": 3},{"left": 0, "right": 1.5},{"left": 1.5, "right": 3}]'
+        // Check index cells
+        expect(qq.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1.5}'
         )
-        expect(qq.columnNames).toEqual([["(0.0, 1.5]", "(1.5, 3.0]"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        expect(qq.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1.5, "right": 3}'
+        )
+        expect(qq.getCell(2, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1.5}'
+        )
+        expect(qq.getCell(3, 0).content?.toString()).toEqual(
+          '{"left": 1.5, "right": 3}'
+        )
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual("foo")
+        expect(qq.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(1, 1).content).toEqual("bar")
+        expect(qq.getCell(1, 2).content).toEqual(BigInt(200))
+        expect(qq.getCell(2, 1).content).toEqual("foo")
+        expect(qq.getCell(2, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(3, 1).content).toEqual("bar")
+        expect(qq.getCell(3, 2).content).toEqual(BigInt(200))
+
+        expect(qq.columnNames).toEqual([["", "(0.0, 1.5]", "(1.5, 3.0]"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[float64, right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(0.0, 1.5]",
+              name: "(0.0, 1.5]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(1.5, 3.0]",
+              name: "(1.5, 3.0]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("interval int64", () => {
@@ -973,37 +1362,65 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(qq.indexData.toString()).toEqual(
-          '[{"left": 0, "right": 1},{"left": 1, "right": 2},{"left": 0, "right": 1},{"left": 1, "right": 2}]'
+        // Check index cells
+        expect(qq.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1}'
         )
-        expect(qq.columnNames).toEqual([["(0, 1]", "(1, 2]"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        expect(qq.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1, "right": 2}'
+        )
+        expect(qq.getCell(2, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1}'
+        )
+        expect(qq.getCell(3, 0).content?.toString()).toEqual(
+          '{"left": 1, "right": 2}'
+        )
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual("foo")
+        expect(qq.getCell(1, 1).content).toEqual("bar")
+        expect(qq.getCell(2, 1).content).toEqual("foo")
+        expect(qq.getCell(3, 1).content).toEqual("bar")
+
+        expect(qq.columnNames).toEqual([["", "(0, 1]", "(1, 2]"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[int64, right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(0, 1]",
+              name: "(0, 1]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(1, 2]",
+              name: "(1, 2]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("interval uint64", () => {
@@ -1012,37 +1429,69 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(qq.indexData.toString()).toEqual(
-          '[{"left": 0, "right": 1},{"left": 1, "right": 2},{"left": 0, "right": 1},{"left": 1, "right": 2}]'
+        // Check index cells
+        expect(qq.getCell(0, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1}'
         )
-        expect(qq.columnNames).toEqual([["(0, 1]", "(1, 2]"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-          ["foo", BigInt(100)],
-          ["bar", BigInt(200)],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        expect(qq.getCell(1, 0).content?.toString()).toEqual(
+          '{"left": 1, "right": 2}'
+        )
+        expect(qq.getCell(2, 0).content?.toString()).toEqual(
+          '{"left": 0, "right": 1}'
+        )
+        expect(qq.getCell(3, 0).content?.toString()).toEqual(
+          '{"left": 1, "right": 2}'
+        )
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual("foo")
+        expect(qq.getCell(0, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(1, 1).content).toEqual("bar")
+        expect(qq.getCell(1, 2).content).toEqual(BigInt(200))
+        expect(qq.getCell(2, 1).content).toEqual("foo")
+        expect(qq.getCell(2, 2).content).toEqual(BigInt(100))
+        expect(qq.getCell(3, 1).content).toEqual("bar")
+        expect(qq.getCell(3, 2).content).toEqual(BigInt(200))
+
+        expect(qq.columnNames).toEqual([["", "(0, 1]", "(1, 2]"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "object",
               numpy_type: "interval[uint64, right]",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(0, 1]",
+              name: "(0, 1]",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "(1, 2]",
+              name: "(1, 2]",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("range", () => {
@@ -1051,20 +1500,33 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([[0, 1, 2, 3]])
-        expect(qq.columnNames).toEqual([["0", "1"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", "1"],
-          ["bar", "2"],
-          ["foo", "1"],
-          ["bar", "2"],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        // Check index cells
+        expect(qq.getCell(0, 0).content).toEqual(0)
+        expect(qq.getCell(1, 0).content).toEqual(1)
+        expect(qq.getCell(2, 0).content).toEqual(2)
+        expect(qq.getCell(3, 0).content).toEqual(3)
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual("foo")
+        expect(qq.getCell(0, 2).content).toEqual("1")
+        expect(qq.getCell(1, 1).content).toEqual("bar")
+        expect(qq.getCell(1, 2).content).toEqual("2")
+        expect(qq.getCell(2, 1).content).toEqual("foo")
+        expect(qq.getCell(2, 2).content).toEqual("1")
+        expect(qq.getCell(3, 1).content).toEqual("bar")
+        expect(qq.getCell(3, 2).content).toEqual("2")
+
+        expect(qq.columnNames).toEqual([["", "0", "1"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "",
+              name: "",
               pandas_type: "range",
               numpy_type: "range",
-              meta: {
+              metadata: {
                 start: 0,
                 step: 1,
                 stop: 4,
@@ -1072,20 +1534,33 @@ describe("Quiver", () => {
                 name: null,
               },
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "0",
+              name: "0",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1",
+              name: "1",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("uint64", () => {
@@ -1094,37 +1569,61 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([
-          [BigInt(1), BigInt(2), BigInt(1), BigInt(2)],
-        ])
-        expect(qq.columnNames).toEqual([["1", "2"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          [BigInt(1), BigInt(2)],
-          [BigInt(3), BigInt(4)],
-          [BigInt(1), BigInt(2)],
-          [BigInt(3), BigInt(4)],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        // Check index cells
+        expect(qq.getCell(0, 0).content).toEqual(BigInt(1))
+        expect(qq.getCell(1, 0).content).toEqual(BigInt(2))
+        expect(qq.getCell(2, 0).content).toEqual(BigInt(1))
+        expect(qq.getCell(3, 0).content).toEqual(BigInt(2))
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual(BigInt(1))
+        expect(qq.getCell(0, 2).content).toEqual(BigInt(2))
+        expect(qq.getCell(1, 1).content).toEqual(BigInt(3))
+        expect(qq.getCell(1, 2).content).toEqual(BigInt(4))
+        expect(qq.getCell(2, 1).content).toEqual(BigInt(1))
+        expect(qq.getCell(2, 2).content).toEqual(BigInt(2))
+        expect(qq.getCell(3, 1).content).toEqual(BigInt(3))
+        expect(qq.getCell(3, 2).content).toEqual(BigInt(4))
+
+        expect(qq.columnNames).toEqual([["", "1", "2"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "uint64",
               numpy_type: "uint64",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "1",
+              name: "1",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "2",
+              name: "2",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("unicode", () => {
@@ -1133,37 +1632,61 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([
-          ["i1", "i2", "i1", "i2"],
+        // Check index cells
+        expect(qq.getCell(0, 0).content).toEqual("i1")
+        expect(qq.getCell(1, 0).content).toEqual("i2")
+        expect(qq.getCell(2, 0).content).toEqual("i1")
+        expect(qq.getCell(3, 0).content).toEqual("i2")
+
+        // Check data cells
+        expect(qq.getCell(0, 1).content).toEqual("foo")
+        expect(qq.getCell(0, 2).content).toEqual("1")
+        expect(qq.getCell(1, 1).content).toEqual("bar")
+        expect(qq.getCell(1, 2).content).toEqual("2")
+        expect(qq.getCell(2, 1).content).toEqual("foo")
+        expect(qq.getCell(2, 2).content).toEqual("1")
+        expect(qq.getCell(3, 1).content).toEqual("bar")
+        expect(qq.getCell(3, 2).content).toEqual("2")
+
+        expect(qq.columnNames).toEqual([["", "c1", "c2"]])
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c1",
+              name: "c1",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c2",
+              name: "c2",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(qq.columnNames).toEqual([["c1", "c2"]])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", "1"],
-          ["bar", "2"],
-          ["foo", "1"],
-          ["bar", "2"],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-        })
       })
     })
 
@@ -1183,46 +1706,71 @@ describe("Quiver", () => {
 
         const qq = q.addRows(q)
 
-        expect(arrayFromVector(qq.indexData)).toEqual([
-          [BigInt(1), BigInt(2), BigInt(1), BigInt(2)],
-          ["red", "blue", "red", "blue"],
-        ])
+        expect(qq.getCell(0, 0).content).toEqual(BigInt(1))
+        expect(qq.getCell(1, 0).content).toEqual(BigInt(2))
+        expect(qq.getCell(0, 1).content).toEqual("red")
+        expect(qq.getCell(1, 1).content).toEqual("blue")
+
+        // Check data cells
+        expect(qq.getCell(0, 2).content).toEqual("foo")
+        expect(qq.getCell(0, 3).content).toEqual("1")
+        expect(qq.getCell(1, 2).content).toEqual("bar")
+        expect(qq.getCell(1, 3).content).toEqual("2")
+
         expect(qq.columnNames).toEqual([
-          ["1", "2"],
-          ["red", "blue"],
+          ["", "", "1", "2"],
+          ["number", "color", "red", "blue"],
         ])
-        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", "1"],
-          ["bar", "2"],
-          ["foo", "1"],
-          ["bar", "2"],
-        ])
-        expect(qq.columnTypes).toEqual({
-          index: [
-            {
+        expect(qq.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "number",
+              name: "number",
               pandas_type: "int64",
               numpy_type: "int64",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "color",
+              name: "color",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "('1', 'red')",
+              name: "('1', 'red')",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "('2', 'blue')",
+              name: "('2', 'blue')",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       test("DataFrames with different column types", () => {
@@ -1233,37 +1781,61 @@ describe("Quiver", () => {
 
         const q1q2 = q1.addRows(q2)
 
-        expect(arrayFromVector(q1q2.indexData)).toEqual([
-          ["i1", "i2", "i1", "i2"],
+        // Check index cells
+        expect(q1q2.getCell(0, 0).content).toEqual("i1")
+        expect(q1q2.getCell(1, 0).content).toEqual("i2")
+        expect(q1q2.getCell(2, 0).content).toEqual("i1")
+        expect(q1q2.getCell(3, 0).content).toEqual("i2")
+
+        // Check data cells
+        expect(q1q2.getCell(0, 1).content).toEqual("foo")
+        expect(q1q2.getCell(0, 2).content).toEqual("1")
+        expect(q1q2.getCell(1, 1).content).toEqual("bar")
+        expect(q1q2.getCell(1, 2).content).toEqual("2")
+        expect(q1q2.getCell(2, 1).content).toEqual("baz")
+        expect(q1q2.getCell(2, 2).content).toEqual("1")
+        expect(q1q2.getCell(3, 1).content).toEqual("qux")
+        expect(q1q2.getCell(3, 2).content).toEqual("2")
+
+        expect(q1q2.columnNames).toEqual([["", "c1", "c2"]])
+        expect(q1q2.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c1",
+              name: "c1",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c2",
+              name: "c2",
+              pandas_type: "unicode",
+              numpy_type: "object",
+              metadata: null,
+            },
+            categoricalOptions: undefined,
+          },
         ])
-        expect(q1q2.columnNames).toEqual([["c1", "c2"]])
-        expect(q1q2.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo", "1"],
-          ["bar", "2"],
-          ["baz", "1"],
-          ["qux", "2"],
-        ])
-        expect(q1q2.columnTypes).toEqual({
-          index: [
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-          data: [
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-            {
-              pandas_type: "unicode",
-              numpy_type: "object",
-              meta: null,
-            },
-          ],
-        })
       })
 
       it("shows df2 if df1 is empty", () => {
@@ -1303,41 +1875,45 @@ describe("Quiver", () => {
 
         const q1q2 = q1.addRows(q2)
 
-        expect(arrayFromVector(q1q2.indexData)).toEqual([
-          ["i1", "i2", "i1", "i2"],
-        ])
-        expect(q1q2.columnNames).toEqual([["c1"]])
-        expect(q1q2.data.toArray().map(a => a?.toArray())).toEqual([
-          ["foo"],
-          ["bar"],
-          ["foo"],
-          ["bar"],
-        ])
-        expect(q1q2.columnTypes).toEqual({
-          index: [
-            {
+        // Check index cells
+        expect(q1q2.getCell(0, 0).content).toEqual("i1")
+        expect(q1q2.getCell(1, 0).content).toEqual("i2")
+        expect(q1q2.getCell(2, 0).content).toEqual("i1")
+        expect(q1q2.getCell(3, 0).content).toEqual("i2")
+
+        // Check data cells
+        expect(q1q2.getCell(0, 1).content).toEqual("foo")
+        expect(q1q2.getCell(1, 1).content).toEqual("bar")
+        expect(q1q2.getCell(2, 1).content).toEqual("foo")
+        expect(q1q2.getCell(3, 1).content).toEqual("bar")
+
+        expect(q1q2.columnNames).toEqual([["", "c1"]])
+        expect(q1q2.columnTypes).toEqual([
+          {
+            type: DataFrameCellType.INDEX,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "__index_level_0__",
+              name: null,
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-          data: [
-            {
+            categoricalOptions: undefined,
+          },
+          {
+            type: DataFrameCellType.DATA,
+            arrowField: expect.any(Field),
+            pandasType: {
+              field_name: "c1",
+              name: "c1",
               pandas_type: "unicode",
               numpy_type: "object",
-              meta: null,
+              metadata: null,
             },
-          ],
-        })
-      })
-
-      it("throws an error if df1 has more columns than df2", () => {
-        const mockElement1 = { data: UNICODE }
-        const mockElement2 = { data: FEWER_COLUMNS }
-        const q1 = new Quiver(mockElement1)
-        const q2 = new Quiver(mockElement2)
-
-        expect(() => q1.addRows(q2)).toThrowErrorMatchingSnapshot()
+            categoricalOptions: undefined,
+          },
+        ])
       })
 
       it("throws an error if one of the DataFrames has Styler", () => {
@@ -1356,6 +1932,15 @@ describe("Quiver", () => {
 
         expect(() => q1.addRows(q2)).toThrowErrorMatchingSnapshot()
         expect(() => q2.addRows(q1)).toThrowErrorMatchingSnapshot()
+      })
+
+      it("throws an error if df1 has more columns than df2", () => {
+        const mockElement1 = { data: UNICODE }
+        const mockElement2 = { data: FEWER_COLUMNS }
+        const q1 = new Quiver(mockElement1)
+        const q2 = new Quiver(mockElement2)
+
+        expect(() => q1.addRows(q2)).toThrowErrorMatchingSnapshot()
       })
 
       it("throws an error if DataFrames have different index types", () => {

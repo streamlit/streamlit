@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, overload
 
 from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
@@ -74,7 +74,7 @@ def _dialog_decorator(
         )
 
     @wraps(non_optional_func)
-    def wrap(*args, **kwargs) -> None:
+    def wrap(*args: Any, **kwargs: Any) -> None:
         _assert_no_nested_dialogs()
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
@@ -97,12 +97,11 @@ def _dialog_decorator(
             # if the dialog should be closed, st.rerun() has to be called
             # (same behavior as with st.fragment)
             _ = non_optional_func(*args, **kwargs)
-            return None
 
         # the fragment decorator has multiple return types so that you can pass
         # arguments to it. Here we know the return type, so we cast
         fragmented_dialog_content = cast(
-            Callable[[], None],
+            "Callable[[], None]",
             _fragment(
                 dialog_content, additional_hash_info=non_optional_func.__qualname__
             ),
@@ -110,9 +109,9 @@ def _dialog_decorator(
 
         with dialog:
             fragmented_dialog_content()
-            return None
+            return
 
-    return cast(F, wrap)
+    return cast("F", wrap)
 
 
 @overload

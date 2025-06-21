@@ -75,3 +75,20 @@ expander_material_icon = st.expander(
 expander_emoji_icon = st.expander("Expander with emoji icon!", icon="🎈").write(
     "This is an expander with an emoji icon."
 )
+
+st.expander(
+    "-> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+).write("Content")
+
+
+level1 = st.expander("Nested expander", expanded=True)
+level1.write("First level expander")
+
+level2 = level1.expander("Inside expander")
+level2.write("Second level expander")
+
+with st.expander("Fixed width expander", width=200):
+    st.write("Hello")
+
+with st.expander("Stretch width expander", width="stretch"):
+    st.write("Hello")

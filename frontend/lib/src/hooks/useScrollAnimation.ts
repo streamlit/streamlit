@@ -27,8 +27,8 @@ import { useCallback, useLayoutEffect, useRef } from "react"
  */
 function squareStepper(current: number, to: number): number {
   const sign = Math.sign(to - current)
-  const step = Math.sqrt(Math.abs(to - current))
-  const next = current + step * sign
+  const currStep = Math.sqrt(Math.abs(to - current))
+  const next = current + currStep * sign
 
   if (sign > 0) {
     return Math.min(to, next)
@@ -103,7 +103,7 @@ export default function useScrollAnimation(
           }
 
           // TODO: Update to match React best practices
-          // eslint-disable-next-line react-compiler/react-compiler
+          // eslint-disable-next-line react-hooks/react-compiler
           target.scrollTop = nextValue
 
           if (toNumber === nextValue) {

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from parameterized import parameterized
@@ -32,7 +32,7 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 class PyplotTest(DeltaGeneratorTestCase):
     def setUp(self):
         super().setUp()
-        if matplotlib.get_backend().lower() != "agg":
+        if mpl.get_backend().lower() != "agg":
             plt.switch_backend("agg")
 
     def tearDown(self):
@@ -60,9 +60,9 @@ class PyplotTest(DeltaGeneratorTestCase):
         st.pyplot(fig)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, -2)
-        self.assertEqual(el.imgs.imgs[0].caption, "")
-        self.assertTrue(el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT))
+        assert el.imgs.width == -2
+        assert el.imgs.imgs[0].caption == ""
+        assert el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT)
 
     @parameterized.expand([("true", True), ("false", False), ("none", None)])
     def test_st_pyplot_clear_global_figure(self, _, clear_figure: bool | None):
@@ -114,4 +114,4 @@ class PyplotTest(DeltaGeneratorTestCase):
         st.pyplot(fig, use_container_width=use_container_width)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, image_width)
+        assert el.imgs.width == image_width

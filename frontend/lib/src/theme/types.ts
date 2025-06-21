@@ -16,10 +16,10 @@
 
 import { lightThemePrimitives } from "baseui"
 
-import { CustomThemeConfig } from "@streamlit/lib/src/proto"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 
-import emotionBaseTheme from "./emotionBaseTheme"
 import { baseuiLightTheme } from "./baseui"
+import emotionBaseTheme from "./emotionBaseTheme"
 
 export type EmotionTheme = typeof emotionBaseTheme
 
@@ -31,6 +31,7 @@ export type ThemeConfig = {
   // sidebar theming.
   basewebTheme: typeof baseuiLightTheme
   primitives: typeof lightThemePrimitives
+  themeInput?: Partial<CustomThemeConfig>
 }
 
 export type CachedTheme = {

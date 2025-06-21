@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
-import BaseButton, {
-  BaseButtonKind,
-} from "@streamlit/lib/src/components/shared/BaseButton"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
-import Tooltip, {
-  Placement,
-} from "@streamlit/lib/src/components/shared/Tooltip"
-import themeColors from "@streamlit/lib/src/theme/emotionBaseTheme/themeColors"
+import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
+import Icon from "~lib/components/shared/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 
 import { StyledSwitchFacingModeButton } from "./styled-components"
 
@@ -56,4 +52,4 @@ const SwitchFacingModeButton = ({
   )
 }
 
-export default SwitchFacingModeButton
+export default memo(SwitchFacingModeButton)

@@ -40,39 +40,53 @@ class ErrorUtilTest(unittest.TestCase):
     def test_handle_uncaught_app_exception_with_rich(self):
         """Test if the exception is logged with rich enabled and disabled."""
         exc = Exception("boom!")
-        with testutil.patch_config_options({"logger.enableRich": True}):
-            with io.StringIO() as buf:
-                # Capture stdout logs (rich logs to stdout)
-                with contextlib.redirect_stdout(buf):
-                    handle_uncaught_app_exception(exc)
-                # Capture the stdout output
-                captured_output = buf.getvalue()
+        # The default is to use rich if rich is installed:
+        with io.StringIO() as buf:
+            # Capture stdout logs (rich logs to stdout)
+            with contextlib.redirect_stdout(buf):
+                handle_uncaught_app_exception(exc)
+            # Capture the stdout output
+            captured_output = buf.getvalue()
 
-                assert "Exception:" in captured_output
-                assert "boom!" in captured_output
-                # Uncaught app exception is only used by the non-rich exception logging
-                assert "Uncaught app exception" not in captured_output
+            assert "Exception:" in captured_output
+            assert "boom!" in captured_output
+            # Uncaught app exception is only used by the non-rich exception logging
+            assert "Uncaught app exception" not in captured_output
 
-        with testutil.patch_config_options({"logger.enableRich": False}):
-            with io.StringIO() as buf:
-                # Capture stdout logs
-                with contextlib.redirect_stdout(buf):
-                    handle_uncaught_app_exception(exc)
-                # Capture the stdout output
-                captured_output = buf.getvalue()
+        with (
+            testutil.patch_config_options({"logger.enableRich": False}),
+            io.StringIO() as buf,
+        ):
+            # Capture stdout logs
+            with contextlib.redirect_stdout(buf):
+                handle_uncaught_app_exception(exc)
+            # Capture the stdout output
+            captured_output = buf.getvalue()
 
-                # With rich deactivated, the exception is not logged to stdout
-                assert "Exception:" not in captured_output
-                assert "boom!" not in captured_output
+            # With rich deactivated, the exception is not logged to stdout
+            assert "Exception:" not in captured_output
+            assert "boom!" not in captured_output
 
     def test_handle_uncaught_app_exception_with_rich_doesnt_call_logger(self):
         """Test that if rich is enabled, the logger error is not used."""
-        with testutil.patch_config_options({"logger.enableRich": True}):
-            with patch("streamlit.error_util._LOGGER.error") as mock_logger:
-                handle_uncaught_app_exception(Exception("boom!"))
-                mock_logger.assert_not_called()
+        # The default is to use rich if rich is installed (which is the case in the
+        # test environment):
+        with patch("streamlit.error_util._LOGGER.error") as mock_logger:
+            handle_uncaught_app_exception(Exception("boom!"))
+            mock_logger.assert_not_called()
 
-        with testutil.patch_config_options({"logger.enableRich": False}):
-            with patch("streamlit.error_util._LOGGER.error") as mock_logger:
-                handle_uncaught_app_exception(Exception("boom!"))
-                mock_logger.assert_called_once()
+        # Test if it is explicitly enabled:
+        with (
+            testutil.patch_config_options({"logger.enableRich": True}),
+            patch("streamlit.error_util._LOGGER.error") as mock_logger,
+        ):
+            handle_uncaught_app_exception(Exception("boom!"))
+            mock_logger.assert_not_called()
+
+        # Test if it is explicitly disabled:
+        with (
+            testutil.patch_config_options({"logger.enableRich": False}),
+            patch("streamlit.error_util._LOGGER.error") as mock_logger,
+        ):
+            handle_uncaught_app_exception(Exception("boom!"))
+            mock_logger.assert_called_once()

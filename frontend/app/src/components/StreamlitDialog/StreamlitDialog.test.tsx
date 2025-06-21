@@ -19,8 +19,8 @@ import React, { Fragment } from "react"
 import { screen } from "@testing-library/react"
 
 import { mockSessionInfo, render, SessionInfo } from "@streamlit/lib"
-
-import { DialogType, StreamlitDialog } from "./StreamlitDialog"
+import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import { StreamlitDialog } from "@streamlit/app/src/components/StreamlitDialog"
 
 function flushPromises(): Promise<void> {
   return new Promise(process.nextTick)
@@ -84,7 +84,7 @@ describe("StreamlitDialog", () => {
 })
 
 describe("aboutDialog", () => {
-  it("shows version string if SessionInfo is initialized", async () => {
+  it("shows version string if SessionInfo is initialized", () => {
     render(
       <Fragment>
         {StreamlitDialog({
@@ -102,7 +102,7 @@ describe("aboutDialog", () => {
     expect(versionText).toBeDefined()
   })
 
-  it("shows no version string if SessionInfo is not initialized", async () => {
+  it("shows no version string if SessionInfo is not initialized", () => {
     const sessionInfo = new SessionInfo()
     expect(sessionInfo.isSet).toBe(false)
 

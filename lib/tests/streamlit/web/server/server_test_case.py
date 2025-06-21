@@ -56,8 +56,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             "/not/a/script.py",
             is_hello=False,
         )
-        app = self.server._create_app()
-        return app
+        return self.server._create_app()
 
     def get_ws_url(self, path):
         """Return a ws:// URL with the given path for our test server."""

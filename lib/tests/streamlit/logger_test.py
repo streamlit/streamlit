@@ -32,21 +32,6 @@ DUMMY_CONFIG_OPTIONS = OrderedDict()
 class LoggerTest(unittest.TestCase):
     """Logger Unittest class."""
 
-    # Need to fix this test:
-    # https://trello.com/c/ZwNR7fWI
-    # def test_set_log_level_by_name(self):
-    #     """Test streamlit.logger.set_log_level."""
-    #     data = {
-    #         'critical': logging.CRITICAL,
-    #         'error': logging.ERROR,
-    #         'warning': logging.WARNING,
-    #         'info': logging.INFO,
-    #         'debug': logging.DEBUG,
-    #     }
-    #     for k, v in data.items():
-    #         streamlit.logger.set_log_level(k)
-    #         self.assertEqual(v, logging.getLogger().getEffectiveLevel())
-
     def test_set_log_level_by_constant(self):
         """Test streamlit.logger.set_log_level."""
         data = [
@@ -58,29 +43,14 @@ class LoggerTest(unittest.TestCase):
         ]
         for k in data:
             logger.set_log_level(k)
-            self.assertEqual(k, logging.getLogger("streamlit").getEffectiveLevel())
+            assert k == logging.getLogger("streamlit").getEffectiveLevel()
 
     def test_set_log_level_error(self):
         """Test streamlit.logger.set_log_level."""
         with pytest.raises(SystemExit) as e:
             logger.set_log_level(90)
-        self.assertEqual(e.type, SystemExit)
-        self.assertEqual(e.value.code, 1)
-
-    # Need to fix this test:
-    # https://trello.com/c/ZwNR7fWI
-    # def test_set_log_level_resets(self):
-    #     """Test streamlit.logger.set_log_level."""
-    #     streamlit.logger.set_log_level('debug')
-    #     test1 = streamlit.logger.get_logger('test1')
-    #     self.assertEqual(logging.DEBUG, test1.getEffectiveLevel())
-    #
-    #     streamlit.logger.set_log_level('warning')
-    #     self.assertEqual(logging.WARNING, test1.getEffectiveLevel())
-    #
-    #     streamlit.logger.set_log_level('critical')
-    #     test2 = streamlit.logger.get_logger('test2')
-    #     self.assertEqual(logging.CRITICAL, test2.getEffectiveLevel())
+        assert e.type is SystemExit
+        assert e.value.code == 1
 
     @parameterized.expand(
         [
@@ -100,27 +70,17 @@ class LoggerTest(unittest.TestCase):
 
         with patch.object(config, "_config_options", new=config_options):
             logger.setup_formatter(LOGGER)
-            self.assertEqual(len(LOGGER.handlers), 1)
+            assert len(LOGGER.handlers) == 1
             if config_options:
-                self.assertEqual(
-                    LOGGER.handlers[0].formatter._fmt, messageFormat or "%(message)s"
+                assert LOGGER.handlers[0].formatter._fmt == (
+                    messageFormat or "%(message)s"
                 )
             else:
-                self.assertEqual(
-                    LOGGER.handlers[0].formatter._fmt, logger.DEFAULT_LOG_MESSAGE
-                )
+                assert LOGGER.handlers[0].formatter._fmt == logger.DEFAULT_LOG_MESSAGE
 
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
         logger.init_tornado_logs()
-        loggers = [x for x in logger._loggers.keys() if "tornado." in x]
+        loggers = [x for x in logger._loggers if "tornado." in x]
         truth = ["tornado.access", "tornado.application", "tornado.general"]
-        self.assertEqual(sorted(truth), sorted(loggers))
-
-    # Need to fix this test:
-    # https://trello.com/c/ZwNR7fWI
-    # def test_get_logger(self):
-    #     """Test streamlit.logger.get_logger."""
-    #     # Test that get_logger with no args, figures out its caller
-    #     logger = streamlit.logger.get_logger()
-    #     self.assertTrue('.logger_test' in streamlit.logger.LOGGERS.keys())
+        assert sorted(truth) == sorted(loggers)

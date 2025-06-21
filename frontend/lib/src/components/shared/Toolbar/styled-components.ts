@@ -16,12 +16,13 @@
 
 import styled, { StyledComponent } from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
-const TOP_DISTANCE = "-2.4rem"
+export const TOP_DISTANCE = "-2.65rem"
 
 export interface StyledToolbarWrapperProps {
   locked?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   target?: StyledComponent<any, any, any>
 }
 
@@ -63,10 +64,11 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   width: "fit-content",
   zIndex: theme.zIndices.sidebar + 1,
+  padding: theme.spacing.twoXS,
 }))
 
 export const StyledToolbarElementContainer = styled.div<{
-  width?: number
+  width?: number | string
   height?: number
   useContainerWidth: boolean
   topCentered?: boolean

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { MockedFunction } from "vitest"
-import { renderHook } from "@testing-library/react-hooks"
+import { renderHook } from "@testing-library/react"
 
 import { useScrollToBottom } from "./useScrollToBottom"
 import useStateRef from "./useStateRef"

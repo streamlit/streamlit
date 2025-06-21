@@ -18,11 +18,44 @@ import {
   IAppPage,
   ICustomThemeConfig,
   MetricsEvent,
-} from "@streamlit/lib/src/proto"
-import { ExportedTheme } from "@streamlit/lib/src/theme"
-import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { LibConfig } from "@streamlit/lib/src/components/core/LibContext"
-import { PresetThemeName } from "@streamlit/lib/src/theme/types"
+} from "@streamlit/protobuf"
+
+import { ExportedTheme } from "~lib/theme"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { PresetThemeName } from "~lib/theme/types"
+
+/**
+ * The app config contains various configurations that the host platform can
+ * use to configure streamlit-app frontend behavior. This should to be treated as part of the public
+ * API, and changes need to be backwards-compatible meaning that an old host configuration
+ * should still work with a new frontend versions.
+ *
+ * TODO(lukasmasuch): Potentially refactor HostCommunicationManager and move this type
+ * to AppContext.tsx.
+ */
+export type AppConfig = {
+  /**
+   * A list of origins that we're allowed to receive cross-iframe messages
+   * from via the browser's window.postMessage API.
+   */
+  allowedOrigins?: string[]
+  /**
+   * Whether to wait until we've received a SET_AUTH_TOKEN message before
+   * resolving deferredAuthToken.promise. The WebsocketConnection class waits
+   * for this promise to resolve before attempting to establish a connection
+   * with the Streamlit server.
+   */
+  useExternalAuthToken?: boolean
+  /**
+   * Enables custom string messages to be sent to the host
+   */
+  enableCustomParentMessages?: boolean
+  /**
+   * Whether host wants to block error dialogs. If true, blocks error dialogs
+   * from being shown to the user, sends error info to host via postMessage
+   */
+  blockErrorDialogs?: boolean
+}
 
 export type DeployedAppMetadata = {
   hostedAt?: string
@@ -201,52 +234,20 @@ export type IGuestToHostMessage =
       eventName: string
       data: MetricsEvent
     }
+  | {
+      type: "CLIENT_ERROR_DIALOG"
+      error: string
+      message?: string
+    }
+  | {
+      type: "CLIENT_ERROR"
+      component: string
+      error: string | number
+      message: string
+      source: string
+      customComponentName?: string
+    }
 
 export type VersionedMessage<Message> = {
   stCommVersion: number
 } & Message
-
-/**
- * The app config contains various configurations that the host platform can
- * use to configure streamlit-app frontend behavior. This should to be treated as part of the public
- * API, and changes need to be backwards-compatible meaning that an old host configuration
- * should still work with a new frontend versions.
- *
- * TODO(lukasmasuch): Potentially refactor HostCommunicationManager and move this type
- * to AppContext.tsx.
- */
-export type AppConfig = {
-  /**
-   * A list of origins that we're allowed to receive cross-iframe messages
-   * from via the browser's window.postMessage API.
-   */
-  allowedOrigins?: string[]
-  /**
-   * Whether to wait until we've received a SET_AUTH_TOKEN message before
-   * resolving deferredAuthToken.promise. The WebsocketConnection class waits
-   * for this promise to resolve before attempting to establish a connection
-   * with the Streamlit server.
-   */
-  useExternalAuthToken?: boolean
-  /**
-   * Enables custom string messages to be sent to the host
-   */
-  enableCustomParentMessages?: boolean
-}
-
-export type MetricsConfig = {
-  /**
-   * URL to send metrics data to via POST request.
-   * Setting to "postMessage" sends metrics events via postMessage to host.
-   * Setting to "off" disables metrics collection.
-   * If undefined, metricsUrl requested from centralized config file.
-   */
-  metricsUrl?: string | "postMessage" | "off"
-}
-
-/**
- * The response structure of the `_stcore/host-config` endpoint.
- * This combines streamlit-lib specific configuration options with
- * streamlit-app specific options (e.g. allowed message origins).
- */
-export type IHostConfigResponse = LibConfig & AppConfig & MetricsConfig

@@ -19,6 +19,10 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "BlockProto";
 
+import "streamlit/proto/WidthConfig.proto";
+import "streamlit/proto/HeightConfig.proto";
+import "streamlit/proto/GapSize.proto";
+
 message Block {
   oneof type {
     Vertical vertical = 1;
@@ -31,10 +35,13 @@ message Block {
     ChatMessage chat_message = 9;
     Popover popover = 10;
     Dialog dialog = 11;
+    FlexContainer flex_container = 13;
   }
 
   bool allow_empty = 8;
   optional string id = 12;
+  optional streamlit.HeightConfig height_config = 14;
+  optional streamlit.WidthConfig width_config = 15;
 
   message Vertical {
     bool border = 1;
@@ -46,9 +53,26 @@ message Block {
     string gap = 1;
   }
 
+  message FlexContainer {
+    bool border = 1;
+
+    streamlit.GapConfig gap_config = 2;
+    float scale = 3;
+
+    enum Direction {
+      DIRECTION_UNDEFINED = 0;
+      VERTICAL = 1;
+      HORIZONTAL = 2;
+    }
+    Direction direction = 4;
+    bool wrap = 5;
+  }
+
   message Column {
     double weight = 1;
-    string gap = 2;
+
+    // Deprecated. Use gap_size
+    string gap = 2 [deprecated = true];
 
     enum VerticalAlignment {
       TOP = 0;
@@ -57,6 +81,8 @@ message Block {
     }
     VerticalAlignment vertical_alignment = 3;
     bool show_border = 4;
+
+    optional streamlit.GapConfig gap_config = 5;
   }
 
   message Expandable {
@@ -112,5 +138,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 13
+  // Next ID: 14
 }

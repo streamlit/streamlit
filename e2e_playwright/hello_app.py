@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import numpy as np
 
 from streamlit import runtime
 from streamlit.hello import streamlit_app
 
-# Set random seed to always get the same results in the plotting demo
 np.random.seed(0)
 if runtime.exists():
     streamlit_app.run()

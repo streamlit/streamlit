@@ -135,5 +135,7 @@ def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
     columns = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.columns)
 
     return pd.DataFrame(
-        data.values, index=index.values.T.tolist(), columns=columns.values.T.tolist()
+        data.to_numpy(),
+        index=index.to_numpy().T.tolist(),
+        columns=columns.to_numpy().T.tolist(),
     )

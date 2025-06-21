@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react-swc"
+import { defineConfig } from "vite"
+import dts from "vite-plugin-dts"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
 import path from "path"
 
 // We do not explicitly set the DEV_BUILD in any of our processes
 // This is a convenience for developers for debugging purposes
-const DEV_BUILD = process.env.DEV_BUILD || false
+const DEV_BUILD = Boolean(process.env.DEV_BUILD)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -33,18 +34,35 @@ export default defineConfig({
       plugins: [["@swc/plugin-emotion", {}]],
     }),
     viteTsconfigPaths(),
+    dts({
+      insertTypesEntry: true,
+    }),
   ],
   build: {
     outDir: "dist",
     sourcemap: DEV_BUILD,
+    lib: {
+      // Specify the entry point of your library
+      entry: path.resolve(__dirname, "src/index.ts"),
+      name: "@streamlit/lib", // Replace with your library's name
+      fileName: format => `streamlit-lib.${format}.js`,
+      formats: ["es", "umd", "cjs"], // Output formats
+    },
     rollupOptions: {
       input: "src/index.ts",
+      // Externalize dependencies that shouldn't be bundled into your library
+      external: ["react", "react-dom"],
+      output: {
+        globals: {
+          react: "React",
+          "react-dom": "ReactDOM",
+        },
+      },
     },
   },
   resolve: {
     alias: {
-      "@streamlit/lib/src": path.resolve(__dirname, "../lib/src"),
-      "@streamlit/lib": path.resolve(__dirname, "../lib/src"),
+      "~lib": path.resolve(__dirname, "../lib/src"),
     },
   },
   test: {
@@ -59,11 +77,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    coverage: {
-      reporter: ["text", "json", "html"],
-      include: ["src/**/*"],
-      exclude: [],
     },
   },
 })

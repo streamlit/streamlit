@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { computeSpacingStyle, IconSize } from "@streamlit/lib/src/theme"
+import { computeSpacingStyle, IconSize } from "~lib/theme"
 
 export interface StyledMaterialIconProps {
   size: IconSize

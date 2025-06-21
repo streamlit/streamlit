@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
+export { default as useColumnFormatting } from "./useColumnFormatting"
 export { default as useColumnLoader } from "./useColumnLoader"
 export { default as useColumnPinning } from "./useColumnPinning"
 export { default as useColumnReordering } from "./useColumnReordering"
 export { default as useColumnSizer } from "./useColumnSizer"
 export { default as useColumnSort } from "./useColumnSort"
+export { default as useColumnVisibility } from "./useColumnVisibility"
+export { default as useCustomEditors } from "./useCustomEditors"
 export { default as useCustomRenderer } from "./useCustomRenderer"
 export { default as useCustomTheme } from "./useCustomTheme"
 export { default as useDataEditor } from "./useDataEditor"

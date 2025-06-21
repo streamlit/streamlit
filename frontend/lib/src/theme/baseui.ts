@@ -19,9 +19,9 @@ import {
   lightThemePrimitives as baseuiLightThemePrimitives,
 } from "baseui"
 
-import emotionLightTheme from "./emotionLightTheme"
+import { createBaseUiTheme } from "./createBaseUiTheme"
 import emotionDarkTheme from "./emotionDarkTheme"
-import { createBaseUiTheme } from "./createThemeUtil"
+import emotionLightTheme from "./emotionLightTheme"
 
 export const baseuiLightTheme = createBaseUiTheme(
   emotionLightTheme,

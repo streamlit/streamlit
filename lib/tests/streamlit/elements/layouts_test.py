@@ -18,8 +18,13 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import FragmentHandledException, StreamlitAPIException
+from streamlit.errors import (
+    FragmentHandledException,
+    StreamlitAPIException,
+    StreamlitInvalidColumnGapError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.proto.GapSize_pb2 import GapSize
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -38,20 +43,20 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         columns_blocks = all_deltas[1:4]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
-        self.assertEqual(len(all_deltas), 7)
+        assert len(all_deltas) == 7
 
         # Check the defaults have been applied correctly for the first column
-        self.assertEqual(
-            columns_blocks[0].add_block.column.vertical_alignment,
-            BlockProto.Column.VerticalAlignment.TOP,
+        assert (
+            columns_blocks[0].add_block.column.vertical_alignment
+            == BlockProto.Column.VerticalAlignment.TOP
         )
-        self.assertEqual(columns_blocks[0].add_block.column.gap, "small")
-        self.assertEqual(columns_blocks[0].add_block.column.show_border, False)
+        assert columns_blocks[0].add_block.column.gap_config.gap_size == GapSize.SMALL
+        assert not columns_blocks[0].add_block.column.show_border
 
         # Check the weights are correct
-        self.assertEqual(columns_blocks[0].add_block.column.weight, 1.0 / 3)
-        self.assertEqual(columns_blocks[1].add_block.column.weight, 1.0 / 3)
-        self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0 / 3)
+        assert columns_blocks[0].add_block.column.weight == 1.0 / 3
+        assert columns_blocks[1].add_block.column.weight == 1.0 / 3
+        assert columns_blocks[2].add_block.column.weight == 1.0 / 3
 
     @parameterized.expand(
         [
@@ -85,7 +90,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
     def test_columns_with_invalid_vertical_alignment(self):
         """Test that it throws an error on invalid vertical_alignment argument"""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.columns(3, vertical_alignment="invalid")
 
     def test_not_equal_width_int_columns(self):
@@ -102,10 +107,10 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         columns_blocks = all_deltas[1:4]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
-        self.assertEqual(len(all_deltas), 7)
-        self.assertEqual(columns_blocks[0].add_block.column.weight, 3.0 / sum_weights)
-        self.assertEqual(columns_blocks[1].add_block.column.weight, 2.0 / sum_weights)
-        self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0 / sum_weights)
+        assert len(all_deltas) == 7
+        assert columns_blocks[0].add_block.column.weight == 3.0 / sum_weights
+        assert columns_blocks[1].add_block.column.weight == 2.0 / sum_weights
+        assert columns_blocks[2].add_block.column.weight == 1.0 / sum_weights
 
     def test_not_equal_width_float_columns(self):
         """Test that it works correctly when spec is list of floats or ints"""
@@ -122,11 +127,11 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         columns_blocks = all_deltas[1:]
         # 4 elements will be created: 1 horizontal block, 3 columns
-        self.assertEqual(len(all_deltas), 4)
-        self.assertEqual(len(columns_blocks), 3)
-        self.assertEqual(columns_blocks[0].add_block.column.weight, 7.5 / sum_weights)
-        self.assertEqual(columns_blocks[1].add_block.column.weight, 2.5 / sum_weights)
-        self.assertEqual(columns_blocks[2].add_block.column.weight, 5.0 / sum_weights)
+        assert len(all_deltas) == 4
+        assert len(columns_blocks) == 3
+        assert columns_blocks[0].add_block.column.weight == 7.5 / sum_weights
+        assert columns_blocks[1].add_block.column.weight == 2.5 / sum_weights
+        assert columns_blocks[2].add_block.column.weight == 5.0 / sum_weights
 
     def test_columns_with_default_small_gap(self):
         """Test that it works correctly with no gap argument
@@ -136,16 +141,29 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
+        horizontal_container = all_deltas[0]
         columns_blocks = all_deltas[1:4]
 
         # 4 elements will be created: 1 horizontal block, 3 columns, each receives
         # "small" gap arg
-        self.assertEqual(len(all_deltas), 4)
-        self.assertEqual(horizontal_block.add_block.horizontal.gap, "small")
-        self.assertEqual(columns_blocks[0].add_block.column.gap, "small")
-        self.assertEqual(columns_blocks[1].add_block.column.gap, "small")
-        self.assertEqual(columns_blocks[2].add_block.column.gap, "small")
+        assert len(all_deltas) == 4
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "gap_size"
+        )
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.gap_size
+            == GapSize.SMALL
+        )
+
+        for col_block in columns_blocks:
+            assert (
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "gap_size"
+            )
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.SMALL
 
     def test_columns_with_medium_gap(self):
         """Test that it works correctly with "medium" gap argument"""
@@ -154,16 +172,29 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
+        horizontal_container = all_deltas[0]
         columns_blocks = all_deltas[1:4]
 
         # 4 elements will be created: 1 horizontal block, 3 columns, each receives
         # "medium" gap arg
-        self.assertEqual(len(all_deltas), 4)
-        self.assertEqual(horizontal_block.add_block.horizontal.gap, "medium")
-        self.assertEqual(columns_blocks[0].add_block.column.gap, "medium")
-        self.assertEqual(columns_blocks[1].add_block.column.gap, "medium")
-        self.assertEqual(columns_blocks[2].add_block.column.gap, "medium")
+        assert len(all_deltas) == 4
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "gap_size"
+        )
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.gap_size
+            == GapSize.MEDIUM
+        )
+
+        for col_block in columns_blocks:
+            assert (
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "gap_size"
+            )
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.MEDIUM
 
     def test_columns_with_large_gap(self):
         """Test that it works correctly with "large" gap argument"""
@@ -172,16 +203,72 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
+        horizontal_container = all_deltas[0]
         columns_blocks = all_deltas[1:4]
 
         # 4 elements will be created: 1 horizontal block, 3 columns, each receives
         # "large" gap arg
-        self.assertEqual(len(all_deltas), 4)
-        self.assertEqual(horizontal_block.add_block.horizontal.gap, "large")
-        self.assertEqual(columns_blocks[0].add_block.column.gap, "large")
-        self.assertEqual(columns_blocks[1].add_block.column.gap, "large")
-        self.assertEqual(columns_blocks[2].add_block.column.gap, "large")
+        assert len(all_deltas) == 4
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "gap_size"
+        )
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.gap_size
+            == GapSize.LARGE
+        )
+
+        for col_block in columns_blocks:
+            assert (
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "gap_size"
+            )
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.LARGE
+
+    def test_columns_with_none_gap(self):
+        """Test that it works correctly with "none" gap argument"""
+
+        st.columns(3, gap=None)
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        # 4 elements will be created: 1 horizontal block, 3 columns, each receives
+        # "none" gap arg
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.WhichOneof(
+                "gap_spec"
+            )
+            == "gap_size"
+        )
+        assert (
+            horizontal_container.add_block.flex_container.gap_config.gap_size
+            == GapSize.NONE
+        )
+
+        for col_block in columns_blocks:
+            assert (
+                col_block.add_block.column.gap_config.WhichOneof("gap_spec")
+                == "gap_size"
+            )
+            assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
+
+    @parameterized.expand(
+        [
+            "invalid",
+            5,
+            "5rem",
+            "10px",
+        ]
+    )
+    def test_columns_with_invalid_gap(self, invalid_gap):
+        """Test that it throws an error on invalid gap argument"""
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            st.columns(3, gap=invalid_gap)
 
     def test_columns_with_border(self):
         """Test that it works correctly with border argument"""
@@ -192,18 +279,18 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         columns_blocks = all_deltas[1:4]
 
-        # 4 elements will be created: 1 horizontal block, 3 columns, each receives
-        # border=True
-        self.assertEqual(len(all_deltas), 4)
-        self.assertTrue(columns_blocks[0].add_block.column.show_border)
-        self.assertTrue(columns_blocks[1].add_block.column.show_border)
-        self.assertTrue(columns_blocks[2].add_block.column.show_border)
+        # 4 elements will be created: 1 horizontal block, 3 columns,
+        # each receives: border=True
+        assert len(all_deltas) == 4
+        assert columns_blocks[0].add_block.column.show_border
+        assert columns_blocks[1].add_block.column.show_border
+        assert columns_blocks[2].add_block.column.show_border
 
 
 class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.expander()
 
     def test_just_label(self):
@@ -215,8 +302,32 @@ class ExpanderTest(DeltaGeneratorTestCase):
             pass
 
         expander_block = self.get_delta_from_queue()
-        self.assertEqual(expander_block.add_block.expandable.label, "label")
-        self.assertFalse(expander_block.add_block.expandable.expanded)
+        assert expander_block.add_block.expandable.label == "label"
+        assert not expander_block.add_block.expandable.expanded
+
+    def test_width_config(self):
+        """Test that width configuration works correctly"""
+        st.expander("label", width=200)
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.width_config.pixel_width == 200
+
+        st.expander("label", width="stretch")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+            ("content",),
+        ]
+    )
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.expander("label", width=invalid_width)
 
     def test_valid_emoji_icon(self):
         """Test that it can be called with an emoji icon"""
@@ -227,8 +338,8 @@ class ExpanderTest(DeltaGeneratorTestCase):
             pass
 
         expander_block = self.get_delta_from_queue()
-        self.assertEqual(expander_block.add_block.expandable.label, "label")
-        self.assertEqual(expander_block.add_block.expandable.icon, "🦄")
+        assert expander_block.add_block.expandable.label == "label"
+        assert expander_block.add_block.expandable.icon == "🦄"
 
     def test_valid_material_icon(self):
         """Test that it can be called with a material icon"""
@@ -239,32 +350,25 @@ class ExpanderTest(DeltaGeneratorTestCase):
             pass
 
         expander_block = self.get_delta_from_queue()
-        self.assertEqual(expander_block.add_block.expandable.label, "label")
-        self.assertEqual(
-            expander_block.add_block.expandable.icon, ":material/download:"
-        )
+        assert expander_block.add_block.expandable.label == "label"
+        assert expander_block.add_block.expandable.icon == ":material/download:"
 
     def test_invalid_emoji_icon(self):
         """Test that it throws an error on invalid emoji icon"""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.expander("label", icon="invalid")
-        self.assertEqual(
-            str(e.exception),
-            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
-            "please use a single character instead.",
+        assert (
+            str(e.value)
+            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
+            "please use a single character instead."
         )
 
     def test_invalid_material_icon(self):
         """Test that it throws an error on invalid material icon"""
         icon = ":material/invalid:"
-        invisible_white_space = "\u200b"
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.expander("label", icon=icon)
-        self.assertEqual(
-            str(e.exception),
-            f'The value `"{icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**. ",
-        )
+        assert "is not a valid Material icon" in str(e.value)
 
 
 class ContainerTest(DeltaGeneratorTestCase):
@@ -272,15 +376,15 @@ class ContainerTest(DeltaGeneratorTestCase):
         """Test that it can be called with border parameter"""
         st.container(border=True)
         container_block = self.get_delta_from_queue()
-        self.assertTrue(container_block.add_block.vertical.border)
+        assert container_block.add_block.flex_container.border
 
     def test_without_parameters(self):
         """Test that it can be called without any parameters."""
         st.container()
         container_block = self.get_delta_from_queue()
-        self.assertFalse(container_block.add_block.vertical.border)
-        self.assertFalse(container_block.add_block.allow_empty)
-        self.assertEqual(container_block.add_block.id, "")
+        assert not container_block.add_block.flex_container.border
+        assert not container_block.add_block.allow_empty
+        assert container_block.add_block.id == ""
 
     def test_setting_key(self):
         """Test that the key can be set and that it is included in the
@@ -294,16 +398,16 @@ class ContainerTest(DeltaGeneratorTestCase):
         st.container(height=100)
 
         container_block = self.get_delta_from_queue()
-        self.assertEqual(container_block.add_block.vertical.height, 100)
+        assert container_block.add_block.height_config.pixel_height == 100
         # Should allow empty and have a border as default:
-        self.assertTrue(container_block.add_block.vertical.border)
-        self.assertTrue(container_block.add_block.allow_empty)
+        assert container_block.add_block.flex_container.border
+        assert container_block.add_block.allow_empty
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.popover()
 
     def test_just_label(self):
@@ -314,11 +418,11 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             pass
 
         popover_block = self.get_delta_from_queue()
-        self.assertEqual(popover_block.add_block.popover.label, "label")
-        self.assertFalse(popover_block.add_block.popover.use_container_width)
-        self.assertFalse(popover_block.add_block.popover.disabled)
-        self.assertEqual(popover_block.add_block.popover.help, "")
-        self.assertTrue(popover_block.add_block.allow_empty)
+        assert popover_block.add_block.popover.label == "label"
+        assert not popover_block.add_block.popover.use_container_width
+        assert not popover_block.add_block.popover.disabled
+        assert popover_block.add_block.popover.help == ""
+        assert popover_block.add_block.allow_empty
 
     def test_use_container_width(self):
         """Test that it correctly applies use_container_width param."""
@@ -328,8 +432,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             pass
 
         popover_block = self.get_delta_from_queue()
-        self.assertEqual(popover_block.add_block.popover.label, "label")
-        self.assertTrue(popover_block.add_block.popover.use_container_width)
+        assert popover_block.add_block.popover.label == "label"
+        assert popover_block.add_block.popover.use_container_width
 
     def test_disabled(self):
         """Test that it correctly applies disabled param."""
@@ -339,8 +443,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             pass
 
         popover_block = self.get_delta_from_queue()
-        self.assertEqual(popover_block.add_block.popover.label, "label")
-        self.assertTrue(popover_block.add_block.popover.disabled)
+        assert popover_block.add_block.popover.label == "label"
+        assert popover_block.add_block.popover.disabled
 
     def test_help(self):
         """Test that it correctly applies help param."""
@@ -350,8 +454,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             pass
 
         popover_block = self.get_delta_from_queue()
-        self.assertEqual(popover_block.add_block.popover.label, "label")
-        self.assertEqual(popover_block.add_block.popover.help, "help text")
+        assert popover_block.add_block.popover.label == "label"
+        assert popover_block.add_block.popover.help == "help text"
 
     def test_valid_emoji_icon(self):
         """Test that it can be called with an emoji icon"""
@@ -362,8 +466,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             pass
 
         popover_block = self.get_delta_from_queue()
-        self.assertEqual(popover_block.add_block.popover.label, "label")
-        self.assertEqual(popover_block.add_block.popover.icon, "🦄")
+        assert popover_block.add_block.popover.label == "label"
+        assert popover_block.add_block.popover.icon == "🦄"
 
     def test_valid_material_icon(self):
         """Test that it can be called with a material icon"""
@@ -374,77 +478,72 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             pass
 
         popover_block = self.get_delta_from_queue()
-        self.assertEqual(popover_block.add_block.popover.label, "label")
-        self.assertEqual(popover_block.add_block.popover.icon, ":material/download:")
+        assert popover_block.add_block.popover.label == "label"
+        assert popover_block.add_block.popover.icon == ":material/download:"
 
     def test_invalid_emoji_icon(self):
         """Test that it throws an error on invalid emoji icon"""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.popover("label", icon="invalid")
-        self.assertEqual(
-            str(e.exception),
-            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
-            "please use a single character instead.",
+        assert (
+            str(e.value)
+            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
+            "please use a single character instead."
         )
 
     def test_invalid_material_icon(self):
         """Test that it throws an error on invalid material icon"""
         icon = ":material/invalid:"
-        invisible_white_space = "\u200b"
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.popover("label", icon=icon)
-        self.assertEqual(
-            str(e.exception),
-            f'The value `"{icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**. ",
-        )
+        assert "is not a valid Material icon" in str(e.value)
 
 
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.status()
 
     def test_throws_error_on_wrong_state(self):
         """Test that it throws an error on unknown state."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.status("label", state="unknown")
 
     def test_just_label(self):
         """Test that it correctly applies label param."""
         st.status("label")
         status_block = self.get_delta_from_queue()
-        self.assertEqual(status_block.add_block.expandable.label, "label")
-        self.assertFalse(status_block.add_block.expandable.expanded)
-        self.assertEqual(status_block.add_block.expandable.icon, "spinner")
+        assert status_block.add_block.expandable.label == "label"
+        assert not status_block.add_block.expandable.expanded
+        assert status_block.add_block.expandable.icon == "spinner"
 
     def test_expanded_param(self):
         """Test that it correctly applies expanded param."""
         st.status("label", expanded=True)
 
         status_block = self.get_delta_from_queue()
-        self.assertEqual(status_block.add_block.expandable.label, "label")
-        self.assertTrue(status_block.add_block.expandable.expanded)
-        self.assertEqual(status_block.add_block.expandable.icon, "spinner")
+        assert status_block.add_block.expandable.label == "label"
+        assert status_block.add_block.expandable.expanded
+        assert status_block.add_block.expandable.icon == "spinner"
 
     def test_state_param_complete(self):
         """Test that it correctly applies state param with `complete`."""
         st.status("label", state="complete")
 
         status_block = self.get_delta_from_queue()
-        self.assertEqual(status_block.add_block.expandable.label, "label")
-        self.assertFalse(status_block.add_block.expandable.expanded)
-        self.assertEqual(status_block.add_block.expandable.icon, ":material/check:")
+        assert status_block.add_block.expandable.label == "label"
+        assert not status_block.add_block.expandable.expanded
+        assert status_block.add_block.expandable.icon == ":material/check:"
 
     def test_state_param_error(self):
         """Test that it correctly applies state param with `error`."""
         st.status("label", state="error")
 
         status_block = self.get_delta_from_queue()
-        self.assertEqual(status_block.add_block.expandable.label, "label")
-        self.assertFalse(status_block.add_block.expandable.expanded, False)
-        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
+        assert status_block.add_block.expandable.label == "label"
+        assert not status_block.add_block.expandable.expanded
+        assert status_block.add_block.expandable.icon == ":material/error:"
 
     def test_usage_with_context_manager(self):
         """Test that it correctly switches to complete state when used as
@@ -456,9 +555,9 @@ class StatusContainerTest(DeltaGeneratorTestCase):
             pass
 
         status_block = self.get_delta_from_queue()
-        self.assertEqual(status_block.add_block.expandable.label, "label")
-        self.assertFalse(status_block.add_block.expandable.expanded)
-        self.assertEqual(status_block.add_block.expandable.icon, ":material/check:")
+        assert status_block.add_block.expandable.label == "label"
+        assert not status_block.add_block.expandable.expanded
+        assert status_block.add_block.expandable.icon == ":material/check:"
 
     def test_mutation_via_update(self):
         """Test that update can be used to change the label, state and expand."""
@@ -466,9 +565,9 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status.update(label="new label", state="error", expanded=True)
 
         status_block = self.get_delta_from_queue()
-        self.assertEqual(status_block.add_block.expandable.label, "new label")
-        self.assertTrue(status_block.add_block.expandable.expanded)
-        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
+        assert status_block.add_block.expandable.label == "new label"
+        assert status_block.add_block.expandable.expanded
+        assert status_block.add_block.expandable.icon == ":material/error:"
 
     def test_mutation_via_update_in_cm(self):
         """Test that update can be used in context manager to change the label, state
@@ -477,33 +576,57 @@ class StatusContainerTest(DeltaGeneratorTestCase):
             status.update(label="new label", state="error", expanded=True)
 
         status_block = self.get_delta_from_queue()
-        self.assertEqual(status_block.add_block.expandable.label, "new label")
-        self.assertTrue(status_block.add_block.expandable.expanded)
-        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
+        assert status_block.add_block.expandable.label == "new label"
+        assert status_block.add_block.expandable.expanded
+        assert status_block.add_block.expandable.icon == ":material/error:"
+
+    def test_width_config(self):
+        """Test that width configuration works correctly"""
+        st.status("label", width=200)
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.width_config.pixel_width == 200
+
+        st.expander("label", width="stretch")
+        status_block = self.get_delta_from_queue()
+        assert status_block.add_block.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+            ("content",),
+        ]
+    )
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.status("label", width=invalid_width)
 
 
 class TabsTest(DeltaGeneratorTestCase):
     def test_tab_required(self):
         """Test that at least one tab is required."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.tabs()
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.tabs([])
 
     def test_only_label_strings_allowed(self):
         """Test that only strings are allowed as tab labels."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.tabs(["tab1", True])
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.tabs(["tab1", 10])
 
     def test_returns_all_expected_tabs(self):
         """Test that all labels are added in correct order."""
         tabs = st.tabs([f"tab {i}" for i in range(5)])
 
-        self.assertEqual(len(tabs), 5)
+        assert len(tabs) == 5
 
         for tab in tabs:
             with tab:
@@ -514,10 +637,10 @@ class TabsTest(DeltaGeneratorTestCase):
 
         tabs_block = all_deltas[1:]
         # 6 elements will be created: 1 horizontal block, 5 tabs
-        self.assertEqual(len(all_deltas), 6)
-        self.assertEqual(len(tabs_block), 5)
+        assert len(all_deltas) == 6
+        assert len(tabs_block) == 5
         for index, tab_block in enumerate(tabs_block):
-            self.assertEqual(tab_block.add_block.tab.label, f"tab {index}")
+            assert tab_block.add_block.tab.label == f"tab {index}"
 
 
 class DialogTest(DeltaGeneratorTestCase):
@@ -536,39 +659,39 @@ class DialogTest(DeltaGeneratorTestCase):
             pass
 
         dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
-        self.assertFalse(dialog_block.add_block.dialog.is_open)
-        self.assertTrue(dialog_block.add_block.dialog.dismissible)
+        assert dialog_block.add_block.dialog.title == DialogTest.title
+        assert not dialog_block.add_block.dialog.is_open
+        assert dialog_block.add_block.dialog.dismissible
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
         dialog = st._main._dialog(DialogTest.title)
 
-        self.assertIsNotNone(dialog)
+        assert dialog is not None
         dialog_block = self.get_delta_from_queue()
-        self.assertFalse(dialog_block.add_block.dialog.is_open)
+        assert not dialog_block.add_block.dialog.is_open
 
         dialog.open()
         dialog_block = self.get_delta_from_queue()
-        self.assertTrue(dialog_block.add_block.dialog.is_open)
+        assert dialog_block.add_block.dialog.is_open
 
         dialog.close()
         dialog_block = self.get_delta_from_queue()
-        self.assertFalse(dialog_block.add_block.dialog.is_open)
+        assert not dialog_block.add_block.dialog.is_open
 
     def test_dialog_deltagenerator_only_call_open_once(self):
         """Test that only a single dialog can be opened"""
         dialog = st._main._dialog(DialogTest.title)
 
-        self.assertIsNotNone(dialog)
+        assert dialog is not None
 
         # Open first time
         dialog.open()
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             # Cannot call open while the dialog is already open
             dialog.open()
         dialog.close()
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             # Close does not reset the dialog-flag as this is handled per script-run
             # context
             dialog.open()
@@ -593,7 +716,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_decorator_title_required(self):
         """Test that the title is required in decorator"""
-        with self.assertRaises(TypeError) as e:
+        with pytest.raises(TypeError) as e:
 
             @st.dialog()
             def dialog():
@@ -601,13 +724,11 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog()
 
-        self.assertTrue(
-            e.exception.args[0].startswith(
-                "dialog_decorator() missing 1 required positional argument: 'title'"
-            )
+        assert e.value.args[0].startswith(
+            "dialog_decorator() missing 1 required positional argument: 'title'"
         )
 
-        with self.assertRaises(TypeError) as e:
+        with pytest.raises(TypeError) as e:
 
             @st.dialog()
             def dialog_with_arguments(a, b):
@@ -615,13 +736,11 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog_with_arguments("", "")
 
-        self.assertTrue(
-            e.exception.args[0].startswith(
-                "dialog_decorator() missing 1 required positional argument: 'title'"
-            )
+        assert e.value.args[0].startswith(
+            "dialog_decorator() missing 1 required positional argument: 'title'"
         )
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
 
             @st.dialog("")
             def dialog():
@@ -629,11 +748,11 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog()
 
-        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
+        assert e.value.args[0].startswith("A non-empty `title`")
 
     def test_dialog_decorator_must_be_called_like_a_function_with_a_title(self):
         """Test that the decorator must be called like a function."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
 
             @st.dialog
             def dialog():
@@ -641,7 +760,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog()
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
 
             @st.dialog
             def dialog_with_arg(a):
@@ -649,7 +768,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog_with_arg("a")
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
 
             @st.dialog
             def dialog_with_args(a, b):
@@ -681,12 +800,10 @@ class DialogTest(DeltaGeneratorTestCase):
         def dialog2():
             st.empty()
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             dialog1()
             dialog2()
 
-        self.assertTrue(
-            e.exception.args[0].startswith(
-                "Only one dialog is allowed to be opened at the same time."
-            )
+        assert e.value.args[0].startswith(
+            "Only one dialog is allowed to be opened at the same time."
         )

@@ -17,6 +17,8 @@ import unittest
 from unittest import mock
 from unittest.mock import Mock
 
+import pytest
+
 from streamlit import source_util
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 
@@ -30,7 +32,7 @@ class ScriptCacheTest(unittest.TestCase):
         """`get_bytecode` works as expected."""
         cache = ScriptCache()
         result = cache.get_bytecode(_get_script_path("good_script.py"))
-        self.assertIsNotNone(result)
+        assert result is not None
         # Execing the code shouldn't raise an error
         exec(result)
 
@@ -42,31 +44,31 @@ class ScriptCacheTest(unittest.TestCase):
 
         # The first time we get a script's bytecode, the script is loaded from disk.
         result = cache.get_bytecode(_get_script_path("good_script.py"))
-        self.assertIsNotNone(result)
+        assert result is not None
         mock_open_python_file.assert_called_once()
 
         # Subsequent calls don't reload the script from disk and return the same object.
         mock_open_python_file.reset_mock()
-        self.assertIs(cache.get_bytecode(_get_script_path("good_script.py")), result)
+        assert cache.get_bytecode(_get_script_path("good_script.py")) is result
         mock_open_python_file.assert_not_called()
 
     def test_clear(self):
         """`clear` removes cached entries."""
         cache = ScriptCache()
         cache.get_bytecode(_get_script_path("good_script.py"))
-        self.assertEqual(1, len(cache._cache))
+        assert len(cache._cache) == 1
 
         cache.clear()
-        self.assertEqual(0, len(cache._cache))
+        assert len(cache._cache) == 0
 
     def test_file_not_found_error(self):
         """An exception is thrown when a script file doesn't exist."""
         cache = ScriptCache()
-        with self.assertRaises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
             cache.get_bytecode(_get_script_path("not_a_valid_path.py"))
 
     def test_syntax_error(self):
         """An exception is thrown when a script has a compile error."""
         cache = ScriptCache()
-        with self.assertRaises(SyntaxError):
+        with pytest.raises(SyntaxError):
             cache.get_bytecode(_get_script_path("compile_error.py.txt"))

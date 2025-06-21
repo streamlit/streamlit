@@ -12,17 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
 
 
-def _get_uuids(app: Page, expected_markdown_count: int = 2):
+def _get_uuids(app: Page, expected_markdown_count: int = 2) -> tuple[str, str]:
     """Test that fragments run and the uuids are written."""
     expect(app.get_by_test_id("stMarkdown")).to_have_count(expected_markdown_count)
 
     fragment_1_text = app.get_by_test_id("stMarkdown").first.text_content()
     fragment_2_text = app.get_by_test_id("stMarkdown").last.text_content()
+
+    assert fragment_1_text is not None
+    assert fragment_2_text is not None
 
     return fragment_1_text, fragment_2_text
 

@@ -66,7 +66,7 @@ def _get_abs_folder_path(path: str) -> str:
 
 
 class EventBasedPathWatcher:
-    """Watches a single path on disk using watchdog"""
+    """Watches a single path on disk using watchdog."""
 
     @staticmethod
     def close_all() -> None:
@@ -243,7 +243,7 @@ class WatchedPath:
         *,  # keyword-only arguments:
         glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
-    ):
+    ) -> None:
         self.md5 = md5
         self.modification_time = modification_time
 
@@ -336,7 +336,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         elif event.event_type == events.EVENT_TYPE_MOVED:
             # Teach mypy that this event has a dest_path, because it can't infer
             # the desired subtype from the event_type check
-            event = cast(events.FileSystemMovedEvent, event)
+            event = cast("events.FileSystemMovedEvent", event)
 
             _LOGGER.debug(
                 "Move event: src %s; dest %s", event.src_path, event.dest_path
@@ -359,7 +359,26 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         abs_changed_path = os.path.abspath(changed_path)
 
-        changed_path_info = self._watched_paths.get(abs_changed_path, None)
+        # To prevent a race condition, we hold a lock while accessing
+        # _watched_paths.
+        with self._lock:
+            # First check if the exact path is being watched
+            changed_path_info = self._watched_paths.get(abs_changed_path, None)
+
+            # If the exact path isn't found, check if it's inside any watched
+            # directories. This is necessary for the folder watching feature to
+            # detect changes to files within watched directories, not just the
+            # directories themselves.
+            if changed_path_info is None:
+                for path, info in self._watched_paths.items():
+                    if (
+                        os.path.isdir(path)
+                        and os.path.commonpath([path, abs_changed_path]) == path
+                    ):
+                        changed_path_info = info
+                        break
+
+        # If we still haven't found a matching path, ignore this event
         if changed_path_info is None:
             _LOGGER.debug(
                 "Ignoring changed path %s.\nWatched_paths: %s",

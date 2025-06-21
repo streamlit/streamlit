@@ -12,9 +12,7 @@ runs:
   using: composite
   steps:
     - name: Enable and Prepare Latest Yarn
-      run: |
-        corepack enable
-        corepack prepare yarn@4.5.3 --activate
+      run: corepack enable
       shell: bash
     - name: Setup Node
       uses: actions/setup-node@v4

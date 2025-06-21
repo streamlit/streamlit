@@ -36,8 +36,8 @@ export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
   })
 )
 
-export const StyledToolbarActions = styled.div(({}) => ({
+export const StyledToolbarActions = styled.div({
   display: "flex",
   alignItems: "center",
   flexDirection: "row",
-}))
+})

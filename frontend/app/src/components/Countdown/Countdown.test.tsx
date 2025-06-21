@@ -24,7 +24,7 @@ import Countdown from "./Countdown"
 
 describe("Countdown Component", () => {
   it("should render without crashing", () => {
-    render(<Countdown countdown={10} />)
+    render(<Countdown countdown={10} endCallback={() => {}} />)
     const countdownElement = screen.getByText("10")
 
     expect(countdownElement).toBeVisible()

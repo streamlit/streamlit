@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast
+
 import streamlit as st
 
 
@@ -52,10 +54,10 @@ if "run_counter" not in st.session_state:
 
 
 @st.cache_resource
-def replay_element():
+def replay_element() -> int:
     st.session_state.run_counter += 1
     st.markdown(f"Cache executions: {st.session_state.run_counter}")
-    return st.session_state.run_counter
+    return cast("int", st.session_state.run_counter)
 
 
 if st.button("Cached function with element replay"):

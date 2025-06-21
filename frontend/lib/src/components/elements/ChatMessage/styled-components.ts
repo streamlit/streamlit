@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 export interface StyledChatMessageContainerProps {
   background: boolean
@@ -27,6 +27,7 @@ export const StyledChatMessageContainer =
   styled.div<StyledChatMessageContainerProps>(({ theme, background }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
+      width: "100%",
       display: "flex",
       alignItems: "flex-start",
       gap: theme.spacing.sm,

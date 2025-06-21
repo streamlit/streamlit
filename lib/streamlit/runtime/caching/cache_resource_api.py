@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.cache_resource implementation"""
+"""@st.cache_resource implementation."""
 
 from __future__ import annotations
 
 import math
 import threading
-import types
 from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar, cast, overload
 
 from cachetools import TTLCache
@@ -45,6 +44,7 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
+    import types
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -67,9 +67,9 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
 
 
 class ResourceCaches(CacheStatsProvider):
-    """Manages all ResourceCache instances"""
+    """Manages all ResourceCache instances."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, ResourceCache] = {}
 
@@ -141,7 +141,7 @@ def get_resource_cache_stats_provider() -> CacheStatsProvider:
 
 
 class CachedResourceFuncInfo(CachedFuncInfo):
-    """Implements the CachedFuncInfo interface for @st.cache_resource"""
+    """Implements the CachedFuncInfo interface for @st.cache_resource."""
 
     def __init__(
         self,
@@ -151,7 +151,7 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> None:
         super().__init__(
             func,
             show_spinner=show_spinner,
@@ -171,7 +171,7 @@ class CachedResourceFuncInfo(CachedFuncInfo):
 
     @property
     def display_name(self) -> str:
-        """A human-readable name for the cached function"""
+        """A human-readable name for the cached function."""
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache:
@@ -189,7 +189,7 @@ class CacheResourceAPI:
     and st.cache_resource.clear().
     """
 
-    def __init__(self, decorator_metric_name: str):
+    def __init__(self, decorator_metric_name: str) -> None:
         """Create a CacheResourceAPI instance.
 
         Parameters
@@ -234,7 +234,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> F | Callable[[F], F]:
         return self._decorator(
             func,
             ttl=ttl,
@@ -255,7 +255,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> F | Callable[[F], F]:
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
         Cached objects are shared across all users, sessions, and reruns. They
@@ -417,9 +417,9 @@ class CacheResourceAPI:
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
-            return lambda f: make_cached_func_wrapper(
+            return lambda f: make_cached_func_wrapper(  # type: ignore
                 CachedResourceFuncInfo(
-                    func=f,
+                    func=f,  # type: ignore
                     show_spinner=show_spinner,
                     max_entries=max_entries,
                     ttl=ttl,
@@ -430,7 +430,7 @@ class CacheResourceAPI:
 
         return make_cached_func_wrapper(
             CachedResourceFuncInfo(
-                func=cast(types.FunctionType, func),
+                func=cast("types.FunctionType", func),
                 show_spinner=show_spinner,
                 max_entries=max_entries,
                 ttl=ttl,
@@ -455,7 +455,7 @@ class ResourceCache(Cache):
         ttl_seconds: float,
         validate: ValidateFunc | None,
         display_name: str,
-    ):
+    ) -> None:
         super().__init__()
         self.key = key
         self.display_name = display_name

@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pytest
 from parameterized import parameterized
 
 from streamlit.dataframe_util import DataFormat
@@ -98,14 +99,13 @@ SHARED_DATA_KIND_TEST_CASES = [
 
 class ColumnConfigUtilsTest(unittest.TestCase):
     @parameterized.expand(
-        SHARED_DATA_KIND_TEST_CASES
-        + [
+        [
+            *SHARED_DATA_KIND_TEST_CASES,
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
             (pd.Series([], dtype="object"), ColumnDataKind.EMPTY),
             (pd.Series([None, None]), ColumnDataKind.EMPTY),
             (pd.Series([pd.NA, pd.NA]), ColumnDataKind.EMPTY),
-            #
             (pd.Series([1 + 2j, 2 + 3j]), ColumnDataKind.COMPLEX),
             (
                 pd.Series([pd.Period("2000Q1"), pd.Period("2000Q2")]),
@@ -135,18 +135,18 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         # Create copy to not interfere with other tests:
         column = column.copy()
 
-        self.assertEqual(
-            _determine_data_kind(column, _get_arrow_schema_field(column)),
-            expected_data_kind,
-            f"Expected {column} to be determined as {expected_data_kind} data kind.",
-        )
+        assert (
+            _determine_data_kind(column, _get_arrow_schema_field(column))
+            == expected_data_kind
+        ), f"Expected {column} to be determined as {expected_data_kind} data kind."
 
         # Attach a missing value to the end of the column and re-test.
         column.loc[column.index.max() + 1] = None
-        self.assertEqual(
-            _determine_data_kind(column, _get_arrow_schema_field(column)),
-            expected_data_kind,
-            f"Expected {column} with missing value to be determined as {expected_data_kind} data kind.",
+        assert (
+            _determine_data_kind(column, _get_arrow_schema_field(column))
+            == expected_data_kind
+        ), (
+            f"Expected {column} with missing value to be determined as {expected_data_kind} data kind."
         )
 
     @parameterized.expand(
@@ -185,15 +185,13 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         self, index: pd.Index, expected_data_kind: ColumnDataKind
     ):
         """Test that _determine_data_kind() returns the expected data kind for a given index."""
-        self.assertEqual(
-            _determine_data_kind(index, None),
-            expected_data_kind,
-            f"Expected {index} to be determined as {expected_data_kind} data kind.",
+        assert _determine_data_kind(index, None) == expected_data_kind, (
+            f"Expected {index} to be determined as {expected_data_kind} data kind."
         )
 
     @parameterized.expand(
-        SHARED_DATA_KIND_TEST_CASES
-        + [
+        [
+            *SHARED_DATA_KIND_TEST_CASES,
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
             (pd.Series([1, 2, 3]), ColumnDataKind.INTEGER),
             (pd.Series([1 + 2j, 2 + 3j]), ColumnDataKind.COMPLEX),
@@ -231,15 +229,13 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         """Test the data kind determination via the inferred type of the column."""
         # Create copy to not interfere with other tests:
         column = column.copy()
-        self.assertEqual(
-            _determine_data_kind_via_inferred_type(column),
-            expected_data_kind,
-            f"Expected {column} to be determined as {expected_data_kind} data kind.",
+        assert _determine_data_kind_via_inferred_type(column) == expected_data_kind, (
+            f"Expected {column} to be determined as {expected_data_kind} data kind."
         )
 
     @parameterized.expand(
-        SHARED_DATA_KIND_TEST_CASES
-        + [
+        [
+            *SHARED_DATA_KIND_TEST_CASES,
             (pd.Series([1, 2, 3]), ColumnDataKind.INTEGER),
             (pd.Series([1 + 2j, 2 + 3j]), ColumnDataKind.COMPLEX),
             (
@@ -264,15 +260,13 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         """Test that the data kind is correctly determined via the pandas dtype."""
         # Create copy to not interfere with other tests:
         column = column.copy()
-        self.assertEqual(
-            _determine_data_kind_via_pandas_dtype(column),
-            expected_data_kind,
-            f"Expected {column} to be determined as {expected_data_kind} data kind.",
+        assert _determine_data_kind_via_pandas_dtype(column) == expected_data_kind, (
+            f"Expected {column} to be determined as {expected_data_kind} data kind."
         )
 
     @parameterized.expand(
-        SHARED_DATA_KIND_TEST_CASES
-        + [
+        [
+            *SHARED_DATA_KIND_TEST_CASES,
             (pd.Series([1, 2, 3]), ColumnDataKind.INTEGER),
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
@@ -303,15 +297,12 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         column = column.copy()
         arrow_field = _get_arrow_schema_field(column)
 
-        self.assertIsNotNone(
-            arrow_field,
-            f"Expected Arrow field to be detected for {column} ({expected_data_kind}).",
+        assert arrow_field is not None, (
+            f"Expected Arrow field to be detected for {column} ({expected_data_kind})."
         )
 
-        self.assertEqual(
-            _determine_data_kind_via_arrow(arrow_field),
-            expected_data_kind,
-            f"Expected {column} to be determined as {expected_data_kind} data kind.",
+        assert _determine_data_kind_via_arrow(arrow_field) == expected_data_kind, (
+            f"Expected {column} to be determined as {expected_data_kind} data kind."
         )
 
     def test_determine_dataframe_schema(self):
@@ -331,17 +322,14 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         arrow_schema = pa.Table.from_pandas(df).schema
 
-        self.assertEqual(
-            determine_dataframe_schema(df, arrow_schema),
-            {
-                INDEX_IDENTIFIER: ColumnDataKind.INTEGER,  # This is the type of the index
-                "int": ColumnDataKind.INTEGER,
-                "float": ColumnDataKind.FLOAT,
-                "bool": ColumnDataKind.BOOLEAN,
-                "str": ColumnDataKind.STRING,
-                "empty": ColumnDataKind.EMPTY,
-            },
-        )
+        assert determine_dataframe_schema(df, arrow_schema) == {
+            INDEX_IDENTIFIER: ColumnDataKind.INTEGER,  # This is the type of the index
+            "int": ColumnDataKind.INTEGER,
+            "float": ColumnDataKind.FLOAT,
+            "bool": ColumnDataKind.BOOLEAN,
+            "str": ColumnDataKind.STRING,
+            "empty": ColumnDataKind.EMPTY,
+        }
 
     def test_is_type_compatible(self):
         """Test that the is_type_compatible function correctly checks for compatibility
@@ -349,20 +337,17 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         """
         for column_type, data_kinds in _EDITING_COMPATIBILITY_MAPPING.items():
             for data_kind in data_kinds:
-                self.assertTrue(
-                    is_type_compatible(column_type, data_kind),
-                    f"Expected {column_type} to be compatible with {data_kind}",
+                assert is_type_compatible(column_type, data_kind), (
+                    f"Expected {column_type} to be compatible with {data_kind}"
                 )
-            self.assertFalse(
-                is_type_compatible(column_type, ColumnDataKind.UNKNOWN),
-                f"Expected {column_type} to not be compatible with {data_kind}",
+            assert not is_type_compatible(column_type, ColumnDataKind.UNKNOWN), (
+                f"Expected {column_type} to not be compatible with {data_kind}"
             )
 
         # Check that non-editable column types are compatible to all data kinds:
         for data_kind in ColumnDataKind:
-            self.assertTrue(
-                is_type_compatible("list", data_kind),
-                f"Expected list to be compatible with {data_kind}",
+            assert is_type_compatible("list", data_kind), (
+                f"Expected list to be compatible with {data_kind}"
             )
 
     def test_process_config_mapping_is_clone(self):
@@ -380,10 +365,8 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         processed_config = process_config_mapping(config_1)
         processed_config["col1"]["label"] = "Changed label"
 
-        self.assertNotEqual(
-            processed_config["col1"]["label"],
-            config_1["col1"]["label"],
-            "The labels should be different.",
+        assert processed_config["col1"]["label"] != config_1["col1"]["label"], (
+            "The labels should be different."
         )
 
     def test_process_config_mapping(self):
@@ -397,10 +380,8 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 "type_config": {"type": "link"},
             },
         }
-        self.assertEqual(
-            process_config_mapping(config_1),
-            config_1,
-            "Expected no changes to config mapping.",
+        assert process_config_mapping(config_1) == config_1, (
+            "Expected no changes to config mapping."
         )
 
         config_2: ColumnConfigMappingInput = {
@@ -408,13 +389,11 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             "col1": "Column 1",
         }
 
-        self.assertEqual(
-            process_config_mapping(config_2),
-            {
-                "index": {"label": "Index", "width": "medium"},
-                "col1": {"label": "Column 1"},
-            },
-            "Expected string to be converted to valid column config dict with string as label.",
+        assert process_config_mapping(config_2) == {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": {"label": "Column 1"},
+        }, (
+            "Expected string to be converted to valid column config dict with string as label."
         )
 
         config_3: ColumnConfigMappingInput = {
@@ -422,24 +401,18 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             "col1": None,
         }
         # The None should be converted to a valid column config dict:
-        self.assertEqual(
-            process_config_mapping(config_3),
-            {
-                "index": {"label": "Index", "width": "medium"},
-                "col1": {"hidden": True},
-            },
-            "Expected None to be converted to valid column config dict with hidden=True.",
-        )
+        assert process_config_mapping(config_3) == {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": {"hidden": True},
+        }, "Expected None to be converted to valid column config dict with hidden=True."
 
         config_4: ColumnConfigMappingInput = None  # type: ignore
 
-        self.assertEqual(
-            process_config_mapping(config_4),
-            {},
-            "Expected None to be converted to empty dict.",
+        assert process_config_mapping(config_4) == {}, (
+            "Expected None to be converted to empty dict."
         )
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             process_config_mapping({"col1": ["a", "b"]})  # type: ignore
 
     def test_update_column_config(self):
@@ -464,9 +437,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             "width": "large",
             "disabled": True,
         }
-        self.assertEqual(
-            initial_column_config[column_to_update], expected_column_config
-        )
+        assert initial_column_config[column_to_update] == expected_column_config
 
         # Test updating a column that doesn't exist in the initial column config mapping
         column_to_update = "col2"
@@ -476,7 +447,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         update_column_config(initial_column_config, column_to_update, new_column_config)
 
         # Check if the new column config was added correctly
-        self.assertEqual(initial_column_config[column_to_update], new_column_config)
+        assert initial_column_config[column_to_update] == new_column_config
 
     @parameterized.expand(
         [
@@ -520,18 +491,16 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         apply_data_specific_configs(columns_config, data_format)
 
         if hidden:
-            self.assertEqual(
-                columns_config[INDEX_IDENTIFIER]["hidden"],
-                hidden,
-                f"Data of type {data_format} should be hidden.",
+            assert columns_config[INDEX_IDENTIFIER]["hidden"] == hidden, (
+                f"Data of type {data_format} should be hidden."
             )
         else:
-            self.assertNotIn(INDEX_IDENTIFIER, columns_config)
+            assert INDEX_IDENTIFIER not in columns_config
 
     def test_nan_as_value_raises_exception(self):
         """Test that the usage of `nan` as value in column config raises an exception."""
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             _convert_column_config_to_json(
                 {
                     "label": "Col1",

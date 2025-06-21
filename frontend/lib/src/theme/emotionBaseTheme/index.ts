@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createEmotionColors } from "@streamlit/lib/src/theme/getColors"
+import { createEmotionColors } from "~lib/theme/getColors"
 import {
   breakpoints,
   fonts,
@@ -27,12 +27,14 @@ import {
   sizes,
   spacing,
   zIndices,
-} from "@streamlit/lib/src/theme/primitives"
+} from "~lib/theme/primitives"
 
 import genericColors from "./themeColors"
 
 export default {
   inSidebar: false,
+  showSidebarBorder: false,
+  linkUnderline: true,
   breakpoints,
   colors: createEmotionColors(genericColors),
   fonts,

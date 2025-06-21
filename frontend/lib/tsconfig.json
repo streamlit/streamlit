@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig.dev.json",
+  "extends": "@streamlit/typescript-config/react.tsconfig.json",
   "compilerOptions": {
     "checkJs": false,
     "baseUrl": ".",
@@ -7,8 +7,10 @@
     "emitDeclarationOnly": true,
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "paths": {
+      "~lib/*": ["src/*"]
+    }
   },
-  "include": ["src", "declarations.d.ts"],
-  "exclude": ["node_modules/**/*", "**/proto.js"]
+  "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"],
+  "exclude": ["**/proto.js"]
 }

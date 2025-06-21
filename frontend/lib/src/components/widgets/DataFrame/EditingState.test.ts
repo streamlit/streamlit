@@ -15,11 +15,13 @@
  */
 
 import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import { Field, Utf8 } from "apache-arrow"
 
 import {
   BaseColumnProps,
   TextColumn,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+} from "~lib/components/widgets/DataFrame/columns"
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import EditingState from "./EditingState"
 
@@ -158,8 +160,15 @@ describe("EditingState class", () => {
       title: "column_1",
       indexNumber: 0,
       arrowType: {
-        pandas_type: "unicode",
-        numpy_type: "object",
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("column_1", new Utf8(), true),
+        pandasType: {
+          field_name: "column_1",
+          name: "column_1",
+          pandas_type: "unicode",
+          numpy_type: "object",
+          metadata: null,
+        },
       },
       isEditable: true,
       isRequired: true,
@@ -211,8 +220,15 @@ describe("EditingState class", () => {
       title: "column_1",
       indexNumber: 0,
       arrowType: {
-        pandas_type: "unicode",
-        numpy_type: "object",
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("column_1", new Utf8(), true),
+        pandasType: {
+          field_name: "column_1",
+          name: "column_1",
+          pandas_type: "unicode",
+          numpy_type: "object",
+          metadata: null,
+        },
       },
       isEditable: false,
       isHidden: false,
@@ -267,8 +283,15 @@ describe("EditingState class", () => {
       title: "column_1",
       indexNumber: 0,
       arrowType: {
-        pandas_type: "unicode",
-        numpy_type: "object",
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("column_1", new Utf8(), true),
+        pandasType: {
+          field_name: "column_1",
+          name: "column_1",
+          pandas_type: "unicode",
+          numpy_type: "object",
+          metadata: null,
+        },
       },
       isEditable: false,
       isRequired: false,
@@ -314,8 +337,15 @@ describe("EditingState class", () => {
       title: "column_1",
       indexNumber: 0,
       arrowType: {
-        pandas_type: "unicode",
-        numpy_type: "object",
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("column_1", new Utf8(), true),
+        pandasType: {
+          field_name: "column_1",
+          name: "column_1",
+          pandas_type: "unicode",
+          numpy_type: "object",
+          metadata: null,
+        },
       },
       isEditable: false,
       isRequired: false,

@@ -16,18 +16,18 @@
 
 import { Mock, Mocked } from "vitest"
 import { View as VegaView } from "vega"
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
 
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { debounce } from "@streamlit/lib/src/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { debounce } from "~lib/util/utils"
 
 import { useVegaLiteSelections } from "./useVegaLiteSelections"
 import { VegaLiteChartElement } from "./arrowUtils"
 
 // Mock the debounce so we can control how/when it is invoked.
-vi.mock("@streamlit/lib/src/util/utils", async () => ({
+vi.mock("~lib/util/utils", async () => ({
   // we will override the `debounce`
-  ...(await vi.importActual("@streamlit/lib/src/util/utils")),
+  ...(await vi.importActual("~lib/util/utils")),
   debounce: vi.fn(),
 }))
 
@@ -49,6 +49,7 @@ describe("useVegaLiteSelections", () => {
 
     const debouncedMock = debounce as Mock
     // By default, the mocked debounce simply calls its callback immediately.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     debouncedMock.mockImplementation((_delay: number, fn: any) => fn)
   })
 

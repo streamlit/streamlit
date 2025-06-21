@@ -14,148 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  buildHttpUri,
-  buildWsUri,
-  getPossibleBaseUris,
-  getWindowBaseUriParts,
-  isValidOrigin,
-} from "./UriUtil"
-
-const location: Partial<Location> = {}
-
-global.window = Object.create(window)
-Object.defineProperty(window, "location", { value: location })
-
-test("gets all window URI parts", () => {
-  location.hostname = "the_host"
-  location.port = "9988"
-  location.pathname = "foo"
-
-  const parts = getWindowBaseUriParts()
-  expect(parts).toStrictEqual({
-    host: "the_host",
-    port: 9988,
-    basePath: "foo",
-  })
-})
-
-test("gets window URI parts without basePath", () => {
-  location.hostname = "the_host"
-  location.port = "9988"
-  location.pathname = ""
-
-  const parts = getWindowBaseUriParts()
-  expect(parts).toStrictEqual({
-    host: "the_host",
-    port: 9988,
-    basePath: "",
-  })
-})
-
-test("gets window URI parts with long basePath", () => {
-  location.hostname = "the_host"
-  location.port = "9988"
-  location.pathname = "/foo/bar"
-
-  const parts = getWindowBaseUriParts()
-  expect(parts).toStrictEqual({
-    host: "the_host",
-    port: 9988,
-    basePath: "foo/bar",
-  })
-})
-
-test("gets window URI parts with weird basePath", () => {
-  location.hostname = "the_host"
-  location.port = "9988"
-  location.pathname = "///foo/bar//"
-
-  const parts = getWindowBaseUriParts()
-  expect(parts).toStrictEqual({
-    host: "the_host",
-    port: 9988,
-    basePath: "foo/bar",
-  })
-})
-
-test("builds HTTP URI correctly", () => {
-  location.href = "http://something"
-  const uri = buildHttpUri(
-    {
-      host: "the_host",
-      port: 9988,
-      basePath: "foo/bar",
-    },
-    "baz"
-  )
-  expect(uri).toBe("http://the_host:9988/foo/bar/baz")
-})
-
-test("builds HTTPS URI correctly", () => {
-  location.href = "https://something"
-  const uri = buildHttpUri(
-    {
-      host: "the_host",
-      port: 9988,
-      basePath: "foo/bar",
-    },
-    "baz"
-  )
-  expect(uri).toBe("https://the_host:9988/foo/bar/baz")
-})
-
-test("builds HTTP URI with no base path", () => {
-  location.href = "http://something"
-  const uri = buildHttpUri(
-    {
-      host: "the_host",
-      port: 9988,
-      basePath: "",
-    },
-    "baz"
-  )
-  expect(uri).toBe("http://the_host:9988/baz")
-})
-
-test("builds WS URI correctly", () => {
-  location.href = "http://something"
-  const uri = buildWsUri(
-    {
-      host: "the_host",
-      port: 9988,
-      basePath: "foo/bar",
-    },
-    "baz"
-  )
-  expect(uri).toBe("ws://the_host:9988/foo/bar/baz")
-})
-
-test("builds WSS URI correctly", () => {
-  location.href = "https://something"
-  const uri = buildWsUri(
-    {
-      host: "the_host",
-      port: 9988,
-      basePath: "foo/bar",
-    },
-    "baz"
-  )
-  expect(uri).toBe("wss://the_host:9988/foo/bar/baz")
-})
-
-test("builds WS URI with no base path", () => {
-  location.href = "http://something"
-  const uri = buildWsUri(
-    {
-      host: "the_host",
-      port: 9988,
-      basePath: "",
-    },
-    "baz"
-  )
-  expect(uri).toBe("ws://the_host:9988/baz")
-})
+import { isValidOrigin } from "./UriUtil"
 
 describe("isValidOrigin", () => {
   it("returns false if allowedOrigin is invalid", () => {
@@ -248,11 +107,13 @@ describe("isValidOrigin", () => {
     // issue is fixed.
     const OrigURL = globalThis.URL
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       globalThis.URL = function (url: string, ...rest: any[]) {
         if (url.includes("*")) {
           throw new Error("Invalid URL")
         }
         return new OrigURL(url, ...rest)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any
       expect(
         isValidOrigin(
@@ -455,51 +316,6 @@ describe("isValidOrigin", () => {
       expect(
         isValidOrigin("https://example.com:80*", "https://example.com:91")
       ).toBe(false)
-    })
-  })
-})
-
-describe("getPossibleBaseUris", () => {
-  let originalPathName = ""
-
-  beforeEach(() => {
-    originalPathName = window.location.pathname
-  })
-
-  afterEach(() => {
-    window.location.pathname = originalPathName
-  })
-
-  const testCases = [
-    {
-      description: "empty pathnames",
-      pathname: "",
-      expectedBasePaths: [""],
-    },
-    {
-      description: "pathnames with a single part",
-      pathname: "foo",
-      expectedBasePaths: ["foo", ""],
-    },
-    {
-      description: "pathnames with two parts",
-      pathname: "foo/bar",
-      expectedBasePaths: ["foo/bar", "foo"],
-    },
-    {
-      description: "pathnames with more than two parts",
-      pathname: "foo/bar/baz/qux",
-      expectedBasePaths: ["foo/bar/baz/qux", "foo/bar/baz"],
-    },
-  ]
-
-  testCases.forEach(({ description, pathname, expectedBasePaths }) => {
-    it(`handles ${description}`, () => {
-      window.location.pathname = pathname
-
-      expect(getPossibleBaseUris().map(b => b.basePath)).toEqual(
-        expectedBasePaths
-      )
     })
   })
 })

@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import unittest
 
+import pytest
+
 from streamlit.runtime.caching.storage import (
     CacheStorageContext,
     CacheStorageKeyNotFoundError,
@@ -45,7 +47,7 @@ class DummyCacheStorageManagerTest(unittest.TestCase):
         Test that storage.get() returns CacheStorageKeyNotFoundError when key is not
         present.
         """
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("some-key")
 
     def test_in_memory_wrapped_dummy_cache_storage_get_found(self):
@@ -53,14 +55,14 @@ class DummyCacheStorageManagerTest(unittest.TestCase):
         Test that storage.get() returns the value when key is present.
         """
         self.storage.set("some-key", b"some-value")
-        self.assertEqual(self.storage.get("some-key"), b"some-value")
+        assert self.storage.get("some-key") == b"some-value"
 
     def test_in_memory_wrapped_dummy_cache_storage_storage_set(self):
         """
         Test that storage.set() sets the value correctly.
         """
         self.storage.set("new-key", b"new-value")
-        self.assertEqual(self.storage.get("new-key"), b"new-value")
+        assert self.storage.get("new-key") == b"new-value"
 
     def test_in_memory_wrapped_dummy_cache_storage_storage_set_override(self):
         """
@@ -68,7 +70,7 @@ class DummyCacheStorageManagerTest(unittest.TestCase):
         """
         self.storage.set("another_key", b"another_value")
         self.storage.set("another_key", b"new_value")
-        self.assertEqual(self.storage.get("another_key"), b"new_value")
+        assert self.storage.get("another_key") == b"new_value"
 
     def test_in_memory_wrapped_dummy_cache_storage_storage_delete(self):
         """
@@ -76,7 +78,7 @@ class DummyCacheStorageManagerTest(unittest.TestCase):
         """
         self.storage.set("new-key", b"new-value")
         self.storage.delete("new-key")
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("new-key")
 
 
@@ -88,12 +90,12 @@ class DummyCacheStorageTest(unittest.TestCase):
     def test_dummy_storage_get_always_not_found(self):
         """Test that storage.get() always returns CacheStorageKeyNotFoundError."""
 
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("some-key")
 
         self.storage.set("some-key", b"some-value")
 
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("some-key")
 
     def test_storage_set(self):
@@ -101,7 +103,7 @@ class DummyCacheStorageTest(unittest.TestCase):
         Test that storage.set() works correctly, at always do nothing without
         raising exception."""
         self.storage.set("new-key", b"new-value")
-        with self.assertRaises(CacheStorageKeyNotFoundError):
+        with pytest.raises(CacheStorageKeyNotFoundError):
             self.storage.get("new-key")
 
     def test_storage_delete(self):

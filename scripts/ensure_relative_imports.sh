@@ -36,7 +36,7 @@ search_files() {
 
 # Set the folder path and the search string
 folder_path="frontend/lib/dist"
-search_string="@streamlit/lib/src"
+search_string="~lib"
 
 # Call the function to search for the string in .ts and .js files
 search_files "$folder_path" "$search_string"

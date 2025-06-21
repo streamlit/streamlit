@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Config } from "@streamlit/lib"
-import { isLocalhost } from "@streamlit/app/src/components/MainMenu"
+import { Config } from "@streamlit/protobuf"
+import { isLocalhost } from "@streamlit/utils"
 
 export const showDevelopmentOptions = (
   hostIsOwner: boolean | undefined,

@@ -26,6 +26,12 @@ from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
 
 
+class SomeError(Exception):
+    def __init__(self, message, **kwargs):
+        self.__dict__.update(kwargs)
+        super().__init__(self, message)
+
+
 @pytest.mark.require_integration
 class SnowflakeConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
@@ -63,19 +69,7 @@ class SnowflakeConnectionTest(unittest.TestCase):
     def test_uses_config_manager_if_available(self, patched_connect):
         SnowflakeConnection("snowflake", some_kwarg="some_value")
 
-        patched_connect.assert_called_once_with(
-            connection_name="default", some_kwarg="some_value"
-        )
-
-    @patch("snowflake.connector.connection")
-    @patch("snowflake.connector.connect")
-    def test_falls_back_to_using_kwargs_last(self, patched_connect, patched_connection):
-        delattr(patched_connection, "CONFIG_MANAGER")
-
-        SnowflakeConnection("snowflake", account="account", some_kwarg="some_value")
-        patched_connect.assert_called_once_with(
-            account="account", some_kwarg="some_value"
-        )
+        patched_connect.assert_called_once_with()
 
     def test_throws_friendly_error_if_no_config_set(self):
         with pytest.raises(StreamlitAPIException) as e:
@@ -152,21 +146,16 @@ class SnowflakeConnectionTest(unittest.TestCase):
         MagicMock(),
     )
     def test_retry_behavior(self):
-        from snowflake.connector.errors import ProgrammingError
-        from snowflake.connector.network import MASTER_TOKEN_EXPIRED_GS_CODE
-
         mock_cursor = MagicMock()
         mock_cursor.fetch_pandas_all = MagicMock(
-            side_effect=ProgrammingError(
-                "oh noes :(", errno=int(MASTER_TOKEN_EXPIRED_GS_CODE)
-            )
+            side_effect=SomeError("oh no", sqlstate="08001")
         )
 
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
 
         with patch.object(conn, "reset", wraps=conn.reset) as wrapped_reset:
-            with pytest.raises(ProgrammingError):
+            with pytest.raises(SomeError):
                 conn.query("SELECT 1;")
 
             # Our connection should have been reset after each failed attempt to call
@@ -182,18 +171,16 @@ class SnowflakeConnectionTest(unittest.TestCase):
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
         MagicMock(),
     )
-    def test_retry_fails_fast_for_programming_errors_with_wrong_code(self):
-        from snowflake.connector.errors import ProgrammingError
-
+    def test_retry_fails_fast_for_programming_errors_with_wrong_sqlstate(self):
         mock_cursor = MagicMock()
         mock_cursor.fetch_pandas_all = MagicMock(
-            side_effect=ProgrammingError("oh noes :(", errno=42)
+            side_effect=SomeError("oh no", sqlstate="42")
         )
 
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
 
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(SomeError):
             conn.query("SELECT 1;")
 
         # conn._connect should have just been called once when first creating the
@@ -208,9 +195,7 @@ class SnowflakeConnectionTest(unittest.TestCase):
         from snowflake.connector.errors import Error as SnowflakeError
 
         mock_cursor = MagicMock()
-        mock_cursor.fetch_pandas_all = MagicMock(
-            side_effect=SnowflakeError("oh noes :(")
-        )
+        mock_cursor.fetch_pandas_all = MagicMock(side_effect=SnowflakeError("oh no"))
 
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
@@ -228,12 +213,12 @@ class SnowflakeConnectionTest(unittest.TestCase):
     )
     def test_retry_fails_fast_for_other_errors(self):
         mock_cursor = MagicMock()
-        mock_cursor.fetch_pandas_all = MagicMock(side_effect=Exception("oh noes :("))
+        mock_cursor.fetch_pandas_all = MagicMock(side_effect=Exception("oh no"))
 
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
 
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception, match="oh no"):
             conn.query("SELECT 1;")
 
         # conn._connect should have just been called once when first creating the

@@ -1,0 +1,42 @@
+name: Static FE Streamlit Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-fe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make frontend-fast
+        run: make frontend-fast
+      - name: Upload FE build files to S3
+        id: exports
+        env:
+          AWS_DEFAULT_REGION: us-west-2
+          AWS_ACCESS_KEY_ID: ${{ secrets.STATIC_S3_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.STATIC_S3_SECRET_KEY }}
+        run: |
+          source venv/bin/activate
+          # Install awscli via pip/uv:
+          uv pip install awscli==1.37.6
+
+          # Remove old build files from static (which have hashes in their names)
+          aws s3 rm s3://notebooks.streamlit.io/static --recursive
+          aws s3 cp frontend/app/build s3://notebooks.streamlit.io --recursive --cache-control max-age=0,no-cache,no-store,must-revalidate --acl public-read

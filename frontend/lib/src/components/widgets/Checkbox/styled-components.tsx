@@ -16,20 +16,13 @@
 
 import styled from "@emotion/styled"
 
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
-export interface StyledCheckboxProps {
-  width: number
-}
-
-export const StyledCheckbox = styled.div<StyledCheckboxProps>(
-  ({ width, theme }) => ({
-    width,
-    display: "flex",
-    alignItems: "center",
-    minHeight: theme.sizes.smallElementHeight,
-  })
-)
+export const StyledCheckbox = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  minHeight: theme.sizes.smallElementHeight,
+}))
 
 export interface StyledContentProps {
   visibility?: LabelVisibilityOptions

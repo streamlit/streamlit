@@ -15,33 +15,38 @@
  */
 import styled from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
-export interface StyledChatInputContainerProps {
-  width: number
+export const StyledChatInputContainer = styled.div`
+  border: none;
+  position: relative;
+  display: flex;
+`
+
+export interface StyledChatInputProps {
+  extended: boolean
 }
 
-export const StyledChatInputContainer =
-  styled.div<StyledChatInputContainerProps>(({ theme, width }) => {
-    return {
-      borderRadius: theme.radii.xxxl,
-      display: "flex",
-      backgroundColor:
-        theme.colors.widgetBackgroundColor ?? theme.colors.secondaryBg,
-      width: `${width}px`,
-    }
-  })
-
-export const StyledChatInput = styled.div(({ theme }) => {
-  return {
-    backgroundColor: theme.colors.transparent,
+export const StyledChatInput = styled.div<StyledChatInputProps>(
+  ({ theme, extended }) => ({
+    border: `${theme.sizes.borderWidth} solid`,
+    borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
+    borderRadius: theme.radii.chatInput,
+    backgroundColor: theme.colors.secondaryBg,
     position: "relative",
     flexGrow: 1,
-    borderRadius: theme.radii.xxxl,
     display: "flex",
     alignItems: "center",
-  }
-})
+    paddingLeft: theme.spacing.lg,
+    maxHeight: extended ? "none" : theme.sizes.minElementHeight,
+    gap: theme.spacing.sm,
+    overflow: "hidden",
+
+    ":focus-within": {
+      borderColor: theme.colors.primary,
+    },
+  })
+)
 
 interface StyledSendIconButtonProps {
   disabled: boolean
@@ -57,9 +62,9 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
     return {
       border: "none",
       backgroundColor: theme.colors.transparent,
-      borderTopRightRadius: extended ? "0" : theme.radii.xxxl,
+      borderTopRightRadius: extended ? "0" : theme.radii.chatInput,
       borderTopLeftRadius: extended ? theme.radii.default : "0",
-      borderBottomRightRadius: theme.radii.xxxl,
+      borderBottomRightRadius: theme.radii.chatInput,
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -86,19 +91,22 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         backgroundColor: theme.colors.transparent,
         borderColor: theme.colors.transparent,
         color: theme.colors.gray,
+        cursor: "not-allowed",
       },
     }
   }
 )
 
-export const StyledSendIconButtonContainer = styled.div({
+export const StyledSendIconButtonContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "flex-end",
   height: "100%",
   position: "absolute",
   right: 0,
+  // Negative margin to offset the parent border width when we align button to end
+  marginBottom: `-${theme.sizes.borderWidth}`,
   pointerEvents: "none",
-})
+}))
 
 export const StyledInputInstructionsContainer = styled.div(({ theme }) => ({
   position: "absolute",

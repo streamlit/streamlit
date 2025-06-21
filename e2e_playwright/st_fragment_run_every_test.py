@@ -18,7 +18,10 @@ from playwright.sync_api import Page, expect
 def test_fragment_runs_at_interval(app: Page):
     fragment_text = app.get_by_test_id("stMarkdown").first.text_content()
 
+    assert fragment_text is not None
+
     # Verify that the fragment text updates a few times.
     for _ in range(3):
         expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(fragment_text)
         fragment_text = app.get_by_test_id("stMarkdown").first.text_content()
+        assert fragment_text is not None

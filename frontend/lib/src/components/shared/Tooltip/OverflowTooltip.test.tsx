@@ -19,8 +19,8 @@ import React from "react"
 import { render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import ThemeProvider from "~lib/components/core/ThemeProvider"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"

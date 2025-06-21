@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "AlertProto";
 
+import "streamlit/proto/WidthConfig.proto";
+
 // NOTE: This proto type is used by some external services so needs to remain
 // relatively stable. While it isn't entirely set in stone, changing it
 // may require a good amount of effort so should be avoided if possible.
@@ -27,6 +29,9 @@ message Alert {
   string body = 1;
   Format format = 2;
   string icon = 3;
+
+  // Indicates the width setting: "stetch", "content" or a pixel value.
+  streamlit.WidthConfig width_config = 4;
 
   // Type of Alert
   enum Format {

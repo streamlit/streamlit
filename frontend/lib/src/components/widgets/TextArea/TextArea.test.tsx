@@ -16,15 +16,17 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
-} from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "@streamlit/protobuf"
+
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
 
@@ -39,7 +41,6 @@ const getProps = (
     placeholder: "Placeholder",
     ...elementProps,
   }),
-  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -84,13 +85,12 @@ describe("TextArea widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<TextArea {...props} />)
     const textArea = screen.getByTestId("stTextArea")
 
     expect(textArea).toHaveClass("stTextArea")
-    expect(textArea).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
@@ -226,7 +226,12 @@ describe("TextArea widget", () => {
 
   it("hides Please enter to apply text when width is smaller than 180px", async () => {
     const user = userEvent.setup()
-    const props = getProps({}, { width: 100 })
+    const props = getProps({}, {})
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [100],
+    })
+
     render(<TextArea {...props} />)
 
     const textArea = screen.getByRole("textbox")
@@ -236,8 +241,13 @@ describe("TextArea widget", () => {
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", async () => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [190],
+    })
+
     const user = userEvent.setup()
-    const props = getProps({}, { width: 190 })
+    const props = getProps({}, {})
     render(<TextArea {...props} />)
 
     const textArea = screen.getByRole("textbox")
@@ -265,7 +275,7 @@ describe("TextArea widget", () => {
     props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(textArea).toHaveValue(props.element.default)
+    await waitFor(() => expect(textArea).toHaveValue(props.element.default))
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
@@ -318,11 +328,15 @@ describe("TextArea widget", () => {
 
     // Remove focus
     textArea.blur()
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
 
     // Then focus again
     textArea.focus()
-    expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
+    await waitFor(() => {
+      expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
+    })
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {

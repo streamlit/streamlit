@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+import { NewSession } from "@streamlit/protobuf"
+
 import { SessionInfo } from "./SessionInfo"
-import { NewSession } from "./proto"
 import { mockSessionInfoProps } from "./mocks/mocks"
 
 test("Throws an error when used before initialization", () => {
@@ -70,10 +71,13 @@ test("Props can be initialized from a protobuf", () => {
       userInfo: {
         installationId: "installationId",
         installationIdV3: "installationIdV3",
+        installationIdV4: "mockInstallationIdV4",
       },
       environmentInfo: {
         streamlitVersion: "streamlitVersion",
         pythonVersion: "pythonVersion",
+        serverOs: "mockServerOS",
+        hasDisplay: true,
       },
       sessionStatus: {
         runOnSave: false,
@@ -88,8 +92,11 @@ test("Props can be initialized from a protobuf", () => {
   expect(props.sessionId).toEqual("sessionId")
   expect(props.streamlitVersion).toEqual("streamlitVersion")
   expect(props.pythonVersion).toEqual("pythonVersion")
+  expect(props.serverOS).toEqual("mockServerOS")
+  expect(props.hasDisplay).toBeTruthy()
   expect(props.installationId).toEqual("installationId")
   expect(props.installationIdV3).toEqual("installationIdV3")
+  expect(props.installationIdV4).toEqual("mockInstallationIdV4")
   expect(props.maxCachedMessageAge).toEqual(31)
   expect(props.commandLine).toBeUndefined()
   expect(props.isHello).toBeFalsy()

@@ -46,7 +46,7 @@ class FolderBlackList:
 
     """
 
-    def __init__(self, folder_blacklist):
+    def __init__(self, folder_blacklist: list[str]) -> None:
         """Constructor.
 
         Parameters
@@ -67,7 +67,7 @@ class FolderBlackList:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def is_blacklisted(self, filepath):
+    def is_blacklisted(self, filepath: str) -> bool:
         """Test if filepath is in the blacklist.
 
         Parameters

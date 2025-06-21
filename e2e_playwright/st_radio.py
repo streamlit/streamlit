@@ -97,3 +97,28 @@ if runtime.exists():
 
 v13 = st.radio("radio 13 (empty selection)", options, index=None)
 st.write("value 13:", v13)
+
+st.radio(
+    "radio 14 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    options=markdown_options,
+)
+
+st.header("Radio - width examples")
+
+st.radio(
+    "Radio with content width (default)",
+    ["Option 1", "Option 2", "Option 3"],
+    width="content",
+)
+
+st.radio(
+    "Radio with stretch width",
+    ["Option A", "Option B", "Option C"],
+    width="stretch",
+)
+
+st.radio(
+    "Radio with 200px width. Label is too long to fit in the width",
+    ["Choice 1", "Choice 2", "Choice 3"],
+    width=200,
+)

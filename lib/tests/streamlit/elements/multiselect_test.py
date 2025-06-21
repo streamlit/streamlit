@@ -23,7 +23,9 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.multiselect import (
+    MultiSelectSerde,
     _get_default_count,
 )
 from streamlit.errors import (
@@ -48,20 +50,21 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", ("m", "f"))
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertListEqual(c.default[:], [])
-        self.assertEqual(c.disabled, False)
+        assert c.default[:] == []
+        assert not c.disabled
+        assert not c.accept_new_options
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.multiselect("the label", ("m", "f"), disabled=True)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -85,9 +88,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", arg_options, default=None)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default[:] == []
+        assert c.options == proto_options
 
     def test_default_string(self):
         """Test if works when the default value is not a list."""
@@ -97,9 +100,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", arg_options, default=123)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [1])
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default[:] == [1]
+        assert c.options == proto_options
 
     def test_format_function(self):
         """Test that it formats options."""
@@ -109,9 +112,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", arg_options, format_func=lambda x: x["name"])
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default[:] == []
+        assert c.options == proto_options
 
     @parameterized.expand(
         [
@@ -128,9 +131,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", options, default=options)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
-        self.assertEqual(c.options, [])
+        assert c.label == "the label"
+        assert c.default[:] == []
+        assert c.options == []
 
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     def test_defaults(self, defaults, expected):
@@ -138,10 +141,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], expected)
-        self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
-        self.assertEqual(c.placeholder, "Choose an option")
+        assert c.label == "the label"
+        assert c.default[:] == expected
+        assert c.options == ["Coffee", "Tea", "Water"]
+        assert c.placeholder == "Choose an option"
 
     @parameterized.expand(
         [
@@ -157,9 +160,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], expected)
-        self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
+        assert c.label == "the label"
+        assert c.default[:] == expected
+        assert c.options == ["Coffee", "Tea", "Water"]
 
     @parameterized.expand(
         [
@@ -201,9 +204,17 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("label", options, defaults)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "label")
-        self.assertListEqual(c.default[:], expected_default)
-        self.assertEqual(c.options, expected_options)
+        assert c.label == "label"
+        assert c.default[:] == expected_default
+        assert c.options == expected_options
+
+    def test_accept_new_options(self):
+        """Test that it can accept new options."""
+        st.multiselect("the label", ("m", "f"), accept_new_options=True)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.accept_new_options
+        assert c.placeholder == "Choose or add an option"
 
     @parameterized.expand(
         [
@@ -213,7 +224,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
     )
     def test_invalid_defaults(self, defaults, expected):
         """Test that invalid default trigger the expected exception."""
-        with self.assertRaises(expected):
+        with pytest.raises(expected):
             st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
 
     def test_outside_form(self):
@@ -222,7 +233,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("foo", ["bar", "baz"])
 
         proto = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -232,11 +243,11 @@ class Multiselectbox(DeltaGeneratorTestCase):
             st.multiselect("foo", ["bar", "baz"])
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         multiselect_proto = self.get_delta_from_queue(1).new_element.multiselect
-        self.assertEqual(multiselect_proto.form_id, form_proto.form.form_id)
+        assert multiselect_proto.form_id == form_proto.form.form_id
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
@@ -249,12 +260,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
-        self.assertEqual(len(all_deltas), 4)
+        assert len(all_deltas) == 4
         multiselect_proto = self.get_delta_from_queue().new_element.multiselect
 
-        self.assertEqual(multiselect_proto.label, "foo")
-        self.assertEqual(multiselect_proto.options, ["bar", "baz"])
-        self.assertEqual(multiselect_proto.default, [])
+        assert multiselect_proto.label == "foo"
+        assert multiselect_proto.options == ["bar", "baz"]
+        assert multiselect_proto.default == []
 
     @parameterized.expand(
         [
@@ -268,22 +279,21 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.multiselect("the label", ("m", "f"), label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.multiselect("the label", ("m", "f"), label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_max_selections(self):
         st.multiselect("the label", ("m", "f"), max_selections=2)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.max_selections, 2)
+        assert c.max_selections == 2
 
     @parameterized.expand(
         [
@@ -305,7 +315,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.placeholder, "Select your beverage")
+        assert c.placeholder == "Select your beverage"
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -313,11 +323,11 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
     def test_over_max_selections_initialization(self):
-        with self.assertRaises(StreamlitSelectionCountExceedsMaxError):
+        with pytest.raises(StreamlitSelectionCountExceedsMaxError):
             st.multiselect(
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
@@ -378,7 +388,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
             current_selections_count=current_selections,
             max_selections_count=max_selections,
         )
-        self.assertEqual(str(error), expected_msg)
+        assert str(error) == expected_msg
 
 
 def test_multiselect_enum_coercion():
@@ -410,6 +420,113 @@ def test_multiselect_enum_coercion():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        with pytest.raises(AssertionError):
-            test_enum()  # expect a failure with the config value off.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()  # expect a failure with the config value off.
+
+
+class TestMultiSelectSerde:
+    def test_serialize(self):
+        options = ["Option A", "Option B", "Option C"]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        res = serde.serialize(["A", "C"])
+        assert res == ["A", "C"]
+
+    def test_serialize_empty_list(self):
+        options = ["Option A", "Option B", "Option C"]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        res = serde.serialize([])
+        assert res == []
+
+    def test_serialize_with_format_func(self):
+        options = ["Option A", "Option B", "Option C"]
+
+        def format_func(x):
+            return f"Format: {x}"
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        res = serde.serialize(["A", "Option C"])
+        assert res == ["A", "Format: Option C"]
+
+    def test_deserialize(self):
+        options = ["Option A", "Option B", "Option C"]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        res = serde.deserialize(["Option A", "Option C", "B"])
+        assert res == ["Option A", "Option C", "B"]
+
+    def test_deserialize_empty_list(self):
+        options = ["Option A", "Option B", "Option C"]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        res = serde.deserialize([])
+        assert res == []
+
+    def test_deserialize_with_default_indices(self):
+        options = ["Option A", "Option B", "Option C"]
+        default_indices = [0, 2]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_options_indices=default_indices,
+        )
+
+        res = serde.deserialize(None)
+        assert res == ["Option A", "Option C"]
+
+    def test_deserialize_complex_options(self):
+        # Test with more complex option types
+        complex_options = [
+            {"id": 1, "name": "First"},
+            {"id": 2, "name": "Second"},
+            {"id": 3, "name": "Third"},
+        ]
+
+        def format_func(x):
+            return x["name"]
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            complex_options, format_func
+        )
+        serde = MultiSelectSerde(
+            complex_options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        res = serde.deserialize(["First", "Third"])
+        assert res == [complex_options[0], complex_options[2]]

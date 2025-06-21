@@ -15,6 +15,8 @@
  */
 
 import React, {
+  FC,
+  memo,
   ReactElement,
   useCallback,
   useEffect,
@@ -22,53 +24,23 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { PlotlyChart as PlotlyChartProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import {
-  keysToSnakeCase,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
-import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
+import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
-import {
-  applyStreamlitTheme,
-  layoutWithThemeDefaults,
-  replaceTemporaryColors,
-} from "./CustomTheme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-// Copied and Pasted from Plotly type def
-export interface SelectionRange {
-  x: number[]
-  y: number[]
-}
-
-export interface PlotlySelection extends SelectionRange {
-  xref: string
-  yref: string
-}
-
-// This is the state that is sent to the backend
-// This needs to be the same structure that is also defined
-// in the Python code. Uses snake case to be compatible with the
-// Python naming conventions.
-export interface PlotlyWidgetState {
-  selection: {
-    points: Array<any>
-    point_indices: number[]
-    box: PlotlySelection[]
-    lasso: PlotlySelection[]
-  }
-}
+import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
+// Default height for Plotly charts when no height is specified
+const DEFAULT_PLOTLY_HEIGHT = 450
 
 // Custom icon used in the fullscreen expand toolbar button:
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
@@ -86,278 +58,6 @@ const FULLSCREEN_COLLAPSE_ICON = {
   // https://fontawesome.com/icons/compress?f=classic&s=solid
   path: "M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z",
 }
-/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
-
-/**
- * Parses an SVG path string into separate x and y coordinates.
- *
- * The function takes a single SVG path string as input. This path string should start with 'M'
- * (move to command), followed by pairs of x and y coordinates separated by commas, and optionally
- * end with 'Z' to close the path. Each pair of coordinates is separated by 'L' (line to command).
- *
- * Example Input:
- * "M4.016412414518674,8.071685352641575L4.020620725933719,7.8197516509841165Z"
- *
- * Example Output:
- * {
- *   x: [4.016412414518674, 4.020620725933719],
- *   y: [8.071685352641575, 7.8197516509841165]
- * }
- *
- * @param {string} pathData - The SVG path string to be parsed.
- * @returns {SelectionRange} An object containing two arrays: `x` for all x coordinates and `y` for all y coordinates.
- */
-export function parseLassoPath(pathData: string): SelectionRange {
-  if (pathData === "") {
-    return {
-      x: [],
-      y: [],
-    }
-  }
-  const points = pathData.replace("M", "").replace("Z", "").split("L")
-
-  const x: number[] = []
-  const y: number[] = []
-
-  points.forEach(point => {
-    const [xVal, yVal] = point.split(",").map(Number)
-    x.push(xVal)
-    y.push(yVal)
-  })
-
-  return { x, y }
-}
-
-/**
- * Parses a box selection object into separate x and y coordinates.
- *
- * The function takes a box selection object as input. This object should contain the following
- * fields: x0, x1, y0, y1. These fields represent the x and y coordinates of the box selection
- * in the plotly chart.
- *
- * Example Input:
- * {
- *   x0: 0.1,
- *   x1: 0.2,
- *   y0: 0.3,
- *   y1: 0.4
- * }
- *
- * Example Output:
- * {
- *   x: [0.1, 0.2],
- *   y: [0.3, 0.4]
- * }
- *
- * @param {Object} selection - The box selection object to be parsed.
- * @returns {SelectionRange} An object containing two arrays: `x` for all x coordinates and `y` for all y coordinates.
- */
-export function parseBoxSelection(selection: any): SelectionRange {
-  const hasRequiredFields =
-    "x0" in selection &&
-    "x1" in selection &&
-    "y0" in selection &&
-    "y1" in selection
-
-  if (!hasRequiredFields) {
-    return { x: [], y: [] }
-  }
-
-  const x: number[] = [selection.x0, selection.x1]
-  const y: number[] = [selection.y0, selection.y1]
-  return { x, y }
-}
-
-/**
- * Apply theming to the Plotly figure.
- *
- * @param plotlyFigure The Plotly figure to apply theming to
- * @param chartTheme The theme of the chart (streamlit or empty string)
- * @param theme The current theme of the app
- * @returns The Plotly figure with theming applied
- */
-export function applyTheming(
-  plotlyFigure: PlotlyFigureType,
-  chartTheme: string,
-  theme: EmotionTheme
-): PlotlyFigureType {
-  const spec = JSON.parse(
-    replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chartTheme)
-  )
-  if (chartTheme === "streamlit") {
-    applyStreamlitTheme(spec, theme)
-  } else {
-    // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-  }
-  return spec
-}
-
-/**
- * Handles the selection event from Plotly and sends the selection state to the backend.
- * The selection state is sent as a stringified JSON object.
- *
- * @param event The Plotly selection event
- * @param widgetMgr The widget manager
- * @param element The PlotlyChartProto element
- * @param fragmentId The fragment id
- */
-export function handleSelection(
-  event: Readonly<Plotly.PlotSelectionEvent>,
-  widgetMgr: WidgetStateManager,
-  element: PlotlyChartProto,
-  fragmentId: string | undefined
-): void {
-  if (!event) {
-    return
-  }
-
-  const selectionState: PlotlyWidgetState = {
-    selection: {
-      points: [],
-      point_indices: [],
-      box: [],
-      lasso: [],
-    },
-  }
-  // Use a set for point indices since all numbers should be unique:
-  const selectedPointIndices = new Set<number>()
-  const selectedBoxes: PlotlySelection[] = []
-  const selectedLassos: PlotlySelection[] = []
-  const selectedPoints: Array<any> = []
-
-  // event.selections doesn't show up in the PlotSelectionEvent
-  // @ts-expect-error
-  const { selections, points } = event
-
-  if (points) {
-    points.forEach(function (point: any) {
-      selectedPoints.push({
-        ...point,
-        legendgroup: point.data.legendgroup || undefined,
-        // Remove data and full data as they have been deemed to be unnecessary data overhead
-        data: undefined,
-        fullData: undefined,
-      })
-      if (notNullOrUndefined(point.pointIndex)) {
-        selectedPointIndices.add(point.pointIndex)
-      }
-
-      // If pointIndices is present (e.g. selection on histogram chart),
-      // add all of them to the set
-      if (
-        notNullOrUndefined(point.pointIndices) &&
-        point.pointIndices.length > 0
-      ) {
-        point.pointIndices.forEach((item: number) =>
-          selectedPointIndices.add(item)
-        )
-      }
-    })
-  }
-
-  if (selections) {
-    selections.forEach((selection: any) => {
-      // box selection
-      if (selection.type === "rect") {
-        const xAndy = parseBoxSelection(selection)
-        const returnSelection: PlotlySelection = {
-          xref: selection.xref,
-          yref: selection.yref,
-          x: xAndy.x,
-          y: xAndy.y,
-        }
-        selectedBoxes.push(returnSelection)
-      }
-      // lasso selection
-      if (selection.type === "path") {
-        const xAndy = parseLassoPath(selection.path)
-        const returnSelection: PlotlySelection = {
-          xref: selection.xref,
-          yref: selection.yref,
-          x: xAndy.x,
-          y: xAndy.y,
-        }
-        selectedLassos.push(returnSelection)
-      }
-    })
-  }
-
-  selectionState.selection.point_indices = Array.from(selectedPointIndices)
-  selectionState.selection.points = selectedPoints.map((point: any) =>
-    keysToSnakeCase(point)
-  )
-
-  selectionState.selection.box = selectedBoxes
-  selectionState.selection.lasso = selectedLassos
-
-  if (
-    selectionState.selection.box.length > 0 &&
-    !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
-  ) {
-    // If box selection is not activated, we don't want
-    // to send any box selection related updates to the frontend
-    return
-  }
-
-  if (
-    selectionState.selection.lasso.length > 0 &&
-    !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
-  ) {
-    // If lasso selection is not activated, we don't want
-    // to send any lasso selection related updates to the frontend
-    return
-  }
-
-  const currentSelectionState = widgetMgr.getStringValue(element)
-  const newSelectionState = JSON.stringify(selectionState)
-  if (currentSelectionState !== newSelectionState) {
-    // Only update the widget state if it has changed
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
-  }
-}
-
-/**
- * Sends an empty selection state to the backend.
- * This is used to reset the selection state in the widget.
- *
- * @param widgetMgr The widget manager
- * @param element The PlotlyChartProto element
- * @param fragmentId The fragment id
- */
-export function sendEmptySelection(
-  widgetMgr: WidgetStateManager,
-  element: PlotlyChartProto,
-  fragmentId: string | undefined
-): void {
-  const emptySelectionState: PlotlyWidgetState = {
-    // We use snake case here since this is the widget state
-    // that is sent and used in the backend. Therefore, it should
-    // conform with the Python naming conventions.
-    selection: {
-      points: [],
-      point_indices: [],
-      box: [],
-      lasso: [],
-    },
-  }
-  const currentSelectionState = widgetMgr.getStringValue(element)
-  const newSelectionState = JSON.stringify(emptySelectionState)
-  if (currentSelectionState !== newSelectionState) {
-    // Only update the widget state if it has changed
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
-  }
-}
 
 export interface PlotlyChartProps {
   element: PlotlyChartProto
@@ -368,6 +68,11 @@ export interface PlotlyChartProps {
   width: number
 }
 
+/**
+ * Note: we do not have any React-testing-library tests because Plotly doesn't support it
+ * https://github.com/plotly/react-plotly.js/issues/176
+ */
+
 export function PlotlyChart({
   element,
   widgetMgr,
@@ -375,14 +80,15 @@ export function PlotlyChart({
   fragmentId,
   disableFullscreenMode,
 }: Readonly<PlotlyChartProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
-    width,
+    width: elWidth,
     height,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
+  const width = elWidth || 0
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
@@ -397,7 +103,7 @@ export function PlotlyChart({
     return JSON.parse(element.spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.id, element.spec])
 
@@ -481,7 +187,7 @@ export function PlotlyChart({
     return config
     // We want to reload the plotlyConfig object whenever the element id changes
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.id,
@@ -573,7 +279,7 @@ export function PlotlyChart({
     // We want to reload these options whenever the element id changes
     // or the selection modes change.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.id,
@@ -593,17 +299,20 @@ export function PlotlyChart({
       : Math.max(
           element.useContainerWidth
             ? width
-            : Math.min(initialFigureSpec.layout.width ?? width, width),
+            : Math.min(initialFigureSpec.layout.width ?? width, width ?? 0),
           // Apply a min width to prevent the chart running into issues with negative
           // width values if the browser window is too small:
           MIN_WIDTH
         )
 
+  // Get the initial height, using a default if not specified
   let calculatedHeight = initialFigureSpec.layout.height
 
   if (isFullScreen) {
     calculatedWidth = width
     calculatedHeight = height
+  } else if (calculatedHeight === undefined) {
+    calculatedHeight = DEFAULT_PLOTLY_HEIGHT
   }
 
   if (
@@ -633,7 +342,7 @@ export function PlotlyChart({
     // We are using element.id here instead of element since we don't
     // shallow reference equality will not work correctly for element.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
@@ -656,6 +365,7 @@ export function PlotlyChart({
           setPlotlyFigure((prevFigure: PlotlyFigureType) => {
             return {
               ...prevFigure,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
               data: prevFigure.data.map((trace: any) => {
                 return {
                   ...trace,
@@ -677,7 +387,7 @@ export function PlotlyChart({
     // We are using element.id here instead of element since we don't
     // shallow reference equality will not work correctly for element.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
@@ -742,14 +452,13 @@ export function PlotlyChart({
     }
     // We only want to trigger this effect if the dragmode changes.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plotlyFigure.layout?.dragmode])
 
   return (
     <div className="stPlotlyChart" data-testid="stPlotlyChart">
       <Plot
-        key={isFullScreen ? "fullscreen" : "original"}
         data={plotlyFigure.data}
         layout={plotlyFigure.layout}
         config={plotlyConfig}
@@ -791,4 +500,20 @@ export function PlotlyChart({
   )
 }
 
-export default withFullScreenWrapper(PlotlyChart)
+const PlotlyChartWidthCheck: FC<Omit<PlotlyChartProps, "width">> = props => {
+  const { width } = useRequiredContext(ElementFullscreenContext)
+
+  // If the width is not defined yet, we don't want to render the chart because
+  // it can cause issues with Plotly's rendering where elements will be
+  // positioned incorrectly
+  if (!width) {
+    return null
+  }
+
+  return <PlotlyChart width={width} {...props} />
+}
+
+const PlotlyChartWithFullScreenWrapper = withFullScreenWrapper(
+  PlotlyChartWidthCheck
+)
+export default memo(PlotlyChartWithFullScreenWrapper)

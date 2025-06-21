@@ -17,7 +17,7 @@
 import { createContext } from "react"
 
 type ElementFullscreenContextShape = {
-  width: number
+  width: number | undefined
   height: number | undefined
   expanded: boolean
   expand: () => void

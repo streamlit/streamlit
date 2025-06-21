@@ -20,8 +20,8 @@
 # because the files were linted after trying to do the first commit.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.8.0
+    # We fix ruff to a version to be in sync with the dev-requirements:
+    rev: v0.12.0
     hooks:
       # Run the linter.
       - id: ruff
@@ -54,20 +54,44 @@ repos:
         exclude: /vendor/
         language: node
         pass_filenames: true
+      - id: prettier-connection
+        name: Prettier Connection
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
+        entry: ./scripts/run_in_subdirectory.py frontend/connection yarn run format
+        files: ^frontend/connection/.*\.(js|jsx|ts|tsx)$
+        exclude: /vendor/
+        language: node
+        pass_filenames: true
+      - id: prettier-utils
+        name: Prettier Utils
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
+        entry: ./scripts/run_in_subdirectory.py frontend/utils yarn run format
+        files: ^frontend/utils/.*\.(js|jsx|ts|tsx)$
+        exclude: /vendor/
+        language: node
+        pass_filenames: true
       - id: prettier-yaml
         name: Prettier-yaml
         # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
         # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
-        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier ../../.github --write
+        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.github/**/*.{yml,yaml}" --write
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false
       - id: license-headers
-        name: Checks that all files have the required license headers
+        name: Checks license headers
         entry: ./scripts/check_license_headers.py
         language: system
         always_run: true
+        pass_filenames: false
+      - id: copilot-instructions
+        name: Check copilot instructions
+        entry: ./scripts/generate_copilot_instructions.py
+        language: system
+        files: ^.cursor/.*\.(mdc)$
         pass_filenames: false
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
@@ -79,7 +103,7 @@ repos:
           - --comment-style
           - "/**| *| */"
           - --license-filepath
-          - scripts/license-template.txt
+          - scripts/assets/license-template.txt
           - --fuzzy-match-generates-todo
         exclude: |
           (?x)
@@ -88,6 +112,7 @@ repos:
           |^component-lib/declarations/apache-arrow
           |^frontend/app/src/assets/css/variables\.scss
           |^lib/tests/streamlit/elements/test_html\.js
+          |^lib/tests/streamlit/elements/test_html\.css
           |^e2e_playwright/test_assets/
       - id: insert-license
         name: Add license for all Proto files
@@ -96,7 +121,7 @@ repos:
           - --comment-style
           - "/**!| *| */"
           - --license-filepath
-          - scripts/license-template.txt
+          - scripts/assets/license-template.txt
           - --fuzzy-match-generates-todo
         exclude: |
           (?x)
@@ -111,7 +136,7 @@ repos:
           - --comment-style
           - "|#|"
           - --license-filepath
-          - scripts/license-template.txt
+          - scripts/assets/license-template.txt
           - --fuzzy-match-generates-todo
         exclude: |
           (?x)
@@ -125,7 +150,7 @@ repos:
           - --comment-style
           - "|#|"
           - --license-filepath
-          - scripts/license-template.txt
+          - scripts/assets/license-template.txt
           - --fuzzy-match-generates-todo
         exclude: |
           (?x)
@@ -139,7 +164,7 @@ repos:
           - --comment-style
           - "<!--||-->"
           - --license-filepath
-          - scripts/license-template.txt
+          - scripts/assets/license-template.txt
           - --fuzzy-match-generates-todo
         exclude: |
           (?x)
@@ -162,3 +187,19 @@ repos:
       - id: check-toml
       - id: check-yaml
         exclude: lib/conda-recipe/meta.yaml
+      - id: check-symlinks
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: fix-byte-order-marker
+      - id: end-of-file-fixer
+        exclude: |
+          (?x)
+          /vendor/
+          |^NOTICES$
+          |^e2e_playwright/test_assets/
+          |^LICENSE$
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: |
+          (?x)
+          ^NOTICES$

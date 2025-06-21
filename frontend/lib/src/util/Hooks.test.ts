@@ -16,6 +16,7 @@
 
 import { useIsOverflowing } from "./Hooks"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 const stateSetters: Array<any> = []
 
 vi.mock("react", async () => ({

@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback, useEffect, useState } from "react"
+import React, {
+  FC,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react"
 
 import { DeckGL } from "@deck.gl/react"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
@@ -22,31 +29,26 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 import { LayersList, PickingInfo } from "@deck.gl/core"
-import { useTheme } from "@emotion/react"
 import { Close } from "@emotion-icons/material-outlined"
 
-import {
-  EmotionTheme,
-  hasLightBackgroundColor,
-} from "@streamlit/lib/src/theme"
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
-import { assertNever } from "@streamlit/lib/src/util/assertNever"
-import Toolbar, {
-  ToolbarAction,
-} from "@streamlit/lib/src/components/shared/Toolbar"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import withMapboxToken from "./withMapboxToken"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { assertNever } from "~lib/util/assertNever"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import { LibContext } from "~lib/components/core/LibContext"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+
 import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
-
-import "mapbox-gl/dist/mapbox-gl.css"
+import { MapBoxCss } from "./MapBoxCss"
 
 registerLoaders([CSVLoader, GLTFLoader])
 
@@ -55,16 +57,10 @@ const EMPTY_SELECTION = EMPTY_STATE.selection
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
-  const {
-    disabled,
-    disableFullscreenMode,
-    element,
-    fragmentId,
-    mapboxToken: propsMapboxToken,
-    widgetMgr,
-  } = props
-  const { mapboxToken: elementMapboxToken } = element
-  const theme: EmotionTheme = useTheme()
+  const { disabled, disableFullscreenMode, element, fragmentId, widgetMgr } =
+    props
+  const { libConfig } = useContext(LibContext)
+  const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
     expand,
@@ -90,6 +86,11 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     theme,
     widgetMgr,
   })
+
+  const mapboxToken = element.mapboxToken || libConfig.mapboxToken
+  const usesMapbox =
+    deck.mapProvider == "mapbox" ||
+    (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
 
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -136,8 +137,8 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
               ((): [number, unknown][] => {
                 const indices = currState?.selection?.indices?.[layerId] || []
 
-                return indices.map((index, i) => [
-                  index,
+                return indices.map((currIndex, i) => [
+                  currIndex,
                   currState.selection?.objects?.[layerId]?.[i],
                 ])
               })()
@@ -153,10 +154,10 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
             if (selectionMap.size === 0) {
               // If the layer has nothing selected, remove the layer from the returned value
-              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: _, ...restIndices } =
                 currState.selection.indices
-              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: __, ...restObjects } =
                 currState.selection.objects
 
@@ -212,9 +213,9 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
-      width={width}
       height={height}
     >
+      {usesMapbox ? <MapBoxCss /> : null}
       <Toolbar
         isFullScreen={isFullScreen}
         disableFullscreenMode={disableFullscreenMode}
@@ -231,42 +232,45 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           />
         )}
       </Toolbar>
-      <DeckGL
-        viewState={viewState}
-        onViewStateChange={onViewStateChange}
-        height={height}
-        width={width}
-        layers={isInitialized ? deck.layers : EMPTY_LAYERS}
-        getTooltip={createTooltip}
-        // @ts-expect-error There is a type mismatch due to our versions of the libraries
-        ContextProvider={MapContext.Provider}
-        controller
-        onClick={
-          isSelectionModeActivated && !disabled ? handleClick : undefined
-        }
-      >
-        <StaticMap
+      {/* Only render the DeckGL component if the viewState is not null,
+      or else we'll get a runtime assertion error from deck.gl and the map will not render. */}
+      {viewState && (
+        <DeckGL
+          viewState={viewState}
+          onViewStateChange={onViewStateChange}
           height={height}
           width={width}
-          mapStyle={
-            deck.mapStyle &&
-            (typeof deck.mapStyle === "string"
-              ? deck.mapStyle
-              : deck.mapStyle[0])
+          layers={isInitialized ? deck.layers : EMPTY_LAYERS}
+          getTooltip={createTooltip}
+          // @ts-expect-error There is a type mismatch due to our versions of the libraries
+          ContextProvider={MapContext.Provider}
+          controller
+          onClick={
+            isSelectionModeActivated && !disabled ? handleClick : undefined
           }
-          mapboxApiAccessToken={elementMapboxToken || propsMapboxToken}
-        />
-        <StyledNavigationControlContainer>
-          <NavigationControl
-            data-testid="stDeckGlJsonChartZoomButton"
-            showCompass={false}
+        >
+          <StaticMap
+            height={height}
+            width={width}
+            mapStyle={
+              deck.mapStyle &&
+              (typeof deck.mapStyle === "string"
+                ? deck.mapStyle
+                : deck.mapStyle[0])
+            }
+            mapboxApiAccessToken={mapboxToken}
           />
-        </StyledNavigationControlContainer>
-      </DeckGL>
+          <StyledNavigationControlContainer>
+            <NavigationControl
+              data-testid="stDeckGlJsonChartZoomButton"
+              showCompass={false}
+            />
+          </StyledNavigationControlContainer>
+        </DeckGL>
+      )}
     </StyledDeckGlChart>
   )
 }
 
-export default withFullScreenWrapper(
-  withMapboxToken("st.pydeck_chart")(DeckGlJsonChart)
-)
+const DeckGlJsonChartWrapped = withFullScreenWrapper(DeckGlJsonChart)
+export default memo(DeckGlJsonChartWrapped)

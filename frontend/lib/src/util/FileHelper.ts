@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import { isFromWindows } from "@streamlit/lib/src/util/utils"
+import { type FileRejection } from "react-dropzone"
+
+import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { isFromWindows } from "~lib/util/utils"
 
 export enum FileSize {
   Gigabyte = "gb",
@@ -93,4 +96,47 @@ export const sizeConverter = (
   }
   // Going from bigger to smaller
   return size * byteDifference
+}
+
+/**
+ * Return a human-readable message for the given error.
+ */
+const getErrorMessage = (
+  errorCode: string,
+  file: File,
+  maxUploadSizeInBytes: number
+): string => {
+  switch (errorCode) {
+    case "file-too-large":
+      return `File must be ${getSizeDisplay(
+        maxUploadSizeInBytes,
+        FileSize.Byte
+      )} or smaller.`
+    case "file-invalid-type":
+      return `${file.type} files are not allowed.`
+    case "file-too-small":
+      // This should not fire.
+      return `File size is too small.`
+    case "too-many-files":
+      return "Only one file is allowed."
+    default:
+      return "Unexpected error. Please try again."
+  }
+}
+
+/**
+ * Returns an `UploadFileInfo` object for a rejected file
+ */
+export const getRejectedFileInfo = (
+  rejected: FileRejection,
+  fileId: number,
+  maxUploadSizeInBytes: number
+): UploadFileInfo => {
+  const { file, errors } = rejected
+  return new UploadFileInfo(file.name, file.size, fileId, {
+    type: "error",
+    errorMessage: errors
+      .map(error => getErrorMessage(error.code, file, maxUploadSizeInBytes))
+      .join(" "),
+  })
 }

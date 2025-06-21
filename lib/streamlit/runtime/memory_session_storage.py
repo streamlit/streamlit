@@ -14,11 +14,14 @@
 
 from __future__ import annotations
 
-from typing import MutableMapping
+from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
 
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
 
 
 class MemorySessionStorage(SessionStorage):

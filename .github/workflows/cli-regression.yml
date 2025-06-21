@@ -40,6 +40,9 @@ jobs:
         run: |
           sudo apt install rsync
           make package
+      - name: Install streamlit in production mode
+        run: |
+          pip install -U ./lib
       - name: Run CLI regression tests
         run: |
-          export SKIP_VERSION_CHECK=true; make cli-regression-tests
+          export SKIP_VERSION_CHECK=true; pytest scripts/cli_regression_tests.py

@@ -16,10 +16,12 @@
 
 const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
+const enforceMemo = require("./enforce-memo")
 
 module.exports = {
   rules: {
     "use-strict-null-equality-checks": useStrictNullEqualityChecks,
     "no-hardcoded-theme-values": noHardcodedThemeValues,
+    "enforce-memo": enforceMemo,
   },
 }

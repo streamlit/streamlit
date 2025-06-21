@@ -33,4 +33,17 @@ message ChatInput {
     BOTTOM = 0;
   }
   Position position = 8;
+
+  enum AcceptFile {
+    NONE = 0;
+    SINGLE = 1;
+    MULTIPLE = 2;
+  }
+  AcceptFile accept_file = 9;
+
+  // Supported file types: For example: ["png","jpg","img"]
+  repeated string file_type = 10;
+
+  // Max file size allowed by server config
+  int32 max_upload_size_mb = 11;
 }

@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from typing import Any
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -18,6 +21,6 @@ test_dicts = [{"x": "y"}, {"x": "y", "a": "b"}, {"x": ["y", "1", "2.34"]}, {"x":
 
 
 @pytest.mark.parametrize("app_with_query_params", test_dicts, indirect=True)
-def test_app_with_query_params(app_with_query_params: Page):
+def test_app_with_query_params(app_with_query_params: tuple[Page, dict[str, Any]]):
     page, test_dict = app_with_query_params
     expect(page.get_by_test_id("stMarkdownContainer")).to_have_text(str(test_dict))

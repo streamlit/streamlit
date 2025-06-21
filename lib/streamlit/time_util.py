@@ -51,9 +51,7 @@ def time_to_seconds(t: float | timedelta | str | None) -> float: ...
 def time_to_seconds(
     t: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
 ) -> float | None:
-    """
-    Convert a time string value to a float representing "number of seconds".
-    """
+    """Convert a time string value to a float representing "number of seconds"."""
     if coerce_none_to_inf and t is None:
         return math.inf
     if isinstance(t, timedelta):

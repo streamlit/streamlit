@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
+from typing import cast
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import check_top_level_class
 
 
@@ -22,6 +25,9 @@ def test_sidebar_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     sidebar = themed_app.get_by_test_id("stSidebar")
+    # Add an except before snapshot assert to ensure that there is time for painting
+    # to complete.
+    expect(sidebar.get_by_test_id("stVegaLiteChart")).to_be_visible()
     assert_snapshot(sidebar, name="st_sidebar-display")
 
 
@@ -31,11 +37,11 @@ def test_sidebar_date_input_popover(
     """Handles z-index of date input popover correctly."""
     date_inputs = themed_app.get_by_test_id("stSidebar").get_by_test_id("stDateInput")
     expect(date_inputs).to_have_count(2)
-
+    expect(date_inputs.first).to_be_visible()
     date_inputs.first.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stSidebar"), name="st_sidebar-date_popover"
-    )
+    calendar_popover = themed_app.locator("[data-baseweb='calendar']")
+    expect(calendar_popover).to_be_visible()
+    assert_snapshot(calendar_popover, name="st_sidebar-date_popover")
 
 
 def test_sidebar_overwriting_elements(app: Page):
@@ -56,7 +62,7 @@ def test_sidebar_no_collapse_on_text_input_mobile(app: Page):
     app.set_viewport_size({"width": 400, "height": 800})
 
     # Expand the sidebar on mobile
-    app.get_by_test_id("stSidebarCollapsedControl").locator("button").click()
+    app.get_by_test_id("stExpandSidebarButton").click()
 
     app.get_by_test_id("stSidebar").get_by_test_id("stTextInput").locator(
         "input"
@@ -78,3 +84,101 @@ def test_sidebar_chart_and_toolbar(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stSidebar")
+
+
+def test_sidebar_resize_functionality(app: Page):
+    """Test that sidebar can be resized by dragging and not by clicking."""
+
+    # Get the sidebar element
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    # Get the initial width of the sidebar
+    initial_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
+
+    # Find the resize handle (the element with cursor: col-resize)
+    resize_handle = app.locator("div[style*='cursor: col-resize']")
+    expect(resize_handle).to_be_visible()
+
+    # Get resize handle position
+    handle_box = resize_handle.bounding_box()
+
+    # Get the handle's starting position
+    assert handle_box is not None
+
+    handle_x = handle_box["x"] + handle_box["width"] / 2
+    handle_y = handle_box["y"] + handle_box["height"] / 2
+
+    # Drag the handle to the right by 20 pixels
+    drag_distance = 20
+    app.mouse.move(handle_x, handle_y)
+    app.mouse.down()
+    app.mouse.move(handle_x + drag_distance, handle_y)
+    app.mouse.up()
+
+    # Wait for the resize to take effect
+    def check_width_changed() -> bool:
+        current_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
+        return current_width > initial_width
+
+    wait_until(app, check_width_changed)
+
+    # Measure the width after dragging
+    after_drag_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+
+    # Verify the width increased by approximately drag_distance
+    # We use a tolerance of +/- 3px to account for rounding and rendering differences
+    def check_approximate_width_change() -> bool:
+        current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+        width_change = current_width - initial_width
+        return math.isclose(width_change, drag_distance, abs_tol=3)
+
+    wait_until(app, check_approximate_width_change)
+
+    # Now just click the resize handle without dragging
+    resize_handle.click()
+
+    # Track width changes after clicking to detect stabilization
+    last_seen_width = after_drag_width
+    stable_count = 0
+
+    def check_width_stabilized() -> bool:
+        nonlocal last_seen_width, stable_count
+        current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+
+        if current_width == last_seen_width:
+            stable_count += 1
+        else:
+            # Width changed, reset counter
+            last_seen_width = current_width
+            stable_count = 0
+
+        # Consider width stable if it hasn't changed for 3 consecutive checks
+        return stable_count >= 3
+
+    wait_until(app, check_width_stabilized)
+
+    # Now get the stable width after clicking
+    click_width = cast(
+        "int", sidebar.evaluate("el => el.getBoundingClientRect().width")
+    )
+
+    # Finally, test double-click to reset width
+    resize_handle.dblclick()
+
+    # Wait for the reset to take effect
+    def check_width_reset() -> bool:
+        reset_width = cast(
+            "int", sidebar.evaluate("el => el.getBoundingClientRect().width")
+        )
+        return reset_width != click_width
+
+    wait_until(app, check_width_reset)
+
+    # Measure the width after double-clicking
+    after_dblclick_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+
+    # Verify the width changed (reset to default)
+    assert after_dblclick_width != click_width, (
+        f"Width didn't reset after double-clicking: {after_dblclick_width} == {click_width}"
+    )

@@ -14,27 +14,28 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
+import React, { memo, ReactElement, useEffect } from "react"
 
 import { select } from "d3"
 import { Engine, graphviz } from "d3-graphviz"
+import { getLogger } from "loglevel"
 
-import { logError } from "@streamlit/lib/src/util/log"
-import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
+import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
+
 import Toolbar, {
   StyledToolbarElementContainer,
-} from "@streamlit/lib/src/components/shared/Toolbar"
-import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
+} from "~lib/components/shared/Toolbar"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 
 import { StyledGraphVizChart } from "./styled-components"
 
 export interface GraphVizChartProps {
   element: GraphVizChartProto
-  width: number
   disableFullscreenMode?: boolean
 }
+export const LOG = getLogger("GraphVizChart")
 
 function GraphVizChart({
   element,
@@ -67,7 +68,7 @@ function GraphVizChart({
         node.removeAttribute("height")
       }
     } catch (error) {
-      logError(error)
+      LOG.error(error)
     }
   }, [
     chartId,
@@ -79,7 +80,7 @@ function GraphVizChart({
 
   return (
     <StyledToolbarElementContainer
-      width={width}
+      width={width ?? 0}
       height={height}
       useContainerWidth={isFullScreen || element.useContainerWidth}
     >
@@ -101,4 +102,5 @@ function GraphVizChart({
   )
 }
 
-export default withFullScreenWrapper(GraphVizChart)
+const GraphVizChartWithFullScreen = withFullScreenWrapper(GraphVizChart)
+export default memo(GraphVizChartWithFullScreen)

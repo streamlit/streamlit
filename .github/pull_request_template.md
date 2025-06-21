@@ -1,5 +1,7 @@
 ## Describe your changes
 
+<!-- If it's a visual change, please include a screenshot or video! -->
+
 ## GitHub Issue Link (if applicable)
 
 ## Testing Plan

@@ -69,3 +69,9 @@ st.link_button(
     type="tertiary",
     use_container_width=True,
 )
+
+st.link_button(
+    "Link Button with help",
+    url="https://streamlit.io",
+    help="help text",
+)

@@ -67,6 +67,22 @@ class StPagesTest(DeltaGeneratorTestCase):
         # Provide an assertion to ensure no error
         assert True
 
+    def test_empty_string_icon_should_raise_exception(self):
+        """Test that passing an empty string icon raises an exception."""
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("page.py", icon="")
+
+        assert 'The value "" is not a valid emoji' in str(exc_info.value)
+
+    def test_whitespace_only_icon_should_raise_exception(self):
+        """Test that passing a whitespace-only icon raises an exception."""
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page("page.py", icon="   ")
+
+        assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+
     def test_script_hash_for_paths_are_different(self):
         """Tests that script hashes are different when url path (inferred or not) is unique"""
         assert st.Page("page1.py")._script_hash != st.Page("page2.py")._script_hash

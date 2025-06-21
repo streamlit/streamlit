@@ -18,9 +18,10 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
-import { render } from "@streamlit/lib/src/test_util"
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { Block as BlockProto } from "@streamlit/protobuf"
+
+import { mockEndpoints } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
 
 import ChatMessage, { ChatMessageProps } from "./ChatMessage"
 

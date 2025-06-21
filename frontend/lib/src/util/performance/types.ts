@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
+import { ScriptRunState } from "~lib/ScriptRunState"
 
 /**
  * Streamlit Performance Metric names. Allows this to be type-safe for our

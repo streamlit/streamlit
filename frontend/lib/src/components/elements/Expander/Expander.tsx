@@ -14,20 +14,28 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { Block as BlockProto } from "@streamlit/protobuf"
+
 import {
   DynamicIcon,
   StyledIcon,
   StyledSpinnerIcon,
-} from "@streamlit/lib/src/components/shared/Icon"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { IconSize, isPresetTheme } from "@streamlit/lib/src/theme"
+} from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { notNullOrUndefined } from "~lib/util/utils"
+import { LibContext } from "~lib/components/core/LibContext"
+import { IconSize, isPresetTheme } from "~lib/theme"
 
 import {
   BORDER_SIZE,
@@ -54,7 +62,7 @@ export interface ExpanderIconProps {
  */
 export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon } = props
-  const { activeTheme } = React.useContext(LibContext)
+  const { activeTheme } = useContext(LibContext)
 
   const iconProps = {
     size: "lg" as IconSize,
@@ -268,4 +276,4 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   )
 }
 
-export default Expander
+export default memo(Expander)

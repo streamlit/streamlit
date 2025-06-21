@@ -18,14 +18,14 @@ import React, { ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import * as Utils from "@streamlit/lib/src/theme/utils"
-import { mockConvertRemToPx } from "@streamlit/lib/src/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import { mockConvertRemToPx } from "~lib/mocks/mocks"
 
 import VirtualDropdown from "./VirtualDropdown"
 
 interface OptionProps {
-  item?: { value: string }
+  item?: { value: string; label?: string; isCreatable?: boolean }
 }
 
 function Option(props: OptionProps): ReactElement {
@@ -74,5 +74,22 @@ describe("VirtualDropdown element", () => {
 
     // each option will have a tooltip attached to it
     expect(screen.getAllByTestId("stTooltipHoverTarget")).toHaveLength(1)
+  })
+
+  it("renders a FixedSizeList where children with isCreatable have label prefix of 'Add:'", () => {
+    render(
+      <VirtualDropdown>
+        <Option item={{ value: "abc", label: "abc", isCreatable: true }} />
+        <Option item={{ value: "def", label: "def" }} />
+      </VirtualDropdown>
+    )
+
+    expect(
+      screen.getByTestId("stSelectboxVirtualDropdown")
+    ).toBeInTheDocument()
+
+    expect(screen.getAllByTestId("stTooltipHoverTarget")).toHaveLength(2)
+    expect(screen.getByText("def", { exact: true })).toBeInTheDocument()
+    expect(screen.getByText("Add: abc", { exact: true })).toBeInTheDocument()
   })
 })

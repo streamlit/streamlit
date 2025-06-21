@@ -18,11 +18,12 @@ from __future__ import annotations
 
 import os
 import subprocess
+from typing import Any
 
 from streamlit import env_util, errors
 
 
-def print_to_cli(message: str, **kwargs) -> None:
+def print_to_cli(message: str, **kwargs: Any) -> None:
     """Print a message to the terminal using click if available, else print
     using the built-in print function.
 
@@ -36,7 +37,7 @@ def print_to_cli(message: str, **kwargs) -> None:
         print(message, flush=True)  # noqa: T201
 
 
-def style_for_cli(message: str, **kwargs) -> str:
+def style_for_cli(message: str, **kwargs: Any) -> str:
     """Style a message using click if available, else return the message
     unchanged.
 
@@ -60,7 +61,7 @@ def _open_browser_with_webbrowser(url: str) -> None:
 def _open_browser_with_command(command: str, url: str) -> None:
     cmd_line = [command, url]
     with open(os.devnull, "w") as devnull:
-        subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
+        subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)  # noqa: S603
 
 
 def open_browser(url: str) -> None:

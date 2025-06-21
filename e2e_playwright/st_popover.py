@@ -28,6 +28,13 @@ with st.popover("popover 2 (use_container_width)", use_container_width=True):
     st.markdown("Hello")
 
 with st.popover(
+    "popover 9 (use_container_width) with help",
+    use_container_width=True,
+    help="help text",
+):
+    st.markdown("Hello")
+
+with st.popover(
     "popover 3 (with widgets)",
 ):
     st.markdown("Hello World 👋")

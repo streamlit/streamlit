@@ -14,31 +14,38 @@
 from __future__ import annotations
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
+    expect_prefixed_markdown,
     get_element_by_key,
+    goto_app,
 )
 
 
-def main_heading(app: Page):
+def main_heading(app: Page) -> Locator:
     return app.get_by_test_id("stHeading").nth(0)
 
 
-def page_heading(app: Page):
+def page_heading(app: Page) -> Locator:
     return app.get_by_test_id("stHeading").nth(1)
 
 
 def check_field(
-    app: Page, *, hide_sidebarnav=False, dynamic_pages=False, add_sidebar_elements=False
-):
+    app: Page,
+    *,
+    hide_sidebarnav: bool = False,
+    dynamic_pages: bool = False,
+    add_sidebar_elements: bool = False,
+) -> None:
     if hide_sidebarnav:
         click_checkbox(app, "Hide sidebar")
 
@@ -68,14 +75,14 @@ expected_page_order = [
 
 def get_page_link(
     app: Page, page_name: str, page_order: list[str] = expected_page_order
-):
+) -> Locator:
     return (
         app.get_by_test_id("stSidebarNav").locator("a").nth(page_order.index(page_name))
     )
 
 
 def expect_page_order(app: Page, page_order: list[str] = expected_page_order):
-    """Test that the page order is correct"""
+    """Test that the page order is correct."""
     nav = app.get_by_test_id("stSidebarNav")
     for i, title in enumerate(page_order):
         expect(nav.locator("a").nth(i)).to_contain_text(title)
@@ -127,18 +134,28 @@ def test_main_script_widgets_persist_across_page_changes(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_contain_text("x is 1")
 
 
+def test_context_url(app: Page, app_port: int):
+    """Test that the page url_path is correct."""
+
+    expected_url = f"http://localhost:{app_port}"
+    expect_prefixed_markdown(app, "Context URL:", expected_url)
+
+    get_page_link(app, "Different Title").click()
+    wait_for_app_run(app)
+    new_expected_url = f"http://localhost:{app_port}/page_3"
+    expect_prefixed_markdown(app, "Context URL:", new_expected_url)
+
+
 def test_supports_navigating_to_page_directly_via_url(app: Page, app_port: int):
     """Test that we can navigate to a page directly via URL."""
-    app.goto(f"http://localhost:{app_port}/page_5")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/page_5")
 
     expect(page_heading(app)).to_contain_text("Page 5")
 
 
 def test_supports_navigating_to_page_directly_via_url_path(app: Page, app_port: int):
     """Test that we can navigate to a page directly via URL. using the url_path."""
-    app.goto(f"http://localhost:{app_port}/my_url_path")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/my_url_path")
     expect(app).to_have_url(f"http://localhost:{app_port}/my_url_path")
     expect(page_heading(app)).to_contain_text("Page 8")
 
@@ -164,12 +181,12 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
 
 
 def test_titles_are_set_correctly(app: Page):
-    """Test that page titles work as expected"""
+    """Test that page titles work as expected."""
     expect_page_order(app)
 
 
 def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that dynamic pages are defined"""
+    """Test that dynamic pages are defined."""
     check_field(themed_app, dynamic_pages=True)
     wait_for_app_run(themed_app)
 
@@ -181,8 +198,7 @@ def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
 
 def test_show_not_found_dialog(app: Page, app_port: int):
     """Test that we show a not found dialog if the page doesn't exist."""
-    app.goto(f"http://localhost:{app_port}/not_a_page")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/not_a_page")
 
     expect(app.locator('[role="dialog"]')).to_contain_text("Page not found")
 
@@ -281,8 +297,7 @@ def test_preserves_navigation_expansion_user_preference(app: Page, app_port: int
     expect(links).to_have_count(13)
 
     # Reload the page and ensure elements are in the sidebar
-    app.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}")
 
     click_checkbox(app, "Show sidebar elements")
     wait_for_app_run(app)
@@ -303,8 +318,7 @@ def test_preserves_navigation_expansion_user_preference(app: Page, app_port: int
     expect(links).to_have_count(10)
 
     # Reload the page and ensure elements are in the sidebar
-    app.goto(f"http://localhost:{app_port}")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}")
 
     click_checkbox(app, "Show sidebar elements")
     wait_for_app_run(app)
@@ -331,11 +345,10 @@ def test_switch_page_by_st_page(app: Page):
 
 
 def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
-    """Test that query params are removed when navigating via st.switch_page"""
+    """Test that query params are removed when navigating via st.switch_page."""
 
     # Start at main page with query params
-    app.goto(f"http://localhost:{app_port}/?foo=bar")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/?foo=bar")
     expect(app).to_have_url(f"http://localhost:{app_port}/?foo=bar")
 
     # Trigger st.switch_page
@@ -346,10 +359,9 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
 
 
 def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
-    """Test that query params are removed when swapping pages by clicking on a link"""
+    """Test that query params are removed when swapping pages by clicking on a link."""
 
-    app.goto(f"http://localhost:{app_port}/page_7?foo=bar")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/page_7?foo=bar")
     expect(app).to_have_url(f"http://localhost:{app_port}/page_7?foo=bar")
 
     get_page_link(app, "page 4").click()
@@ -358,12 +370,12 @@ def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
 
 
 def test_removes_non_embed_query_params_when_swapping_pages(app: Page, app_port: int):
-    """Test that non-embed query params are removed when swapping pages"""
+    """Test that non-embed query params are removed when swapping pages."""
 
-    app.goto(
-        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
+    goto_app(
+        app,
+        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line",
     )
-    wait_for_app_loaded(app)
     expect(app).to_have_url(
         f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
     )
@@ -377,7 +389,7 @@ def test_removes_non_embed_query_params_when_swapping_pages(app: Page, app_port:
 
 
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that logos display properly in sidebar and main sections"""
+    """Test that logos display properly in sidebar and main sections."""
 
     # Go to logo page & wait short moment for logo to appear
     get_page_link(app, "page 8").click()
@@ -389,22 +401,9 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     )
     assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
 
-    # Collapse the sidebar
-    app.get_by_test_id("stSidebarContent").hover()
-    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
-    app.wait_for_timeout(500)
-
-    # Collapsed logo
-    expect(
-        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
-    ).to_have_attribute("href", "https://www.example.com")
-    assert_snapshot(
-        app.get_by_test_id("stSidebarCollapsedControl"), name="collapsed-logo"
-    )
-
 
 def test_page_link_with_path(app: Page):
-    """Test st.page_link works with a path"""
+    """Test st.page_link works with a path."""
 
     app.get_by_test_id("stPageLink-NavLink").filter(has_text="page 5 page link").click()
     wait_for_app_loaded(app)
@@ -413,7 +412,7 @@ def test_page_link_with_path(app: Page):
 
 
 def test_page_link_with_st_file(app: Page):
-    """Test st.page_link works with a st.Page"""
+    """Test st.page_link works with a st.Page."""
 
     app.get_by_test_id("stPageLink-NavLink").filter(has_text="page 9 page link").click()
     wait_for_app_loaded(app)
@@ -422,7 +421,7 @@ def test_page_link_with_st_file(app: Page):
 
 
 def test_hidden_navigation(app: Page):
-    """Test position=hidden hides the navigation"""
+    """Test position=hidden hides the navigation."""
 
     expect(app.get_by_test_id("stSidebarNav")).to_be_visible()
     check_field(app, add_sidebar_elements=True)
@@ -436,19 +435,18 @@ def test_hidden_navigation(app: Page):
 
 
 def test_set_default_navigation(app: Page, app_port: int):
-    """Test the default page set will be shown on initial load"""
+    """Test the default page set will be shown on initial load."""
 
     expect(page_heading(app)).to_contain_text("Page 2")
     wait_for_app_run(app)
 
-    app.goto(f"http://localhost:{app_port}/?default=True")
-    wait_for_app_loaded(app)
+    goto_app(app, f"http://localhost:{app_port}/?default=True")
 
     expect(page_heading(app)).to_contain_text("Page 7")
 
 
 def test_page_url_path_appears_in_url(app: Page, app_port: int):
-    """Test that st.Page's url_path is included in the URL"""
+    """Test that st.Page's url_path is included in the URL."""
     link = get_page_link(app, "page 8")
 
     expect(link).to_have_attribute("href", f"http://localhost:{app_port}/my_url_path")
@@ -458,15 +456,15 @@ def test_page_url_path_appears_in_url(app: Page, app_port: int):
 
 
 def test_widgets_maintain_state_in_fragment(app: Page):
-    """Test that widgets maintain state in a fragment"""
+    """Test that widgets maintain state in a fragment."""
     get_page_link(app, "page 10").click()
 
-    input = app.get_by_test_id("stTextInput").locator("input").first
-    input.fill("Hello")
-    input.blur()
+    input_el = app.get_by_test_id("stTextInput").locator("input").first
+    input_el.fill("Hello")
+    input_el.blur()
     wait_for_app_run(app)
 
-    expect(input).to_have_value("Hello")
+    expect(input_el).to_have_value("Hello")
 
 
 def test_widget_state_reset_on_page_switch(app: Page):
@@ -539,3 +537,42 @@ def test_sidebar_interaction_performance(app: Page):
     options = sidebar.locator("li")
     for option in options.all():
         option.hover()
+
+
+def test_logo_source_errors(app: Page, app_port: int):
+    """Test that logo source errors are logged."""
+    app.route(
+        f"http://localhost:{app_port}/media/**",
+        lambda route: route.fulfill(
+            status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+        ),
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: Sidebar Logo source error" in message for message in messages
+        ),
+    )
+    expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
+    app.get_by_test_id("stSidebarContent").hover()
+    expect(
+        app.get_by_test_id("stSidebarCollapseButton").locator("button")
+    ).to_be_visible()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: Header Logo source error" in message for message in messages
+        ),
+    )

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Callable, Final
 
 from streamlit.logger import get_logger
@@ -59,7 +60,7 @@ class PollingPathWatcher:
         retains references to all active instances.)
         """
         # TODO(vdonato): Modernize this by switching to pathlib.
-        self._path = path
+        self._path = Path(path)  # Changed to pathlib.Path
         self._on_changed = on_changed
 
         self._glob_pattern = glob_pattern
@@ -68,10 +69,10 @@ class PollingPathWatcher:
         self._active = True
 
         self._modification_time = util.path_modification_time(
-            self._path, self._allow_nonexistent
+            str(self._path), self._allow_nonexistent
         )
         self._md5 = util.calc_md5_with_blocking_retries(
-            self._path,
+            str(self._path),
             glob_pattern=self._glob_pattern,
             allow_nonexistent=self._allow_nonexistent,
         )
@@ -81,7 +82,7 @@ class PollingPathWatcher:
         return repr_(self)
 
     def _schedule(self) -> None:
-        def task():
+        def task() -> None:
             time.sleep(_POLLING_PERIOD_SECS)
             self._check_if_path_changed()
 
@@ -93,7 +94,7 @@ class PollingPathWatcher:
             return
 
         modification_time = util.path_modification_time(
-            self._path, self._allow_nonexistent
+            str(self._path), self._allow_nonexistent
         )
         # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
         # modification_time is always 0.0 because of file system limitations.
@@ -104,7 +105,7 @@ class PollingPathWatcher:
         self._modification_time = modification_time
 
         md5 = util.calc_md5_with_blocking_retries(
-            self._path,
+            str(self._path),
             glob_pattern=self._glob_pattern,
             allow_nonexistent=self._allow_nonexistent,
         )
@@ -115,7 +116,7 @@ class PollingPathWatcher:
         self._md5 = md5
 
         _LOGGER.debug("Change detected: %s", self._path)
-        self._on_changed(self._path)
+        self._on_changed(str(self._path))
 
         self._schedule()
 

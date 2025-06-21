@@ -27,15 +27,15 @@ from streamlit.runtime.state.session_state_proxy import (
 from streamlit.runtime.state.widgets import register_widget
 
 __all__ = [
+    "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
+    "QueryParamsProxy",
+    "SafeSessionState",
+    "SessionState",
+    "SessionStateProxy",
+    "SessionStateStatProvider",
     "WidgetArgs",
     "WidgetCallback",
     "WidgetKwargs",
-    "QueryParamsProxy",
-    "SafeSessionState",
-    "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
-    "SessionState",
-    "SessionStateStatProvider",
-    "SessionStateProxy",
     "get_session_state",
     "register_widget",
 ]

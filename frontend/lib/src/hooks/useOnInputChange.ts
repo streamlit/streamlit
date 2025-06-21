@@ -16,8 +16,8 @@
 
 import { Dispatch, SetStateAction, useCallback } from "react"
 
-import { isInForm } from "@streamlit/lib/src/util/utils"
-import { ValueWithSource } from "@streamlit/lib/src/hooks/useBasicWidgetState"
+import { isInForm } from "~lib/util/utils"
+import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 
 type OnInputChangeEventType = {
   target: {

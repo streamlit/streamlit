@@ -19,10 +19,10 @@ import platform
 import re
 import sys
 
-_system = platform.system()
-IS_WINDOWS = _system == "Windows"
-IS_DARWIN = _system == "Darwin"
-IS_LINUX_OR_BSD = (_system == "Linux") or ("BSD" in _system)
+SYSTEM = platform.system().lower()
+IS_WINDOWS = SYSTEM == "windows"
+IS_DARWIN = SYSTEM == "darwin"
+IS_LINUX_OR_BSD = (SYSTEM == "linux") or ("bsd" in SYSTEM)
 
 
 def is_pex() -> bool:
@@ -31,9 +31,7 @@ def is_pex() -> bool:
     Pex modifies sys.path so the pex file is the first path and that's
     how we determine we're running in the pex file.
     """
-    if re.match(r".*pex$", sys.path[0]):
-        return True
-    return False
+    return bool(re.match(r".*pex$", sys.path[0]))
 
 
 def is_repl() -> bool:
@@ -48,10 +46,7 @@ def is_repl() -> bool:
 
     # <stdin> is what the basic Python REPL calls the root frame's
     # filename, and <string> is what iPython sometimes calls it.
-    if filename in ("<stdin>", "<string>"):
-        return True
-
-    return False
+    return filename in ("<stdin>", "<string>")
 
 
 def is_executable_in_path(name: str) -> bool:

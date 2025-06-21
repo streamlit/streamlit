@@ -36,7 +36,7 @@ interface TestProps {
 }
 
 class TestComponent extends PureComponent<TestProps> {
-  public render = (): ReactElement => (
+  public override render = (): ReactElement => (
     <>
       <div>{this.props.unrelatedProp}</div>
       <div>{this.props.screenCast ? "Screencast" : "Undefined"}</div>

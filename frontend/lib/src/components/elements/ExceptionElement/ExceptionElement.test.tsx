@@ -17,9 +17,11 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
+import { MockInstance } from "vitest"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Exception as ExceptionProto } from "@streamlit/lib/src/proto"
+import { Exception as ExceptionProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
@@ -33,7 +35,6 @@ const getProps = (
     messageIsMarkdown: false,
     ...elementProps,
   }),
-  width: 0,
 })
 
 describe("ExceptionElement Element", () => {
@@ -77,5 +78,37 @@ describe("ExceptionElement Element", () => {
     render(<ExceptionElement {...getProps({ message: "" })} />)
 
     expect(screen.getByText("RuntimeError")).toBeInTheDocument()
+  })
+
+  describe("Should render exception links for localhost", () => {
+    let originalLocation: Location
+    let windowSpy: MockInstance
+
+    beforeEach(() => {
+      originalLocation = window.location
+      windowSpy = vi.spyOn(window, "location", "get")
+    })
+
+    afterEach(() => {
+      windowSpy.mockRestore()
+    })
+
+    it("should render exception links for localhost", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
+      render(<ExceptionElement {...getProps()} />)
+
+      expect(screen.getByText("Copy")).toBeInTheDocument()
+      expect(screen.getByText("Ask Google")).toBeInTheDocument()
+      expect(screen.getByText("Ask ChatGPT")).toBeInTheDocument()
+    })
+
+    it("should not render exception links for localhost", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: "foo.com" })
+      render(<ExceptionElement {...getProps()} />)
+
+      expect(screen.queryByText("Copy")).not.toBeInTheDocument()
+      expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
+      expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
+    })
   })
 })

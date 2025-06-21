@@ -45,6 +45,6 @@ __all__ = [
     "RuntimeState",
     "SessionClient",
     "SessionClientDisconnectedError",
-    "get_instance",
     "exists",
+    "get_instance",
 ]

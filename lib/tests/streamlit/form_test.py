@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -35,28 +36,28 @@ class FormAssociationTest(DeltaGeneratorTestCase):
     def _get_last_checkbox_form_id(self) -> str:
         """Return the form ID for the last checkbox delta that was enqueued."""
         last_delta = self.get_delta_from_queue()
-        self.assertIsNotNone(last_delta)
-        self.assertEqual("new_element", last_delta.WhichOneof("type"))
-        self.assertEqual("checkbox", last_delta.new_element.WhichOneof("type"))
+        assert last_delta is not None
+        assert last_delta.WhichOneof("type") == "new_element"
+        assert last_delta.new_element.WhichOneof("type") == "checkbox"
         return last_delta.new_element.checkbox.form_id
 
     def test_no_form(self):
         """By default, an element doesn't belong to a form."""
         st.checkbox("widget")
-        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == NO_FORM_ID
 
     def test_implicit_form_parent(self):
         """Within a `with form` statement, any `st.foo` element becomes
         part of that form."""
         with st.form("form"):
             st.checkbox("widget")
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
 
         # The sidebar, and any other DG parent created outside
         # the form, does not create children inside the form.
         with st.form("form2"):
             st.sidebar.checkbox("widget2")
-        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == NO_FORM_ID
 
     def test_deep_implicit_form_parent(self):
         """Within a `with form` statement, any `st.foo` element becomes
@@ -66,7 +67,7 @@ class FormAssociationTest(DeltaGeneratorTestCase):
             with cols1[0]:
                 with st.container():
                     st.checkbox("widget")
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
 
         # The sidebar, and any other DG parent created outside
         # the form, does not create children inside the form.
@@ -75,7 +76,7 @@ class FormAssociationTest(DeltaGeneratorTestCase):
             with cols1[0]:
                 with st.container():
                     st.sidebar.checkbox("widget2")
-        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == NO_FORM_ID
 
     def test_parent_created_inside_form(self):
         """If a parent DG is created inside a form, any children of
@@ -89,28 +90,28 @@ class FormAssociationTest(DeltaGeneratorTestCase):
                 # They'll all belong to the form.
                 with form_col:
                     st.checkbox("widget1")
-                    self.assertEqual("form", self._get_last_checkbox_form_id())
+                    assert self._get_last_checkbox_form_id() == "form"
 
                     form_col.checkbox("widget2")
-                    self.assertEqual("form", self._get_last_checkbox_form_id())
+                    assert self._get_last_checkbox_form_id() == "form"
 
         form_col.checkbox("widget3")
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
 
     def test_parent_created_outside_form(self):
         """If our parent was created outside a form, any children of
         that parent have no form, regardless of where they're created."""
         no_form_col = st.columns(2)[0]
         no_form_col.checkbox("widget1")
-        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == NO_FORM_ID
 
         with st.form("form"):
             no_form_col.checkbox("widget2")
-            self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+            assert self._get_last_checkbox_form_id() == NO_FORM_ID
 
             with no_form_col:
                 st.checkbox("widget3")
-                self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+                assert self._get_last_checkbox_form_id() == NO_FORM_ID
 
     def test_widget_created_directly_on_form_block(self):
         """Test that a widget can be created directly on a form block."""
@@ -118,7 +119,7 @@ class FormAssociationTest(DeltaGeneratorTestCase):
         form = st.form("form")
         form.checkbox("widget")
 
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
 
     def test_form_inside_columns(self):
         """Test that a form was successfully created inside a column."""
@@ -129,7 +130,7 @@ class FormAssociationTest(DeltaGeneratorTestCase):
             with st.form("form"):
                 st.checkbox("widget")
 
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
 
     def test_form_in_sidebar(self):
         """Test that a form was successfully created in the sidebar."""
@@ -137,7 +138,7 @@ class FormAssociationTest(DeltaGeneratorTestCase):
         with st.sidebar.form("form"):
             st.checkbox("widget")
 
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
 
     def test_dg_outside_form_but_element_inside(self):
         """Test that a widget doesn't belong to a form if its DG was created outside it."""
@@ -147,7 +148,7 @@ class FormAssociationTest(DeltaGeneratorTestCase):
             empty.checkbox("widget")
 
         first_delta = self.get_delta_from_queue(0)
-        self.assertEqual(NO_FORM_ID, first_delta.new_element.checkbox.form_id)
+        assert first_delta.new_element.checkbox.form_id == NO_FORM_ID
 
     def test_dg_inside_form_but_element_outside(self):
         """Test that a widget belongs to a form if its DG was created inside it."""
@@ -156,7 +157,7 @@ class FormAssociationTest(DeltaGeneratorTestCase):
             empty = st.empty()
         empty.checkbox("widget")
 
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
 
     def test_dg_and_element_inside_form(self):
         """Test that a widget belongs to a form if its DG was created inside it and then replaced."""
@@ -165,7 +166,27 @@ class FormAssociationTest(DeltaGeneratorTestCase):
             empty = st.empty()
             empty.checkbox("widget")
 
-        self.assertEqual("form", self._get_last_checkbox_form_id())
+        assert self._get_last_checkbox_form_id() == "form"
+
+    def test_widget_inside_dg_outside_form_it_was_created_in(self):
+        """Test that a widget belongs to a form if its DG was created inside a DG that was created inside a form."""
+
+        with st.form("form"):
+            empty = st.empty()
+
+        with empty:
+            st.checkbox("widget")
+
+        assert self._get_last_checkbox_form_id() == "form"
+
+    def test_widget_parent_parent_created_on_form(self):
+        """Test that a widget belongs to a form if its parent's parent was created inside a form."""
+
+        with st.form("form"):
+            e = st.empty()
+        e.empty().checkbox("widget")
+
+        assert self._get_last_checkbox_form_id() == "form"
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -179,22 +200,22 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
         with st.form(key="foo", clear_on_submit=True):
             pass
 
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+        assert len(self.get_all_deltas_from_queue()) == 1
         form_proto = self.get_delta_from_queue(0).add_block
-        self.assertEqual("foo", form_proto.form.form_id)
-        self.assertEqual(True, form_proto.form.clear_on_submit)
-        self.assertEqual(True, form_proto.form.enter_to_submit)
-        self.assertEqual(True, form_proto.form.border)
+        assert form_proto.form.form_id == "foo"
+        assert form_proto.form.clear_on_submit
+        assert form_proto.form.enter_to_submit
+        assert form_proto.form.border
         self.clear_queue()
 
         # Test with clear_on_submit=False
         with st.form(key="bar", clear_on_submit=False):
             pass
 
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+        assert len(self.get_all_deltas_from_queue()) == 1
         form_proto = self.get_delta_from_queue(0).add_block
-        self.assertEqual("bar", form_proto.form.form_id)
-        self.assertEqual(False, form_proto.form.clear_on_submit)
+        assert form_proto.form.form_id == "bar"
+        assert not form_proto.form.clear_on_submit
 
     def test_form_enter_to_submit(self):
         """Test that a form can be created with enter_to_submit=False."""
@@ -203,9 +224,9 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
         with st.form(key="foo", enter_to_submit=False):
             pass
 
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+        assert len(self.get_all_deltas_from_queue()) == 1
         form_proto = self.get_delta_from_queue(0).add_block
-        self.assertEqual(False, form_proto.form.enter_to_submit)
+        assert not form_proto.form.enter_to_submit
 
     def test_form_without_border(self):
         """Test that a form can be created without a border."""
@@ -214,20 +235,18 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
         with st.form(key="foo", clear_on_submit=True, border=False):
             pass
 
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+        assert len(self.get_all_deltas_from_queue()) == 1
         form_proto = self.get_delta_from_queue(0).add_block
-        self.assertEqual(False, form_proto.form.border)
+        assert not form_proto.form.border
 
     def test_multiple_forms_same_key(self):
         """Multiple forms with the same key are not allowed."""
 
-        with self.assertRaises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitAPIException) as ctx:
             st.form(key="foo")
             st.form(key="foo")
 
-        self.assertIn(
-            "There are multiple identical forms with `key='foo'`", str(ctx.exception)
-        )
+        assert "There are multiple identical forms with `key='foo'`" in str(ctx.value)
 
     def test_multiple_forms_same_labels_different_keys(self):
         """Multiple forms with different keys are allowed."""
@@ -242,29 +261,27 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_form_in_form(self):
         """Test that forms cannot be nested in other forms."""
 
-        with self.assertRaises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitAPIException) as ctx:
             with st.form("foo"):
                 with st.form("bar"):
                     pass
 
-        self.assertEqual(str(ctx.exception), "Forms cannot be nested in other forms.")
+        assert str(ctx.value) == "Forms cannot be nested in other forms."
 
     def test_button_in_form(self):
         """Test that buttons are not allowed in forms."""
 
-        with self.assertRaises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitAPIException) as ctx:
             with st.form("foo"):
                 st.button("foo")
 
-        self.assertIn(
-            "`st.button()` can't be used in an `st.form()`", str(ctx.exception)
-        )
+        assert "`st.button()` can't be used in an `st.form()`" in str(ctx.value)
 
     def test_form_block_data(self):
         """Test that a form creates a block element with correct data."""
 
         form_data = st.form(key="bar")._form_data
-        self.assertEqual("bar", form_data.form_id)
+        assert form_data.form_id == "bar"
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -278,17 +295,16 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             st.form_submit_button(disabled=True)
 
         last_delta = self.get_delta_from_queue()
-        self.assertEqual(True, last_delta.new_element.button.disabled)
+        assert last_delta.new_element.button.disabled
 
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
 
-        with self.assertRaises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitAPIException) as ctx:
             st.form_submit_button()
 
-        self.assertIn(
-            "`st.form_submit_button()` must be used inside an `st.form()`",
-            str(ctx.exception),
+        assert "`st.form_submit_button()` must be used inside an `st.form()`" in str(
+            ctx.value
         )
 
     def test_submit_button_inside_form(self):
@@ -298,7 +314,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             st.form_submit_button()
 
         last_delta = self.get_delta_from_queue()
-        self.assertEqual("foo", last_delta.new_element.button.form_id)
+        assert last_delta.new_element.button.form_id == "foo"
 
     def test_submit_button_called_directly_on_form_block(self):
         """Test that a submit button can be called directly on a form block."""
@@ -307,7 +323,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button()
 
         last_delta = self.get_delta_from_queue()
-        self.assertEqual("foo", last_delta.new_element.button.form_id)
+        assert last_delta.new_element.button.form_id == "foo"
 
     def test_submit_button_default_type(self):
         """Test that a submit button with no explicit type has default of "secondary"."""
@@ -316,7 +332,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button()
 
         last_delta = self.get_delta_from_queue()
-        self.assertEqual("secondary", last_delta.new_element.button.type)
+        assert last_delta.new_element.button.type == "secondary"
 
     @parameterized.expand(["primary", "secondary", "tertiary"])
     def test_submit_button_types(self, type):
@@ -326,7 +342,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button(type=type)
 
         last_delta = self.get_delta_from_queue()
-        self.assertEqual(type, last_delta.new_element.button.type)
+        assert type == last_delta.new_element.button.type
 
     def test_submit_button_emoji_icon(self):
         """Test that a submit button can be called with an emoji icon."""
@@ -335,7 +351,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button(icon="⚡")
 
         last_delta = self.get_delta_from_queue()
-        self.assertEqual("⚡", last_delta.new_element.button.icon)
+        assert last_delta.new_element.button.icon == "⚡"
 
     def test_submit_button_material_icon(self):
         """Test that a submit button can be called with a Material icon."""
@@ -344,7 +360,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button(icon=":material/thumb_up:")
 
         last_delta = self.get_delta_from_queue()
-        self.assertEqual(":material/thumb_up:", last_delta.new_element.button.icon)
+        assert last_delta.new_element.button.icon == ":material/thumb_up:"
 
     def test_submit_button_can_use_container_width_by_default(self):
         """Test that a submit button can be called with use_container_width=True."""
@@ -353,7 +369,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button(type="primary", use_container_width=True)
 
         last_delta = self.get_delta_from_queue()
-        self.assertTrue(last_delta.new_element.button.use_container_width)
+        assert last_delta.new_element.button.use_container_width
 
     def test_submit_button_does_not_use_container_width_by_default(self):
         """Test that a submit button does not use_use_container width by default."""
@@ -362,12 +378,12 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         form.form_submit_button(type="primary")
 
         last_delta = self.get_delta_from_queue()
-        self.assertFalse(last_delta.new_element.button.use_container_width)
+        assert not last_delta.new_element.button.use_container_width
 
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
             submitted = st.form_submit_button("Submit")
-            self.assertEqual(submitted, False)
+            assert not submitted
 
     @patch(
         "streamlit.elements.widgets.button.register_widget",
@@ -376,7 +392,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
     def test_return_true_when_submitted(self):
         with st.form("form"):
             submitted = st.form_submit_button("Submit")
-            self.assertEqual(submitted, True)
+            assert submitted
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -390,14 +406,14 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class FormStateInteractionTest(DeltaGeneratorTestCase):
     def test_exception_for_callbacks_on_widgets(self):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             with st.form("form"):
                 st.radio("radio", ["a", "b", "c"], 0, on_change=lambda x: x)
                 st.form_submit_button()
@@ -406,3 +422,79 @@ class FormStateInteractionTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.radio("radio", ["a", "b", "c"], 0)
             st.form_submit_button(on_click=lambda x: x)
+
+
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class FormDimensionsTest(DeltaGeneratorTestCase):
+    """Test form width and height."""
+
+    def test_form_with_stretch_width(self):
+        """Test form with width='stretch'."""
+        with st.form("form_with_stretch", width="stretch"):
+            st.text_input("Input")
+            st.form_submit_button("Submit")
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        assert form_proto.form.form_id == "form_with_stretch"
+        assert form_proto.width_config.use_stretch
+
+    def test_form_with_content_width(self):
+        """Test form with width='content'."""
+        with st.form("form_with_content", width="content"):
+            st.text_input("Input")
+            st.form_submit_button("Submit")
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        assert form_proto.form.form_id == "form_with_content"
+        assert form_proto.width_config.use_content
+
+    def test_form_with_pixel_width(self):
+        """Test form with pixel width."""
+        with st.form("form_with_pixel", width=100):
+            st.text_input("Input")
+            st.form_submit_button("Submit")
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        assert form_proto.form.form_id == "form_with_pixel"
+        assert form_proto.width_config.pixel_width == 100
+
+    def test_form_with_pixel_height(self):
+        """Test form with pixel height."""
+        with st.form("form_with_pixel", height=100):
+            st.text_input("Input")
+            st.form_submit_button("Submit")
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        assert form_proto.form.form_id == "form_with_pixel"
+        assert form_proto.height_config.pixel_height == 100
+
+    def test_form_with_content_height(self):
+        """Test form with content height."""
+        with st.form("form_with_content", height="content"):
+            st.text_input("Input")
+            st.form_submit_button("Submit")
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        assert form_proto.form.form_id == "form_with_content"
+        assert form_proto.height_config.use_content
+
+    @parameterized.expand(
+        [
+            ("invalid", "invalid"),
+            ("negative", -100),
+            ("zero", 0),
+            ("none", None),
+            ("empty_string", ""),
+        ]
+    )
+    def test_form_with_invalid_width_and_height(self, name, value):
+        """Test form with invalid width values."""
+        with pytest.raises(StreamlitAPIException):
+            with st.form(f"form_with_invalid_{name}", width=value):
+                st.text_input("Input")
+                st.form_submit_button("Submit")
+
+        with pytest.raises(StreamlitAPIException):
+            with st.form(f"form_with_invalid_{name}", height=value):
+                st.text_input("Input")
+                st.form_submit_button("Submit")

@@ -19,11 +19,7 @@ import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { Spinner } from "baseui/spinner"
 
-import {
-  computeSpacingStyle,
-  IconSize,
-  ThemeColor,
-} from "@streamlit/lib/src/theme"
+import { computeSpacingStyle, IconSize } from "~lib/theme"
 
 interface StyledSpinnerIconProps {
   usingCustomTheme: boolean
@@ -35,29 +31,25 @@ interface StyledSpinnerIconProps {
 export const StyledSpinnerIcon = styled(Spinner, {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size"].includes(prop),
-})<StyledSpinnerIconProps>(
-  ({ usingCustomTheme, size, margin, padding, theme }) => {
-    return {
-      width: theme.iconSizes[size],
-      height: theme.iconSizes[size],
-      fontSize: theme.iconSizes[size],
-      justifyContents: "center",
-      margin: computeSpacingStyle(margin, theme),
-      padding: computeSpacingStyle(padding, theme),
-      borderColor: theme.colors.borderColor,
-      borderTopColor: usingCustomTheme
-        ? theme.colors.primary
-        : theme.colors.blue70,
-      borderWidth: theme.sizes.spinnerThickness,
-      flexGrow: 0,
-      flexShrink: 0,
-    }
+})<StyledSpinnerIconProps>(({ size, margin, padding, theme }) => {
+  return {
+    width: theme.iconSizes[size],
+    height: theme.iconSizes[size],
+    fontSize: theme.iconSizes[size],
+    justifyContents: "center",
+    margin: computeSpacingStyle(margin, theme),
+    padding: computeSpacingStyle(padding, theme),
+    borderColor: theme.colors.borderColor,
+    borderTopColor: theme.colors.secondary,
+    borderWidth: theme.sizes.spinnerThickness,
+    flexGrow: 0,
+    flexShrink: 0,
   }
-)
+})
 
 interface StyledIconProps {
   as?: EmotionIcon
-  color: ThemeColor
+  color?: string
   size: IconSize
   margin: string
   padding: string
@@ -68,7 +60,7 @@ export const StyledIcon = styled("span", {
     isPropValid(prop) && !["size", "as"].includes(prop),
 })<StyledIconProps>(({ color, size, margin, padding, theme }) => {
   return {
-    color: theme.colors[color],
+    color: color || "inherit",
     fill: "currentColor",
     display: "inline-flex",
     alignItems: "center",
@@ -105,21 +97,20 @@ export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
   }
 )
 
-export const StyledImageIcon = styled.img(({}) => {
-  return {
-    width: "100%",
-    height: "100%",
-  }
+export const StyledImageIcon = styled.img({
+  width: "100%",
+  height: "100%",
 })
 
 interface StyledEmojiIconProps {
   size: IconSize
   margin: string
   padding: string
+  color?: string
 }
 
 export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
-  ({ size, margin, padding, theme }) => {
+  ({ size, margin, padding, theme, color }) => {
     return {
       display: "inline-flex",
       alignItems: "center",
@@ -129,6 +120,7 @@ export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
       height: theme.iconSizes[size],
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
+      color: color,
     }
   }
 )

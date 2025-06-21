@@ -16,11 +16,8 @@
 
 import React from "react"
 
-import {
-  isNullOrUndefined,
-  LabelVisibilityOptions,
-} from "@streamlit/lib/src/util/utils"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 
 import { StyledWidgetLabel } from "./styled-components"
 
@@ -37,7 +34,7 @@ export interface LabelProps {
   // Used to specify whether widget is visible or not.
   labelVisibility?: LabelVisibilityOptions
 
-  // Associates the label with the input field programatically. Makes it possible to focus input by clicking on label.
+  // Associates the label with the input field programmatically. Makes it possible to focus input by clicking on label.
   htmlFor?: string
 }
 

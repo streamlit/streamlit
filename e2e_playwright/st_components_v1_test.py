@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import re
 
 from playwright.sync_api import Page, expect
@@ -29,7 +30,7 @@ def test_components_iframe_rendering(
     """Test that our components v1 API correctly renders elements via screenshot matching."""
 
     elements = themed_app.locator("iframe")
-    expect(elements).to_have_count(3)
+    expect(elements).to_have_count(7)
 
     # Only doing a snapshot of the html component, since the iframe one
     # does not use a valid URL.
@@ -41,31 +42,65 @@ def test_components_iframe_rendering(
 
 
 def test_html_correctly_sets_attr(app: Page):
-    """Test that html correctly sets attributes."""
+    """Test that html correctly sets attributes and rendered size."""
 
     html_component = app.locator("iframe").nth(0)
 
     expect(html_component).to_have_attribute("srcDoc", "<h1>Hello, Streamlit!</h1>")
-    expect(html_component).to_have_attribute("width", "200")
-    expect(html_component).to_have_attribute("height", "500")
     expect(html_component).to_have_attribute("scrolling", "no")
+
+    # Check the actual rendered size
+    box = html_component.bounding_box()
+    if box is None:
+        raise AssertionError("Bounding box is None")
+
+    assert math.floor(box["width"]) == 200
+    assert math.floor(box["height"]) == 500
 
 
 def test_iframe_correctly_sets_attr(app: Page):
-    """Test that iframe correctly sets attributes."""
+    """Test that iframe correctly sets attributes and rendered size."""
 
     iframe_component = app.locator("iframe").nth(1)
 
     expect(iframe_component).to_have_attribute("src", "http://not.a.real.url")
-    expect(iframe_component).to_have_attribute("width", "200")
-    expect(iframe_component).to_have_attribute("height", "500")
     expect(iframe_component).to_have_attribute("scrolling", "auto")
+
+    # Check the actual rendered size
+    box = iframe_component.bounding_box()
+    if box is None:
+        raise AssertionError("Bounding box is None")
+
+    assert math.floor(box["width"]) == 200
+    assert math.floor(box["height"]) == 500
+
+
+def test_iframe_tab_index_attributes(app: Page):
+    """Test that iframe correctly handles tab_index attributes."""
+
+    # Default iframe (no tab_index specified) - should not have tabindex attribute
+    default_iframe = app.locator("iframe").nth(2)
+    assert not default_iframe.evaluate("node => node.hasAttribute('tabindex')"), (
+        "Iframe should not have tabindex attribute when not specified"
+    )
+
+    # Positive tab_index
+    positive_iframe = app.locator("iframe").nth(3)
+    expect(positive_iframe).to_have_attribute("tabindex", "5")
+
+    # Negative tab_index
+    negative_iframe = app.locator("iframe").nth(4)
+    expect(negative_iframe).to_have_attribute("tabindex", "-1")
+
+    # Zero tab_index
+    zero_iframe = app.locator("iframe").nth(5)
+    expect(zero_iframe).to_have_attribute("tabindex", "0")
 
 
 def test_declare_component_correctly_sets_attr(app: Page):
-    """Test that components.declare_component correctly sets attributes."""
+    """Test that components.declare_component correctly sets attributes and rendered size."""
 
-    declare_component = app.locator("iframe").nth(2)
+    declare_component = app.locator("iframe").nth(6)
 
     expect(declare_component).to_have_attribute(
         "title", "st_components_v1.test_component"
@@ -88,7 +123,7 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "component_1")).to_be_visible()
 
 
-# TODO (willhuang1997): Add tests for handling bytes, JSON, DFs, theme
-# TODO (willhuang1997):add tests to ensure the messages actually go to the iframe
+# TODO(willhuang1997): Add tests for handling bytes, JSON, DFs, theme
+# TODO(willhuang1997): add tests to ensure the messages actually go to the iframe
 # Relevant code is here from the past: https://github.com/streamlit/streamlit/blob/3d0b0603627037255790fe55a483f55fce5eff67/frontend/lib/src/components/widgets/CustomComponent/ComponentInstance.test.tsx#L257
 # Relevant PR is here: https://github.com/streamlit/streamlit/pull/7971

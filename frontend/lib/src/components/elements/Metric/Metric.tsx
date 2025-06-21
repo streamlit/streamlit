@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 
-import { Metric as MetricProto } from "@streamlit/lib/src/proto"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { Metric as MetricProto } from "@streamlit/protobuf"
+
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import Icon from "~lib/components/shared/Icon"
+import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 
 import {
   StyledMetricContainer,
@@ -39,9 +40,7 @@ export interface MetricProps {
   element: MetricProto
 }
 
-export default function Metric({
-  element,
-}: Readonly<MetricProps>): ReactElement {
+function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const { MetricDirection } = MetricProto
   const {
     body,
@@ -110,3 +109,5 @@ export default function Metric({
     </StyledMetricContainer>
   )
 }
+
+export default memo(Metric)

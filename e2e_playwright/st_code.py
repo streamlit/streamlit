@@ -46,6 +46,19 @@ st.code(
     language="diff",
 )
 
+code_with_leading_whitespace = """
+    def hello():
+        print("Hello, Streamlit!")
+"""
+
+st.code(code_with_leading_whitespace, language="python")
+
+st.markdown("```python\n" + code_with_leading_whitespace + "\n```")
+
+st.code("\n" + code_with_leading_whitespace + "\n", language="python")
+
+st.markdown("```python\n\n" + code_with_leading_whitespace + "\n\n```")
+
 with st.expander("`st.code` usage", expanded=True):
     st.code(code, language="python")
     st.code(code, language="python")
@@ -95,3 +108,28 @@ print("That will scroll")
 
 st.code(long_code, height=200)
 st.code(code, height=200)
+
+# width tests
+long_code = """
+def process_data(data):
+    result = []
+    for item in data:
+        if item % 2 == 0:
+            result.append(item * 2)
+        else:
+            result.append(item * 3)
+    return result
+
+# Example usage
+data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+processed = process_data(data)
+print(processed)
+"""
+
+st.code(long_code, width=400, wrap_lines=True)
+st.code(long_code, width="stretch")
+
+long_single_word_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
+
+st.code(long_single_word_string)
+st.code(long_single_word_string, wrap_lines=True)

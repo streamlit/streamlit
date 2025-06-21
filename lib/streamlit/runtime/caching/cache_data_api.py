@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.cache_data: pickle-based caching"""
+"""@st.cache_data: pickle-based caching."""
 
 from __future__ import annotations
 
 import pickle
 import threading
-import types
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -58,7 +57,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    InvalidCacheStorageContext,
+    InvalidCacheStorageContextError,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -68,6 +67,7 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
+    import types
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -81,7 +81,11 @@ CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
 class CachedDataFuncInfo(CachedFuncInfo):
-    """Implements the CachedFuncInfo interface for @st.cache_data"""
+    """Implements the CachedFuncInfo interface for @st.cache_data."""
+
+    persist: CachePersistType
+    max_entries: int | None
+    ttl: float | timedelta | str | None
 
     def __init__(
         self,
@@ -91,7 +95,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
         max_entries: int | None,
         ttl: float | timedelta | str | None,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> None:
         super().__init__(
             func,
             show_spinner=show_spinner,
@@ -113,7 +117,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
     @property
     def display_name(self) -> str:
-        """A human-readable name for the cached function"""
+        """A human-readable name for the cached function."""
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache:
@@ -127,7 +131,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
     def validate_params(self) -> None:
         """
-        Validate the params passed to @st.cache_data are compatible with cache storage
+        Validate the params passed to @st.cache_data are compatible with cache storage.
 
         When called, this method could log warnings if cache params are invalid
         for current storage.
@@ -141,9 +145,9 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
 
 class DataCaches(CacheStatsProvider):
-    """Manages all DataCache instances"""
+    """Manages all DataCache instances."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._caches_lock = threading.Lock()
         self._function_caches: dict[str, DataCache] = {}
 
@@ -270,12 +274,11 @@ class DataCaches(CacheStatsProvider):
         )
         try:
             self.get_storage_manager().check_context(cache_context)
-        except InvalidCacheStorageContext as e:
-            _LOGGER.error(
+        except InvalidCacheStorageContextError:
+            _LOGGER.exception(
                 "Cache params for function %s are incompatible with current "
                 "cache storage manager.",
                 function_name,
-                exc_info=e,
             )
             raise
 
@@ -298,11 +301,10 @@ class DataCaches(CacheStatsProvider):
     def get_storage_manager(self) -> CacheStorageManager:
         if runtime.exists():
             return runtime.get_instance().cache_storage_manager
-        else:
-            # When running in "raw mode", we can't access the CacheStorageManager,
-            # so we're falling back to InMemoryCache.
-            _LOGGER.warning("No runtime found, using MemoryCacheStorageManager")
-            return MemoryCacheStorageManager()
+        # When running in "raw mode", we can't access the CacheStorageManager,
+        # so we're falling back to InMemoryCache.
+        _LOGGER.warning("No runtime found, using MemoryCacheStorageManager")
+        return MemoryCacheStorageManager()
 
 
 # Singleton DataCaches instance
@@ -314,12 +316,17 @@ def get_data_cache_stats_provider() -> CacheStatsProvider:
     return _data_caches
 
 
+# Type-annotate the decorator function.
+# (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
+F = TypeVar("F", bound=Callable[..., Any])
+
+
 class CacheDataAPI:
     """Implements the public st.cache_data API: the @st.cache_data decorator, and
     st.cache_data.clear().
     """
 
-    def __init__(self, decorator_metric_name: str):
+    def __init__(self, decorator_metric_name: str) -> None:
         """Create a CacheDataAPI instance.
 
         Parameters
@@ -333,10 +340,6 @@ class CacheDataAPI:
         self._decorator = gather_metrics(  # type: ignore
             decorator_metric_name, self._decorator
         )
-
-    # Type-annotate the decorator function.
-    # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
-    F = TypeVar("F", bound=Callable[..., Any])
 
     # Bare decorator usage
     @overload
@@ -365,7 +368,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> F | Callable[[F], F]:
         return self._decorator(
             func,
             ttl=ttl,
@@ -386,7 +389,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool,
         experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> F | Callable[[F], F]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
         Cached objects are stored in "pickled" form, which means that the return
@@ -564,16 +567,19 @@ class CacheDataAPI:
         if experimental_allow_widgets:
             show_widget_replay_deprecation("cache_data")
 
-        def wrapper(f):
-            return make_cached_func_wrapper(
-                CachedDataFuncInfo(
-                    func=f,
-                    persist=persist_string,
-                    show_spinner=show_spinner,
-                    max_entries=max_entries,
-                    ttl=ttl,
-                    hash_funcs=hash_funcs,
-                )
+        def wrapper(f: F) -> F:
+            return cast(
+                "F",
+                make_cached_func_wrapper(
+                    CachedDataFuncInfo(
+                        func=f,  # type: ignore
+                        persist=persist_string,
+                        show_spinner=show_spinner,
+                        max_entries=max_entries,
+                        ttl=ttl,
+                        hash_funcs=hash_funcs,
+                    )
+                ),
             )
 
         if func is None:
@@ -581,7 +587,7 @@ class CacheDataAPI:
 
         return make_cached_func_wrapper(
             CachedDataFuncInfo(
-                func=cast(types.FunctionType, func),
+                func=cast("types.FunctionType", func),
                 persist=persist_string,
                 show_spinner=show_spinner,
                 max_entries=max_entries,
@@ -607,7 +613,7 @@ class DataCache(Cache):
         max_entries: int | None,
         ttl_seconds: float | None,
         display_name: str,
-    ):
+    ) -> None:
         super().__init__()
         self.key = key
         self.display_name = display_name
@@ -634,7 +640,7 @@ class DataCache(Cache):
             raise CacheError(str(e)) from e
 
         try:
-            entry = pickle.loads(pickled_entry)
+            entry = pickle.loads(pickled_entry)  # noqa: S301
             if not isinstance(entry, CachedResult):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.

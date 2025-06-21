@@ -42,7 +42,7 @@ st.write(["foo", "bar"])
 st.write({"foo": "bar"})
 
 st.write(st.session_state)
-st.write(st.experimental_user)
+st.write(st.user)
 st.write(st.query_params)
 
 
@@ -70,7 +70,7 @@ st.subheader("st.write(reprhtmlable)")
 
 
 class ClassWithReprHtml:
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return "This is an <b>HTML tag</b>!"
 
 

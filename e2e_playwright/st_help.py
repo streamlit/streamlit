@@ -82,8 +82,8 @@ class FooWithMixedDocs:
     def __init__(self):
         self.my_var_1 = 123
 
-    def my_func_1(self, a, b=False):
-        "Func with doc."
+    def my_func_1(self, a: int, b: bool = False) -> None:
+        """Func with doc."""
 
     def my_func_2(self):
         # Func without doc.
@@ -91,3 +91,32 @@ class FooWithMixedDocs:
 
 
 st.container(key="help_mixed_docs").help(FooWithMixedDocs())
+
+
+# Create a class with very long documentation to demonstrate width differences
+class LongDocumentationClass:
+    """Class with very long documentation to demonstrate width differences.
+
+    This documentation is intentionally long to show how different width settings affect
+    the display of help text. The content should be long enough to wrap and show the
+    difference between stretch and fixed width settings.
+
+    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+    eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est laborum.
+    """
+
+    def __init__(self):
+        self.some_attribute = "This is a sample attribute"
+        self.another_attribute = "This is another attribute"
+        self.third_attribute = "This is a third attribute"
+        self.fourth_attribute = "This is a fourth attribute"
+        self.fifth_attribute = "This is a fifth attribute"
+
+
+# Create instances for testing
+long_doc_instance = LongDocumentationClass()
+
+# Test different width configurations
+st.help(long_doc_instance, width=300)
+st.help(long_doc_instance, width="stretch")

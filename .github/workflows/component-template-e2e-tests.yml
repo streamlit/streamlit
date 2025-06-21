@@ -18,10 +18,8 @@ jobs:
           submodules: "recursive"
           fetch-depth: 2
 
-      - name: Enable and Prepare Latest Yarn
-        run: |
-          corepack enable
-          corepack prepare yarn@4.5.3 --activate
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -42,7 +40,9 @@ jobs:
         uses: ./.github/actions/make_init
 
       - name: Run make develop
-        run: make develop
+        run: |
+          source venv/bin/activate
+          make develop
 
       - name: Build Package
         timeout-minutes: 120

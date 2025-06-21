@@ -25,6 +25,7 @@ from parameterized import parameterized
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.web.server.media_file_handler import MediaFileHandler
+from tests.testutil import patch_config_options
 
 MOCK_ENDPOINT: Final = "/mock/media"
 
@@ -53,10 +54,33 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         url = self.media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
         rsp = self.fetch(url, method="GET")
 
-        self.assertEqual(200, rsp.code)
-        self.assertEqual(b"mock_data", rsp.body)
-        self.assertEqual("video/mp4", rsp.headers["Content-Type"])
-        self.assertEqual(str(len(b"mock_data")), rsp.headers["Content-Length"])
+        assert rsp.code == 200
+        assert rsp.body == b"mock_data"
+        assert rsp.headers["Content-Type"] == "video/mp4"
+        assert rsp.headers["Content-Length"] == str(len(b"mock_data"))
+        assert rsp.headers["Access-Control-Allow-Origin"] == "*"
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session_id"),
+    )
+    @mock.patch(
+        "streamlit.web.server.media_file_handler.allow_all_cross_origin_requests",
+        mock.MagicMock(return_value=False),
+    )
+    @patch_config_options({"server.corsAllowedOrigins": ["http://example.com"]})
+    def test_media_file_allowed_origin(self) -> None:
+        """Requests for media files in MediaFileManager should succeed with allowlisted origin."""
+        # Add a media file and read it back
+        url = self.media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
+
+        rsp = self.fetch(url, method="GET", headers={"Origin": "http://example.com"})
+
+        assert rsp.code == 200
+        assert rsp.body == b"mock_data"
+        assert rsp.headers["Content-Type"] == "video/mp4"
+        assert rsp.headers["Content-Length"] == str(len(b"mock_data"))
+        assert rsp.headers["Access-Control-Allow-Origin"] == "http://example.com"
 
     @parameterized.expand(
         [
@@ -96,14 +120,14 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
         rsp = self.fetch(url, method="GET")
 
-        self.assertEqual(200, rsp.code)
-        self.assertEqual(b"mock_data", rsp.body)
-        self.assertEqual(mimetype, rsp.headers["Content-Type"])
-        self.assertEqual(str(len(b"mock_data")), rsp.headers["Content-Length"])
-        self.assertEqual(content_disposition_header, rsp.headers["Content-Disposition"])
+        assert rsp.code == 200
+        assert rsp.body == b"mock_data"
+        assert rsp.headers["Content-Type"] == mimetype
+        assert rsp.headers["Content-Length"] == str(len(b"mock_data"))
+        assert rsp.headers["Content-Disposition"] == content_disposition_header
 
     def test_invalid_file(self) -> None:
         """Requests for invalid files fail with 404."""
         url = f"{MOCK_ENDPOINT}/invalid_media_file.mp4"
         rsp = self.fetch(url, method="GET")
-        self.assertEqual(404, rsp.code)
+        assert rsp.code == 404

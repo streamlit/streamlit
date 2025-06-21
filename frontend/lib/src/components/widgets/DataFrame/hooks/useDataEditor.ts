@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { MutableRefObject, useCallback } from "react"
 
 import {
   DataEditorProps,
@@ -24,14 +24,14 @@ import {
   Item,
   ValidatedGridCell,
 } from "@glideapps/glide-data-grid"
+import { getLogger } from "loglevel"
 
-import { logWarning } from "@streamlit/lib/src/util/log"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseColumn,
   isErrorCell,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
-import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
+} from "~lib/components/widgets/DataFrame/columns"
+import EditingState from "~lib/components/widgets/DataFrame/EditingState"
+import { notNullOrUndefined } from "~lib/util/utils"
 
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.
@@ -40,6 +40,8 @@ type DataEditorReturn = Pick<
   DataEditorProps,
   "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete" | "validateCell"
 >
+
+const LOG = getLogger("useDataEditor")
 
 /**
  * Custom hook to handle all aspects related to data editing. This includes editing cells,
@@ -61,7 +63,7 @@ type DataEditorReturn = Pick<
 function useDataEditor(
   columns: BaseColumn[],
   fixedNumRows: boolean,
-  editingState: React.MutableRefObject<EditingState>,
+  editingState: MutableRefObject<EditingState>,
   getCellContent: ([col, row]: readonly [number, number]) => GridCell,
   getOriginalIndex: (index: number) => number,
   refreshCells: (
@@ -73,7 +75,7 @@ function useDataEditor(
   syncEditState: () => void,
   clearSelection: () => void
 ): DataEditorReturn {
-  const onCellEdited = React.useCallback(
+  const onCellEdited = useCallback(
     (
       [col, row]: readonly [number, number],
       updatedCell: EditableGridCell
@@ -110,7 +112,7 @@ function useDataEditor(
 
         syncEditState()
       } else {
-        logWarning(
+        LOG.warn(
           `Not applying the cell edit since it causes this error:\n ${newCell.data}`
         )
       }
@@ -121,7 +123,7 @@ function useDataEditor(
   /**
    * Appends a new empty row to the end of the table.
    */
-  const appendEmptyRow = React.useCallback(() => {
+  const appendEmptyRow = useCallback(() => {
     if (fixedNumRows) {
       // Appending rows is not supported
       return
@@ -140,7 +142,7 @@ function useDataEditor(
   /**
    * Callback used by glide-data-grid when the user adds a new row in the table UI.
    */
-  const onRowAppended = React.useCallback(() => {
+  const onRowAppended = useCallback(() => {
     if (fixedNumRows) {
       // Appending rows is not supported
       return
@@ -153,7 +155,7 @@ function useDataEditor(
   /**
    * Callback used by glide-data-grid when the user deletes a row or cell value in the table UI.
    */
-  const onDelete = React.useCallback(
+  const onDelete = useCallback(
     (selection: GridSelection): GridSelection | boolean => {
       if (selection.rows.length > 0) {
         // User has selected one or more rows
@@ -226,7 +228,7 @@ function useDataEditor(
   /**
    * Callback used by glide-data-grid when the user pastes data into the table.
    */
-  const onPaste = React.useCallback(
+  const onPaste = useCallback(
     (target: Item, values: readonly (readonly string[])[]): boolean => {
       const [targetCol, targetRow] = target
 
@@ -307,7 +309,7 @@ function useDataEditor(
   /**
    * Callback used by glide-data-grid to validate the data inputted into a cell by the user.
    */
-  const validateCell = React.useCallback(
+  const validateCell = useCallback(
     (cell: Item, newValue: EditableGridCell) => {
       const col = cell[0]
       if (col >= columns.length) {

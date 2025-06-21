@@ -23,7 +23,7 @@ sleep_time = st.session_state["sleep_time"]
 
 
 @st.fragment
-def my_fragment(n):
+def my_fragment(n: int) -> None:
     with st.container(border=True):
         st.button("rerun this fragment", key=n)
         st.write(f"uuid in fragment {n}: {uuid4()}")

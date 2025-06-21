@@ -31,8 +31,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-import streamlit.delta_generator as delta_generator
 import streamlit.runtime.state.widgets as w
+from streamlit import delta_generator
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
@@ -69,7 +69,7 @@ class RunWarningTest(unittest.TestCase):
             st.write("Using delta generator")
             output = "".join(logs.output)
             # Warning produced exactly once
-            self.assertEqual(len(re.findall(r"streamlit run", output)), 1)
+            assert len(re.findall(r"streamlit run", output)) == 1
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_run_warning_absence(self):
@@ -81,7 +81,7 @@ class RunWarningTest(unittest.TestCase):
             # assertLogs is being used as a context manager, but it also checks
             # that some log output was captured, so we have to let it capture something
             get_logger("root").warning("irrelevant warning so assertLogs passes")
-            self.assertNotRegex("".join(logs.output), r"streamlit run")
+            assert not re.search(r"streamlit run", "".join(logs.output))
 
     def test_public_api(self):
         """Test that we don't accidentally remove (or add) symbols
@@ -109,34 +109,27 @@ class RunWarningTest(unittest.TestCase):
         # Add public commands that only exist in the delta generator:
         expected_api = expected_api.union({"add_rows", "id", "dg"})
 
-        self.assertEqual(api, expected_api)
+        assert api == expected_api
 
 
 class DeltaGeneratorTest(DeltaGeneratorTestCase):
     """Test streamlit.delta_generator methods."""
 
     def test_nonexistent_method(self):
-        with self.assertRaises(Exception) as ctx:
+        with pytest.raises(StreamlitAPIException):
             st.sidebar.non_existing()
 
-        self.assertEqual(
-            str(ctx.exception), "`non_existing()` is not a valid Streamlit command."
-        )
-
     def test_sidebar_nonexistent_method(self):
-        with self.assertRaises(Exception) as ctx:
+        with pytest.raises(
+            StreamlitAPIException,
+            match="Method `echo\\(\\)` does not exist for `st\\.sidebar`\\. Did you mean `st\\.echo\\(\\)`\\?",
+        ):
             st.sidebar.echo()
-
-        self.assertEqual(
-            str(ctx.exception),
-            "Method `echo()` does not exist for `st.sidebar`. "
-            "Did you mean `st.echo()`?",
-        )
 
     def set_widget_requires_args(self):
         st.text_input()
         c = self.get_delta_from_queue().new_element.exception
-        self.assertEqual(c.type, "TypeError")
+        assert c.type == "TypeError"
 
     def test_duplicate_widget_id_error(self):
         """Multiple widgets with the same generated key should report an error."""
@@ -157,7 +150,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
 
         for _, create_widget in widgets.items():
             create_widget()
-            with self.assertRaises(StreamlitDuplicateElementId):
+            with pytest.raises(StreamlitDuplicateElementId):
                 # Test creating a widget with a duplicate c
                 # raises an exception.
                 create_widget()
@@ -165,7 +158,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         for widget_type, create_widget in widgets.items():
             # widgets with keys are distinct from the unkeyed ones created above
             create_widget(widget_type)
-            with self.assertRaises(StreamlitDuplicateElementKey):
+            with pytest.raises(StreamlitDuplicateElementKey):
                 # Test creating a widget with a duplicate key
                 # raises an exception.
                 create_widget(widget_type)
@@ -209,7 +202,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         for widget_type, create_widget in widgets.items():
             user_key = widget_type
             create_widget(label="LABEL_A", key=user_key)
-            with self.assertRaises(StreamlitDuplicateElementKey):
+            with pytest.raises(StreamlitDuplicateElementKey):
                 # We specify different labels for widgets, so auto-generated keys
                 # (widget_ids) will be different.
                 # Test creating a widget with a different auto-generated key but same
@@ -223,81 +216,79 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     def test_constructor(self):
         """Test default DeltaGenerator()."""
         dg = DeltaGenerator()
-        self.assertFalse(dg._cursor.is_locked)
-        self.assertEqual(dg._cursor.index, 0)
+        assert not dg._cursor.is_locked
+        assert dg._cursor.index == 0
 
     def test_constructor_with_id(self):
         """Test DeltaGenerator() with an id."""
         cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)
         dg = DeltaGenerator(root_container=RootContainer.MAIN, cursor=cursor)
-        self.assertTrue(dg._cursor.is_locked)
-        self.assertEqual(dg._cursor.index, 1234)
+        assert dg._cursor.is_locked
+        assert dg._cursor.index == 1234
 
     def test_can_deepcopy_delta_generators(self):
         cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)
         dg1 = DeltaGenerator(root_container=RootContainer.MAIN, cursor=cursor)
         dg2 = deepcopy(dg1)
 
-        self.assertEqual(dg1._root_container, dg2._root_container)
-        self.assertIsNone(dg1._parent)
-        self.assertIsNone(dg2._parent)
-        self.assertEqual(dg1._block_type, dg2._block_type)
+        assert dg1._root_container == dg2._root_container
+        assert dg1._parent is None
+        assert dg2._parent is None
+        assert dg1._block_type == dg2._block_type
 
         # Check that the internals of the Cursors look the same. Note the cursors
         # themselves will be different objects so won't compare equal.
         c1 = dg1._cursor
         c2 = dg2._cursor
-        self.assertIsInstance(c1, LockedCursor)
-        self.assertIsInstance(c2, LockedCursor)
-        self.assertEqual(c1._root_container, c2._root_container)
-        self.assertEqual(c1._index, c2._index)
-        self.assertEqual(c1._parent_path, c2._parent_path)
-        self.assertEqual(c1._props, c2._props)
+        assert isinstance(c1, LockedCursor)
+        assert isinstance(c2, LockedCursor)
+        assert c1._root_container == c2._root_container
+        assert c1._index == c2._index
+        assert c1._parent_path == c2._parent_path
+        assert c1._props == c2._props
 
     def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(root_container=None)
         new_dg = dg._enqueue("empty", EmptyProto())
-        self.assertEqual(dg, new_dg)
+        assert dg == new_dg
 
     @parameterized.expand([(RootContainer.MAIN,), (RootContainer.SIDEBAR,)])
     def test_enqueue(self, container):
         dg = DeltaGenerator(root_container=container)
-        self.assertEqual(0, dg._cursor.index)
-        self.assertEqual(container, dg._root_container)
+        assert dg._cursor.index == 0
+        assert container == dg._root_container
 
         test_data = "some test data"
         text_proto = TextProto()
         text_proto.body = test_data
         new_dg = dg._enqueue("text", text_proto)
 
-        self.assertNotEqual(dg, new_dg)
-        self.assertEqual(1, dg._cursor.index)
-        self.assertEqual(container, new_dg._root_container)
+        assert dg != new_dg
+        assert dg._cursor.index == 1
+        assert container == new_dg._root_container
 
         delta = self.get_delta_from_queue()
         element = delta.new_element
-        self.assertEqual(delta.fragment_id, "")
-        self.assertEqual(element.text.body, test_data)
+        assert delta.fragment_id == ""
+        assert element.text.body == test_data
 
     def test_enqueue_same_id(self):
         cursor = LockedCursor(root_container=RootContainer.MAIN, index=123)
         dg = DeltaGenerator(root_container=RootContainer.MAIN, cursor=cursor)
-        self.assertEqual(123, dg._cursor.index)
+        assert dg._cursor.index == 123
 
         test_data = "some test data"
         text_proto = TextProto()
         text_proto.body = test_data
         new_dg = dg._enqueue("text", text_proto)
 
-        self.assertEqual(dg._cursor, new_dg._cursor)
+        assert dg._cursor == new_dg._cursor
 
         msg = self.get_message_from_queue()
         # The last element in delta_path is the delta's index in its container.
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 123), msg.metadata.delta_path
-        )
-        self.assertEqual(msg.delta.new_element.text.body, test_data)
+        assert make_delta_path(RootContainer.MAIN, (), 123) == msg.metadata.delta_path
+        assert msg.delta.new_element.text.body == test_data
 
     def test_enqueue_adds_fragment_id_to_delta_if_set(self):
         ctx = get_script_run_ctx()
@@ -307,7 +298,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         dg._enqueue("text", TextProto())
 
         delta = self.get_delta_from_queue()
-        self.assertEqual(delta.fragment_id, "my_fragment_id")
+        assert delta.fragment_id == "my_fragment_id"
 
     def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
         ctx = get_script_run_ctx()
@@ -335,8 +326,8 @@ class DeltaGeneratorContainerTest(DeltaGeneratorTestCase):
     def test_container(self):
         container = st.container()
 
-        self.assertIsInstance(container, DeltaGenerator)
-        self.assertFalse(container._cursor.is_locked)
+        assert isinstance(container, DeltaGenerator)
+        assert not container._cursor.is_locked
 
     def test_container_paths(self):
         level3 = st.container().container().container()
@@ -344,8 +335,8 @@ class DeltaGeneratorContainerTest(DeltaGeneratorTestCase):
         level3.markdown("bye")
 
         msg = self.get_message_from_queue()
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (0, 0, 0), 1), msg.metadata.delta_path
+        assert (
+            make_delta_path(RootContainer.MAIN, (0, 0, 0), 1) == msg.metadata.delta_path
         )
 
 
@@ -354,8 +345,8 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
 
     def test_equal_columns(self):
         for column in st.columns(4):
-            self.assertIsInstance(column, DeltaGenerator)
-            self.assertFalse(column._cursor.is_locked)
+            assert isinstance(column, DeltaGenerator)
+            assert not column._cursor.is_locked
 
     def test_variable_columns(self):
         weights = [3, 1, 4, 1, 5, 9]
@@ -365,26 +356,26 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
         for idx, weight in enumerate(weights):
             # Pull the delta from the back of the queue, using negative index
             delta = self.get_delta_from_queue(idx - len(weights))
-            self.assertEqual(delta.add_block.column.weight, weight / sum_weights)
+            assert delta.add_block.column.weight == weight / sum_weights
 
     def test_bad_columns_negative_int(self):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.columns(-1337)
 
     def test_bad_columns_single_float(self):
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.columns(6.28)
 
     def test_bad_columns_list_negative_value(self):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.columns([5, 6, -1.2])
 
     def test_bad_columns_list_int_zero_value(self):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.columns([5, 0, 1])
 
     def test_bad_columns_list_float_zero_value(self):
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.columns([5.0, 0.0, 1.0])
 
     def test_two_levels_of_columns_does_not_raise_any_exception(self):
@@ -394,12 +385,13 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
         except StreamlitAPIException:
             self.fail("Error, one level of nested columns should be allowed!")
 
-    def test_three_levels_of_columns_raise_streamlit_api_exception(self):
-        level1, _ = _ = st.columns(2)
-        level2, _ = level1.columns(2)
-        exc = "Columns can only be placed inside other columns up to one level of nesting."
-        with pytest.raises(StreamlitAPIException, match=exc):
+    def test_three_levels_of_columns_does_not_raise_any_exception(self):
+        try:
+            level1, _ = _ = st.columns(2)
+            level2, _ = level1.columns(2)
             _, _ = level2.columns(2)
+        except StreamlitAPIException:
+            self.fail("Error, one level of nested columns should be allowed!")
 
     def test_one_level_of_columns_is_allowed_in_the_sidebar(self):
         try:
@@ -408,19 +400,19 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
         except StreamlitAPIException:
             self.fail("Error, 1 level column should be allowed in the sidebar!")
 
-    def test_two_levels_of_columns_in_the_sidebar_raise_streamlit_api_exception(self):
-        exc = "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
-        with pytest.raises(StreamlitAPIException, match=exc):
+    def test_two_levels_of_columns_is_allowed_in_the_sidebar(self):
+        try:
             with st.sidebar:
                 col1, _ = st.columns(2)
                 _, _ = col1.columns(2)
+        except StreamlitAPIException:
+            self.fail("Error, 1 level column should be allowed in the sidebar!")
 
 
 class DeltaGeneratorExpanderTest(DeltaGeneratorTestCase):
-    def test_nested_expanders(self):
+    def test_nested_expanders_allowed(self):
         level1 = st.expander("level 1")
-        with self.assertRaises(StreamlitAPIException):
-            level1.expander("level 2")
+        level1.expander("level 2")
 
 
 class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
@@ -434,33 +426,30 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
             st.markdown("bye")
 
         msg = self.get_message_from_queue()
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (0, 0, 0), 1), msg.metadata.delta_path
+        assert (
+            make_delta_path(RootContainer.MAIN, (0, 0, 0), 1) == msg.metadata.delta_path
         )
 
         # Now we're out of the `with` block, commands should use the main dg
         st.markdown("outside")
 
         msg = self.get_message_from_queue()
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 1), msg.metadata.delta_path
-        )
+        assert make_delta_path(RootContainer.MAIN, (), 1) == msg.metadata.delta_path
 
     def test_nested_with(self):
         with st.container():
             with st.container():
                 st.markdown("Level 2 with")
                 msg = self.get_message_from_queue()
-                self.assertEqual(
-                    make_delta_path(RootContainer.MAIN, (0, 0), 0),
-                    msg.metadata.delta_path,
+                assert (
+                    make_delta_path(RootContainer.MAIN, (0, 0), 0)
+                    == msg.metadata.delta_path
                 )
 
             st.markdown("Level 1 with")
             msg = self.get_message_from_queue()
-            self.assertEqual(
-                make_delta_path(RootContainer.MAIN, (0,), 1),
-                msg.metadata.delta_path,
+            assert (
+                make_delta_path(RootContainer.MAIN, (0,), 1) == msg.metadata.delta_path
             )
 
     def test_threads_with(self):
@@ -494,9 +483,9 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
 
                 st.markdown("Object 2")
                 msg = self.get_message_from_queue()
-                self.assertEqual(
-                    make_delta_path(RootContainer.MAIN, (1,), 0),
-                    msg.metadata.delta_path,
+                assert (
+                    make_delta_path(RootContainer.MAIN, (1,), 0)
+                    == msg.metadata.delta_path
                 )
 
         worker_thread = threading.Thread(target=thread)
@@ -509,9 +498,8 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
 
             st.markdown("Object in container 1")
             msg = self.get_message_from_queue()
-            self.assertEqual(
-                make_delta_path(RootContainer.MAIN, (0,), 0),
-                msg.metadata.delta_path,
+            assert (
+                make_delta_path(RootContainer.MAIN, (0,), 0) == msg.metadata.delta_path
             )
 
             object_1.set()
@@ -532,8 +520,9 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
         st.markdown("Object 1b") |
                                  | st.markdown("Object 2")
 
-        In this scenario, Task 2 should inherit the container1 context from Task 1 when it is created, so Objects 1a and 1b
-        will both go in container 1, and object 2 will go in container 2.
+        In this scenario, Task 2 should inherit the container1 context from Task 1
+        when it is created, so Objects 1a and 1b will both go in container 1,
+        and object 2 will go in container 2.
         """
         container1 = st.container()
         container2 = st.container()
@@ -549,9 +538,9 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
 
                 st.markdown("Object 1b")
                 msg = self.get_message_from_queue()
-                self.assertEqual(
-                    make_delta_path(RootContainer.MAIN, (0,), 1),
-                    msg.metadata.delta_path,
+                assert (
+                    make_delta_path(RootContainer.MAIN, (0,), 1)
+                    == msg.metadata.delta_path
                 )
 
                 object_1.set()
@@ -560,18 +549,17 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
         async def task2():
             st.markdown("Object 1a")
             msg = self.get_message_from_queue()
-            self.assertEqual(
-                make_delta_path(RootContainer.MAIN, (0,), 0),
-                msg.metadata.delta_path,
+            assert (
+                make_delta_path(RootContainer.MAIN, (0,), 0) == msg.metadata.delta_path
             )
 
             with container2:
                 with_2.set()
                 st.markdown("Object 2")
                 msg = self.get_message_from_queue()
-                self.assertEqual(
-                    make_delta_path(RootContainer.MAIN, (1,), 0),
-                    msg.metadata.delta_path,
+                assert (
+                    make_delta_path(RootContainer.MAIN, (1,), 0)
+                    == msg.metadata.delta_path
                 )
 
                 await object_1.wait()
@@ -591,7 +579,7 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         json_string = json.dumps(json_data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.json.body)
+        assert json_string == element.json.body
 
     def test_json_tuple(self):
         """Test Text.JSON tuple."""
@@ -602,7 +590,7 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         json_string = json.dumps(json_data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.json.body)
+        assert json_string == element.json.body
 
     def test_json_object(self):
         """Test Text.JSON object."""
@@ -614,8 +602,8 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         json_string = json.dumps(json_data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.json.body)
-        self.assertEqual(True, element.json.expanded)
+        assert json_string == element.json.body
+        assert element.json.expanded
 
     def test_json_string(self):
         """Test Text.JSON string."""
@@ -625,7 +613,7 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         st.json(json_string)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.json.body)
+        assert json_string == element.json.body
 
     def test_json_unserializable(self):
         """Test Text.JSON with unserializable object."""
@@ -637,7 +625,7 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
 
         # validate a substring since repr for a module may contain an installation-specific path
-        self.assertTrue(element.json.body.startswith("\"<module 'json'"))
+        assert element.json.body.startswith("\"<module 'json'")
 
     def test_json_not_expanded_arg(self):
         """Test st.json expanded arg."""
@@ -649,18 +637,18 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         json_string = json.dumps(json_data)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(json_string, element.json.body)
-        self.assertEqual(False, element.json.expanded)
+        assert json_string == element.json.body
+        assert not element.json.expanded
 
     def test_json_not_mutates_data_containing_sets(self):
         """Test st.json do not mutate data containing sets,
         pass a dict-containing-a-set to st.json; ensure that it's not mutated
         """
         json_data = {"some_set": {"a", "b"}}
-        self.assertIsInstance(json_data["some_set"], set)
+        assert isinstance(json_data["some_set"], set)
 
         st.json(json_data)
-        self.assertIsInstance(json_data["some_set"], set)
+        assert isinstance(json_data["some_set"], set)
 
     def test_st_json_set_is_serialized_as_list(self):
         """Test st.json serializes set as list"""
@@ -668,9 +656,9 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         st.json(json_data)
         element = self.get_delta_from_queue().new_element
         parsed_element = json.loads(element.json.body)
-        self.assertIsInstance(parsed_element, list)
+        assert isinstance(parsed_element, list)
         for el in json_data:
-            self.assertIn(el, parsed_element)
+            assert el in parsed_element
 
     def test_st_json_serializes_sets_inside_iterables_as_lists(self):
         """Test st.json serializes sets inside iterables as lists"""
@@ -679,8 +667,8 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         parsed_element = json.loads(element.json.body)
         set_as_list = parsed_element.get("some_set")
-        self.assertIsInstance(set_as_list, list)
-        self.assertSetEqual(json_data["some_set"], set(set_as_list))
+        assert isinstance(set_as_list, list)
+        assert json_data["some_set"] == set(set_as_list)
 
     def test_st_json_generator_is_serialized_as_string(self):
         """Test st.json serializes generator as string"""
@@ -688,8 +676,8 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         st.json(json_data)
         element = self.get_delta_from_queue().new_element
         parsed_element = json.loads(element.json.body)
-        self.assertIsInstance(parsed_element, str)
-        self.assertIn("generator", parsed_element)
+        assert isinstance(parsed_element, str)
+        assert "generator" in parsed_element
 
     def test_markdown(self):
         """Test Markdown element."""
@@ -698,7 +686,7 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         st.markdown(test_string)
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual("data", element.markdown.body)
+        assert element.markdown.body == "data"
 
         test_string = "    <a#data>data</a>   "
         st.markdown(test_string)
@@ -711,12 +699,12 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
         st.empty()
 
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.empty, EmptyProto())
+        assert element.empty == EmptyProto()
 
 
 class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
     def test_ids_are_equal_when_inputs_are_equal(self):
-        with self.assertRaises(StreamlitDuplicateElementId):
+        with pytest.raises(StreamlitDuplicateElementId):
             compute_and_register_element_id(
                 "text_input",
                 label="Label #1",
@@ -734,7 +722,7 @@ class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
             )
 
     def test_duplicated_key_is_raised(self):
-        with self.assertRaises(StreamlitDuplicateElementKey):
+        with pytest.raises(StreamlitDuplicateElementKey):
             compute_and_register_element_id(
                 "text_input",
                 label="Label #1",
@@ -820,17 +808,17 @@ class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
         # single URL
         st.image(url, caption=caption, width=200)
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(element.imgs.width, 200)
-        self.assertEqual(len(element.imgs.imgs), 1)
-        self.assertEqual(element.imgs.imgs[0].url, url)
-        self.assertEqual(element.imgs.imgs[0].caption, caption)
+        assert element.imgs.width == 200
+        assert len(element.imgs.imgs) == 1
+        assert element.imgs.imgs[0].url == url
+        assert element.imgs.imgs[0].caption == caption
 
         # multiple URLs
         st.image([url] * 5, caption=[caption] * 5, width=200)
         element = self.get_delta_from_queue().new_element
-        self.assertEqual(len(element.imgs.imgs), 5)
-        self.assertEqual(element.imgs.imgs[4].url, url)
-        self.assertEqual(element.imgs.imgs[4].caption, caption)
+        assert len(element.imgs.imgs) == 5
+        assert element.imgs.imgs[4].url == url
+        assert element.imgs.imgs[4].caption == caption
 
     def test_unequal_images_and_captions_error(self):
         """Tests that the number of images and captions must match, or
@@ -839,6 +827,7 @@ class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
         url = "https://streamlit.io/an_image.png"
         caption = "ahoy!"
 
-        with self.assertRaises(Exception) as ctx:
+        with pytest.raises(
+            StreamlitAPIException, match="Cannot pair 2 captions with 5 images."
+        ):
             st.image([url] * 5, caption=[caption] * 2)
-        self.assertTrue("Cannot pair 2 captions with 5 images." in str(ctx.exception))

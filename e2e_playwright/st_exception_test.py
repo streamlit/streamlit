@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_st_exception_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    expect(themed_app.get_by_test_id("stException").nth(0)).to_have_text(
+    expect(themed_app.get_by_test_id("stException").nth(0)).to_contain_text(
         "RuntimeError: This exception message is awesome!"
     )
 
@@ -30,10 +30,34 @@ def test_st_exception_displays_correctly(
     button.click()
     wait_for_app_run(themed_app)
 
-    for i in range(4):
-        assert_snapshot(
-            themed_app.get_by_test_id("stException").nth(i), name=f"st_exception-{i}"
-        )
+    # Make sure that there is not hover active on the exceptions
+    themed_app.get_by_test_id("stMarkdownContainer").first.hover()
+
+    expect(themed_app.get_by_test_id("stException")).to_have_count(6)
+
+    # Use descriptive names for each exception snapshot
+    assert_snapshot(
+        themed_app.get_by_test_id("stException").nth(0), name="st_exception-basic"
+    )
+    assert_snapshot(
+        themed_app.get_by_test_id("stException").nth(1),
+        name="st_exception-long_message",
+    )
+    assert_snapshot(
+        themed_app.get_by_test_id("stException").nth(2),
+        name="st_exception-with_markdown",
+    )
+    assert_snapshot(
+        themed_app.get_by_test_id("stException").nth(3), name="st_exception-fixed_width"
+    )
+    assert_snapshot(
+        themed_app.get_by_test_id("stException").nth(4),
+        name="st_exception-stretch_width",
+    )
+    assert_snapshot(
+        themed_app.get_by_test_id("stException").nth(5),
+        name="st_exception-raised_with_traceback",
+    )
 
 
 def test_check_top_level_class(app: Page):

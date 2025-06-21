@@ -19,14 +19,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
-import sys
 from typing import Any, Callable
-
-# Due to security issue in md5 and sha1, usedforsecurity
-# argument is added to hashlib for python versions higher than 3.8
-HASHLIB_KWARGS: dict[str, Any] = (
-    {"usedforsecurity": False} if sys.version_info >= (3, 9) else {}
-)
 
 
 def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -34,7 +27,7 @@ def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
     result: list[Any] = []
 
     @functools.wraps(func)
-    def wrapped_func():
+    def wrapped_func() -> Any:
         if not result:
             result.append(func())
         return result[0]
@@ -66,10 +59,38 @@ def repr_(self: Any) -> str:
 
 
 def calc_md5(s: bytes | str) -> str:
-    """Return the md5 hash of the given string."""
-    h = hashlib.new("md5", **HASHLIB_KWARGS)
+    """Return the md5 hash of the given string.
+
+    This should not be used for security-related purposes.
+    """
+    # Due to security issue in md5 and sha1, usedforsecurity
+    h = hashlib.new("md5", usedforsecurity=False)
 
     b = s.encode("utf-8") if isinstance(s, str) else s
 
     h.update(b)
     return h.hexdigest()
+
+
+class AttributeDictionary(dict[Any, Any]):
+    """
+    A dictionary subclass that supports attribute-style access.
+
+    This class extends the functionality of a standard dictionary to allow items
+    to be accessed via attribute-style dot notation in addition to the traditional
+    key-based access. If a dictionary item is accessed and is itself a dictionary,
+    it is automatically wrapped in another `AttributeDictionary`, enabling recursive
+    attribute-style access.
+    """
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            item = self.__getitem__(key)
+            return AttributeDictionary(item) if isinstance(item, dict) else item
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            ) from err
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        self[name] = value

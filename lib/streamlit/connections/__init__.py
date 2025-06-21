@@ -21,8 +21,8 @@ ExperimentalBaseConnection = BaseConnection
 
 __all__ = [
     "BaseConnection",
+    "ExperimentalBaseConnection",
+    "SQLConnection",
     "SnowflakeConnection",
     "SnowparkConnection",
-    "SQLConnection",
-    "ExperimentalBaseConnection",
 ]

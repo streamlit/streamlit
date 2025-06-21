@@ -18,7 +18,7 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
 
@@ -47,5 +47,15 @@ describe("Testing Camera Input Button", () => {
 
     const progress = screen.getByRole("progressbar")
     expect(progress).toHaveAttribute("aria-valuenow", "50")
+  })
+
+  it("renders disabled button properly", () => {
+    const props = getProps({ disabled: true })
+
+    render(<CameraInputButton {...props} />)
+
+    const button = screen.getByTestId("stCameraInputButton")
+    expect(button).toBeDisabled()
+    expect(button).toHaveStyle("cursor: not-allowed")
   })
 })

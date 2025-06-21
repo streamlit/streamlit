@@ -16,9 +16,10 @@
 
 import styled from "@emotion/styled"
 
-import { StyledWidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget/styled-components"
-import { Metric as MetricProto } from "@streamlit/lib/src/proto"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import { Metric as MetricProto } from "@streamlit/protobuf"
+
+import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface StyledMetricContainerProps {
   showBorder: boolean
@@ -80,6 +81,7 @@ export interface StyledMetricDeltaTextProps {
 }
 
 const getMetricColor = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   theme: any,
   color: MetricProto.MetricColor
 ): string => {

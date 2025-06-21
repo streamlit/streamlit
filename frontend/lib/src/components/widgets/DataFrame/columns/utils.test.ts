@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { Field, Utf8 } from "apache-arrow"
 import moment, { Moment } from "moment-timezone"
 
-import { withTimezones } from "@streamlit/lib/src/util/withTimezones"
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { withTimezones } from "~lib/util/withTimezones"
 
 import {
   BaseColumnProps,
@@ -32,6 +34,7 @@ import {
   mergeColumnParameters,
   removeLineBreaks,
   toGlideColumn,
+  toJsonString,
   toSafeArray,
   toSafeBoolean,
   toSafeDate,
@@ -48,8 +51,15 @@ const MOCK_TEXT_COLUMN_PROPS = {
   title: "column_1",
   indexNumber: 0,
   arrowType: {
-    pandas_type: "unicode",
-    numpy_type: "object",
+    type: DataFrameCellType.DATA,
+    arrowField: new Field("test", new Utf8(), true),
+    pandasType: {
+      field_name: "test",
+      name: "test",
+      pandas_type: "unicode",
+      numpy_type: "object",
+      metadata: null,
+    },
   },
   isEditable: false,
   isHidden: false,
@@ -278,11 +288,11 @@ describe("formatNumber", () => {
   )
 
   it.each([
-    [0.5, "percent", "50.00%"],
+    [0.5, "percent", "50%"],
     [0.51236, "percent", "51.24%"],
-    [1.1, "percent", "110.00%"],
-    [0, "percent", "0.00%"],
-    [0.00001, "percent", "0.00%"],
+    [-1.123456, "percent", "-112.35%"],
+    [0, "percent", "0%"],
+    [0.00001, "percent", "0%"],
     [1000, "compact", "1K"],
     [1100, "compact", "1.1K"],
     [10, "compact", "10"],
@@ -292,6 +302,33 @@ describe("formatNumber", () => {
     [123456789, "scientific", "1.235E8"],
     [1000, "engineering", "1E3"],
     [123456789, "engineering", "123.457E6"],
+    [1234.567, "engineering", "1.235E3"],
+    // plain
+    [10.1231234, "plain", "10.1231234"],
+    [-1234.456789, "plain", "-1234.456789"],
+    [0.00000001, "plain", "0.00000001"],
+    // dollar
+    [10.123, "dollar", "$10.12"],
+    [-1234.456789, "dollar", "-$1,234.46"],
+    [0.00000001, "dollar", "$0.00"],
+    // euro
+    [10.123, "euro", "€10.12"],
+    [-1234.456789, "euro", "-€1,234.46"],
+    [0.00000001, "euro", "€0.00"],
+    // yen
+    [10.123, "yen", "¥10"],
+    [-1234.456789, "yen", "-¥1,234"],
+    [0.00000001, "yen", "¥0"],
+    // localized
+    [10.123, "localized", "10.123"],
+    [-1234.456789, "localized", "-1,234.457"],
+    [0.001, "localized", "0.001"],
+    // accounting
+    [10.123, "accounting", "10.12"],
+    [-10.126, "accounting", "(10.13)"],
+    [-10.1, "accounting", "(10.10)"],
+    [1000000.123412, "accounting", "1,000,000.12"],
+    [-1000000.123412, "accounting", "(1,000,000.12)"],
     // sprintf format
     [10.123, "%d", "10"],
     [10.123, "%i", "10"],
@@ -396,6 +433,7 @@ describe("toGlideColumn", () => {
       id: MOCK_TEXT_COLUMN_PROPS.id,
       title: MOCK_TEXT_COLUMN_PROPS.title,
       hasMenu: false,
+      menuIcon: "dots",
       themeOverride: MOCK_TEXT_COLUMN_PROPS.themeOverride,
       grow: undefined,
       width: undefined,
@@ -408,16 +446,16 @@ describe("toGlideColumn", () => {
       isStretched: true,
     })
 
-    expect(toGlideColumn(textColumn).grow).toEqual(3)
+    expect(toGlideColumn(textColumn).grow).toEqual(1)
 
-    // Create index column:
+    // Pinned columns should not use grow:
     const indexColumn = TextColumn({
       ...MOCK_TEXT_COLUMN_PROPS,
       isStretched: true,
-      isIndex: true,
+      isPinned: true,
     })
 
-    expect(toGlideColumn(indexColumn).grow).toEqual(1)
+    expect(toGlideColumn(indexColumn).grow).toEqual(undefined)
   })
 })
 
@@ -499,10 +537,10 @@ describe("countDecimals", () => {
     [0.0000000000000000001, 19],
     [-0.12345, 5],
     [123456789432, 0],
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [123456789876543212312313, 0],
     // It is expected that very large and small numbers won't work correctly:
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [1234567898765432.1, 0],
     [0.0000000000000000000001, 0],
     [1.234567890123456e-20, 20],
@@ -525,6 +563,8 @@ describe("truncateDecimals", () => {
     [42, 0, 42],
     [-42, 0, -42],
     [0.1 + 0.2, 2, 0.3],
+    [4.52, 2, 4.52],
+    [0.0099999, 2, 0.0],
   ])(
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {
@@ -583,15 +623,21 @@ withTimezones(() => {
       ["distance", moment.utc("2022-04-27T23:59:59Z"), "a few seconds ago"],
       ["distance", moment.utc("2022-04-20T00:00:00Z"), "8 days ago"],
       ["distance", moment.utc("2022-05-27T23:59:59Z"), "in a month"],
-      // Relative:
-      ["relative", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
+      // Calendar:
+      ["calendar", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
       [
-        "relative",
+        "calendar",
         moment.utc("2022-04-24T12:20:30Z"),
         "Last Sunday at 12:20 PM",
       ],
-      ["relative", moment.utc("2022-04-28T12:00:00Z"), "Today at 12:00 PM"],
-      ["relative", moment.utc("2022-04-29T12:00:00Z"), "Tomorrow at 12:00 PM"],
+      ["calendar", moment.utc("2022-04-28T12:00:00Z"), "Today at 12:00 PM"],
+      ["calendar", moment.utc("2022-04-29T12:00:00Z"), "Tomorrow at 12:00 PM"],
+      // ISO8601:
+      [
+        "iso8601",
+        moment.utc("2023-04-27T10:20:30.123Z"),
+        "2023-04-27T10:20:30.123Z",
+      ],
     ])(
       "uses %s format to format %s to %s",
       (format: string, momentDate: Moment, expected: string) => {
@@ -687,4 +733,43 @@ describe("getLinkDisplayValueFromRegex", () => {
       expect(getLinkDisplayValueFromRegex(regex, href)).toBe(expected)
     }
   )
+})
+
+describe("toJsonString", () => {
+  it.each([
+    // Simple values
+    ["hello", "hello"],
+    [123, "123"],
+    [true, "true"],
+    [false, "false"],
+    [null, ""],
+    [undefined, ""],
+    // Arrays
+    [[1, 2, 3], "[1,2,3]"],
+    [["a", "b", "c"], '["a","b","c"]'],
+    [[1, "a", true], '[1,"a",true]'],
+    // Objects
+    [{ a: 1, b: 2 }, '{"a":1,"b":2}'],
+    [{ name: "test", active: true }, '{"name":"test","active":true}'],
+    // Nested structures
+    [{ arr: [1, 2, { x: "y" }] }, '{"arr":[1,2,{"x":"y"}]}'],
+    // BigInt handling
+    [BigInt(123), "123"],
+    [{ big: BigInt(9007199254740991) }, '{"big":9007199254740991}'],
+    // Already stringified JSON
+    ['{"test":123}', '{"test":123}'],
+    // Circular reference (should use toSafeString fallback)
+    [
+      (() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+        const circular: any = { a: 1 }
+        circular.self = circular
+        return circular
+      })(),
+      "[object Object]",
+    ],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  ])("converts %o to JSON string %s", (input: any, expected: string) => {
+    expect(toJsonString(input)).toBe(expected)
+  })
 })

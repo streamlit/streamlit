@@ -18,7 +18,7 @@ import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { EmotionTheme } from "~lib/theme"
 
 export const StyledVegaLiteChartTooltips = (
   theme: EmotionTheme
@@ -35,7 +35,7 @@ export const StyledVegaLiteChartTooltips = (
     maxWidth: theme.sizes.maxChartTooltipWidth,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
     borderRadius: theme.radii.default,
-    zIndex: theme.zIndices.vegaTooltips,
+    zIndex: theme.zIndices.popup,
 
     "&.visible": {
       visibility: "visible",
@@ -129,7 +129,7 @@ export const StyledVegaLiteChartContainer =
           flexDirection: "column",
           paddingBottom: theme.spacing.sm,
           paddingTop: theme.spacing.sm,
-          zIndex: theme.zIndices.popupMenu,
+          zIndex: theme.zIndices.popup,
           // Position under the menu button. The size of the menu button
           // iconSizes.md + padding (2 * spacing.xs)
           //+ some additional spacing (spacing.xs)
@@ -155,7 +155,7 @@ export const StyledVegaLiteChartContainer =
             textDecoration: "none",
           },
           "a:hover, a:focus": {
-            backgroundColor: theme.colors.secondaryBg,
+            backgroundColor: theme.colors.darkenedBgMix15,
             color: theme.colors.bodyText,
           },
           ":before": {
@@ -211,7 +211,7 @@ export const StyledVegaLiteChartContainer =
             boxShadow: "none",
             color: theme.colors.bodyText,
             opacity: "1 !important",
-            background: theme.colors.darkenedBgMix25,
+            background: theme.colors.darkenedBgMix15,
           },
           svg: {
             width: theme.iconSizes.md,

@@ -14,27 +14,24 @@
  * limitations under the License.
  */
 
-import { Draft, default as produce } from "immer"
+import { Draft, produce } from "immer"
 import { Long, util } from "protobufjs"
 import { Signal, SignalConnection } from "typed-signals"
 
 import {
-  isValidFormId,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
-
-import {
+  ChatInputValue,
   DoubleArray,
   IArrowTable,
+  IChatInputValue,
   IFileUploaderState,
   SInt64Array,
   StringArray,
-  StringTriggerValue,
   Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
-} from "./proto"
+} from "@streamlit/protobuf"
 
+import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
 export interface Source {
   fromUi: boolean
 }
@@ -102,7 +99,7 @@ export class WidgetStateDict {
 
   /** Remove the state of widgets that are not contained in `activeIds`. */
   public removeInactive(activeIds: Set<string>): void {
-    this.widgetStates.forEach((value, key) => {
+    this.widgetStates.forEach((_value, key) => {
       if (!activeIds.has(key)) {
         this.widgetStates.delete(key)
       }
@@ -193,6 +190,7 @@ export class WidgetStateManager {
   // A dictionary that maps elementId -> element state keys -> element state values.
   // This is used to store frontend-only state for elements.
   // This state is not never sent to the server.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   private readonly elementStates = new Map<string, Map<string, any>>()
 
   constructor(props: Props) {
@@ -237,6 +235,7 @@ export class WidgetStateManager {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`invalid formID '${formId}'`)
     }
 
@@ -306,20 +305,17 @@ export class WidgetStateManager {
     })
   }
 
-  /**
-   * Sets the string trigger value for the given widget ID to a string value,
-   * sends a rerunScript message to the server, and then immediately unsets the
-   * string trigger value to None/null.
-   */
-  public setStringTriggerValue(
+  public setChatInputValue(
     widget: WidgetInfo,
-    value: string,
+    value: IChatInputValue,
     source: Source,
     fragmentId: string | undefined
-  ): Promise<void> {
-    this.createWidgetState(widget, source).stringTriggerValue =
-      new StringTriggerValue({ data: value })
-    return this.setTriggerValueAtEndOfEventLoop(widget, source, fragmentId)
+  ): void {
+    this.createWidgetState(widget, source).chatInputValue = new ChatInputValue(
+      value
+    )
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
+    this.deleteWidgetState(widget.id)
   }
 
   /**
@@ -500,6 +496,7 @@ export class WidgetStateManager {
 
   public setJsonValue(
     widget: WidgetInfo,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     value: any,
     source: Source,
     fragmentId: string | undefined
@@ -800,6 +797,7 @@ export class WidgetStateManager {
    * Get the element state value for the given element ID and key, if it exists.
    * This is a frontend-only state that is never sent to the server.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   public getElementState(elementId: string, key: string): any {
     return this.elementStates.get(elementId)?.get(key)
   }
@@ -815,12 +813,15 @@ export class WidgetStateManager {
    * @param {any} value - The value to set for the element's state.
    * @returns {void}
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   public setElementState(elementId: string, key: string, value: any): void {
     if (!this.elementStates.has(elementId)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       this.elementStates.set(elementId, new Map<string, any>())
     }
 
     // It's expected here that there is always an initialized map for an elementId
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     ;(this.elementStates.get(elementId) as Map<string, any>).set(key, value)
   }
 
@@ -861,6 +862,7 @@ function requireNumberInt(value: number | Long): number {
   }
 
   throw new Error(
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
     `value ${value} cannot be converted to number without a loss of precision!`
   )
 }

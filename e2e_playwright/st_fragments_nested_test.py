@@ -165,7 +165,7 @@ def test_outer_fragment_rerun_clears_stale_widgets_in_inner_fragment(app: Page):
     expect(_get_inner_fragment_counter_text(app)).to_have_count(0)
 
     max_bound: Final = 2
-    for i in range(0, max_bound):
+    for i in range(max_bound):
         _rerun_outer_fragment(app)
         # the inner text is rendered now
         counter_text = _get_inner_fragment_counter_text(app)
@@ -175,7 +175,7 @@ def test_outer_fragment_rerun_clears_stale_widgets_in_inner_fragment(app: Page):
     # rerunning inner fragment should not change the inner fragment text
     number_markdown_elements: Final = DEFAULT_NUMBER_MARKDOWN_ELEMENTS + 1
     _, _, previous_inner_fragment_text, _ = _get_uuids(app, number_markdown_elements)
-    for _ in range(0, 10):
+    for _ in range(10):
         _rerun_inner_fragment(app)
         # ensure that the inner fragment indeed runs
         _, _, inner_fragment_text, _ = _get_uuids(app, number_markdown_elements)

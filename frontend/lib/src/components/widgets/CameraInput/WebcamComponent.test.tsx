@@ -19,16 +19,16 @@ import React from "react"
 import { screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { Props, WebcamPermission } from "./WebcamComponent"
 
 vi.mock("react-webcam")
 
-vi.mock("react-device-detect", () => {
+vi.mock("~lib/util/isMobile", () => {
   return {
-    isMobile: true,
+    isMobile: () => true,
   }
 })
 

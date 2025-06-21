@@ -35,7 +35,9 @@ function useTimeout(callback: () => void, timeoutMs: number): () => void {
   }, [callback])
 
   useEffect(() => {
-    timeoutRef.current = setTimeout(callbackRef.current, timeoutMs)
+    timeoutRef.current = setTimeout(() => {
+      callbackRef.current()
+    }, timeoutMs)
 
     return () => {
       if (!timeoutRef.current) {

@@ -18,12 +18,13 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { IFrame as IFrameProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "@streamlit/lib/src/util/IFrameUtil"
-import { IFrame as IFrameProto } from "@streamlit/lib/src/proto"
+} from "~lib/util/IFrameUtil"
 
 import IFrame, { IFrameProps } from "./IFrame"
 
@@ -31,7 +32,6 @@ const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({
   element: IFrameProto.create({
     ...elementProps,
   }),
-  width: 100,
 })
 
 describe("st.iframe", () => {
@@ -49,6 +49,30 @@ describe("st.iframe", () => {
     })
     render(<IFrame {...props} />)
     expect(screen.getByTestId("stIFrame")).toHaveAttribute("height", "400")
+  })
+
+  describe("tabIndex attribute", () => {
+    it("should not have tabIndex attribute when not provided", () => {
+      const props = getProps({})
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).not.toHaveAttribute("tabindex")
+    })
+
+    it.each([
+      { value: 5, expected: "5", description: "positive" },
+      { value: -1, expected: "-1", description: "negative" },
+      { value: 0, expected: "0", description: "zero" },
+    ])(
+      "should set tabIndex to $description value when provided",
+      ({ value, expected }) => {
+        const props = getProps({ tabIndex: value })
+        render(<IFrame {...props} />)
+        expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+          "tabindex",
+          expected
+        )
+      }
+    )
   })
 
   describe("Render iframe with `src` parameter", () => {
@@ -108,23 +132,6 @@ describe("st.iframe", () => {
         "sandbox",
         DEFAULT_IFRAME_SANDBOX_POLICY
       )
-    })
-  })
-
-  describe("Render iframe with specified width", () => {
-    const props = getProps({
-      hasWidth: true,
-      width: 200,
-    })
-    it("should set element width", () => {
-      render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute("width", "200")
-    })
-
-    it("should set app width", () => {
-      const props = getProps({})
-      render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute("width", "100")
     })
   })
 

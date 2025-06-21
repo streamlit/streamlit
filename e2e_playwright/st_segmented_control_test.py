@@ -14,7 +14,7 @@
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -24,19 +24,11 @@ from e2e_playwright.shared.app_utils import (
     click_form_button,
     expect_help_tooltip,
     expect_markdown,
+    get_button_group,
     get_element_by_key,
     get_markdown,
+    get_segment_button,
 )
-
-
-def get_button_group(app: Page, key: str) -> Locator:
-    return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
-
-
-def get_segment_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(
-        re.compile("stBaseButton-segmented_control(Active)?")
-    ).filter(has_text=text)
 
 
 def test_click_multiple_segmented_control_button_and_take_snapshot(

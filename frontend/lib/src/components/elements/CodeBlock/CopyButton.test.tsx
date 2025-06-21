@@ -19,7 +19,7 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import Clipboard from "clipboard"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import CopyButton from "./CopyButton"
 

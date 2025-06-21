@@ -16,7 +16,7 @@
 
 import { Signal } from "typed-signals"
 
-import { SessionEvent } from "@streamlit/lib"
+import { SessionEvent } from "@streamlit/protobuf"
 
 /** Redispatches SessionEvent messages received from the server. */
 export class SessionEventDispatcher {

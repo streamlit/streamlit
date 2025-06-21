@@ -15,14 +15,17 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.data_mocks import SHARED_TEST_CASES
 
 
 def test_data_editor_input_format_rendering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that st.data_editor renders various data formats correctly via snapshot testing."""
+    """Test that st.data_editor renders various data formats correctly via snapshot
+    testing.
+    """
     dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(33)
+    expect(dataframe_elements).to_have_count(len(SHARED_TEST_CASES) + 1)
 
     # The data editor might require a bit more time for rendering the canvas
     app.wait_for_timeout(1000)

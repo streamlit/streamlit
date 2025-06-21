@@ -17,6 +17,9 @@
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind, UriCell } from "@glideapps/glide-data-grid"
+import { Field, Utf8 } from "apache-arrow"
+
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import LinkColumn from "./LinkColumn"
 import { ErrorCell, isErrorCell } from "./utils"
@@ -32,10 +35,15 @@ const MOCK_LINK_COLUMN_PROPS = {
   isPinned: false,
   isStretched: false,
   arrowType: {
-    // The arrow type of the underlying data is
-    // not used for anything inside the column.
-    pandas_type: "unicode",
-    numpy_type: "object",
+    type: DataFrameCellType.DATA,
+    arrowField: new Field("link_column", new Utf8(), true),
+    pandasType: {
+      field_name: "link_column",
+      name: "link_column",
+      pandas_type: "unicode",
+      numpy_type: "object",
+      metadata: null,
+    },
   },
 }
 
@@ -63,6 +71,7 @@ describe("LinkColumn", () => {
     // should also be supported by the UrlColumn.
   ])(
     "supports string-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
     (input: any, value: any | null) => {
       const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
@@ -224,7 +233,6 @@ describe("LinkColumn", () => {
   it("sets displayed value as the href, when displayText is a regex but there is no match", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
-      // eslint-disable-next-line prettier/prettier
       columnTypeOptions: { display_text: "https://(.*?)\\.google.com" },
     })
 

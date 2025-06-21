@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from shared.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
+from shared.data_mocks import SHARED_TEST_CASES, CaseMetadata
 from streamlit.dataframe_util import DataFormat
 
 np.random.seed(0)
@@ -38,7 +38,7 @@ TEST_CASES.append(
                 [("A", "foo"), ("A", "bar"), ("B", "foo")]
             ),
         ),  # Explicitly set the range index to have the same behavior across versions
-        TestCaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME),
+        CaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME),
     ),
 )
 
@@ -51,6 +51,7 @@ for i, test_case in enumerate(TEST_CASES):
         data,
         key=f"data_editor-{i}",
         num_rows="dynamic" if activate_dynamic_editing else "fixed",
+        use_container_width=False,
     )
     if show_return_data:
-        st.dataframe(return_df_fixed)
+        st.dataframe(return_df_fixed, use_container_width=False)

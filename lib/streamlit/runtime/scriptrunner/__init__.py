@@ -27,12 +27,12 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 
 __all__ = [
     "RerunData",
-    "ScriptRunContext",
-    "add_script_run_ctx",
-    "get_script_run_ctx",
-    "enqueue_message",
     "RerunException",
+    "ScriptRunContext",
     "ScriptRunner",
     "ScriptRunnerEvent",
     "StopException",
+    "add_script_run_ctx",
+    "enqueue_message",
+    "get_script_run_ctx",
 ]

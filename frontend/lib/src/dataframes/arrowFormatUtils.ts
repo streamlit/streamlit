@@ -19,26 +19,17 @@
  * a human-readable format.
  */
 
-import {
-  Field,
-  Float,
-  Struct,
-  StructRow,
-  Timestamp,
-  TimeUnit,
-  util,
-} from "apache-arrow"
+import { Field, Struct, StructRow, TimeUnit, util } from "apache-arrow"
 import trimEnd from "lodash/trimEnd"
+import { getLogger } from "loglevel"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
-import { logWarning } from "@streamlit/lib/src/util/log"
-import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
+  ArrowType,
+  DataFrameCellType,
   DataType,
   isDatetimeType,
   isDateType,
@@ -49,8 +40,8 @@ import {
   isListType,
   isObjectType,
   isPeriodType,
+  isStringType,
   isTimeType,
-  PandasColumnType,
 } from "./arrowTypeUtils"
 
 /**
@@ -89,6 +80,7 @@ type PandasPeriodFrequency =
   | SupportedPandasOffsetType
   | `${SupportedPandasOffsetType}-${string}`
 
+const LOG = getLogger("arrowFormatUtils")
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 const formatMs = (duration: number): string =>
   moment("19700101", "YYYYMMDD")
@@ -262,7 +254,7 @@ function formatDate(date: number | Date): string {
   // Date values from arrow are already converted to a date object
   // or a timestamp in milliseconds even if the field unit belonging to the
   // passed date might have indicated a different unit.
-  // Thats why we don't need the field information here (aka its not passed to the function)
+  // That's why we don't need the field information here (aka its not passed to the function)
   // and we don't need to apply any unit conversion.
   // https://github.com/apache/arrow/blob/9e08c57c0986531879aadf7942998d26a94a5d1b/js/src/visitor/get.ts#L167-L171
 
@@ -274,7 +266,7 @@ function formatDate(date: number | Date): string {
       (typeof date === "number" && Number.isFinite(date))
     )
   ) {
-    logWarning(`Unsupported date value: ${date}`)
+    LOG.warn(`Unsupported date value: ${date}`)
     return String(date)
   }
 
@@ -296,7 +288,7 @@ function formatDatetime(date: number | Date, field?: Field): string {
       (typeof date === "number" && Number.isFinite(date))
     )
   ) {
-    logWarning(`Unsupported datetime value: ${date}`)
+    LOG.warn(`Unsupported datetime value: ${date}`)
     return String(date)
   }
 
@@ -393,24 +385,30 @@ export function formatPeriodFromFreq(
   const momentConverter =
     PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
   if (!momentConverter) {
-    logWarning(`Unsupported period frequency: ${freq}`)
+    LOG.warn(`Unsupported period frequency: ${freq}`)
     return String(duration)
   }
   const durationNumber = Number(duration)
   if (!Number.isSafeInteger(durationNumber)) {
-    logWarning(
+    LOG.warn(
       `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
     )
     return String(duration)
   }
-  return momentConverter(durationNumber, freqParam)
+  try {
+    return momentConverter(durationNumber, freqParam)
+  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+    LOG.warn(`Error while formatting period value: ${error}`)
+    return String(duration)
+  }
 }
 
 function formatPeriod(duration: number | bigint, field?: Field): string {
   // Serialization for pandas.Period is provided by Arrow extensions
   // https://github.com/pandas-dev/pandas/blob/70bb855cbbc75b52adcb127c84e0a35d2cd796a9/pandas/core/arrays/arrow/extension_types.py#L26
   if (isNullOrUndefined(field)) {
-    logWarning("Field information is missing")
+    LOG.warn("Field information is missing")
     return String(duration)
   }
 
@@ -421,16 +419,16 @@ function formatPeriod(duration: number | bigint, field?: Field): string {
     isNullOrUndefined(extensionName) ||
     isNullOrUndefined(extensionMetadata)
   ) {
-    logWarning("Arrow extension metadata is missing")
+    LOG.warn("Arrow extension metadata is missing")
     return String(duration)
   }
 
   if (extensionName !== "pandas.period") {
-    logWarning(`Unsupported extension name for period type: ${extensionName}`)
+    LOG.warn(`Unsupported extension name for period type: ${extensionName}`)
     return String(duration)
   }
 
-  const parsedExtensionMetadata = JSON.parse(extensionMetadata as string)
+  const parsedExtensionMetadata = JSON.parse(extensionMetadata)
   const { freq } = parsedExtensionMetadata
   return formatPeriodFromFreq(duration, freq)
 }
@@ -442,6 +440,7 @@ function formatPeriod(duration: number | bigint, field?: Field): string {
  * @param field The field metadata from arrow containing metadata about the column.
  * @returns The formatted JSON string.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 function formatObject(object: any, field?: Field): string {
   if (field?.type instanceof Struct) {
     // This type is used by python dictionary values
@@ -498,27 +497,35 @@ function formatInterval(x: StructRow, field?: Field): string {
     )
     const { subtype, closed } = extensionMetadata
 
-    const interval = (x as StructRow).toJSON() as PandasInterval
+    const interval = x.toJSON() as PandasInterval
 
     const leftBracket = closed === "both" || closed === "left" ? "[" : "("
     const rightBracket = closed === "both" || closed === "right" ? "]" : ")"
 
-    const leftInterval = format(
-      interval.left,
-      {
+    const leftInterval = format(interval.left, {
+      // Construct a arrow type for the left interval
+      type: DataFrameCellType.DATA,
+      pandasType: {
         pandas_type: subtype,
         numpy_type: subtype,
+        field_name: "",
+        name: "",
+        metadata: null,
       },
-      (field.type as Struct)?.children?.[0]
-    )
-    const rightInterval = format(
-      interval.right,
-      {
+      arrowField: (field.type as Struct)?.children?.[0],
+    })
+    const rightInterval = format(interval.right, {
+      // Construct a arrow type for the right interval
+      type: DataFrameCellType.DATA,
+      pandasType: {
         pandas_type: subtype,
         numpy_type: subtype,
+        field_name: "",
+        name: "",
+        metadata: null,
       },
-      (field.type as Struct)?.children?.[1]
-    )
+      arrowField: (field.type as Struct)?.children?.[1],
+    })
 
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
   }
@@ -536,62 +543,59 @@ function formatInterval(x: StructRow, field?: Field): string {
  * @param field The field metadata from arrow containing metadata about the column.
  * @returns The formatted cell value.
  */
-export function format(
-  x: DataType,
-  pandasType?: PandasColumnType,
-  field?: Field
-): string {
-  const extensionName = field && field.metadata.get("ARROW:extension:name")
-  const fieldType = field?.type
+export function format(x: DataType, type: ArrowType): string {
+  try {
+    if (isNullOrUndefined(x)) {
+      return ""
+    }
 
-  if (isNullOrUndefined(x)) {
-    return "<NA>"
-  }
+    if (isStringType(type)) {
+      return String(x)
+    }
 
-  // date
-  const isDate = x instanceof Date || Number.isFinite(x)
-  if (isDate && isDateType(pandasType)) {
-    return formatDate(x as Date | number)
-  }
+    const isDate = x instanceof Date || Number.isFinite(x)
+    if (isDate && isDateType(type)) {
+      return formatDate(x as Date | number)
+    }
 
-  // time
-  if (typeof x === "bigint" && isTimeType(pandasType)) {
-    return formatTime(Number(x), field)
-  }
+    if (typeof x === "bigint" && isTimeType(type)) {
+      return formatTime(Number(x), type.arrowField)
+    }
 
-  // datetimetz, datetime, datetime64, datetime64[ns], etc.
-  if (
-    isDate &&
-    (isDatetimeType(pandasType) || fieldType instanceof Timestamp)
-  ) {
-    return formatDatetime(x as Date | number, field)
-  }
+    if (isDate && isDatetimeType(type)) {
+      return formatDatetime(x as Date | number, type.arrowField)
+    }
 
-  if (isPeriodType(pandasType) || extensionName === "pandas.period") {
-    return formatPeriod(x as bigint, field)
-  }
+    if (isPeriodType(type)) {
+      return formatPeriod(x as bigint, type.arrowField)
+    }
 
-  if (isIntervalType(pandasType) || extensionName === "pandas.interval") {
-    return formatInterval(x as StructRow, field)
-  }
+    if (isIntervalType(type)) {
+      return formatInterval(x as StructRow, type.arrowField)
+    }
 
-  if (isDurationType(pandasType)) {
-    return formatDuration(x as number | bigint, field)
-  }
+    if (isDurationType(type)) {
+      return formatDuration(x as number | bigint, type.arrowField)
+    }
 
-  if (isDecimalType(pandasType)) {
-    return formatDecimal(x as Uint32Array, field)
-  }
+    if (isDecimalType(type)) {
+      return formatDecimal(x as Uint32Array, type.arrowField)
+    }
 
-  if (
-    (isFloatType(pandasType) || fieldType instanceof Float) &&
-    Number.isFinite(x)
-  ) {
-    return formatFloat(x as number)
-  }
+    if (isFloatType(type) && Number.isFinite(x)) {
+      return formatFloat(x as number)
+    }
 
-  if (isObjectType(pandasType) || isListType(pandasType)) {
-    return formatObject(x, field)
+    if (isObjectType(type) || isListType(type)) {
+      return formatObject(x, type.arrowField)
+    }
+  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+    LOG.warn(`Unexpected error occurred while formatting value: ${error}`)
+    // Fallback to string conversion if any error occurs.
+    // It's not expected that this happens, but we want to guard against
+    // any unexpected errors.
+    return String(x)
   }
 
   return String(x)

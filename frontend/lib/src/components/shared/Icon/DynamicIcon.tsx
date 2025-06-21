@@ -16,7 +16,7 @@
 
 import React, { Suspense } from "react"
 
-import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
+import { IconSize } from "~lib/theme"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
@@ -40,6 +40,13 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
 }
 
 /**
+ * Returns true if the icon value is a material icon.
+ */
+export function isMaterialIcon(iconName: string): boolean {
+  return parseIconPackEntry(iconName).pack === "material"
+}
+
+/**
  *
  * @returns returns an img tag with a yellow filled star icon svg as base64 data
  */
@@ -53,7 +60,7 @@ export interface DynamicIconProps {
   margin?: string
   padding?: string
   testid?: string
-  color?: ThemeColor
+  color?: string
 }
 
 const DynamicIconDispatcher = ({
