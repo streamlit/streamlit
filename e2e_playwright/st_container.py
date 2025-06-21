@@ -51,3 +51,15 @@ if st.button("Add message"):
 with st.container(height=200):
     for i in range(10):
         st.chat_message("user").write(f"Message {i}")
+
+# Test that an empty container with a border is rendered.
+with st.container(border=True):
+    st.container(border=True)
+
+# Test that an empty container with height is rendered.
+with st.container(border=True):
+    st.container(height=200)
+
+# Test that an empty container without height or border is not rendered.
+with st.container(border=True):
+    st.container()
