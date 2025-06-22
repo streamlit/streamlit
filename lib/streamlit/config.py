@@ -1350,6 +1350,43 @@ _create_theme_options(
     type_=bool,
 )
 
+_create_theme_options(
+    "chartCategoricalColors",
+    categories=["theme"],
+    description="""
+        An array of colors to use for categorical charts.
+
+        If no chart categorical colors are set, Streamlit uses a default set of
+        colors.
+        For light themes the default colors are:
+        [
+            blue80 ("#0068c9"),
+            blue40 ("#83c9ff"),
+            red80 ("#ff2b2b"),
+            red40 ("#ffabab"),
+            blueGreen80 ("#29b09d"),
+            green40 ("#7defa1"),
+            orange80 ("#ff8700"),
+            orange50 ("#ffd16a"),
+            purple80 ("#6d3fc0"),
+            gray40 ("#d5dae5")
+        ]
+        For dark themes the default colors are:
+        [
+            blue40 ("#83c9ff"),
+            blue80 ("#0068c9"),
+            red40 ("#ffabab"),
+            red80 ("#ff2b2b"),
+            green40 ("#7defa1"),
+            blueGreen80 ("#29b09d"),
+            orange50 ("#ffd16a"),
+            orange80 ("#ff8700"),
+            purple80 ("#6d3fc0"),
+            gray40 ("#d5dae5")
+        ]
+    """,
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")

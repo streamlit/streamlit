@@ -180,6 +180,8 @@ message CustomThemeConfig {
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
 
+  repeated string chart_categorical_colors = 90;
+
   // Next ID: 30
 }
 

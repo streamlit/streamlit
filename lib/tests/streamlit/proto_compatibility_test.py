@@ -118,6 +118,7 @@ FD = FieldDescriptor
                 ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
             },
         ),

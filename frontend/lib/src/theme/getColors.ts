@@ -70,6 +70,10 @@ export const computeDerivedColors = (
   }
 }
 
+function _isLightBackground(bgColor: string): boolean {
+  return getLuminance(bgColor) > 0.5
+}
+
 export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
@@ -78,6 +82,7 @@ export const createEmotionColors = (genericColors: {
   [key: string]: string
 }): { [key: string]: string } => {
   const derivedColors = computeDerivedColors(genericColors)
+  const defaultCategoricalColors = defaultCategoricalColorsArray(genericColors)
 
   return {
     ...genericColors,
@@ -96,6 +101,9 @@ export const createEmotionColors = (genericColors: {
     dataframeBorderColor: derivedColors.fadedText05,
 
     headingColor: genericColors.bodyText,
+
+    // @ts-expect-error
+    chartCategoricalColors: defaultCategoricalColors,
   }
 }
 
@@ -259,6 +267,36 @@ export function getDivergingColorsArray(theme: EmotionTheme): string[] {
     colors.blue90,
     colors.blue100,
   ]
+}
+
+function defaultCategoricalColorsArray(genericColors: {
+  [key: string]: string
+}): string[] {
+  return _isLightBackground(genericColors.bgColor)
+    ? [
+        genericColors.blue80,
+        genericColors.blue40,
+        genericColors.red80,
+        genericColors.red40,
+        genericColors.blueGreen80,
+        genericColors.green40,
+        genericColors.orange80,
+        genericColors.orange50,
+        genericColors.purple80,
+        genericColors.gray40,
+      ]
+    : [
+        genericColors.blue40,
+        genericColors.blue80,
+        genericColors.red40,
+        genericColors.red80,
+        genericColors.green40,
+        genericColors.blueGreen80,
+        genericColors.orange50,
+        genericColors.orange80,
+        genericColors.purple80,
+        genericColors.gray40,
+      ]
 }
 
 export function getCategoricalColorsArray(theme: EmotionTheme): string[] {

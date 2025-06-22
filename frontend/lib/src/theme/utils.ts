@@ -234,6 +234,8 @@ export const createEmotionTheme = (
     codeFont,
     showSidebarBorder,
     linkUnderline,
+    // TODO: Fix handling
+    chartCategoricalColors,
     ...customColors
   } = themeInput
 
@@ -324,6 +326,15 @@ export const createEmotionTheme = (
     // consider full removing it at some point.
     conditionalOverrides.colors.widgetBorderColor =
       widgetBorderColor || conditionalOverrides.colors.borderColor
+  }
+
+  // TODO: Handle verification of colors passed in and
+  // provide warning logging for invalid colors passed
+  if (
+    notNullOrUndefined(chartCategoricalColors) &&
+    chartCategoricalColors.length > 0
+  ) {
+    conditionalOverrides.colors.chartCategoricalColors = chartCategoricalColors
   }
 
   if (notNullOrUndefined(baseRadius)) {
