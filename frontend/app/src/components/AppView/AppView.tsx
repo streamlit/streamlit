@@ -214,13 +214,19 @@ function AppView(props: AppViewProps): ReactElement {
       innerWidth: window.innerWidth,
       activeTheme: activeTheme,
     })
+
     setSidebarIsCollapsed(
       initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
         (initialSidebarState === PageConfig.SidebarState.AUTO &&
           window.innerWidth <=
-            parseInt(activeTheme.emotion.breakpoints.md, 10))
+            parseInt(activeTheme.emotion.breakpoints.md, 10) &&
+          window.innerWidth > 0)
     )
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
+  }, [
+    initialSidebarState,
+    activeTheme.emotion.breakpoints.md,
+    window.innerWidth,
+  ])
 
   const toggleSidebar = useCallback(() => {
     setSidebarIsCollapsed(prev => !prev)
