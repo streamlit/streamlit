@@ -218,6 +218,47 @@ export const parseFontSize = (
   )
 }
 
+/**
+ * Helper function to set the normal, bold, and extrabold font weights based
+ * on the baseFontWeight option
+ * @param defaultFontWeights: the default theme font weights
+ * @param baseFontWeight: the base font weight provided via theme config
+ * @param isSidebar: whether the theme is in a sidebar, for informative error messages
+ * @returns the updated emotion theme object
+ */
+const setFontWeights = (
+  defaultFontWeights: EmotionTheme["fontWeights"],
+  baseFontWeight: number,
+  isSidebar: boolean
+): EmotionTheme["fontWeights"] => {
+  const fontWeightOverrides = {
+    ...defaultFontWeights,
+  }
+  // Validate the baseFontWeight provided is an integer between 100 and 600
+  // (in increments of 100)
+  const isInteger = Number.isInteger(baseFontWeight)
+  const isIncrementOf100 = baseFontWeight % 100 === 0
+  const isInRange = baseFontWeight >= 100 && baseFontWeight <= 600
+
+  if (!isInteger || !isIncrementOf100 || !isInRange) {
+    const themeSection = isSidebar ? "theme.sidebar" : "theme"
+    LOG.warn(
+      `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights in ${themeSection}.`
+    )
+    return fontWeightOverrides
+  }
+
+  // Set each of the font weights based on the base weight provided
+  // The provided baseFontWeight sets the normal weight
+  fontWeightOverrides.normal = baseFontWeight
+  // The bold weight is set to the baseFontWeight + 200
+  fontWeightOverrides.bold = baseFontWeight + 200
+  // The extrabold weight is set to the baseFontWeight + 300
+  fontWeightOverrides.extrabold = baseFontWeight + 300
+
+  return fontWeightOverrides
+}
+
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
@@ -225,6 +266,7 @@ export const createEmotionTheme = (
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
   const {
     baseFontSize,
+    baseFontWeight,
     baseRadius,
     buttonRadius,
     codeFontSize,
@@ -410,6 +452,15 @@ export const createEmotionTheme = (
     }
     // codeFontSize default (fallback) set in typography primitives (0.875rem)
     // inlineCodeFontSize set in typography primitives (0.75em)
+  }
+
+  if (notNullOrUndefined(baseFontWeight)) {
+    // Set the font weights based on the baseFontWeight provided
+    conditionalOverrides.fontWeights = setFontWeights(
+      baseThemeConfig.emotion.fontWeights,
+      baseFontWeight,
+      inSidebar
+    )
   }
 
   if (notNullOrUndefined(showSidebarBorder)) {

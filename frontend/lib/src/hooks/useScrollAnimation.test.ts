@@ -49,7 +49,7 @@ describe("useScrollAnimation", () => {
   it("should animate scroll", () => {
     vi.useFakeTimers()
 
-    renderHook(() => useScrollAnimation(targetElement, onEndMock, true))
+    renderHook(() => useScrollAnimation(targetElement, onEndMock, true, true))
 
     // Simulate scroll animation
     vi.advanceTimersByTime(5)
@@ -72,7 +72,7 @@ describe("useScrollAnimation", () => {
     vi.useFakeTimers()
 
     const { unmount } = renderHook(() =>
-      useScrollAnimation(targetElement, onEndMock, true)
+      useScrollAnimation(targetElement, onEndMock, true, true)
     )
 
     expect(targetElement.addEventListener).toHaveBeenCalledTimes(2)
@@ -102,13 +102,19 @@ describe("useScrollAnimation", () => {
   })
 
   it("should not animate scroll if target element is null", () => {
-    renderHook(() => useScrollAnimation(null, onEndMock, true))
+    renderHook(() => useScrollAnimation(null, onEndMock, true, true))
 
     expect(targetElement.addEventListener).not.toHaveBeenCalled()
   })
 
   it("should not animate scroll if isAnimating is false", () => {
-    renderHook(() => useScrollAnimation(targetElement, onEndMock, false))
+    renderHook(() => useScrollAnimation(targetElement, onEndMock, false, true))
+
+    expect(targetElement.addEventListener).not.toHaveBeenCalled()
+  })
+
+  it("should not animate scroll if active is false", () => {
+    renderHook(() => useScrollAnimation(targetElement, onEndMock, true, false))
 
     expect(targetElement.addEventListener).not.toHaveBeenCalled()
   })

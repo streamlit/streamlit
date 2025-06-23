@@ -139,6 +139,7 @@ export type UseLayoutStylesShape = {
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
   overflow: React.CSSProperties["overflow"]
+  flex?: React.CSSProperties["flex"]
 }
 
 /**
@@ -158,6 +159,7 @@ export const useLayoutStyles = ({
         overflow: "visible",
       }
     }
+    let flex: React.CSSProperties["flex"] = undefined
 
     // The st.image element is potentially a list of images, so we always want
     // the enclosing container to be full width. The size of individual
@@ -204,12 +206,16 @@ export const useLayoutStyles = ({
     } else if (heightType === DimensionType.PIXEL) {
       height = commandHeight
       overflow = skipOverflow ? "visible" : "auto"
+      // TODO (lawilby): We only have vertical containers currently, but this will be
+      // modified to handle horizontal containers when direction on containers is implemented.
+      flex = `0 0 ${commandHeight}px`
     }
 
     return {
       width,
       height,
       overflow,
+      flex,
     }
   }, [element, subElement])
 
