@@ -571,8 +571,9 @@ class ButtonGroupMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width: int or "stretch" or "content"
-            The width of the widget. Can be an integer (pixels), "stretch" to use the full width of the container,
-            or "content" (default) to size based on the content.
+            The width of the widget. Can be an integer (pixels), "stretch" to use
+            the full width of the container, or "content" (default) to size based
+            on the content.
 
         Returns
         -------
@@ -788,8 +789,9 @@ class ButtonGroupMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width: int or "stretch" or "content"
-            The width of the widget. Can be an integer (pixels), "stretch" to use the full width of the container,
-            or "content" (default) to size based on the content.
+            The width of the widget. Can be an integer (pixels), "stretch" to
+            use the full width of the container, or "content" (default) to size
+            based on the content.
 
         Returns
         -------

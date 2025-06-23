@@ -50,6 +50,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { EmotionTheme } from "~lib/theme"
+import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
 
 export interface Props {
   disabled: boolean
@@ -375,10 +376,10 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   )
 
   return (
-    <div
+    <StyledButtonGroup
       className="stButtonGroup"
       data-testid="stButtonGroup"
-      style={{ width: containerWidth ? "100%" : "auto" }}
+      containerWidth={containerWidth}
     >
       <WidgetLabel
         label={label}
@@ -419,7 +420,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       >
         {optionElements}
       </BasewebButtonGroup>
-    </div>
+    </StyledButtonGroup>
   )
 }
 

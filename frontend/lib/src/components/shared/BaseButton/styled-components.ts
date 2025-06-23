@@ -510,3 +510,9 @@ export const StyledElementToolbarButton = styled(
     },
   }
 })
+
+export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
+  ({ containerWidth }) => ({
+    width: containerWidth ? "100%" : "auto",
+  })
+)
