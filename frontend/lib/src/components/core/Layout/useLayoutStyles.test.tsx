@@ -658,6 +658,7 @@ describe("#useLayoutStyles", () => {
           width: "50%",
           height: "150px",
           overflow: "hidden",
+          flex: "0 0 150px",
         }
 
         const { result } = renderHook(() =>
@@ -665,9 +666,10 @@ describe("#useLayoutStyles", () => {
         )
 
         expect(result.current).toEqual({
-          width: "50%", // overridden from calculated "200px"
-          height: "150px", // overridden from calculated "300px"
-          overflow: "hidden", // overridden from calculated "auto"
+          width: "50%",
+          height: "150px",
+          overflow: "hidden",
+          flex: "0 0 150px",
         })
       })
 
@@ -686,9 +688,10 @@ describe("#useLayoutStyles", () => {
         )
 
         expect(result.current).toEqual({
-          width: "75%", // overridden
-          height: "300px", // computed value preserved
-          overflow: "auto", // computed value preserved
+          width: "75%",
+          height: "300px",
+          overflow: "auto",
+          flex: "0 0 300px",
         })
       })
 
