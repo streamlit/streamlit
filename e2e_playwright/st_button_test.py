@@ -188,10 +188,10 @@ def test_colored_text_hover(app: Page):
     )
 
 
-def test_button_width_examples(themed_app: Page, assert_snapshot: ImageCompareFunction):
+def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test button width examples via screenshot matching."""
     # Button width examples
-    button_expander = get_expander(themed_app, "Button Width Examples")
+    button_expander = get_expander(app, "Button Width Examples")
     button_expander.click()
 
     button_elements = button_expander.get_by_test_id("stButton")
@@ -203,11 +203,11 @@ def test_button_width_examples(themed_app: Page, assert_snapshot: ImageCompareFu
 
 
 def test_download_button_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test download button width examples via screenshot matching."""
     # Download button width examples
-    download_expander = get_expander(themed_app, "Download Button Width Examples")
+    download_expander = get_expander(app, "Download Button Width Examples")
     download_expander.click()
 
     download_elements = download_expander.get_by_test_id("stDownloadButton")
@@ -218,12 +218,10 @@ def test_download_button_width_examples(
     assert_snapshot(download_elements.nth(2), name="st_download_button-width_300px")
 
 
-def test_link_button_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test link button width examples via screenshot matching."""
     # Link button width examples
-    link_expander = get_expander(themed_app, "Link Button Width Examples")
+    link_expander = get_expander(app, "Link Button Width Examples")
     link_expander.click()
 
     link_elements = link_expander.get_by_test_id("stLinkButton")
@@ -234,12 +232,10 @@ def test_link_button_width_examples(
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
 
 
-def test_page_link_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test page link width examples via screenshot matching."""
     # Page link width examples
-    page_expander = get_expander(themed_app, "Page Link Width Examples")
+    page_expander = get_expander(app, "Page Link Width Examples")
     page_expander.click()
 
     page_elements = page_expander.get_by_test_id("stPageLink")
@@ -251,11 +247,11 @@ def test_page_link_width_examples(
 
 
 def test_form_submit_button_width_examples(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test form submit button width examples via screenshot matching."""
     # Form submit button width examples
-    form = themed_app.get_by_test_id("stForm").first
+    form = app.get_by_test_id("stForm").first
     expect(form).to_have_count(1)
 
     submit_elements = form.get_by_test_id("stFormSubmitButton")
