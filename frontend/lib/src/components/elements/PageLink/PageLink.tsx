@@ -25,13 +25,13 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LibContext } from "~lib/components/core/LibContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 import {
   StyledNavLink,
   StyledNavLinkContainer,
   StyledNavLinkText,
 } from "./styled-components"
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   disabled: boolean
@@ -42,7 +42,7 @@ export interface Props {
 function shouldUseContainerWidth(
   useContainerWidth: boolean | null | undefined,
   isInSidebar: boolean,
-  widthConfig?: streamlit.IWidthConfig | null | undefined
+  widthConfig?: streamlit.IWidthConfig | null
 ): boolean {
   if (shouldChildrenStretch(widthConfig)) {
     return true
