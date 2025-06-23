@@ -42,7 +42,7 @@ def configure_custom_theme():
     os.environ["STREAMLIT_THEME_CODE_BACKGROUND_COLOR"] = "#29361e"
     os.environ["STREAMLIT_THEME_SHOW_SIDEBAR_BORDER"] = "True"
     os.environ["STREAMLIT_THEME_HEADING_FONT"] = "bold, serif"
-    os.environ["STREAMLIT_CLIENT_TOOLBAR_MODE"] = "minimal"  # 70aec1
+    os.environ["STREAMLIT_CLIENT_TOOLBAR_MODE"] = "minimal"
     yield
     del os.environ["STREAMLIT_THEME_BASE"]
     del os.environ["STREAMLIT_THEME_PRIMARY_COLOR"]
