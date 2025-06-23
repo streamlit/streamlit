@@ -20,7 +20,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(6)
+    expect(st_tabs).to_have_count(7)
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -56,3 +56,16 @@ def test_tabs_with_html(app: Page):
     expect(app.get_by_text("This is HTML tab 3")).to_be_visible()
     tabs.get_by_role("tab", name="HTML Tab 1").click()
     expect(app.get_by_text("This is HTML tab 1")).to_be_visible()
+
+
+def test_tabs_with_code_layouts(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that tabs with code blocks and different height configurations render correctly."""
+    tabs_with_code = app.get_by_test_id("stTabs").nth(6)
+
+    # Test Tab 1 with container and stretched code
+    tabs_with_code.scroll_into_view_if_needed()
+    assert_snapshot(tabs_with_code, name="st_tabs-code_stretch_height_in_container")
+
+    # Switch to Tab 2 and test fixed height and stretched code
+    tabs_with_code.get_by_role("tab", name="Tab 2").click()
+    assert_snapshot(tabs_with_code, name="st_tabs-fixed_height_stretch_height")

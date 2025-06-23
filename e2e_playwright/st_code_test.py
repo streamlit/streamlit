@@ -73,7 +73,7 @@ def test_code_blocks_render_correctly(
 ):
     """Test that the code blocks render as expected via screenshot matching."""
     code_blocks = themed_app.get_by_test_id("stCode")
-    expect(code_blocks).to_have_count(25)
+    expect(code_blocks).to_have_count(31)
     # The code blocks might require a bit more time for rendering, so wait until
     # the text is truly visible. Otherwise we might get blank code blocks in the
     # screenshots.
@@ -82,7 +82,7 @@ def test_code_blocks_render_correctly(
         f"()=>document.body.textContent.split('def foo()').length === {foo_func_count}"
     )
     # Check that there are 15 code blocks with the class "language-python"
-    expect(themed_app.locator("code.language-python")).to_have_count(23)
+    expect(themed_app.locator("code.language-python")).to_have_count(29)
 
     assert_snapshot(code_blocks.nth(0), name="st_code-auto_lang")
     assert_snapshot(code_blocks.nth(1), name="st_code-empty")
@@ -186,3 +186,27 @@ def test_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
     # Test longer code blocks with different widths
     assert_snapshot(code_elements.nth(21), name="st_code-width_pixels")
     assert_snapshot(code_elements.nth(22), name="st_code-width_stretch")
+
+
+def test_form_with_code_block(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that code blocks render correctly within forms."""
+    # Get the form container and snapshot the entire form
+    form_container = app.get_by_test_id("stForm")
+    form_container.scroll_into_view_if_needed()
+    assert_snapshot(form_container, name="st_code-form_container")
+
+
+def test_columns_with_code_blocks(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that code blocks render correctly within columns."""
+    # Get the columns container and snapshot the entire columns layout
+    columns_container = app.get_by_test_id("stHorizontalBlock")
+    columns_container.scroll_into_view_if_needed()
+    assert_snapshot(columns_container, name="st_code-columns")
+
+
+def test_container_with_code_blocks(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that code blocks render correctly within containers with fixed height."""
+    # Get the container with height and snapshot the entire container
+    height_container = app.get_by_test_id("stVerticalBlock").last
+    height_container.scroll_into_view_if_needed()
+    assert_snapshot(height_container, name="st_code-height_container")

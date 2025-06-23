@@ -26,7 +26,7 @@ class MockElement implements Element {
 
   heightConfig?: streamlit.HeightConfig | null
 
-  type?: "imgs" | "textArea"
+  type?: "imgs" | "textArea" | "iframe" | "deckGlJsonChart" | "arrowDataFrame"
 
   constructor(props: Partial<MockElement> = {}) {
     Object.assign(this, props)
@@ -317,7 +317,11 @@ describe("#useLayoutStyles", () => {
         ],
         [
           new streamlit.HeightConfig({ pixelHeight: 100 }),
-          getDefaultStyles({ height: 100, overflow: "auto" }),
+          getDefaultStyles({
+            height: 100,
+            overflow: "auto",
+            flex: "0 0 100px",
+          }),
         ],
       ])(
         "and with a heightConfig value of %o, returns %o",
@@ -348,13 +352,45 @@ describe("#useLayoutStyles", () => {
 
     describe("with height defined on subElement but element.heightConfig is null or undefined", () => {
       it.each([
-        [100, null, getDefaultStyles({ height: 100, overflow: "auto" })],
-        [200, null, getDefaultStyles({ height: 200, overflow: "auto" })],
+        [
+          100,
+          null,
+          getDefaultStyles({
+            height: 100,
+            overflow: "auto",
+            flex: "0 0 100px",
+          }),
+        ],
+        [
+          200,
+          null,
+          getDefaultStyles({
+            height: 200,
+            overflow: "auto",
+            flex: "0 0 200px",
+          }),
+        ],
         [0, null, getDefaultStyles({})],
         [-100, null, getDefaultStyles({})],
         [NaN, null, getDefaultStyles({})],
-        [100, undefined, getDefaultStyles({ height: 100, overflow: "auto" })],
-        [200, undefined, getDefaultStyles({ height: 200, overflow: "auto" })],
+        [
+          100,
+          undefined,
+          getDefaultStyles({
+            height: 100,
+            overflow: "auto",
+            flex: "0 0 100px",
+          }),
+        ],
+        [
+          200,
+          undefined,
+          getDefaultStyles({
+            height: 200,
+            overflow: "auto",
+            flex: "0 0 200px",
+          }),
+        ],
         [0, undefined, getDefaultStyles({})],
         [-100, undefined, getDefaultStyles({})],
         [NaN, undefined, getDefaultStyles({})],
@@ -383,7 +419,14 @@ describe("#useLayoutStyles", () => {
         [0, getDefaultStyles({})],
         [-100, getDefaultStyles({})],
         [NaN, getDefaultStyles({})],
-        [100, getDefaultStyles({ height: 100, overflow: "auto" })],
+        [
+          100,
+          getDefaultStyles({
+            height: 100,
+            overflow: "auto",
+            flex: "0 0 100px",
+          }),
+        ],
       ])("and with a height value of %s, returns %o", (height, expected) => {
         const element = new MockElement()
         const subElement = { height }
@@ -442,7 +485,11 @@ describe("#useLayoutStyles", () => {
             heightConfig: new streamlit.HeightConfig({ pixelHeight: 200 }),
             height: 100,
           },
-          getDefaultStyles({ height: 200, overflow: "auto" }),
+          getDefaultStyles({
+            height: 200,
+            overflow: "auto",
+            flex: "0 0 200px",
+          }),
         ],
         [
           {
@@ -488,7 +535,12 @@ describe("#useLayoutStyles", () => {
             widthConfig: new streamlit.WidthConfig({ pixelWidth: 200 }),
             heightConfig: new streamlit.HeightConfig({ pixelHeight: 300 }),
           },
-          getDefaultStyles({ width: 200, height: 300, overflow: "auto" }),
+          getDefaultStyles({
+            width: 200,
+            height: 300,
+            overflow: "auto",
+            flex: "0 0 300px",
+          }),
         ],
         [
           {
@@ -515,11 +567,21 @@ describe("#useLayoutStyles", () => {
       it.each([
         [
           { width: 200, height: 300 },
-          getDefaultStyles({ width: 200, height: 300, overflow: "auto" }),
+          getDefaultStyles({
+            width: 200,
+            height: 300,
+            overflow: "auto",
+            flex: "0 0 300px",
+          }),
         ],
         [
           { width: 0, height: 100 },
-          getDefaultStyles({ width: "auto", height: 100, overflow: "auto" }),
+          getDefaultStyles({
+            width: "auto",
+            height: 100,
+            overflow: "auto",
+            flex: "0 0 100px",
+          }),
         ],
         [
           { width: 100, height: 0 },
@@ -582,6 +644,50 @@ describe("#useLayoutStyles", () => {
           expect(result.current).toEqual(expected)
         }
       )
+    })
+
+    describe("flex property behavior", () => {
+      it("should include flex when height is set via heightConfig pixelHeight", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ pixelHeight: 250 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }))
+        expect(result.current.flex).toBe("0 0 250px")
+      })
+
+      it("should include flex when height is set via subElement height", () => {
+        const element = new MockElement()
+        const subElement = { height: 175 }
+        const { result } = renderHook(() =>
+          useLayoutStyles({ element, subElement })
+        )
+        expect(result.current.flex).toBe("0 0 175px")
+      })
+
+      it("should not include flex when height is stretch", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ useStretch: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }))
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it("should not include flex when height is content", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ useContent: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }))
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it.each([
+        ["stretch", new streamlit.HeightConfig({ useStretch: true })],
+        ["content", new streamlit.HeightConfig({ useContent: true })],
+      ])("should not include flex when height is %s", (_, heightConfig) => {
+        const element = new MockElement({ heightConfig })
+        const { result } = renderHook(() => useLayoutStyles({ element }))
+        expect(result.current.flex).toBeUndefined()
+      })
     })
   })
 })

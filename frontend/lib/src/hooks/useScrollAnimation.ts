@@ -80,7 +80,8 @@ function step(
 export default function useScrollAnimation(
   target: HTMLElement | null,
   onEnd: () => void,
-  isAnimating: boolean
+  isAnimating: boolean,
+  active: boolean
 ): void {
   const animator = useRef(0)
 
@@ -123,7 +124,7 @@ export default function useScrollAnimation(
   }, [onEnd])
 
   useLayoutEffect(() => {
-    if (!target || !isAnimating) {
+    if (!target || !isAnimating || !active) {
       return
     }
     animate(target.scrollTop, 1)
@@ -144,5 +145,5 @@ export default function useScrollAnimation(
     }
 
     return () => cancelAnimationFrame(animator.current)
-  }, [animate, animator, handleCancelAnimation, target, isAnimating])
+  }, [animate, animator, handleCancelAnimation, target, isAnimating, active])
 }

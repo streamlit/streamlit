@@ -230,6 +230,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
         widgetMgr={this.widgetMgr}
         uploadClient={this.uploadClient}
         widgetsDisabled={false}
+        height="auto"
       />
     )
   }

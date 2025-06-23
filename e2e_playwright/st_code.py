@@ -133,3 +133,19 @@ long_single_word_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
 
 st.code(long_single_word_string)
 st.code(long_single_word_string, wrap_lines=True)
+
+with st.form("form with a code block", height=400):
+    st.code(code, height="stretch")
+    st.form_submit_button("Submit")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.code(code, height=300)
+    st.code(code, height="stretch")
+with col2:
+    st.code(code, height="stretch")
+
+with st.container(height=300, key="container_with_code"):
+    st.code(code, height=100)
+    st.code(code, height="stretch")
