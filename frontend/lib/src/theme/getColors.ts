@@ -299,35 +299,6 @@ function defaultCategoricalColorsArray(genericColors: {
       ]
 }
 
-export function getCategoricalColorsArray(theme: EmotionTheme): string[] {
-  const { colors } = theme
-  return hasLightBackgroundColor(theme)
-    ? [
-        colors.blue80,
-        colors.blue40,
-        colors.red80,
-        colors.red40,
-        colors.blueGreen80,
-        colors.green40,
-        colors.orange80,
-        colors.orange50,
-        colors.purple80,
-        colors.gray40,
-      ]
-    : [
-        colors.blue40,
-        colors.blue80,
-        colors.red40,
-        colors.red80,
-        colors.green40,
-        colors.blueGreen80,
-        colors.orange50,
-        colors.orange80,
-        colors.purple80,
-        colors.gray40,
-      ]
-}
-
 export function getDecreasingRed(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.red80

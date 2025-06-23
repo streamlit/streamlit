@@ -102,7 +102,6 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       symbolStrokeWidth: convertRemToPx(theme.spacing.twoXS),
     },
     range: {
-      // category: getCategoricalColorsArray(theme),
       category: theme.colors.chartCategoricalColors,
       diverging: getDivergingColorsArray(theme),
       ramp: getSequentialColorsArray(theme),
