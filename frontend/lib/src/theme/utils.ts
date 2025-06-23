@@ -221,8 +221,9 @@ export const parseFontSize = (
 /**
  * Helper function to set the normal, bold, and extrabold font weights based
  * on the baseFontWeight option
- * @param conditionalOverrides: the emotion theme object to update
+ * @param fontWeights: the font weights portion of conditionalOverrides
  * @param baseFontWeight: the base font weight to set
+ * @param isSidebar: whether the theme is in a sidebar, for informative error messages
  * @returns the updated emotion theme object
  */
 export const setFontWeights = (
