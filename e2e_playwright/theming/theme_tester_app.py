@@ -177,3 +177,8 @@ def run_theme_tester_app():
                 }
             )
         )
+        st.dataframe(
+            pd.DataFrame({"A": [1, 2], "B": ["streamlit.io", "snowflake.com"]}),
+            column_config={"B": st.column_config.LinkColumn()},
+            use_container_width=True,
+        )

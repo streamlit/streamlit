@@ -27,8 +27,10 @@ from e2e_playwright.shared.app_utils import expect_no_skeletons
 def configure_custom_theme_font_weights():
     """Configure custom theme."""
     os.environ["STREAMLIT_THEME_BASE_FONT_WEIGHT"] = "200"
+    os.environ["STREAMLIT_THEME_CODE_FONT_WEIGHT"] = "500"
     yield
     del os.environ["STREAMLIT_THEME_BASE_FONT_WEIGHT"]
+    del os.environ["STREAMLIT_THEME_CODE_FONT_WEIGHT"]
 
 
 @pytest.mark.usefixtures("configure_custom_theme_font_weights")
