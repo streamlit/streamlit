@@ -987,6 +987,21 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.dataframeBorderColor).toBe("green")
   })
 
+  it("sets the dataframeHeaderBackgroundColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderBackgroundColor: "green",
+    }
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("green")
+  })
+
+  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      theme.colors.bgMix
+    )
+  })
+
   it("showSidebarBorder config is set to false by default", () => {
     const theme = createEmotionTheme({})
     expect(theme.showSidebarBorder).toBe(false)
