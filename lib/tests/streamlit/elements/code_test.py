@@ -212,7 +212,7 @@ class CodeElement(DeltaGeneratorTestCase):
         )
         assert element.height_config.use_content
 
-    def test_st_code_with_height_stretch(self) -> None:
+    def test_st_code_with_height_stretch(self):
         """Test st.code with stretch height."""
         code = "print('My string = %d' % my_value)"
         st.code(code, height="stretch")
@@ -224,7 +224,6 @@ class CodeElement(DeltaGeneratorTestCase):
             == HeightConfigFields.USE_STRETCH.value
         )
         assert element.height_config.use_stretch
-
 
     @parameterized.expand(["invalid", -100, 0, 100.5])
     def test_st_code_with_invalid_height(self, height):
