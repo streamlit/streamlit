@@ -35,7 +35,7 @@ export interface Props {
   element: ButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig?: streamlit.WidthConfig | null | undefined
+  widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
 export function FormSubmitButton(props: Props): ReactElement {

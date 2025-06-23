@@ -36,13 +36,13 @@ import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 export interface Props {
   disabled: boolean
   element: PageLinkProto
-  widthConfig?: streamlit.WidthConfig | null | undefined
+  widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
 function shouldUseContainerWidth(
   useContainerWidth: boolean | null | undefined,
   isInSidebar: boolean,
-  widthConfig?: streamlit.WidthConfig
+  widthConfig?: streamlit.IWidthConfig | null | undefined
 ): boolean {
   if (shouldChildrenStretch(widthConfig)) {
     return true
