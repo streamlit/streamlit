@@ -121,33 +121,31 @@ def test_custom_css_class_via_key(app: Page):
 
 def test_empty_containers(app: Page):
     # Test that an empty container with a border is rendered.
-    border_outer_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)
+    border_outer_container = app.get_by_test_id("stVerticalBlock").nth(17)
     expect(
-        border_outer_container.get_by_test_id("stVerticalBlockBorderWrapper").first
+        border_outer_container.get_by_test_id("stVerticalBlock").first
     ).to_be_visible()
 
     # Test that an empty container with height is rendered.
-    height_outer_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(8)
+    height_outer_container = app.get_by_test_id("stVerticalBlock").nth(19)
     expect(
-        height_outer_container.get_by_test_id("stVerticalBlockBorderWrapper").first
+        height_outer_container.get_by_test_id("stVerticalBlock").first
     ).to_be_visible()
 
     # Test that an empty container without height or border is not rendered.
-    empty_outer_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(10)
-    expect(
-        empty_outer_container.get_by_test_id("stVerticalBlockBorderWrapper")
-    ).to_have_count(0)
+    empty_outer_container = app.get_by_test_id("stVerticalBlock").nth(21)
+    expect(empty_outer_container.get_by_test_id("stVerticalBlock")).to_have_count(0)
 
 
 def test_nested_containers(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that nested containers render correctly with different height configurations."""
     # Test first nested container example (outer: height=200, inner: height=250)
-    nested_container_1 = app.get_by_test_id("stVerticalBlock").nth(17)
+    nested_container_1 = app.get_by_test_id("stVerticalBlock").nth(23)
     nested_container_1.scroll_into_view_if_needed()
     assert_snapshot(nested_container_1, name="st_container-nested_overflow")
 
     # Test second nested container example (outer: height=200, inner: no height)
-    nested_container_2 = app.get_by_test_id("stVerticalBlock").nth(19)
+    nested_container_2 = app.get_by_test_id("stVerticalBlock").nth(25)
     nested_container_2.scroll_into_view_if_needed()
     assert_snapshot(nested_container_2, name="st_container-nested_content")
 

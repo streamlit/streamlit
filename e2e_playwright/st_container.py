@@ -63,6 +63,7 @@ with st.container(border=True):
 # Test that an empty container without height or border is not rendered.
 with st.container(border=True):
     st.container()
+
 with st.container(height=200, border=True):
     st.write("Inside container 1")
     with st.container(height=250, border=True):
