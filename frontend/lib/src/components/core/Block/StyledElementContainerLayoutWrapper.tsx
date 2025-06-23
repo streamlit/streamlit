@@ -29,10 +29,40 @@ export const StyledElementContainerLayoutWrapper: FC<
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
+  let styleOverrides = {}
+  if (node.element.type === "imgs") {
+    // The st.image element is potentially a list of images, so we always want
+    // the enclosing container to be full width. The size of individual
+    // images is managed in the ImageList component.
+    styleOverrides = {
+      width: "100%",
+    }
+  } else if (node.element.type === "textArea") {
+    // The st.text_area element has a legacy implementation where the height
+    // is measuring only the input box so the pixel height must be set in the element
+    // and the container must be allowed to expand.
+    // The difference between content and stretch is so that this element will
+    // behave correctly inside containers.
+    styleOverrides = {
+      height: node.element.heightConfig?.useContent ? "auto" : "100%",
+    }
+  } else if (
+    node.element.type === "iframe" ||
+    node.element.type === "deckGlJsonChart" ||
+    node.element.type === "arrowDataFrame"
+  ) {
+    // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
+    // if we can remove this custom handling in future layouts work.
+    styleOverrides = {
+      overflow: "visible",
+    }
+  }
+
   const styles = useLayoutStyles({
     element: node.element,
     subElement:
       (node.element?.type && node.element[node.element.type]) || undefined,
+    styleOverrides,
   })
 
   return <StyledElementContainer {...rest} {...styles} />
