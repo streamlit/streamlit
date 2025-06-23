@@ -221,16 +221,19 @@ export const parseFontSize = (
 /**
  * Helper function to set the normal, bold, and extrabold font weights based
  * on the baseFontWeight option
- * @param fontWeights: the font weights portion of conditionalOverrides
- * @param baseFontWeight: the base font weight to set
+ * @param defaultFontWeights: the default theme font weights
+ * @param baseFontWeight: the base font weight provided via theme config
  * @param isSidebar: whether the theme is in a sidebar, for informative error messages
  * @returns the updated emotion theme object
  */
-export const setFontWeights = (
-  fontWeights: EmotionTheme["fontWeights"],
+const setFontWeights = (
+  defaultFontWeights: EmotionTheme["fontWeights"],
   baseFontWeight: number,
   isSidebar: boolean
 ): EmotionTheme["fontWeights"] => {
+  const fontWeightOverrides = {
+    ...defaultFontWeights,
+  }
   // Validate the baseFontWeight provided is an integer between 100 and 600
   // (in increments of 100)
   const isInteger = Number.isInteger(baseFontWeight)
@@ -242,18 +245,18 @@ export const setFontWeights = (
     LOG.warn(
       `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights in ${themeSection}.`
     )
-    return fontWeights
+    return fontWeightOverrides
   }
 
   // Set each of the font weights based on the base weight provided
   // The provided baseFontWeight sets the normal weight
-  fontWeights.normal = baseFontWeight
+  fontWeightOverrides.normal = baseFontWeight
   // The bold weight is set to the baseFontWeight + 200
-  fontWeights.bold = baseFontWeight + 200
+  fontWeightOverrides.bold = baseFontWeight + 200
   // The extrabold weight is set to the baseFontWeight + 300
-  fontWeights.extrabold = baseFontWeight + 300
+  fontWeightOverrides.extrabold = baseFontWeight + 300
 
-  return fontWeights
+  return fontWeightOverrides
 }
 
 export const createEmotionTheme = (
@@ -452,13 +455,9 @@ export const createEmotionTheme = (
   }
 
   if (notNullOrUndefined(baseFontWeight)) {
-    conditionalOverrides.fontWeights = {
-      ...baseThemeConfig.emotion.fontWeights,
-    }
-
     // Set the font weights based on the baseFontWeight provided
     conditionalOverrides.fontWeights = setFontWeights(
-      conditionalOverrides.fontWeights,
+      baseThemeConfig.emotion.fontWeights,
       baseFontWeight,
       inSidebar
     )
