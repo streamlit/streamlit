@@ -42,6 +42,7 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class TestGetMappedOptions:
@@ -805,6 +806,67 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         st.session_state.command_key = ["stars"]
         val = command(["thumbs", "stars"], key="command_key", selection_mode="multi")
         assert val == ["stars"]
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_with_width(self, command: Callable[..., None]):
+        """Test button group widgets with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                command(["a", "b", "c"], width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.button_group.options[0].content == "a"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_with_invalid_width(self, command: Callable[..., None]):
+        """Test button group widgets with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    command(["a", "b", "c"], width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_default_width(self, command: Callable[..., None]):
+        """Test that button group widgets default to content width."""
+        command(["a", "b", "c"])
+
+        el = self.get_delta_from_queue().new_element
+        assert el.button_group.options[0].content == "a"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
 
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""

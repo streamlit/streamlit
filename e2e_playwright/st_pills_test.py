@@ -203,3 +203,17 @@ def test_pills_with_labels(app: Page):
     expect(markdown_el).not_to_be_visible()
     expect(markdown_el).to_have_css("display", "flex")
     expect(markdown_el).to_have_css("visibility", "hidden")
+
+
+def test_pills_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test pills with different width configurations."""
+
+    # The width examples start at index 7 (after the other pills examples)
+    content_pills = get_button_group(app, 7)
+    assert_snapshot(content_pills, name="st_pills-width_content")
+
+    stretch_pills = get_button_group(app, 8)
+    assert_snapshot(stretch_pills, name="st_pills-width_stretch")
+
+    pills_300px = get_button_group(app, 9)
+    assert_snapshot(pills_300px, name="st_pills-width_300px")

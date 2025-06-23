@@ -103,6 +103,9 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
+  widthConfig: {
+    useContent: true,
+  },
   ...widgetProps,
 })
 const EXPECTED_BUTTONS_LENGTH = materialIconOnlyOptions.length + options.length

@@ -513,7 +513,8 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": st.feedback("stars", disabled=disabled),
+                style="",
+                width="content": st.feedback("stars", disabled=disabled),
                 "button_group",
             ),
             (
@@ -525,7 +526,8 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": st.pills("some_label", options, disabled=disabled),
+                style="",
+                width="content": st.pills("some_label", options, disabled=disabled),
                 "button_group",
             ),
             (
@@ -537,7 +539,8 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": st.segmented_control(
+                style="",
+                width="content": st.segmented_control(
                     "some_label", options, disabled=disabled
                 ),
                 "button_group",
