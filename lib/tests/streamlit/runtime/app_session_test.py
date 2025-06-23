@@ -715,6 +715,7 @@ def _mock_get_options_for_section(
         "showWidgetBorder": True,
         "textColor": "black",
         "codeBackgroundColor": "blue",
+        "dataframeHeaderBackgroundColor": "purple",
     }
 
     if overrides.get("sidebar") is not None:
@@ -758,6 +759,7 @@ def _mock_get_options_for_section(
         "showSidebarBorder": True,
         "textColor": "black",
         "codeBackgroundColor": "blue",
+        "dataframeHeaderBackgroundColor": "purple",
     }
 
     for k, v in overrides.items():
@@ -1218,6 +1220,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "textColor": None,
                     "sidebar": None,
                     "codeBackgroundColor": None,
+                    "dataframeHeaderBackgroundColor": None,
                 }
             )
         )
@@ -1255,6 +1258,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "textColor": None,
                     "sidebar": None,
                     "codeBackgroundColor": None,
+                    "dataframeHeaderBackgroundColor": None,
                 }
             )
         )
@@ -1292,6 +1296,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "showSidebarBorder": None,
                     "textColor": None,
                     "codeBackgroundColor": None,
+                    "dataframeHeaderBackgroundColor": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1309,6 +1314,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "showWidgetBorder": None,
                         "textColor": None,
                         "codeBackgroundColor": None,
+                        "dataframeHeaderBackgroundColor": None,
                     },
                 }
             )
@@ -1340,6 +1346,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField("base_font_weight")
         assert not new_session_msg.custom_theme.HasField("code_background_color")
         assert not new_session_msg.custom_theme.HasField("show_sidebar_border")
+        assert not new_session_msg.custom_theme.HasField(
+            "dataframe_header_background_color"
+        )
 
         app_session._populate_theme_msg(
             new_session_msg.custom_theme.sidebar,
@@ -1361,6 +1370,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField("link_underline")
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "code_background_color"
+        )
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "dataframe_header_background_color"
         )
 
     @patch("streamlit.runtime.app_session.config")
@@ -1387,6 +1399,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.base_font_size == 14
         assert new_session_msg.custom_theme.base_font_weight == 300
         assert new_session_msg.custom_theme.code_background_color == "blue"
+        assert (
+            new_session_msg.custom_theme.dataframe_header_background_color == "purple"
+        )
         assert new_session_msg.custom_theme.show_sidebar_border is True
         # The value from `theme.font` will be placed in body_font since
         # font uses a deprecated enum:
@@ -1428,6 +1443,10 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.sidebar.body_font == "Inter"
         assert new_session_msg.custom_theme.sidebar.code_font == "Monaspace Argon"
         assert new_session_msg.custom_theme.sidebar.code_background_color == "blue"
+        assert (
+            new_session_msg.custom_theme.sidebar.dataframe_header_background_color
+            == "purple"
+        )
 
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0

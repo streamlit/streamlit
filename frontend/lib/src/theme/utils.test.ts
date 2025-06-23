@@ -976,6 +976,16 @@ describe("createEmotionTheme", () => {
     )
   })
 
+  it("showSidebarBorder config is set to false by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.showSidebarBorder).toBe(false)
+  })
+
+  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: true })
+    expect(theme.showSidebarBorder).toBe(true)
+  })
+
   it("sets the dataframeBorderColor if configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       borderColor: "red",
@@ -985,6 +995,21 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
     expect(theme.colors.borderColor).toBe("red")
     expect(theme.colors.dataframeBorderColor).toBe("green")
+  })
+
+  it("sets the dataframeHeaderBackgroundColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderBackgroundColor: "green",
+    }
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("green")
+  })
+
+  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      theme.colors.bgMix
+    )
   })
 
   it.each([
@@ -1036,16 +1061,6 @@ describe("createEmotionTheme", () => {
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
     }
   )
-
-  it("showSidebarBorder config is set to false by default", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.showSidebarBorder).toBe(false)
-  })
-
-  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
-    const theme = createEmotionTheme({ showSidebarBorder: true })
-    expect(theme.showSidebarBorder).toBe(true)
-  })
 
   it("linkUnderline config is set to true by default", () => {
     const theme = createEmotionTheme({})

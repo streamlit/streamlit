@@ -180,8 +180,9 @@ message CustomThemeConfig {
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
+  optional string dataframe_header_background_color = 31;
 
-  // Next ID: 31
+  // Next ID: 32
 }
 
 message FontFace {

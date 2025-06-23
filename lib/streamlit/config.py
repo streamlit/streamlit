@@ -1319,6 +1319,17 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "dataframeHeaderBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        The background color of the dataframe's header.
+
+        If no dataframe header background color is set, Streamlit uses a mix of
+        `theme.bgColor` and `theme.secondaryBg`.
+    """,
+)
+
+_create_theme_options(
     "showWidgetBorder",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""

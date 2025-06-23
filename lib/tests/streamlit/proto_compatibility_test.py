@@ -118,6 +118,11 @@ FD = FieldDescriptor
                 ("base_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
                 ("widget_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("code_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                (
+                    "dataframe_header_background_color",
+                    FD.LABEL_OPTIONAL,
+                    FD.TYPE_STRING,
+                ),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
             },

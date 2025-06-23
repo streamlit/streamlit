@@ -76,7 +76,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       // Header styling:
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
-      bgHeader: theme.colors.bgMix,
+      bgHeader: theme.colors.dataframeHeaderBackgroundColor,
       bgHeaderHasFocus: transparentize(theme.colors.darkenedBgMix100, 0.9),
       bgHeaderHovered: transparentize(theme.colors.darkenedBgMix100, 0.9),
       textHeader: theme.colors.fadedText60,

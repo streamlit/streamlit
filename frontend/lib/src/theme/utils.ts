@@ -318,6 +318,7 @@ export const createEmotionTheme = (
     primaryColor: primary,
     textColor: bodyText,
     dataframeBorderColor,
+    dataframeHeaderBackgroundColor,
     widgetBorderColor,
     borderColor,
     linkColor,
@@ -358,6 +359,11 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(dataframeBorderColor)) {
     // If dataframeBorderColor explicitly set, override borderColorLight fallback
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
+  }
+
+  if (notNullOrUndefined(dataframeHeaderBackgroundColor)) {
+    conditionalOverrides.colors.dataframeHeaderBackgroundColor =
+      dataframeHeaderBackgroundColor
   }
 
   if (showWidgetBorder || widgetBorderColor) {
