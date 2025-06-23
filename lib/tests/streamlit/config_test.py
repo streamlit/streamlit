@@ -486,6 +486,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.secondaryBackgroundColor",
                 "theme.textColor",
                 "theme.baseFontSize",
+                "theme.baseFontWeight",
                 "theme.baseRadius",
                 "theme.buttonRadius",
                 "theme.font",
@@ -685,6 +686,7 @@ class ConfigTest(unittest.TestCase):
             "codeFontSize": None,
             "fontFaces": None,
             "baseFontSize": None,
+            "baseFontWeight": None,
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
@@ -725,6 +727,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.codeFontSize", "12px", "test")
         config._set_option("theme.baseFontSize", 14, "test")
+        config._set_option("theme.baseFontWeight", 300, "test")
         config._set_option("theme.showSidebarBorder", True, "test")
 
         expected = {
@@ -754,6 +757,7 @@ class ConfigTest(unittest.TestCase):
                 },
             ],
             "baseFontSize": 14,
+            "baseFontWeight": 300,
             "showSidebarBorder": True,
         }
         assert config.get_options_for_section("theme") == expected

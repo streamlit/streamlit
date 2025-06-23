@@ -30,7 +30,7 @@ export interface Props {
 
 export default function ScrollToBottomContainer(props: Props): ReactElement {
   const { className, tabIndex, children, isEmbedded, disableScrolling } = props
-  const scrollContainerRef = useScrollToBottom()
+  const scrollContainerRef = useScrollToBottom(true)
 
   return (
     <StyledAppViewMain
