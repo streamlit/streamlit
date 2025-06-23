@@ -50,7 +50,10 @@ export const fontSizes = {
 export const fontWeights = {
   normal: 400,
   bold: 600,
-  extrabold: 700, // Use sparingly! Only h1 for now.
+  extrabold: 700,
+  // baseFontWeight config does not affect headers
+  headerBold: 600,
+  headerExtraBold: 700, // Use sparingly! Only h1 for now.
 }
 
 export const lineHeights = {

@@ -69,7 +69,8 @@ function getMarkdownHeadingDefinitions(
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
-      fontWeight: theme.fontWeights.bold,
+      // Bold used for headers separate
+      fontWeight: theme.fontWeights.headerBold,
       lineHeight: theme.lineHeights.headings,
       margin: 0,
       color: "inherit",
@@ -82,12 +83,12 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: useSmallerHeadings
-        ? theme.fontWeights.bold
-        : theme.fontWeights.extrabold,
+        ? theme.fontWeights.headerBold
+        : theme.fontWeights.headerExtraBold,
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
-      fontWeight: theme.fontWeights.extrabold,
+      fontWeight: theme.fontWeights.headerExtraBold,
     },
     "h2, h3": {
       letterSpacing: "-0.005em",
@@ -248,6 +249,8 @@ export const StyledStreamlitMarkdown =
         },
 
         th: {
+          // TODO: check whether this should be adjusted
+          // defaults to font-weight: "bold" (700)
           textAlign: "inherit",
         },
 

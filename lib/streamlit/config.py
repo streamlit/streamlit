@@ -1319,10 +1319,31 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "dataframeHeaderBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        The background color of the dataframe's header.
+
+        If no dataframe header background color is set, Streamlit uses a mix of
+        `theme.bgColor` and `theme.secondaryBg`.
+    """,
+)
+
+_create_theme_options(
     "showWidgetBorder",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Whether to show a border around input widgets.
+    """,
+    type_=bool,
+)
+
+_create_theme_options(
+    "showSidebarBorder",
+    categories=["theme"],
+    description="""
+        Whether to show a vertical separator between the sidebar and the main
+        content area.
     """,
     type_=bool,
 )
@@ -1341,13 +1362,17 @@ _create_theme_options(
 )
 
 _create_theme_options(
-    "showSidebarBorder",
+    "baseFontWeight",
     categories=["theme"],
     description="""
-        Whether to show a vertical separator between the sidebar and the main
-        content area.
+        Sets the root font weight for the app.
+
+        This determines the overall weight of text and UI elements.
+        Valid values are 100-600, in increments of 100.
+
+        When unset, the font weight will be set to normal 400.
     """,
-    type_=bool,
+    type_=int,
 )
 
 _create_theme_options(
