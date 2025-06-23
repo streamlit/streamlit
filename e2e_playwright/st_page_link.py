@@ -60,6 +60,6 @@ with st.sidebar:
     # Page links are container width by default in the sidebar
     st.page_link(
         "http://www.example.com",
-        label="Sidebar container_width=false",
-        use_container_width=False,
+        label="Sidebar content width",
+        width="content",
     )
