@@ -39,7 +39,7 @@ export interface Props {
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig?: streamlit.WidthConfig
+  widthConfig?: streamlit.WidthConfig | null | undefined
 }
 
 export function createDownloadLink(

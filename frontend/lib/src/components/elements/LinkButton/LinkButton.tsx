@@ -31,7 +31,7 @@ import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   element: LinkButtonProto
-  widthConfig?: streamlit.WidthConfig
+  widthConfig?: streamlit.WidthConfig | null | undefined
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
