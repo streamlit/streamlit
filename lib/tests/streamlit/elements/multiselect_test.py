@@ -398,10 +398,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element
         assert (
-            c.layout_config.width_spec.WhichOneof("spec")
+            c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.layout_config.width_spec.use_stretch
+        assert c.width_config.use_stretch
 
     def test_width_config_pixel(self):
         """Test that pixel width works properly."""
@@ -409,10 +409,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element
         assert (
-            c.layout_config.width_spec.WhichOneof("spec")
+            c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        assert c.layout_config.width_spec.pixel_width == 200
+        assert c.width_config.pixel_width == 200
 
     def test_width_config_stretch(self):
         """Test that 'stretch' width works properly."""
@@ -420,10 +420,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element
         assert (
-            c.layout_config.width_spec.WhichOneof("spec")
+            c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.layout_config.width_spec.use_stretch
+        assert c.width_config.use_stretch
 
     @parameterized.expand(
         [
