@@ -19,6 +19,8 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -199,21 +201,34 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(
-    () =>
-      initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-      (initialSidebarState === PageConfig.SidebarState.AUTO &&
-        window.innerWidth <= parseInt(activeTheme.emotion.breakpoints.md, 10))
+    () => initialSidebarState === PageConfig.SidebarState.COLLAPSED
   )
 
-  // sometimes the initialSidebarState is not updated until after the script runs with a set_page_config
+  const hasInitializedWidthRef = useRef(false)
+
+  // Initialize sidebar state once after stable width is achieved
+  useLayoutEffect(() => {
+    if (!hasInitializedWidthRef.current && window.innerWidth > 0) {
+      setSidebarIsCollapsed(
+        initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
+          (initialSidebarState === PageConfig.SidebarState.AUTO &&
+            window.innerWidth <=
+              parseInt(activeTheme.emotion.breakpoints.md, 10))
+      )
+      hasInitializedWidthRef.current = true
+    }
+  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
+
+  // Handle updates to initialSidebarState after set_page_config
   useEffect(() => {
-    setSidebarIsCollapsed(
-      initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-        (initialSidebarState === PageConfig.SidebarState.AUTO &&
-          window.innerWidth <=
-            parseInt(activeTheme.emotion.breakpoints.md, 10) &&
-          window.innerWidth > 0)
-    )
+    if (hasInitializedWidthRef.current) {
+      setSidebarIsCollapsed(
+        initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
+          (initialSidebarState === PageConfig.SidebarState.AUTO &&
+            window.innerWidth <=
+              parseInt(activeTheme.emotion.breakpoints.md, 10))
+      )
+    }
   }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
 
   const toggleSidebar = useCallback(() => {
