@@ -987,6 +987,56 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.dataframeBorderColor).toBe("green")
   })
 
+  it.each([
+    // Test valid font weights
+    [100, 100, 300, 400],
+    [200, 200, 400, 500],
+    [300, 300, 500, 600],
+    [400, 400, 600, 700],
+    [500, 500, 700, 800],
+    [600, 600, 800, 900],
+  ])(
+    "sets the font weights based on the baseFontWeight config '%s'",
+    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+    }
+  )
+
+  it.each([
+    // Test invalid font weights
+    [150, 400, 600, 700], // Not an increment of 100
+    [700, 400, 600, 700], // Not between 100 and 600
+    [400.5, 400, 600, 700], // Not an integer
+  ])(
+    "logs a warning and falls back to default font weights if baseFontWeight is invalid '%s'",
+    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights in theme.`
+      )
+
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+    }
+  )
+
   it("showSidebarBorder config is set to false by default", () => {
     const theme = createEmotionTheme({})
     expect(theme.showSidebarBorder).toBe(false)
