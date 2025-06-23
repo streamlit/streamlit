@@ -1325,7 +1325,7 @@ _create_theme_options(
         The background color of the dataframe's header.
 
         If no dataframe header background color is set, Streamlit uses a mix of
-        `theme.backgroundColor` and `theme.secondaryBackgroundColor`.
+        `theme.bgColor` and `theme.secondaryBg`.
     """,
 )
 
