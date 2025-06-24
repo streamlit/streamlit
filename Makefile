@@ -385,7 +385,7 @@ pre-commit-install:
 	pre-commit install
 
 .PHONY: performance-lighthouse
-# Run Lighthouse performance tests
+# Run Lighthouse performance tests.
 performance-lighthouse:
 	cd frontend/app; \
 	yarn run lighthouse:run
