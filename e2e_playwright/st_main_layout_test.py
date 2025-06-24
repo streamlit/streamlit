@@ -117,6 +117,7 @@ def setup_viewport_and_verify_title(
     expect(app).to_have_title(expected_title)
 
     app.reload()
+    wait_for_app_run(app)
 
 
 def verify_sidebar_state(app: Page, expected_expanded: bool) -> None:
