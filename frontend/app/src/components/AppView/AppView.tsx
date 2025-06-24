@@ -36,8 +36,9 @@ import {
   Profiler,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { IAppPage, Logo, Navigation, PageConfig } from "@streamlit/protobuf"
+import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
+import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
 import { TopNav } from "@streamlit/app/src/components/Navigation"
@@ -200,8 +201,11 @@ function AppView(props: AppViewProps): ReactElement {
     />
   )
 
-  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(
-    () => initialSidebarState === PageConfig.SidebarState.COLLAPSED
+  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() =>
+    shouldCollapse(
+      initialSidebarState,
+      parseInt(activeTheme.emotion.breakpoints.md, 10)
+    )
   )
 
   const hasInitializedWidthRef = useRef(false)
@@ -210,10 +214,10 @@ function AppView(props: AppViewProps): ReactElement {
   useLayoutEffect(() => {
     if (!hasInitializedWidthRef.current && window.innerWidth > 0) {
       setSidebarIsCollapsed(
-        initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-          (initialSidebarState === PageConfig.SidebarState.AUTO &&
-            window.innerWidth <=
-              parseInt(activeTheme.emotion.breakpoints.md, 10))
+        shouldCollapse(
+          initialSidebarState,
+          parseInt(activeTheme.emotion.breakpoints.md, 10)
+        )
       )
       hasInitializedWidthRef.current = true
     }
@@ -223,10 +227,10 @@ function AppView(props: AppViewProps): ReactElement {
   useEffect(() => {
     if (hasInitializedWidthRef.current) {
       setSidebarIsCollapsed(
-        initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-          (initialSidebarState === PageConfig.SidebarState.AUTO &&
-            window.innerWidth <=
-              parseInt(activeTheme.emotion.breakpoints.md, 10))
+        shouldCollapse(
+          initialSidebarState,
+          parseInt(activeTheme.emotion.breakpoints.md, 10)
+        )
       )
     }
   }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
