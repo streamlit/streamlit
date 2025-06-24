@@ -65,8 +65,8 @@ class MetricMixin:
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
-        height: Height = "content",
         width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
