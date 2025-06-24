@@ -1053,7 +1053,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights in theme.`
+        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
@@ -1121,7 +1121,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights in theme.`
+        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
