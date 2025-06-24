@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useState } from "react"
+import React, { memo, ReactElement, useEffect, useState, useRef } from "react"
 
 import classNames from "classnames"
 
@@ -37,13 +37,27 @@ export interface SpinnerProps {
 function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
   const { cache, showTime } = element
   const [elapsedTime, setElapsedTime] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!showTime) return
 
-    const timer = setInterval(() => {
-      setElapsedTime(prev => prev + 0.1)
-    }, 100)
+    // Record the start time when the component mounts
+    startTimeRef.current = Date.now()
+
+    const updateElapsedTime = (): void => {
+      if (startTimeRef.current !== null) {
+        const currentTime = Date.now()
+        const elapsed = (currentTime - startTimeRef.current) / 1000 // Convert to seconds
+        setElapsedTime(elapsed)
+      }
+    }
+
+    // Update immediately
+    updateElapsedTime()
+
+    // Set up interval to update every 100ms
+    const timer = setInterval(updateElapsedTime, 100)
 
     return () => clearInterval(timer)
   }, [showTime])
