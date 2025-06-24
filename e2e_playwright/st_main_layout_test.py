@@ -26,19 +26,84 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
+# Disable the module-scoped app_server fixture for this test module
+@pytest.fixture(scope="module", autouse=True)
+def app_server():
+    """Override to disable the default module-scoped app_server fixture."""
+    return
+
+
+# Custom app fixture that starts a fresh server for each test with the correct sidebar mode
 @pytest.fixture
-def sidebar_mode(request: pytest.FixtureRequest) -> Generator[str, None, None]:
-    mode = request.param
-    os.environ["STREAMLIT_SIDEBAR_TEST_MODE"] = mode
-    yield mode
-    if "STREAMLIT_SIDEBAR_TEST_MODE" in os.environ:
-        del os.environ["STREAMLIT_SIDEBAR_TEST_MODE"]
+def app(
+    page: Page, app_port: int, request: pytest.FixtureRequest
+) -> Generator[Page, None, None]:
+    """Start fresh server with correct sidebar mode for each test."""
+    from e2e_playwright.conftest import (
+        AsyncSubprocess,
+        resolve_test_to_script,
+        wait_for_app_loaded,
+        wait_for_app_server_to_start,
+    )
+    from e2e_playwright.shared.performance import start_capture_traces
 
+    # Get sidebar_mode from test parameters
+    # For parametrized tests, the sidebar_mode will be in the test's callspec
+    sidebar_mode = "auto"  # default
+    if (
+        hasattr(request, "node")
+        and hasattr(request.node, "callspec")
+        and "sidebar_mode" in request.node.callspec.params
+    ):
+        sidebar_mode = request.node.callspec.params["sidebar_mode"]
 
-@pytest.fixture(scope="module")
-def app_server_extra_args() -> list[str]:
-    """Return extra arguments for the app server."""
-    return []
+    # Set environment variable for this test
+    full_env = os.environ.copy()
+    full_env["STREAMLIT_SIDEBAR_TEST_MODE"] = sidebar_mode
+
+    # Start the Streamlit server
+    streamlit_proc = AsyncSubprocess(
+        [
+            "streamlit",
+            "run",
+            resolve_test_to_script(request.module),
+            "--server.headless",
+            "true",
+            "--global.developmentMode",
+            "false",
+            "--global.e2eTest",
+            "true",
+            "--server.port",
+            str(app_port),
+            "--browser.gatherUsageStats",
+            "false",
+            "--server.fileWatcherType",
+            "none",
+            "--server.enableStaticServing",
+            "true",
+        ],
+        cwd=".",
+        env=full_env,
+    )
+    streamlit_proc.start()
+    if not wait_for_app_server_to_start(app_port):
+        streamlit_stdout = streamlit_proc.terminate()
+        print(streamlit_stdout, flush=True)
+        raise RuntimeError("Unable to start Streamlit app")
+
+    try:
+        # Open the app page
+        response = page.goto(f"http://localhost:{app_port}/")
+        if response is None or response.status != 200:
+            raise RuntimeError("Unable to load page")
+
+        start_capture_traces(page)
+        wait_for_app_loaded(page)
+        yield page
+    finally:
+        # Clean up the server
+        streamlit_stdout = streamlit_proc.terminate()
+        print(streamlit_stdout, flush=True)
 
 
 def setup_viewport_and_verify_title(
@@ -51,6 +116,8 @@ def setup_viewport_and_verify_title(
     # Verify the fixture was applied correctly by checking the page title
     expected_title = f"Sidebar Test - {sidebar_mode.title()}"
     expect(app).to_have_title(expected_title)
+
+    app.reload()
 
 
 def verify_sidebar_state(app: Page, expected_expanded: bool) -> None:
@@ -87,7 +154,6 @@ def verify_expand_button_visible(app: Page) -> None:
         ("expanded", {"width": 375, "height": 667}, True, "expanded_mobile"),
         ("expanded", {"width": 1280, "height": 800}, True, "expanded_desktop"),
     ],
-    indirect=["sidebar_mode"],
 )
 def test_sidebar_basic_states(
     app: Page,
