@@ -26,13 +26,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-# Disable the module-scoped app_server fixture for this test module
-@pytest.fixture(scope="module", autouse=True)
-def app_server():
-    """Override to disable the default module-scoped app_server fixture."""
-    return
-
-
 @pytest.fixture
 def sidebar_mode(request: pytest.FixtureRequest) -> Generator[str, None, None]:
     mode = request.param
@@ -42,160 +35,121 @@ def sidebar_mode(request: pytest.FixtureRequest) -> Generator[str, None, None]:
         del os.environ["STREAMLIT_SIDEBAR_TEST_MODE"]
 
 
-# Override the app fixture to use a fresh server for each test
-@pytest.fixture
-def app(
-    page: Page, app_port: int, request: pytest.FixtureRequest, sidebar_mode: str
-) -> Generator[Page, None, None]:
-    """Override app fixture to start fresh server with correct sidebar mode for each test."""
-    from playwright.sync_api import Response
-
-    from e2e_playwright.conftest import (
-        AsyncSubprocess,
-        resolve_test_to_script,
-        wait_for_app_loaded,
-        wait_for_app_server_to_start,
-    )
-    from e2e_playwright.shared.performance import start_capture_traces
-
-    # Start the Streamlit server with the sidebar mode already set
-    # Ensure we inherit the full current environment and override with our specific env var
-    full_env = os.environ.copy()
-    full_env["STREAMLIT_SIDEBAR_TEST_MODE"] = sidebar_mode
-
-    streamlit_proc = AsyncSubprocess(
-        [
-            "streamlit",
-            "run",
-            resolve_test_to_script(request.module),
-            "--server.headless",
-            "true",
-            "--global.developmentMode",
-            "false",
-            "--global.e2eTest",
-            "true",
-            "--server.port",
-            str(app_port),
-            "--browser.gatherUsageStats",
-            "false",
-            "--server.fileWatcherType",
-            "none",
-            "--server.enableStaticServing",
-            "true",
-        ],
-        cwd=".",
-        env=full_env,  # Pass the full environment with our override
-    )
-    streamlit_proc.start()
-    if not wait_for_app_server_to_start(app_port):
-        streamlit_stdout = streamlit_proc.terminate()
-        print(streamlit_stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
-
-    try:
-        # Open the app page
-        marker = request.node.get_closest_marker("app_hash")
-        hash_fragment = ""
-        if marker:
-            hash_fragment = f"#{marker.args[0]}"
-
-        response: Response | None = None
-        try:
-            response = page.goto(f"http://localhost:{app_port}/{hash_fragment}")
-        except Exception as e:
-            print(e, flush=True)
-
-        if response is None:
-            raise RuntimeError("Unable to load page")
-        if response.status != 200:
-            print(
-                f"Unsuccessful in loading page. Status: {response.status}", flush=True
-            )
-            if response.status == 404:
-                print(
-                    "404 error: try building the frontend with make frontend-fast",
-                    flush=True,
-                )
-            raise RuntimeError("Unable to load page")
-        print("Successfully loaded page", flush=True)
-
-        start_capture_traces(page)
-        wait_for_app_loaded(page)
-        yield page
-    finally:
-        # Clean up the server
-        streamlit_stdout = streamlit_proc.terminate()
-        print(streamlit_stdout, flush=True)
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    """Return extra arguments for the app server."""
+    return []
 
 
-# Tests for different sidebar initial states using pytest markers
-
-
-# Tests for initial_sidebar_state="auto" (default behavior)
-@pytest.mark.parametrize("sidebar_mode", ["auto"], indirect=True)
-def test_sidebar_auto_mobile_collapsed(
-    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
-):
-    """Test sidebar with initial_sidebar_state='auto' on mobile - should be collapsed and can be expanded."""
-    app.set_viewport_size({"width": 375, "height": 667})
+def setup_viewport_and_verify_title(
+    app: Page, width: int, height: int, sidebar_mode: str
+) -> None:
+    """Common setup for viewport, waiting, and title verification."""
+    app.set_viewport_size({"width": width, "height": height})
     wait_for_app_run(app)
 
     # Verify the fixture was applied correctly by checking the page title
     expected_title = f"Sidebar Test - {sidebar_mode.title()}"
     expect(app).to_have_title(expected_title)
 
-    # Verify sidebar exists and is collapsed on mobile
+
+def verify_sidebar_state(app: Page, expected_expanded: bool) -> None:
+    """Verify sidebar exists and has expected expanded state."""
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("aria-expanded", str(expected_expanded).lower())
 
-    # Verify expand button exists and works
+
+def verify_sidebar_content_visibility(app: Page, should_be_visible: bool) -> None:
+    """Verify sidebar content visibility."""
+    sidebar_content = app.get_by_test_id("stSidebarContent")
+    if should_be_visible:
+        expect(sidebar_content).to_be_visible()
+    else:
+        # For collapsed state, we don't check visibility as it might vary
+        pass
+
+
+def verify_expand_button_visible(app: Page) -> None:
+    """Verify expand button is visible."""
     expand_button = app.get_by_test_id("stExpandSidebarButton")
     expect(expand_button).to_be_visible()
 
-    # Take snapshot of collapsed state
-    assert_snapshot(app, name="st_main_layout-auto_mobile_collapsed")
 
-    # Test expand functionality
+# Consolidated test for basic sidebar states across different modes and viewports
+@pytest.mark.parametrize(
+    ("sidebar_mode", "viewport", "expected_expanded", "test_name"),
+    [
+        ("auto", {"width": 375, "height": 667}, False, "auto_mobile_collapsed"),
+        ("auto", {"width": 1280, "height": 800}, True, "auto_desktop_expanded"),
+        ("collapsed", {"width": 375, "height": 667}, False, "collapsed_mobile"),
+        ("collapsed", {"width": 1280, "height": 800}, False, "collapsed_desktop"),
+        ("expanded", {"width": 375, "height": 667}, True, "expanded_mobile"),
+        ("expanded", {"width": 1280, "height": 800}, True, "expanded_desktop"),
+    ],
+    indirect=["sidebar_mode"],
+)
+def test_sidebar_basic_states(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    sidebar_mode: str,
+    viewport: dict[str, int],
+    expected_expanded: bool,
+    test_name: str,
+):
+    """Test sidebar basic states across different modes and viewport sizes."""
+    setup_viewport_and_verify_title(
+        app, viewport["width"], viewport["height"], sidebar_mode
+    )
+
+    # Verify sidebar state
+    verify_sidebar_state(app, expected_expanded)
+
+    # Verify content visibility for expanded states
+    if expected_expanded:
+        verify_sidebar_content_visibility(app, True)
+    else:
+        verify_expand_button_visible(app)
+
+    # Take snapshot
+    assert_snapshot(app, name=f"st_main_layout-{test_name}")
+
+
+# Test interaction functionality for auto mode
+@pytest.mark.parametrize("sidebar_mode", ["auto"], indirect=True)
+def test_sidebar_auto_mobile_expand_interaction(
+    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
+):
+    """Test sidebar expand interaction on mobile with auto mode."""
+    setup_viewport_and_verify_title(app, 375, 667, sidebar_mode)
+
+    # Verify initial collapsed state
+    verify_sidebar_state(app, False)
+    verify_expand_button_visible(app)
+
     # Expand the sidebar
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
     expand_button.click()
 
-    # Verify sidebar is now expanded
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
-
-    # Verify sidebar content is visible
-    sidebar_content = app.get_by_test_id("stSidebarContent")
-    expect(sidebar_content).to_be_visible()
+    # Verify expanded state
+    verify_sidebar_state(app, True)
+    verify_sidebar_content_visibility(app, True)
 
     # Take snapshot of expanded state
     assert_snapshot(app, name="st_main_layout-auto_mobile_expanded")
 
 
 @pytest.mark.parametrize("sidebar_mode", ["auto"], indirect=True)
-def test_sidebar_auto_desktop_expanded(
+def test_sidebar_auto_desktop_collapse_interaction(
     app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
 ):
-    """Test sidebar with initial_sidebar_state='auto' on desktop - should be expanded and can be collapsed."""
-    app.set_viewport_size({"width": 1280, "height": 800})
-    wait_for_app_run(app)
+    """Test sidebar collapse interaction on desktop with auto mode."""
+    setup_viewport_and_verify_title(app, 1280, 800, sidebar_mode)
 
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
+    # Verify initial expanded state
+    verify_sidebar_state(app, True)
+    verify_sidebar_content_visibility(app, True)
 
-    # Verify sidebar exists and is expanded on desktop
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_attached()
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
-
-    # Verify sidebar content is visible
-    sidebar_content = app.get_by_test_id("stSidebarContent")
-    expect(sidebar_content).to_be_visible()
-
-    # Take snapshot of expanded desktop state
-    assert_snapshot(app, name="st_main_layout-auto_desktop_expanded")
-
-    # Test collapse functionality
     # Hover over sidebar to make collapse button visible
     sidebar_header = app.get_by_test_id("stSidebarHeader")
     sidebar_header.hover()
@@ -204,171 +158,53 @@ def test_sidebar_auto_desktop_expanded(
     collapse_button = app.get_by_test_id("stSidebarCollapseButton").locator("button")
     collapse_button.click()
 
-    # Verify sidebar is collapsed
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
-
-    # Verify expand button is now visible
-    expand_button = app.get_by_test_id("stExpandSidebarButton")
-    expect(expand_button).to_be_visible()
+    # Verify collapsed state
+    verify_sidebar_state(app, False)
+    verify_expand_button_visible(app)
 
     # Take snapshot of collapsed desktop state
     assert_snapshot(app, name="st_main_layout-auto_desktop_collapsed")
 
 
-# Tests for initial_sidebar_state="collapsed"
-@pytest.mark.parametrize("sidebar_mode", ["collapsed"], indirect=True)
-def test_sidebar_collapsed_mobile(
-    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
-):
-    """Test sidebar with initial_sidebar_state='collapsed' on mobile."""
-    app.set_viewport_size({"width": 375, "height": 667})
-    wait_for_app_run(app)
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
-
-    # Verify sidebar exists but is collapsed
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_attached()
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
-
-    # Verify expand button exists
-    expand_button = app.get_by_test_id("stExpandSidebarButton")
-    expect(expand_button).to_be_visible()
-
-    # Take snapshot
-    assert_snapshot(app, name="st_main_layout-collapsed_mobile")
-
-
-@pytest.mark.parametrize("sidebar_mode", ["collapsed"], indirect=True)
-def test_sidebar_collapsed_desktop(
-    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
-):
-    """Test sidebar with initial_sidebar_state='collapsed' on desktop."""
-    app.set_viewport_size({"width": 1280, "height": 800})
-    wait_for_app_run(app)
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
-
-    # Verify sidebar exists but is collapsed (unlike auto mode)
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_attached()
-
-    # Take snapshot
-    assert_snapshot(app, name="st_main_layout-collapsed_desktop")
-
-
-# Tests for initial_sidebar_state="expanded"
-@pytest.mark.parametrize("sidebar_mode", ["expanded"], indirect=True)
-def test_sidebar_expanded_mobile(
-    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
-):
-    """Test sidebar with initial_sidebar_state='expanded' on mobile."""
-    app.set_viewport_size({"width": 375, "height": 667})
-    wait_for_app_run(app)
-
-    app.reload()
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
-
-    # Verify sidebar exists and is expanded (unlike auto mode)
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_attached()
-
-    # Verify sidebar content is visible
-    sidebar_content = app.get_by_test_id("stSidebarContent")
-    expect(sidebar_content).to_be_visible()
-
-    # Take snapshot
-    assert_snapshot(app, name="st_main_layout-expanded_mobile")
-
-
-@pytest.mark.parametrize("sidebar_mode", ["expanded"], indirect=True)
-def test_sidebar_expanded_desktop(
-    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
-):
-    """Test sidebar with initial_sidebar_state='expanded' on desktop."""
-    app.set_viewport_size({"width": 1280, "height": 800})
-    wait_for_app_run(app)
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
-
-    # Verify sidebar exists and is expanded
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_attached()
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
-
-    # Verify sidebar content is visible
-    sidebar_content = app.get_by_test_id("stSidebarContent")
-    expect(sidebar_content).to_be_visible()
-
-    # Take snapshot
-    assert_snapshot(app, name="st_main_layout-expanded_desktop")
-
-
-# Tests for deploy button positioning with different sidebar states
+# Tests for deploy button positioning
 @pytest.mark.parametrize("sidebar_mode", ["auto"], indirect=True)
-def test_deploy_button_mobile_sidebar_collapsed(
-    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
+@pytest.mark.parametrize(
+    ("viewport", "expected_expanded", "test_name"),
+    [
+        ({"width": 375, "height": 667}, False, "deploy_button_mobile_collapsed"),
+        ({"width": 1280, "height": 800}, True, "deploy_button_desktop_expanded"),
+    ],
+)
+def test_deploy_button_positioning(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    sidebar_mode: str,
+    viewport: dict[str, int],
+    expected_expanded: bool,
+    test_name: str,
 ):
-    """Test deploy button positioning on mobile with collapsed sidebar."""
-    app.set_viewport_size({"width": 375, "height": 667})
-    wait_for_app_run(app)
+    """Test deploy button positioning with different sidebar states."""
+    setup_viewport_and_verify_title(
+        app, viewport["width"], viewport["height"], sidebar_mode
+    )
 
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
-
-    # Verify header is visible and positioned correctly
-    header = app.get_by_test_id("stHeader")
-    expect(header).to_be_visible()
-
-    # Take screenshot focusing on header area
-    assert_snapshot(header, name="st_main_layout-deploy_button_mobile_collapsed")
-
-
-@pytest.mark.parametrize("sidebar_mode", ["auto"], indirect=True)
-def test_deploy_button_desktop_sidebar_expanded(
-    app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
-):
-    """Test deploy button positioning on desktop with expanded sidebar."""
-    app.set_viewport_size({"width": 1280, "height": 800})
-    wait_for_app_run(app)
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
-
-    # Verify sidebar is expanded
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    # Verify sidebar state
+    verify_sidebar_state(app, expected_expanded)
 
     # Verify header is visible
     header = app.get_by_test_id("stHeader")
     expect(header).to_be_visible()
 
     # Take screenshot focusing on header area
-    assert_snapshot(header, name="st_main_layout-deploy_button_desktop_expanded")
+    assert_snapshot(header, name=f"st_main_layout-{test_name}")
 
 
 @pytest.mark.parametrize("sidebar_mode", ["auto"], indirect=True)
-def test_deploy_button_desktop_sidebar_manually_collapsed(
+def test_deploy_button_desktop_manually_collapsed(
     app: Page, assert_snapshot: ImageCompareFunction, sidebar_mode: str
 ):
     """Test deploy button positioning on desktop after manually collapsing sidebar."""
-    app.set_viewport_size({"width": 1280, "height": 800})
-    wait_for_app_run(app)
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
+    setup_viewport_and_verify_title(app, 1280, 800, sidebar_mode)
 
     # Manually collapse the sidebar
     sidebar_header = app.get_by_test_id("stSidebarHeader")
@@ -378,8 +214,7 @@ def test_deploy_button_desktop_sidebar_manually_collapsed(
     collapse_button.click()
 
     # Verify sidebar is collapsed
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    verify_sidebar_state(app, False)
 
     # Verify header adjusts correctly
     header = app.get_by_test_id("stHeader")
@@ -398,31 +233,21 @@ def test_viewport_resize_responsive_behavior(
 ):
     """Test sidebar behavior when resizing viewport with auto mode."""
     # Start with desktop - sidebar should be expanded
-    app.set_viewport_size({"width": 1280, "height": 800})
-    wait_for_app_run(app)
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
-
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    setup_viewport_and_verify_title(app, 1280, 800, sidebar_mode)
+    verify_sidebar_state(app, True)
 
     # Resize to mobile - sidebar should auto-collapse
     app.set_viewport_size({"width": 375, "height": 667})
 
     # Verify sidebar collapsed on mobile
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
-
-    # Verify expand button is available
-    expand_button = app.get_by_test_id("stExpandSidebarButton")
-    expect(expand_button).to_be_visible()
+    verify_sidebar_state(app, False)
+    verify_expand_button_visible(app)
 
     # Take final snapshot
     assert_snapshot(app, name="st_main_layout-responsive_mobile_final")
 
 
-# Parametrized test for comprehensive layout testing
+# Comprehensive responsiveness test
 @pytest.mark.parametrize("sidebar_mode", ["auto"], indirect=True)
 @pytest.mark.parametrize(
     "viewport_config",
@@ -432,7 +257,6 @@ def test_viewport_resize_responsive_behavior(
         {"name": "desktop", "width": 1280, "height": 800},
         {"name": "wide", "width": 1920, "height": 1080},
     ],
-    indirect=False,
 )
 def test_layout_responsiveness_auto_mode(
     app: Page,
@@ -441,14 +265,9 @@ def test_layout_responsiveness_auto_mode(
     sidebar_mode: str,
 ):
     """Test layout responsiveness with auto sidebar mode across different viewport sizes."""
-    app.set_viewport_size(
-        {"width": viewport_config["width"], "height": viewport_config["height"]}
+    setup_viewport_and_verify_title(
+        app, viewport_config["width"], viewport_config["height"], sidebar_mode
     )
-    wait_for_app_run(app)
-
-    # Verify the fixture was applied correctly by checking the page title
-    expected_title = f"Sidebar Test - {sidebar_mode.title()}"
-    expect(app).to_have_title(expected_title)
 
     # Verify basic layout elements are present
     header = app.get_by_test_id("stHeader")
