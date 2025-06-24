@@ -1004,15 +1004,10 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     chart_categorical_colors = theme_opts.get("chartCategoricalColors", None)
     # If chartCategoricalColors was configured via config.toml, it's already a list of
     # strings. However, if it was provided via env variable or via CLI arg,
-    # it's a comma-separated string that needs to be parsed.
+    # it's a json string that needs to be parsed.
     if isinstance(chart_categorical_colors, str):
         try:
-            # Parse comma-separated format
-            chart_categorical_colors = [
-                color.strip()
-                for color in chart_categorical_colors.split(",")
-                if color.strip()
-            ]
+            chart_categorical_colors = json.loads(chart_categorical_colors)
         except Exception as e:
             _LOGGER.warning(
                 "Failed to parse the theme.chartCategoricalColors config option: %s.",
