@@ -976,6 +976,184 @@ describe("createEmotionTheme", () => {
     )
   })
 
+  it.each([
+    // Test valid color values
+    [
+      ["red", "orange", "blue", "pink", "purple"],
+      ["red", "orange", "blue", "pink", "purple"],
+    ],
+    // Valid hex codes passed without leading #
+    [
+      [
+        "7fc97f",
+        "beaed4",
+        "fdc086",
+        "ffff99",
+        "386cb0",
+        "f0027f",
+        "bf5b17",
+        "666666",
+      ],
+      [
+        "#7fc97f",
+        "#beaed4",
+        "#fdc086",
+        "#ffff99",
+        "#386cb0",
+        "#f0027f",
+        "#bf5b17",
+        "#666666",
+      ],
+    ],
+    [
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+    ],
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of categorical color config '%s'",
+    (chartCategoricalColors, expectedCategoricalColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartCategoricalColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartCategoricalColors).toEqual(
+        expectedCategoricalColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      ["red", "orange", "blue", "pink", "purple", "invalid"],
+      ["red", "orange", "blue", "pink", "purple"],
+    ],
+    [
+      [
+        "7fc97f",
+        "beaed4",
+        "fdc086",
+        "ffff99",
+        "386cb0",
+        "f0027f",
+        "bf5b17",
+        "666666",
+        "invalid",
+      ],
+      [
+        "#7fc97f",
+        "#beaed4",
+        "#fdc086",
+        "#ffff99",
+        "#386cb0",
+        "#f0027f",
+        "#bf5b17",
+        "#666666",
+      ],
+    ],
+    [
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+        "invalid",
+      ],
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+    ],
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+        "invalid",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+    ],
+  ])(
+    "logs a warning and falls back to default for any invalid categorical color configs '%s'",
+    (chartCategoricalColors, expectedCategoricalColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartCategoricalColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartCategoricalColors in theme: "invalid"`
+      )
+      expect(theme.colors.chartCategoricalColors).toEqual(
+        expectedCategoricalColors
+      )
+    }
+  )
+
   it("showSidebarBorder config is set to false by default", () => {
     const theme = createEmotionTheme({})
     expect(theme.showSidebarBorder).toBe(false)
