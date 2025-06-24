@@ -14,13 +14,17 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
 
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    start_app_server,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -48,47 +52,14 @@ def app(
     sidebar_mode: str,
 ) -> Generator[Page, None, None]:
     """Start fresh server with correct sidebar mode for each test."""
-    from e2e_playwright.conftest import (
-        AsyncSubprocess,
-        resolve_test_to_script,
-        wait_for_app_loaded,
-        wait_for_app_server_to_start,
-    )
     from e2e_playwright.shared.performance import start_capture_traces
 
-    # Set environment variable for this test
-    full_env = os.environ.copy()
-    full_env["STREAMLIT_SIDEBAR_TEST_MODE"] = sidebar_mode
-
-    # Start the Streamlit server
-    streamlit_proc = AsyncSubprocess(
-        [
-            "streamlit",
-            "run",
-            resolve_test_to_script(request.module),
-            "--server.headless",
-            "true",
-            "--global.developmentMode",
-            "false",
-            "--global.e2eTest",
-            "true",
-            "--server.port",
-            str(app_port),
-            "--browser.gatherUsageStats",
-            "false",
-            "--server.fileWatcherType",
-            "none",
-            "--server.enableStaticServing",
-            "true",
-        ],
-        cwd=".",
-        env=full_env,
+    # Start the Streamlit server with the custom environment variable
+    streamlit_proc = start_app_server(
+        app_port,
+        request.module,
+        extra_env={"STREAMLIT_SIDEBAR_TEST_MODE": sidebar_mode},
     )
-    streamlit_proc.start()
-    if not wait_for_app_server_to_start(app_port):
-        streamlit_stdout = streamlit_proc.terminate()
-        print(streamlit_stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
 
     try:
         # Open the app page
