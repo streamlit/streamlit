@@ -104,7 +104,7 @@ export const createEmotionColors = (genericColors: {
 
     headingColor: genericColors.bodyText,
 
-    // @ts-expect-error
+    // @ts-expect-error -- defaultCategoricalColors is a string[] vs. string
     chartCategoricalColors: defaultCategoricalColors,
   }
 }

@@ -1135,8 +1135,24 @@ describe("createEmotionTheme", () => {
         "rgb(128, 0, 128)",
       ],
     ],
+    [
+      // When no valid colors are passed, returns default colors
+      ["invalid"],
+      [
+        "#0068c9",
+        "#83c9ff",
+        "#ff2b2b",
+        "#ffabab",
+        "#29b09d",
+        "#7defa1",
+        "#ff8700",
+        "#ffd16a",
+        "#6d3fc0",
+        "#d5dae5",
+      ],
+    ],
   ])(
-    "logs a warning and falls back to default for any invalid categorical color configs '%s'",
+    "logs a warning and removes any invalid categorical color configs '%s'",
     (chartCategoricalColors, expectedCategoricalColors) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {

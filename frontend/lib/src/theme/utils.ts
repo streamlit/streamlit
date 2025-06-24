@@ -156,7 +156,7 @@ export const parseFont = (font: string): string => {
 const parseColor = (
   color: string,
   configKey: string,
-  inSidebar = false
+  inSidebar: boolean = false
 ): string | undefined => {
   // First try the color as-is
   if (isColor(color)) {
@@ -298,14 +298,11 @@ const setFontWeights = (
  * @param colors: the categorical colors config passed in (array of strings)
  * @returns the valid colors from the config
  */
-const validateCategoricalColors = (
-  colors: string[],
-  inSidebar: boolean
-): string[] => {
+const validateCategoricalColors = (colors: string[]): string[] => {
   return (
     colors
       // parseColor returns undefined for invalid colors
-      .map(color => parseColor(color, "chartCategoricalColors", inSidebar))
+      .map(color => parseColor(color, "chartCategoricalColors"))
       // Filter any invalid colors
       .filter((color): color is string => color !== undefined)
   )
@@ -417,8 +414,7 @@ export const createEmotionTheme = (
   ) {
     // Validate the categorical colors config
     const validatedCategoricalColors = validateCategoricalColors(
-      chartCategoricalColors,
-      inSidebar
+      chartCategoricalColors
     )
     // Set the validated colors if non-empty array
     if (validatedCategoricalColors.length > 0) {
