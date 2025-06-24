@@ -96,12 +96,15 @@ python-init:
 	if command -v "uv" > /dev/null; then \
 		echo "Running command: uv pip install $${pip_args[@]}"; \
 		uv pip install $${pip_args[@]}; \
+		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+			uv run python -m playwright install --with-deps; \
+		fi;\
 	else \
 		echo "Running command: pip install $${pip_args[@]}"; \
 		pip install $${pip_args[@]}; \
-	fi;\
-	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-		python -m playwright install --with-deps; \
+		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+			python -m playwright install --with-deps; \
+		fi;\
 	fi;\
 
 .PHONY: pylint
