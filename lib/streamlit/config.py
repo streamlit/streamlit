@@ -825,6 +825,19 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.customComponentBaseUrlPath",
+    description="""
+        The base path for the URL where Streamlit should serve custom
+        components. If this config var is set and a call to ``declare_component``
+        does not specify a URL, the component's URL will be set to
+        ``f"{server.customComponentBaseUrlPath}/{component_name}/"``.
+    """,
+    default_val="",
+    type_=str,
+    visibility="hidden",
+)
+
 # TODO: Rename to server.enableCorsProtection.
 _create_option(
     "server.enableCORS",
@@ -1208,6 +1221,20 @@ _create_theme_options(
 
         When unset, the code font size will be 0.875rem.
     """,
+)
+
+_create_theme_options(
+    "codeFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for code blocks and code text.
+
+        This applies to inline code, code blocks (ex: `st.code`), and font in `st.json` and `st.help`.
+        Valid values are 100-900, in increments of 100.
+
+        When unset, the default code font weight will be 400.
+    """,
+    type_=int,
 )
 
 _create_theme_options(

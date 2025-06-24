@@ -40,7 +40,7 @@ help:
 
 .PHONY: all
 # Get dependencies, build frontend, install Streamlit into Python environment.
-all: init frontend install
+all: init frontend
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
@@ -96,12 +96,15 @@ python-init:
 	if command -v "uv" > /dev/null; then \
 		echo "Running command: uv pip install $${pip_args[@]}"; \
 		uv pip install $${pip_args[@]}; \
+		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+			uv run python -m playwright install --with-deps; \
+		fi;\
 	else \
 		echo "Running command: pip install $${pip_args[@]}"; \
 		pip install $${pip_args[@]}; \
-	fi;\
-	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-		python -m playwright install --with-deps; \
+		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+			python -m playwright install --with-deps; \
+		fi;\
 	fi;\
 
 .PHONY: pylint
@@ -382,7 +385,7 @@ pre-commit-install:
 	pre-commit install
 
 .PHONY: performance-lighthouse
-# Run Lighthouse performance tests
+# Run Lighthouse performance tests.
 performance-lighthouse:
 	cd frontend/app; \
 	yarn run lighthouse:run
