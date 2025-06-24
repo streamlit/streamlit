@@ -57,7 +57,7 @@ def configure_sidebar_auto():
 def test_sidebar_auto_mobile_collapsed(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test sidebar with initial_sidebar_state='auto' on mobile - should be collapsed."""
+    """Test sidebar with initial_sidebar_state='auto' on mobile - should be collapsed and can be expanded."""
     app.set_viewport_size({"width": 375, "height": 667})
     wait_for_app_run(app)
 
@@ -73,21 +73,11 @@ def test_sidebar_auto_mobile_collapsed(
     # Take snapshot of collapsed state
     assert_snapshot(app, name="st_main_layout-auto_mobile_collapsed")
 
-
-@pytest.mark.usefixtures("configure_sidebar_auto")
-def test_sidebar_auto_mobile_can_expand(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test sidebar with initial_sidebar_state='auto' can be expanded on mobile."""
-    app.set_viewport_size({"width": 375, "height": 667})
-    wait_for_app_run(app)
-
+    # Test expand functionality
     # Expand the sidebar
-    expand_button = app.get_by_test_id("stExpandSidebarButton")
     expand_button.click()
 
     # Verify sidebar is now expanded
-    sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_have_attribute("aria-expanded", "true")
 
     # Verify sidebar content is visible
@@ -102,7 +92,7 @@ def test_sidebar_auto_mobile_can_expand(
 def test_sidebar_auto_desktop_expanded(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test sidebar with initial_sidebar_state='auto' on desktop - should be expanded."""
+    """Test sidebar with initial_sidebar_state='auto' on desktop - should be expanded and can be collapsed."""
     app.set_viewport_size({"width": 1280, "height": 800})
     wait_for_app_run(app)
 
@@ -118,15 +108,7 @@ def test_sidebar_auto_desktop_expanded(
     # Take snapshot of expanded desktop state
     assert_snapshot(app, name="st_main_layout-auto_desktop_expanded")
 
-
-@pytest.mark.usefixtures("configure_sidebar_auto")
-def test_sidebar_auto_desktop_can_collapse(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test sidebar with initial_sidebar_state='auto' can be collapsed on desktop."""
-    app.set_viewport_size({"width": 1280, "height": 800})
-    wait_for_app_run(app)
-
+    # Test collapse functionality
     # Hover over sidebar to make collapse button visible
     sidebar_header = app.get_by_test_id("stSidebarHeader")
     sidebar_header.hover()
@@ -136,7 +118,6 @@ def test_sidebar_auto_desktop_can_collapse(
     collapse_button.click()
 
     # Verify sidebar is collapsed
-    sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_have_attribute("aria-expanded", "false")
 
     # Verify expand button is now visible
