@@ -541,6 +541,7 @@ class ConfigTest(unittest.TestCase):
                 "mapbox.token",
                 "secrets.files",
                 "server.baseUrlPath",
+                "server.customComponentBaseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
                 "server.corsAllowedOrigins",

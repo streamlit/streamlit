@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.runtime import get_instance
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -77,12 +78,15 @@ def declare_component(
         The path to serve the component's frontend files from. The path should
         be absolute. If ``path`` is ``None`` (default), Streamlit will serve
         the component from the location in ``url``. Either ``path`` or ``url``
-        must be specified, but not both.
+        must be specified. If both are specified, then ``url`` will take
+        precedence.
 
     url: str or None
         The URL that the component is served from. If ``url`` is ``None``
         (default), Streamlit will serve the component from the location in
-        ``path``. Either ``path`` or ``url`` must be specified, but not both.
+        ``path``. Either ``path`` or ``url`` must be specified. If both are
+        specified, then ``url`` will take precedence.
+
 
     Returns
     -------
@@ -108,6 +112,15 @@ def declare_component(
 
     # Build the component name.
     component_name = f"{module_name}.{name}"
+
+    # NOTE: We intentionally don't mention this behavior in this function's
+    # docstring as we're only using it internally for now (the config option
+    # is also hidden). This should be properly documented if/when we do decide
+    # to expose it more publicly.
+    if not url and (
+        component_base_path := config.get_option("server.customComponentBaseUrlPath")
+    ):
+        url = f"{component_base_path}/{component_name}/"
 
     # Create our component object, and register it.
     component = CustomComponent(

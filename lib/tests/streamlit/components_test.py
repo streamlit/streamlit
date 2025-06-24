@@ -44,6 +44,7 @@ from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.testing.v1.util import patch_config_options
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_mock_script_run_ctx
@@ -88,6 +89,9 @@ class DeclareComponentTest(unittest.TestCase):
     def tearDown(self) -> None:
         Runtime._instance = None
 
+    def mock_isdir(self, path: str) -> bool:
+        return path == PATH or path == os.path.abspath(PATH)
+
     def test_name(self):
         """Test component name generation"""
         # Test a component defined in a module with no package
@@ -122,12 +126,9 @@ class DeclareComponentTest(unittest.TestCase):
     def test_only_path_str(self):
         """Succeed when a path is provided via str."""
 
-        def isdir(path):
-            return path == PATH or path == os.path.abspath(PATH)
-
         with mock.patch(
             "streamlit.components.v1.component_registry.os.path.isdir",
-            side_effect=isdir,
+            side_effect=self.mock_isdir,
         ):
             component = components.declare_component("test", path=PATH)
 
@@ -142,12 +143,9 @@ class DeclareComponentTest(unittest.TestCase):
     def test_only_path_pathlib(self):
         """Succeed when a path is provided via Path."""
 
-        def isdir(path):
-            return path == PATH or path == os.path.abspath(PATH)
-
         with mock.patch(
             "streamlit.components.v1.component_registry.os.path.isdir",
-            side_effect=isdir,
+            side_effect=self.mock_isdir,
         ):
             component = components.declare_component("test", path=Path(PATH))
 
@@ -170,23 +168,37 @@ class DeclareComponentTest(unittest.TestCase):
             == component.abspath
         )
 
-    def test_path_and_url(self):
-        """Fail if path AND url are provided."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
-            components.declare_component("test", path=PATH, url=URL)
+    def test_both_path_and_url_ok(self):
+        with mock.patch(
+            "streamlit.components.v1.component_registry.os.path.isdir",
+            side_effect=self.mock_isdir,
+        ):
+            component = components.declare_component("test", path=PATH, url=URL)
+
+        assert component.url == URL
+        assert component.path == PATH
+
+    @patch_config_options(
+        {"server.customComponentBaseUrlPath": "https://example.com/my/custom/component"}
+    )
+    def test_url_via_base_path_config(self):
+        with mock.patch(
+            "streamlit.components.v1.component_registry.os.path.isdir",
+            side_effect=self.mock_isdir,
+        ):
+            component = components.declare_component("test", path=PATH)
+
         assert (
-            str(exception_message.value)
-            == "Either 'path' or 'url' must be set, but not both."
+            component.url
+            == "https://example.com/my/custom/component/tests.streamlit.components_test.test/"
         )
+        assert component.path == PATH
 
     def test_no_path_and_no_url(self):
         """Fail if neither path nor url is provided."""
         with pytest.raises(StreamlitAPIException) as exception_message:
             components.declare_component("test", path=None, url=None)
-        assert (
-            str(exception_message.value)
-            == "Either 'path' or 'url' must be set, but not both."
-        )
+        assert str(exception_message.value) == "Either 'path' or 'url' must be set."
 
     def test_module_name_not_none(self):
         caller_frame = inspect.currentframe()

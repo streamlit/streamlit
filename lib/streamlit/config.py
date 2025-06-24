@@ -825,6 +825,19 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.customComponentBaseUrlPath",
+    description="""
+        The base path for the URL where Streamlit should serve custom
+        components. If this config var is set and a call to ``declare_component``
+        does not specify a URL, the component's URL will be set to
+        ``f"{server.customComponentBaseUrlPath}/{component_name}/"``.
+    """,
+    default_val="",
+    type_=str,
+    visibility="hidden",
+)
+
 # TODO: Rename to server.enableCorsProtection.
 _create_option(
     "server.enableCORS",
