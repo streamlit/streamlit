@@ -137,6 +137,10 @@ class WebsocketSessionManager(SessionManager):
             )
             del self._active_session_info_by_id[session_id]
 
+        if not self._active_session_info_by_id:
+            # this is to avoid stale cached scripts when all file watchers are closed
+            self._script_cache.clear()
+
     def get_active_session_info(self, session_id: str) -> ActiveSessionInfo | None:
         return self._active_session_info_by_id.get(session_id)
 
