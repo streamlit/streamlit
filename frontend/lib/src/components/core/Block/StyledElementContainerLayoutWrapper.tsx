@@ -44,7 +44,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     // The difference between content and stretch is so that this element will
     // behave correctly inside containers.
     styleOverrides = {
-      height: node.element.heightConfig?.useContent ? "auto" : "100%",
+      height: "100%",
     }
   } else if (
     node.element.type === "iframe" ||
