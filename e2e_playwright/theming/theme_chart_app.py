@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import altair as alt
 import numpy as np
 import pandas as pd
 
 import streamlit as st
-
-np.random.seed(7)
 
 
 def run_chart_tester_app():
@@ -39,22 +37,74 @@ def run_chart_tester_app():
         ]
     )
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
+    # Set seed for reproducible data in E2E testing
+    np.random.seed(7)
     data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
 
     with col1:
-        st.write("st.area_chart")
-        st.area_chart(data, x_label="x label", y_label="y label")
-        st.write("st.bar_chart")
+        st.write("**st.area_chart**")
+        st.area_chart(
+            data, x_label="x label", y_label="y label", use_container_width=True
+        )
+
+        st.write("**st.bar_chart**")
         st.bar_chart(
-            data,
-            x_label="x label",
-            y_label="y label",
+            data, x_label="x label", y_label="y label", use_container_width=True
         )
 
     with col2:
-        st.write("st.line_chart")
-        st.line_chart(data, x_label="x label", y_label="y label")
-        st.write("st.scatter_chart")
-        st.scatter_chart(data, x_label="x label", y_label="y label")
+        st.write("**st.line_chart**")
+        st.line_chart(
+            data, x_label="x label", y_label="y label", use_container_width=True
+        )
+
+        st.write("**st.scatter_chart**")
+        st.scatter_chart(
+            data, x_label="x label", y_label="y label", use_container_width=True
+        )
+
+    with col3:
+        st.write("**st.altair_chart**")
+        scatter_data = pd.DataFrame(
+            {
+                "x": np.random.randn(50),
+                "y": np.random.randn(50),
+                "category": np.random.choice(["1", "2", "3"], 50),
+            }
+        )
+
+        altair_chart = (
+            alt.Chart(scatter_data)
+            .mark_circle(size=60)
+            .encode(
+                x="x:Q",
+                y="y:Q",
+                color=alt.Color("category:N", legend=alt.Legend(orient="bottom")),
+            )
+        )
+        st.altair_chart(altair_chart, use_container_width=True)
+
+        st.write("**st.vega_lite_chart**")
+        categorical_data = pd.DataFrame(
+            {
+                "category": ["A", "B", "C", "A", "B", "C"] * 5,
+                "value": np.random.randint(10, 100, 30),
+                "x": list(range(30)),
+            }
+        )
+
+        vega_spec = {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "x", "type": "quantitative"},
+                "y": {"field": "value", "type": "quantitative"},
+                "color": {
+                    "field": "category",
+                    "type": "nominal",
+                    "legend": {"orient": "bottom"},
+                },
+            },
+        }
+        st.vega_lite_chart(categorical_data, vega_spec, use_container_width=True)
