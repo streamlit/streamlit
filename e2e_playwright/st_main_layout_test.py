@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 # Configuration fixtures for different sidebar initial states
@@ -176,13 +176,6 @@ def test_sidebar_collapsed_desktop(app: Page, assert_snapshot: ImageCompareFunct
     # Verify sidebar exists but is collapsed (unlike auto mode)
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
-
-    # Wait for expand button to be visible
-    wait_until(
-        app,
-        lambda: app.get_by_test_id("stExpandSidebarButton").is_visible(),
-        timeout=10000,
-    )
 
     # Take snapshot
     assert_snapshot(app, name="st_main_layout-collapsed_desktop")
