@@ -356,6 +356,9 @@ def test_layout_responsiveness_auto_mode(
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
 
+    expect(app.get_by_text("Info box 1")).to_be_visible()
+    expect(app.get_by_text("Info box 2")).to_be_visible()
+
     # Take full app screenshot for this viewport
     assert_snapshot(
         app, name=f"st_main_layout-auto_{viewport_config['name']}_responsive"
