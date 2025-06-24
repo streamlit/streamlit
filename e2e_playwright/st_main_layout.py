@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-from datetime import date
 
 import streamlit as st
 
@@ -36,16 +35,8 @@ else:
 
 # Add substantial sidebar content to ensure it's detected
 st.sidebar.markdown("# Sidebar Content")
-st.sidebar.text_input("Enter text here", key="sidebar_text")
-st.sidebar.selectbox("Choose option", ["A", "B", "C"], key="sidebar_select")
-st.sidebar.date_input("Pick date", date(2024, 1, 1), key="sidebar_date")
-st.sidebar.slider("Pick number", 0, 100, 50, key="sidebar_slider")
-st.sidebar.checkbox("Enable feature", key="sidebar_checkbox")
-
-with st.sidebar:
-    st.write("Additional sidebar content in context manager")
-    st.button("Sidebar Button", key="sidebar_button")
-    st.info("This is an info message in the sidebar")
+for i in range(10):
+    st.sidebar.text(f"This is a text {i}")
 
 # Main content
 st.title(f"Main Layout Test - Mode: {test_mode}")
