@@ -223,38 +223,58 @@ export const parseFontSize = (
  * on the baseFontWeight option
  * @param defaultFontWeights: the default theme font weights
  * @param baseFontWeight: the base font weight provided via theme config
- * @param isSidebar: whether the theme is in a sidebar, for informative error messages
- * @returns the updated emotion theme object
+ * @param codeFontWeight: the code font weight provided via theme config
+ * @returns an updated emotion theme font weights object
  */
 const setFontWeights = (
   defaultFontWeights: EmotionTheme["fontWeights"],
-  baseFontWeight: number,
-  isSidebar: boolean
+  baseFontWeight: number | null | undefined,
+  codeFontWeight: number | null | undefined
 ): EmotionTheme["fontWeights"] => {
   const fontWeightOverrides = {
     ...defaultFontWeights,
   }
-  // Validate the baseFontWeight provided is an integer between 100 and 600
-  // (in increments of 100)
-  const isInteger = Number.isInteger(baseFontWeight)
-  const isIncrementOf100 = baseFontWeight % 100 === 0
-  const isInRange = baseFontWeight >= 100 && baseFontWeight <= 600
 
-  if (!isInteger || !isIncrementOf100 || !isInRange) {
-    const themeSection = isSidebar ? "theme.sidebar" : "theme"
-    LOG.warn(
-      `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights in ${themeSection}.`
-    )
-    return fontWeightOverrides
+  if (notNullOrUndefined(baseFontWeight)) {
+    // Validate the baseFontWeight provided is an integer between 100 and 600
+    // (in increments of 100)
+    const isInteger = Number.isInteger(baseFontWeight)
+    const isIncrementOf100 = baseFontWeight % 100 === 0
+    const isInRange = baseFontWeight >= 100 && baseFontWeight <= 600
+
+    if (!isInteger || !isIncrementOf100 || !isInRange) {
+      LOG.warn(
+        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights.`
+      )
+    } else {
+      // Set each of the font weights based on the base weight provided
+      // The provided baseFontWeight sets the normal weight
+      fontWeightOverrides.normal = baseFontWeight
+      // The bold weight is set to the baseFontWeight + 200
+      fontWeightOverrides.bold = baseFontWeight + 200
+      // The extrabold weight is set to the baseFontWeight + 300
+      fontWeightOverrides.extrabold = baseFontWeight + 300
+
+      // Set fallback for code's font weight based on configured baseFontWeight
+      fontWeightOverrides.code = baseFontWeight
+    }
   }
 
-  // Set each of the font weights based on the base weight provided
-  // The provided baseFontWeight sets the normal weight
-  fontWeightOverrides.normal = baseFontWeight
-  // The bold weight is set to the baseFontWeight + 200
-  fontWeightOverrides.bold = baseFontWeight + 200
-  // The extrabold weight is set to the baseFontWeight + 300
-  fontWeightOverrides.extrabold = baseFontWeight + 300
+  if (notNullOrUndefined(codeFontWeight)) {
+    // Validate the codeFontWeight provided is an integer between 100 and 900
+    // (in increments of 100)
+    const codeIsInteger = Number.isInteger(codeFontWeight)
+    const codeIsIncrementOf100 = codeFontWeight % 100 === 0
+    const codeIsInRange = codeFontWeight >= 100 && codeFontWeight <= 900
+
+    if (!codeIsInteger || !codeIsIncrementOf100 || !codeIsInRange) {
+      LOG.warn(
+        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights.`
+      )
+    } else {
+      fontWeightOverrides.code = codeFontWeight
+    }
+  }
 
   return fontWeightOverrides
 }
@@ -270,6 +290,7 @@ export const createEmotionTheme = (
     baseRadius,
     buttonRadius,
     codeFontSize,
+    codeFontWeight,
     showWidgetBorder,
     headingFont,
     bodyFont,
@@ -460,12 +481,15 @@ export const createEmotionTheme = (
     // inlineCodeFontSize set in typography primitives (0.75em)
   }
 
-  if (notNullOrUndefined(baseFontWeight)) {
-    // Set the font weights based on the baseFontWeight provided
+  if (
+    notNullOrUndefined(baseFontWeight) ||
+    notNullOrUndefined(codeFontWeight)
+  ) {
+    // Set the font weights based on the baseFontWeight & codeFontWeight provided
     conditionalOverrides.fontWeights = setFontWeights(
       baseThemeConfig.emotion.fontWeights,
       baseFontWeight,
-      inSidebar
+      codeFontWeight
     )
   }
 
