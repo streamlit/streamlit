@@ -17,7 +17,7 @@
 import React from "react"
 
 import { BaseProvider, LightTheme } from "baseui"
-import { screen, waitFor, act } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
@@ -122,7 +122,9 @@ describe("Spinner component", () => {
 
     await waitFor(() => {
       // Allow for some variance in timing - should be around 4.7 seconds
-      expect(screen.getByText(/\([4-6]\.[0-9] seconds\)/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/\([4-6]\.\d{1,2} seconds\)/)
+      ).toBeInTheDocument()
     })
   })
 
