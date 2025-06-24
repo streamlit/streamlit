@@ -270,6 +270,8 @@ def test_sidebar_expanded_mobile(
     app.set_viewport_size({"width": 375, "height": 667})
     wait_for_app_run(app)
 
+    app.reload()
+
     # Verify the fixture was applied correctly by checking the page title
     expected_title = f"Sidebar Test - {sidebar_mode.title()}"
     expect(app).to_have_title(expected_title)
