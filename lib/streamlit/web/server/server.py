@@ -70,6 +70,9 @@ TORNADO_SETTINGS = {
     # Gzip HTTP responses.
     "compress_response": True,
     # Ping every 30s to keep WS alive.
+    # With recent versions of Tornado, this value must be greater than or
+    # equal to websocket_ping_timeout.
+    # For details, see https://github.com/tornadoweb/tornado/pull/3376
     "websocket_ping_interval": 30,
     # If we don't get a ping response within 30s, the connection
     # is timed out.
