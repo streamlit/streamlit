@@ -28,7 +28,7 @@ type SubElement = {
 }
 
 type StyleOverrides = Partial<
-  Pick<UseLayoutStylesShape, "height" | "width" | "overflow">
+  Pick<UseLayoutStylesShape, "height" | "width" | "overflow" | "flex">
 >
 
 export type UseLayoutStylesArgs = {
