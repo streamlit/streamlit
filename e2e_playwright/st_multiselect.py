@@ -162,3 +162,13 @@ st.multiselect(
     options=many_options,
     default=many_options[0:28],
 )
+
+st.multiselect(
+    "multiselect 18 (width=300px)", many_options, default=many_options[0:28], width=300
+)
+st.multiselect(
+    "multiselect 19 (width='stretch')",
+    many_options,
+    default=many_options[0:28],
+    width="stretch",
+)
