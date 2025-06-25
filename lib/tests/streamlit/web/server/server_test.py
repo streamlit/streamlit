@@ -268,6 +268,20 @@ class ServerTest(ServerTestCase):
                     is None
                 )
 
+    @tornado.testing.gen_test
+    async def test_tornado_settings_applied(self):
+        """Test that TORNADO_SETTINGS are properly applied to the app."""
+        from streamlit.web.server.server import TORNADO_SETTINGS
+
+        assert (
+            self.app_settings["websocket_ping_interval"]
+            == TORNADO_SETTINGS["websocket_ping_interval"]
+        )
+        assert (
+            self.app_settings["websocket_ping_timeout"]
+            == TORNADO_SETTINGS["websocket_ping_timeout"]
+        )
+
 
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
