@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "19.x"
+          node-version-file: ".nvmrc"
           cache: "yarn"
           cache-dependency-path: "component-lib/yarn.lock"
 
