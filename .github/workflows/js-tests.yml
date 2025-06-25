@@ -106,9 +106,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version-file: ".nvmrc"
           cache: "yarn"
-          cache-dependency-path: "component-lib/yarn.lock"
+          cache-dependency-path: "**/yarn.lock"
       - name: Install node dependencies
         working-directory: component-lib
         run: yarn install
