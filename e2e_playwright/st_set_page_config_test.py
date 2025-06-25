@@ -307,8 +307,6 @@ def test_set_page_config_menu_items_overwrites(app: Page):
     main_menu_items = app.get_by_test_id("stMainMenuList").first.get_by_role("option")
     # Get help should still be present in the main menu from the 1st call:
     expect(main_menu_items.nth(4)).to_have_text("Get help")
-    main_menu_items.nth(5).click()
-    about_dialog = app.get_by_role("dialog")
-    expect(about_dialog).to_be_visible()
-    # The about section markdown should not contain the updated text:
-    expect(about_dialog).not_to_contain_text("UPDATED")
+    # About menu item should no longer be present since it was set to None, so there
+    # should be one less menu item now
+    expect(main_menu_items).to_have_count(5)
