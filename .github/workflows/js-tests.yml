@@ -108,7 +108,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
-          cache-dependency-path: "**/yarn.lock"
+          cache-dependency-path: "component-lib/yarn.lock"
       - name: Install node dependencies
         working-directory: component-lib
         run: yarn install
