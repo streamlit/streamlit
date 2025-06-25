@@ -16,6 +16,7 @@
 
 import React from "react"
 
+import { isInteger } from "lodash"
 import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -44,11 +45,12 @@ export interface StyledElementContainerProps {
   height: React.CSSProperties["height"]
   elementType: string
   overflow: React.CSSProperties["overflow"]
+  flex?: React.CSSProperties["flex"]
 }
 
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, width, height, elementType, overflow }) => ({
+  ({ theme, isStale, width, height, elementType, overflow, flex }) => ({
     width,
     height,
     maxWidth: "100%",
@@ -56,6 +58,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     // floating buttons.
     position: "relative",
     overflow,
+    flex,
 
     "@media print": {
       overflow: "visible",
@@ -147,36 +150,18 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   }
 )
 
-export interface StyledBlockWrapperProps {
-  border: boolean
-  height?: number
-}
-
-export const StyledBlockWrapper = styled.div<StyledBlockWrapperProps>(
-  ({ theme, border, height }) => ({
-    display: "block",
-    ...(border && {
-      border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-      borderRadius: theme.radii.default,
-      padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
-    }),
-    ...(height && {
-      height: `${height}px`,
-      overflow: "auto",
-    }),
-  })
-)
-
 export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
   gap?: streamlit.GapSize | undefined
   flex?: React.CSSProperties["flex"]
   wrap?: boolean
+  height?: React.CSSProperties["height"]
+  border: boolean
 }
 
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
-    ({ theme, direction, gap, flex, wrap }) => {
+    ({ theme, direction, gap, flex, wrap, height, border }) => {
       let gapWidth
       if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
@@ -187,10 +172,16 @@ export const StyledFlexContainerBlock =
         gap: gapWidth,
         width: "100%",
         maxWidth: "100%",
-        height: "auto",
+        height: height ?? "auto",
+        overflow: isInteger(height) ? "auto" : "visible",
         flexDirection: direction,
         flex,
         flexWrap: wrap ? "wrap" : "nowrap",
+        ...(border && {
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderRadius: theme.radii.default,
+          padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+        }),
       }
     }
   )
@@ -198,13 +189,15 @@ export const StyledFlexContainerBlock =
 export interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
+  flex?: React.CSSProperties["flex"]
 }
 
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width, height }) => ({
+  ({ width, height, flex }) => ({
     display: "flex",
     width,
     maxWidth: "100%",
     height,
+    flex,
   })
 )

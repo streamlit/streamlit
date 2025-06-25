@@ -20,6 +20,11 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overloa
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     create_mappings,
@@ -170,6 +175,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T]: ...
 
     @overload
@@ -190,6 +196,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T | str]: ...
 
     @overload
@@ -210,6 +217,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -230,6 +238,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False, True] | bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -332,6 +341,17 @@ class MultiSelectMixin:
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
 
+        width : "stretch" or int
+            The width of the multiselect widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
+
         Returns
         -------
         list
@@ -397,6 +417,7 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            width=width,
             ctx=ctx,
         )
 
@@ -417,6 +438,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -457,6 +479,7 @@ class MultiSelectMixin:
             max_selections=max_selections,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            width=width,
         )
 
         proto = MultiSelectProto()
@@ -503,10 +526,13 @@ class MultiSelectMixin:
             proto.raw_values[:] = serde.serialize(widget_state.value)
             proto.set_value = True
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto)
+        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
         return widget_state.value
 

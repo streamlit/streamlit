@@ -21,9 +21,6 @@ INSTALL_TEST_REQS ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
-# Black magic to get module directories
-PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-
 # Check if Python is installed and can be executed, otherwise show an error message in red (but continue)
 ifeq ($(PYTHON_VERSION),)
 error_message="Error: Python version is not detected. Please ensure Python is installed and accessible in your PATH."
@@ -40,11 +37,11 @@ help:
 
 .PHONY: all
 # Get dependencies, build frontend, install Streamlit into Python environment.
-all: init frontend install
+all: init frontend
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop pre-commit-install frontend-dependencies
+all-devel: init develop pre-commit-install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -54,7 +51,7 @@ all-devel: init develop pre-commit-install frontend-dependencies
 
 .PHONY: mini-devel
 # Get minimal dependencies for development and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init frontend-dependencies
+mini-devel: mini-init
 
 .PHONY: build-deps
 # An even smaller installation than mini-devel. Installs the bare minimum necessary to build Streamlit (by leaving out some dependencies necessary for the development process). Does not build the frontend.
@@ -96,12 +93,15 @@ python-init:
 	if command -v "uv" > /dev/null; then \
 		echo "Running command: uv pip install $${pip_args[@]}"; \
 		uv pip install $${pip_args[@]}; \
+		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+			uv run python -m playwright install --with-deps; \
+		fi;\
 	else \
 		echo "Running command: pip install $${pip_args[@]}"; \
 		pip install $${pip_args[@]}; \
-	fi;\
-	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-		python -m playwright install --with-deps; \
+		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+			python -m playwright install --with-deps; \
+		fi;\
 	fi;\
 
 .PHONY: pylint
@@ -125,32 +125,29 @@ pyformat:
 pytest:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
-			-l tests/ \
+		pytest -v -l \
 			-m "not performance" \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: performance-pytest
 # Run Python benchmark tests
 performance-pytest:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
-			-l tests/ \
+		pytest -v -l \
 			-m "performance" \
 			--benchmark-autosave \
 			--benchmark-storage file://../.benchmarks/pytest \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: pytest-integration
 # Run Python integration tests. This requires the integration-requirements to be installed.
 pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
+		pytest -v -l \
 			--require-integration \
-			-l tests/ \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: mypy
 # Run Mypy static type checker.
@@ -260,11 +257,15 @@ protobuf:
 .PHONY: react-init
 # Install all frontend dependencies.
 react-init:
-	cd frontend/ ; \
-	if command -v "corepack" > /dev/null; then \
-		corepack install ; \
-	fi;\
-	yarn install --immutable
+	@cd frontend/ && { \
+		corepack enable yarn; \
+		if [ $$? -ne 0 ]; then \
+			echo "Error: 'corepack' command not found or failed to enable."; \
+			echo "Please ensure you are running the expected version of Node.js as defined in '.nvmrc'."; \
+			exit 1; \
+		fi; \
+		corepack install && yarn install --immutable; \
+	}
 
 .PHONY: frontend
 # Build frontend into static files.
@@ -275,6 +276,7 @@ frontend:
 	# Move manifest.json to a location that can actually be served by the Tornado
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
+
 
 .PHONY: frontend-dependencies
 # Build frontend dependent libraries (excluding app and lib)
@@ -296,9 +298,9 @@ frontend-fast:
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-dev
-# Build frontend dependencies and start the dev server.
-frontend-dev: frontend-dependencies
-	cd frontend/ ; yarn dev
+# Start the frontend dev server.
+frontend-dev:
+	cd frontend/ ; yarn start
 
 .PHONY: frontend-lib
 # Build the frontend library.
@@ -307,13 +309,13 @@ frontend-lib:
 
 .PHONY: jslint
 # Verify that our JS/TS code is formatted and that there are no lint errors.
-jslint: frontend-dependencies
+jslint:
 	cd frontend/ ; yarn workspaces foreach --all run formatCheck
 	cd frontend/ ; yarn workspaces foreach --all run lint
 
 .PHONY: tstypecheck
 # Typecheck the JS/TS code.
-tstypecheck: frontend-dependencies
+tstypecheck:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
 	cd frontend/ ; yarn workspaces foreach --all run typecheck
 
@@ -324,12 +326,12 @@ jsformat:
 
 .PHONY: jstest
 # Run JS unit tests.
-jstest: frontend-dependencies
+jstest:
 	cd frontend; TESTPATH=$(TESTPATH) yarn test
 
 .PHONY: jstestcoverage
 # Run JS unit tests and generate a coverage report.
-jstestcoverage: frontend-dependencies
+jstestcoverage:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: update-snapshots
@@ -381,7 +383,7 @@ pre-commit-install:
 	pre-commit install
 
 .PHONY: performance-lighthouse
-# Run Lighthouse performance tests
+# Run Lighthouse performance tests.
 performance-lighthouse:
 	cd frontend/app; \
 	yarn run lighthouse:run

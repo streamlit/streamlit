@@ -8,7 +8,12 @@
     "declaration": true,
     "outDir": "dist",
     "paths": {
-      "~lib/*": ["src/*"]
+      "~lib/*": ["src/*"],
+      "@streamlit/lib": ["../lib/src"],
+      "@streamlit/app": ["./src"],
+      "@streamlit/connection": ["../connection/src"],
+      "@streamlit/protobuf": ["../protobuf/src"],
+      "@streamlit/utils": ["../utils/src"]
     }
   },
   "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"],
