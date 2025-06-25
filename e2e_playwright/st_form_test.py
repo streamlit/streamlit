@@ -322,3 +322,17 @@ def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     height_container = app.get_by_test_id("stVerticalBlock").nth(20)
     height_container.scroll_into_view_if_needed()
     assert_snapshot(height_container, name="st_form-height_container")
+
+
+def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a form with a dataframe renders correctly with the toolbar."""
+    form_22 = app.get_by_test_id("stForm").nth(21)
+    form_22.scroll_into_view_if_needed()
+    dataframe = form_22.get_by_test_id("stDataFrame")
+    dataframe.hover()
+
+    dataframe_toolbar = dataframe.get_by_test_id("stElementToolbar")
+    expect(dataframe_toolbar).to_be_visible()
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    assert_snapshot(form_22, name="st_form-with_dataframe_toolbar")
