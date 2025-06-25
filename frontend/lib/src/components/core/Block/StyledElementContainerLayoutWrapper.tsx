@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import React, { FC, useMemo } from "react"
 
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import type { ElementNode } from "~lib/AppNode"
@@ -29,10 +29,45 @@ export const StyledElementContainerLayoutWrapper: FC<
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
+  const styleOverrides = useMemo(() => {
+    if (node.element.type === "imgs") {
+      // The st.image element is potentially a list of images, so we always want
+      // the enclosing container to be full width. The size of individual
+      // images is managed in the ImageList component.
+      return {
+        width: "100%",
+      }
+    } else if (node.element.type === "textArea") {
+      // The st.text_area element has a legacy implementation where the height
+      // is measuring only the input box so the pixel height must be set in the element
+      // and the container must be allowed to expand. Additionally, we don't want the
+      // flex with height to be set on the element container.
+      // TODO(lawilby): The PR expanding the height of text_area elements will
+      // make st.text_area consistent with the other elements and we can remove this.
+      return {
+        height: "auto",
+        flex: "",
+      }
+    } else if (
+      node.element.type === "iframe" ||
+      node.element.type === "deckGlJsonChart" ||
+      node.element.type === "arrowDataFrame"
+    ) {
+      // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
+      // if we can remove this custom handling in future layouts work.
+      return {
+        overflow: "visible",
+      }
+    }
+
+    return {}
+  }, [node.element.type])
+
   const styles = useLayoutStyles({
     element: node.element,
     subElement:
       (node.element?.type && node.element[node.element.type]) || undefined,
+    styleOverrides,
   })
 
   return <StyledElementContainer {...rest} {...styles} />
