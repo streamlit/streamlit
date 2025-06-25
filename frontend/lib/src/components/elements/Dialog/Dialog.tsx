@@ -20,6 +20,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
 export interface Props {
   element: BlockProto.Dialog
@@ -57,7 +58,9 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       onClose={() => setIsOpen(false)}
       size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
-      <ModalHeader>{title}</ModalHeader>
+      <ModalHeader>
+        <StreamlitMarkdown source={title} allowHTML={false} isLabel />
+      </ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>
   )

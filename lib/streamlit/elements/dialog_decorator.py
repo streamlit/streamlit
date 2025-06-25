@@ -173,6 +173,16 @@ def dialog_decorator(
     ----------
     title : str
         The title to display at the top of the modal dialog. It cannot be empty.
+
+        The title can optionally contain GitHub-flavored Markdown. Syntax
+        information can be found at: https://github.github.com/gfm.
+
+        See the ``body`` parameter of |st.markdown|_ for additional,
+        supported Markdown directives.
+
+        .. |st.markdown| replace:: ``st.markdown``
+        .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
     width : "small", "large"
         The width of the modal dialog. If ``width`` is ``"small`` (default), the
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
