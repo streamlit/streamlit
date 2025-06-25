@@ -146,3 +146,7 @@ with col1:
     st.code(code, height="stretch")
 with col2:
     st.code(code, height="stretch")
+
+with st.container(height=300, key="container_with_code"):
+    st.code(code, height=100)
+    st.code(code, height="stretch")
