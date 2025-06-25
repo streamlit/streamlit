@@ -94,10 +94,14 @@ def test_number_input_shows_instructions_when_dirty(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.number_input shows the instructions correctly when dirty."""
-    first_number_input = app.get_by_test_id("stNumberInput").first
-    first_number_input.locator("input").fill("10")
+    first_number_input = app.get_by_label("number input 1 (default)")
+    first_number_input.fill("10")
+    # Find the container of the number input to snapshot
+    first_number_input_field = app.locator("[data-testid='stNumberInput']").filter(
+        has=first_number_input
+    )
 
-    assert_snapshot(first_number_input, name="st_number_input-input_instructions")
+    assert_snapshot(first_number_input_field, name="st_number_input-input_instructions")
 
 
 def test_number_input_updates_value_correctly_on_enter(app: Page):
@@ -142,9 +146,7 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
 
 def test_number_input_has_correct_value_on_arrow_up(app: Page):
     """Test that st.number_input has the correct value on arrow up."""
-    first_number_input_field = (
-        app.get_by_test_id("stNumberInput").nth(0).locator("input")
-    )
+    first_number_input_field = app.get_by_label("number input 1 (default)")
     first_number_input_field.press("ArrowUp")
 
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
@@ -155,9 +157,7 @@ def test_number_input_has_correct_value_on_arrow_up(app: Page):
 def test_number_input_has_correct_value_on_blur(app: Page):
     """Test that st.number_input has the correct value on blur."""
 
-    first_number_input_field = (
-        app.get_by_test_id("stNumberInput").nth(0).locator("input")
-    )
+    first_number_input_field = app.get_by_label("number input 1 (default)")
     first_number_input_field.focus()
     first_number_input_field.fill("10")
     first_number_input_field.blur()
