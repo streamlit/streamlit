@@ -1844,15 +1844,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/core@npm:^4.3.3":
-  version: 4.3.3
-  resolution: "@loaders.gl/core@npm:4.3.3"
+"@loaders.gl/core@npm:^4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/core@npm:4.3.4"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.3.3"
-    "@loaders.gl/schema": "npm:4.3.3"
-    "@loaders.gl/worker-utils": "npm:4.3.3"
+    "@loaders.gl/loader-utils": "npm:4.3.4"
+    "@loaders.gl/schema": "npm:4.3.4"
+    "@loaders.gl/worker-utils": "npm:4.3.4"
     "@probe.gl/log": "npm:^4.0.2"
-  checksum: 10c0/edaf68a70fb5d2b10cf57f932d5274e66d91927edc29413499ba1852fa19fc137c97b281c447b1a0558f8212c5be276d6574d0fef4caf96b3b8a1373519fb266
+  checksum: 10c0/6ca8a1676cbbd700e47d7f1325afd7a6210cced70bdcc5d8d57945b7074597c7a4913eb37410bc25152f30c7dae1b1c32448fee7c6999e851a982a8d4e2576ad
   languageName: node
   linkType: hard
 
@@ -1869,16 +1869,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/csv@npm:^4.3.3":
-  version: 4.3.3
-  resolution: "@loaders.gl/csv@npm:4.3.3"
+"@loaders.gl/csv@npm:^4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/csv@npm:4.3.4"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.3.3"
-    "@loaders.gl/schema": "npm:4.3.3"
+    "@loaders.gl/loader-utils": "npm:4.3.4"
+    "@loaders.gl/schema": "npm:4.3.4"
     d3-dsv: "npm:^1.2.0"
   peerDependencies:
     "@loaders.gl/core": ^4.3.0
-  checksum: 10c0/07d68d8e2cc39a0366c7b072d24fb33a961abefd4a2a97bf29fb49526d983902a7715a09de870c05e57108fb3b76be441ec8293d28bd1a5196f0cac24b31bbf0
+  checksum: 10c0/aa591cb65e78d078123ec75953f2b3f5f41f104a6d9a426e37eac9747f1a1163eaf6d4e4368f3125fc729939a46b014273a8104656092a4ceffb40b800238df7
   languageName: node
   linkType: hard
 
@@ -1896,17 +1896,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/draco@npm:4.3.3":
-  version: 4.3.3
-  resolution: "@loaders.gl/draco@npm:4.3.3"
+"@loaders.gl/draco@npm:4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/draco@npm:4.3.4"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.3.3"
-    "@loaders.gl/schema": "npm:4.3.3"
-    "@loaders.gl/worker-utils": "npm:4.3.3"
+    "@loaders.gl/loader-utils": "npm:4.3.4"
+    "@loaders.gl/schema": "npm:4.3.4"
+    "@loaders.gl/worker-utils": "npm:4.3.4"
     draco3d: "npm:1.5.7"
   peerDependencies:
     "@loaders.gl/core": ^4.3.0
-  checksum: 10c0/ae55555cfffbd0087713bcf5770cafb42029c1f3757d44bffb5dd751c7eaf9f63d6103a68f052bac35ca5391eb7763128aa945332ecf92e437d4bfd0686bc5a1
+  checksum: 10c0/395b041595209fdbdb3bd846e04b4d5a06990d9a42aab66da4444e0b9b560db11e254beffecab181f61135d849e166de5b939e544b0661a82a72cb54cb3b040c
   languageName: node
   linkType: hard
 
@@ -1941,19 +1941,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/gltf@npm:^4.3.3":
-  version: 4.3.3
-  resolution: "@loaders.gl/gltf@npm:4.3.3"
+"@loaders.gl/gltf@npm:^4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/gltf@npm:4.3.4"
   dependencies:
-    "@loaders.gl/draco": "npm:4.3.3"
-    "@loaders.gl/images": "npm:4.3.3"
-    "@loaders.gl/loader-utils": "npm:4.3.3"
-    "@loaders.gl/schema": "npm:4.3.3"
-    "@loaders.gl/textures": "npm:4.3.3"
+    "@loaders.gl/draco": "npm:4.3.4"
+    "@loaders.gl/images": "npm:4.3.4"
+    "@loaders.gl/loader-utils": "npm:4.3.4"
+    "@loaders.gl/schema": "npm:4.3.4"
+    "@loaders.gl/textures": "npm:4.3.4"
     "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
     "@loaders.gl/core": ^4.3.0
-  checksum: 10c0/4e2dfc2f6c5ba08d2287cc4f8d508d0225767c6bc0535ed55413cc5e1c7a6aca02798909fcb22cbc8e36e26f4618979d9fd914b078d0459eaab80d937203d943
+  checksum: 10c0/78537dc8e83731563a3aae4679a4544728ce822656a0e2bb520cc1c97efdd2ac36d914e41e8eb3232c3728b58d7e809031538e03c5f4946e3516b5a6708a1ea7
   languageName: node
   linkType: hard
 
@@ -1968,14 +1968,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/images@npm:4.3.3":
-  version: 4.3.3
-  resolution: "@loaders.gl/images@npm:4.3.3"
+"@loaders.gl/images@npm:4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/images@npm:4.3.4"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.3.3"
+    "@loaders.gl/loader-utils": "npm:4.3.4"
   peerDependencies:
     "@loaders.gl/core": ^4.3.0
-  checksum: 10c0/9b6dbcce46b687532bd8d6b73bd24b3e315ead3ed5601e0b46e9a0232300405dc14a67e9e7e5aa7abcd25e104f475ec7ddf27a136b8eccc3e57043be9b07b4d8
+  checksum: 10c0/f2314b0b02ce92c473054f7e4e7f11466d3f86b27a74d6b10f35ddc02ef3d25254906f7a1fde6b8cc1ae606239c47c1a3fd66f46f1aef4d709d642230d4bc9aa
   languageName: node
   linkType: hard
 
@@ -2003,6 +2003,20 @@ __metadata:
   peerDependencies:
     "@loaders.gl/core": ^4.3.0
   checksum: 10c0/5da26b94b9c9b260bf4da211c3daee801f3f810c56ca81aec75979134c9d4e46ffeb4c74a896605529f2a7858797ad9dd383f3058b7a2dd864e3b0d602209059
+  languageName: node
+  linkType: hard
+
+"@loaders.gl/loader-utils@npm:4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/loader-utils@npm:4.3.4"
+  dependencies:
+    "@loaders.gl/schema": "npm:4.3.4"
+    "@loaders.gl/worker-utils": "npm:4.3.4"
+    "@probe.gl/log": "npm:^4.0.2"
+    "@probe.gl/stats": "npm:^4.0.2"
+  peerDependencies:
+    "@loaders.gl/core": ^4.3.0
+  checksum: 10c0/f303500f8f0c5313cf7c8bd2e63bba3a885cc9db95ec66ba195f52453800f7da45accf458a53d50ef380983dc2ebdd1067c6bcc2118dc5f79963fa7a09c542ec
   languageName: node
   linkType: hard
 
@@ -2057,6 +2071,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@loaders.gl/schema@npm:4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/schema@npm:4.3.4"
+  dependencies:
+    "@types/geojson": "npm:^7946.0.7"
+  peerDependencies:
+    "@loaders.gl/core": ^4.3.0
+  checksum: 10c0/8a1a8d7c3a1c553d02086519252ed37d9311643a1eecae0a037a7c6498fee6c07829054bbdcfd24f040f062857f5a9daa0da4f9d83b773e28723b6281e71ad9c
+  languageName: node
+  linkType: hard
+
 "@loaders.gl/terrain@npm:^4.2.0":
   version: 4.2.5
   resolution: "@loaders.gl/terrain@npm:4.2.5"
@@ -2088,20 +2113,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/textures@npm:4.3.3":
-  version: 4.3.3
-  resolution: "@loaders.gl/textures@npm:4.3.3"
+"@loaders.gl/textures@npm:4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/textures@npm:4.3.4"
   dependencies:
-    "@loaders.gl/images": "npm:4.3.3"
-    "@loaders.gl/loader-utils": "npm:4.3.3"
-    "@loaders.gl/schema": "npm:4.3.3"
-    "@loaders.gl/worker-utils": "npm:4.3.3"
+    "@loaders.gl/images": "npm:4.3.4"
+    "@loaders.gl/loader-utils": "npm:4.3.4"
+    "@loaders.gl/schema": "npm:4.3.4"
+    "@loaders.gl/worker-utils": "npm:4.3.4"
     "@math.gl/types": "npm:^4.1.0"
     ktx-parse: "npm:^0.7.0"
     texture-compressor: "npm:^1.0.2"
   peerDependencies:
     "@loaders.gl/core": ^4.3.0
-  checksum: 10c0/fe8fc9788d3314e9958d87a3da1808c35b657dbf58b5fc7b47ba3fb1de7b41faadc15c01e664e4936884000892aaebed9daa3529d663864467108d9ea6aab032
+  checksum: 10c0/74415f1334f3c07fd8e8d5204bf0f8d8308d0c524551a664f723a908367563f5bd1380f6f5472d88e6bfdf924c37e54095a02932730333123a69ab1c364b010e
   languageName: node
   linkType: hard
 
@@ -2153,6 +2178,15 @@ __metadata:
   peerDependencies:
     "@loaders.gl/core": ^4.3.0
   checksum: 10c0/d20a666966ce7f0116cf0ec51318152c78342cedb3cc1c0594784bcad65bb94f50929f5b722d8d2842e90eef08e6278bb58c0e028151b9e6076007040ba56fca
+  languageName: node
+  linkType: hard
+
+"@loaders.gl/worker-utils@npm:4.3.4":
+  version: 4.3.4
+  resolution: "@loaders.gl/worker-utils@npm:4.3.4"
+  peerDependencies:
+    "@loaders.gl/core": ^4.3.0
+  checksum: 10c0/2ed330bcdfc4d18dea3c5d86ec92d76cd4b4c8f93277e2553c744982fec27ec6041d8f0b33076043d85242d608087e11640eb0a2a4d40b1e02480e1fc938ab12
   languageName: node
   linkType: hard
 
@@ -3297,9 +3331,9 @@ __metadata:
     "@glideapps/glide-data-grid": "npm:6.0.4-alpha9"
     "@glideapps/glide-data-grid-cells": "npm:6.0.4-alpha9"
     "@glideapps/glide-data-grid-source": "npm:6.0.4-alpha9"
-    "@loaders.gl/core": "npm:^4.3.3"
-    "@loaders.gl/csv": "npm:^4.3.3"
-    "@loaders.gl/gltf": "npm:^4.3.3"
+    "@loaders.gl/core": "npm:^4.3.4"
+    "@loaders.gl/csv": "npm:^4.3.4"
+    "@loaders.gl/gltf": "npm:^4.3.4"
     "@sindresorhus/slugify": "npm:^2.2.1"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
