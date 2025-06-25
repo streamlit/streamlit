@@ -532,7 +532,7 @@ class MultiSelectMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue("multiselect", proto, layout_config=layout_config)
+        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
         return widget_state.value
 
