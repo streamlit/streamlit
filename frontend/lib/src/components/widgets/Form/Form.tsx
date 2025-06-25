@@ -40,7 +40,7 @@ export interface Props {
   // TODO(lawilby): This prop drill-downcan be removed once
   // we are using a portal to render the toolbars. But we want to
   // do a patch to reduce the impact on existing usages of st.form.
-  overflow: React.CSSProperties["overflow"]
+  overflow?: React.CSSProperties["overflow"]
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
