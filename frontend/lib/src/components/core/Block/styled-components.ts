@@ -205,6 +205,9 @@ export interface StyledLayoutWrapperProps {
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
   ({ width, height, flex }) => ({
     display: "flex",
+    // This shouldn't matter since this is a wrapper and should only have one child.
+    // However, adding it here to be explicit.
+    flexDirection: "column",
     width,
     maxWidth: "100%",
     height,

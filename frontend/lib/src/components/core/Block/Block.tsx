@@ -194,8 +194,10 @@ export const FlexBoxContainer = (
     $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
     overflow: layout_styles.overflow,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
+    // We need the height on the container for scrolling.
     height: layout_styles.height,
-    flex: layout_styles.flex,
+    // Flex properties are set on the LayoutWrapper.
+    flex: "1",
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)

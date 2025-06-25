@@ -17,7 +17,6 @@
 import { useMemo } from "react"
 
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
-import { Direction } from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
