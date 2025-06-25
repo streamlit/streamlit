@@ -99,7 +99,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
                   : "stMetricDeltaIcon-Down"
               }
               content={metricDirection}
-              size="lg"
+              size="md"
               margin={arrowMargin}
             />
           )}

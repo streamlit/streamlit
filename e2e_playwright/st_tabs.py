@@ -57,3 +57,31 @@ fixed_width_tabs = st.tabs(["width_test_1", "width_test_2", "width_test_3"], wid
 
 for i, tab in enumerate(fixed_width_tabs):
     tab.write(f"Hello {i}")
+
+# Tabs layout tests.
+tab_with_code_1, tab_with_code_2 = st.tabs(["Tab 1", "Tab 2"])
+
+container = tab_with_code_1.container(height=200)
+container.code(
+    """
+def hello():
+    print("Hello, Streamlit!")
+""",
+    height="stretch",
+)
+
+tab_with_code_2.code(
+    """
+def hello():
+    print("Hello, Streamlit!")
+""",
+    height=200,
+)
+
+tab_with_code_2.code(
+    """
+def hello():
+    print("Hello, Streamlit!")
+""",
+    height="stretch",
+)

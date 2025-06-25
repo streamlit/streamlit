@@ -116,6 +116,9 @@ describe("Metric element", () => {
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "color: rgba(49, 51, 63, 0.6);"
     )
+    expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
+      "background-color: rgba(128, 132, 149, 0.1);"
+    )
   })
 
   it("renders correct green based on props", () => {
@@ -127,6 +130,9 @@ describe("Metric element", () => {
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "color: rgb(21, 130, 55);"
     )
+    expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
+      "background-color: rgba(33, 195, 84, 0.1);"
+    )
   })
 
   it("renders correct red based on props", () => {
@@ -134,6 +140,9 @@ describe("Metric element", () => {
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       "color: rgb(255, 43, 43);"
+    )
+    expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
+      "background-color: rgba(255, 43, 43, 0.1);"
     )
   })
 
