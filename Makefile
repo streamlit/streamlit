@@ -21,9 +21,6 @@ INSTALL_TEST_REQS ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
-# Black magic to get module directories
-PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-
 # Check if Python is installed and can be executed, otherwise show an error message in red (but continue)
 ifeq ($(PYTHON_VERSION),)
 error_message="Error: Python version is not detected. Please ensure Python is installed and accessible in your PATH."
@@ -128,32 +125,29 @@ pyformat:
 pytest:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
-			-l tests/ \
+		pytest -v -l \
 			-m "not performance" \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: performance-pytest
 # Run Python benchmark tests
 performance-pytest:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
-			-l tests/ \
+		pytest -v -l \
 			-m "performance" \
 			--benchmark-autosave \
 			--benchmark-storage file://../.benchmarks/pytest \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: pytest-integration
 # Run Python integration tests. This requires the integration-requirements to be installed.
 pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
+		pytest -v -l \
 			--require-integration \
-			-l tests/ \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: mypy
 # Run Mypy static type checker.
