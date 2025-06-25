@@ -13,14 +13,15 @@
 # limitations under the License.
 
 """A script to clean up orphaned e2e snapshots.
+
+Usage:
+    python scripts/attempt_to_clean_up_snapshots.py
+
+This script will analyze the e2e test files and identify snapshot files that
+appear to be orphaned (no longer referenced in tests). Run from the project
+root directory.
 NOTE: This script is not perfect and may identify some
 snapshots as orphans when they aren't actually so manually review results.
-
-MANUAL VERIFICATION REQUIRED:
-The following snapshots are not detected by this script's static analysis but
-are actually in use. This disallow list should be manually updated whenever the
-script incorrectly identifies a snapshot as orphaned. Not a perfect solution
-but follows the 80/20 rule.
 """
 
 import os
@@ -28,6 +29,12 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
+
+# MANUAL VERIFICATION REQUIRED:
+# The following snapshots are not detected by this script's static analysis but
+# are actually in use. This disallow list should be manually updated whenever the
+# script incorrectly identifies a snapshot as orphaned. Not a perfect solution
+# but follows the 80/20 rule.
 
 # Snapshots that are not detected by static analysis but are actually in use.
 # This list should be manually updated when the script incorrectly flags snapshots.
