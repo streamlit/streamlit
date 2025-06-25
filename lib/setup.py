@@ -75,10 +75,23 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
 EXTRA_REQUIRES = {
+    # Optional dependency required for Snowflake connection:
     "snowflake": [
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
-    ]
+    ],
+    # Optional dependency required for auth:
+    "auth": [
+        "Authlib>=1.3.2, <2",
+    ],
+    # Optional charting dependencies:
+    "charts": [
+        "plotly>=4.0.0, <7",
+        "matplotlib>=3.0.0, <4",
+        "graphviz>=0.19.0, <1",
+    ],
+    # Install all optional dependencies:
+    "all": ["streamlit[auth,charts,snowflake]"],
 }
 
 
