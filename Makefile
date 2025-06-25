@@ -263,11 +263,15 @@ protobuf:
 .PHONY: react-init
 # Install all frontend dependencies.
 react-init:
-	cd frontend/ ; \
-	if command -v "corepack" > /dev/null; then \
-		corepack install ; \
-	fi;\
-	yarn install --immutable
+	@cd frontend/ && { \
+		corepack enable yarn; \
+		if [ $$? -ne 0 ]; then \
+			echo "Error: 'corepack' command not found or failed to enable."; \
+			echo "Please ensure you are running the expected version of Node.js as defined in '.nvmrc'."; \
+			exit 1; \
+		fi; \
+		corepack install && yarn install --immutable; \
+	}
 
 .PHONY: frontend
 # Build frontend into static files.
