@@ -337,4 +337,7 @@ def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Take a snapshot of the container that contains the form and the dataframe so
     # that we can see the toolbar.
-    assert_snapshot(form_22.locator(".."), name="st_form-with_dataframe_toolbar")
+    assert_snapshot(
+        app.get_by_test_id("stVerticalBlock").filter(has=form_22),
+        name="st_form-with_dataframe_toolbar",
+    )
