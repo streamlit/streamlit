@@ -326,7 +326,7 @@ def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
 
 def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a form with a dataframe renders correctly with the toolbar."""
-    form_22 = app.get_by_test_id("stForm").nth(23)
+    form_22 = app.get_by_test_id("stForm").nth(21)
     form_22.scroll_into_view_if_needed()
     dataframe = form_22.get_by_test_id("stDataFrame")
     dataframe.hover()
