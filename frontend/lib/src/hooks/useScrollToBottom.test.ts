@@ -35,7 +35,7 @@ describe("useScrollToBottom", () => {
       vi.fn(),
       { current: initialValue },
     ])
-    const { result } = renderHook(() => useScrollToBottom())
+    const { result } = renderHook(() => useScrollToBottom(true))
 
     expect(result.current).not.toBeNull()
     expect(result.current.current).toBeNull()

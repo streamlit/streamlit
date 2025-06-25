@@ -22,6 +22,7 @@ export const StyledStackTrace = styled.pre(({ theme }) => ({
   color: "inherit",
   fontSize: theme.fontSizes.codeFontSize,
   fontFamily: theme.genericFonts.codeFont,
+  fontWeight: theme.fontWeights.code,
   backgroundColor: theme.colors.transparent,
   overflowX: "auto",
   margin: 0,
