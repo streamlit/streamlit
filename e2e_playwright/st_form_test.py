@@ -319,14 +319,14 @@ def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
 def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that forms render correctly within containers with fixed height."""
     # Get the container with height and snapshot the entire container
-    height_container = app.get_by_test_id("stVerticalBlock").nth(23)
+    height_container = app.get_by_test_id("stVerticalBlock").nth(24)
     height_container.scroll_into_view_if_needed()
     assert_snapshot(height_container, name="st_form-height_container")
 
 
 def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a form with a dataframe renders correctly with the toolbar."""
-    form_container = app.get_by_test_id("stVerticalBlock").nth(26)
+    form_container = app.get_by_test_id("stVerticalBlock").nth(27)
     dataframe = form_container.get_by_test_id("stDataFrame")
     dataframe.hover()
 
