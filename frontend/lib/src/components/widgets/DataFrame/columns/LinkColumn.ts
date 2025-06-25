@@ -32,12 +32,19 @@ import {
 } from "./utils"
 
 export interface LinkColumnParams {
-  // The maximum number of characters the user can enter into the text input.
+  /**
+   * The maximum number of characters the user can enter into the text input.
+   */
   readonly max_chars?: number
-  // Regular expression that the input's value must match for the value to pass
+  /**
+   * Regular expression that the input's value must match for the value to pass.
+   */
   readonly validate?: string
-  // A value to display in the link cell. Can be a regex to parse out a specific substring of
-  //  the url to be displayed. This can also be a material icon specified via ":material/icon_name:"
+  /**
+   * A value to display in the link cell. This can be a regex to parse out a
+   * specific substring of the url to be displayed. This can also be a
+   * material icon specified via ":material/icon_name:".
+   */
   readonly display_text?: string
 }
 
