@@ -27,11 +27,9 @@ type SubElement = {
   widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
-type StyleOverrides = {
-  height?: string
-  width?: string
-  overflow?: string
-}
+type StyleOverrides = Partial<
+  Pick<UseLayoutStylesShape, "height" | "width" | "overflow">
+>
 
 export type UseLayoutStylesArgs = {
   element: Element | BlockProto
@@ -201,7 +199,7 @@ export const useLayoutStyles = ({
       flex = `0 0 ${commandHeight}px`
     }
 
-    const calculated_styles = {
+    const calculatedStyles = {
       width,
       height,
       overflow,
@@ -209,7 +207,7 @@ export const useLayoutStyles = ({
     }
 
     return {
-      ...calculated_styles,
+      ...calculatedStyles,
       ...styleOverrides,
     }
   }, [element, subElement, styleOverrides])
