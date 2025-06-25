@@ -54,10 +54,10 @@ class LayoutsMixin:
     def container(
         self,
         *,
-        height: Height = "content",
         border: bool | None = None,
         key: Key | None = None,
         width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -179,12 +179,15 @@ class LayoutsMixin:
         if isinstance(height, int) or border:
             block_proto.allow_empty = True
 
-        if height:
-            validate_height(height, allow_content=True)
-            block_proto.height_config.CopyFrom(get_height_config(height))
+        if isinstance(height, int):
+            block_proto.flex_container.border = True
+        elif border is None:
+            block_proto.flex_container.border = False
+        else:
+            block_proto.flex_container.border = border
 
-            if border is None:
-                block_proto.flex_container.border = True
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
 
         block_proto.height_config.CopyFrom(get_height_config(height))
 
