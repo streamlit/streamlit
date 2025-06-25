@@ -30,7 +30,7 @@ import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 import { isMobile } from "~lib/util/isMobile"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
-import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
+import { filterFunctions } from "~lib/components/shared/Dropdown/Selectbox"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -191,12 +191,28 @@ const Multiselect: FC<Props> = props => {
         option => !value.includes(option.value)
       )
 
-      return fuzzyFilterSelectOptions(
+      // If filterMode is not set but acceptNewOptions is true and user is typing,
+      // return empty array so only "Add: [typed text]" option shows
+      if (!element.filterMode) {
+        if (element.acceptNewOptions && filterValue) {
+          return []
+        }
+        // If not typing or acceptNewOptions is false, return all unselected options
+        return unselectedOptions
+      }
+
+      // Use the filterMode from the protobuf element, defaulting to fuzzy
+      const filterMode =
+        (element.filterMode as keyof typeof filterFunctions) || "fuzzy"
+      const filterFunction =
+        filterFunctions[filterMode] || filterFunctions.fuzzy
+
+      return filterFunction(
         unselectedOptions as MultiselectOption[],
         filterValue
       )
     },
-    [overMaxSelections, value]
+    [overMaxSelections, value, element.filterMode]
   )
 
   const { options } = element
@@ -421,9 +437,14 @@ const Multiselect: FC<Props> = props => {
             },
             Input: {
               props: {
-                // Change the 'readonly' prop to hide the mobile keyboard if options < 10
+                // Allow typing when:
+                // 1. acceptNewOptions is true (for adding new options), OR
+                // 2. filterMode is set (for filtering), OR
+                // 3. on mobile with many options (for better UX)
                 readOnly:
-                  isMobile() && showKeyboardOnMobile === false
+                  !element.acceptNewOptions &&
+                  !element.filterMode &&
+                  (!isMobile() || !showKeyboardOnMobile)
                     ? "readonly"
                     : null,
               },

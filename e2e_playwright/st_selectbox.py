@@ -144,3 +144,14 @@ st.write("value 17:", v17)
 
 st.selectbox("selectbox 18 (width=200px)", options, index=0, width=200)
 st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch")
+
+# Add filter_mode test examples
+# Note that we're only testing the default value and one other value here. All possible
+# filter modes are tested in frontend tests in `Selectbox.test.tsx`.
+filter_options = ["Apple", "Banana", "Cherry", "Date", "APPLE", "Application"]
+st.selectbox("selectbox 20 (default filter_mode - fuzzy)", filter_options)
+st.selectbox(
+    "selectbox 21 (filter_mode=case_sensitive)",
+    filter_options,
+    filter_mode="case_sensitive",
+)

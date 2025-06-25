@@ -23,7 +23,7 @@ def test_selectbox_widget_rendering(
 ):
     """Test that the selectbox widgets are correctly rendered via screenshot matching."""
     selectbox_widgets = themed_app.get_by_test_id("stSelectbox")
-    expect(selectbox_widgets).to_have_count(19)
+    expect(selectbox_widgets).to_have_count(21)
 
     assert_snapshot(selectbox_widgets.nth(0), name="st_selectbox-default")
     assert_snapshot(selectbox_widgets.nth(1), name="st_selectbox-formatted_options")
@@ -334,3 +334,40 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
         "value 17: another_option"
     )
     expect(selectbox_elem.get_by_text("another_option")).to_be_visible()
+
+
+def test_filter_mode_fuzzy_default_behavior(app: Page):
+    """Test that default filter_mode uses fuzzy filtering."""
+    # Use selectbox 20 (default filter_mode - fuzzy)
+    selectbox_input = app.get_by_test_id("stSelectbox").nth(19).locator("input")
+
+    # Type "Apl" - fuzzy should match "Apple", "APPLE", and "Application" (scattered chars)
+    selectbox_input.click()
+    selectbox_input.type("Apl")
+
+    # Check that dropdown shows options
+    dropdown = app.locator('[data-baseweb="popover"]').first
+    expect(dropdown).to_be_visible()
+
+    # Should show multiple options with fuzzy matching (Apple, APPLE, Application)
+    options = dropdown.locator("li")
+    expect(options).to_have_count(3)
+
+
+def test_filter_mode_case_sensitive_behavior(app: Page):
+    """Test that filter_mode=case_sensitive uses case-sensitive matching."""
+    # Use selectbox 21 (filter_mode=case_sensitive)
+    selectbox_input = app.get_by_test_id("stSelectbox").nth(20).locator("input")
+
+    # Type "Apple" - case_sensitive should match only "Apple" (exact case)
+    selectbox_input.click()
+    selectbox_input.type("Apple")
+
+    # Check that dropdown shows options
+    dropdown = app.locator('[data-baseweb="popover"]').first
+    expect(dropdown).to_be_visible()
+
+    # Should show only "Apple" option (case-sensitive match, not "APPLE")
+    options = dropdown.locator("li")
+    expect(options).to_have_count(1)
+    expect(options.first).to_contain_text("Apple")

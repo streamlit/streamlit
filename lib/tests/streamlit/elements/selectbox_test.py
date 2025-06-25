@@ -144,6 +144,36 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.accept_new_options
         assert c.placeholder == "Choose or add an option"
 
+    @parameterized.expand(
+        [
+            ("fuzzy", "fuzzy"),
+            ("exact", "exact"),
+            ("prefix", "prefix"),
+            ("case_sensitive", "case_sensitive"),
+            (None, None),
+        ]
+    )
+    def test_filter_mode(self, filter_mode_value, expected_proto_value):
+        """Test that filter_mode parameter is marshalled correctly."""
+        st.selectbox("the label", ("m", "f"), filter_mode=filter_mode_value)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        if expected_proto_value is None:
+            assert not c.HasField("filter_mode")
+        else:
+            assert c.filter_mode == expected_proto_value
+
+    def test_invalid_filter_mode(self):
+        """Test that invalid filter_mode values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as ex:
+            st.selectbox("the label", ("m", "f"), filter_mode="invalid")
+
+        assert "Unsupported filter_mode option 'invalid'" in str(ex.value)
+        assert (
+            "Valid values are 'fuzzy', 'exact', 'prefix', 'case_sensitive', or None"
+            in str(ex.value)
+        )
+
     def test_invalid_value(self):
         """Test that value must be an int."""
         with pytest.raises(StreamlitAPIException):

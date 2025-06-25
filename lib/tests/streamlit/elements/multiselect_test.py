@@ -218,6 +218,36 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            ("fuzzy", "fuzzy"),
+            ("exact", "exact"),
+            ("prefix", "prefix"),
+            ("case_sensitive", "case_sensitive"),
+            (None, None),
+        ]
+    )
+    def test_filter_mode(self, filter_mode_value, expected_proto_value):
+        """Test that filter_mode parameter is marshalled correctly."""
+        st.multiselect("the label", ("m", "f"), filter_mode=filter_mode_value)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        if expected_proto_value is None:
+            assert not c.HasField("filter_mode")
+        else:
+            assert c.filter_mode == expected_proto_value
+
+    def test_invalid_filter_mode(self):
+        """Test that invalid filter_mode values raise StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException) as ex:
+            st.multiselect("the label", ("m", "f"), filter_mode="invalid")
+
+        assert "Unsupported filter_mode option 'invalid'" in str(ex.value)
+        assert (
+            "Valid values are 'fuzzy', 'exact', 'prefix', 'case_sensitive', or None"
+            in str(ex.value)
+        )
+
+    @parameterized.expand(
+        [
             (["Tea", "Vodka", None], StreamlitAPIException),
             ([1, 2], StreamlitAPIException),
         ]

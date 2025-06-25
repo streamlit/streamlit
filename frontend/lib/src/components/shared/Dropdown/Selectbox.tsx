@@ -56,6 +56,7 @@ export interface Props {
   placeholder?: string
   clearable?: boolean
   acceptNewOptions?: boolean | null
+  filterMode?: string | null
 }
 
 interface SelectOption {
@@ -63,28 +64,34 @@ interface SelectOption {
   value: string
 }
 
-// Add a custom filterOptions method to filter options only based on labels.
-// The baseweb default method filters based on labels or indices
-// More details: https://github.com/streamlit/streamlit/issues/1010
-// Also filters using fuzzy search.
-export function fuzzyFilterSelectOptions(
-  options: SelectOption[],
-  pattern: string
-): readonly SelectOption[] {
-  if (!pattern) {
-    return options
-  }
-
-  const filteredOptions = options.filter((opt: SelectOption) =>
-    hasMatch(pattern, opt.label)
-  )
-  return sortBy(
-    filteredOptions,
-    // Use the negative score to sort the list in a stable manner
-    // This ensures highest score is first
-    (opt: SelectOption) => -score(pattern, opt.label, true)
-  )
-}
+export const filterFunctions = {
+  fuzzy: (options: SelectOption[], pattern: string) => {
+    if (!pattern) return options
+    const filteredOptions = options.filter((opt: SelectOption) =>
+      hasMatch(pattern, opt.label)
+    )
+    return sortBy(
+      filteredOptions,
+      (opt: SelectOption) => -score(pattern, opt.label, true)
+    )
+  },
+  exact: (options: SelectOption[], pattern: string) => {
+    if (!pattern) return options
+    return options.filter((opt: SelectOption) =>
+      opt.label.toLowerCase().includes(pattern.toLowerCase())
+    )
+  },
+  prefix: (options: SelectOption[], pattern: string) => {
+    if (!pattern) return options
+    return options.filter((opt: SelectOption) =>
+      opt.label.toLowerCase().startsWith(pattern.toLowerCase())
+    )
+  },
+  case_sensitive: (options: SelectOption[], pattern: string) => {
+    if (!pattern) return options
+    return options.filter((opt: SelectOption) => opt.label.includes(pattern))
+  },
+} as const
 
 const Selectbox: React.FC<Props> = ({
   disabled,
@@ -97,6 +104,7 @@ const Selectbox: React.FC<Props> = ({
   placeholder,
   clearable,
   acceptNewOptions,
+  filterMode,
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
@@ -144,9 +152,22 @@ const Selectbox: React.FC<Props> = ({
   }, [])
 
   const filterOptions = useCallback(
-    (options: readonly Option[], filterValue: string): readonly Option[] =>
-      fuzzyFilterSelectOptions(options as SelectOption[], filterValue),
-    []
+    (options: readonly Option[], filterValue: string): readonly Option[] => {
+      // If filterMode is None/null but acceptNewOptions is true and user is typing,
+      // return empty array so only "Add: [typed text]" option shows
+      if (filterMode === null || filterMode === undefined) {
+        if (acceptNewOptions && filterValue) {
+          return []
+        }
+        // If not typing or acceptNewOptions is false, return all options
+        return options
+      }
+
+      const filterFunction =
+        filterFunctions[filterMode as keyof typeof filterFunctions]
+      return filterFunction(options as SelectOption[], filterValue)
+    },
+    [filterMode, acceptNewOptions]
   )
 
   let selectDisabled = disabled
@@ -268,9 +289,16 @@ const Selectbox: React.FC<Props> = ({
           },
           Input: {
             props: {
-              // Change the 'readonly' prop to hide the mobile keyboard if options < 10
+              // Allow typing when:
+              // 1. acceptNewOptions is true (for adding new options), OR
+              // 2. filterMode is set (for filtering), OR
+              // 3. on mobile with many options (for better UX)
               readOnly:
-                isMobile() && !showKeyboardOnMobile ? "readonly" : null,
+                !acceptNewOptions &&
+                !filterMode &&
+                (!isMobile() || !showKeyboardOnMobile)
+                  ? "readonly"
+                  : null,
             },
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,

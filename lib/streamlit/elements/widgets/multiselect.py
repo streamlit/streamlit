@@ -39,6 +39,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
@@ -170,6 +171,8 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: Literal["fuzzy", "exact", "prefix", "case_sensitive"]
+        | None = "fuzzy",
     ) -> list[T]: ...
 
     @overload
@@ -190,6 +193,8 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        filter_mode: Literal["fuzzy", "exact", "prefix", "case_sensitive"]
+        | None = "fuzzy",
     ) -> list[T | str]: ...
 
     @overload
@@ -210,6 +215,8 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: Literal["fuzzy", "exact", "prefix", "case_sensitive"]
+        | None = "fuzzy",
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -230,6 +237,8 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False, True] | bool = False,
+        filter_mode: Literal["fuzzy", "exact", "prefix", "case_sensitive"]
+        | None = "fuzzy",
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -332,6 +341,14 @@ class MultiSelectMixin:
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
 
+        filter_mode : "fuzzy", "exact", "prefix", or "case_sensitive"
+            The filtering method to use when typing in the multiselect:
+            - "fuzzy": Uses fuzzy matching (default)
+            - "exact": Case-insensitive substring matching
+            - "prefix": Case-insensitive prefix matching
+            - "case_sensitive": Case-sensitive substring matching
+            - None: No filtering, i.e. the user cannot type into the multiselect
+
         Returns
         -------
         list
@@ -397,6 +414,7 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             ctx=ctx,
         )
 
@@ -417,6 +435,8 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: Literal["fuzzy", "exact", "prefix", "case_sensitive"]
+        | None = "fuzzy",
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -429,6 +449,17 @@ class MultiSelectMixin:
             default_value=default,
         )
         maybe_raise_label_warnings(label, label_visibility)
+
+        if filter_mode is not None and filter_mode not in (
+            "fuzzy",
+            "exact",
+            "prefix",
+            "case_sensitive",
+        ):
+            raise StreamlitAPIException(
+                f"Unsupported filter_mode option '{filter_mode}'. "
+                f"Valid values are 'fuzzy', 'exact', 'prefix', 'case_sensitive', or None."
+            )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options, formatted_option_to_option_index = create_mappings(
@@ -457,6 +488,7 @@ class MultiSelectMixin:
             max_selections=max_selections,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
         )
 
         proto = MultiSelectProto()
@@ -474,6 +506,8 @@ class MultiSelectMixin:
         if help is not None:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
+        if filter_mode is not None:
+            proto.filter_mode = filter_mode
 
         serde = MultiSelectSerde(
             indexable_options,

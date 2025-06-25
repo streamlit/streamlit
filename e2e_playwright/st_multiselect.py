@@ -162,3 +162,14 @@ st.multiselect(
     options=many_options,
     default=many_options[0:28],
 )
+
+# Add filter_mode test examples
+# Note that we're only testing the default value and one other value here. All possible
+# filter modes are tested in frontend tests in `Multiselect.test.tsx`.
+filter_options = ["Apple", "Banana", "Cherry", "Date", "APPLE", "Application"]
+st.multiselect("multiselect 18 (default filter_mode - fuzzy)", filter_options)
+st.multiselect(
+    "multiselect 19 (filter_mode=case_sensitive)",
+    filter_options,
+    filter_mode="case_sensitive",
+)
