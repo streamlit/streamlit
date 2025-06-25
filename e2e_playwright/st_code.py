@@ -126,8 +126,9 @@ processed = process_data(data)
 print(processed)
 """
 
-st.code(long_code, width=400, wrap_lines=True)
+st.code(long_code, width=500, wrap_lines=True)
 st.code(long_code, width="stretch")
+st.code(long_code, width="content")
 
 long_single_word_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
 
