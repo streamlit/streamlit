@@ -163,14 +163,7 @@ def get_used_snapshots() -> dict[str, tuple[set[str], set[str]]]:
                         else:
                             # For regular strings, it's an exact name
                             exact_names.add(snapshot_name)
-                    else:
-                        # Check for string concatenation patterns like "prefix" + str(i)
-                        concat_match = re.search(
-                            r'name\s*=\s*["\']([^"\']+)["\']\s*\+', context
-                        )
-                        if concat_match:
-                            prefix = concat_match.group(1)
-                            prefixes.add(prefix)
+                    # If no name parameter found, skip this assert_snapshot call
 
         except Exception as e:
             print(f"Error processing {test_file}: {e}")
