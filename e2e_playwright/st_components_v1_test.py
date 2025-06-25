@@ -20,6 +20,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    get_checkbox,
     get_element_by_key,
 )
 
@@ -100,6 +101,9 @@ def test_iframe_tab_index_attributes(app: Page):
 def test_declare_component_correctly_sets_attr(app: Page):
     """Test that components.declare_component correctly sets attributes and rendered size."""
 
+    checkbox_element = get_checkbox(app, "Show custom component")
+    checkbox_element.locator("label").click()
+
     declare_component = app.locator("iframe").nth(6)
 
     expect(declare_component).to_have_attribute(
@@ -115,11 +119,17 @@ def test_declare_component_correctly_sets_attr(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
+    checkbox_element = get_checkbox(app, "Show custom component")
+    checkbox_element.locator("label").click()
+
     check_top_level_class(app, "stCustomComponentV1")
 
 
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
+    checkbox_element = get_checkbox(app, "Show custom component")
+    checkbox_element.locator("label").click()
+
     expect(get_element_by_key(app, "component_1")).to_be_visible()
 
 
