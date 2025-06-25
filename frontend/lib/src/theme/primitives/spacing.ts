@@ -17,14 +17,14 @@
 export const spacing = {
   px: "1px",
   none: "0",
-  threeXS: "0.125rem",
-  twoXS: "0.25rem",
-  xs: "0.375rem",
-  sm: "0.5rem",
-  md: "0.75rem",
-  lg: "1rem",
-  xl: "1.25rem",
-  twoXL: "1.5rem",
-  threeXL: "2rem",
-  fourXL: "4rem",
+  threeXS: "0.125rem", // 2px
+  twoXS: "0.25rem", // 4px
+  xs: "0.375rem", // 6px
+  sm: "0.5rem", // 8px
+  md: "0.75rem", // 12px
+  lg: "1rem", // 16px
+  xl: "1.25rem", // 20px
+  twoXL: "1.5rem", // 24px
+  threeXL: "2rem", // 32px
+  fourXL: "4rem", // 64px
 }

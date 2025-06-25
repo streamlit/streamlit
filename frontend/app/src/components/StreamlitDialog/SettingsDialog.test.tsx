@@ -26,6 +26,7 @@ import {
   lightTheme,
   mockSessionInfo,
   renderWithContexts,
+  SessionInfo,
 } from "@streamlit/lib"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
@@ -54,6 +55,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   animateModal: true,
   openThemeCreator: vi.fn(),
   metricsMgr: new MetricsManager(mockSessionInfo()),
+  sessionInfo: mockSessionInfo(),
   ...extend,
 })
 
@@ -171,5 +173,32 @@ describe("SettingsDialog", () => {
     renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.queryByTestId("edit-theme")).not.toBeInTheDocument()
+  })
+
+  it("shows version string if SessionInfo is initialized", () => {
+    const props = getProps({
+      sessionInfo: mockSessionInfo({ streamlitVersion: "42.42.42" }),
+    })
+    const context = getContext()
+
+    renderWithContexts(<SettingsDialog {...props} />, context)
+
+    const versionRegex = /Made with Streamlit\s*42\.42\.42/
+    const versionText = screen.getByText(versionRegex)
+    expect(versionText).toBeDefined()
+  })
+
+  it("shows no version string if SessionInfo is not initialized", () => {
+    const sessionInfo = new SessionInfo()
+    expect(sessionInfo.isSet).toBe(false)
+
+    const props = getProps({ sessionInfo })
+    const context = getContext()
+
+    renderWithContexts(<SettingsDialog {...props} />, context)
+
+    const versionRegex = /^Made with Streamlit.*/
+    const nonExistentText = screen.queryByText(versionRegex)
+    expect(nonExistentText).not.toBeInTheDocument()
   })
 })
