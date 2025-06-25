@@ -59,7 +59,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
       <ModalHeader>
-        <StreamlitMarkdown source={title} allowHTML={false} isLabel />
+        <StreamlitMarkdown source={title} allowHTML={false} isDialogTitle />
       </ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>

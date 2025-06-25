@@ -98,6 +98,11 @@ export interface Props {
   isLabel?: boolean
 
   /**
+   * Indicates dialog titles & restricts allowed elements
+   */
+  isDialogTitle?: boolean
+
+  /**
    * Make the label bold
    */
   boldLabel?: boolean
@@ -324,6 +329,11 @@ export interface RenderedMarkdownProps {
    * Indicates widget labels & restricts allowed elements
    */
   isLabel?: boolean
+
+  /**
+   * Indicates dialog titles & restricts allowed elements
+   */
+  isDialogTitle?: boolean
 
   /**
    * Does not allow links
@@ -706,6 +716,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   source,
   overrideComponents,
   isLabel,
+  isDialogTitle,
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
@@ -747,9 +758,11 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const disallowed = useMemo(() => {
-    if (!isLabel) return []
+    // Apply restrictions if either isLabel or isDialogTitle is true
+    const shouldRestrict = isLabel || isDialogTitle
+    if (!shouldRestrict) return []
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
-  }, [isLabel, disableLinks])
+  }, [isLabel, isDialogTitle, disableLinks])
 
   return (
     <ErrorBoundary>
@@ -778,6 +791,7 @@ const StreamlitMarkdown: FC<Props> = ({
   style,
   isCaption,
   isLabel,
+  isDialogTitle,
   boldLabel,
   largerLabel,
   disableLinks,
@@ -791,6 +805,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isCaption={Boolean(isCaption)}
       isInSidebarOrDialog={isInSidebar || isInDialog}
       isLabel={isLabel}
+      isDialogTitle={isDialogTitle}
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}
@@ -801,6 +816,7 @@ const StreamlitMarkdown: FC<Props> = ({
         source={source}
         allowHTML={allowHTML}
         isLabel={isLabel}
+        isDialogTitle={isDialogTitle}
         disableLinks={disableLinks}
       />
     </StyledStreamlitMarkdown>
