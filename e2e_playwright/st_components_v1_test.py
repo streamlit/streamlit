@@ -24,6 +24,8 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
+NUM_IFRAMES = 6
+
 
 def test_components_iframe_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
@@ -31,7 +33,7 @@ def test_components_iframe_rendering(
     """Test that our components v1 API correctly renders elements via screenshot matching."""
 
     elements = themed_app.locator("iframe")
-    expect(elements).to_have_count(7)
+    expect(elements).to_have_count(NUM_IFRAMES)
 
     # Only doing a snapshot of the html component, since the iframe one
     # does not use a valid URL.
