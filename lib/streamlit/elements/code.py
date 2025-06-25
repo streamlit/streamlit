@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, cast
 from streamlit.elements.lib.layout_utils import (
     Height,
     LayoutConfig,
-    WidthWithoutContent,
+    Width,
     validate_height,
     validate_width,
 )
@@ -42,7 +42,7 @@ class CodeMixin:
         line_numbers: bool = False,
         wrap_lines: bool = False,
         height: Height | None = "content",
-        width: WidthWithoutContent = "stretch",
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.
 
@@ -85,11 +85,13 @@ class CodeMixin:
                 the screen on mobile devices, which makes it hard to scroll the
                 rest of the app.
 
-        width : "stretch" or int
+        width : "stretch", "content", or int
             The width of the code block element. This can be one of the following:
 
             - ``"stretch"`` (default): The width of the element matches the
               width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
             - An integer specifying the width in pixels: The element has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
@@ -137,7 +139,7 @@ class CodeMixin:
             height = "content"
         else:
             validate_height(height, allow_content=True)
-        validate_width(width)
+        validate_width(width, allow_content=True)
         layout_config = LayoutConfig(height=height, width=width)
 
         return self.dg._enqueue("code", code_proto, layout_config=layout_config)

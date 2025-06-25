@@ -176,13 +176,14 @@ message CustomThemeConfig {
   optional bool link_underline = 29;
   optional int32 base_font_size = 22;
   optional int32 base_font_weight = 30;
+  optional int32 code_font_weight = 32;
   optional string code_font_size = 28;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
 
-  // Next ID: 32
+  // Next ID: 33
 }
 
 message FontFace {

@@ -1053,12 +1053,81 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights in theme.`
+        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
       expect(theme.fontWeights.bold).toBe(expectedBold)
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+    }
+  )
+
+  it.each([
+    // Test valid font weights
+    [100, 400, 600, 700, 100],
+    [200, 400, 600, 700, 200],
+    [300, 400, 600, 700, 300],
+    [400, 400, 600, 700, 400],
+    [500, 400, 600, 700, 500],
+    [600, 400, 600, 700, 600],
+    [700, 400, 600, 700, 700],
+    [800, 400, 600, 700, 800],
+    [900, 400, 600, 700, 900],
+  ])(
+    "sets the font weights based on the codeFontWeight config '%s'",
+    (
+      codeFontWeight,
+      expectedNormal,
+      expectedBold,
+      expectedExtrabold,
+      expectedCode
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
+      // baseFontWeight is not set, so the default font weights are used
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+      // codeFontWeight is set, so it overrides the default code font weight
+      expect(theme.fontWeights.code).toBe(expectedCode)
+    }
+  )
+
+  it.each([
+    // Test invalid font weights
+    [150, 400, 600, 700, 400], // Not an increment of 100
+    [1000, 400, 600, 700, 400], // Not between 100 and 900
+    [400.5, 400, 600, 700, 400], // Not an integer
+  ])(
+    "logs a warning and falls back to default font weights if codeFontWeight is invalid '%s'",
+    (
+      codeFontWeight,
+      expectedNormal,
+      expectedBold,
+      expectedExtrabold,
+      expectedCode
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights.`
+      )
+
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+      expect(theme.fontWeights.code).toBe(expectedCode)
     }
   )
 
