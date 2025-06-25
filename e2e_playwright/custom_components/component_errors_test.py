@@ -71,7 +71,7 @@ def test_component_timeout_failure(page: Page, app_port: int):
     page.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(page, f"http://localhost:{app_port}")
+    page.goto(f"http://localhost:{app_port}")
 
     # Expect the iframe to be attached
     expect(page.get_by_test_id("stCustomComponentV1")).to_be_attached()
