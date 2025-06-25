@@ -392,8 +392,7 @@ describe("SidebarNav", () => {
   it("collapses sidebar on page change when on mobile", async () => {
     const onPageChange = vi.fn()
     const user = userEvent.setup()
-    // @ts-expect-error
-    reactDeviceDetect.isMobile = true
+    vi.spyOn(isMobile, "isMobile").mockReturnValue(true)
 
     const props = getProps({ onPageChange })
     render(<SidebarNav {...props} />)
