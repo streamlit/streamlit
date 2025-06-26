@@ -37,16 +37,25 @@ import {
 } from "./utils"
 
 export interface ProgressColumnParams {
-  // The minimum permitted value. Defaults to 0.
+  /**
+   * The minimum permitted value. Defaults to 0.
+   */
   readonly min_value?: number
-  // The maximum permitted value. Defaults to 100 if the underlying data is integer,
-  // or 1 for all others types.
+  /**
+   * The maximum permitted value. Defaults to 100 if the underlying data is
+   * integer, or 1 for all others types.
+   */
   readonly max_value?: number
-  // A formatting syntax (e.g. sprintf) to format the display value.
-  // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
+  /**
+   * A formatting syntax (e.g. sprintf) to format the display value.
+   * This can be used for adding prefix or suffix, or changing the number of
+   * decimals of the display value.
+   */
   readonly format?: string
-  // The stepping interval. Defaults to 0.01.
-  // Mainly useful once we provide editing capabilities.
+  /**
+   * The stepping interval. Defaults to 0.01.
+   * Mainly useful once we provide editing capabilities.
+   */
   readonly step?: number
 }
 

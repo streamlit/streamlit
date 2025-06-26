@@ -40,47 +40,51 @@ import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
  * These options can also be used to overwrite from user-defined column config.
  */
 export interface BaseColumnProps {
-  // The id of the column:
+  /** The id of the column. */
   readonly id: string
-  // The name of the column from the original data:
+  /** The name of the column from the original data. */
   readonly name: string
-  // The display title of the column:
+  /** The display title of the column. */
   readonly title: string
-  // The index number of the column:
+  /** The index number of the column. */
   readonly indexNumber: number
-  // The arrow data type of the column:
+  /** The arrow data type of the column. */
   readonly arrowType: ArrowType
-  // If `True`, the column can be edited:
+  /** If `True`, the column can be edited. */
   readonly isEditable: boolean
-  // If `True`, the column is hidden (will not be shown):
+  /** If `True`, the column is hidden (will not be shown). */
   readonly isHidden: boolean
-  // If `True`, the column is a table index:
+  /** If `True`, the column is a table index. */
   readonly isIndex: boolean
-  // If `True`, the column is pinned/frozen:
+  /** If `True`, the column is pinned/frozen. */
   readonly isPinned: boolean
-  // If `True`, the column is a stretched:
+  /** If `True`, the column is a stretched. */
   readonly isStretched: boolean
-  // If `True`, a value is required before the cell or row can be submitted:
+  /** If `True`, a value is required before the cell or row can be submitted. */
   readonly isRequired?: boolean
-  // If `True`, the content of the cell is allowed to be wrapped
-  // to fill the available height of the cell.
+  /**
+   * If `True`, the content of the cell is allowed to be wrapped to fill the
+   * available height of the cell.
+   */
   readonly isWrappingAllowed?: boolean
-  // The initial width of the column:
+  /** The initial width of the column. */
   readonly width?: number
-  // A help text that is displayed on hovering the column header.
+  /** A help text that is displayed on hovering the column header. */
   readonly help?: string
-  // Configuration options related to the column type:
+  /**
+   * Configuration options related to the column type.
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   readonly columnTypeOptions?: Record<string, any>
-  // The content alignment of the column:
+  /** The content alignment of the column. */
   readonly contentAlignment?: "left" | "center" | "right"
-  // The default value of the column used when adding a new row:
+  /** The default value of the column used when adding a new row. */
   readonly defaultValue?: string | number | boolean
-  // Theme overrides for this column:
+  /** Theme overrides for this column. */
   readonly themeOverride?: Partial<GlideTheme>
-  // A custom icon to be displayed in the column header:
+  /** A custom icon to be displayed in the column header. */
   readonly icon?: string
-  // The group that this column belongs to.
+  /** The group that this column belongs to. */
   readonly group?: string
 }
 

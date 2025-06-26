@@ -32,7 +32,7 @@ df = pd.DataFrame(
 )
 
 
-st.header("Hide index parameter:")
+st.header(":material/visibility_off: Hide index parameter:")
 st.dataframe(df, hide_index=True, use_container_width=False)
 st.dataframe(df, hide_index=False, use_container_width=False)
 
@@ -225,6 +225,12 @@ st.dataframe(
                 "",
                 None,
             ],
+            "col_4": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
+                None,
+            ],
         }
     ),
     column_config={
@@ -246,6 +252,10 @@ st.dataframe(
         "col_3": st.column_config.LinkColumn(
             "Static display text",
             display_text="Open link",
+        ),
+        "col_4": st.column_config.LinkColumn(
+            "Static display icon",
+            display_text=":material/open_in_new:",
         ),
     },
     use_container_width=False,

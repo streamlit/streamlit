@@ -40,9 +40,13 @@ export const AREA_CHART_TYPE = "area_chart"
 export const BAR_CHART_TYPE = "bar_chart"
 
 export interface ChartColumnParams {
-  // The minimum value used for plotting the chart. Defaults to 0.
+  /**
+   * The minimum value used for plotting the chart. Defaults to 0.
+   */
   readonly y_min?: number
-  // The maximum value used for plotting the chart. Defaults to 1.
+  /**
+   * The maximum value used for plotting the chart. Defaults to 1.
+   */
   readonly y_max?: number
 }
 
