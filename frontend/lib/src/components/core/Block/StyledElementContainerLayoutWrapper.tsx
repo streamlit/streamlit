@@ -18,9 +18,9 @@ import React, { FC, useContext, useMemo } from "react"
 
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import type { ElementNode } from "~lib/AppNode"
+import IsSidebarContext from "src/components/core/IsSidebarContext"
 
 import { StyledElementContainer } from "./styled-components"
-import IsSidebarContext from "../IsSidebarContext"
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<

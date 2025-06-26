@@ -16,7 +16,7 @@
 
 import React, { memo, ReactElement } from "react"
 
-import { Button as ButtonProto, streamlit } from "@streamlit/protobuf"
+import { Button as ButtonProto } from "@streamlit/protobuf"
 
 import BaseButton, {
   BaseButtonKind,

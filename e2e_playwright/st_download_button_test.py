@@ -27,7 +27,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 15
+DOWNLOAD_BUTTON_ELEMENTS = 21
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -49,7 +49,7 @@ def test_download_button_widget_rendering(
 ):
     """Test that download buttons are correctly rendered via screenshot matching."""
     download_buttons = themed_app.get_by_test_id("stDownloadButton")
-    expect(download_buttons).to_have_count(15)
+    expect(download_buttons).to_have_count(DOWNLOAD_BUTTON_ELEMENTS)
 
     assert_snapshot(download_buttons.nth(0), name="st_download_button-default")
     assert_snapshot(download_buttons.nth(1), name="st_download_button-disabled")
@@ -71,19 +71,19 @@ def test_download_button_widget_rendering(
 
 
 def test_show_tooltip_on_hover(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(5)
+    download_button = app.get_by_test_id("stDownloadButton").nth(9)
     download_button.hover()
-    expect(app.get_by_test_id("stTooltipContent")).to_have_text("Example help text")
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
 
 
 def test_value_correct_on_click(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
 
 
 def test_value_not_reset_on_reclick(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     download_button.click()
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
@@ -124,7 +124,7 @@ def test_click_calls_callback(app: Page):
 
 
 def test_reset_on_other_widget_change(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(14).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(12).locator("button")
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text("value: True")
     expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(

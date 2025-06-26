@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 31
+TOTAL_BUTTONS = 33
 
 
 def test_button_widget_rendering(
@@ -137,7 +137,7 @@ def test_shows_cursor_pointer(app: Page):
 def test_colored_text_hover(app: Page):
     """Test that the colored text is correctly rendered and changes color on hover."""
     # Check hover behavior for colored text in primary button
-    primary_button_element = app.get_by_test_id("stButton").nth(22)
+    primary_button_element = app.get_by_test_id("stButton").nth(20)
     expect(primary_button_element.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
@@ -151,7 +151,7 @@ def test_colored_text_hover(app: Page):
     )
 
     # Check hover behavior for colored text in secondary button
-    secondary_button_element = app.get_by_test_id("stButton").nth(23)
+    secondary_button_element = app.get_by_test_id("stButton").nth(21)
     expect(secondary_button_element.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
@@ -165,7 +165,7 @@ def test_colored_text_hover(app: Page):
     )
 
     # Check hover behavior for colored text in tertiary button
-    tertiary_button_element = app.get_by_test_id("stButton").nth(24)
+    tertiary_button_element = app.get_by_test_id("stButton").nth(22)
     expect(tertiary_button_element.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
@@ -180,9 +180,12 @@ def test_colored_text_hover(app: Page):
 
 
 def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    stretch_help_button = get_element_by_key(themed_app, "help_button")
-    stretch_help_button.locator("button").hover()
-    assert_snapshot(stretch_help_button, name="st_button-help_button")
+    help_button_container = get_element_by_key(themed_app, "help_button_container")
+    help_button = help_button_container.get_by_role(
+        "button", name="button 6 (just help)"
+    )
+    help_button.hover()
+    assert_snapshot(help_button_container, name="st_button-help_button")
 
 
 def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):

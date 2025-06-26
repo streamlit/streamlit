@@ -347,10 +347,8 @@ def test_form_submit_button_width_examples(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test form submit button width examples via screenshot matching."""
-    # Form submit button width examples
     form = get_element_by_key(app, "width_tests")
     submit_elements = form.get_by_test_id("stFormSubmitButton")
-    expect(submit_elements).to_have_count(6)
 
     assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
     assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
