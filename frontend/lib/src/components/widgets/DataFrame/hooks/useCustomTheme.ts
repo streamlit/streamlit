@@ -104,6 +104,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bubbleMargin: Math.round(convertRemToPx(theme.spacing.twoXS)),
       linkColor: theme.colors.link,
       drilldownBorder: theme.colors.darkenedBgMix25,
+      checkboxMaxSize: Math.round(convertRemToPx(theme.sizes.checkbox)),
       // Unused settings:
       // lineHeight
       // markerFontStyle: string;
