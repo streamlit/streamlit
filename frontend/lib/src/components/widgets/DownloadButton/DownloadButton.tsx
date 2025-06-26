@@ -16,10 +16,7 @@
 
 import React, { memo, ReactElement, useContext, useEffect } from "react"
 
-import {
-  DownloadButton as DownloadButtonProto,
-  streamlit,
-} from "@streamlit/protobuf"
+import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import BaseButton, {

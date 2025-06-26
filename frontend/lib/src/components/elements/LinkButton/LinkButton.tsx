@@ -16,7 +16,7 @@
 
 import React, { memo, MouseEvent, ReactElement } from "react"
 
-import { LinkButton as LinkButtonProto, streamlit } from "@streamlit/protobuf"
+import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
 import {
   BaseButtonKind,

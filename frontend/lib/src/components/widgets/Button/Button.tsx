@@ -26,7 +26,6 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { Box } from "~lib/components/shared/Base/styled-components"
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   disabled: boolean

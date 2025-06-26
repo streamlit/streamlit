@@ -16,7 +16,7 @@
 
 import React, { memo, ReactElement, useContext } from "react"
 
-import { PageLink as PageLinkProto, streamlit } from "@streamlit/protobuf"
+import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"

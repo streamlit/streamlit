@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useEffect } from "react"
 
-import { Button as ButtonProto, streamlit } from "@streamlit/protobuf"
+import { Button as ButtonProto } from "@streamlit/protobuf"
 
 import { FormsContext } from "~lib/components/core/FormsContext"
 import { Box } from "~lib/components/shared/Base/styled-components"
@@ -28,7 +28,6 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   disabled: boolean
