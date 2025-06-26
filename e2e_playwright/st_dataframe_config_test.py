@@ -138,6 +138,19 @@ def test_json_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFuncti
     )
 
 
+def test_list_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the list cell overlay works correctly."""
+    dataframe_element = themed_app.get_by_test_id("stDataFrame").nth(17)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the first cell of the list column
+    click_on_cell(dataframe_element, 1, 1, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(themed_app)
+    assert_snapshot(cell_overlay, name="st_dataframe-list_column_overlay")
+
+
 def test_number_column_formatting_via_ui(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
