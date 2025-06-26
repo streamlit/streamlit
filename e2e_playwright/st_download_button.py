@@ -27,6 +27,7 @@ st.download_button(
     "Download button label",
     data="Hello world!",
     file_name="hello.txt",
+    key="default_download_button",
 )
 
 st.download_button(
@@ -56,24 +57,28 @@ st.download_button(
     data="Hello world!",
     file_name="hello.txt",
     type="primary",
+    key="primary_download_button",
 )
 
 st.download_button(
     "Button with emoji icon",
     data="Hello world!",
     icon="⬇️",
+    key="emoji_download_button",
 )
 
 st.download_button(
     "Button with material icon",
     data="Hello world!",
     icon=":material/download:",
+    key="material_icon_download_button",
 )
 
 st.download_button(
     "Tertiary download button",
     data="Hello world!",
     type="tertiary",
+    key="tertiary_download_button",
 )
 
 st.download_button(
@@ -81,12 +86,14 @@ st.download_button(
     data="Hello world!",
     type="tertiary",
     disabled=True,
+    key="disabled_tertiary_download_button",
 )
 
 st.download_button(
     "Download button with help",
     data="Hello world!",
     help="help text",
+    key="help_download_button",
 )
 
 random_str = str(random())

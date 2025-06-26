@@ -51,17 +51,39 @@ def test_download_button_widget_rendering(
     download_buttons = themed_app.get_by_test_id("stDownloadButton")
     expect(download_buttons).to_have_count(DOWNLOAD_BUTTON_ELEMENTS)
 
-    assert_snapshot(download_buttons.nth(0), name="st_download_button-default")
-    assert_snapshot(download_buttons.nth(1), name="st_download_button-disabled")
-
-    assert_snapshot(download_buttons.nth(6), name="st_download_button-primary")
-    assert_snapshot(download_buttons.nth(7), name="st_download_button-emoji_icon")
-    assert_snapshot(download_buttons.nth(8), name="st_download_button-material_icon")
-    assert_snapshot(download_buttons.nth(9), name="st_download_button-tertiary")
     assert_snapshot(
-        download_buttons.nth(10), name="st_download_button-disabled_tertiary"
+        get_element_by_key(themed_app, "default_download_button"),
+        name="st_download_button-default",
     )
-    assert_snapshot(download_buttons.nth(11), name="st_download_button-help")
+    assert_snapshot(
+        get_element_by_key(themed_app, "disabled_dl_button"),
+        name="st_download_button-disabled",
+    )
+
+    assert_snapshot(
+        get_element_by_key(themed_app, "primary_download_button"),
+        name="st_download_button-primary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "emoji_download_button"),
+        name="st_download_button-emoji_icon",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "material_icon_download_button"),
+        name="st_download_button-material_icon",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "tertiary_download_button"),
+        name="st_download_button-tertiary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "disabled_tertiary_download_button"),
+        name="st_download_button-disabled_tertiary",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "help_download_button"),
+        name="st_download_button-help",
+    )
 
 
 def test_show_tooltip_on_hover(app: Page):
