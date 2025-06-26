@@ -62,7 +62,7 @@ const generateAppPages = (
       ...(sectionHeaders && {
         sectionHeader: sectionHeaders[(i + 1) % sectionHeaders.length],
       }),
-      ...(icons && i === 0 && { icon: "🐧" }),
+      ...(icons && i === 0 ? { icon: "🐧" } : {}),
     })
   }
 
