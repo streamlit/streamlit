@@ -183,7 +183,14 @@ message CustomThemeConfig {
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
 
-  // Next ID: 33
+
+  optional int32 h2_font_weight = 100;
+  optional int32 h3_font_weight = 101;
+  optional int32 h4_font_weight = 102;
+  optional int32 h5_font_weight = 103;
+  optional int32 h6_font_weight = 104;
+
+  // Next ID: <TODO ADD HERE>
 }
 
 message FontFace {
