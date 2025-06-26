@@ -98,13 +98,13 @@ with st.sidebar:
     with st.container(key="sidebar_container_width_true"):
         st.page_link(
             "http://www.example.com",
-            label="sidebar_container_width_true",
+            label="max_width",
             use_container_width=True,
         )
 
     with st.container(key="sidebar_container_width_false"):
         st.page_link(
             "http://www.example.com",
-            label="cont_width",
+            label="min_width",
             use_container_width=False,
         )
