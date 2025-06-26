@@ -753,7 +753,6 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
-
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
   }, [isLabel, disableLinks])
 
