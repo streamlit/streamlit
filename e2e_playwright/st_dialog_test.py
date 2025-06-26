@@ -85,6 +85,10 @@ def open_dialog_with_rerun(app: Page):
     click_button(app, "Open Dialog with rerun")
 
 
+def open_dialog_with_long_title(app: Page):
+    click_button(app, "Open Dialog with long title")
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -506,3 +510,14 @@ def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     open_dialog_with_images(app)
     check_top_level_class(app, "stDialog")
+
+
+def test_dialog_with_long_title_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a dialog with a very long title displays correctly without overlapping the close button."""
+    open_dialog_with_long_title(app)
+    wait_for_app_run(app)
+    dialog = app.get_by_role("dialog")
+    # Take a snapshot to verify the long title doesn't overlap with the close button
+    assert_snapshot(dialog, name="st_dialog-with_long_title")
