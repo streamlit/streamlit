@@ -107,11 +107,6 @@ with st.expander("Button Width Examples", expanded=True):
     st.button("Content Width (help)", width="content", help="help text")
     st.button("200px Width (help)", width=200, help="help text")
 
-with st.expander("Link Button Width Examples", expanded=True):
-    st.link_button("Content Width (Default)", "https://example.com", width="content")
-    st.link_button("Stretch Width", "https://example.com", width="stretch")
-    st.link_button("400px Width", "https://example.com", width=400)
-
 with st.expander("Page Link Width Examples", expanded=True):
     st.page_link(
         "https://example.com", label="Content Width (Default)", width="content"

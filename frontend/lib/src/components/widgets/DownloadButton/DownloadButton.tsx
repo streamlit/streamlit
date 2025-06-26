@@ -38,7 +38,6 @@ export interface Props {
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
 export function createDownloadLink(
@@ -54,8 +53,7 @@ export function createDownloadLink(
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, endpoints, fragmentId, widthConfig } =
-    props
+  const { disabled, element, widgetMgr, endpoints, fragmentId } = props
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests

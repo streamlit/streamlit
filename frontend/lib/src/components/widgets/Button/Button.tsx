@@ -33,11 +33,10 @@ export interface Props {
   element: ButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
 function Button(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, fragmentId, widthConfig } = props
+  const { disabled, element, widgetMgr, fragmentId } = props
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {

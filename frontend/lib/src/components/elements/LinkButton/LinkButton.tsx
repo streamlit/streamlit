@@ -25,17 +25,15 @@ import {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { Box } from "~lib/components/shared/Base/styled-components"
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 import BaseLinkButton from "./BaseLinkButton"
 
 export interface Props {
   element: LinkButtonProto
-  widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
-  const { element, widthConfig } = props
+  const { element } = props
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -51,15 +49,13 @@ function LinkButton(props: Readonly<Props>): ReactElement {
     }
   }
 
-  const containerWidth = shouldChildrenStretch(widthConfig)
-
   return (
     <Box className="stLinkButton" data-testid="stLinkButton">
       <BaseButtonTooltip
         help={element.help}
         // element.useContainerWidth is no longer used, but we keep it here for
         // proto backwards compatibility.
-        containerWidth={element.useContainerWidth || containerWidth}
+        containerWidth={true}
       >
         {/* We use separate BaseLinkButton instead of BaseButton here, because
         link behavior requires tag <a> instead of <button>.*/}
@@ -70,7 +66,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           onClick={handleClick}
           // element.useContainerWidth is no longer used, but we keep it here for
           // proto backwards compatibility.
-          containerWidth={element.useContainerWidth || containerWidth}
+          containerWidth={true}
           href={element.url}
           target="_blank"
           rel="noreferrer"

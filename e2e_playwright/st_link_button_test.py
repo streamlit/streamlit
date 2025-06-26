@@ -16,9 +16,9 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
-LINK_BUTTON_ELEMENTS = 12
+LINK_BUTTON_ELEMENTS = 18
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -62,3 +62,20 @@ def test_link_button_hover(themed_app: Page, assert_snapshot: ImageCompareFuncti
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stLinkButton")
+
+
+def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test link button width examples via screenshot matching."""
+    # Link button width examples
+    link_expander = get_expander(app, "Link Button Width Examples")
+    link_expander.click()
+
+    link_elements = link_expander.get_by_test_id("stLinkButton")
+    expect(link_elements).to_have_count(3)
+
+    assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
+    assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
+    assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
+    assert_snapshot(link_elements.nth(3), name="st_link_button-width_content_help")
+    assert_snapshot(link_elements.nth(4), name="st_link_button-width_stretch_help")
+    assert_snapshot(link_elements.nth(5), name="st_link_button-width_400px_help")
