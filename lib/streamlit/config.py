@@ -676,12 +676,11 @@ _create_section("server", "Settings for the Streamlit server")
 _create_option(
     "server.folderWatchList",
     description="""
-        List of folders to watch for changes.
+        List of directories to watch for changes.
 
-        By default, Streamlit watches for files in the current working directory.
-        Use this parameter to specify additional folders to watch.
-
-        Note: This is a list of absolute paths.
+        By default, Streamlit watches files in the current working directory
+        and its subdirectories. Use this option to specify additional
+        directories to watch. Paths must be absolute.
     """,
     default_val=[],
     multiple=True,
@@ -690,9 +689,12 @@ _create_option(
 _create_option(
     "server.folderWatchBlacklist",
     description="""
-        List of folders that should not be watched for changes.
+        List of directories to ignore for changes.
 
-        Relative paths will be taken as relative to the current working directory.
+        By default, Streamlit watches files in the current working directory
+        and its subdirectories. Use this option to specify exceptions within
+        watched directories. Paths can be absolute or relative to the current
+        working directory.
 
         Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
@@ -744,6 +746,17 @@ def _server_headless() -> bool:
         and not os.getenv("WAYLAND_DISPLAY")
     )
 
+
+_create_option(
+    "server.showEmailPrompt",
+    description="""
+        Whether to show a terminal prompt for the user to enter their email
+        address when they run Streamlit for the first time. If you set
+        `server.headless=True`, Streamlit will not show this prompt.
+    """,
+    default_val=True,
+    type_=bool,
+)
 
 _create_option(
     "server.runOnSave",
@@ -812,6 +825,19 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.customComponentBaseUrlPath",
+    description="""
+        The base path for the URL where Streamlit should serve custom
+        components. If this config var is set and a call to ``declare_component``
+        does not specify a URL, the component's URL will be set to
+        ``f"{server.customComponentBaseUrlPath}/{component_name}/"``.
+    """,
+    default_val="",
+    type_=str,
+    visibility="hidden",
+)
+
 # TODO: Rename to server.enableCorsProtection.
 _create_option(
     "server.enableCORS",
@@ -829,9 +855,11 @@ _create_option(
 _create_option(
     "server.corsAllowedOrigins",
     description="""
-        If CORS protection is enabled (when server.enableCORS=True), allows an
-        app developer to set a list of allowed origins that the Streamlit server
-        will accept traffic from.
+        Allowed list of origins.
+
+        If CORS protection is enabled (`server.enableCORS=True`), use this
+        option to set a list of allowed origins that the Streamlit server will
+        accept traffic from.
 
         This config option does nothing if CORS protection is disabled.
 
@@ -1130,6 +1158,15 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "linkUnderline",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Whether or not links should be displayed with an underline.
+    """,
+    type_=bool,
+)
+
+_create_theme_options(
     "codeBackgroundColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
@@ -1141,14 +1178,14 @@ _create_theme_options(
     "font",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        The font family for all text, except code blocks. This can be one of
-        the following:
+        The font family for all text, except code blocks.
 
+        This can be one of the following:
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `family` value for a custom font table under [[theme.fontFaces]]
-        - a comma-separated list of these (as a single string) to specify
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A comma-separated list of these (as a single string) to specify
           fallbacks
 
         For example, you can use the following:
@@ -1161,29 +1198,57 @@ _create_theme_options(
     "codeFont",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        The font family to use for code (monospace) in the sidebar. This can be
-        one of the following:
+        The font family to use for code (monospace) in the sidebar.
 
+        This can be one of the following:
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `family` value for a custom font table under [[theme.fontFaces]]
-        - a comma-separated list of these (as a single string) to specify
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A comma-separated list of these (as a single string) to specify
           fallbacks
     """,
+)
+
+_create_theme_options(
+    "codeFontSize",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Sets the font size (in pixels or rem) for code blocks and code text.
+
+        This applies to code blocks (ex: `st.code`), as well as font in `st.json` and `st.help`.
+        It does not apply to inline code, which is set by default to 0.75em.
+
+        When unset, the code font size will be 0.875rem.
+    """,
+)
+
+_create_theme_options(
+    "codeFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for code blocks and code text.
+
+        This applies to inline code, code blocks (ex: `st.code`), and font in `st.json` and `st.help`.
+        Valid values are 100-900, in increments of 100.
+
+        When unset, the default code font weight will be 400.
+    """,
+    type_=int,
 )
 
 _create_theme_options(
     "headingFont",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
-        The font family to use for headings. This can be one of the following:
+        The font family to use for headings.
 
+        This can be one of the following:
         - "sans-serif"
         - "serif"
         - "monospace"
-        - the `family` value for a custom font table under [[theme.fontFaces]]
-        - a comma-separated list of these (as a single string) to specify
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A comma-separated list of these (as a single string) to specify
           fallbacks
 
         If no heading font is set, Streamlit uses `theme.font` for headings.
@@ -1196,21 +1261,27 @@ _create_theme_options(
     description="""
         An array of fonts to use in your app.
 
-        Each font in the array is a table (dictionary) with the following three
-        attributes: family, url, weight, and style.
+        Each font in the array is a table (dictionary) that can have the
+        following attributes, closely resembling CSS font-face definitions:
+        - family
+        - url
+        - weight (optional)
+        - style (optional)
+        - unicodeRange (optional)
 
         To host a font with your app, enable static file serving with
         `server.enableStaticServing=true`.
 
-        You can define multiple [[theme.fontFaces]] tables.
+        You can define multiple [[theme.fontFaces]] tables, including multiple
+        tables with the same family if your font is defined by multiple files.
 
-        For example, each font is defined in a [[theme.fontFaces]] table as
-        follows:
+        For example, a font hosted with your app may have a [[theme.fontFaces]]
+        table as follows:
 
             [[theme.fontFaces]]
             family = "font_name"
             url = "app/static/font_file.woff"
-            weight = 400
+            weight = "400"
             style = "normal"
     """,
 )
@@ -1227,9 +1298,10 @@ _create_theme_options(
         - "medium"
         - "large"
         - "full"
-        - ...or the number in pixels or rem. For example, you can use "10px",
-          "0.5rem", or "2rem". To follow best practices, use rem instead of
-          pixels when specifying a numeric size.
+        - The number in pixels or rem.
+
+        For example, you can use "10px", "0.5rem", or "2rem". To follow best
+        practices, use rem instead of pixels when specifying a numeric size.
     """,
 )
 
@@ -1245,9 +1317,12 @@ _create_theme_options(
         - "medium"
         - "large"
         - "full"
-        - ...or the number in pixels or rem. For example, you can use "10px",
-          "0.5rem", or "2rem". To follow best practices, use rem instead of
-          pixels when specifying a numeric size.
+        - The number in pixels or rem.
+
+        For example, you can use "10px", "0.5rem", or "2rem". To follow best
+        practices, use rem instead of pixels when specifying a numeric size.
+
+        If no button radius is set, Streamlit uses `theme.baseRadius` instead.
     """,
 )
 
@@ -1264,6 +1339,20 @@ _create_theme_options(
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         The color of the border around dataframes and tables.
+
+        If no dataframe border color is set, Streamlit uses `theme.borderColor`
+        instead.
+    """,
+)
+
+_create_theme_options(
+    "dataframeHeaderBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        The background color of the dataframe's header.
+
+        If no dataframe header background color is set, Streamlit uses a mix of
+        `theme.bgColor` and `theme.secondaryBg`.
     """,
 )
 
@@ -1272,6 +1361,16 @@ _create_theme_options(
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Whether to show a border around input widgets.
+    """,
+    type_=bool,
+)
+
+_create_theme_options(
+    "showSidebarBorder",
+    categories=["theme"],
+    description="""
+        Whether to show a vertical separator between the sidebar and the main
+        content area.
     """,
     type_=bool,
 )
@@ -1290,13 +1389,17 @@ _create_theme_options(
 )
 
 _create_theme_options(
-    "showSidebarBorder",
+    "baseFontWeight",
     categories=["theme"],
     description="""
-        Whether to show a vertical separator between the sidebar and the main
-        content area.
+        Sets the root font weight for the app.
+
+        This determines the overall weight of text and UI elements.
+        Valid values are 100-600, in increments of 100.
+
+        When unset, the font weight will be set to normal 400.
     """,
-    type_=bool,
+    type_=int,
 )
 
 # Config Section: Secrets #

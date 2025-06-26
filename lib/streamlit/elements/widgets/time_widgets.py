@@ -441,9 +441,14 @@ class TimeWidgetsMixin:
             You can also pass a datetime.timedelta object.
 
         width : "stretch" or int
-            The width of the time input. If "stretch", the time input will stretch
-            to fill the available space. If a number, the time input will have a
-            fixed width of that many pixels. Defaults to "stretch".
+            The width of the time input widget. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -770,9 +775,14 @@ class TimeWidgetsMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "stretch" or int
-            The width of the date input. If "stretch", the date input will stretch
-            to fill the available space. If a number, the date input will have a
-            fixed width of that many pixels. Defaults to "stretch".
+            The width of the date input widget. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -893,10 +903,7 @@ class TimeWidgetsMixin:
         if value == "today":
             parsed = None
         elif isinstance(value, Sequence):
-            parsed = [
-                parse_date_deterministic_for_id(cast("NullableScalarDateValue", v))
-                for v in value
-            ]
+            parsed = [parse_date_deterministic_for_id(v) for v in value]
         else:
             parsed = parse_date_deterministic_for_id(value)
 

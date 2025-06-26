@@ -130,6 +130,7 @@ function parsePandasIndexData(
  * Example:
  * "('1','foo')" -> ["1", "foo"]
  * "foo" -> ["foo"]
+ * "('1','foo (bar)')" -> ["1", "foo (bar)"]
  */
 function parseHeaderName(name: string, numLevels: number): string[] {
   if (numLevels === 1) {
@@ -138,7 +139,7 @@ function parseHeaderName(name: string, numLevels: number): string[] {
 
   try {
     return JSON.parse(
-      name.replace(/\(/g, "[").replace(/\)/g, "]").replace(/'/g, '"')
+      name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replace(/'/g, '"')
     )
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {

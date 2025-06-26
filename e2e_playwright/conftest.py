@@ -46,6 +46,7 @@ from playwright.sync_api import (
     Page,
     Response,
     Route,
+    expect,
 )
 from typing_extensions import Self
 
@@ -70,6 +71,9 @@ def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line(
         "markers", "no_perf: mark test to not use performance profiling"
+    )
+    config.addinivalue_line(
+        "markers", "app_hash(hash): mark test to open the app with a URL hash"
     )
 
 
@@ -259,45 +263,27 @@ def app_server(
     request: pytest.FixtureRequest,
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the Streamlit app server."""
-    streamlit_proc = AsyncSubprocess(
-        [
-            "streamlit",
-            "run",
-            resolve_test_to_script(request.module),
-            "--server.headless",
-            "true",
-            "--global.developmentMode",
-            "false",
-            "--global.e2eTest",
-            "true",
-            "--server.port",
-            str(app_port),
-            "--browser.gatherUsageStats",
-            "false",
-            "--server.fileWatcherType",
-            "none",
-            "--server.enableStaticServing",
-            "true",
-            *app_server_extra_args,
-        ],
-        cwd=".",
+    streamlit_proc = start_app_server(
+        app_port,
+        request.module,
+        extra_args=app_server_extra_args,
     )
-    streamlit_proc.start()
-    if not wait_for_app_server_to_start(app_port):
-        streamlit_stdout = streamlit_proc.terminate()
-        print(streamlit_stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
     yield streamlit_proc
     streamlit_stdout = streamlit_proc.terminate()
     print(streamlit_stdout, flush=True)
 
 
 @pytest.fixture
-def app(page: Page, app_port: int) -> Page:
+def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
     """Fixture that opens the app."""
+    marker = request.node.get_closest_marker("app_hash")
+    hash_fragment = ""
+    if marker:
+        hash_fragment = f"#{marker.args[0]}"
+
     response: Response | None = None
     try:
-        response = page.goto(f"http://localhost:{app_port}/")
+        response = page.goto(f"http://localhost:{app_port}/{hash_fragment}")
     except Exception as e:
         print(e, flush=True)
 
@@ -684,7 +670,11 @@ def assert_snapshot(
     """Fixture that compares a screenshot with screenshot from a past run."""
 
     # Check if reruns are enabled for this test run
-    configured_reruns = pytestconfig.getoption("reruns", 0)
+    flaky_marker = request.node.get_closest_marker("flaky")
+    if flaky_marker and "reruns" in flaky_marker.kwargs:
+        configured_reruns = flaky_marker.kwargs["reruns"]
+    else:
+        configured_reruns = pytestconfig.getoption("reruns", 0)
     # Get the current execution count:
     execution_count = getattr(request.node, "execution_count", 1)
     # True if this is the last rerun (or the only test run)
@@ -942,6 +932,10 @@ def wait_for_app_run(
         state="attached",
     )
 
+    # Wait for all element skeletons to be removed.
+    # This is useful to make sure that all elements have been rendered.
+    expect(page_or_locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=25000)
+
     if wait_delay > 0:
         # Give the app a little more time to render everything
         page.wait_for_timeout(wait_delay)
@@ -1019,6 +1013,75 @@ def wait_until(
             if timed_out():
                 raise TimeoutError(timeout_msg)
         page.wait_for_timeout(interval)
+
+
+def start_app_server(
+    app_port: int,
+    request_module: ModuleType,
+    *,
+    extra_env: dict[str, str] | None = None,
+    extra_args: list[str] | None = None,
+) -> AsyncSubprocess:
+    """Start a Streamlit app server for the given *test module*.
+
+    This helper centralizes the logic for spinning up a Streamlit subprocess so
+    it can be reused by different pytest fixtures (for example, tests that
+    require per-test environment variables).
+
+    Parameters
+    ----------
+    app_port : int
+        Port on which the server should listen.
+    request_module : ModuleType
+        The pytest *module object* that triggered the server start. This is
+        needed to resolve the Streamlit script that belongs to the test.
+    extra_env : dict[str, str] | None, optional
+        Additional environment variables to set for the subprocess.
+    extra_args : list[str] | None, optional
+        Additional command-line arguments to pass to *streamlit run*.
+
+    Returns
+    -------
+    AsyncSubprocess
+        The running Streamlit subprocess wrapper. *Call ``terminate()`` on the
+        returned object to stop the server and obtain the captured output.*
+    """
+    env = {**os.environ.copy(), **(extra_env or {})}
+
+    args = [
+        "streamlit",
+        "run",
+        resolve_test_to_script(request_module),
+        "--server.headless",
+        "true",
+        "--global.developmentMode",
+        "false",
+        "--global.e2eTest",
+        "true",
+        "--server.port",
+        str(app_port),
+        "--browser.gatherUsageStats",
+        "false",
+        "--server.fileWatcherType",
+        "none",
+        "--server.enableStaticServing",
+        "true",
+    ]
+
+    # Append any caller-supplied extra args at the end so they can override
+    # defaults when necessary.
+    if extra_args:
+        args.extend(extra_args)
+
+    proc = AsyncSubprocess(args, cwd=".", env=env)
+    proc.start()
+
+    if not wait_for_app_server_to_start(app_port):
+        stdout = proc.terminate()
+        print(stdout, flush=True)
+        raise RuntimeError("Unable to start Streamlit app")
+
+    return proc
 
 
 # endregion

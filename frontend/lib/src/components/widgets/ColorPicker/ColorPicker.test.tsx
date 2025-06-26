@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
@@ -101,15 +101,19 @@ describe("ColorPicker widget", () => {
 
     render(<ColorPicker {...props} />)
 
-    const newColor = "#e91e63"
+    // Open the color picker
     const colorBlock = screen.getByTestId("stColorPickerBlock")
     await user.click(colorBlock)
 
-    // Our widget should be updated.
+    // Clear the color input text field
     const colorInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(colorInput, { target: { value: newColor } })
+    await user.tripleClick(colorInput)
+    await user.keyboard("{backspace}")
+
+    // Enter the new color in the input field
+    const newColor = "#e91e63"
+    await user.type(colorInput, newColor)
+
     // Close out of the popover
     await user.click(colorBlock)
 
@@ -131,19 +135,23 @@ describe("ColorPicker widget", () => {
 
     render(<ColorPicker {...props} />)
 
-    // Choose a new color
-    const newColor = "#e91e63"
+    // Open the color picker
     const colorBlock = screen.getByTestId("stColorPickerBlock")
     await user.click(colorBlock)
 
+    // Clear the color input text field
     const colorInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(colorInput, { target: { value: newColor } })
+    await user.tripleClick(colorInput)
+    await user.keyboard("{backspace}")
+
+    // Enter the new color in the input field
+    const newColor = "#e91e63"
+    await user.type(colorInput, newColor)
+
     // Close out of the popover
     await user.click(colorBlock)
 
-    expect(colorInput).toHaveValue(newColor)
+    expect(colorInput).toHaveValue(newColor.toUpperCase())
     expect(colorBlock).toHaveStyle(`background-color: ${newColor}`)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,

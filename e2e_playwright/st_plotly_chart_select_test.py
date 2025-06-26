@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -21,6 +21,16 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     get_element_by_key,
 )
+
+
+def _check_toolbar_visibility(chart_element: Locator):
+    """Check that the toolbar is visible."""
+
+    fullscreen_button = chart_element.locator(
+        ".modebar-group:has([data-title='Fullscreen'])"
+    )
+    expect(fullscreen_button).to_be_visible()
+    expect(fullscreen_button).to_have_css("opacity", "1")
 
 
 def test_box_select_on_scatter_chart_displays_a_df(app: Page):
@@ -81,6 +91,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
 
     # Hover chart to show toolbar:
     chart.hover()
+    _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-double_select")
     expect(app.get_by_text("Selected points: 2")).to_be_attached()
 
@@ -93,6 +104,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     chart.scroll_into_view_if_needed()
     # Hover chart to show toolbar:
     chart.hover()
+    _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
 
 
@@ -113,6 +125,7 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
 @pytest.mark.only_browser(
     "chromium"
 )  # Flaky on WebKit and Firefox, but manually tested
+@pytest.mark.flaky(reruns=4)
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -144,6 +157,7 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
 
     # Hover chart to show toolbar:
     chart.hover()
+    _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-reset")
 
 
@@ -168,6 +182,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     chart.scroll_into_view_if_needed()
     # Hover chart to show toolbar:
     chart.hover()
+    _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
 
 
@@ -193,6 +208,7 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
 
     # Hover chart to show toolbar:
     chart.hover()
+    _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-panned")
 
     # Hover to position the cursor for a more reliable double click
@@ -202,6 +218,7 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
 
     # Hover chart to show toolbar:
     chart.hover()
+    _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-panned_reset")
 
 
@@ -232,6 +249,7 @@ def test_selection_state_remains_after_unmounting(
     expect(chart).to_be_visible()
     # Hover chart to show toolbar:
     chart.hover()
+    _check_toolbar_visibility(chart)
     assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
 
 

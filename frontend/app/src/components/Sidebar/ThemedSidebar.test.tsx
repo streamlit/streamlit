@@ -29,12 +29,19 @@ import { CustomThemeConfig } from "@streamlit/protobuf"
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar, { createSidebarTheme } from "./ThemedSidebar"
 
-function getProps(
-  props: Partial<SidebarProps> = {}
-): Omit<SidebarProps, "chevronDownshift"> {
+function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   return {
     endpoints: mockEndpoints(),
     hasElements: true,
+    appPages: [],
+    navSections: [],
+    onPageChange: vi.fn(),
+    currentPageScriptHash: "",
+    hideSidebarNav: false,
+    expandSidebarNav: false,
+    isCollapsed: false,
+    onToggleCollapse: vi.fn(),
+    appLogo: null,
     ...props,
   }
 }

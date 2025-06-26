@@ -247,6 +247,23 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveAttribute("alt", "Streamlit logo")
   })
 
+  it("renders streamlit logo with allowHTML=true", () => {
+    render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
+    const image = screen.getByRole("img")
+    expect(image).toHaveAttribute("alt", "Streamlit logo")
+    expect(image).toHaveStyle("display: inline-block")
+    expect(image).toHaveStyle("user-select: none")
+  })
+
+  it("renders material icons with allowHTML=true", () => {
+    const source = `:material/search: Icon`
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const markdown = screen.getByText("search")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
+  })
+
   // Typographical symbol replacements
   const symbolReplacementCases = [
     { input: "a -> b", tag: "p", expected: "a → b" },
@@ -511,13 +528,10 @@ describe("StreamlitMarkdown", () => {
 const getCustomCodeTagProps = (
   props: Partial<CustomCodeTagProps> = {}
 ): CustomCodeTagProps => ({
-  children: [
-    `import streamlit as st
+  children: `import streamlit as st
 
 st.write("Hello")
 `,
-  ],
-  node: { type: "element", tagName: "tagName", children: [] },
   ...props,
 })
 
@@ -540,7 +554,7 @@ describe("CustomCodeTag Element", () => {
 
   it("should render copy button when code block has content", () => {
     const props = getCustomCodeTagProps({
-      children: ["i am not empty"],
+      children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
     const copyButton = screen.getByTitle("Copy to clipboard")
@@ -550,7 +564,7 @@ describe("CustomCodeTag Element", () => {
 
   it("should not render copy button when code block is empty", () => {
     const props = getCustomCodeTagProps({
-      children: [""],
+      children: "",
     })
     render(<CustomCodeTag {...props} />)
     // queryBy returns null vs. error
@@ -573,19 +587,6 @@ describe("CustomCodeTag Element", () => {
         'st.write("Hello")\n' +
         "</code></div>"
     )
-  })
-
-  it("should trim leading and final newlines", () => {
-    const props = getCustomCodeTagProps({
-      children: [
-        `
-      def hello():
-          print("Hello, Streamlit!")
-`,
-      ],
-    })
-    const { baseElement } = render(<CustomCodeTag {...props} />)
-    expect(baseElement).toMatchSnapshot()
   })
 })
 

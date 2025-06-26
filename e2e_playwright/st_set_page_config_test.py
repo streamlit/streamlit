@@ -26,6 +26,10 @@ from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 
 def test_wide_layout(app: Page):
+    """Test the default layout is centered and calling set_page_config with
+    layout="wide" sets the layout to wide.
+    """
+
     app_view_container = app.get_by_test_id("stAppViewContainer")
     # The default layout is "centered":
     expect(app_view_container).to_have_attribute("data-layout", "narrow")
@@ -81,6 +85,9 @@ def test_wide_layout_with_small_viewport(app: Page):
 
 
 def test_centered_layout(app: Page):
+    """Test that calling set_page_config with layout="centered" sets the layout
+    to centered.
+    """
     click_button(app, "Centered Layout")
     expect(app).to_have_title("Centered Layout")
     app_view_container = app.get_by_test_id("stAppViewContainer")
@@ -97,6 +104,9 @@ def test_allows_preceding_command_in_callback(app: Page):
 
 
 def test_with_collapsed_sidebar(app: Page):
+    """Test that calling set_page_config with initial_sidebar_state="collapsed"
+    sets the sidebar to collapsed.
+    """
     click_button(app, "Collapsed Sidebar")
     expect(app).to_have_title("Collapsed Sidebar")
     sidebar = app.get_by_test_id("stSidebar")
@@ -105,6 +115,9 @@ def test_with_collapsed_sidebar(app: Page):
 
 
 def test_with_expanded_sidebar(app: Page):
+    """Test that calling set_page_config with initial_sidebar_state="expanded"
+    sets the sidebar to expanded.
+    """
     click_button(app, "Expanded Sidebar")
     expect(app).to_have_title("Expanded Sidebar")
     sidebar = app.get_by_test_id("stSidebar")
@@ -113,6 +126,9 @@ def test_with_expanded_sidebar(app: Page):
 
 
 def test_page_icon_with_emoji_shortcode(app: Page):
+    """Test that calling set_page_config with page_icon=":shark:" sets
+    the page icon to a shark emoji.
+    """
     click_button(app, "Page Config With Emoji Shortcode")
     expect(app).to_have_title("With Emoji Shortcode")
     favicon = app.locator("link[rel='shortcut icon']")
@@ -125,6 +141,9 @@ def test_page_icon_with_emoji_shortcode(app: Page):
 
 
 def test_page_icon_with_emoji_symbol(app: Page):
+    """Test that calling set_page_config with page_icon="🐦‍🔥" sets
+    the page icon to a phoenix emoji.
+    """
     click_button(app, "Page Config With Emoji Symbol")
     expect(app).to_have_title("With Emoji Symbol")
     favicon = app.locator("link[rel='shortcut icon']")
@@ -136,6 +155,9 @@ def test_page_icon_with_emoji_symbol(app: Page):
 
 
 def test_page_icon_with_local_icon_str(app: Page):
+    """Test that calling set_page_config with a local icon string for page_icon
+    sets as expected.
+    """
     click_button(app, "Page Config With Local Icon Str")
     expect(app).to_have_title("With Local Icon Str")
     favicon_element = app.locator("link[rel='shortcut icon']")
@@ -145,6 +167,9 @@ def test_page_icon_with_local_icon_str(app: Page):
 
 
 def test_page_icon_with_local_icon(app: Page):
+    """Test that calling set_page_config with a local icon path for page_icon
+    sets as expected.
+    """
     click_button(app, "Page Config With Local Icon Path")
     expect(app).to_have_title("With Local Icon Path")
     favicon_element = app.locator("link[rel='shortcut icon']")
@@ -154,6 +179,9 @@ def test_page_icon_with_local_icon(app: Page):
 
 
 def test_page_icon_with_material_icon(app: Page):
+    """Test that calling set_page_config with a material icon for page_icon
+    sets as expected.
+    """
     click_button(app, "Page Config With Material Icon")
     expect(app).to_have_title("With Material Icon")
     favicon = app.locator("link[rel='shortcut icon']")
@@ -166,12 +194,18 @@ def test_page_icon_with_material_icon(app: Page):
 
 # Tests for removal of set page config restrictions:
 def test_allow_double_set_page_config(app: Page):
+    """Test that calling set_page_config multiple times no longer triggers
+    an error.
+    """
     click_button(app, "Double Set Page Config")
     expect_no_exception(app)
     expect(app).to_have_title("Page Config 2")
 
 
 def test_allow_set_page_config_not_first_command(app: Page):
+    """Test that calling set_page_config after the first command does not trigger
+    an error.
+    """
     click_button(app, "Page Config not first command")
     favicon = app.locator("link[rel='shortcut icon']")
     expect(favicon).to_have_attribute(
@@ -184,6 +218,9 @@ def test_allow_set_page_config_not_first_command(app: Page):
 
 
 def test_set_page_config_properties_additive(app: Page):
+    """Test that calling set_page_config multiple times with different properties
+    sets as expected (properties are additive).
+    """
     click_button(app, "Set Page Config Properties Additive")
     expect_no_exception(app)
     expect(app).to_have_title("Page Config Additive")
@@ -196,10 +233,37 @@ def test_set_page_config_properties_additive(app: Page):
     expect(app_view_container).to_have_attribute("data-layout", "wide")
 
 
+def test_set_page_config_layout_additive(app: Page):
+    """Test that calling set_page_config multiple times with different layout
+    configs sets as expected (properties are additive).
+    """
+    click_button(app, "Layout Additive")
+    expect_no_exception(app)
+    expect(app).to_have_title("Updated")
+    app_view_container = app.get_by_test_id("stAppViewContainer")
+    # Layout set to None should inherit config from previous call
+    expect(app_view_container).to_have_attribute("data-layout", "wide")
+
+
+def test_set_page_config_sidebar_additive(app: Page):
+    """Test that calling set_page_config multiple times with different sidebar
+    configs sets as expected (properties are additive).
+    """
+    click_button(app, "Sidebar Additive")
+    expect_no_exception(app)
+    expect(app).to_have_title("Updated")
+    sidebar = app.get_by_test_id("stSidebar")
+    # Sidebar set to None should inherit config from previous call
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
+
+
 # Webkit (safari) doesn't support screencast on linux machines, so menu item
 # indices not the same as other browsers
 @pytest.mark.skip_browser("webkit")
 def test_set_page_config_menu_items_additive(app: Page):
+    """Test that calling set_page_config multiple times with different menu
+    items sets as expected (properties are additive).
+    """
     click_button(app, "Set Page Config Menu Items Additive")
     expect_no_exception(app)
 
@@ -214,6 +278,9 @@ def test_set_page_config_menu_items_additive(app: Page):
 
 @pytest.mark.skip_browser("webkit")
 def test_set_page_config_menu_items_overwrites(app: Page):
+    """Test that menu items can be overwritten by calling set_page_config
+    multiple times.
+    """
     # Set the initial menu items:
     click_button(app, "Set Initial Menu Items")
     expect_no_exception(app)
@@ -240,8 +307,6 @@ def test_set_page_config_menu_items_overwrites(app: Page):
     main_menu_items = app.get_by_test_id("stMainMenuList").first.get_by_role("option")
     # Get help should still be present in the main menu from the 1st call:
     expect(main_menu_items.nth(4)).to_have_text("Get help")
-    main_menu_items.nth(5).click()
-    about_dialog = app.get_by_role("dialog")
-    expect(about_dialog).to_be_visible()
-    # The about section markdown should not contain the updated text:
-    expect(about_dialog).not_to_contain_text("UPDATED")
+    # About menu item should no longer be present since it was set to None, so there
+    # should be one less menu item now
+    expect(main_menu_items).to_have_count(5)

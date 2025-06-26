@@ -16,7 +16,7 @@
 
 import React, { Fragment, ReactElement, useContext } from "react"
 
-import type { Components } from "react-markdown/lib/ast-to-react"
+import { Components } from "react-markdown"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 

@@ -101,7 +101,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     margin: 0 0 1rem 0;
     padding: 0;
     font-size: 1rem;
-    font-weight: 400;
+    font-weight: ${theme.fontWeights.normal};
   }
 
   ol ol,
@@ -214,14 +214,20 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
     ::-webkit-scrollbar {
       background: transparent;
-      border-radius: 100px;
+    }
+
+    ::-webkit-scrollbar:vertical {
       width: 6px;
+    }
+
+    ::-webkit-scrollbar:horizontal {
+      height: 6px;
     }
 
     ::-webkit-scrollbar-thumb:vertical,
     ::-webkit-scrollbar-thumb:horizontal {
       background: ${theme.colors.fadedText40};
-      border-radius: 100px;
+      border-radius: ${theme.radii.full};
     }
   }
 `

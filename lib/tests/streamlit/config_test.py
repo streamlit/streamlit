@@ -486,17 +486,22 @@ class ConfigTest(unittest.TestCase):
                 "theme.secondaryBackgroundColor",
                 "theme.textColor",
                 "theme.baseFontSize",
+                "theme.baseFontWeight",
                 "theme.baseRadius",
                 "theme.buttonRadius",
                 "theme.font",
                 "theme.headingFont",
                 "theme.codeFont",
+                "theme.codeFontSize",
+                "theme.codeFontWeight",
                 "theme.fontFaces",
                 "theme.borderColor",
                 "theme.dataframeBorderColor",
                 "theme.showWidgetBorder",
                 "theme.linkColor",
+                "theme.linkUnderline",
                 "theme.codeBackgroundColor",
+                "theme.dataframeHeaderBackgroundColor",
                 "theme.showSidebarBorder",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
@@ -507,11 +512,14 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.font",
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
+                "theme.sidebar.codeFontSize",
                 "theme.sidebar.borderColor",
                 "theme.sidebar.dataframeBorderColor",
                 "theme.sidebar.showWidgetBorder",
                 "theme.sidebar.linkColor",
+                "theme.sidebar.linkUnderline",
                 "theme.sidebar.codeBackgroundColor",
+                "theme.sidebar.dataframeHeaderBackgroundColor",
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",
@@ -534,6 +542,7 @@ class ConfigTest(unittest.TestCase):
                 "mapbox.token",
                 "secrets.files",
                 "server.baseUrlPath",
+                "server.customComponentBaseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
                 "server.corsAllowedOrigins",
@@ -544,6 +553,7 @@ class ConfigTest(unittest.TestCase):
                 "server.folderWatchList",
                 "server.folderWatchBlacklist",
                 "server.headless",
+                "server.showEmailPrompt",
                 "server.address",
                 "server.allowRunOnSave",
                 "server.port",
@@ -671,12 +681,17 @@ class ConfigTest(unittest.TestCase):
             "dataframeBorderColor": None,
             "showWidgetBorder": None,
             "linkColor": None,
+            "linkUnderline": None,
             "font": None,
             "headingFont": None,
             "codeFont": None,
+            "codeFontSize": None,
+            "codeFontWeight": None,
             "fontFaces": None,
             "baseFontSize": None,
+            "baseFontWeight": None,
             "codeBackgroundColor": None,
+            "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
         }
         assert config.get_options_for_section("theme") == expected
@@ -696,7 +711,9 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.dataframeBorderColor", "#280f63", "test")
         config._set_option("theme.showWidgetBorder", True, "test")
         config._set_option("theme.linkColor", "#2EC163", "test")
+        config._set_option("theme.linkUnderline", False, "test")
         config._set_option("theme.codeBackgroundColor", "#29361e", "test")
+        config._set_option("theme.dataframeHeaderBackgroundColor", "#29361e", "test")
         config._set_option("theme.font", "Inter", "test")
         config._set_option("theme.headingFont", "Inter", "test")
         config._set_option(
@@ -711,7 +728,10 @@ class ConfigTest(unittest.TestCase):
             "test",
         )
         config._set_option("theme.codeFont", "Monaspace Argon", "test")
+        config._set_option("theme.codeFontSize", "12px", "test")
+        config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
+        config._set_option("theme.baseFontWeight", 300, "test")
         config._set_option("theme.showSidebarBorder", True, "test")
 
         expected = {
@@ -726,10 +746,14 @@ class ConfigTest(unittest.TestCase):
             "dataframeBorderColor": "#280f63",
             "showWidgetBorder": True,
             "linkColor": "#2EC163",
+            "linkUnderline": False,
             "font": "Inter",
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
+            "codeFontSize": "12px",
+            "codeFontWeight": 300,
             "codeBackgroundColor": "#29361e",
+            "dataframeHeaderBackgroundColor": "#29361e",
             "fontFaces": [
                 {
                     "family": "Inter",
@@ -738,6 +762,7 @@ class ConfigTest(unittest.TestCase):
                 },
             ],
             "baseFontSize": 14,
+            "baseFontWeight": 300,
             "showSidebarBorder": True,
         }
         assert config.get_options_for_section("theme") == expected
@@ -756,10 +781,15 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.dataframeBorderColor", "#280f63", "test")
         config._set_option("theme.sidebar.showWidgetBorder", True, "test")
         config._set_option("theme.sidebar.linkColor", "#2EC163", "test")
+        config._set_option("theme.sidebar.linkUnderline", False, "test")
         config._set_option("theme.sidebar.font", "Inter", "test")
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
+        config._set_option("theme.sidebar.codeFontSize", "12px", "test")
         config._set_option("theme.sidebar.codeBackgroundColor", "#29361e", "test")
+        config._set_option(
+            "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
+        )
 
         expected = {
             "primaryColor": "#FFF000",
@@ -772,10 +802,13 @@ class ConfigTest(unittest.TestCase):
             "dataframeBorderColor": "#280f63",
             "showWidgetBorder": True,
             "linkColor": "#2EC163",
+            "linkUnderline": False,
             "font": "Inter",
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
+            "codeFontSize": "12px",
             "codeBackgroundColor": "#29361e",
+            "dataframeHeaderBackgroundColor": "#29361e",
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 

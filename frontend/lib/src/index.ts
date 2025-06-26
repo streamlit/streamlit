@@ -64,6 +64,7 @@ export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
 export { useRequiredContext } from "./hooks/useRequiredContext"
+export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
@@ -110,6 +111,7 @@ export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export { fonts, spacing } from "./theme/primitives"
 export { ensureError } from "./util/ErrorHandling"
 export { useIsOverflowing } from "./util/Hooks"
+export { isMobile } from "./util/isMobile"
 export {
   mark,
   measure,

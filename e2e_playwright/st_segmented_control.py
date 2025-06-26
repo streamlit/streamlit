@@ -55,6 +55,8 @@ s1 = st.segmented_control(
         "🎥 Video",
         "📝 Text",
         "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝"
+        ", yes, long long long long text"
+        ", yes, long long long long text"
         ", yes, long long long long text",
     ],
     key="segmented_control_multi_selection",
@@ -147,7 +149,7 @@ st.write(
 st.header("Segmented Control in fragment", anchor="segmented-control-in-fragment")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     s5 = st.segmented_control(
         "Select an emotion:",
@@ -175,6 +177,26 @@ s6 = st.segmented_control(
 )
 st.write("segmented-control-after-sleep:", str(s6))
 
+st.segmented_control(
+    "Segmented control with content width",
+    ["Option 1", "Option 2", "Option 3 with more content"],
+    width="content",
+    key="segmented_control_content_width",
+)
+
+st.segmented_control(
+    "Segmented control with stretch width",
+    ["Option 1", "Option 2", "Option 3 more content"],
+    width="stretch",
+    key="segmented_control_stretch_width",
+)
+
+st.segmented_control(
+    "Segmented control with 300px width",
+    ["Option 1", "Option 2", "Option 3 with more content"],
+    width=300,
+    key="segmented_control_300px_width",
+)
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0

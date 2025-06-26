@@ -205,6 +205,10 @@ class StreamlitPage:
 
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
+
+        if icon is not None:
+            # validate user provided icon.
+            validate_icon_or_emoji(icon)
         self._icon: str = icon or inferred_icon
 
         if self._title.strip() == "":

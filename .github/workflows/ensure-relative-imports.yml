@@ -50,7 +50,6 @@ jobs:
         run: make protobuf
       - name: Build frontend lib for production
         run: |
-          make frontend-dependencies
           cd frontend/ ; yarn workspace @streamlit/lib build;
       - name: Ensure relative imports exist in @streamlit/lib
         # Ensure relative imports exist within the lib/dist folder

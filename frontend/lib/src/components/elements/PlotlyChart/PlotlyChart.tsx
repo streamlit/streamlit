@@ -24,17 +24,16 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
-import { EmotionTheme } from "~lib/theme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
 
@@ -81,7 +80,7 @@ export function PlotlyChart({
   fragmentId,
   disableFullscreenMode,
 }: Readonly<PlotlyChartProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
     width: elWidth,

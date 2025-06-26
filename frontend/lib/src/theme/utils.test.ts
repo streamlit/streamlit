@@ -181,7 +181,7 @@ describe("Cached theme helpers", () => {
         backgroundColor: "orange",
         secondaryBackgroundColor: "yellow",
         textColor: "green",
-        bodyFont: '"Source Sans Pro", sans-serif',
+        bodyFont: '"Source Sans", sans-serif',
       }
 
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
@@ -226,7 +226,7 @@ describe("Cached theme helpers", () => {
       backgroundColor: "orange",
       secondaryBackgroundColor: "yellow",
       textColor: "green",
-      bodyFont: '"Source Sans Pro", sans-serif',
+      bodyFont: '"Source Sans", sans-serif',
     }
     const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
 
@@ -576,6 +576,10 @@ describe("isColor", () => {
 })
 
 describe("createEmotionTheme", () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("sets to light when matchMedia does not match dark", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       headingFont: "serif",
@@ -632,6 +636,58 @@ describe("createEmotionTheme", () => {
     expect(theme.genericFonts.headingFont).toBe(theme.fonts.monospace)
   })
 
+  it.each([
+    // Test valid codeFontSize values
+    // Inline code font size unaffected, set to 0.75em
+    ["0.875rem", "0.875rem", "0.75em"],
+    ["0.875REM", "0.875rem", "0.75em"],
+    ["14px", "14px", "0.75em"],
+    ["14PX", "14px", "0.75em"],
+    ["15", "15px", "0.75em"],
+  ])(
+    "correctly applies codeFontSize and inlineCodeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid codeFontSize values
+    ["invalid", "0.875rem", "0.75em"],
+    ["rem", "0.875rem", "0.75em"],
+    ["px", "0.875rem", "0.75em"],
+    [" ", "0.875rem", "0.75em"],
+  ])(
+    "logs a warning and falls back to default for any invalid codeFontSize '%s'",
+    (codeFontSize, expectedCodeFontSize, expectedInlineCodeFontSize) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error with the actual codeFontSize value
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for codeFontSize in theme: ${codeFontSize}. Falling back to default codeFontSize.`
+      )
+
+      expect(theme.fontSizes.codeFontSize).toBe(expectedCodeFontSize)
+      expect(theme.fontSizes.inlineCodeFontSize).toBe(
+        expectedInlineCodeFontSize
+      )
+    }
+  )
+
   it("adapts the radii theme props if baseRadius is provided", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       baseRadius: "1.2rem",
@@ -685,9 +741,8 @@ describe("createEmotionTheme", () => {
     "invalid",
     "rem", // Missing number
     "px", // Missing number
-    "", // Empty string
   ])(
-    "logs an warning and falls back to default for invalid baseRadius '%s'",
+    "logs a warning and falls back to default for invalid baseRadius '%s'",
     invalidBaseRadius => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -845,7 +900,7 @@ describe("createEmotionTheme", () => {
     ["linkColor", "red", "orange", "blue", "pink", "invalid", "green"],
     ["borderColor", "red", "orange", "blue", "pink", "purple", "invalid"],
   ])(
-    "logs an warning and falls back to default for any invalid color configs '%s'",
+    "logs a warning and falls back to default for any invalid color configs '%s'",
     (
       invalidColorConfig,
       primary,
@@ -921,6 +976,16 @@ describe("createEmotionTheme", () => {
     )
   })
 
+  it("showSidebarBorder config is set to false by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.showSidebarBorder).toBe(false)
+  })
+
+  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: true })
+    expect(theme.showSidebarBorder).toBe(true)
+  })
+
   it("sets the dataframeBorderColor if configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       borderColor: "red",
@@ -931,6 +996,150 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.borderColor).toBe("red")
     expect(theme.colors.dataframeBorderColor).toBe("green")
   })
+
+  it("sets the dataframeHeaderBackgroundColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderBackgroundColor: "green",
+    }
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("green")
+  })
+
+  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      theme.colors.bgMix
+    )
+  })
+
+  it.each([
+    // Test valid font weights
+    [100, 100, 300, 400],
+    [200, 200, 400, 500],
+    [300, 300, 500, 600],
+    [400, 400, 600, 700],
+    [500, 500, 700, 800],
+    [600, 600, 800, 900],
+  ])(
+    "sets the font weights based on the baseFontWeight config '%s'",
+    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+    }
+  )
+
+  it.each([
+    // Test invalid font weights
+    [150, 400, 600, 700], // Not an increment of 100
+    [700, 400, 600, 700], // Not between 100 and 600
+    [400.5, 400, 600, 700], // Not an integer
+  ])(
+    "logs a warning and falls back to default font weights if baseFontWeight is invalid '%s'",
+    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights.`
+      )
+
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+    }
+  )
+
+  it.each([
+    // Test valid font weights
+    [100, 400, 600, 700, 100],
+    [200, 400, 600, 700, 200],
+    [300, 400, 600, 700, 300],
+    [400, 400, 600, 700, 400],
+    [500, 400, 600, 700, 500],
+    [600, 400, 600, 700, 600],
+    [700, 400, 600, 700, 700],
+    [800, 400, 600, 700, 800],
+    [900, 400, 600, 700, 900],
+  ])(
+    "sets the font weights based on the codeFontWeight config '%s'",
+    (
+      codeFontWeight,
+      expectedNormal,
+      expectedBold,
+      expectedExtrabold,
+      expectedCode
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
+      // baseFontWeight is not set, so the default font weights are used
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+      // codeFontWeight is set, so it overrides the default code font weight
+      expect(theme.fontWeights.code).toBe(expectedCode)
+    }
+  )
+
+  it.each([
+    // Test invalid font weights
+    [150, 400, 600, 700, 400], // Not an increment of 100
+    [1000, 400, 600, 700, 400], // Not between 100 and 900
+    [400.5, 400, 600, 700, 400], // Not an integer
+  ])(
+    "logs a warning and falls back to default font weights if codeFontWeight is invalid '%s'",
+    (
+      codeFontWeight,
+      expectedNormal,
+      expectedBold,
+      expectedExtrabold,
+      expectedCode
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights.`
+      )
+
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+      expect(theme.fontWeights.code).toBe(expectedCode)
+    }
+  )
+
+  it("linkUnderline config is set to true by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.linkUnderline).toBe(true)
+  })
+
+  it("sets the linkUnderline config to false if linkUnderline=false", () => {
+    const theme = createEmotionTheme({ linkUnderline: false })
+    expect(theme.linkUnderline).toBe(false)
+  })
 })
 
 describe("toThemeInput", () => {
@@ -938,7 +1147,7 @@ describe("toThemeInput", () => {
     const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({
       primaryColor: colors.primary,
-      bodyFont: `"Source Sans Pro", sans-serif`,
+      bodyFont: `"Source Sans", sans-serif`,
       backgroundColor: colors.bgColor,
       secondaryBackgroundColor: colors.secondaryBg,
       textColor: colors.bodyText,
@@ -1041,11 +1250,11 @@ describe("theme overrides", () => {
 describe("parseFont", () => {
   it.each([
     // Test standard font mappings
-    ["sans-serif", '"Source Sans Pro", sans-serif'],
-    ["Sans-Serif", '"Source Sans Pro", sans-serif'], // Case insensitive
-    ["SANS-SERIF", '"Source Sans Pro", sans-serif'], // All caps
-    ["sans serif", '"Source Sans Pro", sans-serif'], // With space
-    ["serif", '"Source Serif Pro", serif'],
+    ["sans-serif", '"Source Sans", sans-serif'],
+    ["Sans-Serif", '"Source Sans", sans-serif'], // Case insensitive
+    ["SANS-SERIF", '"Source Sans", sans-serif'], // All caps
+    ["sans serif", '"Source Sans", sans-serif'], // With space
+    ["serif", '"Source Serif", serif'],
     ["monospace", '"Source Code Pro", monospace'],
 
     // Test fonts that aren't in the map (should return as-is)

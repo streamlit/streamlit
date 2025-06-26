@@ -17,42 +17,11 @@ The following are packages:
 
 ## Getting Started
 
-The dependency diagram below describes the interaction between the packages. In particular, three packages need to be pre-built to develop actively:
-
-- connection
-- protobuf
-- utils
-
-You can run these after `yarn install` in the frontend directory with:
-
-```
-make frontend-dependencies
-```
-
-From their, assuming you do not plan to actively change the underlying libraries, you can continue active development with `yarn start` in the `frontend` directory.
-
-### Making changes to dependent libraries
-
-If you make a change in any of the dependent libraries, there are three ways:
-
-**EASIEST - Run `make frontend-dev`**
-
-This command will do the following:
-
-1. Build Frontend Dependencies
-2. Run `yarn dev` in the `frontend` which concurrently runs `yarn buildWatch` in dependent directories and `yarn start` in @streamlit/app.
-
-This is the most foolproof, but it can duplicate efforts (e.g. what if the frontend dependencies were already built)
-
-**SOMEWHAT EASY - Run `yarn dev` in the `frontend` directory**
-
-This sidesteps the frontend dependencies requirement assuming you've handled this on your own.
-
-**ADVANCED - Run `yarn buildWatch` in the dependent library directory** (or `yarn workspace @streamlit/WORKSPACE buildWatch` in the `frontend` directory).
-
-This minimizes the CPU in investigating other packages, but it requires knowledge of the dependency chain in ensuring proper package dependencies are managed.
+- Run `yarn start` or `make frontend-dev` to start the development server.
 
 ## Dependency Diagram
+
+The dependency diagram below describes the interaction between the packages in our workspace.
 
 ```mermaid
 graph LR;

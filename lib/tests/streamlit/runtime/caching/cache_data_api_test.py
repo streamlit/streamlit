@@ -660,6 +660,73 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
     def tearDown(self):
         st.cache_data.clear()
 
+    def test_media_data_tracking_only_in_cached_functions(self):
+        """Test that media data gets tracked only when called inside a cache_data function.
+
+        The test creates:
+        1. A cached function that uses st.image (should save media data)
+        2. A non-cached function that uses st.image (should NOT save media data)
+        """
+        # Create some test image data (numpy array) that will trigger media processing
+        import numpy as np
+
+        from streamlit.runtime.caching.cache_data_api import (
+            CACHE_DATA_MESSAGE_REPLAY_CTX,
+        )
+
+        test_image = np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8)
+
+        # Track when media data is actually added vs when it's skipped
+        original_save_media_data = CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data
+        media_data_saved = []
+
+        def tracking_save_media_data(media_data, mimetype, media_id):
+            # Call original first to check the in_cached_function logic
+            list_length_before = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
+            result = original_save_media_data(media_data, mimetype, media_id)
+            list_length_after = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
+
+            # Record whether media data was actually added
+            was_added = list_length_after > list_length_before
+            media_data_saved.append(was_added)
+            return result
+
+        with patch.object(
+            CACHE_DATA_MESSAGE_REPLAY_CTX,
+            "save_media_data",
+            side_effect=tracking_save_media_data,
+        ):
+            # Test 1: Call a cached function - should add media data
+            @st.cache_data
+            def cached_function_with_image():
+                st.image(test_image, caption="Test Image")
+                return "cached_result"
+
+            media_data_saved.clear()
+            cached_function_with_image()
+
+            # Should have at least one call where media data was added
+            cached_saves = sum(media_data_saved)
+            assert cached_saves > 0, (
+                f"Media data should be saved when in cached function. "
+                f"Got {cached_saves} saves out of {len(media_data_saved)} calls"
+            )
+
+            # Test 2: Call a non-cached function - should NOT add media data
+            def non_cached_function_with_image():
+                st.image(test_image, caption="Test Image")
+                return "non_cached_result"
+
+            media_data_saved.clear()
+            non_cached_function_with_image()
+
+            # Should have no calls where media data was added
+            non_cached_saves = sum(media_data_saved)
+            assert non_cached_saves == 0, (
+                f"Media data should NOT be saved when not in cached function. "
+                f"Got {non_cached_saves} saves out of {len(media_data_saved)} calls"
+            )
+
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_shows_cached_widget_replay_warning(
         self, _widget_name: str, widget_producer: ELEMENT_PRODUCER

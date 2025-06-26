@@ -15,9 +15,9 @@
  */
 
 export const fonts: { [key: string]: string } = {
-  sansSerif: '"Source Sans Pro", sans-serif',
+  sansSerif: '"Source Sans", sans-serif',
   monospace: '"Source Code Pro", monospace',
-  serif: '"Source Serif Pro", serif',
+  serif: '"Source Serif", serif',
   materialIcons: "Material Symbols Rounded",
 }
 
@@ -41,12 +41,21 @@ export const fontSizes = {
   twoXL: "1.75rem",
   threeXL: "2.25rem",
   fourXL: "2.75rem",
+  codeFontSize: "0.875rem",
+  // Inline code font size as em value for proper scaling w/ headers, captions,
+  // sidebar, etc.
+  inlineCodeFontSize: "0.75em",
 }
 
 export const fontWeights = {
   normal: 400,
   bold: 600,
-  extrabold: 700, // Use sparingly! Only h1 for now.
+  extrabold: 700,
+  // codeFontWeight separately configurable
+  code: 400,
+  // baseFontWeight config does not affect headers
+  headerBold: 600,
+  headerExtraBold: 700, // Use sparingly! Only h1 for now.
 }
 
 export const lineHeights = {

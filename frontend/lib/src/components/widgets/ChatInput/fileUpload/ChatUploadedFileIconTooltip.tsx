@@ -16,9 +16,8 @@
 
 import React, { ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
-
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 interface Props {
   children: ReactElement
@@ -29,7 +28,7 @@ export function ChatUploadedFileIconTooltip({
   children,
   content,
 }: Props): ReactElement {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   return (
     <Tooltip
       content={content}

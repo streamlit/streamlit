@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Literal, TypedDict
 from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -32,6 +33,7 @@ NumberFormat: TypeAlias = Literal[
     "localized",
     "dollar",
     "euro",
+    "yen",
     "percent",
     "compact",
     "scientific",
@@ -417,7 +419,7 @@ def NumberColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format:  str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format:  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 
@@ -427,6 +429,7 @@ def NumberColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
@@ -710,6 +713,7 @@ def LinkColumn(
 
         - ``None`` (default) to display the URL itself.
         - A string that is displayed in every cell, e.g. ``"Open link"``.
+        - A material icon displayed in every cell, e.g. ``":material/open_in_new:"``
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
           ``"https://(.*?)\.example\.com"`` to extract the display text
@@ -767,6 +771,8 @@ def LinkColumn(
         https://doc-link-column.streamlit.app/
         height: 300px
     """
+    if display_text and display_text.startswith(":material/"):
+        display_text = validate_material_icon(display_text)
 
     return ColumnConfig(
         label=label,
@@ -1992,7 +1998,7 @@ def ProgressColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    format: str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format: str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how the numbers are displayed.
         This can be one of the following values:
 
@@ -2002,6 +2008,7 @@ def ProgressColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").

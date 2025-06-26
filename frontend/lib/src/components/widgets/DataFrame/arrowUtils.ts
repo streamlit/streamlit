@@ -49,6 +49,7 @@ import {
   isTimeType,
 } from "~lib/dataframes/arrowTypeUtils"
 import { StyledCell } from "~lib/dataframes/pandasStylerUtils"
+import { fontSizes } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -85,6 +86,13 @@ export function extractCssProperty(
   property: string,
   cssStyle: string
 ): string | undefined {
+  // Check if the css even includes the property we are looking for.
+  // The html element ID already gets checked in applyPandasStylerCss
+  // we don't check it again for performance reasons.
+  if (!cssStyle.includes(property)) {
+    return undefined
+  }
+
   // This regex is supposed to extract the value of a CSS property
   // for a specified HTML element ID from a CSS style string:
   const regex = new RegExp(
@@ -116,11 +124,25 @@ export function applyPandasStylerCss(
   cssStyles: string
 ): GridCell {
   const themeOverride = {} as Partial<GlideTheme>
+  if (!cssStyles.includes(cssId)) {
+    // If the CSS styles don't contain the CSS ID, we can skip applying the styles.
+    // This is a performance optimization to avoid running a regex if the
+    // property or element is not even in the style string.
+    return cell
+  }
 
   // Extract and apply the font color
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
   if (fontColor) {
     themeOverride.textDark = fontColor
+
+    // Apply text color also for cells that don't use textDark:
+    if (cell.kind === GridCellKind.Bubble) {
+      themeOverride.textBubble = fontColor
+    }
+    if (cell.kind === GridCellKind.Uri) {
+      themeOverride.linkColor = fontColor
+    }
   }
 
   // Extract and apply the background color
@@ -139,6 +161,16 @@ export function applyPandasStylerCss(
     // Therefore, we are overriding the font color to our dark font color which
     // always works well with yellow background.
     themeOverride.textDark = "#31333F"
+  }
+
+  // Extract and apply the font weight:
+  const fontWeight = extractCssProperty(cssId, "font-weight", cssStyles)
+  if (fontWeight) {
+    // It's not recommended to directly use the theme primitives. However,
+    // we don't change our fontsize primitives (since they are already in rem)
+    // and we don't have access to the theme here (would be quite a big refactoring to
+    // get access to the theme)
+    themeOverride.baseFontStyle = `${fontWeight} ${fontSizes.sm}`
   }
 
   if (themeOverride) {
