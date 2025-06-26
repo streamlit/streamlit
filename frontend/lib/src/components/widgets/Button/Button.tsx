@@ -46,19 +46,19 @@ function Button(props: Props): ReactElement {
     kind = BaseButtonKind.TERTIARY
   }
 
-  const containerWidth = shouldChildrenStretch(widthConfig)
-
   return (
     <Box className="stButton" data-testid="stButton">
       <BaseButtonTooltip
         help={element.help}
-        containerWidth={element.useContainerWidth || containerWidth}
+        // The element wrapper determines the width so
+        // we should always expand to fill the wrapper.
+        containerWidth={true}
       >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
-          containerWidth={element.useContainerWidth || containerWidth}
+          containerWidth={true}
           onClick={() =>
             widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
           }
