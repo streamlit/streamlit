@@ -106,9 +106,3 @@ with st.expander("Button Width Examples", expanded=True):
     st.button("Stretch Width (help)", width="stretch", help="help text")
     st.button("Content Width (help)", width="content", help="help text")
     st.button("200px Width (help)", width=200, help="help text")
-
-with st.form("width_form"):
-    st.write("Form Submit Button Width Examples:")
-    st.form_submit_button("Content Width (Default)", width="content")
-    st.form_submit_button("Stretch Width", width="stretch")
-    st.form_submit_button("250px Width", width=250)

@@ -205,19 +205,3 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(button_elements.nth(3), name="st_button-width_stretch_help")
     assert_snapshot(button_elements.nth(4), name="st_button-width_content_help")
     assert_snapshot(button_elements.nth(5), name="st_button-width_200px_help")
-
-
-def test_form_submit_button_width_examples(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test form submit button width examples via screenshot matching."""
-    # Form submit button width examples
-    form = app.get_by_test_id("stForm").first
-    expect(form).to_have_count(1)
-
-    submit_elements = form.get_by_test_id("stFormSubmitButton")
-    expect(submit_elements).to_have_count(3)
-
-    assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
-    assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
-    assert_snapshot(submit_elements.nth(2), name="st_form_submit_button-width_250px")

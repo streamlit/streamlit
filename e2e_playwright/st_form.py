@@ -251,8 +251,19 @@ with st.container(height=600, border=True):
         st.form_submit_button(
             help="Submit by clicking",
         )
+
 with st.container(border=True):
     st.write("")
     with st.form("form_22"):
         st.dataframe([1, 2, 3])
         st.form_submit_button("Submit")
+
+with st.container(key="width_tests"):
+    with st.form("width_form"):
+        st.write("Form Submit Button Width Examples:")
+        st.form_submit_button("Content Width (Default)", width="content")
+        st.form_submit_button("Stretch Width", width="stretch")
+        st.form_submit_button("250px Width", width=250)
+        st.form_submit_button("Stretch Width (help)", width="stretch", help="help text")
+        st.form_submit_button("Content Width (help)", width="content", help="help text")
+        st.form_submit_button("250px Width (help)", width=250, help="help text")

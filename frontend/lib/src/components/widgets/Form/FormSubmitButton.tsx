@@ -35,11 +35,10 @@ export interface Props {
   element: ButtonProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig?: streamlit.IWidthConfig | null | undefined
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, fragmentId, widthConfig } = props
+  const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
 
   const { formsData } = useRequiredContext(FormsContext)
@@ -57,18 +56,13 @@ export function FormSubmitButton(props: Props): ReactElement {
     return () => widgetMgr.removeSubmitButton(formId, element)
   }, [widgetMgr, formId, element])
 
-  const containerWidth = shouldChildrenStretch(widthConfig)
-
   return (
     <Box className="stFormSubmitButton" data-testid="stFormSubmitButton">
-      <BaseButtonTooltip
-        help={element.help}
-        containerWidth={element.useContainerWidth || containerWidth}
-      >
+      <BaseButtonTooltip help={element.help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          containerWidth={element.useContainerWidth || containerWidth}
+          containerWidth={true}
           disabled={disabled || hasInProgressUpload}
           onClick={() => {
             widgetMgr.submitForm(element.formId, fragmentId, element)
