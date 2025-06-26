@@ -91,8 +91,8 @@ python-init:
 		pip_args+=("--requirement" "lib/test-requirements.txt"); \
 	fi;\
 	if command -v "uv" > /dev/null; then \
-		echo "Running command: uv pip install $${pip_args[@]}"; \
-		uv pip install $${pip_args[@]}; \
+		echo "Running command: uv venv --allow-existing && uv pip install $${pip_args[@]}"; \
+		uv venv --allow-existing && uv pip install $${pip_args[@]} \
 		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 			uv run python -m playwright install --with-deps; \
 		fi;\
