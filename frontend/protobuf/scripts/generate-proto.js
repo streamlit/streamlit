@@ -36,7 +36,7 @@ const TEMPLATE = "/* eslint-disable */\n\n"
 const runCommand = (commandAndArgs, outputFile) => {
   return new Promise((resolve, reject) => {
     const [cmd, ...args] = commandAndArgs
-    const result = spawnSync(cmd, args, { encoding: "utf8" })
+    const result = spawnSync(cmd, args, { maxBuffer: 4096 * 1024, encoding: "utf8" })
     if (result.error) {
       console.error(`Error: ${result.error.message}`)
       reject(result.error)
