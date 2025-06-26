@@ -31,7 +31,6 @@ import {
   ContainerContentsWrapper,
   FileUploadClient,
   IGuestToHostMessage,
-  isToolbarDisplayed,
   LibContext,
   Profiler,
   WidgetStateManager,
