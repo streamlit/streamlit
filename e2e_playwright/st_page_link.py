@@ -21,13 +21,6 @@ st.page_link("http://www.example.com", label="Icon Example", icon="🌎")
 st.page_link("http://www.example.com", label="Help Example", help="Some help text")
 st.page_link("http://www.example.com", label="Disabled Example", disabled=True)
 
-# Default is container width=false in main app section
-st.page_link(
-    "http://www.example.com",
-    label="Main container_width=true",
-    use_container_width=True,
-)
-
 # Test Material icon
 st.page_link(
     "http://www.example.com", label="Material Icon Example", icon=":material/home:"
@@ -85,3 +78,10 @@ with st.sidebar:
         label="Sidebar content width",
         width="content",
     )
+
+    # use_container_width is deprecated, but not removed from the API.
+    with st.container():
+        st.page_link("http://www.example.com", use_container_width=True)
+
+    with st.container():
+        st.page_link("http://www.example.com", use_container_width=False)

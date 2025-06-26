@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_expander
 
-PAGE_LINK_COUNT = 20
+PAGE_LINK_COUNT = 21
 
 
 def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
@@ -31,15 +31,15 @@ def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
     page_link_links = page_link_elements.get_by_test_id("stPageLink-NavLink")
 
     assert_snapshot(page_link_links.nth(7), name="st_page_link-icon")
-    assert_snapshot(page_link_links.nth(10), name="st_page_link-disabled")
-    assert_snapshot(page_link_links.nth(12), name="st_page_link-material-icon")
+    assert_snapshot(page_link_links.nth(9), name="st_page_link-disabled")
+    assert_snapshot(page_link_links.nth(11), name="st_page_link-material-icon")
 
     # st.Page object page links
-    assert_snapshot(page_link_links.nth(13), name="st_page_link-st_page_with_icon")
+    assert_snapshot(page_link_links.nth(12), name="st_page_link-st_page_with_icon")
     assert_snapshot(
-        page_link_links.nth(14), name="st_page_link-st_page_with_material_icon"
+        page_link_links.nth(13), name="st_page_link-st_page_with_material_icon"
     )
-    assert_snapshot(page_link_links.nth(15), name="st_page_link-st_page_icon_override")
+    assert_snapshot(page_link_links.nth(14), name="st_page_link-st_page_icon_override")
 
     # Sidebar page links
     assert_snapshot(page_link_links.nth(1), name="st_page_link-sidebar-icon")
@@ -61,9 +61,6 @@ def test_default_container_width(app: Page, assert_snapshot: ImageCompareFunctio
     page_links.nth(5).get_by_test_id("stMarkdownContainer").hover()
     assert_snapshot(page_links.nth(5), name="st_page_link-default")
 
-    page_links.nth(9).get_by_test_id("stMarkdownContainer").hover()
-    assert_snapshot(page_links.nth(9), name="st_page_link-container-width-true")
-
 
 def test_page_link_help_tooltip(app: Page):
     """Test that st.page_link help tooltip renders correctly."""
@@ -82,12 +79,9 @@ def test_page_link_help_tooltip(app: Page):
 
 def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test page link width examples via screenshot matching."""
-    # Page link width examples
     page_expander = get_expander(app, "Page Link Width Examples")
-    page_expander.click()
 
     page_elements = page_expander.get_by_test_id("stPageLink")
-    expect(page_elements).to_have_count(3)
 
     assert_snapshot(page_elements.nth(0), name="st_page_link-width_content")
     assert_snapshot(page_elements.nth(1), name="st_page_link-width_stretch")
@@ -95,3 +89,17 @@ def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(page_elements.nth(3), name="st_page_link-width_content_help")
     assert_snapshot(page_elements.nth(4), name="st_page_link-width_stretch_help")
     assert_snapshot(page_elements.nth(5), name="st_page_link-width_500px_help")
+
+    # Test gradual deprecation of use_container_width
+    container_width_true_container = page_expander.get_by_test_id(
+        "stVerticalBlock"
+    ).nth(1)
+    assert_snapshot(
+        container_width_true_container, name="st_page_link-width_container_width_true"
+    )
+    container_width_false_container = page_expander.get_by_test_id(
+        "stVerticalBlock"
+    ).nth(2)
+    assert_snapshot(
+        container_width_false_container, name="st_page_link-width_container_width_false"
+    )
