@@ -110,15 +110,15 @@ describe("Header", () => {
     expect(screen.queryByTestId("test-right")).not.toBeInTheDocument()
   })
 
-  it("renders with transparent background when isTransparentBackground is true", () => {
-    render(<Header {...getProps({ isTransparentBackground: true })} />)
+  it("renders with transparent background when no content exists", () => {
+    render(<Header {...getProps()} />)
 
     const header = screen.getByTestId("stHeader")
     expect(header).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
   })
 
-  it("renders with default background when isTransparentBackground is false", () => {
-    render(<Header {...getProps({ isTransparentBackground: false })} />)
+  it("renders with solid background when content exists", () => {
+    render(<Header {...getProps({ navigation: <div>Nav</div> })} />)
 
     const header = screen.getByTestId("stHeader")
     // Check that it doesn't have transparent background
@@ -343,7 +343,7 @@ describe("Header", () => {
 
     describe("Background transparency logic", () => {
       it("should have transparent background when NO content is shown", () => {
-        render(<Header {...getProps({ isTransparentBackground: true })} />)
+        render(<Header {...getProps()} />)
 
         const header = screen.getByTestId("stHeader")
         expect(header).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
@@ -357,7 +357,6 @@ describe("Header", () => {
             {...getProps({
               logoComponent: logo,
               isSidebarOpen: false,
-              isTransparentBackground: false,
             })}
           />
         )
@@ -373,7 +372,6 @@ describe("Header", () => {
             {...getProps({
               hasSidebar: true,
               isSidebarOpen: false,
-              isTransparentBackground: false,
             })}
           />
         )
@@ -389,7 +387,6 @@ describe("Header", () => {
           <Header
             {...getProps({
               navigation,
-              isTransparentBackground: false,
             })}
           />
         )
@@ -425,7 +422,6 @@ describe("Header", () => {
           <Header
             {...getProps({
               rightContent,
-              isTransparentBackground: false,
             })}
           />
         )
