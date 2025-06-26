@@ -134,7 +134,7 @@ def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
 def dialog_decorator(
     title: F | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
-    """Function decorator to create a modal dialog.
+    r"""Function decorator to create a modal dialog.
 
     A function decorated with ``@st.dialog`` becomes a dialog
     function. When you call a dialog function, Streamlit inserts a modal dialog
@@ -173,6 +173,23 @@ def dialog_decorator(
     ----------
     title : str
         The title to display at the top of the modal dialog. It cannot be empty.
+
+        The title can optionally contain GitHub-flavored Markdown of the
+        following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+        and Images. Images display like icons, with a max height equal to
+        the font height.
+
+        Unsupported Markdown elements are unwrapped so only their children
+        (text contents) render. Display unsupported elements as literal
+        characters by backslash-escaping them. E.g.,
+        ``"1\. Not an ordered list"``.
+
+        See the ``body`` parameter of |st.markdown|_ for additional,
+        supported Markdown directives.
+
+        .. |st.markdown| replace:: ``st.markdown``
+        .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
     width : "small", "large"
         The width of the modal dialog. If ``width`` is ``"small`` (default), the
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the

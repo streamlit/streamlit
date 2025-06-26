@@ -116,6 +116,11 @@ export interface Props {
    * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
+
+  /**
+   * Inherit font family, size, and weight from parent
+   */
+  inheritFont?: boolean
 }
 
 /**
@@ -782,6 +787,7 @@ const StreamlitMarkdown: FC<Props> = ({
   largerLabel,
   disableLinks,
   isToast,
+  inheritFont,
 }) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
@@ -791,6 +797,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isCaption={Boolean(isCaption)}
       isInSidebarOrDialog={isInSidebar || isInDialog}
       isLabel={isLabel}
+      inheritFont={inheritFont}
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}
