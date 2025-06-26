@@ -15,15 +15,23 @@
 """A script to clean up orphaned e2e snapshots.
 
 Usage:
-    python scripts/attempt_to_clean_up_snapshots.py
+    python scripts/snapshot_cleanup.py [--dry-run] [--debug] [--ci]
 
 This script will analyze the e2e test files and identify snapshot files that
 appear to be orphaned (no longer referenced in tests). Run from the project
 root directory.
+
+Options:
+    --dry-run   : Show what would be deleted without actually deleting
+    --debug     : Show detailed debug information
+    --ci        : CI mode - check for orphaned snapshots and exit with non-zero
+                 status if any are found (does not delete anything)
+
 NOTE: This script is not perfect and may identify some
 snapshots as orphans when they aren't actually so manually review results.
 """
 
+import argparse
 import os
 import re
 import subprocess
@@ -192,10 +200,31 @@ def search_for_snapshot_name(snapshot_name: str) -> bool:
 
 def main() -> None:
     """Finds and deletes all orphaned snapshot files."""
-    debug = "--debug" in sys.argv
-    dry_run = "--dry-run" in sys.argv or debug
+    parser = argparse.ArgumentParser(
+        prog="snapshot_cleanup.py", description="Clean up orphaned e2e snapshots"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be deleted without actually deleting",
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Show detailed debug information"
+    )
+    parser.add_argument(
+        "--ci",
+        action="store_true",
+        help="CI mode - check for orphaned snapshots and exit with non-zero status if any are found "
+        "(does not delete anything)",
+    )
+    args = parser.parse_args()
 
-    print("Analyzing test files for snapshot usage...")
+    debug = args.debug
+    dry_run = args.dry_run or debug
+    ci = args.ci
+
+    if not ci:
+        print("Analyzing test files for snapshot usage...")
     snapshots_by_test = get_used_snapshots()
 
     if debug:
@@ -216,7 +245,8 @@ def main() -> None:
     searched_snapshots = 0
 
     snapshot_root = "e2e_playwright/__snapshots__/linux"
-    print(f"\nScanning {snapshot_root} for snapshot files...")
+    if not ci:
+        print(f"\nScanning {snapshot_root} for snapshot files...")
 
     all_snapshot_files = []
     for dirpath, _, filenames in os.walk(snapshot_root):
@@ -224,7 +254,8 @@ def main() -> None:
             if filename.endswith(".png"):
                 all_snapshot_files.append(os.path.join(dirpath, filename))
 
-    print(f"Found {len(all_snapshot_files)} total snapshot files")
+    if not ci:
+        print(f"Found {len(all_snapshot_files)} total snapshot files")
 
     # Debug specific test
     if debug and "--test" in sys.argv:
@@ -233,7 +264,8 @@ def main() -> None:
             debug_test = sys.argv[test_idx + 1]
             print(f"\nDEBUG: Focusing on test: {debug_test}")
 
-    print("\nChecking snapshots...")
+    if not ci:
+        print("\nChecking snapshots...")
     for i, filepath in enumerate(all_snapshot_files):
         test_name = os.path.basename(os.path.dirname(filepath))
         filename = os.path.basename(filepath)
@@ -280,45 +312,68 @@ def main() -> None:
         if not is_used:
             orphaned_files.append(filepath)
 
-        # Show progress for non-debug runs
-        if not debug and (i + 1) % 100 == 0:
+        # Show progress for non-debug and non-CI runs
+        if not debug and not ci and (i + 1) % 100 == 0:
             print(f"  Checked {i + 1}/{len(all_snapshot_files)} files...")
 
     if not orphaned_files:
-        print("\nNo orphaned snapshots found.")
-        return
+        if ci:
+            print("\n✅ CI MODE: No orphaned snapshots found.")
+            sys.exit(0)
+        else:
+            print("\nNo orphaned snapshots found.")
+            return
 
-    print(f"\nFound {len(orphaned_files)} orphaned snapshots")
-    print(
-        f"(Had to search codebase for {searched_snapshots} snapshots not found in assert_snapshot calls)"
-    )
+    if not ci:
+        print(f"\nFound {len(orphaned_files)} orphaned snapshots")
+        print(
+            f"(Had to search codebase for {searched_snapshots} snapshots not found in assert_snapshot calls)"
+        )
 
     # Print a summary of what we're about to delete
-    print("\nSummary by test:")
+    if not ci:
+        print("\nSummary by test:")
     orphaned_by_test = defaultdict(list)
     for filepath in orphaned_files:
         test_name = os.path.basename(os.path.dirname(filepath))
         orphaned_by_test[test_name].append(os.path.basename(filepath))
 
     # Show tests with most orphans first
-    for test_name in sorted(
-        orphaned_by_test.keys(), key=lambda x: len(orphaned_by_test[x]), reverse=True
-    ):
-        count = len(orphaned_by_test[test_name])
-        print(f"\n{test_name}: {count} orphaned files")
-        if debug or count <= 5:
-            for filename in sorted(orphaned_by_test[test_name])[:10]:
-                print(f"  - {filename}")
-            if count > 10:
-                print(f"  ... and {count - 10} more")
-        else:
-            for filename in sorted(orphaned_by_test[test_name])[:3]:
-                print(f"  - {filename}")
-            print(f"  ... and {count - 3} more")
+    if not ci:
+        for test_name in sorted(
+            orphaned_by_test.keys(),
+            key=lambda x: len(orphaned_by_test[x]),
+            reverse=True,
+        ):
+            count = len(orphaned_by_test[test_name])
+            print(f"\n{test_name}: {count} orphaned files")
+            if debug or count <= 5:
+                for filename in sorted(orphaned_by_test[test_name])[:10]:
+                    print(f"  - {filename}")
+                if count > 10:
+                    print(f"  ... and {count - 10} more")
+            else:
+                for filename in sorted(orphaned_by_test[test_name])[:3]:
+                    print(f"  - {filename}")
+                print(f"  ... and {count - 3} more")
 
     if dry_run:
         print(f"\nDRY RUN: Would delete {len(orphaned_files)} orphaned snapshots.")
         print("Run without --dry-run or --debug to actually delete them.")
+    elif ci:
+        print(f"\n❌ CI MODE: Found {len(orphaned_files)} orphaned snapshots!")
+        print("\nOrphaned snapshots by test:")
+        for test_name in sorted(
+            orphaned_by_test.keys(),
+            key=lambda x: len(orphaned_by_test[x]),
+            reverse=True,
+        ):
+            count = len(orphaned_by_test[test_name])
+            print(f"  {test_name}: {count} orphaned files")
+
+        print("\nTo fix this, run: python scripts/snapshot_cleanup.py")
+        print("Or review the snapshots manually to ensure they're actually orphaned.")
+        sys.exit(1)
     else:
         print(f"\nReady to delete {len(orphaned_files)} orphaned snapshots.")
         print("Proceeding with deletion...")
