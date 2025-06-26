@@ -16,11 +16,11 @@
 
 import styled from "@emotion/styled"
 
-export const StyledNavLinkContainer = styled.div<>(({}) => ({
+export const StyledNavLinkContainer = styled.div({
   display: "flex",
   flexDirection: "column",
   width: "100%",
-}))
+})
 
 export interface StyledNavLinkProps {
   disabled: boolean
