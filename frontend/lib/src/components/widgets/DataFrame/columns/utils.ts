@@ -514,11 +514,9 @@ function determineDefaultMantissa(value: number): number {
 }
 
 /**
- * Formats the given number to a string based on a provided format or the default format.
-/**
  * Helper function to format the Intl.NumberFormat call using locales
- * @param value - the number to format
  *
+ * @param value - the number to format
  * @param options - the options to pass to the Intl.NumberFormat call
  *
  * @returns The formatted number as a string.
@@ -542,6 +540,7 @@ function formatIntlNumberWithLocales(
 
 /**
  * Formats the given number to a string based on a provided format or the default format.
+ *
  * @param format - The format to use. If not provided, the default format is used.
  * @param maxPrecision - The maximum number of decimals to show. This is only used by the default format.
  *                     If not provided, the default is 4 decimals and trailing zeros are hidden.
@@ -628,18 +627,22 @@ export function formatNumber(
       trimMantissa: false,
     })
   } else if (format === "bytes") {
-    return new Intl.NumberFormat(undefined, {
-      notation: "compact",
-      style: "unit",
-      unit: "byte",
-      unitDisplay: "narrow",
-      maximumFractionDigits: 1,
-    }).format(value)
+    return (
+      formatIntlNumberWithLocales(value, {
+        notation: "compact",
+        style: "unit",
+        unit: "byte",
+        unitDisplay: "narrow",
+        maximumFractionDigits: 1,
+      })
+        // The intl number format renders gigabytes as BB
+        // which would be unexpected for users.
+        .replace("BB", "GB")
+    )
   }
 
   return sprintf(format, value)
 }
-
 /**
  * Formats the given date to a string with the given format.
  *
