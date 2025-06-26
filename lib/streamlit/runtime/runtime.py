@@ -609,16 +609,23 @@ class Runtime:
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
 
                     # Wait for new websocket connections (new sessions):
-                    _, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
-                        (
-                            asyncio.create_task(async_objs.must_stop.wait()),
-                            asyncio.create_task(async_objs.has_connection.wait()),
-                        ),
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    # Clean up pending tasks to avoid memory leaks
-                    for task in pending_tasks:
-                        task.cancel()
+                    # Use a timeout to ensure the event loop periodically checks for signals on Windows
+                    # This fixes the issue where Ctrl+C doesn't work without an open browser tab
+                    try:
+                        _, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
+                            (
+                                asyncio.create_task(async_objs.must_stop.wait()),
+                                asyncio.create_task(async_objs.has_connection.wait()),
+                            ),
+                            return_when=asyncio.FIRST_COMPLETED,
+                            timeout=1.0,  # 1 second timeout to ensure responsiveness to signals
+                        )
+                        # Clean up pending tasks to avoid memory leaks
+                        for task in pending_tasks:
+                            task.cancel()
+                    except asyncio.TimeoutError:
+                        # Timeout is expected and normal - it ensures we check must_stop regularly
+                        pass
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
 
@@ -643,19 +650,25 @@ class Runtime:
                     break
 
                 # Wait for new proto messages that need to be sent out:
-                _, pending_tasks = await asyncio.wait(
-                    (
-                        asyncio.create_task(async_objs.must_stop.wait()),
-                        asyncio.create_task(async_objs.need_send_data.wait()),
-                    ),
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                # We need to cancel the pending tasks (the `must_stop` one in most situations).
-                # Otherwise, this would stack up one waiting task per loop
-                # (e.g. per forward message). These tasks cannot be garbage collected
-                # causing an increase in memory (-> memory leak).
-                for task in pending_tasks:
-                    task.cancel()
+                # Use a timeout here as well to ensure responsiveness to signals on Windows
+                try:
+                    _, pending_tasks = await asyncio.wait(
+                        (
+                            asyncio.create_task(async_objs.must_stop.wait()),
+                            asyncio.create_task(async_objs.need_send_data.wait()),
+                        ),
+                        return_when=asyncio.FIRST_COMPLETED,
+                        timeout=1.0,  # 1 second timeout to ensure responsiveness to signals
+                    )
+                    # We need to cancel the pending tasks (the `must_stop` one in most situations).
+                    # Otherwise, this would stack up one waiting task per loop
+                    # (e.g. per forward message). These tasks cannot be garbage collected
+                    # causing an increase in memory (-> memory leak).
+                    for task in pending_tasks:
+                        task.cancel()
+                except asyncio.TimeoutError:
+                    # Timeout is expected and normal - it ensures we check must_stop regularly
+                    pass
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():

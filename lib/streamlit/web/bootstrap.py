@@ -40,6 +40,7 @@ def _set_up_signal_handler(server: Server) -> None:
 
     def signal_handler(signal_number: int, stack_frame: Any) -> None:  # noqa: ARG001
         # The server will shut down its threads and exit its loop.
+        _LOGGER.debug(f"Signal {signal_number} received, stopping server...")
         server.stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
