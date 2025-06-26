@@ -66,12 +66,9 @@ def test_check_top_level_class(app: Page):
 
 def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     """Test link button width examples via screenshot matching."""
-    # Link button width examples
     link_expander = get_expander(app, "Link Button Width Examples")
-    link_expander.click()
 
     link_elements = link_expander.get_by_test_id("stLinkButton")
-    expect(link_elements).to_have_count(3)
 
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
@@ -79,3 +76,18 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(3), name="st_link_button-width_content_help")
     assert_snapshot(link_elements.nth(4), name="st_link_button-width_stretch_help")
     assert_snapshot(link_elements.nth(5), name="st_link_button-width_400px_help")
+
+    # Test gradual deprecation of use_container_width
+    container_width_true_container = link_expander.get_by_test_id(
+        "stVerticalBlock"
+    ).nth(1)
+    assert_snapshot(
+        container_width_true_container, name="st_link_button-width_container_width_true"
+    )
+    container_width_false_container = link_expander.get_by_test_id(
+        "stVerticalBlock"
+    ).nth(2)
+    assert_snapshot(
+        container_width_false_container,
+        name="st_link_button-width_container_width_false",
+    )

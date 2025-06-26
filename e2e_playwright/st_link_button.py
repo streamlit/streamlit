@@ -30,7 +30,7 @@ st.link_button(
 st.link_button(
     "Container **full width** *markdown*",
     "https://streamlit.io",
-    use_container_width=True,
+    width="stretch",
     help="help text",
 )
 
@@ -38,7 +38,7 @@ st.link_button(
     "Container **full width** *markdown* ~~primary~~",
     "https://streamlit.io",
     type="primary",
-    use_container_width=True,
+    width="stretch",
     help="help text here",
 )
 
@@ -67,7 +67,7 @@ st.link_button(
     "Tertiary link - container width",
     url="https://streamlit.io",
     type="tertiary",
-    use_container_width=True,
+    width="stretch",
 )
 
 st.link_button(
@@ -89,3 +89,10 @@ with st.expander("Link Button Width Examples", expanded=True):
     st.link_button(
         "400px Width (help)", "https://example.com", width=400, help="help text"
     )
+
+    # use_container_width is deprecated, but not removed from the API.
+    with st.container():
+        st.link_button("link_button (container_width=True)", use_container_width=True)
+
+    with st.container():
+        st.link_button("link_button (container_width=False)", use_container_width=False)
