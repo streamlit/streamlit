@@ -18,19 +18,14 @@ import { exec, execSync } from "child_process"
 import fs from "fs"
 import path from "path"
 
-// Paths
-const gitRoot = execSync("git rev-parse --show-toplevel", {
-  encoding: "utf8",
-}).trim()
-const protoDir = path.join(gitRoot, "proto")
-const protoGlob = path.join(protoDir, "streamlit/proto/*.proto")
-console.log(`Proto files: ${protoGlob}`)
+// Output files
 const outputJsFile = "proto.js"
 const outputDtsFile = "proto.d.ts"
 
 // Commands to run
-const pbjsCommand = `yarn run --silent pbjs ${protoGlob} --path ${protoDir} -t static-module --wrap es6`
-const pbtsCommand = `yarn run --silent pbts proto.js`
+const pbjsCommand = 'gitRoot=$(git rev-parse --show-toplevel) yarn run --silent pbjs "${gitRoot@Q}/proto/streamlit/proto/*.proto" --path ${gitRoot@Q}/proto -t static-module --wrap es6'
+console.log(pbjsCommand)
+const pbtsCommand = "yarn run --silent pbts proto.js"
 const TEMPLATE = "/* eslint-disable */\n\n"
 
 const runCommand = (command, outputFile) => {
