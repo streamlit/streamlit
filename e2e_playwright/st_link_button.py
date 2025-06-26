@@ -92,7 +92,15 @@ with st.expander("Link Button Width Examples", expanded=True):
 
     # use_container_width is deprecated, but not removed from the API.
     with st.container():
-        st.link_button("link_button (container_width=True)", use_container_width=True)
+        st.link_button(
+            "link_button (container_width=True)",
+            "https://example.com",
+            use_container_width=True,
+        )
 
     with st.container():
-        st.link_button("link_button (container_width=False)", use_container_width=False)
+        st.link_button(
+            "link_button (container_width=False)",
+            "https://example.com",
+            use_container_width=False,
+        )
