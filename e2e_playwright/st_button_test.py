@@ -207,20 +207,6 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(button_elements.nth(5), name="st_button-width_200px_help")
 
 
-def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test page link width examples via screenshot matching."""
-    # Page link width examples
-    page_expander = get_expander(app, "Page Link Width Examples")
-    page_expander.click()
-
-    page_elements = page_expander.get_by_test_id("stPageLink")
-    expect(page_elements).to_have_count(3)
-
-    assert_snapshot(page_elements.nth(0), name="st_page_link-width_content")
-    assert_snapshot(page_elements.nth(1), name="st_page_link-width_stretch")
-    assert_snapshot(page_elements.nth(2), name="st_page_link-width_500px")
-
-
 def test_form_submit_button_width_examples(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

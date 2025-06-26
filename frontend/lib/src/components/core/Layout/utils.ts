@@ -40,7 +40,7 @@ export function getDirectionOfBlock(block: BlockProto): Direction {
 export function shouldChildrenStretch(
   widthConfig: streamlit.IWidthConfig | undefined | null
 ): boolean {
-  // Some elements (e.g. LinkButton, ButtonGroup) need styles applied to the element itself, to support
+  // Some elements (e.g. ButtonGroup) need styles applied to the element itself, to support
   // the width configuration.
   return !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
 }

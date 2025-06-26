@@ -52,6 +52,28 @@ st.page_link(page_with_material_icon, label="Page Link with Material Icon from s
 # Test overriding page icons in st.page_link
 st.page_link(page_with_icon, label="Override Page Icon from st.Page", icon="🔥")
 
+with st.expander("Page Link Width Examples", expanded=True):
+    st.page_link(
+        "https://example.com", label="Content Width (Default)", width="content"
+    )
+    st.page_link("https://example.com", label="Stretch Width", width="stretch")
+    st.page_link("https://example.com", label="500px Width", width=500)
+    st.page_link(
+        "https://example.com",
+        label="Content Width (help)",
+        width="content",
+        help="help text",
+    )
+    st.page_link(
+        "https://example.com",
+        label="Stretch Width (help)",
+        width="stretch",
+        help="help text",
+    )
+    st.page_link(
+        "https://example.com", label="500px Width (help)", width=500, help="help text"
+    )
+
 with st.sidebar:
     st.page_link("http://www.example.com", label="Default Sidebar")
     st.page_link("http://www.example.com", label="Icon Sidebar", icon="🌎")

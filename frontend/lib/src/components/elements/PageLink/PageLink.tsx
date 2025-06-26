@@ -24,8 +24,6 @@ import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LibContext } from "~lib/components/core/LibContext"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 import {
   StyledNavLink,
@@ -36,37 +34,14 @@ import {
 export interface Props {
   disabled: boolean
   element: PageLinkProto
-  widthConfig?: streamlit.IWidthConfig | null | undefined
-}
-
-function shouldUseContainerWidth(
-  useContainerWidth: boolean | null | undefined,
-  isInSidebar: boolean,
-  widthConfig?: streamlit.IWidthConfig | null
-): boolean {
-  if (shouldChildrenStretch(widthConfig)) {
-    return true
-  } else if (useContainerWidth === null && isInSidebar) {
-    return true
-  } else if (useContainerWidth === null && !isInSidebar) {
-    return false
-  }
-  return useContainerWidth === true ? true : false
 }
 
 function PageLink(props: Readonly<Props>): ReactElement {
   const { onPageChange, currentPageScriptHash } = useContext(LibContext)
-  const isInSidebar = useContext(IsSidebarContext)
 
   const { colors } = useEmotionTheme()
 
-  const { disabled, element, widthConfig } = props
-
-  const useContainerWidth = shouldUseContainerWidth(
-    element.useContainerWidth,
-    isInSidebar,
-    widthConfig
-  )
+  const { disabled, element } = props
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
@@ -90,14 +65,14 @@ function PageLink(props: Readonly<Props>): ReactElement {
       <BaseButtonTooltip
         help={element.help}
         placement={Placement.TOP_RIGHT}
-        containerWidth={useContainerWidth}
+        containerWidth={true}
       >
-        <StyledNavLinkContainer containerWidth={useContainerWidth}>
+        <StyledNavLinkContainer containerWidth={true}>
           <StyledNavLink
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            containerWidth={useContainerWidth}
+            containerWidth={true}
             href={element.page}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"

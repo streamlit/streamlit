@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_expander
 
 PAGE_LINK_COUNT = 14
 
@@ -77,3 +78,20 @@ def test_page_link_help_tooltip(app: Page):
     hover_target.hover()
 
     expect(app.get_by_text("Some help text")).to_be_visible()
+
+
+def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test page link width examples via screenshot matching."""
+    # Page link width examples
+    page_expander = get_expander(app, "Page Link Width Examples")
+    page_expander.click()
+
+    page_elements = page_expander.get_by_test_id("stPageLink")
+    expect(page_elements).to_have_count(3)
+
+    assert_snapshot(page_elements.nth(0), name="st_page_link-width_content")
+    assert_snapshot(page_elements.nth(1), name="st_page_link-width_stretch")
+    assert_snapshot(page_elements.nth(2), name="st_page_link-width_500px")
+    assert_snapshot(page_elements.nth(3), name="st_page_link-width_content_help")
+    assert_snapshot(page_elements.nth(4), name="st_page_link-width_stretch_help")
+    assert_snapshot(page_elements.nth(5), name="st_page_link-width_500px_help")
