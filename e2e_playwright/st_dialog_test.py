@@ -85,6 +85,10 @@ def open_dialog_with_rerun(app: Page):
     click_button(app, "Open Dialog with rerun")
 
 
+def open_dialog_with_long_title(app: Page):
+    click_button(app, "Open Dialog with long title")
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -262,7 +266,9 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
-    dialog.locator("div", has_text="Simple Dialog").click()
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Simple Dialog"
+    ).click()
     submit_button = get_button(dialog, "Submit")
     submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-default")
@@ -276,7 +282,9 @@ def test_largewidth_dialog_displays_correctly(
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
-    dialog.locator("div", has_text="Large-width Dialog").click()
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Large-width Dialog"
+    ).click()
     submit_button = get_button(dialog, "Submit")
     submit_button.hover()
     assert_snapshot(dialog, name="st_dialog-with_large_width")
@@ -294,7 +302,9 @@ def test_dialog_shows_error_inline(app: Page, assert_snapshot: ImageCompareFunct
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
-    dialog.locator("div", has_text="Dialog with error").click()
+    dialog.get_by_test_id("stMarkdownContainer").filter(
+        has_text="Dialog with error"
+    ).click()
     expect(dialog.get_by_text("TypeError")).to_be_visible()
     assert_snapshot(dialog, name="st_dialog-with_inline_error")
 
@@ -500,3 +510,14 @@ def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     open_dialog_with_images(app)
     check_top_level_class(app, "stDialog")
+
+
+def test_dialog_with_long_title_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that a dialog with a very long title displays correctly without overlapping the close button."""
+    open_dialog_with_long_title(app)
+    wait_for_app_run(app)
+    dialog = app.get_by_role("dialog")
+    # Take a snapshot to verify the long title doesn't overlap with the close button
+    assert_snapshot(dialog, name="st_dialog-with_long_title")
