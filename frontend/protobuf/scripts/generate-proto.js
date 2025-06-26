@@ -14,35 +14,40 @@
  * limitations under the License.
  */
 
-import { exec, execSync } from "child_process"
+import { exec, execSync, spawn, spawnSync } from "child_process"
 import fs from "fs"
+import path from "path"
 
-// Output files
+// Paths
+const gitRoot = execSync("git rev-parse --show-toplevel", {
+  encoding: "utf8",
+}).trim()
+const protoDir = path.join(gitRoot, "proto")
+const protoGlob = path.join(protoDir, "streamlit/proto/*.proto")
+console.log(`Proto files: ${protoGlob}`)
 const outputJsFile = "proto.js"
 const outputDtsFile = "proto.d.ts"
 
-// Commands to run (for whatever reason, these seem to end up getting run in sh)
-const gitRoot = "`git rev-parse --show-toplevel`"
-const pbjsCommand = `yarn run --silent pbjs "${gitRoot}/proto/streamlit/proto/*.proto" --path "${gitRoot}/proto" -t static-module --wrap es6`
-console.log(pbjsCommand)
-const pbtsCommand = "yarn run --silent pbts proto.js"
+// Commands to run
+const pbjsCommand = ["yarn", "run", "--silent", "pbjs", protoGlob, "--path", protoDir, "-t", "static-module", "--wrap", "es6"]
+const pbtsCommand = ["yarn", "run", "--silent", "pbts", "proto.js"]
 const TEMPLATE = "/* eslint-disable */\n\n"
 
-const runCommand = (command, outputFile) => {
+const runCommand = (commandAndArgs, outputFile) => {
   return new Promise((resolve, reject) => {
-    exec(command, { maxBuffer: 4096 * 1024 }, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${error.message}`)
-        reject(error)
-        return
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`)
-      }
-      fs.writeFileSync(outputFile, `${TEMPLATE}${stdout}`, "utf8")
-      console.log(`Generated: ${outputFile}`)
-      resolve()
-    })
+    const [cmd, ...args] = commandAndArgs
+    const result = spawnSync(cmd, args, { encoding: "utf8" })
+    if (result.error) {
+      console.error(`Error: ${result.error.message}`)
+      reject(result.error)
+      return
+    }
+    if (result.stderr) {
+      console.error(`stderr: ${result.stderr}`)
+    }
+    fs.writeFileSync(outputFile, `${TEMPLATE}${result.stdout}`, "utf8")
+    console.log(`Generated: ${outputFile}`)
+    resolve()
   })
 }
 
