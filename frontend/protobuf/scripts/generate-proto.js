@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { exec, execSync, spawn, spawnSync } from "child_process"
+import { execSync, spawnSync } from "child_process"
 import fs from "fs"
 import path from "path"
 
