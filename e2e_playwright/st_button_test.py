@@ -37,24 +37,20 @@ def test_button_widget_rendering(
     assert_snapshot(button_elements.nth(1), name="st_button-disabled")
     assert_snapshot(button_elements.nth(2), name="st_button-primary")
     assert_snapshot(button_elements.nth(3), name="st_button-disabled_primary")
-    # use_container_width is deprecated, but we still these since they are not
-    # removed from the API.
-    assert_snapshot(button_elements.nth(4), name="st_button-use_container_width")
-    assert_snapshot(button_elements.nth(5), name="st_button-use_container_width_help")
-    assert_snapshot(button_elements.nth(6), name="st_button-styled_label")
-    assert_snapshot(button_elements.nth(7), name="st_button-just_help")
-    assert_snapshot(button_elements.nth(8), name="st_button-material_icon")
-    assert_snapshot(button_elements.nth(9), name="st_button-emoji_icon")
-    assert_snapshot(button_elements.nth(10), name="st_button-tertiary")
-    assert_snapshot(button_elements.nth(11), name="st_button-disabled_tertiary")
-    assert_snapshot(button_elements.nth(12), name="st_button-material_icon_1k_icon")
-    assert_snapshot(button_elements.nth(13), name="st_button-material_icon_1k_markdown")
+    assert_snapshot(button_elements.nth(4), name="st_button-styled_label")
+    assert_snapshot(button_elements.nth(5), name="st_button-just_help")
+    assert_snapshot(button_elements.nth(6), name="st_button-material_icon")
+    assert_snapshot(button_elements.nth(7), name="st_button-emoji_icon")
+    assert_snapshot(button_elements.nth(8), name="st_button-tertiary")
+    assert_snapshot(button_elements.nth(9), name="st_button-disabled_tertiary")
+    assert_snapshot(button_elements.nth(10), name="st_button-material_icon_1k_icon")
+    assert_snapshot(button_elements.nth(11), name="st_button-material_icon_1k_markdown")
 
     # The rest is tested in one screenshot in the following test
 
 
 def test_material_icon_hover(app: Page, assert_snapshot: ImageCompareFunction):
-    material_icon_button = app.get_by_test_id("stButton").nth(8)
+    material_icon_button = app.get_by_test_id("stButton").nth(6)
     app.get_by_text("Like Button").hover()
     assert_snapshot(material_icon_button, name="st_button-material_icon_hover")
 
@@ -122,13 +118,6 @@ def test_reset_on_other_widget_change(app: Page):
     )
 
 
-def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction):
-    button_element = app.get_by_test_id("stButton").nth(5)
-    button_element.hover()
-    assert_snapshot(button_element, name="st_button-on_hover")
-    expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
-
-
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stButton")
@@ -194,14 +183,39 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     """Test button width examples via screenshot matching."""
     # Button width examples
     button_expander = get_expander(app, "Button Width Examples")
-    button_expander.click()
-
     button_elements = button_expander.get_by_test_id("stButton")
-    expect(button_elements).to_have_count(3)
 
     assert_snapshot(button_elements.nth(0), name="st_button-width_content")
     assert_snapshot(button_elements.nth(1), name="st_button-width_stretch")
     assert_snapshot(button_elements.nth(2), name="st_button-width_200px")
-    assert_snapshot(button_elements.nth(3), name="st_button-width_stretch_help")
-    assert_snapshot(button_elements.nth(4), name="st_button-width_content_help")
-    assert_snapshot(button_elements.nth(5), name="st_button-width_200px_help")
+
+    stretch_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(0)
+    stretch_help_button = button_elements.nth(3)
+    stretch_help_button.hover()
+    assert_snapshot(stretch_help_container, name="st_button-width_stretch_help")
+
+    content_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(1)
+    content_help_button = button_elements.nth(4)
+    content_help_button.hover()
+    assert_snapshot(content_help_container, name="st_button-width_content_help")
+
+    fixed_width_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(
+        2
+    )
+    fixed_width_help_button = button_elements.nth(5)
+    fixed_width_help_button.hover()
+    assert_snapshot(fixed_width_help_container, name="st_button-width_200px_help")
+
+    # Test gradual deprecation of use_container_width
+    container_width_true_container = button_expander.get_by_test_id(
+        "stVerticalBlock"
+    ).nth(3)
+    assert_snapshot(
+        container_width_true_container, name="st_button-width_container_width_true"
+    )
+    container_width_false_container = button_expander.get_by_test_id(
+        "stVerticalBlock"
+    ).nth(4)
+    assert_snapshot(
+        container_width_false_container, name="st_button-width_container_width_false"
+    )

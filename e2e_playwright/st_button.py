@@ -51,18 +51,12 @@ st.write("value 3:", i4)
 i5 = st.button("button 4 (primary + disabled)", type="primary", disabled=True)
 st.write("value 4:", i5)
 
-st.button("button 5 (container_width)", use_container_width=True)
-
 st.button(
-    "button 6 (container_width + help)", use_container_width=True, help="help text"
+    ":material/search: _button 5_ (**styled** :green[label]) :material/arrow_forward:"
 )
 
 st.button(
-    ":material/search: _button 7_ (**styled** :green[label]) :material/arrow_forward:"
-)
-
-st.button(
-    "button 8 (just help)",
+    "button 6 (just help)",
     help="help text",
 )
 
@@ -93,7 +87,7 @@ conn_types = [
     "custom",
 ]
 for i in range(len(conn_types)):
-    cols[i % 3].button(conn_types[i], use_container_width=True)
+    cols[i % 3].button(conn_types[i], width="stretch")
 
 st.button("Foo :blue[bar] baz", type="primary")
 st.button("Foo :blue[bar] baz")
@@ -103,6 +97,22 @@ with st.expander("Button Width Examples", expanded=True):
     st.button("Content Width (Default)", width="content")
     st.button("Stretch Width", width="stretch")
     st.button("200px Width", width=200)
-    st.button("Stretch Width (help)", width="stretch", help="help text")
-    st.button("Content Width (help)", width="content", help="help text")
-    st.button("200px Width (help)", width=200, help="help text")
+
+    with st.container():
+        st.write("Stretch Width (help)")
+        st.button("Stretch Width (help)", width="stretch", help="help text")
+
+    with st.container():
+        st.write("Content Width (help)")
+        st.button("Content Width (help)", width="content", help="help text")
+
+    with st.container():
+        st.write("200px Width (help)")
+        st.button("200px Width (help)", width=200, help="help text")
+
+    # use_container_width is deprecated, but not removed from the API.
+    with st.container():
+        st.button("button (container_width=True)", use_container_width=True)
+
+    with st.container():
+        st.button("button (container_width=False)", use_container_width=False)
