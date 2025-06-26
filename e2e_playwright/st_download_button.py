@@ -52,21 +52,6 @@ with open(CAT_IMAGE, "rb") as f:
     )
 
 st.download_button(
-    "Download button with use_container_width=True",
-    data="Hello world!",
-    file_name="hello.txt",
-    use_container_width=True,
-)
-
-st.download_button(
-    "Download button with help text and use_container_width=True",
-    data="Hello world!",
-    file_name="hello.txt",
-    use_container_width=True,
-    help="Example help text",
-)
-
-st.download_button(
     "Primary download button",
     data="Hello world!",
     file_name="hello.txt",
@@ -161,3 +146,14 @@ with st.expander("Download Button Width Examples", expanded=True):
         "Stretch Width (help)", "data", width="stretch", help="help text"
     )
     st.download_button("300px Width (help)", "data", width=300, help="help text")
+
+    # use_container_width is deprecated, but not removed from the API.
+    with st.container(key="container_width_true"):
+        st.download_button(
+            "download_button (container_width=True)", "data", use_container_width=True
+        )
+
+    with st.container(key="container_width_false"):
+        st.download_button(
+            "download_button (container_width=False)", "data", use_container_width=False
+        )
