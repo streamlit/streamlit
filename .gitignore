@@ -31,7 +31,6 @@ cffi_bin
 
 # Pyenv / uv Stuff
 .python-version
-venv
 .venv
 Pipfile.lock
 Pipfile

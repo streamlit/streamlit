@@ -46,7 +46,7 @@ jobs:
         run: python -m playwright install --with-deps
       - name: Install integration dependencies
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv pip install polars
       - name: Run make frontend-build-with-profiler
         run: make frontend-build-with-profiler

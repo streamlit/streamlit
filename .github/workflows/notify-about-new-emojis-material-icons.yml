@@ -33,7 +33,7 @@ jobs:
 
       - name: Run make develop
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           make develop
       - name: Install newest version of emoji package
         run: pip install emoji --upgrade

@@ -92,7 +92,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           make develop
       - name: Run Linters
         run: make pylint
@@ -141,11 +141,11 @@ jobs:
           use_cached_venv: false
       - name: Run make develop
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           make develop
       - name: Install integration dependencies
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv pip install -r lib/integration-requirements.txt --force-reinstall
       - name: Run Python integration tests
         run: make pytest-integration
@@ -192,13 +192,13 @@ jobs:
           use_cached_venv: false
       - name: Install min dependencies (force reinstall)
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
       - name: Generate Protobufs
         run: make protobuf
       - name: Make local modules visible
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           uv pip install --editable ./lib --no-deps
       - name: Run Python Tests
         run: make pytest

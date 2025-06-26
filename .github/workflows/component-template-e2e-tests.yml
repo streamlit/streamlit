@@ -41,7 +41,7 @@ jobs:
 
       - name: Run make develop
         run: |
-          source venv/bin/activate
+          source .venv/bin/activate
           make develop
 
       - name: Build Package

@@ -108,7 +108,7 @@ export class LighthouseOrchestrator {
   createVirtualEnvironment(streamlitRoot) {
     console.log(`Creating virtual environment for Streamlit...`)
     const libPath = path.join(streamlitRoot, "lib")
-    execSync(`cd ${libPath} && python -m venv venv && cd ${streamlitRoot}`)
+    execSync(`cd ${libPath} && python -m venv .venv && cd ${streamlitRoot}`)
     console.log(`Virtual environment created`)
   }
 
@@ -129,7 +129,7 @@ export class LighthouseOrchestrator {
     return new Promise((resolve, reject) => {
       console.log(`Starting Streamlit for ${appPath}...`)
 
-      const activatePath = path.join(streamlitRoot, "lib/venv/bin/activate")
+      const activatePath = path.join(streamlitRoot, "lib/.venv/bin/activate")
 
       if (!fs.existsSync(activatePath)) {
         this.createVirtualEnvironment(streamlitRoot)
