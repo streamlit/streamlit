@@ -37,7 +37,7 @@ export interface Props {
   children?: ReactNode
   widgetMgr: WidgetStateManager
   border: boolean
-  // TODO(lawilby): This prop drill-downcan be removed once
+  // TODO(lawilby): This prop drill-down can be removed once
   // we are using a portal to render the toolbars. But we want to
   // do a patch to reduce the impact on existing usages of st.form.
   overflow?: React.CSSProperties["overflow"]
