@@ -82,10 +82,10 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
-      headerFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
       headerIconSize: Math.round(convertRemToPx("1.125rem")),
+      headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:
-      baseFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
+      baseFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       editorFontSize: theme.fontSizes.sm,
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),
