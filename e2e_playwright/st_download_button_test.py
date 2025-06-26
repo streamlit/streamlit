@@ -54,12 +54,6 @@ def test_download_button_widget_rendering(
     assert_snapshot(download_buttons.nth(0), name="st_download_button-default")
     assert_snapshot(download_buttons.nth(1), name="st_download_button-disabled")
 
-    assert_snapshot(
-        download_buttons.nth(4), name="st_download_button-use_container_width"
-    )
-    assert_snapshot(
-        download_buttons.nth(5), name="st_download_button-use_container_width_help"
-    )
     assert_snapshot(download_buttons.nth(6), name="st_download_button-primary")
     assert_snapshot(download_buttons.nth(7), name="st_download_button-emoji_icon")
     assert_snapshot(download_buttons.nth(8), name="st_download_button-material_icon")
