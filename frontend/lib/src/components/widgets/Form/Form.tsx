@@ -37,6 +37,10 @@ export interface Props {
   children?: ReactNode
   widgetMgr: WidgetStateManager
   border: boolean
+  // TODO(lawilby): This prop drill-down can be removed once
+  // we are using a portal to render the toolbars. But we want to
+  // do a patch to reduce the impact on existing usages of st.form.
+  overflow?: React.CSSProperties["overflow"]
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
@@ -57,6 +61,7 @@ function Form(props: Props): ReactElement {
     clearOnSubmit,
     enterToSubmit,
     border,
+    overflow,
   } = props
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
@@ -88,7 +93,12 @@ function Form(props: Props): ReactElement {
   }
 
   return (
-    <StyledForm className="stForm" data-testid="stForm" border={border}>
+    <StyledForm
+      className="stForm"
+      data-testid="stForm"
+      border={border}
+      overflow={overflow}
+    >
       {children}
       {submitWarning}
     </StyledForm>

@@ -314,6 +314,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
         scriptNotRunning={scriptNotRunning}
         widgetMgr={props.widgetMgr}
         border={border}
+        overflow={styles.overflow}
       >
         {child}
       </Form>
