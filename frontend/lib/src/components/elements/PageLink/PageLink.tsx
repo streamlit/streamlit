@@ -67,12 +67,11 @@ function PageLink(props: Readonly<Props>): ReactElement {
         placement={Placement.TOP_RIGHT}
         containerWidth={true}
       >
-        <StyledNavLinkContainer containerWidth={true}>
+        <StyledNavLinkContainer>
           <StyledNavLink
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            containerWidth={true}
             href={element.page}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"

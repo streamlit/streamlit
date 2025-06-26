@@ -51,6 +51,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { EmotionTheme } from "~lib/theme"
 import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   disabled: boolean
@@ -338,8 +339,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     fragmentId,
   })
 
-  // This determines whether the buttons will stretch to fill the container or if they should take up the width of their content.
-  const containerWidth = !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
+  const containerWidth = shouldChildrenStretch(widthConfig)
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
