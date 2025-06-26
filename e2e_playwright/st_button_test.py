@@ -189,18 +189,18 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(button_elements.nth(1), name="st_button-width_stretch")
     assert_snapshot(button_elements.nth(2), name="st_button-width_200px")
 
-    stretch_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(0)
+    stretch_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(1)
     stretch_help_button = button_elements.nth(3)
     stretch_help_button.hover()
     assert_snapshot(stretch_help_container, name="st_button-width_stretch_help")
 
-    content_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(1)
+    content_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(2)
     content_help_button = button_elements.nth(4)
     content_help_button.hover()
     assert_snapshot(content_help_container, name="st_button-width_content_help")
 
     fixed_width_help_container = button_expander.get_by_test_id("stVerticalBlock").nth(
-        2
+        3
     )
     fixed_width_help_button = button_elements.nth(5)
     fixed_width_help_button.hover()
@@ -209,13 +209,13 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     # Test gradual deprecation of use_container_width
     container_width_true_container = button_expander.get_by_test_id(
         "stVerticalBlock"
-    ).nth(3)
+    ).nth(4)
     assert_snapshot(
         container_width_true_container, name="st_button-width_container_width_true"
     )
     container_width_false_container = button_expander.get_by_test_id(
         "stVerticalBlock"
-    ).nth(4)
+    ).nth(5)
     assert_snapshot(
         container_width_false_container, name="st_button-width_container_width_false"
     )
