@@ -2099,7 +2099,12 @@ export class App extends PureComponent<Props, State> {
         })
       : null
 
-    const showToolbar = !isEmbed() || isToolbarDisplayed()
+    // Consider both embed state AND toolbar mode for showing toolbar
+    const showToolbar =
+      (!isEmbed() || isToolbarDisplayed()) &&
+      (this.state.toolbarMode !== Config.ToolbarMode.MINIMAL ||
+        hostMenuItems.length > 0 ||
+        hostToolbarItems.length > 0)
     const showColoredLine =
       (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
     const showPadding = !isEmbed() || isPaddingDisplayed()
