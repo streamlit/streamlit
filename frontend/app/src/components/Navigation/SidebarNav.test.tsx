@@ -33,6 +33,68 @@ vi.mock("~lib/util/Hooks", async () => ({
   useIsOverflowing: vi.fn(),
 }))
 
+/**
+ * Generates the main/default page for testing purposes
+ */
+const generateMainPage = (sectionHeaders?: string[]): IAppPage => ({
+  pageScriptHash: "main_page_hash",
+  pageName: "streamlit app",
+  urlPathname: "streamlit_app",
+  isDefault: true,
+  ...(sectionHeaders && { sectionHeader: sectionHeaders[0] }),
+})
+
+/**
+ * Generates the naming suffix for additional pages.
+ * Maintains backward compatibility by omitting suffix for the first page when totalPages === 2
+ */
+const generatePageSuffix = (pageIndex: number, totalPages: number): string => {
+  return pageIndex === 0 && totalPages === 2 ? "" : pageIndex.toString()
+}
+
+/**
+ * Generates a section header for a page based on the provided headers array
+ */
+const generateSectionHeader = (
+  pageIndex: number,
+  sectionHeaders: string[]
+): string => {
+  return sectionHeaders[(pageIndex + 1) % sectionHeaders.length]
+}
+
+/**
+ * Generates an additional page for testing purposes
+ */
+const generateAdditionalPage = (
+  pageIndex: number,
+  totalPages: number,
+  options: {
+    sectionHeaders?: string[]
+    icons?: boolean
+  }
+): IAppPage => {
+  const { sectionHeaders, icons } = options
+  const suffix = generatePageSuffix(pageIndex, totalPages)
+
+  return {
+    pageScriptHash: `other_page_hash${suffix}`,
+    pageName: `my other page${suffix}`,
+    urlPathname: `my_other_page${suffix}`,
+    isDefault: false,
+    ...(sectionHeaders && {
+      sectionHeader: generateSectionHeader(pageIndex, sectionHeaders),
+    }),
+    ...(icons && pageIndex === 0 ? { icon: "🐧" } : {}),
+  }
+}
+
+/**
+ * Generates a collection of app pages for testing purposes
+ * @param totalPages - Total number of pages to generate (minimum 1)
+ * @param options - Configuration options for page generation
+ * @param options.sectionHeaders - Array of section headers to cycle through
+ * @param options.icons - Whether to add icons to the first additional page
+ */
 const generateAppPages = (
   totalPages: number,
   options: {
@@ -40,30 +102,12 @@ const generateAppPages = (
     icons?: boolean
   } = {}
 ): IAppPage[] => {
-  const { sectionHeaders, icons } = options
-  const pages: IAppPage[] = [
-    {
-      pageScriptHash: "main_page_hash",
-      pageName: "streamlit app",
-      urlPathname: "streamlit_app",
-      isDefault: true,
-      ...(sectionHeaders && { sectionHeader: sectionHeaders[0] }),
-    },
-  ]
+  const { sectionHeaders } = options
+  const pages: IAppPage[] = [generateMainPage(sectionHeaders)]
 
+  // Generate additional pages (totalPages - 1)
   for (let i = 0; i < totalPages - 1; i++) {
-    // For the first additional page (i=0), maintain original naming for backward compatibility
-    const suffix = i === 0 && totalPages === 2 ? "" : i.toString()
-    pages.push({
-      pageScriptHash: `other_page_hash${suffix}`,
-      pageName: `my other page${suffix}`,
-      urlPathname: `my_other_page${suffix}`,
-      isDefault: false,
-      ...(sectionHeaders && {
-        sectionHeader: sectionHeaders[(i + 1) % sectionHeaders.length],
-      }),
-      ...(icons && i === 0 ? { icon: "🐧" } : {}),
-    })
+    pages.push(generateAdditionalPage(i, totalPages, options))
   }
 
   return pages
