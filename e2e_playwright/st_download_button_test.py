@@ -23,6 +23,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     get_element_by_key,
+    get_expander,
     goto_app,
 )
 
@@ -219,4 +220,29 @@ def test_download_button_source_error(app: Page, app_port: int):
             messages, DOWNLOAD_BUTTON_ELEMENTS
         ),
         timeout=10000,
+    )
+
+
+def test_download_button_width_examples(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test download button width examples via screenshot matching."""
+    # Download button width examples
+    download_expander = get_expander(app, "Download Button Width Examples")
+    download_expander.click()
+
+    download_elements = download_expander.get_by_test_id("stDownloadButton")
+    expect(download_elements).to_have_count(3)
+
+    assert_snapshot(download_elements.nth(0), name="st_download_button-width_content")
+    assert_snapshot(download_elements.nth(1), name="st_download_button-width_stretch")
+    assert_snapshot(download_elements.nth(2), name="st_download_button-width_300px")
+    assert_snapshot(
+        download_elements.nth(3), name="st_download_button-width_content_help"
+    )
+    assert_snapshot(
+        download_elements.nth(4), name="st_download_button-width_stretch_help"
+    )
+    assert_snapshot(
+        download_elements.nth(5), name="st_download_button-width_300px_help"
     )

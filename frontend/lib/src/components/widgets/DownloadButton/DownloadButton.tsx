@@ -31,7 +31,6 @@ import BaseButton, {
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { LibContext } from "~lib/components/core/LibContext"
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -89,20 +88,16 @@ function DownloadButton(props: Props): ReactElement {
     )
     link.click()
   }
-  const containerWidth = shouldChildrenStretch(widthConfig)
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
-      <BaseButtonTooltip
-        help={element.help}
-        containerWidth={element.useContainerWidth || containerWidth}
-      >
+      <BaseButtonTooltip help={element.help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
-          containerWidth={element.useContainerWidth || containerWidth}
+          containerWidth={true}
         >
           <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>
