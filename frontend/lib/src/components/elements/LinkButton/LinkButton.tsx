@@ -57,6 +57,8 @@ function LinkButton(props: Readonly<Props>): ReactElement {
     <Box className="stLinkButton" data-testid="stLinkButton">
       <BaseButtonTooltip
         help={element.help}
+        // element.useContainerWidth is no longer used, but we keep it here for
+        // proto backwards compatibility.
         containerWidth={element.useContainerWidth || containerWidth}
       >
         {/* We use separate BaseLinkButton instead of BaseButton here, because
@@ -66,6 +68,8 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           size={BaseButtonSize.SMALL}
           disabled={element.disabled}
           onClick={handleClick}
+          // element.useContainerWidth is no longer used, but we keep it here for
+          // proto backwards compatibility.
           containerWidth={element.useContainerWidth || containerWidth}
           href={element.url}
           target="_blank"
