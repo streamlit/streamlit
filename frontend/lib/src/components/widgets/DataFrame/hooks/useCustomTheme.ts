@@ -76,16 +76,15 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       // Header styling:
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
-      bgHeader: theme.colors.bgMix,
+      bgHeader: theme.colors.dataframeHeaderBackgroundColor,
       bgHeaderHasFocus: transparentize(theme.colors.darkenedBgMix100, 0.9),
       bgHeaderHovered: transparentize(theme.colors.darkenedBgMix100, 0.9),
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
-      headerFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
-      headerIconSize: Math.round(convertRemToPx("1.125rem")),
+      headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:
-      baseFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
+      baseFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       editorFontSize: theme.fontSizes.sm,
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),
@@ -103,7 +102,9 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       drilldownBorder: theme.colors.darkenedBgMix25,
       // Unused settings:
       // lineHeight
+      // headerIconSize: number;
       // markerFontStyle: string;
+      // resizeIndicatorColor?: string;
       // headerBottomBorderColor?: string;
     }
 

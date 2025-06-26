@@ -18,7 +18,7 @@ import React, { Fragment } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { mockSessionInfo, render, SessionInfo } from "@streamlit/lib"
+import { render } from "@streamlit/lib"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import { StreamlitDialog } from "@streamlit/app/src/components/StreamlitDialog"
 
@@ -84,42 +84,20 @@ describe("StreamlitDialog", () => {
 })
 
 describe("aboutDialog", () => {
-  it("shows version string if SessionInfo is initialized", () => {
+  it("shows aboutSectionMd content when provided", () => {
     render(
       <Fragment>
         {StreamlitDialog({
           type: DialogType.ABOUT,
-          sessionInfo: mockSessionInfo({ streamlitVersion: "42.42.42" }),
           onClose: () => {},
+          aboutSectionMd: "# This is a test about section",
         })}
       </Fragment>
     )
 
     expect(screen.getByTestId("stDialog")).toBeInTheDocument()
-    // need a regex because there is a line break
-    const versionRegex = /Streamlit v\s*42\.42\.42/
-    const versionText = screen.getByText(versionRegex)
-    expect(versionText).toBeDefined()
-  })
-
-  it("shows no version string if SessionInfo is not initialized", () => {
-    const sessionInfo = new SessionInfo()
-    expect(sessionInfo.isSet).toBe(false)
-
-    render(
-      <Fragment>
-        {StreamlitDialog({
-          type: DialogType.ABOUT,
-          sessionInfo,
-          onClose: () => {},
-        })}
-      </Fragment>
-    )
-
-    expect(screen.getByTestId("stDialog")).toBeInTheDocument()
-    // regex that is anything after Streamlit v
-    const versionRegex = /^Streamlit v.*/
-    const nonExistentText = screen.queryByText(versionRegex)
-    expect(nonExistentText).not.toBeInTheDocument()
+    expect(
+      screen.getByText("This is a test about section")
+    ).toBeInTheDocument()
   })
 })
