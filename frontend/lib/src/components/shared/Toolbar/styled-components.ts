@@ -22,31 +22,29 @@ export const TOP_DISTANCE = "-2.65rem"
 
 export interface StyledToolbarWrapperProps {
   locked?: boolean
+  isVisible?: boolean
+  position?: {
+    top: number
+    right: number
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   target?: StyledComponent<any, any, any>
 }
 
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
-  ({ theme, locked, target }) => ({
+  ({ theme, locked, isVisible, target, position }) => ({
     padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
-    position: "absolute",
-    top: locked ? TOP_DISTANCE : "-1rem",
-    right: theme.spacing.none,
-    transition: "none",
-    ...(!locked && {
-      opacity: 0,
-      "&:active, &:focus-visible, &:hover": {
-        transition: "opacity 150ms 100ms, top 100ms 100ms",
-        opacity: 1,
-        top: TOP_DISTANCE,
-      },
-      ...(target && {
-        [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]: {
-          transition: "opacity 150ms 100ms, top 100ms 100ms",
-          opacity: 1,
-          top: TOP_DISTANCE,
-        },
-      }),
+    position: position ? "fixed" : "absolute",
+    right: position ? position.right : theme.spacing.none,
+    transition: "opacity 150ms 100ms, top 100ms 100ms",
+
+    opacity: locked || isVisible ? 1 : 0,
+
+    ...(!position && {
+      top: locked || isVisible ? TOP_DISTANCE : "-1rem",
+    }),
+    ...(position && {
+      top: `calc(${position.top}px + ${TOP_DISTANCE})`,
     }),
   })
 )

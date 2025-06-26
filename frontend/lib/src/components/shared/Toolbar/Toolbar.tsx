@@ -89,6 +89,12 @@ export interface ToolbarProps {
   onCollapse?: () => void
   isFullScreen?: boolean
   locked?: boolean
+  isVisible?: boolean
+  // The position of the toolbar can be passed in to allow it to be rendered in a portal.
+  position?: {
+    top: number
+    right: number
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   target?: StyledComponent<any, any, any>
   disableFullscreenMode?: boolean
@@ -99,6 +105,8 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   onCollapse,
   isFullScreen,
   locked,
+  isVisible = false,
+  position,
   children,
   target,
   disableFullscreenMode,
@@ -113,7 +121,9 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
       className="stElementToolbar"
       data-testid="stElementToolbar"
       locked={locked || isFullScreen}
+      isVisible={isVisible}
       target={target}
+      position={position}
     >
       <StyledToolbar data-testid="stElementToolbarButtonContainer">
         {children}

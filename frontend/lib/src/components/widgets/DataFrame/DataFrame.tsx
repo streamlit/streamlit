@@ -59,6 +59,7 @@ import { LibContext } from "~lib/components/core/LibContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useElementPosition } from "~lib/hooks/useElementPosition"
 
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
@@ -148,6 +149,7 @@ function DataFrame({
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
   const resizableContainerRef = useRef<HTMLDivElement>(null)
+  const position = useElementPosition(resizableContainerRef)
 
   const gridTheme = useCustomTheme()
 
@@ -158,6 +160,7 @@ function DataFrame({
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
   } = useContext(LibContext)
 
+  const [isHovered, setIsHovered] = useState(false)
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
   const [hasVerticalScroll, setHasVerticalScroll] = useState<boolean>(false)
@@ -697,6 +700,8 @@ function DataFrame({
       data-testid="stDataFrame"
       hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onMouseDown={e => {
         if (resizableContainerRef.current && hasCustomizedScrollbars) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
@@ -741,103 +746,118 @@ function DataFrame({
         }
       }}
     >
-      <Toolbar
-        isFullScreen={isFullScreen}
-        disableFullscreenMode={disableFullscreenMode}
-        // Lock the toolbar in some specific situations:
-        locked={
-          (isRowSelected && !isRowSelectionActivated) ||
-          isCellSelected ||
-          (isTouchDevice && isFocused) ||
-          showColumnVisibilityMenu
-        }
-        onExpand={expand}
-        onCollapse={collapse}
-        target={StyledResizableContainer}
-      >
-        {((isRowSelectionActivated && isRowSelected) ||
-          (isColumnSelectionActivated && isColumnSelected)) && (
-          // Add clear selection action if selections are active
-          // and a valid selections currently exists. Cell selections
-          // are not relevant since they are not synced to the backend
-          // at the moment.
-          <ToolbarAction
-            label="Clear selection"
-            icon={Close}
-            onClick={() => {
-              clearSelection()
-              clearTooltip()
-            }}
-          />
-        )}
-        {isDynamicAndEditable && isRowSelected && (
-          <ToolbarAction
-            label="Delete row(s)"
-            icon={Delete}
-            onClick={() => {
-              if (onDelete) {
-                onDelete(gridSelection)
-                clearTooltip()
-              }
-            }}
-          />
-        )}
-        {isDynamicAndEditable && !isRowSelected && (
-          <ToolbarAction
-            label="Add row"
-            icon={Add}
-            onClick={() => {
-              if (onRowAppended) {
-                setIsFocused(true)
-                // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-                onRowAppended()
-                clearTooltip()
-                // Automatically scroll to the new row on the vertical axis:
-                dataEditorRef.current?.scrollTo(0, numRows, "vertical")
-              }
-            }}
-          />
-        )}
-        {!isEmptyTable && allColumns.length > columns.length && (
-          <ColumnVisibilityMenu
-            columns={allColumns}
-            columnOrder={columnOrder}
-            setColumnOrder={setColumnOrder}
-            hideColumn={hideColumn}
-            showColumn={showColumn}
-            isOpen={showColumnVisibilityMenu}
-            onClose={() => setShowColumnVisibilityMenu(false)}
-          >
+      {createPortal(
+        <Toolbar
+          isFullScreen={isFullScreen}
+          disableFullscreenMode={disableFullscreenMode}
+          // Lock the toolbar in some specific situations:
+          locked={
+            (isRowSelected && !isRowSelectionActivated) ||
+            isCellSelected ||
+            (isTouchDevice && isFocused) ||
+            showColumnVisibilityMenu
+          }
+          isVisible={isHovered}
+          onExpand={expand}
+          onCollapse={collapse}
+          target={StyledResizableContainer}
+          position={
+            position
+              ? {
+                  top: position.top,
+                  right:
+                    document.documentElement.clientWidth -
+                    (position.left + position.width) -
+                    1,
+                }
+              : undefined
+          }
+        >
+          {((isRowSelectionActivated && isRowSelected) ||
+            (isColumnSelectionActivated && isColumnSelected)) && (
+            // Add clear selection action if selections are active
+            // and a valid selections currently exists. Cell selections
+            // are not relevant since they are not synced to the backend
+            // at the moment.
             <ToolbarAction
-              label="Show/hide columns"
-              icon={Visibility}
-              onClick={() => setShowColumnVisibilityMenu(true)}
+              label="Clear selection"
+              icon={Close}
+              onClick={() => {
+                clearSelection()
+                clearTooltip()
+              }}
             />
-          </ColumnVisibilityMenu>
-        )}
-        {!isLargeTable && !isEmptyTable && (
-          <ToolbarAction
-            label="Download as CSV"
-            icon={FileDownload}
-            onClick={() => exportToCsv()}
-          />
-        )}
-        {!isEmptyTable && (
-          <ToolbarAction
-            label="Search"
-            icon={Search}
-            onClick={() => {
-              if (!showSearch) {
-                setIsFocused(true)
-                setShowSearch(true)
-              } else {
-                setShowSearch(false)
-              }
-              clearTooltip()
-            }}
-          />
-        )}
-      </Toolbar>
+          )}
+          {isDynamicAndEditable && isRowSelected && (
+            <ToolbarAction
+              label="Delete row(s)"
+              icon={Delete}
+              onClick={() => {
+                if (onDelete) {
+                  onDelete(gridSelection)
+                  clearTooltip()
+                }
+              }}
+            />
+          )}
+          {isDynamicAndEditable && !isRowSelected && (
+            <ToolbarAction
+              label="Add row"
+              icon={Add}
+              onClick={() => {
+                if (onRowAppended) {
+                  setIsFocused(true)
+                  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
+                  onRowAppended()
+                  clearTooltip()
+                  // Automatically scroll to the new row on the vertical axis:
+                  dataEditorRef.current?.scrollTo(0, numRows, "vertical")
+                }
+              }}
+            />
+          )}
+          {!isEmptyTable && allColumns.length > columns.length && (
+            <ColumnVisibilityMenu
+              columns={allColumns}
+              columnOrder={columnOrder}
+              setColumnOrder={setColumnOrder}
+              hideColumn={hideColumn}
+              showColumn={showColumn}
+              isOpen={showColumnVisibilityMenu}
+              onClose={() => setShowColumnVisibilityMenu(false)}
+            >
+              <ToolbarAction
+                label="Show/hide columns"
+                icon={Visibility}
+                onClick={() => setShowColumnVisibilityMenu(true)}
+              />
+            </ColumnVisibilityMenu>
+          )}
+          {!isLargeTable && !isEmptyTable && (
+            <ToolbarAction
+              label="Download as CSV"
+              icon={FileDownload}
+              onClick={() => exportToCsv()}
+            />
+          )}
+          {!isEmptyTable && (
+            <ToolbarAction
+              label="Search"
+              icon={Search}
+              onClick={() => {
+                if (!showSearch) {
+                  setIsFocused(true)
+                  setShowSearch(true)
+                } else {
+                  setShowSearch(false)
+                }
+                clearTooltip()
+              }}
+            />
+          )}
+        </Toolbar>,
+        document.body
+      )}
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}

@@ -87,3 +87,6 @@ with col2:
         st.write("Inside container 7")
     with st.container(height=100, border=True):
         st.write("Inside container 8")
+
+with st.container(height=200, border=True):
+    st.dataframe([1, 2, 3])
