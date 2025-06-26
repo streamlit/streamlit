@@ -19,6 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    expect_font,
     reset_hovering,
 )
 from e2e_playwright.shared.dataframe_utils import (
@@ -36,6 +37,8 @@ def test_dataframe_supports_various_configurations(
     """Screenshot test that st.dataframe supports various configuration options."""
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
     expect(dataframe_elements).to_have_count(30)
+    # Wait for material icons font to be loaded for more stable tests:
+    expect_font(themed_app, "Material Symbols Rounded")
 
     # The dataframe component might require a bit more time for rendering the canvas
     themed_app.wait_for_timeout(250)
@@ -52,6 +55,7 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(9), name="st_dataframe-number_column")
     assert_snapshot(dataframe_elements.nth(10), name="st_dataframe-checkbox_column")
     assert_snapshot(dataframe_elements.nth(11), name="st_dataframe-selectbox_column")
+
     assert_snapshot(dataframe_elements.nth(12), name="st_dataframe-link_column")
     assert_snapshot(dataframe_elements.nth(13), name="st_dataframe-datetime_column")
     assert_snapshot(dataframe_elements.nth(14), name="st_dataframe-date_column")
