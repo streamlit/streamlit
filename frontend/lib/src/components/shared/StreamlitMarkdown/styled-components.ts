@@ -21,7 +21,7 @@ export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInSidebarOrDialog: boolean
   isLabel?: boolean
-  isDialogTitle?: boolean
+  inheritFont?: boolean
   boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
@@ -148,7 +148,7 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInSidebarOrDialog,
       isLabel,
-      isDialogTitle,
+      inheritFont,
       boldLabel,
       largerLabel,
       isToast,
@@ -159,8 +159,8 @@ export const StyledStreamlitMarkdown =
         (isLabel && !largerLabel) || isToast || isCaption
 
       return {
-        fontFamily: isDialogTitle ? "inherit" : theme.genericFonts.bodyFont,
-        fontSize: isDialogTitle
+        fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
+        fontSize: inheritFont
           ? "inherit"
           : useSmallerFontSize
             ? theme.fontSizes.sm
@@ -184,7 +184,7 @@ export const StyledStreamlitMarkdown =
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? theme.spacing.none : "",
-          fontWeight: isDialogTitle
+          fontWeight: inheritFont
             ? "inherit"
             : boldLabel
               ? theme.fontWeights.bold

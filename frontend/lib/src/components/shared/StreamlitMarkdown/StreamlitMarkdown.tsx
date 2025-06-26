@@ -98,11 +98,6 @@ export interface Props {
   isLabel?: boolean
 
   /**
-   * Indicates dialog titles & restricts allowed elements
-   */
-  isDialogTitle?: boolean
-
-  /**
    * Make the label bold
    */
   boldLabel?: boolean
@@ -121,6 +116,11 @@ export interface Props {
    * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
+
+  /**
+   * Inherit font family, size, and weight from parent
+   */
+  inheritFont?: boolean
 }
 
 /**
@@ -329,11 +329,6 @@ export interface RenderedMarkdownProps {
    * Indicates widget labels & restricts allowed elements
    */
   isLabel?: boolean
-
-  /**
-   * Indicates dialog titles & restricts allowed elements
-   */
-  isDialogTitle?: boolean
 
   /**
    * Does not allow links
@@ -716,7 +711,6 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   source,
   overrideComponents,
   isLabel,
-  isDialogTitle,
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
@@ -758,11 +752,10 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const disallowed = useMemo(() => {
-    // Apply restrictions if either isLabel or isDialogTitle is true
-    const shouldRestrict = isLabel || isDialogTitle
-    if (!shouldRestrict) return []
+    if (!isLabel) return []
+
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
-  }, [isLabel, isDialogTitle, disableLinks])
+  }, [isLabel, disableLinks])
 
   return (
     <ErrorBoundary>
@@ -791,11 +784,11 @@ const StreamlitMarkdown: FC<Props> = ({
   style,
   isCaption,
   isLabel,
-  isDialogTitle,
   boldLabel,
   largerLabel,
   disableLinks,
   isToast,
+  inheritFont,
 }) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
@@ -805,7 +798,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isCaption={Boolean(isCaption)}
       isInSidebarOrDialog={isInSidebar || isInDialog}
       isLabel={isLabel}
-      isDialogTitle={isDialogTitle}
+      inheritFont={inheritFont}
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}
@@ -816,7 +809,6 @@ const StreamlitMarkdown: FC<Props> = ({
         source={source}
         allowHTML={allowHTML}
         isLabel={isLabel}
-        isDialogTitle={isDialogTitle}
         disableLinks={disableLinks}
       />
     </StyledStreamlitMarkdown>
