@@ -105,6 +105,6 @@ with st.sidebar:
     with st.container(key="sidebar_container_width_false"):
         st.page_link(
             "http://www.example.com",
-            label="sidebar_container_width_false",
+            label="cont_width",
             use_container_width=False,
         )
