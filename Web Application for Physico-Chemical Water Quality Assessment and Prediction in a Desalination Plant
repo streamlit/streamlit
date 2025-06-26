@@ -1,0 +1,113 @@
+# Web Application for Physico-Chemical Water Quality Assessment and Prediction in a Desalination Plant
+
+## Description (EN)
+Web application built with Python and Streamlit for analyzing and predicting the physico-chemical water quality in a desalination plant. It compares values to WHO standards and uses AI (Linear Regression and MLP) to predict key parameters for decision-making and monitoring.
+
+## Description (FR)
+Application web développée avec Python et Streamlit pour l’analyse et la prédiction de la qualité physico-chimique de l’eau d’une station de dessalement. Elle compare les résultats aux normes OMS et utilise l’IA (régression linéaire et MLP) pour la prédiction de paramètres.
+
+---
+
+# app.py
+
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.neural_network import MLPRegressor
+
+st.set_page_config(page_title="Qualité de l'eau - Station de dessalement", layout="wide")
+st.title("💧 Qualité de l'eau - Station de Dessalement")
+
+# Navigation
+pages = ["🌍 Accueil", "📊 Qualité selon l'OMS", "🤖 Prédiction (RL)", "🫠 Prédiction (MLP)"]
+page = st.sidebar.radio("Aller à :", pages)
+
+# Données
+semaine_labels = ["Semaine 1", "Semaine 2", "Semaine 3", "Semaine 4"]
+data = pd.DataFrame({
+    "Semaine": semaine_labels,
+    "Chlore": [0.42, 0.43, 0.4, 0.41],
+    "Durete": [69.88, 70.09, 69.61, 69.82],
+    "TDS": [306, 326, 334, 343],
+    "pH": [8.39, 8.37, 8.37, 8.35],
+    "Temp": [18.6, 18.4, 18.8, 19.7],
+    "Cond": [615, 652, 668, 685],
+    "TAC": [60.21, 60.26, 60.05, 60.2],
+    "TA": [60.07, 54.31, 59.77, 60.63],
+    "Mg": [9.81, 14.88, 9.88, 9.26],
+    "Ca": [60.07, 55.21, 59.63, 60.55],
+    "Bore": [0.8, 0.82, 0.84, 0.9],
+    "Chlorure": [162, 143, 152, 169],
+    "Nitrites": [2, 1.9, 1.2, 2.3],
+    "Nitrates": [33.8, 39.9, 36.9, 38.1],
+    "Sulfate": [60, 63, 67.8, 65.3],
+    "Sodium": [40, 34, 42, 38],
+    "Potassium": [13, 14.9, 12.6, 11.7],
+    "Fer": [0.1, 0.24, 0.19, 0.22]
+})
+data.set_index("Semaine", inplace=True)
+
+normes = {
+    "Chlore": (0, 5),
+    "Durete": (65, 150),
+    "TDS": (150, 500),
+    "pH": (6.5, 8.5),
+    "Cond": (0, 1500),
+    "TAC": (50, 65),
+    "Mg": (0, 150),
+    "Ca": (0, 75),
+    "Bore": (0, 1),
+    "Chlorure": (0, 250),
+    "Nitrites": (0, 3),
+    "Nitrates": (0, 50),
+    "Sulfate": (0, 500),
+    "Sodium": (0, 200),
+    "Potassium": (0, 20),
+    "Fer": (0, 0.3)
+}
+
+if page == pages[0]:
+    st.header("🌊 Bienvenue")
+    st.markdown("""
+    Cette application permet :
+    - D'analyser la qualité de l'eau produite par une station de dessalement
+    - De comparer les résultats aux normes OMS
+    - De prédire certains paramètres grâce à l'intelligence artificielle
+    """)
+    st.dataframe(data)
+
+elif page == pages[1]:
+    st.header("📊 Comparaison aux normes OMS")
+    comparaison = {}
+    for param in normes:
+        moyenne = data[param].mean()
+        borne_min, borne_max = normes[param]
+        if moyenne < borne_min:
+            comparaison[param] = f"❌ Trop bas: {moyenne:.2f}"
+        elif moyenne > borne_max:
+            comparaison[param] = f"⚠️ Trop élevé: {moyenne:.2f}"
+        else:
+            comparaison[param] = f"✅ Conforme: {moyenne:.2f}"
+    st.json(comparaison)
+
+elif page == pages[2] or page == pages[3]:
+    algo = "Régression Linéaire" if page == pages[2] else "MLP"
+    st.header(f"🤖 Prédiction avec {algo}")
+    cols = st.multiselect("Choisir les variables d'entrée (X)", options=data.columns.tolist())
+    target = st.selectbox("Variable cible (y)", options=data.columns.tolist())
+    if cols and target and target not in cols:
+        X = data[cols].values
+        y = data[target].values
+        model = LinearRegression() if algo == "Régression Linéaire" else MLPRegressor(hidden_layer_sizes=(10,), max_iter=2000)
+        model.fit(X, y)
+        prediction = model.predict(X)
+
+        fig, ax = plt.subplots()
+        ax.plot(semaine_labels, y, label="Réel", marker='o')
+        ax.plot(semaine_labels, prediction, label=f"Prédiction {algo}", linestyle='--')
+        ax.set_title(f"{target} : réel vs prédit")
+        ax.legend()
+        st.pyplot(fig)
+    elif target in cols:
+        st.warning("La variable cible ne doit pas faire partie des variables d'entrée.")
