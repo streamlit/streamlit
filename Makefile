@@ -92,7 +92,7 @@ python-init:
 	fi;\
 	if command -v "uv" > /dev/null; then \
 		echo "Running command: uv venv --allow-existing && uv pip install $${pip_args[@]}"; \
-		uv venv --allow-existing && uv pip install $${pip_args[@]} \
+		uv venv --allow-existing && uv pip install $${pip_args[@]}; \
 		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 			uv run python -m playwright install --with-deps; \
 		fi;\
