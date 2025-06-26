@@ -18,8 +18,8 @@ import { useMemo } from "react"
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { mix, transparentize } from "color2k"
 
-import { convertRemToPx } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
@@ -76,15 +76,15 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       // Header styling:
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
-      bgHeader: theme.colors.bgMix,
+      bgHeader: theme.colors.dataframeHeaderBackgroundColor,
       bgHeaderHasFocus: transparentize(theme.colors.darkenedBgMix100, 0.9),
       bgHeaderHovered: transparentize(theme.colors.darkenedBgMix100, 0.9),
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
-      headerFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
+      headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:
-      baseFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
+      baseFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       editorFontSize: theme.fontSizes.sm,
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),

@@ -30,6 +30,7 @@ export interface StyledMetricContainerProps {
 
 export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
   ({ theme, showBorder }) => ({
+    height: "100%",
     ...(showBorder && {
       border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
       borderRadius: theme.radii.default,
