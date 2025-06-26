@@ -67,6 +67,21 @@ with st.expander("Page Link Width Examples", expanded=True):
         "https://example.com", label="500px Width (help)", width=500, help="help text"
     )
 
+    # use_container_width is deprecated, but not removed from the API.
+    with st.container(key="main_container_width_true"):
+        st.page_link(
+            "http://www.example.com",
+            label="main_container_width_true",
+            use_container_width=True,
+        )
+
+    with st.container(key="main_container_width_false"):
+        st.page_link(
+            "http://www.example.com",
+            label="main_container_width_false",
+            use_container_width=False,
+        )
+
 with st.sidebar:
     st.page_link("http://www.example.com", label="Default Sidebar")
     st.page_link("http://www.example.com", label="Icon Sidebar", icon="🌎")
@@ -80,8 +95,16 @@ with st.sidebar:
     )
 
     # use_container_width is deprecated, but not removed from the API.
-    with st.container():
-        st.page_link("http://www.example.com", use_container_width=True)
+    with st.container(key="sidebar_container_width_true"):
+        st.page_link(
+            "http://www.example.com",
+            label="sidebar_container_width_true",
+            use_container_width=True,
+        )
 
-    with st.container():
-        st.page_link("http://www.example.com", use_container_width=False)
+    with st.container(key="sidebar_container_width_false"):
+        st.page_link(
+            "http://www.example.com",
+            label="sidebar_container_width_false",
+            use_container_width=False,
+        )
