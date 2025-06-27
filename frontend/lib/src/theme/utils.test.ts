@@ -1053,7 +1053,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights.`
+        `Invalid baseFontWeight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
@@ -1121,13 +1121,108 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights.`
+        `Invalid codeFontWeight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
       expect(theme.fontWeights.bold).toBe(expectedBold)
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
       expect(theme.fontWeights.code).toBe(expectedCode)
+    }
+  )
+
+  it.each([
+    // Test valid font weights for h2-h6
+    [100, 100, 100, 100, 100],
+    [200, 200, 200, 200, 200],
+    [300, 300, 300, 300, 300],
+    [400, 400, 400, 400, 400],
+    [500, 500, 500, 500, 500],
+    [600, 600, 600, 600, 600],
+    [700, 700, 700, 700, 700],
+    [800, 800, 800, 800, 800],
+    [900, 900, 900, 900, 900],
+  ])(
+    "sets the font weights based on the h2-h6 configs '%s'",
+    (h2FontWeight, h3FontWeight, h4FontWeight, h5FontWeight, h6FontWeight) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        h2FontWeight,
+        h3FontWeight,
+        h4FontWeight,
+        h5FontWeight,
+        h6FontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
+      expect(theme.fontWeights.h2FontWeight).toBe(h2FontWeight)
+      expect(theme.fontWeights.h3FontWeight).toBe(h3FontWeight)
+      expect(theme.fontWeights.h4FontWeight).toBe(h4FontWeight)
+      expect(theme.fontWeights.h5FontWeight).toBe(h5FontWeight)
+      expect(theme.fontWeights.h6FontWeight).toBe(h6FontWeight)
+    }
+  )
+
+  it.each([
+    // Test invalid font weights for h2-h6
+    [150, 200, 300, 400, 500, 150, "h2FontWeight"], // Not an increment of 100 (h2)
+    [1000, 200, 300, 400, 500, 1000, "h2FontWeight"], // Not between 100 and 900 (h2)
+    [400.5, 200, 300, 400, 500, 400.5, "h2FontWeight"], // Not an integer (h2)
+    [200, 150, 300, 400, 500, 150, "h3FontWeight"], // h3
+    [200, 1000, 300, 400, 500, 1000, "h3FontWeight"], // h3
+    [200, 400.5, 300, 400, 500, 400.5, "h3FontWeight"], // h3
+    [200, 300, 150, 400, 500, 150, "h4FontWeight"], // h4
+    [200, 300, 1000, 400, 500, 1000, "h4FontWeight"], // h4
+    [200, 300, 400.5, 400, 500, 400.5, "h4FontWeight"], // h4
+    [200, 300, 400, 150, 500, 150, "h5FontWeight"], // h5
+    [200, 300, 400, 1000, 500, 1000, "h5FontWeight"], // h5
+    [200, 300, 400, 400.5, 500, 400.5, "h5FontWeight"], // h5
+    [200, 300, 400, 500, 150, 150, "h6FontWeight"], // h6
+    [200, 300, 400, 500, 1000, 1000, "h6FontWeight"], // h6
+    [200, 300, 400, 500, 400.5, 400.5, "h6FontWeight"], // h6
+  ])(
+    "logs a warning and falls back to default font weights if codeFontWeight is invalid '%s'",
+    (
+      h2FontWeight,
+      h3FontWeight,
+      h4FontWeight,
+      h5FontWeight,
+      h6FontWeight,
+      invalidFontWeight,
+      invalidFontWeightConfig
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        h2FontWeight,
+        h3FontWeight,
+        h4FontWeight,
+        h5FontWeight,
+        h6FontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid ${invalidFontWeightConfig}: ${invalidFontWeight}. The ${invalidFontWeightConfig} must be an integer 100-900, and an increment of 100. Falling back to default font weight.`
+      )
+
+      if (invalidFontWeightConfig !== "h2FontWeight") {
+        expect(theme.fontWeights.h2FontWeight).toBe(h2FontWeight)
+      }
+      if (invalidFontWeightConfig !== "h3FontWeight") {
+        expect(theme.fontWeights.h3FontWeight).toBe(h3FontWeight)
+      }
+      if (invalidFontWeightConfig !== "h4FontWeight") {
+        expect(theme.fontWeights.h4FontWeight).toBe(h4FontWeight)
+      }
+      if (invalidFontWeightConfig !== "h5FontWeight") {
+        expect(theme.fontWeights.h5FontWeight).toBe(h5FontWeight)
+      }
+      if (invalidFontWeightConfig !== "h6FontWeight") {
+        expect(theme.fontWeights.h6FontWeight).toBe(h6FontWeight)
+      }
     }
   )
 

@@ -709,11 +709,6 @@ def _mock_get_options_for_section(
         "codeFontWeight": 500,
         "font": "Inter",
         "headingFont": "Inter Bold",
-        "h2FontWeight": 400,
-        "h3FontWeight": 400,
-        "h4FontWeight": 400,
-        "h5FontWeight": 400,
-        "h6FontWeight": 400,
         "linkColor": "#2EC163",
         "linkUnderline": False,
         "primaryColor": "red",
@@ -1268,6 +1263,11 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
+                    "h2FontWeight": None,
+                    "h3FontWeight": None,
+                    "h4FontWeight": None,
+                    "h5FontWeight": None,
+                    "h6FontWeight": None,
                     "linkColor": None,
                     "linkUnderline": None,
                     "primaryColor": None,
@@ -1334,11 +1334,6 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "codeFontWeight": None,
                         "font": None,
                         "headingFont": None,
-                        "h2FontWeight": None,
-                        "h3FontWeight": None,
-                        "h4FontWeight": None,
-                        "h5FontWeight": None,
-                        "h6FontWeight": None,
                         "linkColor": None,
                         "linkUnderline": None,
                         "secondaryBackgroundColor": None,
@@ -1488,17 +1483,17 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             new_session_msg.custom_theme.sidebar.dataframe_header_background_color
             == "purple"
         )
-        assert new_session_msg.custom_theme.sidebar.h2_font_weight == 400
-        assert new_session_msg.custom_theme.sidebar.h3_font_weight == 400
-        assert new_session_msg.custom_theme.sidebar.h4_font_weight == 400
-        assert new_session_msg.custom_theme.sidebar.h5_font_weight == 400
-        assert new_session_msg.custom_theme.sidebar.h6_font_weight == 400
 
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0
         assert not new_session_msg.custom_theme.sidebar.font_faces
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("h2_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("h3_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("h4_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("h5_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("h6_font_weight")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
 
     @patch("streamlit.runtime.app_session._LOGGER")

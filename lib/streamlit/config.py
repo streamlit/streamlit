@@ -1404,7 +1404,7 @@ _create_theme_options(
 
 _create_theme_options(
     "h2FontWeight",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=["theme"],
     description="""
         Sets the font weight for h2 headings.
 
@@ -1415,7 +1415,7 @@ _create_theme_options(
 
 _create_theme_options(
     "h3FontWeight",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=["theme"],
     description="""
         Sets the font weight for h3 headings.
 
@@ -1426,7 +1426,7 @@ _create_theme_options(
 
 _create_theme_options(
     "h4FontWeight",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=["theme"],
     description="""
         Sets the font weight for h4 headings.
 
@@ -1437,7 +1437,7 @@ _create_theme_options(
 
 _create_theme_options(
     "h5FontWeight",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=["theme"],
     description="""
         Sets the font weight for h5 headings.
 
@@ -1448,9 +1448,11 @@ _create_theme_options(
 
 _create_theme_options(
     "h6FontWeight",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
+    categories=["theme"],
     description="""
         Sets the font weight for h6 headings.
+
+        When unset, the font weight will be set to semi-bold 600.
     """,
     type_=int,
 )
