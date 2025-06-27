@@ -89,7 +89,7 @@ const styleCellFunction = (
   "&:not(:first-child)": {
     paddingLeft:
       border === "none" || border === "horizontal"
-        ? theme.spacing.xl
+        ? theme.spacing.lg
         : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
