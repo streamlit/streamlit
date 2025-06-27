@@ -31,8 +31,21 @@ if TYPE_CHECKING:
 
     assert_type(cached_data_fn(1, "2"), bool)
     assert_type(cached_data_fn.clear(), None)
+    assert_type(cached_data_fn.clear(1), None)
+    assert_type(cached_data_fn.clear(1, "2"), None)
+    assert_type(cached_data_fn.clear(1, arg2="2"), None)
+    assert_type(cached_data_fn.clear(arg1=1), None)
+    assert_type(cached_data_fn.clear(arg2="2"), None)
+    assert_type(cached_data_fn.clear(arg1=1, arg2="2"), None)
+
     assert_type(cached_data_fn_with_decorator_args(1, "2"), bool)
     assert_type(cached_data_fn_with_decorator_args.clear(), None)
+    assert_type(cached_data_fn_with_decorator_args.clear(1), None)
+    assert_type(cached_data_fn_with_decorator_args.clear(1, "2"), None)
+    assert_type(cached_data_fn_with_decorator_args.clear(1, arg2="2"), None)
+    assert_type(cached_data_fn_with_decorator_args.clear(arg1=1), None)
+    assert_type(cached_data_fn_with_decorator_args.clear(arg2="2"), None)
+    assert_type(cached_data_fn_with_decorator_args.clear(arg1=1, arg2="2"), None)
 
     @st.cache_resource
     def cached_resource_fn(arg1: int, arg2: str) -> bool:
@@ -44,5 +57,18 @@ if TYPE_CHECKING:
 
     assert_type(cached_resource_fn(1, "2"), bool)
     assert_type(cached_resource_fn.clear(), None)
+    assert_type(cached_resource_fn.clear(1), None)
+    assert_type(cached_resource_fn.clear(1, "2"), None)
+    assert_type(cached_resource_fn.clear(1, arg2="2"), None)
+    assert_type(cached_resource_fn.clear(arg1=1), None)
+    assert_type(cached_resource_fn.clear(arg2="2"), None)
+    assert_type(cached_resource_fn.clear(arg1=1, arg2="2"), None)
+
     assert_type(cached_resource_fn_with_decorator_args(1, "2"), bool)
     assert_type(cached_resource_fn_with_decorator_args.clear(), None)
+    assert_type(cached_resource_fn_with_decorator_args.clear(1), None)
+    assert_type(cached_resource_fn_with_decorator_args.clear(1, "2"), None)
+    assert_type(cached_resource_fn_with_decorator_args.clear(1, arg2="2"), None)
+    assert_type(cached_resource_fn_with_decorator_args.clear(arg1=1), None)
+    assert_type(cached_resource_fn_with_decorator_args.clear(arg2="2"), None)
+    assert_type(cached_resource_fn_with_decorator_args.clear(arg1=1, arg2="2"), None)

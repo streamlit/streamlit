@@ -210,6 +210,11 @@ class CachedFunc(Protocol[P, T_co]):
     @overload
     def clear(self, *args: P.args, **kwargs: P.kwargs) -> None: ...
 
+    # Currently we can't define the "all-optional" argument overload with `P.args` and `P.kwargs` in Python.
+    # So we use `Any` as a fallback.
+    @overload
+    def clear(self, *args: Any, **kwargs: Any) -> None: ...
+
 
 class CacheResourceAPI:
     """Implements the public st.cache_resource API: the @st.cache_resource decorator,
