@@ -38,9 +38,8 @@ message MultiSelect {
   bool disabled = 9;
   LabelVisibilityMessage label_visibility = 10;
   int32 max_selections = 11;
-  string placeholder = 12 [deprecated = true];
+  string placeholder = 12;
   optional bool accept_new_options = 13;
-  optional string custom_placeholder = 15;
 
-  // Next: 16
+  // Next: 15
 }
