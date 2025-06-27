@@ -327,14 +327,14 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.placeholder == " "
 
     def test_none_placeholder_uses_default(self):
-        """Test that None placeholder gets converted to default text."""
+        """Test that None placeholder gets converted to empty string for frontend to handle."""
         st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder=None)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        assert c.placeholder == "Choose an option"
+        assert c.placeholder == ""
 
     def test_none_placeholder_with_accept_new_options(self):
-        """Test that None placeholder uses appropriate default with accept_new_options."""
+        """Test that None placeholder gets converted to empty string with accept_new_options."""
         st.multiselect(
             "the label",
             ["Coffee", "Tea", "Water"],
@@ -343,7 +343,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.multiselect
-        assert c.placeholder == "Choose or add an option"
+        assert c.placeholder == ""
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""

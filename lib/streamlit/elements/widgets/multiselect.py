@@ -444,13 +444,9 @@ class MultiSelectMixin:
 
         default_values = get_default_indices(indexable_options, default)
 
-        # Set default placeholder if none provided (will be empty string from proto)
+        # Handle empty string placeholder by converting to single space
         if placeholder == "":
-            placeholder = (
-                "Choose an option"
-                if not accept_new_options
-                else "Choose or add an option"
-            )
+            placeholder = " "
 
         form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(

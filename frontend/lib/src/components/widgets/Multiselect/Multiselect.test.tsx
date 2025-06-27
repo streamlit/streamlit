@@ -242,9 +242,15 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      // Should show single space (which appears as empty in UI)
-      const placeholder = screen.getByPlaceholderText(" ")
-      expect(placeholder).toBeInTheDocument()
+      // Should not show any default placeholder text since single space is provided
+      expect(screen.queryByText("Choose an option")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("Choose or add an option")
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText("Add options")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("No options to select")
+      ).not.toBeInTheDocument()
     })
   })
 
