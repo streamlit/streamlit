@@ -85,6 +85,13 @@ const styleCellFunction = (
   },
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
+  // Add extra left padding when there are no vertical borders to improve column separation
+  "&:not(:first-child)": {
+    paddingLeft:
+      border === "none" || border === "horizontal"
+        ? theme.spacing.xl
+        : theme.spacing.xs,
+  },
   fontWeight: theme.fontWeights.normal,
 })
 
