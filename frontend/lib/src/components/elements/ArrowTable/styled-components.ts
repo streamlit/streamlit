@@ -70,7 +70,11 @@ const styleCellFunction = (
       ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
       : "none",
   "tbody tr:last-child &": {
-    borderBottom: border === "all" ? "none" : undefined,
+    // For "all" borders, remove bottom border of last row to prevent double border with
+    // table border. For "horizontal" borders, also remove bottom border of last row
+    // since there's no content after it
+    borderBottom:
+      border === "all" || border === "horizontal" ? "none" : undefined,
   },
   borderRight:
     border === "all"
