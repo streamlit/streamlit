@@ -518,6 +518,11 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
                 "theme.sidebar.codeFontSize",
+                "theme.sidebar.h2FontWeight",
+                "theme.sidebar.h3FontWeight",
+                "theme.sidebar.h4FontWeight",
+                "theme.sidebar.h5FontWeight",
+                "theme.sidebar.h6FontWeight",
                 "theme.sidebar.borderColor",
                 "theme.sidebar.dataframeBorderColor",
                 "theme.sidebar.showWidgetBorder",
@@ -806,6 +811,11 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.sidebar.codeFontSize", "12px", "test")
+        config._set_option("theme.sidebar.h2FontWeight", 700, "test")
+        config._set_option("theme.sidebar.h3FontWeight", 700, "test")
+        config._set_option("theme.sidebar.h4FontWeight", 700, "test")
+        config._set_option("theme.sidebar.h5FontWeight", 700, "test")
+        config._set_option("theme.sidebar.h6FontWeight", 700, "test")
         config._set_option("theme.sidebar.codeBackgroundColor", "#29361e", "test")
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
@@ -827,6 +837,11 @@ class ConfigTest(unittest.TestCase):
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
+            "h2FontWeight": 700,
+            "h3FontWeight": 700,
+            "h4FontWeight": 700,
+            "h5FontWeight": 700,
+            "h6FontWeight": 700,
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
         }

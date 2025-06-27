@@ -122,6 +122,11 @@ def run_theme_weight_tester_app():
             )
 
     with st.sidebar:
+        st.write("<h2>Heading 2</h2>", unsafe_allow_html=True)
+        st.write("<h3>Heading 3</h3>", unsafe_allow_html=True)
+        st.write("<h4>Heading 4</h4>", unsafe_allow_html=True)
+        st.write("<h5>Heading 5</h5>", unsafe_allow_html=True)
+        st.write("<h6>Heading 6</h6>", unsafe_allow_html=True)
         st.markdown(
             "## Welcome\n"
             ":rainbow-background[:rainbow[Hello World]] :material/waving_hand: **This** "
@@ -132,16 +137,4 @@ def run_theme_weight_tester_app():
         st.divider()
         st.text_input(
             "Text Input in Sidebar", value="Some Text", help="Tooltip", max_chars=10
-        )
-        st.file_uploader("File :primary[Uploader]", type=["png", "gif"])
-        st.table(
-            pd.DataFrame(
-                {
-                    "A": [1, 2],
-                    "B": [
-                        "[streamlit](streamlit.io)",
-                        "[snowflake](snowflake.com)",
-                    ],
-                }
-            )
         )
