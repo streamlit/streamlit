@@ -698,57 +698,47 @@ class ArrowMixin:
 
         Examples
         --------
-        **Example 1: Display a simple dataframe as a static table**
+        **Example 1: Display a confusion matrix**
 
         >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(10, 5), columns=("col %d" % i for i in range(5))
+        >>> confusion_matrix = pd.DataFrame(
+        ...     {
+        ...         "Predicted Cat": [85, 3, 2, 1],
+        ...         "Predicted Dog": [2, 78, 4, 0],
+        ...         "Predicted Bird": [1, 5, 72, 3],
+        ...         "Predicted Fish": [0, 2, 1, 89],
+        ...     },
+        ...     index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
         ... )
-        >>>
-        >>> st.table(df)
+        >>> st.table(confusion_matrix)
 
         .. output::
            https://doc-table.streamlit.app/
            height: 480px
 
-        **Example 2: Display a table of Markdown strings**
+        **Example 2: Display a product leaderboard with Markdown and horizontal borders**
 
         >>> import streamlit as st
-        >>> import pandas as pd
         >>>
-        >>> df = pd.DataFrame(
-        ...     {
-        ...         "Command": ["**st.table**", "*st.dataframe*"],
-        ...         "Type": ["`static`", "`interactive`"],
-        ...         "Docs": [
-        ...             "[:rainbow[docs]](https://docs.streamlit.io/develop/api-reference/data/st.dataframe)",
-        ...             "[:book:](https://docs.streamlit.io/develop/api-reference/data/st.table)",
-        ...         ],
-        ...     }
-        ... )
-        >>> st.table(df)
+        >>> product_data = {
+        ...     "Product": [
+        ...         ":material/devices: Widget Pro",
+        ...         ":material/smart_toy: Smart Device",
+        ...         ":material/inventory: Premium Kit",
+        ...     ],
+        ...     "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
+        ...     "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
+        ...     "Units sold": [1247, 892, 654],
+        ...     "Revenue": [125000, 89000, 98000],
+        ... }
+        >>> st.table(product_data, border="horizontal")
 
         .. output::
            https://doc-table-markdown.streamlit.app/
            height: 200px
 
-        **Example 3: Display a table without borders**
-
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>>
-        >>> df = pd.DataFrame(
-        ...     {
-        ...         "Name": ["Alice", "Bob", "Charlie"],
-        ...         "Age": [25, 30, 35],
-        ...         "City": ["New York", "London", "Tokyo"],
-        ...     }
-        ... )
-        >>>
-        >>> st.table(df, border=False)
         """
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
