@@ -94,27 +94,40 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
  * Generate the table header rows from a Quiver object.
  */
 function generateTableHeader(table: Quiver, border: string): ReactElement {
+  // When there are no vertical borders, we want to align the header text with the data.
+  const shouldAlignWithData = border === "none" || border === "horizontal"
+
   return (
     <thead>
       {getStyledHeaders(table).map((headerRow, rowIndex) => (
         // TODO: Update to match React best practices
         // eslint-disable-next-line @eslint-react/no-array-index-key
         <tr key={rowIndex}>
-          {headerRow.map((header, colIndex) => (
-            <StyledTableCellHeader
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-array-index-key
-              key={colIndex}
-              className={header.cssClass}
-              scope="col"
-              $border={border}
-            >
-              <StreamlitMarkdown
-                source={header.name || "\u00A0"}
-                allowHTML={false}
-              />
-            </StyledTableCellHeader>
-          ))}
+          {headerRow.map((header, colIndex) => {
+            // Determine alignment based on column data type when no vertical borders
+            let textAlign: React.CSSProperties["textAlign"] = "inherit"
+            if (shouldAlignWithData && table.dimensions.numDataRows > 0) {
+              const { contentType } = table.getCell(0, colIndex)
+              textAlign = isNumericType(contentType) ? "right" : "left"
+            }
+
+            return (
+              <StyledTableCellHeader
+                // TODO: Update to match React best practices
+                // eslint-disable-next-line @eslint-react/no-array-index-key
+                key={colIndex}
+                className={header.cssClass}
+                scope="col"
+                $border={border}
+                style={{ textAlign }}
+              >
+                <StreamlitMarkdown
+                  source={header.name || "\u00A0"}
+                  allowHTML={false}
+                />
+              </StyledTableCellHeader>
+            )
+          })}
         </tr>
       ))}
     </thead>
