@@ -48,7 +48,7 @@
     "@emotion/cache": "^11.13.5",
     "@emotion/is-prop-valid": "^1.2.0",
     "@emotion/react": "^11.13.5",
-    "@emotion/styled": "^11.13.5",
+    "@emotion/styled": "^11.14.1",
     "@glideapps/glide-data-grid": "6.0.4-alpha9",
     "@glideapps/glide-data-grid-cells": "6.0.4-alpha9",
     "@glideapps/glide-data-grid-source": "6.0.4-alpha9",
