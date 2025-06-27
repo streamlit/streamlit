@@ -21,6 +21,15 @@ import streamlit as st
 
 
 def run_chart_tester_app():
+    # Better show the charts by minimizing the dead space
+    st.html("""
+        <style>
+            .stMainBlockContainer {
+                padding-top: 4rem;
+            }
+        </style>
+    """)
+
     st.set_page_config(initial_sidebar_state="collapsed", layout="wide")
 
     def page1():

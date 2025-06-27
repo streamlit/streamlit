@@ -37,6 +37,8 @@ def configure_custom_categorical_colors():
             "#f0027f",
             "#bf5b17",
             "#666666",
+            "#7fc97f",
+            "#beaed4",
         ]
     )
     yield
@@ -45,6 +47,8 @@ def configure_custom_categorical_colors():
 
 @pytest.mark.usefixtures("configure_custom_categorical_colors")
 def test_custom_theme_font_weights(app: Page, assert_snapshot: ImageCompareFunction):
+    # Set bigger viewport to better show the charts
+    app.set_viewport_size({"width": 1280, "height": 1000})
     # Make sure that all elements are rendered and no skeletons are shown:
     expect_no_skeletons(app, timeout=25000)
     # Add some additional timeout to ensure that fonts can load without
