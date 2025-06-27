@@ -132,6 +132,11 @@ class ArrowTest(DeltaGeneratorTestCase):
         """Test that st.table border parameter converts values correctly."""
         df = mock_data_frame()
 
+        # Test explicit border=True
+        st.table(df, border=True)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+        assert proto.border == ArrowProto.BorderMode.ALL
+
         # Test border=False
         st.table(df, border=False)
         proto = self.get_delta_from_queue().new_element.arrow_table
