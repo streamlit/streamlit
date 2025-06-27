@@ -30,8 +30,8 @@ def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
     # (one for normal, one for mobile tooltip) so indices are off
     page_link_links = page_link_elements.get_by_test_id("stPageLink-NavLink")
 
-    assert_snapshot(page_link_links.nth(7), name="st_page_link-icon")
-    assert_snapshot(page_link_links.nth(9), name="st_page_link-disabled")
+    assert_snapshot(page_link_links.nth(8), name="st_page_link-icon")
+    assert_snapshot(page_link_links.nth(10), name="st_page_link-disabled")
     assert_snapshot(page_link_links.nth(11), name="st_page_link-material-icon")
 
     # st.Page object page links
@@ -43,7 +43,7 @@ def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Sidebar page links
     assert_snapshot(page_link_links.nth(1), name="st_page_link-sidebar-icon")
-    assert_snapshot(page_link_links.nth(4), name="st_page_link-sidebar-disabled")
+    assert_snapshot(page_link_links.nth(3), name="st_page_link-sidebar-disabled")
 
 
 def test_page_link_help_tooltip(app: Page):
@@ -52,7 +52,7 @@ def test_page_link_help_tooltip(app: Page):
     expect(page_links).to_have_count(PAGE_LINK_COUNT)
 
     # Get the tooltip hover target and ensure it's visible before hovering
-    hover_target = page_links.nth(7).get_by_test_id("stTooltipHoverTarget")
+    hover_target = page_links.nth(9).get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
     # Hover over the tooltip target
