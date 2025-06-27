@@ -98,6 +98,7 @@ DISALLOWED_SNAPSHOTS = {
     "st_data_editor-input_data_31[firefox].png",
     "st_data_editor-input_data_32[firefox].png",
     "st_data_editor-input_data_33[firefox].png",
+    "st_data_editor-input_data_34[firefox].png",
 }
 
 
