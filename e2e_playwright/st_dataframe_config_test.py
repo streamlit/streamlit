@@ -70,7 +70,13 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(
         dataframe_elements.nth(23), name="st_dataframe-hierarchical_headers"
     )
+
+    # The pinned columns webkit snapshot is a bit flaky (vertical scrollbar is sometimes visible)
+    # And needs a bit of extra handling:
+    dataframe_elements.nth(23).scroll_into_view_if_needed()
+    expect_canvas_to_be_stable(dataframe_elements.nth(23))
     assert_snapshot(dataframe_elements.nth(24), name="st_dataframe-pinned_columns")
+
     assert_snapshot(dataframe_elements.nth(25), name="st_dataframe-row_height")
     assert_snapshot(dataframe_elements.nth(26), name="st_dataframe-number_formatting")
     assert_snapshot(dataframe_elements.nth(27), name="st_dataframe-datetime_formatting")
