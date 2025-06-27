@@ -82,6 +82,7 @@ const styleCellFunction = (
       : "none",
   "&:last-child": {
     borderRight: border === "all" ? "none" : undefined,
+    paddingRight: border === "none" ? "0" : theme.spacing.xs,
   },
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
@@ -91,6 +92,11 @@ const styleCellFunction = (
       border === "none" || border === "horizontal"
         ? theme.spacing.lg
         : theme.spacing.xs,
+  },
+  // Remove left padding from first column when no borders, so that the table aligns
+  // with the rest of the page.
+  "&:first-child": {
+    paddingLeft: border === "none" ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
 })
@@ -103,7 +109,18 @@ export const StyledTableCellHeader = styled.th<{ $border: string }>(
     ...styleCellFunction(theme, $border),
     textAlign: "inherit",
     color: theme.colors.fadedText60,
-    paddingLeft: theme.spacing.sm,
+    // Remove left padding from first cell when no borders, so that the table aligns
+    // with the rest of the page.
+    "&:first-child": {
+      paddingLeft: $border === "none" ? "0" : theme.spacing.sm,
+    },
+    // Increase the space between columns when there are no vertical borders.
+    "&:not(:first-child)": {
+      paddingLeft:
+        $border === "none" || $border === "horizontal"
+          ? theme.spacing.lg
+          : theme.spacing.sm,
+    },
   })
 )
 
