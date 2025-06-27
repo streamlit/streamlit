@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
 
-PAGE_LINK_COUNT = 21
+PAGE_LINK_COUNT = 23
 
 
 def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):

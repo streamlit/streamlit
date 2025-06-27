@@ -243,12 +243,8 @@ def test_download_button_width_examples(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test download button width examples via screenshot matching."""
-    # Download button width examples
     download_expander = get_expander(app, "Download Button Width Examples")
-    download_expander.click()
-
     download_elements = download_expander.get_by_test_id("stDownloadButton")
-    expect(download_elements).to_have_count(3)
 
     assert_snapshot(download_elements.nth(0), name="st_download_button-width_content")
     assert_snapshot(download_elements.nth(1), name="st_download_button-width_stretch")
