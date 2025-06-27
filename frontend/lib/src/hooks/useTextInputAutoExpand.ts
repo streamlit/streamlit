@@ -22,7 +22,7 @@ import {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
+import { useEmotionTheme } from "src/components/shared/EmotionThemeProvider"
 
 // Constants for auto-expansion behavior
 // We want to show easily that there's scrolling so we deliberately choose
@@ -128,7 +128,7 @@ export const useTextInputAutoExpand = ({
   textareaRef,
   dependencies = [],
 }: UseTextInputAutoExpandOptions): UseTextInputAutoExpandResult => {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const heightGuidance = useRef<HeightGuidance>({ minHeight: 0, maxHeight: 0 })
 
   const [scrollHeight, setScrollHeight] = useState(0)
