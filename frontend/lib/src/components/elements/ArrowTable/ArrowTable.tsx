@@ -49,19 +49,21 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns } = table.dimensions
   const dataRowIndices = range(numDataRows)
+  const border = table.border
 
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
       {/* Add an extra wrapper with the border. This makes sure the border shows around
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}
-      <StyledTableBorder>
+      <StyledTableBorder $border={border}>
         <StyledTable id={cssId} data-testid="stTableStyledTable">
-          {numHeaderRows > 0 && generateTableHeader(table)}
+          {numHeaderRows > 0 && generateTableHeader(table, border)}
           <tbody>
             {dataRowIndices.length === 0 ? (
               <tr>
                 <StyledEmptyTableCell
+                  $border={border}
                   data-testid="stTableStyledEmptyTableCell"
                   colSpan={numColumns || 1}
                 >
@@ -70,7 +72,7 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
               </tr>
             ) : (
               dataRowIndices.map(rowIndex =>
-                generateTableRow(table, rowIndex, numColumns)
+                generateTableRow(table, rowIndex, numColumns, border)
               )
             )}
           </tbody>
@@ -91,7 +93,7 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
 /**
  * Generate the table header rows from a Quiver object.
  */
-function generateTableHeader(table: Quiver): ReactElement {
+function generateTableHeader(table: Quiver, border: boolean): ReactElement {
   return (
     <thead>
       {getStyledHeaders(table).map((headerRow, rowIndex) => (
@@ -103,6 +105,7 @@ function generateTableHeader(table: Quiver): ReactElement {
               // TODO: Update to match React best practices
               // eslint-disable-next-line @eslint-react/no-array-index-key
               key={colIndex}
+              $border={border}
               className={header.cssClass}
               scope="col"
             >
@@ -124,12 +127,13 @@ function generateTableHeader(table: Quiver): ReactElement {
 function generateTableRow(
   table: Quiver,
   rowIndex: number,
-  columns: number
+  columns: number,
+  border: boolean
 ): ReactElement {
   return (
     <tr key={rowIndex}>
       {range(columns).map(columnIndex =>
-        generateTableCell(table, rowIndex, columnIndex)
+        generateTableCell(table, rowIndex, columnIndex, border)
       )}
     </tr>
   )
@@ -141,7 +145,8 @@ function generateTableRow(
 function generateTableCell(
   table: Quiver,
   rowIndex: number,
-  columnIndex: number
+  columnIndex: number,
+  border: boolean
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
@@ -174,6 +179,7 @@ function generateTableCell(
       return (
         <StyledTableCellHeader
           key={columnIndex}
+          $border={border}
           scope="row"
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
@@ -190,6 +196,7 @@ function generateTableCell(
       return (
         <StyledTableCell
           key={columnIndex}
+          $border={border}
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
           style={style}

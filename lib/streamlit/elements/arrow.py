@@ -649,7 +649,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
-    def table(self, data: Data = None) -> DeltaGenerator:
+    def table(self, data: Data = None, *, border: bool = True) -> DeltaGenerator:
         """Display a static table.
 
         While ``st.dataframe`` is geared towards large datasets and interactive
@@ -672,6 +672,10 @@ class ArrowMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        border : bool
+            Whether to show borders around the table and between cells.
+            Defaults to True.
 
         Examples
         --------
@@ -711,6 +715,21 @@ class ArrowMixin:
         .. output::
            https://doc-table-markdown.streamlit.app/
            height: 200px
+
+        **Example 3: Display a table without borders**
+
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>>
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "Name": ["Alice", "Bob", "Charlie"],
+        ...         "Age": [25, 30, 35],
+        ...         "City": ["New York", "London", "Tokyo"],
+        ...     }
+        ... )
+        >>>
+        >>> st.table(df, border=False)
         """
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
@@ -730,6 +749,7 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
+        proto.border = border
         return self.dg._enqueue("arrow_table", proto)
 
     @gather_metrics("add_rows")
