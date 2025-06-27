@@ -18,10 +18,19 @@ from __future__ import annotations
 
 import math
 import threading
-from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Protocol,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from cachetools import TTLCache
-from typing_extensions import TypeAlias
+from typing_extensions import ParamSpec, TypeAlias
 
 import streamlit as st
 from streamlit.logger import get_logger
@@ -184,6 +193,29 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         )
 
 
+# Type-annotate the decorator function.
+# (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
+P = ParamSpec("P")
+T_co = TypeVar("T_co", covariant=True)
+
+
+class CachedFunc(Protocol[P, T_co]):
+    """Protocol for cached functions that preserve the original function's signature and add a clear method."""
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T_co: ...
+
+    @overload
+    def clear(self) -> None: ...
+
+    @overload
+    def clear(self, *args: P.args, **kwargs: P.kwargs) -> None: ...
+
+    # Currently we can't define the "all-optional" argument overload with `P.args` and `P.kwargs` in Python.
+    # So we use `Any` as a fallback.
+    @overload
+    def clear(self, *args: Any, **kwargs: Any) -> None: ...
+
+
 class CacheResourceAPI:
     """Implements the public st.cache_resource API: the @st.cache_resource decorator,
     and st.cache_resource.clear().
@@ -202,14 +234,9 @@ class CacheResourceAPI:
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
         self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
 
-    # Type-annotate the decorator function.
-    # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
-
-    F = TypeVar("F", bound=Callable[..., Any])
-
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F: ...
+    def __call__(self, func: Callable[P, T_co]) -> CachedFunc[P, T_co]: ...
 
     # Decorator with arguments
     @overload
@@ -222,11 +249,11 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]: ...
+    ) -> Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]: ...
 
     def __call__(
         self,
-        func: F | None = None,
+        func: Callable[P, T_co] | None = None,
         *,
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
@@ -234,7 +261,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> F | Callable[[F], F]:
+    ) -> CachedFunc[P, T_co] | Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]:
         return self._decorator(
             func,
             ttl=ttl,
@@ -247,7 +274,7 @@ class CacheResourceAPI:
 
     def _decorator(
         self,
-        func: F | None,
+        func: Callable[P, T_co] | None,
         *,
         ttl: float | timedelta | str | None,
         max_entries: int | None,
@@ -255,7 +282,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> F | Callable[[F], F]:
+    ) -> CachedFunc[P, T_co] | Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]:
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
         Cached objects are shared across all users, sessions, and reruns. They
