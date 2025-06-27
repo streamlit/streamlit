@@ -125,3 +125,11 @@ class ArrowTest(DeltaGeneratorTestCase):
 
             st.table(df)
             convert_anything_to_df.assert_called_once()
+
+    def test_table_border_parameter(self):
+        """Test that st.table can be called with border=False."""
+        df = mock_data_frame()
+
+        st.table(df, border=False)
+        proto = self.get_delta_from_queue().new_element.arrow_table
+        assert proto.border is False

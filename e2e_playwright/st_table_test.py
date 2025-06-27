@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
-TOTAL_TABLE_ELEMENTS = 33
+TOTAL_TABLE_ELEMENTS = 34
 
 
 def test_table_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -47,6 +47,14 @@ def test_pandas_styler_tooltips(app: Page, assert_snapshot: ImageCompareFunction
     table_cell.hover()
     expect(table_cell.locator(".pd-t")).to_have_css("visibility", "visible")
     assert_snapshot(styled_table, name="st_table-styler_tooltip")
+
+
+def test_table_without_border(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that table without border renders correctly."""
+    # The borderless table should be the last one (index 33)
+    borderless_table = app.get_by_test_id("stTable").nth(33)
+    expect(borderless_table).to_be_visible()
+    assert_snapshot(borderless_table, name="st_table-no_border")
 
 
 def test_check_top_level_class(app: Page):

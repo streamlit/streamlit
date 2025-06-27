@@ -52,4 +52,19 @@ describe("st._arrow_table", () => {
       screen.getByTestId("stTableStyledEmptyTableCell")
     ).toBeInTheDocument()
   })
+
+  it("renders without borders when border=false", () => {
+    // Create a Quiver with border=false
+    const props = getProps(UNICODE)
+    const mockQuiver = new Quiver({ data: UNICODE, border: false })
+    const modifiedProps = { element: mockQuiver }
+
+    const { container } = render(<ArrowTable {...modifiedProps} />)
+
+    // Check that the table border wrapper has no border styling
+    const tableBorder = container.querySelector(
+      '[data-testid="stTable"] > div'
+    )
+    expect(tableBorder).toHaveStyle("border: none")
+  })
 })
