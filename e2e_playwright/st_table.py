@@ -285,7 +285,14 @@ st.table(data)
 st.header("Border Parameter")
 
 st.subheader("No borders (border=False)")
-st.table(pd.DataFrame({"A": [1, 2, 3], "B": ["X", "Y", "Z"]}), border=False)
+data = {
+    "A": [1, 2, 3],
+    "B": ["X", "Y", "Z"],
+    "C": [10.5, 20.3, 30.1],
+    "D": ["Alpha", "Beta", "Gamma"],
+    "E": [True, False, True],
+}
+st.table(data, border=False)
 
 st.subheader("Horizontal borders only (border='horizontal')")
-st.table(pd.DataFrame({"A": [1, 2, 3], "B": ["X", "Y", "Z"]}), border="horizontal")
+st.table(data, border="horizontal")
