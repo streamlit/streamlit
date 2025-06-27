@@ -412,7 +412,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str = "",
-        height: Height | None = None,
+        height: Height | None = 122,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -432,7 +432,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: SupportsStr | None = None,
-        height: Height | None = None,
+        height: Height | None = 122,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -452,7 +452,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str | SupportsStr | None = "",
-        height: Height | None = None,
+        height: Height | None = 122,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -499,7 +499,7 @@ class TextWidgetsMixin:
         height : int or None
             Desired height of the UI element expressed in pixels. If this is
             ``None`` (default), the widget's initial height fits three lines.
-            The height must be at least 68 pixels, which fits two lines.
+            The height must be at least 98 pixels, which fits two lines.
 
         max_chars : int or None
             Maximum number of characters allowed in text area.
@@ -578,10 +578,6 @@ class TextWidgetsMixin:
            height: 300px
 
         """
-        # Height will default to 68px (3 lines of text).
-        if height is not None and isinstance(height, int) and height < 68:
-            height = None
-
         ctx = get_script_run_ctx()
         return self._text_area(
             label=label,
@@ -604,7 +600,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: SupportsStr | None = "",
-        height: Height | None = None,
+        height: Height | None = 122,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -686,10 +682,11 @@ class TextWidgetsMixin:
             text_area_proto.set_value = True
 
         validate_width(width)
-        layout_config = LayoutConfig(width=width)
         if height is not None:
             validate_height(height, allow_content=True)
-            layout_config.height = height
+            layout_config = LayoutConfig(width=width, height=height)
+        else:
+            layout_config = LayoutConfig(width=width)
 
         self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
         return widget_state.value

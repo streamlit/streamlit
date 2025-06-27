@@ -32,7 +32,11 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
-import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import {
+  isInForm,
+  LabelVisibilityOptions,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -40,7 +44,6 @@ import {
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 
 import { StyledTextAreaContainer } from "./styled-components"
 
@@ -104,12 +107,24 @@ const TextArea: FC<Props> = ({
    */
   const [focused, setFocused] = useState(false)
 
-  const styles = useLayoutStyles({
-    element: outerElement,
-  })
-
-  // Determine if we should use auto-expansion
+  // Determine if we should use auto-expansion.
   const isAutoHeight = outerElement.heightConfig?.useContent ?? false
+  // Disable resize if stretch height is enabled.
+  const isStretchHeight = outerElement.heightConfig?.useStretch ?? false
+
+  // TODO(lawilby): Move this into a function.
+  let height = "auto"
+  if (outerElement.heightConfig?.useStretch) {
+    height = "100%"
+  } else if (!!outerElement.heightConfig?.pixelHeight) {
+    let labelAndPadding =
+      labelVisibilityProtoValueToEnum(element.labelVisibility?.value) ===
+      LabelVisibilityOptions.Collapsed
+        ? 2
+        : 30
+    let innerHeight = outerElement.heightConfig.pixelHeight - labelAndPadding
+    height = `${innerHeight}px`
+  }
 
   // Create ref for auto-expansion
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -235,10 +250,10 @@ const TextArea: FC<Props> = ({
             style: {
               lineHeight: theme.lineHeights.inputWidget,
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height: isAutoHeight ? autoExpand.height : "",
+              height: isAutoHeight ? autoExpand.height : height,
               maxHeight: isAutoHeight ? autoExpand.maxHeight : "",
               minHeight: theme.sizes.largestElementHeight,
-              resize: "vertical",
+              resize: isStretchHeight ? "none" : "vertical",
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.md,
               paddingLeft: theme.spacing.md,
@@ -259,8 +274,7 @@ const TextArea: FC<Props> = ({
               borderRightWidth: theme.sizes.borderWidth,
               borderTopWidth: theme.sizes.borderWidth,
               borderBottomWidth: theme.sizes.borderWidth,
-              height: styles.height,
-              maxHeight: "100%",
+              flexGrow: 1,
             },
           },
         }}

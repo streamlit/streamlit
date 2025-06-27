@@ -22,7 +22,7 @@ import {
   useState,
 } from "react"
 
-import { useEmotionTheme } from "src/components/shared/EmotionThemeProvider"
+import { useEmotionTheme } from "@streamlit/lib"
 
 // Constants for auto-expansion behavior
 // We want to show easily that there's scrolling so we deliberately choose
