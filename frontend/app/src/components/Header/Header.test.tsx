@@ -35,7 +35,7 @@ const getMockAppContext = (
   overrides: Partial<
     ReturnType<typeof StreamlitContextProviderModule.useAppContext>
   > = {}
-) => ({
+): ReturnType<typeof StreamlitContextProviderModule.useAppContext> => ({
   showToolbar: true,
   showColoredLine: true,
   widgetsDisabled: false,
@@ -58,7 +58,7 @@ const mockAppContext = (
   overrides: Partial<
     ReturnType<typeof StreamlitContextProviderModule.useAppContext>
   > = {}
-) => {
+): void => {
   vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
     getMockAppContext(overrides)
   )
