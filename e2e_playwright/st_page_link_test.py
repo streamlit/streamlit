@@ -77,17 +77,17 @@ def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFuncti
     # Test gradual deprecation of use_container_width
     assert_snapshot(
         get_element_by_key(app, "main_container_width_true"),
-        name="st_page_link-width_container_width_true",
+        name="st_page_link-main_container_width_true",
     )
     assert_snapshot(
         get_element_by_key(app, "main_container_width_false"),
-        name="st_page_link-width_container_width_false",
+        name="st_page_link-main_container_width_false",
     )
     assert_snapshot(
         get_element_by_key(app, "sidebar_container_width_true"),
-        name="st_page_link-width_container_width_true",
+        name="st_page_link-sidebar_container_width_true",
     )
     assert_snapshot(
         get_element_by_key(app, "sidebar_container_width_false"),
-        name="st_page_link-width_container_width_false",
+        name="st_page_link-sidebar_container_width_false",
     )
