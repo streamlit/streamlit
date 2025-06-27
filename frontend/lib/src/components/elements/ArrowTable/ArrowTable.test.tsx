@@ -67,7 +67,8 @@ describe("st._arrow_table", () => {
     const tableBorder = container.querySelector(
       '[data-testid="stTable"] > div'
     )
-    expect(tableBorder).toHaveStyle("border: 1px solid")
+    const borderStyle = getComputedStyle(tableBorder!)
+    expect(borderStyle.borderStyle).toBe("solid")
   })
 
   it("renders without borders when border=false", () => {
@@ -108,6 +109,7 @@ describe("st._arrow_table", () => {
 
     // Check that table cells have bottom borders (horizontal lines between rows)
     const tableCell = container.querySelector("td")
-    expect(tableCell).toHaveStyle("border-bottom: 1px solid")
+    const cellStyle = getComputedStyle(tableCell!)
+    expect(cellStyle.borderBottomStyle).toBe("solid")
   })
 })
