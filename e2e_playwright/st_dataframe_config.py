@@ -658,6 +658,7 @@ st.dataframe(
             "yen": [0.0123123, -1234.567, 12, 0],
             "localized": [0.0123123, -1234.567, 12, 0],
             "accounting": [0.0123123, -1234.567, 12, 0],
+            "bytes": [0.0123123, -1234.567, 12, 0],
             "custom format": [0.0123123, -1234.567, 12, 0],
         }
     ),
@@ -672,6 +673,7 @@ st.dataframe(
         "yen": st.column_config.NumberColumn(format="yen"),
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
+        "bytes": st.column_config.NumberColumn(format="bytes"),
         "custom format": st.column_config.NumberColumn(format="%.2f"),
     },
     hide_index=True,
