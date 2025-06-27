@@ -31,6 +31,8 @@ NOTE: This script is not perfect and may identify some
 snapshots as orphans when they aren't actually so manually review results.
 """
 
+from __future__ import annotations
+
 import argparse
 import os
 import re
