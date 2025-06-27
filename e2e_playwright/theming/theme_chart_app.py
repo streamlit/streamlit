@@ -15,14 +15,13 @@
 import altair as alt
 import numpy as np
 import pandas as pd
+import plotly.express as px
 
 import streamlit as st
 
 
 def run_chart_tester_app():
     st.set_page_config(initial_sidebar_state="collapsed", layout="wide")
-
-    st.header("Custom Themed :blue[App]")
 
     def page1():
         pass
@@ -37,35 +36,43 @@ def run_chart_tester_app():
         ]
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     # Set seed for reproducible data in E2E testing
     np.random.seed(7)
     data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
 
     with col1:
-        st.write("**st.area_chart**")
-        st.area_chart(
-            data, x_label="x label", y_label="y label", use_container_width=True
-        )
-
-        st.write("**st.bar_chart**")
-        st.bar_chart(
-            data, x_label="x label", y_label="y label", use_container_width=True
-        )
-
-    with col2:
         st.write("**st.line_chart**")
         st.line_chart(
             data, x_label="x label", y_label="y label", use_container_width=True
         )
 
-        st.write("**st.scatter_chart**")
-        st.scatter_chart(
-            data, x_label="x label", y_label="y label", use_container_width=True
+        st.write("**st.plotly_chart**")
+        categorical_data = pd.DataFrame(
+            {
+                "sales": [120, 95, 150, 110, 135, 88, 175, 92, 148, 103],
+                "category": [
+                    "Electronics",
+                    "Clothing",
+                    "Books",
+                    "Home",
+                    "Sports",
+                    "Automotive",
+                    "Beauty",
+                    "Toys",
+                    "Garden",
+                    "Kitchen",
+                ],
+            }
         )
 
-    with col3:
+        fig_categorical = px.bar(
+            categorical_data, x="category", y="sales", color="category", height=350
+        )
+        st.plotly_chart(fig_categorical)
+
+    with col2:
         st.write("**st.altair_chart**")
         scatter_data = pd.DataFrame(
             {
@@ -98,7 +105,11 @@ def run_chart_tester_app():
         vega_spec = {
             "mark": "bar",
             "encoding": {
-                "x": {"field": "x", "type": "quantitative"},
+                "x": {
+                    "field": "x",
+                    "type": "quantitative",
+                    "scale": {"domain": [0, 30]},
+                },
                 "y": {"field": "value", "type": "quantitative"},
                 "color": {
                     "field": "category",

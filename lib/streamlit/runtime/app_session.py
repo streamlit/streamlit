@@ -1008,7 +1008,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if isinstance(chart_categorical_colors, str):
         try:
             chart_categorical_colors = json.loads(chart_categorical_colors)
-        except Exception as e:
+        except json.JSONDecodeError as e:
             _LOGGER.warning(
                 "Failed to parse the theme.chartCategoricalColors config option: %s.",
                 chart_categorical_colors,

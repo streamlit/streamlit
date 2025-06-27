@@ -75,7 +75,7 @@ function _isLightBackground(bgColor: string): boolean {
 }
 
 export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
-  return getLuminance(theme.colors.bgColor) > 0.5
+  return _isLightBackground(theme.colors.bgColor)
 }
 
 export const createEmotionColors = (genericColors: {

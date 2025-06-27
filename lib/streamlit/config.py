@@ -1412,29 +1412,29 @@ _create_theme_options(
         colors.
         For light themes the default colors are:
         [
-            blue80 ("#0068c9"),
-            blue40 ("#83c9ff"),
-            red80 ("#ff2b2b"),
-            red40 ("#ffabab"),
-            blueGreen80 ("#29b09d"),
-            green40 ("#7defa1"),
-            orange80 ("#ff8700"),
-            orange50 ("#ffd16a"),
-            purple80 ("#6d3fc0"),
-            gray40 ("#d5dae5")
+            "#0068c9", # blue80
+            "#83c9ff", # blue40
+            "#ff2b2b", # red80
+            "#ffabab", # red40
+            "#29b09d", # blueGreen80
+            "#7defa1", # green40
+            "#ff8700", # orange80
+            "#ffd16a", # orange50
+            "#6d3fc0", # purple80
+            "#d5dae5", # gray40
         ]
         For dark themes the default colors are:
         [
-            blue40 ("#83c9ff"),
-            blue80 ("#0068c9"),
-            red40 ("#ffabab"),
-            red80 ("#ff2b2b"),
-            green40 ("#7defa1"),
-            blueGreen80 ("#29b09d"),
-            orange50 ("#ffd16a"),
-            orange80 ("#ff8700"),
-            purple80 ("#6d3fc0"),
-            gray40 ("#d5dae5")
+            "#83c9ff", # blue40
+            "#0068c9", # blue80
+            "#ffabab", # red40
+            "#ff2b2b", # red80
+            "#7defa1", # green40
+            "#29b09d", # blueGreen80
+            "#ffd16a", # orange50
+            "#ff8700", # orange80
+            "#6d3fc0", # purple80
+            "#d5dae5", # gray40
         ]
     """,
 )
