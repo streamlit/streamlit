@@ -283,4 +283,9 @@ data = pd.DataFrame(
 st.table(data)
 
 st.header("Border Parameter")
+
+st.subheader("No borders (border=False)")
 st.table(pd.DataFrame({"A": [1, 2, 3], "B": ["X", "Y", "Z"]}), border=False)
+
+st.subheader("Horizontal borders only (border='horizontal')")
+st.table(pd.DataFrame({"A": [1, 2, 3], "B": ["X", "Y", "Z"]}), border="horizontal")
