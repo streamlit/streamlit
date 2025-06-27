@@ -649,7 +649,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
-    def table(self, data: Data = None, *, border: bool = True) -> DeltaGenerator:
+    def table(self, data: Data = None, *, border: bool | str = True) -> DeltaGenerator:
         """Display a static table.
 
         While ``st.dataframe`` is geared towards large datasets and interactive
@@ -673,9 +673,13 @@ class ArrowMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        border : bool
-            Whether to show borders around the table and between cells.
-            Defaults to True.
+        border : bool or str
+            Whether to show borders around the table and between cells. This can be one
+            of the following:
+
+            - ``True``: Show borders around the table and between cells (default)
+            - ``False``: Show no borders
+            - ``"horizontal"``: Show only horizontal borders between rows
 
         Examples
         --------
@@ -731,6 +735,16 @@ class ArrowMixin:
         >>>
         >>> st.table(df, border=False)
         """
+        # Convert border parameter to standardized string format
+        if isinstance(border, bool):
+            border_str = "all" if border else "none"
+        elif border == "horizontal":
+            border_str = "horizontal"
+        else:
+            raise ValueError(
+                f"Invalid border value: {border!r}. "
+                "Must be True, False, or 'horizontal'."
+            )
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
@@ -749,7 +763,7 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        proto.border = border
+        proto.border = border_str
         return self.dg._enqueue("arrow_table", proto)
 
     @gather_metrics("add_rows")

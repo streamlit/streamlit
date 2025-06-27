@@ -37,14 +37,15 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
   display: "inline-block",
 }))
 
-export const StyledTableBorder = styled.div<{ $border: boolean }>(
+export const StyledTableBorder = styled.div<{ $border: string }>(
   ({ theme, $border }) => ({
     // Add the enclosing border on an extra wrapper around the table. This ensures that
     // when the table scrolls horizontally on small windows, it still shows a border all
     // around the table and the table doesn't look cut off.
-    border: $border
-      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
-      : "none",
+    border:
+      $border === "all"
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+        : "none",
     borderRadius: theme.radii.default,
     overflow: "auto",
   })
@@ -59,32 +60,34 @@ export const StyledTable = styled.table(({ theme }) => ({
 
 const styleCellFunction = (
   theme: EmotionTheme,
-  border: boolean = true
+  border: string = "all"
 ): CSSObject => ({
   // Only have borders on the bottom and right of each cell. And remove the borders
   // of the last row and column to prevent double borders together with the enclosing
   // border from `StyledTableBorder`.
-  borderBottom: border
-    ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
-    : "none",
+  borderBottom:
+    border !== "none"
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+      : "none",
   "tbody tr:last-child &": {
-    borderBottom: "none",
+    borderBottom: border === "all" ? "none" : undefined,
   },
-  borderRight: border
-    ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
-    : "none",
+  borderRight:
+    border === "all"
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+      : "none",
   "&:last-child": {
-    borderRight: "none",
+    borderRight: border === "all" ? "none" : undefined,
   },
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   fontWeight: theme.fontWeights.normal,
 })
 
-export const StyledTableCell = styled.td<{ $border: boolean }>(
+export const StyledTableCell = styled.td<{ $border: string }>(
   ({ theme, $border }) => styleCellFunction(theme, $border)
 )
-export const StyledTableCellHeader = styled.th<{ $border: boolean }>(
+export const StyledTableCellHeader = styled.th<{ $border: string }>(
   ({ theme, $border }) => ({
     ...styleCellFunction(theme, $border),
     textAlign: "inherit",
@@ -94,7 +97,7 @@ export const StyledTableCellHeader = styled.th<{ $border: boolean }>(
 )
 
 export const StyledEmptyTableCell = styled(StyledTableCell)<{
-  $border: boolean
+  $border: string
 }>(({ theme }) => ({
   color: theme.colors.darkGray,
   fontStyle: "italic",

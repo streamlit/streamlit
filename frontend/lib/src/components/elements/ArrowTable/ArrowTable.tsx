@@ -63,9 +63,9 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
             {dataRowIndices.length === 0 ? (
               <tr>
                 <StyledEmptyTableCell
-                  $border={border}
                   data-testid="stTableStyledEmptyTableCell"
                   colSpan={numColumns || 1}
+                  $border={border}
                 >
                   empty
                 </StyledEmptyTableCell>
@@ -93,7 +93,7 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
 /**
  * Generate the table header rows from a Quiver object.
  */
-function generateTableHeader(table: Quiver, border: boolean): ReactElement {
+function generateTableHeader(table: Quiver, border: string): ReactElement {
   return (
     <thead>
       {getStyledHeaders(table).map((headerRow, rowIndex) => (
@@ -105,9 +105,9 @@ function generateTableHeader(table: Quiver, border: boolean): ReactElement {
               // TODO: Update to match React best practices
               // eslint-disable-next-line @eslint-react/no-array-index-key
               key={colIndex}
-              $border={border}
               className={header.cssClass}
               scope="col"
+              $border={border}
             >
               <StreamlitMarkdown
                 source={header.name || "\u00A0"}
@@ -128,7 +128,7 @@ function generateTableRow(
   table: Quiver,
   rowIndex: number,
   columns: number,
-  border: boolean
+  border: string
 ): ReactElement {
   return (
     <tr key={rowIndex}>
@@ -146,7 +146,7 @@ function generateTableCell(
   table: Quiver,
   rowIndex: number,
   columnIndex: number,
-  border: boolean
+  border: string
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
@@ -179,10 +179,10 @@ function generateTableCell(
       return (
         <StyledTableCellHeader
           key={columnIndex}
-          $border={border}
           scope="row"
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
+          $border={border}
         >
           {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown
@@ -196,10 +196,10 @@ function generateTableCell(
       return (
         <StyledTableCell
           key={columnIndex}
-          $border={border}
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
           style={style}
+          $border={border}
         >
           {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown

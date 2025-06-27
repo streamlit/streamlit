@@ -47,7 +47,7 @@ message Arrow {
   // Row height in pixels
   optional uint32 row_height = 13;
   // Whether to show borders around the table and between cells
-  bool border = 14;
+  string border = 14;
 
   // Available editing modes:
   enum EditingMode {

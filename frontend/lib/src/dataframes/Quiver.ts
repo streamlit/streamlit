@@ -145,7 +145,7 @@ export class Quiver {
   private readonly _styler?: PandasStylerData
 
   /** Whether to show borders around the table and between cells. */
-  private readonly _border: boolean
+  private readonly _border: string
 
   /** Number of bytes in the Arrow IPC bytes. */
   private _num_bytes: number
@@ -172,7 +172,7 @@ export class Quiver {
     this._dataColumnTypes = dataColumnTypes
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
-    this._border = element.border ?? true
+    this._border = element.border ?? "all"
     this._num_bytes = element.data?.length ?? 0
     this._columnTypes = this._pandasIndexColumnTypes.concat(
       this._dataColumnTypes
@@ -201,7 +201,7 @@ export class Quiver {
   }
 
   /** Whether to show borders around the table and between cells. */
-  public get border(): boolean {
+  public get border(): string {
     return this._border
   }
 
