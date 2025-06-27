@@ -67,14 +67,6 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      {
-        find: "~lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
-      {
-        find: "@streamlit/lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
       // Alias react-syntax-highlighter to the cjs version to avoid
       // issues with the esm version causing a bug in rendering
       // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565

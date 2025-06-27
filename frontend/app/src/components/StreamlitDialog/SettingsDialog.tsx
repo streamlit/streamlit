@@ -32,6 +32,7 @@ import {
   Modal,
   ModalBody,
   ModalHeader,
+  SessionInfo,
   StreamlitMarkdown,
   ThemeConfig,
   UISelectbox,
@@ -58,6 +59,7 @@ export interface Props {
   openThemeCreator: () => void
   animateModal: boolean
   metricsMgr: MetricsManager
+  sessionInfo: SessionInfo
 }
 
 const ThemeCreatorButton: FC<Pick<Props, "openThemeCreator">> = ({
@@ -85,6 +87,7 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
   openThemeCreator,
   animateModal,
   metricsMgr,
+  sessionInfo,
 }) {
   const libContext = useContext(LibContext)
   const activeSettings = useRef(settings)
@@ -195,6 +198,18 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                 <ThemeCreatorButton openThemeCreator={openThemeCreator} />
               )}
             </StyledFullRow>
+          )}
+
+          {/* Show our version string only if SessionInfo has been created. If Streamlit
+          hasn't yet connected to the server, the SessionInfo singleton will be null. */}
+          {sessionInfo.isSet && (
+            <div data-testid="stVersionInfo">
+              <StreamlitMarkdown
+                source={`Made with Streamlit ${sessionInfo.current.streamlitVersion}`}
+                allowHTML={false}
+                isCaption
+              />
+            </div>
           )}
         </StyledDialogBody>
       </ModalBody>

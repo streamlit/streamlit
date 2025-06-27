@@ -102,7 +102,8 @@ const DEFAULT_DEBOUNCE_MS = 100
 export default function useScrollSpy(
   target: HTMLElement | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  eventHandler: ({ timeStampLow }: any) => void
+  eventHandler: ({ timeStampLow }: any) => void,
+  active: boolean
 ): void {
   const onEventRef = useRef(eventHandler)
 
@@ -125,7 +126,7 @@ export default function useScrollSpy(
   )
 
   useLayoutEffect(() => {
-    if (!target) {
+    if (!target || !active) {
       return () => {}
     }
 
@@ -133,5 +134,5 @@ export default function useScrollSpy(
     handleEvent({ target })
 
     return () => target.removeEventListener("scroll", handleEvent)
-  }, [handleEvent, target])
+  }, [handleEvent, target, active])
 }
