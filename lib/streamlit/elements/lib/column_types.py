@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Literal, TypedDict
 from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -38,6 +39,7 @@ NumberFormat: TypeAlias = Literal[
     "scientific",
     "engineering",
     "accounting",
+    "bytes",
 ]
 
 ColumnWidth: TypeAlias = Literal["small", "medium", "large"]
@@ -429,6 +431,7 @@ def NumberColumn(
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
         - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
@@ -711,6 +714,7 @@ def LinkColumn(
 
         - ``None`` (default) to display the URL itself.
         - A string that is displayed in every cell, e.g. ``"Open link"``.
+        - A material icon displayed in every cell, e.g. ``":material/open_in_new:"``
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
           ``"https://(.*?)\.example\.com"`` to extract the display text
@@ -768,6 +772,8 @@ def LinkColumn(
         https://doc-link-column.streamlit.app/
         height: 300px
     """
+    if display_text and display_text.startswith(":material/"):
+        display_text = validate_material_icon(display_text)
 
     return ColumnConfig(
         label=label,
@@ -2005,6 +2011,7 @@ def ProgressColumn(
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
         - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").

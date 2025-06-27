@@ -202,3 +202,14 @@ def dialog_with_rerun() -> None:
 
 if st.button("Open Dialog with rerun"):
     dialog_with_rerun()
+
+
+@st.dialog(
+    "This is a very long dialog title that should not overlap with the close button"
+)
+def dialog_with_long_title() -> None:
+    st.write("This dialog has a very long title to test spacing.")
+
+
+if st.button("Open Dialog with long title"):
+    dialog_with_long_title()

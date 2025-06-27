@@ -54,6 +54,7 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import (
     get_cookie_secret,
+    is_tornado_version_less_than,
     is_xsrf_enabled,
     make_url_path_regex,
 )
@@ -73,7 +74,8 @@ TORNADO_SETTINGS = {
     # With recent versions of Tornado, this value must be greater than or
     # equal to websocket_ping_timeout.
     # For details, see https://github.com/tornadoweb/tornado/pull/3376
-    "websocket_ping_interval": 30,
+    # For compatibility with older versions of Tornado, we set the value to 1.
+    "websocket_ping_interval": 1 if is_tornado_version_less_than("6.5.0") else 30,
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
