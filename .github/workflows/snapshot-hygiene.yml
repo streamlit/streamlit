@@ -56,6 +56,37 @@ jobs:
         run: |
           source venv/bin/activate
           python scripts/snapshot_cleanup.py --ci
+      - name: Delete comment on success
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find and delete existing orphaned snapshots comments
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const orphanedSnapshotComments = comments.data.filter(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('❌ **Orphaned Snapshots Detected**')
+            );
+
+            for (const comment of orphanedSnapshotComments) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment.id
+              });
+              console.log(`Deleted comment ${comment.id}`);
+            }
+
+            if (orphanedSnapshotComments.length > 0) {
+              console.log(`Deleted ${orphanedSnapshotComments.length} orphaned snapshots comment(s)`);
+            } else {
+              console.log('No orphaned snapshots comments found to delete');
+            }
       - name: Comment on PR if snapshots found
         if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
