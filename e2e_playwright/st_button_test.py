@@ -185,6 +185,7 @@ def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
         "button", name="button 6 (just help)"
     )
     help_button.hover()
+    expect(help_button_container.get_by_text("help text")).to_be_visible()
     assert_snapshot(help_button_container, name="st_button-help_button")
 
 
