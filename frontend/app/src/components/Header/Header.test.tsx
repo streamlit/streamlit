@@ -76,9 +76,9 @@ describe("Header", () => {
   })
 
   describe("Toolbar visibility", () => {
-    it("renders toolbar when showToolbar is true and content exists", () => {
+    it("renders toolbar when showToolbar is true and rightContent exists", () => {
       mockAppContext({ showToolbar: true })
-      render(<Header {...getProps({ navigation: <div>Nav</div> })} />)
+      render(<Header {...getProps({ rightContent: <div>Right</div> })} />)
 
       expect(screen.getByTestId("stToolbar")).toBeVisible()
     })
@@ -132,8 +132,11 @@ describe("Header", () => {
         hasTransparentBg: false,
       },
       {
-        description: "solid background when logo exists",
-        props: { logoComponent: <div data-testid="test-logo">Logo</div> },
+        description: "solid background when logo exists (sidebar closed)",
+        props: {
+          logoComponent: <div data-testid="test-logo">Logo</div>,
+          isSidebarOpen: false,
+        },
         hasTransparentBg: false,
       },
     ])("renders with $description", ({ props, hasTransparentBg }) => {
@@ -172,25 +175,49 @@ describe("Header", () => {
 
   describe("Sidebar functionality", () => {
     it.each([
-      { hasSidebar: true, shouldRender: true },
-      { hasSidebar: false, shouldRender: false },
-    ])(
-      "renders sidebar expand button when hasSidebar is $hasSidebar",
-      ({ hasSidebar, shouldRender }) => {
-        render(<Header {...getProps({ hasSidebar })} />)
+      {
+        description:
+          "renders sidebar expand button when sidebar exists and is closed",
+        hasSidebar: true,
+        isSidebarOpen: false,
+        shouldRender: true,
+      },
+      {
+        description:
+          "does not render sidebar expand button when sidebar doesn't exist",
+        hasSidebar: false,
+        isSidebarOpen: false,
+        shouldRender: false,
+      },
+      {
+        description:
+          "does not render sidebar expand button when sidebar is open",
+        hasSidebar: true,
+        isSidebarOpen: true,
+        shouldRender: false,
+      },
+    ])("$description", ({ hasSidebar, isSidebarOpen, shouldRender }) => {
+      render(<Header {...getProps({ hasSidebar, isSidebarOpen })} />)
 
-        const expandButton = screen.queryByTestId("stExpandSidebarButton")
-        if (shouldRender) {
-          expect(expandButton).toBeInTheDocument()
-        } else {
-          expect(expandButton).not.toBeInTheDocument()
-        }
+      const expandButton = screen.queryByTestId("stExpandSidebarButton")
+      if (shouldRender) {
+        expect(expandButton).toBeInTheDocument()
+      } else {
+        expect(expandButton).not.toBeInTheDocument()
       }
-    )
+    })
 
     it("calls onToggleSidebar when expand button is clicked", () => {
       const onToggleSidebar = vi.fn()
-      render(<Header {...getProps({ hasSidebar: true, onToggleSidebar })} />)
+      render(
+        <Header
+          {...getProps({
+            hasSidebar: true,
+            isSidebarOpen: false,
+            onToggleSidebar,
+          })}
+        />
+      )
 
       const expandButton = screen.getByTestId("stExpandSidebarButton")
       expandButton.click()
@@ -243,6 +270,8 @@ describe("Header", () => {
         render(<Header {...getProps({ rightContent })} />)
 
         expect(screen.queryByTestId("test-right")).not.toBeInTheDocument()
+        // But toolbar should still not render because no other content exists
+        expect(screen.queryByTestId("stToolbar")).not.toBeInTheDocument()
       })
 
       it("should show all left-side content together", () => {
