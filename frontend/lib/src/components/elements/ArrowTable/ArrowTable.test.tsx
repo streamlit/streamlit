@@ -21,6 +21,7 @@ import { screen } from "@testing-library/react"
 import { render } from "~lib/test_util"
 import { EMPTY, UNICODE } from "~lib/mocks/arrow"
 import { Quiver } from "~lib/dataframes/Quiver"
+import { Arrow } from "@streamlit/protobuf"
 
 import { ArrowTable, TableProps } from "./ArrowTable"
 
@@ -53,9 +54,28 @@ describe("st._arrow_table", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders with all borders when border=true", () => {
+    const mockQuiver = new Quiver({
+      data: UNICODE,
+      border: Arrow.BorderMode.ALL,
+    })
+    const modifiedProps = { element: mockQuiver }
+
+    const { container } = render(<ArrowTable {...modifiedProps} />)
+
+    // Check that the table border wrapper has border styling
+    const tableBorder = container.querySelector(
+      '[data-testid="stTable"] > div'
+    )
+    expect(tableBorder).toHaveStyle("border: 1px solid")
+  })
+
   it("renders without borders when border=false", () => {
     // Create a Quiver with border=false
-    const mockQuiver = new Quiver({ data: UNICODE, border: false })
+    const mockQuiver = new Quiver({
+      data: UNICODE,
+      border: Arrow.BorderMode.NONE,
+    })
     const modifiedProps = { element: mockQuiver }
 
     const { container } = render(<ArrowTable {...modifiedProps} />)
@@ -65,5 +85,29 @@ describe("st._arrow_table", () => {
       '[data-testid="stTable"] > div'
     )
     expect(tableBorder).toHaveStyle("border: none")
+
+    // Check that table cells have no bottom borders
+    const tableCell = container.querySelector("td")
+    expect(tableCell).toHaveStyle("border-bottom: none")
+  })
+
+  it("renders with horizontal borders only when border='horizontal'", () => {
+    const mockQuiver = new Quiver({
+      data: UNICODE,
+      border: Arrow.BorderMode.HORIZONTAL,
+    })
+    const modifiedProps = { element: mockQuiver }
+
+    const { container } = render(<ArrowTable {...modifiedProps} />)
+
+    // Check that the table border wrapper has no border (horizontal borders are on cells)
+    const tableBorder = container.querySelector(
+      '[data-testid="stTable"] > div'
+    )
+    expect(tableBorder).toHaveStyle("border: none")
+
+    // Check that table cells have bottom borders (horizontal lines between rows)
+    const tableCell = container.querySelector("td")
+    expect(tableCell).toHaveStyle("border-bottom: 1px solid")
   })
 })
