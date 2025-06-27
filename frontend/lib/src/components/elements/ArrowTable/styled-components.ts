@@ -16,8 +16,9 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 
-import { EmotionTheme } from "~lib/theme"
 import { Arrow } from "@streamlit/protobuf"
+
+import { EmotionTheme } from "~lib/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,

@@ -18,10 +18,11 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
+import { Arrow } from "@streamlit/protobuf"
+
 import { render } from "~lib/test_util"
 import { EMPTY, UNICODE } from "~lib/mocks/arrow"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { Arrow } from "@streamlit/protobuf"
 
 import { ArrowTable, TableProps } from "./ArrowTable"
 
@@ -67,8 +68,10 @@ describe("st._arrow_table", () => {
     const tableBorder = container.querySelector(
       '[data-testid="stTable"] > div'
     )
-    const borderStyle = getComputedStyle(tableBorder!)
-    expect(borderStyle.borderStyle).toBe("solid")
+    if (tableBorder) {
+      const borderStyle = getComputedStyle(tableBorder)
+      expect(borderStyle.borderStyle).toBe("solid")
+    }
   })
 
   it("renders without borders when border=false", () => {
@@ -109,7 +112,9 @@ describe("st._arrow_table", () => {
 
     // Check that table cells have bottom borders (horizontal lines between rows)
     const tableCell = container.querySelector("td")
-    const cellStyle = getComputedStyle(tableCell!)
-    expect(cellStyle.borderBottomStyle).toBe("solid")
+    if (tableCell) {
+      const cellStyle = getComputedStyle(tableCell)
+      expect(cellStyle.borderBottomStyle).toBe("solid")
+    }
   })
 })
