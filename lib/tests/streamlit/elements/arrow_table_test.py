@@ -19,12 +19,14 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pytest
 
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -127,9 +129,25 @@ class ArrowTest(DeltaGeneratorTestCase):
             convert_anything_to_df.assert_called_once()
 
     def test_table_border_parameter(self):
-        """Test that st.table can be called with border=False."""
+        """Test that st.table border parameter converts values correctly."""
         df = mock_data_frame()
 
+        # Test border=False
         st.table(df, border=False)
         proto = self.get_delta_from_queue().new_element.arrow_table
-        assert proto.border is False
+        assert proto.border == ArrowProto.BorderMode.NONE
+
+        # Test border="horizontal"
+        st.table(df, border="horizontal")
+        proto = self.get_delta_from_queue().new_element.arrow_table
+        assert proto.border == ArrowProto.BorderMode.HORIZONTAL
+
+    def test_table_border_invalid_value(self):
+        """Test that st.table raises ValueError for invalid border values."""
+        df = mock_data_frame()
+
+        with pytest.raises(
+            ValueError,
+            match="Invalid border value.*Must be True, False, or 'horizontal'",
+        ):
+            st.table(df, border="invalid")
