@@ -649,7 +649,9 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
-    def table(self, data: Data = None, *, border: bool | str = True) -> DeltaGenerator:
+    def table(
+        self, data: Data = None, *, border: bool | Literal["horizontal"] = True
+    ) -> DeltaGenerator:
         """Display a static table.
 
         While ``st.dataframe`` is geared towards large datasets and interactive
@@ -673,7 +675,7 @@ class ArrowMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        border : bool or str
+        border : bool or "horizontal"
             Whether to show borders around the table and between cells. This can be one
             of the following:
 
