@@ -122,17 +122,20 @@ describe("Header", () => {
   describe("Background color", () => {
     it.each([
       {
-        description: "transparent background when no content exists",
+        description:
+          "transparent background when header is completely empty to blend seamlessly into page",
         props: {},
         hasTransparentBg: true,
       },
       {
-        description: "solid background when navigation exists",
+        description:
+          "solid background when navigation exists to provide contrast for user interaction",
         props: { navigation: <div>Nav</div> },
         hasTransparentBg: false,
       },
       {
-        description: "solid background when logo exists (sidebar closed)",
+        description:
+          "solid background when logo exists (sidebar closed) to ensure brand visibility",
         props: {
           logoComponent: <div data-testid="test-logo">Logo</div>,
           isSidebarOpen: false,
@@ -332,13 +335,15 @@ describe("Header", () => {
     describe("Background transparency logic", () => {
       const testCases = [
         {
-          description: "transparent background when NO content is shown",
+          description:
+            "transparent background when header has no content to create seamless page integration",
           props: {},
           expectTransparent: true,
           expectToolbar: false,
         },
         {
-          description: "solid background when logo is shown",
+          description:
+            "solid background when logo is shown to provide brand contrast and readability",
           props: {
             logoComponent: <div data-testid="test-logo">Logo</div>,
             isSidebarOpen: false,
@@ -347,13 +352,15 @@ describe("Header", () => {
           expectToolbar: true,
         },
         {
-          description: "solid background when sidebar button is shown",
+          description:
+            "solid background when sidebar expand button is shown to define clickable area",
           props: { hasSidebar: true, isSidebarOpen: false },
           expectTransparent: false,
           expectToolbar: true,
         },
         {
-          description: "solid background when navigation is shown",
+          description:
+            "solid background when navigation is shown to provide clear container for nav elements",
           props: { navigation: <div data-testid="test-nav">Navigation</div> },
           expectTransparent: false,
           expectToolbar: true,
@@ -407,7 +414,7 @@ describe("Header", () => {
           expectToolbar: false,
         },
         {
-          description: "not show expand button when sidebar is open",
+          description: "not show expand button when sidebar is already open",
           props: { hasSidebar: true, isSidebarOpen: true },
           expectExpandButton: false,
           expectToolbar: false,
