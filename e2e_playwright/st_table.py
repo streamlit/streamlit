@@ -246,9 +246,6 @@ styled_df.set_tooltips(
 
 st.table(styled_df)
 
-st.header("Border Parameter")
-st.table(pd.DataFrame({"A": [1, 2, 3], "B": ["X", "Y", "Z"]}), border=False)
-
 st.header("Markdown Support")
 index = pd.Index(
     [
@@ -284,3 +281,6 @@ data = pd.DataFrame(
 )
 
 st.table(data)
+
+st.header("Border Parameter")
+st.table(pd.DataFrame({"A": [1, 2, 3], "B": ["X", "Y", "Z"]}), border=False)

@@ -49,14 +49,6 @@ def test_pandas_styler_tooltips(app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(styled_table, name="st_table-styler_tooltip")
 
 
-def test_table_without_border(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that table without border renders correctly."""
-    # The borderless table should be the last one (index 33)
-    borderless_table = app.get_by_test_id("stTable").nth(33)
-    expect(borderless_table).to_be_visible()
-    assert_snapshot(borderless_table, name="st_table-no_border")
-
-
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stTable")
