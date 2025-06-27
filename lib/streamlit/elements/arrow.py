@@ -220,6 +220,19 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
+def parse_border_mode(
+    border: bool | Literal["horizontal"],
+) -> ArrowProto.BorderMode.ValueType:
+    """Parse and check the user provided border mode."""
+    if isinstance(border, bool):
+        return ArrowProto.BorderMode.ALL if border else ArrowProto.BorderMode.NONE
+    if border == "horizontal":
+        return ArrowProto.BorderMode.HORIZONTAL
+    raise ValueError(
+        f"Invalid border value: {border!r}. Must be True, False, or 'horizontal'."
+    )
+
+
 class ArrowMixin:
     @overload
     def dataframe(
@@ -737,16 +750,8 @@ class ArrowMixin:
         >>>
         >>> st.table(df, border=False)
         """
-        # Convert border parameter to standardized string format
-        if isinstance(border, bool):
-            border_str = "all" if border else "none"
-        elif border == "horizontal":
-            border_str = "horizontal"
-        else:
-            raise ValueError(
-                f"Invalid border value: {border!r}. "
-                "Must be True, False, or 'horizontal'."
-            )
+        # Parse border parameter to enum value
+        border_mode = parse_border_mode(border)
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of
         # 10k rows, which is done in all other cases.
@@ -765,7 +770,7 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        proto.border = border_str
+        proto.border = border_mode
         return self.dg._enqueue("arrow_table", proto)
 
     @gather_metrics("add_rows")

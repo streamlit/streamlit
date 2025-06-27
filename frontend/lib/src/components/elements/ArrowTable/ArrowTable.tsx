@@ -29,6 +29,7 @@ import {
 } from "~lib/dataframes/pandasStylerUtils"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Arrow } from "@streamlit/protobuf"
 
 import {
   StyledEmptyTableCell,
@@ -93,9 +94,13 @@ export function ArrowTable(props: Readonly<TableProps>): ReactElement {
 /**
  * Generate the table header rows from a Quiver object.
  */
-function generateTableHeader(table: Quiver, border: string): ReactElement {
+function generateTableHeader(
+  table: Quiver,
+  border: Arrow.BorderMode
+): ReactElement {
   // When there are no vertical borders, we want to align the header text with the data.
-  const shouldAlignWithData = border === "none" || border === "horizontal"
+  const shouldAlignWithData =
+    border === Arrow.BorderMode.NONE || border === Arrow.BorderMode.HORIZONTAL
 
   return (
     <thead>
@@ -141,7 +146,7 @@ function generateTableRow(
   table: Quiver,
   rowIndex: number,
   columns: number,
-  border: string
+  border: Arrow.BorderMode
 ): ReactElement {
   return (
     <tr key={rowIndex}>
@@ -159,7 +164,7 @@ function generateTableCell(
   table: Quiver,
   rowIndex: number,
   columnIndex: number,
-  border: string
+  border: Arrow.BorderMode
 ): ReactElement {
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
