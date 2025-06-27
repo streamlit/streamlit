@@ -63,9 +63,7 @@ const styleCellFunction = (
   theme: EmotionTheme,
   border: Arrow.BorderMode = Arrow.BorderMode.ALL
 ): CSSObject => ({
-  // Only have borders on the bottom and right of each cell. And remove the borders
-  // of the last row and column to prevent double borders together with the enclosing
-  // border from `StyledTableBorder`.
+  // Only have borders on the bottom and right of each cell.
   borderBottom:
     border !== Arrow.BorderMode.NONE
       ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
@@ -73,7 +71,7 @@ const styleCellFunction = (
   "tbody tr:last-child &": {
     // For "all" borders, remove bottom border of last row to prevent double border with
     // table border. For "horizontal" borders, also remove bottom border of last row
-    // since there's no content after it
+    // since there's no content after it.
     borderBottom:
       border === Arrow.BorderMode.ALL || border === Arrow.BorderMode.HORIZONTAL
         ? "none"
@@ -85,11 +83,13 @@ const styleCellFunction = (
       : "none",
   "&:last-child": {
     borderRight: border === Arrow.BorderMode.ALL ? "none" : undefined,
+    // Remove right padding from last cell when no borders, so that the table aligns
+    // with the rest of the page.
     paddingRight: border === Arrow.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
-  // Add extra left padding when there are no vertical borders to improve column separation
+  // Increase the space between columns when there are no vertical borders.
   "&:not(:first-child)": {
     paddingLeft:
       border === Arrow.BorderMode.NONE ||
