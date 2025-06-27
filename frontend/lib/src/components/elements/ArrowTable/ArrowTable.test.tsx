@@ -55,7 +55,6 @@ describe("st._arrow_table", () => {
 
   it("renders without borders when border=false", () => {
     // Create a Quiver with border=false
-    const props = getProps(UNICODE)
     const mockQuiver = new Quiver({ data: UNICODE, border: false })
     const modifiedProps = { element: mockQuiver }
 
