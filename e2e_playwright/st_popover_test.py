@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    get_element_by_key,
     get_popover,
     open_popover,
 )
@@ -27,7 +28,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(9)
+    expect(popover_elements).to_have_count(21)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -63,6 +64,90 @@ def test_popover_button_rendering(
     )
 
 
+def test_popover_width_parameter_rendering(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that popover buttons with width parameter are correctly rendered via screenshot matching."""
+
+    content_width_container = get_element_by_key(app, "test_width=content")
+    content_width_popover = get_popover(app, "popover 10 (width=content)")
+    content_width_popover.click()
+    expect(content_width_popover).to_be_visible()
+    assert_snapshot(
+        content_width_container,
+        name="st_popover-width_content",
+    )
+
+    stretch_width_container = get_element_by_key(app, "test_width=stretch")
+    stretch_width_popover = get_popover(app, "popover 11 (width=stretch)")
+    stretch_width_popover.click()
+    expect(stretch_width_popover).to_be_visible()
+    assert_snapshot(
+        stretch_width_container,
+        name="st_popover-width_stretch",
+    )
+
+    fixed_width_container = get_element_by_key(app, "test_width=500px")
+    fixed_width_popover = get_popover(app, "popover 12 (width=500px)")
+    fixed_width_popover.click()
+    expect(fixed_width_popover).to_be_visible()
+    assert_snapshot(
+        fixed_width_container,
+        name="st_popover-width_500px",
+    )
+
+    # Test width parameter combined with help tooltips
+    content_width_help_container = get_element_by_key(app, "test_width=content_help")
+    content_width_help_popover = get_popover(app, "popover 13 (width=content + help)")
+    content_width_help_popover.click()
+    expect(content_width_help_popover).to_be_visible()
+    assert_snapshot(
+        content_width_help_container,
+        name="st_popover-width_content_help",
+    )
+
+    stretch_width_help_container = get_element_by_key(app, "test_width=stretch_help")
+    stretch_width_help_popover = get_popover(app, "popover 14 (width=stretch + help)")
+    stretch_width_help_popover.click()
+    expect(stretch_width_help_popover).to_be_visible()
+    assert_snapshot(
+        stretch_width_help_container,
+        name="st_popover-width_stretch_help",
+    )
+
+    fixed_width_help_container = get_element_by_key(app, "test_width=180px_help")
+    fixed_width_help_popover = get_popover(app, "popover 15 (width=500px + help)")
+    fixed_width_help_popover.click()
+    expect(fixed_width_help_popover).to_be_visible()
+    assert_snapshot(
+        fixed_width_help_container,
+        name="st_popover-width_500px_help",
+    )
+
+    columns_container = get_element_by_key(app, "test_columns")
+    columns_popover_1 = get_popover(app, "popover 16 (in column 1)")
+    columns_popover_1.click()
+    expect(columns_popover_1).to_be_visible()
+    assert_snapshot(
+        columns_container,
+        name="st_popover-columns",
+    )
+
+    # Test deprecated use_container_width parameter with warning display
+    container_width_true = get_element_by_key(
+        app, "test_deprecated_use_container_width=True"
+    )
+    container_width_false = get_element_by_key(
+        app, "test_deprecated_use_container_width=False"
+    )
+    expect(container_width_true).to_have_text(
+        "Using deprecated use_container_width=True"
+    )
+    expect(container_width_false).to_have_text(
+        "Using deprecated use_container_width=False"
+    )
+
+
 def test_popover_container_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -87,30 +172,6 @@ def test_popover_container_rendering(
     expect(popover_container.get_by_test_id("stTextInput")).to_have_count(4)
 
     assert_snapshot(popover_container, name="st_popover-container")
-
-
-def test_popover_with_use_container_width(app: Page):
-    """Test that the popover container is correctly stretched to the button width
-    if `use_container_width=True`.
-    """
-    # Get the stretched popover container:
-    popover_container = open_popover(app, "popover 2 (use_container_width)")
-
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello")
-    # Check that the min width is stretched to the full container width:
-    expect(popover_container).to_have_css("min-width", "704px")
-
-
-def test_popover_with_use_container_width_and_help(app: Page):
-    """Test that the popover container is correctly stretched to the button width
-    if `use_container_width=True` and `help` is provided.
-    """
-    # Get the stretched popover container:
-    popover_container = open_popover(app, "popover 9 (use_container_width) with help")
-
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello")
-    # Check that the min width is stretched to the full container width:
-    expect(popover_container).to_have_css("min-width", "704px")
 
 
 def test_applying_changes_from_popover_container(app: Page):

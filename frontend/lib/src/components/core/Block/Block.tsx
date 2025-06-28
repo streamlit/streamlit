@@ -293,10 +293,11 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   }
 
   if (node.deltaBlock.popover) {
-    return (
+    containerElement = (
       <Popover
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
+        stretchWidth={node.deltaBlock.widthConfig?.useStretch ?? false}
       >
         {child}
       </Popover>

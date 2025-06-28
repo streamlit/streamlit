@@ -13,11 +13,13 @@
 # limitations under the License.
 
 from typing import Literal
+from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
@@ -26,6 +28,7 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class ColumnsTest(DeltaGeneratorTestCase):
@@ -513,21 +516,73 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
 
         popover_block = self.get_delta_from_queue()
         assert popover_block.add_block.popover.label == "label"
-        assert not popover_block.add_block.popover.use_container_width
         assert not popover_block.add_block.popover.disabled
         assert popover_block.add_block.popover.help == ""
         assert popover_block.add_block.allow_empty
+        # Default width should be "content"
+        assert popover_block.add_block.width_config.use_content
 
-    def test_use_container_width(self):
-        """Test that it correctly applies use_container_width param."""
-        popover = st.popover("label", use_container_width=True)
-        with popover:
-            # Noop
-            pass
+    @patch("streamlit.elements.layouts.show_deprecation_warning")
+    def test_use_container_width_true(self, mock_show_deprecation_warning):
+        """Test use_container_width=True is mapped to width='stretch' and shows deprecation warning."""
+        test_widths = [200, "content", "stretch"]
 
-        popover_block = self.get_delta_from_queue()
-        assert popover_block.add_block.popover.label == "label"
-        assert popover_block.add_block.popover.use_container_width
+        for width in test_widths:
+            with self.subTest(width=width):
+                if width is None:
+                    st.popover("label", use_container_width=True)
+                else:
+                    st.popover("label", use_container_width=True, width=width)
+
+                popover_block = self.get_delta_from_queue()
+                assert (
+                    popover_block.add_block.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.USE_STRETCH.value
+                )
+                assert popover_block.add_block.width_config.use_stretch is True
+
+        assert mock_show_deprecation_warning.call_count == len(test_widths)
+        mock_show_deprecation_warning.assert_called_with(
+            make_deprecated_name_warning(
+                "use_container_width",
+                "width",
+                "2025-12-31",
+                "For `use_container_width=True`, use `width='stretch'`. "
+                "For `use_container_width=False`, use `width='content'`.",
+                include_st_prefix=False,
+            )
+        )
+
+    @patch("streamlit.elements.layouts.show_deprecation_warning")
+    def test_use_container_width_false(self, mock_show_deprecation_warning):
+        """Test use_container_width=False is mapped to width='content' and shows deprecation warning."""
+        test_widths = [200, "stretch", "content"]
+
+        for width in test_widths:
+            with self.subTest(width=width):
+                if width is None:
+                    st.popover("label", use_container_width=False)
+                else:
+                    st.popover("label", use_container_width=False, width=width)
+
+                popover_block = self.get_delta_from_queue()
+                assert (
+                    popover_block.add_block.width_config.WhichOneof("width_spec")
+                    == WidthConfigFields.USE_CONTENT.value
+                )
+                assert popover_block.add_block.width_config.use_content is True
+
+        assert mock_show_deprecation_warning.call_count == len(test_widths)
+        mock_show_deprecation_warning.assert_called_with(
+            make_deprecated_name_warning(
+                "use_container_width",
+                "width",
+                "2025-12-31",
+                "For `use_container_width=True`, use `width='stretch'`. "
+                "For `use_container_width=False`, use `width='content'`.",
+                include_st_prefix=False,
+            )
+        )
 
     def test_disabled(self):
         """Test that it correctly applies disabled param."""
@@ -591,6 +646,30 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as e:
             st.popover("label", icon=icon)
         assert "is not a valid Material icon" in str(e.value)
+
+    def test_width_pixel_value(self):
+        """Test that pixel width configuration works correctly"""
+        st.popover("label", width=200)
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.width_config.pixel_width == 200
+
+    def test_width_stretch(self):
+        """Test that stretch width configuration works correctly"""
+        st.popover("label", width="stretch")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.width_config.use_stretch
+
+    def test_width_content(self):
+        """Test that content width configuration works correctly"""
+        st.popover("label", width="content")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.width_config.use_content
+
+    @parameterized.expand(["invalid", -100, 0])
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.popover("label", width=invalid_width)
 
 
 class StatusContainerTest(DeltaGeneratorTestCase):
