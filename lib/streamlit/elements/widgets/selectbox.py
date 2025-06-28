@@ -506,12 +506,17 @@ class SelectboxMixin:
                 "and less than the length of options."
             )
 
-        if placeholder is None:
+        # Only set default placeholder if options are not empty
+        # For empty options, let frontend decide the appropriate text
+        if placeholder is None and len(opt) > 0:
             placeholder = (
                 "Choose an option"
                 if not accept_new_options
                 else "Choose or add an option"
             )
+
+        if placeholder == "":
+            placeholder = " "
 
         formatted_options, formatted_option_to_option_index = create_mappings(
             opt, format_func
@@ -542,10 +547,7 @@ class SelectboxMixin:
             selectbox_proto.default = index
         selectbox_proto.options[:] = formatted_options
         selectbox_proto.form_id = current_form_id(self.dg)
-        selectbox_proto.placeholder = placeholder
-        # Map user's placeholder to the new proto field for the fix
-        if placeholder is not None:
-            selectbox_proto.custom_placeholder = placeholder
+        selectbox_proto.placeholder = placeholder or ""
         selectbox_proto.disabled = disabled
         selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

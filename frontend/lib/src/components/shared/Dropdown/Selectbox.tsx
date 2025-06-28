@@ -157,9 +157,9 @@ const Selectbox: React.FC<Props> = ({
     selectValue = [{ label: value, value }]
   }
 
-  // If no custom placeholder provided, determine appropriate default based on widget state
+  // If no custom placeholder provided (empty string or null), determine appropriate default based on widget state
   let selectboxPlaceholder = placeholder
-  if (!placeholder) {
+  if (!placeholder || placeholder === "") {
     if (opts.length === 0) {
       if (!acceptNewOptions) {
         selectboxPlaceholder = "No options to select"
