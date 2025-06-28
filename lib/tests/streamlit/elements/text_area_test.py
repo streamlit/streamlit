@@ -197,15 +197,12 @@ class TextAreaTest(DeltaGeneratorTestCase):
             st.text_area("the label", width=width)
 
     def test_height_config_default(self):
-        """Test that default height is None."""
+        """Test that default height is 122 pixels."""
         st.text_area("the label")
 
         c = self.get_delta_from_queue().new_element
-        # Default height should not be set in width_config.
-        # This will be set to 68px in the frontend.
-        assert not c.height_config.HasField("pixel_height")
-        assert not c.height_config.HasField("use_stretch")
-        assert not c.height_config.HasField("use_content")
+        # Default height should be set to 122 pixels.
+        assert c.height_config.pixel_height == 122
 
     def test_height_config_pixel(self):
         """Test that pixel height works properly."""
@@ -244,28 +241,14 @@ class TextAreaTest(DeltaGeneratorTestCase):
         [
             100.5,
             "invalid",
+            0,
+            -100,
         ]
     )
     def test_invalid_height(self, height):
         """Test that invalid height values raise exceptions."""
         with pytest.raises(StreamlitInvalidHeightError):
             st.text_area("the label", height=height)
-
-    @parameterized.expand(
-        [
-            0,
-            -100,
-        ]
-    )
-    def test_height_config_negative_zero(self, height):
-        """Negative and zero height will be defaulted to 68px in the frontend consistent with legacy behavior."""
-        st.text_area("the label", height=height)
-        c = self.get_delta_from_queue().new_element
-        # Default height should not be set in height_config.
-        # This will be set to 68px in the frontend.
-        assert not c.height_config.HasField("pixel_height")
-        assert not c.height_config.HasField("use_stretch")
-        assert not c.height_config.HasField("use_content")
 
     def test_help_dedents(self):
         """Test that help properly dedents"""
