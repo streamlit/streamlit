@@ -147,13 +147,22 @@ with st.container(border=True, key="test_width=180px_help"):
     st.write("")
     st.write("")
 
-col1, col2 = st.columns(2, key="test_columns")
-with col1:
-    with st.popover("popover 16 (in column 1)", width="stretch"):
-        st.markdown("Popover in column 1")
-with col2:
-    with st.popover("popover 17 (in column 2)"):
-        st.markdown("Popover in column 2")
+with st.container(border=True, key="test_columns"):
+    col1, col2 = st.columns(2)
+    with col1:
+        with st.popover("popover 16 (in column 1)", width="stretch"):
+            st.markdown("Popover in column 1")
+    with col2:
+        with st.popover("popover 17 (in column 2)"):
+            st.markdown("Popover in column 2")
+
+    # TODO (lawilby): This is just to add height to capture the popover expanded
+    # until container height is merged and we can use that.
+    st.write("")
+    st.write("")
+    st.write("")
+    st.write("")
+    st.write("")
 
 with st.container(border=True, key="test_deprecated_use_container_width=True"):
     with st.popover("popover 18 (use_container_width=True)", use_container_width=True):
