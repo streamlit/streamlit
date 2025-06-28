@@ -116,13 +116,16 @@ const TextArea: FC<Props> = ({
   let height = "auto"
   if (outerElement.heightConfig?.useStretch) {
     height = "100%"
-  } else if (!!outerElement.heightConfig?.pixelHeight) {
-    let labelAndPadding =
+  } else if (
+    outerElement.heightConfig?.pixelHeight &&
+    outerElement.heightConfig.pixelHeight > 0
+  ) {
+    const labelAndPadding =
       labelVisibilityProtoValueToEnum(element.labelVisibility?.value) ===
       LabelVisibilityOptions.Collapsed
         ? 2
         : 30
-    let innerHeight = outerElement.heightConfig.pixelHeight - labelAndPadding
+    const innerHeight = outerElement.heightConfig.pixelHeight - labelAndPadding
     height = `${innerHeight}px`
   }
 
