@@ -940,7 +940,10 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     for option_name, option_val in theme_opts.items():
         # We need to ignore some config options here that need special handling
         # and cannot directly be set on the protobuf.
-        if option_name not in {"base", "font", "fontFaces"} and option_val is not None:
+        if (
+            option_name not in {"base", "font", "fontFaces", "chartCategoricalColors"}
+            and option_val is not None
+        ):
             setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base and font will default to the protobuf enum zero
@@ -995,6 +998,32 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
+                    exc_info=e,
+                )
+
+    chart_categorical_colors = theme_opts.get("chartCategoricalColors", None)
+    # If chartCategoricalColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_categorical_colors, str):
+        try:
+            chart_categorical_colors = json.loads(chart_categorical_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                chart_categorical_colors,
+                exc_info=e,
+            )
+            chart_categorical_colors = None
+
+    if chart_categorical_colors is not None:
+        for color in chart_categorical_colors:
+            try:
+                msg.chart_categorical_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                    color,
                     exc_info=e,
                 )
 

@@ -147,6 +147,40 @@ export const parseFont = (font: string): string => {
 }
 
 /**
+ * Helper function to parse/validate a config color value
+ * @param color: a string - the color value passed in as a given config
+ * @param configKey: a string - the config that the color value was passed for
+ * @param inSidebar: boolean - whether this is for sidebar theming (for error messages)
+ * @returns the validated color value or undefined if the color is invalid
+ */
+const parseColor = (
+  color: string,
+  configKey: string,
+  inSidebar: boolean = false
+): string | undefined => {
+  // First try the color as-is
+  if (isColor(color)) {
+    return color
+  }
+
+  // If that fails, try adding a # prefix
+  if (isColor(`#${color}`)) {
+    return `#${color}`
+  }
+
+  // If both fail and this is a color config, log a warning
+  const isAColorConfig = configKey.toLowerCase().includes("color")
+  if (isAColorConfig) {
+    const themeSection = inSidebar ? "theme.sidebar" : "theme"
+    LOG.warn(
+      `Invalid color passed for ${configKey} in ${themeSection}: "${color}"`
+    )
+  }
+
+  return undefined
+}
+
+/**
  * Helper function to parse the baseRadius & buttonRadius options which allow the same possible values
  * @param radius: a string - "none", "small", "medium", "large", "full", a number in pixels or rem
  * @returns radius value and css unit
@@ -279,6 +313,21 @@ const setFontWeights = (
   return fontWeightOverrides
 }
 
+/**
+ * Helper function to validate each of the colors passed in the categorical colors config
+ * @param colors: the categorical colors config passed in (array of strings)
+ * @returns the valid colors from the config
+ */
+const validateCategoricalColors = (colors: string[]): string[] => {
+  return (
+    colors
+      // parseColor returns undefined for invalid colors
+      .map(color => parseColor(color, "chartCategoricalColors"))
+      // Filter any invalid colors
+      .filter((color): color is string => color !== undefined)
+  )
+}
+
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
@@ -297,32 +346,17 @@ export const createEmotionTheme = (
     codeFont,
     showSidebarBorder,
     linkUnderline,
+    // Since categorical colors passed as array, handle separate from parsedColors
+    chartCategoricalColors,
     ...customColors
   } = themeInput
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
-      let isInvalidColor = true
       // @ts-expect-error
-      if (isColor(color)) {
-        isInvalidColor = false
-        // @ts-expect-error
-        colorsArg[key] = color
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
-      } else if (isColor(`#${color}`)) {
-        isInvalidColor = false
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
-        colorsArg[key] = `#${color}`
-      }
-
-      const isAColorConfig = key.toLowerCase().includes("color")
-      if (isAColorConfig && isInvalidColor) {
-        const themeSection = inSidebar ? "theme.sidebar" : "theme"
-        // Provide warning logging for invalid colors passed to theme color configs
-        LOG.warn(
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-base-to-string
-          `Invalid color passed for ${key} in ${themeSection}: "${color}"`
-        )
+      const validatedColor = parseColor(color, key, inSidebar)
+      if (validatedColor) {
+        colorsArg[key] = validatedColor
       }
 
       return colorsArg
@@ -393,6 +427,21 @@ export const createEmotionTheme = (
     // consider full removing it at some point.
     conditionalOverrides.colors.widgetBorderColor =
       widgetBorderColor || conditionalOverrides.colors.borderColor
+  }
+
+  if (
+    notNullOrUndefined(chartCategoricalColors) &&
+    chartCategoricalColors.length > 0
+  ) {
+    // Validate the categorical colors config
+    const validatedCategoricalColors = validateCategoricalColors(
+      chartCategoricalColors
+    )
+    // Set the validated colors if non-empty array
+    if (validatedCategoricalColors.length > 0) {
+      conditionalOverrides.colors.chartCategoricalColors =
+        validatedCategoricalColors
+    }
   }
 
   if (notNullOrUndefined(baseRadius)) {

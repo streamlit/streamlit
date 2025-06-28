@@ -125,6 +125,7 @@ FD = FieldDescriptor
                     FD.TYPE_STRING,
                 ),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
             },
         ),

@@ -21,7 +21,6 @@ import {
   convertRemToPx,
   EmotionTheme,
   getBlue80,
-  getCategoricalColorsArray,
   getDecreasingRed,
   getDivergingColorsArray,
   getGray30,
@@ -237,7 +236,7 @@ function replaceCategoricalColors(
   const CATEGORY_9 = "#000010"
 
   if (elementTheme === "streamlit") {
-    const categoryColors = getCategoricalColorsArray(theme)
+    const categoryColors = theme.colors.chartCategoricalColors
     spec = spec.replaceAll(CATEGORY_0, categoryColors[0])
     spec = spec.replaceAll(CATEGORY_1, categoryColors[1])
     spec = spec.replaceAll(CATEGORY_2, categoryColors[2])
