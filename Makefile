@@ -250,8 +250,8 @@ protobuf:
 
 .PHONY: react-init
 # Install all frontend dependencies.
-react-init:
-	@$(CD) frontend/ && { \
+react-init: #It's fine to use a regular cd here, and it breaks the CI otherwise.
+	cd frontend/ && { \
 		corepack enable yarn; \
 		if [ $$? -ne 0 ]; then \
 			echo "Error: 'corepack' command not found or failed to enable."; \
