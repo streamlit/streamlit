@@ -28,6 +28,9 @@ error_message_red_colored=$(shell echo -e "\033[0;31m ${error_message} \033[0m")
 $(warning ${error_message_red_colored})
 endif
 
+# Instead of cd, in these recipes you must use $(CD), in order to activate the virtual environment right.
+CD=(if command -v "uv" > /dev/null; then uv venv --allow-existing --quiet; fi) && . .venv/bin/activate && echo "Using virtual environment `realpath .venv`" && cd
+
 .PHONY: help
 help:
 	@# Magic line used to create self-documenting makefiles.
@@ -90,19 +93,10 @@ python-init:
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		pip_args+=("--requirement" "lib/test-requirements.txt"); \
 	fi;\
-	if command -v "uv" > /dev/null; then \
-		echo "Running command: uv venv --allow-existing && uv pip install $${pip_args[@]}"; \
-		uv venv --allow-existing && uv pip install $${pip_args[@]}; \
-		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-			uv run python -m playwright install --with-deps; \
-		fi;\
-	else \
-		echo "Running command: pip install $${pip_args[@]}"; \
-		pip install $${pip_args[@]}; \
-		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-			python -m playwright install --with-deps; \
-		fi;\
-	fi;\
+	$(CD) . ; \
+	 echo "Running command: uv venv --allow-existing && uv pip install $${pip_args[@]}"; \
+	uv pip install $${pip_args[@]}; \
+	python -m playwright install --with-deps;
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted and that there are no lint errors.
@@ -123,7 +117,7 @@ pyformat:
 .PHONY: pytest
 # Run Python unit tests.
 pytest:
-	cd lib; \
+	$(CD) lib; \
 		PYTHONPATH=. \
 		pytest -v -l \
 			-m "not performance" \
@@ -132,7 +126,7 @@ pytest:
 .PHONY: performance-pytest
 # Run Python benchmark tests
 performance-pytest:
-	cd lib; \
+	$(CD) lib; \
 		PYTHONPATH=. \
 		pytest -v -l \
 			-m "performance" \
@@ -143,7 +137,7 @@ performance-pytest:
 .PHONY: pytest-integration
 # Run Python integration tests. This requires the integration-requirements to be installed.
 pytest-integration:
-	cd lib; \
+	$(CD) lib; \
 		PYTHONPATH=. \
 		pytest -v -l \
 			--require-integration \
@@ -170,7 +164,7 @@ cli-smoke-tests:
 distribution:
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
-	cd lib ; python3 setup.py bdist_wheel sdist
+	$(CD) lib ; python3 setup.py bdist_wheel sdist
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
@@ -199,7 +193,7 @@ conda-package: build-deps
 .PHONY: clean
 # Remove all generated files.
 clean:
-	cd lib; rm -rf build dist  .eggs *.egg-info
+	$(CD) lib; rm -rf build dist  .eggs *.egg-info
 	rm -rf lib/conda-recipe/dist
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
@@ -226,7 +220,7 @@ clean:
 	rm -rf e2e_playwright/test-results
 	rm -rf e2e_playwright/performance-results
 	find . -name .streamlit -not \( -path './e2e_playwright/.streamlit' -o -path './e2e_playwright/config/.streamlit' \) -type d -exec rm -rfv {} \; || true
-	cd lib; rm -rf .coverage .coverage\.*
+	$(CD) lib; rm -rf .coverage .coverage\.*
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and the frontend.
@@ -245,19 +239,19 @@ protobuf:
 	else \
 		echo "protoc version $${PROTOC_VERSION} is >= than $(MIN_PROTOC_VERSION)"; \
 	fi; \
-	protoc \
+	$(CD) . && protoc \
 		--proto_path=proto \
 		--python_out=lib \
 		--mypy_out=lib \
 		proto/streamlit/proto/*.proto
 
 	@# JS/TS protobuf generation
-	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
+	$(CD) frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
 .PHONY: react-init
 # Install all frontend dependencies.
 react-init:
-	@cd frontend/ && { \
+	@$(CD) frontend/ && { \
 		corepack enable yarn; \
 		if [ $$? -ne 0 ]; then \
 			echo "Error: 'corepack' command not found or failed to enable."; \
@@ -270,7 +264,7 @@ react-init:
 .PHONY: frontend
 # Build frontend into static files.
 frontend:
-	cd frontend/ ; yarn workspaces foreach --all --topological run build
+	$(CD) frontend/ ; yarn workspaces foreach --all --topological run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 	# Move manifest.json to a location that can actually be served by the Tornado
@@ -281,58 +275,58 @@ frontend:
 .PHONY: frontend-dependencies
 # Build frontend dependent libraries (excluding app and lib)
 frontend-dependencies:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
+	$(CD) frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
 
 .PHONY: frontend-build-with-profiler
 # Build the frontend with the profiler enabled.
 frontend-build-with-profiler: frontend-dependencies
-	cd frontend/ ; yarn workspace @streamlit/app buildWithProfiler
+	$(CD) frontend/ ; yarn workspace @streamlit/app buildWithProfiler
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-fast
 # Build the frontend (as fast as possible)
 frontend-fast:
-	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/app --exclude @streamlit/lib run build
+	$(CD) frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/app --exclude @streamlit/lib run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-dev
 # Start the frontend dev server.
 frontend-dev:
-	cd frontend/ ; yarn start
+	$(CD) frontend/ ; yarn start
 
 .PHONY: frontend-lib
 # Build the frontend library.
 frontend-lib:
-	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
+	$(CD) frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
 
 .PHONY: jslint
 # Verify that our JS/TS code is formatted and that there are no lint errors.
 jslint:
-	cd frontend/ ; yarn workspaces foreach --all run formatCheck
-	cd frontend/ ; yarn workspaces foreach --all run lint
+	$(CD) frontend/ ; yarn workspaces foreach --all run formatCheck
+	$(CD) frontend/ ; yarn workspaces foreach --all run lint
 
 .PHONY: tstypecheck
 # Typecheck the JS/TS code.
 tstypecheck:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
-	cd frontend/ ; yarn workspaces foreach --all run typecheck
+	$(CD) frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
+	$(CD) frontend/ ; yarn workspaces foreach --all run typecheck
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
 jsformat:
-	cd frontend/ ; yarn workspaces foreach --all run format
+	$(CD) frontend/ ; yarn workspaces foreach --all run format
 
 .PHONY: jstest
 # Run JS unit tests.
 jstest:
-	cd frontend; TESTPATH=$(TESTPATH) yarn test
+	$(CD) frontend; TESTPATH=$(TESTPATH) yarn test
 
 .PHONY: jstestcoverage
 # Run JS unit tests and generate a coverage report.
 jstestcoverage:
-	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
+	$(CD) frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: update-snapshots
 # Update e2e playwright snapshots based on the latest completed CI run.
@@ -353,7 +347,7 @@ update-material-icons:
 .PHONY: notices
 # Rebuild the NOTICES file.
 notices:
-	cd frontend; \
+	$(CD) frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
@@ -385,7 +379,7 @@ pre-commit-install:
 .PHONY: performance-lighthouse
 # Run Lighthouse performance tests.
 performance-lighthouse:
-	cd frontend/app; \
+	$(CD) frontend/app; \
 	yarn run lighthouse:run
 
 .PHONY: debug-e2e-test
@@ -397,7 +391,7 @@ debug-e2e-test:
 	fi
 	@echo "Running test: $(filter-out $@,$(MAKECMDGOALS)) in debug mode."
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
-	cd e2e_playwright && PWDEBUG=1 pytest $$TEST_SCRIPT --tracing on || ( \
+	$(CD) e2e_playwright && PWDEBUG=1 pytest $$TEST_SCRIPT --tracing on || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \
 		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1 \
@@ -412,7 +406,7 @@ run-e2e-test:
 	fi
 	@echo "Running test: $(filter-out $@,$(MAKECMDGOALS))"
 	@TEST_SCRIPT=$$(echo $(filter-out $@,$(MAKECMDGOALS)) | sed 's|^e2e_playwright/||'); \
-	cd e2e_playwright && pytest $$TEST_SCRIPT --tracing retain-on-failure --reruns 0 || ( \
+	$(CD) e2e_playwright && pytest $$TEST_SCRIPT --tracing retain-on-failure --reruns 0 || ( \
 		echo "If you implemented changes in the frontend, make sure to call \`make frontend-fast\` to use the up-to-date frontend build in the test."; \
 		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1 \
@@ -427,7 +421,7 @@ autofix:
 	# JS fixes:
 	make react-init
 	make jsformat
-	cd frontend/ ; yarn workspaces foreach --all run lint --fix
+	$(CD) frontend/ ; yarn workspaces foreach --all run lint --fix
 	# Other fixes:
 	make notices
 	# Run all pre-commit fixes but not fail if any of them don't work.
@@ -437,7 +431,7 @@ autofix:
 # Run typesync in each frontend workspace to check for unsynced types.
 # If types are unsynced, print a message and exit with a non-zero exit code.
 frontend-typesync:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync:ci --dry=fail || (\
+	$(CD) frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync:ci --dry=fail || (\
 		echo -e "\033[0;31mTypesync check failed. Run 'make frontend-typesync-update' to fix.\033[0m"; \
 		exit 1 \
 	)
@@ -445,7 +439,7 @@ frontend-typesync:
 .PHONY: frontend-typesync-update
 # Run typesync in each frontend workspace to update types.
 frontend-typesync-update:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync
-	cd frontend/ ; yarn
-	cd component-lib/ ; yarn typesync
-	cd component-lib/ ; yarn
+	$(CD) frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync
+	$(CD) frontend/ ; yarn
+	$(CD) component-lib/ ; yarn typesync
+	$(CD) component-lib/ ; yarn
