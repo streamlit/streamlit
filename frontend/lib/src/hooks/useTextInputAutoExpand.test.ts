@@ -30,6 +30,7 @@ vi.mock("@emotion/react", () => ({
       minElementHeight: "2.5rem",
     },
   }),
+  keyframes: () => "keyframes",
 }))
 
 // Helper to create a mock textarea ref
