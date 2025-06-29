@@ -685,7 +685,7 @@ class TextWidgetsMixin:
         if height is not None:
             validate_height(height, allow_content=True)
         else:
-            # We want to maintain the same aprox. three lines of text height
+            # We want to maintain the same approximately three lines of text height
             # for the text input when the label is collapsed.
             # These numbers are for the entire element including the label and
             # padding.
