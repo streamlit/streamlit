@@ -118,6 +118,28 @@ describe("Selectbox widget", () => {
     expect(screen.getByRole("combobox")).not.toBeDisabled()
   })
 
+  it("renders markdown in placeholder correctly", () => {
+    props = getProps({
+      value: undefined,
+      placeholder: "**Bold** and *italic* text",
+    })
+    render(<Selectbox {...props} />)
+    // The markdown should be rendered with proper formatting
+    expect(screen.getByText("Bold")).toBeInTheDocument()
+    expect(screen.getByText("and")).toBeInTheDocument()
+    expect(screen.getByText("italic")).toBeInTheDocument()
+    expect(screen.getByText("text")).toBeInTheDocument()
+  })
+
+  it("renders plain text placeholder when no markdown detected", () => {
+    props = getProps({
+      value: undefined,
+      placeholder: "Simple plain text placeholder",
+    })
+    render(<Selectbox {...props} />)
+    expect(screen.getByText("Simple plain text placeholder")).toBeInTheDocument()
+  })
+
   it("renders options", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)

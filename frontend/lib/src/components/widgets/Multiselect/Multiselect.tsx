@@ -45,6 +45,42 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+
+/**
+ * Custom Placeholder component that supports Markdown rendering for Multiselect
+ */
+interface MultiselectPlaceholderProps {
+  children: React.ReactNode
+  $style?: React.CSSProperties
+}
+
+const MarkdownPlaceholder: React.FC<MultiselectPlaceholderProps> = ({ children, $style }) => {
+  // Check if the placeholder text contains potential Markdown syntax
+  const placeholderText = String(children || "")
+  const hasMarkdownSyntax = /[*_`\[\]!:]/g.test(placeholderText)
+  
+  if (!hasMarkdownSyntax) {
+    // Render as plain text if no Markdown syntax detected
+    return (
+      <div style={$style}>
+        {children}
+      </div>
+    )
+  }
+  
+  // Render with Markdown support
+  return (
+    <div style={{ ...$style, fontSize: "inherit", color: "inherit" }}>
+      <StreamlitMarkdown 
+        source={placeholderText}
+        allowHTML={false}
+        isLabel={true}
+        inheritFont={true}
+      />
+    </div>
+  )
+}
 
 export interface Props {
   disabled: boolean
@@ -322,12 +358,24 @@ const Multiselect: FC<Props> = props => {
               },
             },
             Placeholder: {
-              style: () => ({
-                flex: "inherit",
-                color: disabled
-                  ? theme.colors.fadedText40
-                  : theme.colors.fadedText60,
-              }),
+              component: (props) => {
+                const { $disabled, children, ...restProps } = props
+                const placeholderText = String(children || "")
+                
+                return (
+                  <MarkdownPlaceholder
+                    {...restProps}
+                    $style={{
+                      flex: "inherit",
+                      color: $disabled
+                        ? theme.colors.fadedText40
+                        : theme.colors.fadedText60,
+                    }}
+                  >
+                    {placeholderText}
+                  </MarkdownPlaceholder>
+                )
+              },
             },
             ValueContainer: {
               style: () => ({

@@ -178,6 +178,28 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("Add options")).toBeInTheDocument()
       expect(screen.getByRole("combobox")).not.toBeDisabled()
     })
+
+    it("renders markdown in placeholder correctly", () => {
+      const props = getProps({
+        default: [],
+        placeholder: "**Bold** and *italic* text",
+      })
+      render(<Multiselect {...props} />)
+      // The markdown should be rendered with proper formatting
+      expect(screen.getByText("Bold")).toBeInTheDocument()
+      expect(screen.getByText("and")).toBeInTheDocument()
+      expect(screen.getByText("italic")).toBeInTheDocument()
+      expect(screen.getByText("text")).toBeInTheDocument()
+    })
+
+    it("renders plain text placeholder when no markdown detected", () => {
+      const props = getProps({
+        default: [],
+        placeholder: "Simple plain text placeholder",
+      })
+      render(<Multiselect {...props} />)
+      expect(screen.getByText("Simple plain text placeholder")).toBeInTheDocument()
+    })
   })
 
   it("renders options", async () => {

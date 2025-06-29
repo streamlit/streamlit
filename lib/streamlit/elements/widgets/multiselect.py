@@ -318,6 +318,10 @@ class MultiSelectMixin:
             - "Choose or add an option" is displayed if you set
               ``accept_new_options=True``.
 
+            The placeholder can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
+
         disabled: bool
             An optional boolean that disables the multiselect widget if set
             to ``True``. The default is ``False``.
