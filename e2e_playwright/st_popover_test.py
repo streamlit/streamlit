@@ -70,27 +70,28 @@ def test_popover_width_parameter_rendering(
     """Test that popover buttons with width parameter are correctly rendered via screenshot matching."""
 
     content_width_container = get_element_by_key(app, "test_width=content")
-    content_width_popover = get_popover(app, "popover 10 (width=content)")
-    content_width_popover.click()
-    expect(content_width_popover).to_be_visible()
+    content_width_popover = open_popover(app, "popover 10 (width=content)")
+    expect(content_width_popover.get_by_test_id("stMarkdown")).to_have_text(
+        "Content width"
+    )
     assert_snapshot(
         content_width_container,
         name="st_popover-width_content",
     )
 
     stretch_width_container = get_element_by_key(app, "test_width=stretch")
-    stretch_width_popover = get_popover(app, "popover 11 (width=stretch)")
-    stretch_width_popover.click()
-    expect(stretch_width_popover).to_be_visible()
+    stretch_width_popover = open_popover(app, "popover 11 (width=stretch)")
+    expect(stretch_width_popover.get_by_test_id("stMarkdown")).to_have_text(
+        "Stretch width"
+    )
     assert_snapshot(
         stretch_width_container,
         name="st_popover-width_stretch",
     )
 
     fixed_width_container = get_element_by_key(app, "test_width=500px")
-    fixed_width_popover = get_popover(app, "popover 12 (width=500px)")
-    fixed_width_popover.click()
-    expect(fixed_width_popover).to_be_visible()
+    fixed_width_popover = open_popover(app, "popover 12 (width=500px)")
+    expect(fixed_width_popover.get_by_test_id("stMarkdown")).to_have_text("500px width")
     assert_snapshot(
         fixed_width_container,
         name="st_popover-width_500px",
@@ -98,36 +99,40 @@ def test_popover_width_parameter_rendering(
 
     # Test width parameter combined with help tooltips
     content_width_help_container = get_element_by_key(app, "test_width=content_help")
-    content_width_help_popover = get_popover(app, "popover 13 (width=content + help)")
-    content_width_help_popover.click()
-    expect(content_width_help_popover).to_be_visible()
+    content_width_help_popover = open_popover(app, "popover 13 (width=content + help)")
+    expect(content_width_help_popover.get_by_test_id("stMarkdown")).to_have_text(
+        "Content width with help"
+    )
     assert_snapshot(
         content_width_help_container,
         name="st_popover-width_content_help",
     )
 
     stretch_width_help_container = get_element_by_key(app, "test_width=stretch_help")
-    stretch_width_help_popover = get_popover(app, "popover 14 (width=stretch + help)")
-    stretch_width_help_popover.click()
-    expect(stretch_width_help_popover).to_be_visible()
+    stretch_width_help_popover = open_popover(app, "popover 14 (width=stretch + help)")
+    expect(stretch_width_help_popover.get_by_test_id("stMarkdown")).to_have_text(
+        "Stretch width with help"
+    )
     assert_snapshot(
         stretch_width_help_container,
         name="st_popover-width_stretch_help",
     )
 
     fixed_width_help_container = get_element_by_key(app, "test_width=180px_help")
-    fixed_width_help_popover = get_popover(app, "popover 15 (width=500px + help)")
-    fixed_width_help_popover.click()
-    expect(fixed_width_help_popover).to_be_visible()
+    fixed_width_help_popover = open_popover(app, "popover 15 (width=500px + help)")
+    expect(fixed_width_help_popover.get_by_test_id("stMarkdown")).to_have_text(
+        "500px width with help"
+    )
     assert_snapshot(
         fixed_width_help_container,
         name="st_popover-width_500px_help",
     )
 
     columns_container = get_element_by_key(app, "test_columns")
-    columns_popover_1 = get_popover(app, "popover 16 (in column 1)")
-    columns_popover_1.click()
-    expect(columns_popover_1).to_be_visible()
+    columns_popover_1 = open_popover(app, "popover 16 (in column 1)")
+    expect(columns_popover_1.get_by_test_id("stMarkdown")).to_have_text(
+        "Popover in column 1"
+    )
     assert_snapshot(
         columns_container,
         name="st_popover-columns",
@@ -137,14 +142,30 @@ def test_popover_width_parameter_rendering(
     container_width_true = get_element_by_key(
         app, "test_deprecated_use_container_width=True"
     )
+    assert_snapshot(
+        container_width_true,
+        name="st_popover-deprecated_use_container_width_true",
+    )
     container_width_false = get_element_by_key(
         app, "test_deprecated_use_container_width=False"
+    )
+    assert_snapshot(
+        container_width_false,
+        name="st_popover-deprecated_use_container_width_false",
     )
     expect(container_width_true).to_have_text(
         "Using deprecated use_container_width=True"
     )
+    assert_snapshot(
+        container_width_true,
+        name="st_popover-deprecated_use_container_width_true",
+    )
     expect(container_width_false).to_have_text(
         "Using deprecated use_container_width=False"
+    )
+    assert_snapshot(
+        container_width_false,
+        name="st_popover-deprecated_use_container_width_false",
     )
 
 
