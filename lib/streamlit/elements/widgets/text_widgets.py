@@ -412,7 +412,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str = "",
-        height: Height | None = 122,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -432,7 +432,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: SupportsStr | None = None,
-        height: Height | None = 122,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -452,7 +452,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str | SupportsStr | None = "",
-        height: Height | None = 122,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -600,7 +600,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: SupportsStr | None = "",
-        height: Height | None = 122,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -684,9 +684,14 @@ class TextWidgetsMixin:
         validate_width(width)
         if height is not None:
             validate_height(height, allow_content=True)
-            layout_config = LayoutConfig(width=width, height=height)
         else:
-            layout_config = LayoutConfig(width=width)
+            # We want to maintain the same aprox. three lines of text height
+            # for the text input when the lable is collapsed.
+            # These numbers are for the entire element including the label and
+            # padding.
+            height = 122 if label_visibility != "collapsed" else 94
+
+        layout_config = LayoutConfig(width=width, height=height)
 
         self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
         return widget_state.value
