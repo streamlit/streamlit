@@ -503,6 +503,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.codeBackgroundColor",
                 "theme.dataframeHeaderBackgroundColor",
                 "theme.showSidebarBorder",
+                "theme.chartCategoricalColors",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
                 "theme.sidebar.secondaryBackgroundColor",
@@ -693,6 +694,7 @@ class ConfigTest(unittest.TestCase):
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
+            "chartCategoricalColors": None,
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -733,6 +735,9 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.baseFontWeight", 300, "test")
         config._set_option("theme.showSidebarBorder", True, "test")
+        config._set_option(
+            "theme.chartCategoricalColors", ["#000000", "#111111", "#222222"], "test"
+        )
 
         expected = {
             "base": "dark",
@@ -764,6 +769,7 @@ class ConfigTest(unittest.TestCase):
             "baseFontSize": 14,
             "baseFontWeight": 300,
             "showSidebarBorder": True,
+            "chartCategoricalColors": ["#000000", "#111111", "#222222"],
         }
         assert config.get_options_for_section("theme") == expected
 
