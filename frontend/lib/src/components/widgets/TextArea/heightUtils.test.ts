@@ -13,78 +13,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import {
+  Element,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  TextArea,
+} from "@streamlit/protobuf"
 
 import { getTextAreaHeight } from "./heightUtils"
-import { LabelVisibilityOptions } from "~lib/util/utils"
 
 describe("getTextAreaHeight", () => {
-  const baseOuterElement = {
-    heightConfig: {},
-  }
-  const baseElement = {
-    labelVisibility: { value: undefined },
-  }
+  const baseOuterElement = new Element({ heightConfig: {} })
+  const baseElement = new TextArea({ labelVisibility: { value: undefined } })
 
   it("returns '100%' if useStretch is true", () => {
-    const outerElement = {
-      ...baseOuterElement,
-      heightConfig: { useStretch: true },
-    }
-    expect(getTextAreaHeight(outerElement as any, baseElement as any)).toBe(
-      "100%"
-    )
+    const outerElement = new Element({ heightConfig: { useStretch: true } })
+    expect(getTextAreaHeight(outerElement, baseElement)).toBe("100%")
   })
 
   it("returns calculated px height if pixelHeight is set and label is visible", () => {
-    const outerElement = {
-      ...baseOuterElement,
-      heightConfig: { pixelHeight: 100 },
-    }
-    const element = {
-      ...baseElement,
-      labelVisibility: { value: LabelVisibilityOptions.Visible },
-    }
-    expect(getTextAreaHeight(outerElement as any, element as any)).toBe("70px")
+    const outerElement = new Element({ heightConfig: { pixelHeight: 100 } })
+    const element = new TextArea({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.VISIBLE,
+      },
+    })
+    expect(getTextAreaHeight(outerElement, element)).toBe("70px")
   })
 
   it("returns calculated px height if pixelHeight is set and label is collapsed", () => {
-    const outerElement = {
-      ...baseOuterElement,
-      heightConfig: { pixelHeight: 100 },
-    }
-    const element = {
-      ...baseElement,
-      labelVisibility: { value: LabelVisibilityOptions.Collapsed },
-    }
-    expect(getTextAreaHeight(outerElement as any, element as any)).toBe("98px")
+    const outerElement = new Element({ heightConfig: { pixelHeight: 100 } })
+    const element = new TextArea({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    expect(getTextAreaHeight(outerElement, element)).toBe("98px")
   })
 
   it("returns 'auto' if no height config is set", () => {
-    expect(
-      getTextAreaHeight(baseOuterElement as any, baseElement as any)
-    ).toBe("auto")
+    expect(getTextAreaHeight(baseOuterElement, baseElement)).toBe("auto")
   })
 
   it("returns 'auto' if useContent is true", () => {
-    const outerElement = {
-      ...baseOuterElement,
-      heightConfig: { useContent: true },
-    }
-    expect(getTextAreaHeight(outerElement as any, baseElement as any)).toBe(
-      "auto"
-    )
+    const outerElement = new Element({ heightConfig: { useContent: true } })
+    expect(getTextAreaHeight(outerElement, baseElement)).toBe("auto")
   })
 
   it("returns calculated px height if pixelHeight is set and label is hidden", () => {
-    const outerElement = {
-      ...baseOuterElement,
-      heightConfig: { pixelHeight: 100 },
-    }
-    const element = {
-      ...baseElement,
-      labelVisibility: { value: LabelVisibilityOptions.Hidden },
-    }
+    const outerElement = new Element({ heightConfig: { pixelHeight: 100 } })
+    const element = new TextArea({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
     // Should match the same as visible (30px padding)
-    expect(getTextAreaHeight(outerElement as any, element as any)).toBe("70px")
+    expect(getTextAreaHeight(outerElement, element)).toBe("70px")
   })
 })

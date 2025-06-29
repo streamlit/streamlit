@@ -32,11 +32,7 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
-import {
-  isInForm,
-  LabelVisibilityOptions,
-  labelVisibilityProtoValueToEnum,
-} from "~lib/util/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,

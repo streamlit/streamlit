@@ -15,9 +15,10 @@
  */
 
 import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
+
 import {
-  labelVisibilityProtoValueToEnum,
   LabelVisibilityOptions,
+  labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 
 export const getTextAreaHeight = (
