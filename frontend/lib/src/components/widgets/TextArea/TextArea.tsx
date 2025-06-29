@@ -46,6 +46,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 
 import { StyledTextAreaContainer } from "./styled-components"
+import { getTextAreaHeight } from "./heightUtils"
 
 export interface Props {
   disabled: boolean
@@ -112,22 +113,9 @@ const TextArea: FC<Props> = ({
   // Disable resize if stretch height is enabled.
   const isStretchHeight = outerElement.heightConfig?.useStretch ?? false
 
-  // TODO(lawilby): Move this into a function.
-  let height = "auto"
-  if (outerElement.heightConfig?.useStretch) {
-    height = "100%"
-  } else if (
-    outerElement.heightConfig?.pixelHeight &&
-    outerElement.heightConfig.pixelHeight > 0
-  ) {
-    const labelAndPadding =
-      labelVisibilityProtoValueToEnum(element.labelVisibility?.value) ===
-      LabelVisibilityOptions.Collapsed
-        ? 2
-        : 30
-    const innerHeight = outerElement.heightConfig.pixelHeight - labelAndPadding
-    height = `${innerHeight}px`
-  }
+  // For text area, we need to set the height on the input element and let
+  // that determine the height of the overall element so that resizing works.
+  const height = getTextAreaHeight(outerElement, element)
 
   // Create ref for auto-expansion
   const textareaRef = useRef<HTMLTextAreaElement>(null)
