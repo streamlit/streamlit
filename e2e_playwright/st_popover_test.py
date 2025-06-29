@@ -164,22 +164,9 @@ def test_popover_deprecated_use_container_width(
         container_width_true,
         name="st_popover-deprecated_use_container_width_true",
     )
+
     container_width_false = get_element_by_key(
         app, "test_deprecated_use_container_width=False"
-    )
-    assert_snapshot(
-        container_width_false,
-        name="st_popover-deprecated_use_container_width_false",
-    )
-    expect(container_width_true).to_have_text(
-        "Using deprecated use_container_width=True"
-    )
-    assert_snapshot(
-        container_width_true,
-        name="st_popover-deprecated_use_container_width_true",
-    )
-    expect(container_width_false).to_have_text(
-        "Using deprecated use_container_width=False"
     )
     assert_snapshot(
         container_width_false,
