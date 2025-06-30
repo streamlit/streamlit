@@ -35,6 +35,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
   onChange: vi.fn(),
   placeholder: "Select...",
+  acceptNewOptions: false,
   ...props,
 })
 
@@ -100,7 +101,7 @@ describe("Selectbox widget", () => {
     props = getProps({
       options: [],
       value: undefined,
-      placeholder: undefined, // No placeholder provided to test default logic
+      placeholder: "", // Empty string triggers default logic
     })
     render(<Selectbox {...props} />)
 

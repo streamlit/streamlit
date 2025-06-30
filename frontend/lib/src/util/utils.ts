@@ -406,22 +406,22 @@ export function isInForm(widget: { formId?: string }): boolean {
  * Determines the appropriate placeholder text for select-type widgets.
  * Handles both single-select and multi-select cases with appropriate pluralization.
  *
- * @param placeholder - The custom placeholder provided by the user
+ * @param placeholder - The custom placeholder provided by the user (empty string means use defaults)
  * @param options - Array of available options
  * @param acceptNewOptions - Whether the widget accepts new options
  * @param isMultiSelect - Whether this is for a multi-select widget (affects pluralization)
  * @returns Object containing the placeholder text and whether the widget should be disabled
  */
 export function getSelectPlaceholder(
-  placeholder: string | null | undefined,
+  placeholder: string,
   options: readonly string[],
-  acceptNewOptions: boolean | null | undefined,
+  acceptNewOptions: boolean,
   isMultiSelect = false
 ): { placeholder: string; shouldDisable: boolean } {
   let shouldDisable = false
 
-  // If custom placeholder is provided, use it as-is
-  if (placeholder && placeholder !== "") {
+  // If custom placeholder is provided (not empty string), use it as-is
+  if (placeholder !== "") {
     return { placeholder, shouldDisable }
   }
 

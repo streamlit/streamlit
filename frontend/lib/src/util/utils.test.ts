@@ -722,27 +722,9 @@ describe("getSelectPlaceholder", () => {
   })
 
   describe("edge cases", () => {
-    it("handles null placeholder", () => {
-      const result = getSelectPlaceholder(null, ["option1"], true, false)
-      expect(result.placeholder).toBe("Choose or add an option")
-      expect(result.shouldDisable).toBe(false)
-    })
-
-    it("handles undefined placeholder", () => {
-      const result = getSelectPlaceholder(undefined, ["option1"], true, false)
-      expect(result.placeholder).toBe("Choose or add an option")
-      expect(result.shouldDisable).toBe(false)
-    })
-
-    it("handles null acceptNewOptions", () => {
-      const result = getSelectPlaceholder("", ["option1"], null, false)
-      expect(result.placeholder).toBe("Choose an option")
-      expect(result.shouldDisable).toBe(false)
-    })
-
-    it("handles undefined acceptNewOptions", () => {
-      const result = getSelectPlaceholder("", ["option1"], undefined, false)
-      expect(result.placeholder).toBe("Choose an option")
+    it("handles single space placeholder as custom placeholder", () => {
+      const result = getSelectPlaceholder(" ", ["option1"], true, false)
+      expect(result.placeholder).toBe(" ")
       expect(result.shouldDisable).toBe(false)
     })
   })

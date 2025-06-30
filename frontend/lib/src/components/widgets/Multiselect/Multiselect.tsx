@@ -208,7 +208,7 @@ const Multiselect: FC<Props> = props => {
   const { placeholder, shouldDisable } = getSelectPlaceholder(
     element.placeholder,
     options,
-    element.acceptNewOptions,
+    element.acceptNewOptions ?? false,
     true // isMultiSelect = true for multi-select
   )
 

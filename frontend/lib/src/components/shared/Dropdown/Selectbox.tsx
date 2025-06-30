@@ -57,9 +57,9 @@ export interface Props {
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
-  placeholder?: string | null
+  placeholder: string
   clearable?: boolean
-  acceptNewOptions?: boolean | null
+  acceptNewOptions: boolean
 }
 
 interface SelectOption {
@@ -199,7 +199,7 @@ const Selectbox: React.FC<Props> = ({
         )}
       </WidgetLabel>
       <UISelect
-        creatable={acceptNewOptions ?? false}
+        creatable={acceptNewOptions}
         disabled={selectDisabled}
         labelKey="label"
         aria-label={label || ""}
