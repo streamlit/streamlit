@@ -24,18 +24,24 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     get_element_by_key,
     goto_app,
+    reset_hovering,
 )
 
 
 def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload]):
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+
+    expect(upload_button).to_be_visible()
+    upload_button.scroll_into_view_if_needed()
+
     with app.expect_file_chooser() as fc_info:
-        chat_input.get_by_role("button").nth(0).click()
+        upload_button.click()
         file_chooser = fc_info.value
         file_chooser.set_files(files=files)
 
     # take away hover focus of button
     app.keyboard.press("Escape")
-    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+    reset_hovering(app)
 
     wait_for_app_run(app, 500)
 
