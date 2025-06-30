@@ -113,7 +113,7 @@ describe("useOnInputChange", () => {
     const additionalAction2 = vi.fn()
 
     const { result: onInputChange } = renderHook(() =>
-      useOnInPutChange({
+      useOnInputChange({
         formId: "someFormId",
         maxChars: 0,
         setDirty: setDirtyCallback,
