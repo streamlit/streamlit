@@ -35,9 +35,9 @@ import sortBy from "lodash/sortBy"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
 import {
+  getSelectPlaceholder,
   isNullOrUndefined,
   LabelVisibilityOptions,
-  getSelectPlaceholder,
 } from "~lib/util/utils"
 import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 import { Placement } from "~lib/components/shared/Tooltip"

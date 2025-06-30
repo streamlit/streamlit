@@ -40,8 +40,8 @@ import {
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
-  labelVisibilityProtoValueToEnum,
   getSelectPlaceholder,
+  labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
