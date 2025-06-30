@@ -24,7 +24,9 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, overload
+
+from typing_extensions import ParamSpec
 
 from streamlit import type_util
 from streamlit.dataframe_util import is_unevaluated_data_object
@@ -60,6 +62,10 @@ _LOGGER: Final = get_logger(__name__)
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
+
+# Type-annotate the cached function.
+P = ParamSpec("P")
+T_co = TypeVar("T_co", covariant=True)
 
 
 class Cache:
@@ -158,7 +164,7 @@ def make_cached_func_wrapper(info: CachedFuncInfo) -> Callable[..., Any]:
     The wrapper also has a `clear` function that can be called to clear
     some or all of the wrapper's cached values.
     """
-    cached_func = CachedFunc(info)
+    cached_func: CachedFunc[..., Any] = CachedFunc(info)
     return functools.update_wrapper(cached_func, info.func)
 
 
@@ -167,7 +173,7 @@ class BoundCachedFunc:
     decorated function is a class method.
     """
 
-    def __init__(self, cached_func: CachedFunc, instance: Any) -> None:
+    def __init__(self, cached_func: CachedFunc[..., Any], instance: Any) -> None:
         self._cached_func = cached_func
         self._instance = instance
 
@@ -188,7 +194,7 @@ class BoundCachedFunc:
             self._cached_func.clear()
 
 
-class CachedFunc:
+class CachedFunc(Generic[P, T_co]):
     def __init__(self, info: CachedFuncInfo) -> None:
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
@@ -203,7 +209,7 @@ class CachedFunc:
 
         return functools.update_wrapper(BoundCachedFunc(self, instance), self)
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T_co:
         """The wrapper. We'll only call our underlying function on a cache miss."""
 
         spinner_message: str | None = None
@@ -223,7 +229,7 @@ class CachedFunc:
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
         spinner_message: str | None = None,
-    ) -> Any:
+    ) -> T_co:
         # Retrieve the function's cache object. We must do this "just-in-time"
         # (as opposed to in the constructor), because caches can be invalidated
         # at any time.
@@ -260,7 +266,7 @@ class CachedFunc:
         with spinner_or_no_context:
             return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
 
-    def _handle_cache_hit(self, result: CachedResult) -> Any:
+    def _handle_cache_hit(self, result: CachedResult) -> T_co:
         """Handle a cache hit: replay the result's cached messages, and return its
         value.
         """
@@ -277,7 +283,7 @@ class CachedFunc:
         value_key: str,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
-    ) -> Any:
+    ) -> T_co:
         """Handle a cache miss: compute a new cached value, write it back to the cache,
         and return that newly-computed value.
         """
@@ -345,6 +351,12 @@ class CachedFunc:
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
                 )
+
+    @overload
+    def clear(self) -> None: ...
+
+    @overload
+    def clear(self, *args: Any, **kwargs: Any) -> None: ...
 
     def clear(self, *args: Any, **kwargs: Any) -> None:
         """Clear the cached function's associated cache.

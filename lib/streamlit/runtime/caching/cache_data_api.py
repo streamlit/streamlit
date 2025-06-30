@@ -24,7 +24,6 @@ from typing import (
     Callable,
     Final,
     Literal,
-    Protocol,
     TypeVar,
     Union,
     cast,
@@ -41,6 +40,7 @@ from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundE
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
+    CachedFunc,
     CachedFuncInfo,
     make_cached_func_wrapper,
 )
@@ -321,23 +321,6 @@ def get_data_cache_stats_provider() -> CacheStatsProvider:
 # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
 P = ParamSpec("P")
 T_co = TypeVar("T_co", covariant=True)
-
-
-class CachedFunc(Protocol[P, T_co]):
-    """Protocol for cached functions that preserve the original function's signature and add a clear method."""
-
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T_co: ...
-
-    @overload
-    def clear(self) -> None: ...
-
-    @overload
-    def clear(self, *args: P.args, **kwargs: P.kwargs) -> None: ...
-
-    # Currently we can't define the "all-optional" argument overload with `P.args` and `P.kwargs` in Python.
-    # So we use `Any` as a fallback.
-    @overload
-    def clear(self, *args: Any, **kwargs: Any) -> None: ...
 
 
 class CacheDataAPI:
