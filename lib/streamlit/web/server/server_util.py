@@ -21,6 +21,7 @@ from urllib.parse import urljoin
 
 from streamlit import config, net_util, url_util
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.type_util import is_version_less_than
 
 if TYPE_CHECKING:
     from tornado.web import RequestHandler
@@ -33,6 +34,29 @@ AUTH_COOKIE_NAME: Final = "_streamlit_user"
 
 def allowlisted_origins() -> set[str]:
     return {origin.strip() for origin in config.get_option("server.corsAllowedOrigins")}
+
+
+def is_tornado_version_less_than(v: str) -> bool:
+    """Return True if the current Tornado version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+    """
+    import tornado
+
+    return is_version_less_than(tornado.version, v)
 
 
 def is_url_from_allowed_origins(url: str) -> bool:

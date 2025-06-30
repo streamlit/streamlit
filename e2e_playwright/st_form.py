@@ -253,3 +253,8 @@ with st.container(height=600, border=True):
         st.form_submit_button(
             help="Submit by clicking",
         )
+with st.container(border=True):
+    st.write("")
+    with st.form("form_22"):
+        st.dataframe([1, 2, 3])
+        st.form_submit_button("Submit")
