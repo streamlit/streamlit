@@ -47,6 +47,8 @@ def run_chart_tester_app():
     )
 
     col1, col2 = st.columns(2)
+    # Set seed for reproducibility
+    np.random.seed(42)
 
     with col1:
         st.write("**st.area_chart**")
