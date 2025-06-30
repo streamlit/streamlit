@@ -206,7 +206,7 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      expect(screen.getByText("Choose an option")).toBeInTheDocument()
+      expect(screen.getByText("Choose options")).toBeInTheDocument()
     })
 
     it("renders with appropriate default placeholder when options are available and acceptNewOptions is true", () => {
@@ -218,7 +218,7 @@ describe("Multiselect widget", () => {
       })
       render(<Multiselect {...props} />)
 
-      expect(screen.getByText("Choose or add an option")).toBeInTheDocument()
+      expect(screen.getByText("Choose or add options")).toBeInTheDocument()
     })
 
     it("treats empty string placeholder as no placeholder provided", () => {
@@ -231,7 +231,7 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Should show default placeholder when empty string is provided
-      expect(screen.getByText("Choose an option")).toBeInTheDocument()
+      expect(screen.getByText("Choose options")).toBeInTheDocument()
     })
 
     it("handles single space placeholder as a valid placeholder", () => {
@@ -243,9 +243,9 @@ describe("Multiselect widget", () => {
       render(<Multiselect {...props} />)
 
       // Should not show any default placeholder text since single space is provided
-      expect(screen.queryByText("Choose an option")).not.toBeInTheDocument()
+      expect(screen.queryByText("Choose options")).not.toBeInTheDocument()
       expect(
-        screen.queryByText("Choose or add an option")
+        screen.queryByText("Choose or add options")
       ).not.toBeInTheDocument()
       expect(screen.queryByText("Add options")).not.toBeInTheDocument()
       expect(
