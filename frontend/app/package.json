@@ -103,7 +103,7 @@
     "eslint-plugin-testing-library": "^7.5.3",
     "globals": "^16.2.0",
     "jsdom": "24.1.3",
-    "lighthouse": "^12.6.0",
+    "lighthouse": "^12.7.0",
     "polyfill-pseudoclass-has": "^1.1.0",
     "prettier": "^3.5.3",
     "prop-types": "^15.7.2",
