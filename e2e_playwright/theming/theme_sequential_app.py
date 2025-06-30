@@ -16,14 +16,22 @@
 import altair as alt
 import numpy as np
 import pandas as pd
+import plotly.express as px
 
 import streamlit as st
 
 
 def run_chart_tester_app():
-    st.set_page_config(initial_sidebar_state="collapsed", layout="wide")
+    # Better show the charts by minimizing the dead space
+    st.html("""
+        <style>
+            .stMainBlockContainer {
+                padding-top: 4rem;
+            }
+        </style>
+    """)
 
-    st.header("Custom Themed :blue[App]")
+    st.set_page_config(initial_sidebar_state="collapsed", layout="wide")
 
     def page1():
         pass
@@ -38,7 +46,7 @@ def run_chart_tester_app():
         ]
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         st.write("**st.area_chart**")
@@ -73,83 +81,26 @@ def run_chart_tester_app():
             use_container_width=True,
         )
 
-        st.write("**st.bar_chart**")
-        bar_data_numeric = pd.DataFrame(
+        st.write("**st.plotly_chart**")
+        sequential_data = pd.DataFrame(
             {
-                "product": [
-                    "Product A",
-                    "Product B",
-                    "Product C",
-                    "Product D",
-                    "Product E",
-                ],
-                "sales": [100, 150, 120, 180, 90],
-                "priority_level": [
-                    1,
-                    2,
-                    3,
-                    4,
-                    5,
-                ],  # Integer sequence for sequential colors
+                "x": np.random.normal(0, 1, 100),
+                "y": np.random.normal(0, 1, 100),
+                "temperature": np.random.uniform(
+                    0, 100, 100
+                ),  # 0-100 temperature scale
             }
         )
 
-        st.bar_chart(
-            bar_data_numeric,
-            x="product",
-            y="sales",
-            color="priority_level",
-            use_container_width=True,
+        fig_sequential = px.scatter(sequential_data, x="x", y="y", color="temperature")
+        fig_sequential.update_layout(
+            coloraxis_colorbar=dict(
+                orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, len=1
+            )
         )
+        st.plotly_chart(fig_sequential, use_container_width=True)
 
     with col2:
-        st.write("**st.line_chart**")
-        time_series_data = []
-        time_points = np.arange(25)
-
-        # Create multiple time series with different numeric IDs
-        for sensor_id in [1, 2, 3, 4, 5]:
-            for t in time_points:
-                time_series_data.append(
-                    {
-                        "time": t,
-                        "temperature": 5 * np.sin(t * 0.2 + sensor_id * 0.5)
-                        + np.random.normal(0, 0.3),
-                        "sensor_id": sensor_id,  # Numeric IDs should trigger sequential colors
-                        "sensor_priority": sensor_id * 0.5,  # Floating point priorities
-                    }
-                )
-
-        st.line_chart(
-            pd.DataFrame(time_series_data),
-            x="time",
-            y="temperature",
-            color="sensor_id",
-            use_container_width=True,
-        )
-
-        st.write("**st.scatter_chart**")
-        np.random.seed(42)  # For reproducible results
-        n_points = 100
-
-        scatter_continuous = pd.DataFrame(
-            {
-                "x_pos": np.random.normal(0, 2, n_points),
-                "y_pos": np.random.normal(0, 2, n_points),
-                "temperature": np.linspace(-10, 40, n_points)
-                + np.random.normal(0, 2, n_points),  # Continuous temperature
-            }
-        )
-
-        st.scatter_chart(
-            scatter_continuous,
-            x="x_pos",
-            y="y_pos",
-            color="temperature",
-            use_container_width=True,
-        )
-
-    with col3:
         st.write("**st.altair_chart**")
         # Create explicit sequential data for color mapping
         time_data = pd.DataFrame(
