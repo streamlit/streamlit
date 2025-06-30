@@ -1401,17 +1401,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:9.30.0":
+"@eslint/js@npm:9.30.0, @eslint/js@npm:^9.30.0":
   version: 9.30.0
   resolution: "@eslint/js@npm:9.30.0"
   checksum: 10c0/aec2df7f4e4e884d693dc27dbf4713c1a48afa327bfadac25ebd0e61a2797ce906f2f2a9be0d7d922acb68ccd68cc88779737811f9769eb4933d1f5e574c469e
-  languageName: node
-  linkType: hard
-
-"@eslint/js@npm:^9.29.0":
-  version: 9.29.0
-  resolution: "@eslint/js@npm:9.29.0"
-  checksum: 10c0/d0ccf37063fa27a3fae9347cb044f84ca10b5a2fa19ffb2b3fedf3b96843ac1ff359ea9f0ab0e80f2f16fda4cb0dc61ea0fed0375090f050fe0a029e7d6de3a3
   languageName: node
   linkType: hard
 
@@ -3203,7 +3196,7 @@ __metadata:
     "@eslint-react/eslint-plugin": "npm:^1.52.2"
     "@eslint/compat": "npm:^1.2.9"
     "@eslint/eslintrc": "npm:^3.3.1"
-    "@eslint/js": "npm:^9.29.0"
+    "@eslint/js": "npm:^9.30.0"
     "@streamlit/connection": "workspace:^"
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
