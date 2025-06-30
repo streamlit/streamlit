@@ -344,13 +344,18 @@ class SelectboxMixin:
 
         placeholder : str or None
             A string to display when no options are selected.
-            If this is ``None`` (default), the widget displays one of the two
-            following placeholder strings:
+            If this is ``None`` (default), the widget displays appropriate
+            default placeholder text based on the widget's configuration:
 
-            - "Choose an option" is displayed if you set
+            - "Choose an option" is displayed when options are available and
               ``accept_new_options=False``.
-            - "Choose or add an option" is displayed if you set
+            - "Choose or add an option" is displayed when options are available
+              and ``accept_new_options=True``.
+            - "Add an option" is displayed when no options are available and
               ``accept_new_options=True``.
+            - "No options to select" is displayed when no options are available
+              and ``accept_new_options=False`` (the widget is also disabled in
+              this case).
 
         disabled : bool
             An optional boolean that disables the selectbox if set to ``True``.
@@ -504,15 +509,6 @@ class SelectboxMixin:
             raise StreamlitAPIException(
                 "Selectbox index must be greater than or equal to 0 "
                 "and less than the length of options."
-            )
-
-        # Backend default placeholder logic only applies when placeholder is None.
-        # For empty options, let frontend decide the appropriate text based on widget state.
-        if placeholder is None and len(opt) > 0:
-            placeholder = (
-                "Choose an option"
-                if not accept_new_options
-                else "Choose or add an option"
             )
 
         # Convert empty string to single space to distinguish from None:

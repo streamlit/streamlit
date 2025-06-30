@@ -304,13 +304,15 @@ class MultiSelectMixin:
             If this is ``None`` (default), the widget displays appropriate
             default placeholder text based on the widget's configuration:
 
-            - "Choose an option" is displayed for standard multiselect widgets.
-            - "Choose or add an option" is displayed if you set
-              ``accept_new_options=True``.
+            - "Choose options" is displayed when options are available and
+              ``accept_new_options=False``.
+            - "Choose or add options" is displayed when options are available
+              and ``accept_new_options=True``.
             - "Add options" is displayed when no options are available and
               ``accept_new_options=True``.
             - "No options to select" is displayed when no options are available
-              and ``accept_new_options=False``.
+              and ``accept_new_options=False`` (the widget is also disabled in
+              this case).
 
         disabled: bool
             An optional boolean that disables the multiselect widget if set
