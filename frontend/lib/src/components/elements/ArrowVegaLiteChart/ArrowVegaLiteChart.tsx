@@ -51,6 +51,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const {
     expanded: isFullScreen,
     height,
+    width: fullScreenWidth,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
@@ -105,7 +106,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // the tooltip element is drawn outside of this component.
   return (
     <StyledToolbarElementContainer
-      width={width}
+      width={isFullScreen ? fullScreenWidth : width}
       height={height}
       useContainerWidth={element.useContainerWidth}
     >

@@ -21,6 +21,7 @@ import { screen } from "@testing-library/react"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import * as useRequiredContextModule from "~lib/hooks/useRequiredContext"
 
 import ArrowVegaLiteChart, { Props } from "./ArrowVegaLiteChart"
 import { VegaLiteChartElement } from "./arrowUtils"
@@ -74,10 +75,63 @@ describe("ArrowVegaLiteChart", () => {
     })
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("renders without crashing", () => {
     render(<ArrowVegaLiteChart {...getProps()} />)
     const vegaLiteChart = screen.getByTestId("stVegaLiteChart")
     expect(vegaLiteChart).toBeInTheDocument()
     expect(vegaLiteChart).toHaveClass("stVegaLiteChart")
+  })
+
+  it("uses the fullscreen width and height when in fullscreen mode", () => {
+    // Save the original implementation
+    const originalUseRequiredContext =
+      useRequiredContextModule.useRequiredContext
+
+    vi.spyOn(
+      useRequiredContextModule,
+      "useRequiredContext"
+    ).mockImplementation(ctx => {
+      if (ctx.displayName === "ElementFullscreenContext") {
+        return {
+          expanded: true,
+          width: 999,
+          height: 888,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }
+      }
+      // For all other contexts, use the original implementation
+      return originalUseRequiredContext(ctx)
+    })
+
+    render(<ArrowVegaLiteChart {...getProps()} />)
+    const vegaLiteChart = screen.getByTestId("stVegaLiteChart")
+    const StyledToolbarElementContainer = vegaLiteChart.parentElement
+    expect(StyledToolbarElementContainer).toBeInTheDocument()
+    expect(StyledToolbarElementContainer).toHaveStyle({ width: "999" })
+    expect(StyledToolbarElementContainer).toHaveStyle({ height: "888" })
+  })
+
+  it("sets the style width to 250px when useContainerWidth is true", () => {
+    render(<ArrowVegaLiteChart {...getProps({ useContainerWidth: true })} />)
+    const vegaLiteChart = screen.getByTestId("stVegaLiteChart")
+
+    const StyledToolbarElementContainer = vegaLiteChart.parentElement
+    expect(StyledToolbarElementContainer).toBeInTheDocument()
+    // The style should be width: 250px (from the mocked useResizeObserver)
+    expect(StyledToolbarElementContainer).toHaveStyle({ width: "250px" })
+  })
+
+  it("sets the style width to fit-content when useContainerWidth is false", () => {
+    render(<ArrowVegaLiteChart {...getProps({ useContainerWidth: false })} />)
+    const vegaLiteChart = screen.getByTestId("stVegaLiteChart")
+    const StyledToolbarElementContainer = vegaLiteChart.parentElement
+    expect(StyledToolbarElementContainer).toBeInTheDocument()
+    // The style should be width: fit-content
+    expect(StyledToolbarElementContainer).toHaveStyle({ width: "fit-content" })
   })
 })
