@@ -3260,7 +3260,7 @@ __metadata:
     lodash: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
-    polyfill-pseudoclass-has: "npm:^1.0.0"
+    polyfill-pseudoclass-has: "npm:^1.1.0"
     prettier: "npm:^3.5.3"
     prop-types: "npm:^15.7.2"
     rc-overflow: "npm:^1.4.1"
@@ -15806,10 +15806,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"polyfill-pseudoclass-has@npm:^1.0.0":
-  version: 1.0.1
-  resolution: "polyfill-pseudoclass-has@npm:1.0.1"
-  checksum: 10c0/52d3e578ca0f4ac4857af0a19fd056fb531125d9d90cbbdeae7c16c540a47ad459fe105cbc2a4c9e842ccf0e0010af961a26abbb3541e6f9e84b923b6fa1934c
+"polyfill-pseudoclass-has@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "polyfill-pseudoclass-has@npm:1.1.0"
+  checksum: 10c0/19bfb2ded08aa82b8dd96b471431db763bcd6e2c93ba468d290bcab73f82a0834e8869371a167636bc3cbeb9e1e03b70e7549731aa541faa1e4ab3f3b0a4adea
   languageName: node
   linkType: hard
 
