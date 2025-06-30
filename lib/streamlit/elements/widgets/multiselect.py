@@ -384,7 +384,10 @@ class MultiSelectMixin:
            height: 350px
 
         """
-        # Handle empty string placeholder by converting to single space
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
         if placeholder == "":
             placeholder = " "
 
@@ -444,7 +447,10 @@ class MultiSelectMixin:
 
         default_values = get_default_indices(indexable_options, default)
 
-        # Handle empty string placeholder by converting to single space
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
         if placeholder == "":
             placeholder = " "
 

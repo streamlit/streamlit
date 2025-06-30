@@ -320,7 +320,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.placeholder == "Select your beverage"
 
     def test_empty_string_placeholder(self):
-        """Test that empty string placeholder is converted to single space."""
+        """Test that empty string placeholder is converted to single space to allow explicit empty placeholder."""
         st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder="")
 
         c = self.get_delta_from_queue().new_element.multiselect

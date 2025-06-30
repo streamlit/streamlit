@@ -506,8 +506,8 @@ class SelectboxMixin:
                 "and less than the length of options."
             )
 
-        # Only set default placeholder if options are not empty
-        # For empty options, let frontend decide the appropriate text
+        # Backend default placeholder logic only applies when placeholder is None.
+        # For empty options, let frontend decide the appropriate text based on widget state.
         if placeholder is None and len(opt) > 0:
             placeholder = (
                 "Choose an option"
@@ -515,6 +515,10 @@ class SelectboxMixin:
                 else "Choose or add an option"
             )
 
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
         if placeholder == "":
             placeholder = " "
 
