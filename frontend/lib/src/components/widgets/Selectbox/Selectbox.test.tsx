@@ -179,29 +179,4 @@ describe("Selectbox widget", () => {
 
     expect(screen.getByText("Please select an option...")).toBeInTheDocument()
   })
-
-  it("falls back to deprecated placeholder field when customPlaceholder is not provided", () => {
-    const props = getProps({
-      placeholder: "Deprecated placeholder",
-      customPlaceholder: undefined,
-      default: null,
-    })
-    render(<Selectbox {...props} />)
-
-    expect(screen.getByText("Deprecated placeholder")).toBeInTheDocument()
-  })
-
-  it("prioritizes customPlaceholder over deprecated placeholder field", () => {
-    const props = getProps({
-      placeholder: "Deprecated placeholder",
-      customPlaceholder: "New custom placeholder",
-      default: null,
-    })
-    render(<Selectbox {...props} />)
-
-    expect(screen.getByText("New custom placeholder")).toBeInTheDocument()
-    expect(
-      screen.queryByText("Deprecated placeholder")
-    ).not.toBeInTheDocument()
-  })
 })
