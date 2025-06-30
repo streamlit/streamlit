@@ -23,7 +23,6 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     get_element_by_key,
     goto_app,
-    reset_hovering,
 )
 
 
@@ -40,7 +39,7 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
 
     # take away hover focus of button
     app.keyboard.press("Escape")
-    reset_hovering(app)
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
     wait_for_app_run(app, 500)
 
