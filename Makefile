@@ -264,11 +264,6 @@ frontend-fast:
 frontend-dev:
 	cd frontend/ ; yarn start
 
-.PHONY: frontend-lib
-# Build the frontend library.
-frontend-lib:
-	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
-
 .PHONY: jslint
 # Verify that our JS/TS code is formatted and that there are no lint errors.
 jslint:
