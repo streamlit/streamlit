@@ -109,6 +109,7 @@ def run_theme_weight_tester_app():
     with col3:
         tab1, _, _ = st.tabs(["Tab 1", "Tab 2", "Tab 3"])
         with tab1:
+            st.write("<h1>Heading 1</h1>", unsafe_allow_html=True)
             st.write("<h2>Heading 2</h2>", unsafe_allow_html=True)
             st.write("<h3>Heading 3</h3>", unsafe_allow_html=True)
             st.write("<h4>Heading 4</h4>", unsafe_allow_html=True)
@@ -122,6 +123,7 @@ def run_theme_weight_tester_app():
             )
 
     with st.sidebar:
+        st.write("<h1>Heading 1</h1>", unsafe_allow_html=True)
         st.write("<h2>Heading 2</h2>", unsafe_allow_html=True)
         st.write("<h3>Heading 3</h3>", unsafe_allow_html=True)
         st.write("<h4>Heading 4</h4>", unsafe_allow_html=True)
