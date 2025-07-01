@@ -355,6 +355,37 @@ describe("AppView element", () => {
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("6rem")
       })
+
+      it("uses 8rem top padding when top nav is showing (>1 page)", () => {
+        render(
+          <AppView
+            {...getProps({
+              embedded: false,
+              navigationPosition: Navigation.Position.TOP,
+              appPages: [
+                { pageName: "page1", pageScriptHash: "hash1" },
+                { pageName: "page2", pageScriptHash: "hash2" },
+              ],
+            })}
+          />
+        )
+        const style = getMainBlockContainerStyle()
+        expect(style.paddingTop).toEqual("8rem")
+      })
+
+      it("uses 6rem top padding when top nav is not showing (single page)", () => {
+        render(
+          <AppView
+            {...getProps({
+              embedded: false,
+              navigationPosition: Navigation.Position.TOP,
+              appPages: [{ pageName: "page1", pageScriptHash: "hash1" }],
+            })}
+          />
+        )
+        const style = getMainBlockContainerStyle()
+        expect(style.paddingTop).toEqual("6rem")
+      })
     })
 
     describe("embedded apps", () => {
@@ -380,6 +411,25 @@ describe("AppView element", () => {
                 embedded: true,
                 showPadding: true,
                 appLogo: logo,
+                navigationPosition: Navigation.Position.TOP,
+                appPages: [
+                  { pageName: "page1", pageScriptHash: "hash1" },
+                  { pageName: "page2", pageScriptHash: "hash2" },
+                ],
+              })}
+            />
+          )
+
+          const style = getMainBlockContainerStyle()
+          expect(style.paddingTop).toEqual("6rem")
+        })
+
+        it("uses 6rem top padding even with top nav (never 8rem for embedded apps)", () => {
+          render(
+            <AppView
+              {...getProps({
+                embedded: true,
+                showPadding: true,
                 navigationPosition: Navigation.Position.TOP,
                 appPages: [
                   { pageName: "page1", pageScriptHash: "hash1" },
