@@ -434,6 +434,10 @@ describe("formatNumber", () => {
     [10.129, "yen", undefined, "¥10"],
     [10.129, "yen", 0, "¥10"],
     [10.129, "yen", 2, "¥10.13"],
+    // bytes - doesn't impact bytes:
+    [10.129, "bytes", undefined, "10.1B"],
+    [10.129, "bytes", 2, "10.1B"],
+    [10.129, "bytes", 0, "10.1B"],
     // accounting
     [-10.129, "accounting", undefined, "(10.13)"],
     [-10.129, "accounting", 2, "(10.13)"],
