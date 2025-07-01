@@ -166,16 +166,16 @@ def make_cached_func_wrapper(info: CachedFuncInfo[P, R]) -> CachedFunc[P, R]:
     return cast("CachedFunc[P, R]", functools.update_wrapper(cached_func, info.func))
 
 
-class BoundCachedFunc:
+class BoundCachedFunc(Generic[P, R]):
     """A wrapper around a CachedFunc that binds it to a specific instance in case of
     decorated function is a class method.
     """
 
-    def __init__(self, cached_func: CachedFunc[..., Any], instance: Any) -> None:
+    def __init__(self, cached_func: CachedFunc[P, R], instance: Any) -> None:
         self._cached_func = cached_func
         self._instance = instance
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         return self._cached_func(self._instance, *args, **kwargs)
 
     def __repr__(self) -> str:
