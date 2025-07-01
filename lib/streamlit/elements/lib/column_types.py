@@ -39,6 +39,7 @@ NumberFormat: TypeAlias = Literal[
     "scientific",
     "engineering",
     "accounting",
+    "bytes",
 ]
 
 ColumnWidth: TypeAlias = Literal["small", "medium", "large"]
@@ -430,6 +431,7 @@ def NumberColumn(
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
         - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
@@ -2009,6 +2011,7 @@ def ProgressColumn(
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
         - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
