@@ -310,6 +310,12 @@ class CacheResourceAPI:
             a "cache miss" and the cached resource is being created. If string,
             value of show_spinner param will be used for spinner text.
 
+        show_time : bool
+            Whether to show the elapsed time next to the spinner text. If this is
+            ``False`` (default), no time is displayed. If this is ``True``,
+            elapsed time is displayed with a precision of 0.1 seconds. The time
+            format is not configurable.
+
         validate : callable or None
             An optional validation function for cached data. ``validate`` is called
             each time the cached value is accessed. It receives the cached value as

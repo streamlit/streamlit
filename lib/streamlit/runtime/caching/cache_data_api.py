@@ -94,8 +94,8 @@ class CachedDataFuncInfo(CachedFuncInfo):
         max_entries: int | None,
         ttl: float | timedelta | str | None,
         show_spinner: bool | str,
-        hash_funcs: HashFuncsDict | None = None,
         show_time: bool = False,
+        hash_funcs: HashFuncsDict | None = None,
     ) -> None:
         super().__init__(
             func,
@@ -443,6 +443,12 @@ class CacheDataAPI:
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
+
+        show_time : bool
+            Whether to show the elapsed time next to the spinner text. If this is
+            ``False`` (default), no time is displayed. If this is ``True``,
+            elapsed time is displayed with a precision of 0.1 seconds. The time
+            format is not configurable.
 
         persist : "disk", bool, or None
             Optional location to persist cached data to. Passing "disk" (or True)
