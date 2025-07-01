@@ -595,7 +595,9 @@ export function formatNumber(
   } else if (format === "percent") {
     return formatIntlNumberWithLocales(value, {
       style: "percent",
-      minimumFractionDigits: maxPrecision ?? 0,
+      minimumFractionDigits: notNullOrUndefined(maxPrecision)
+        ? Math.max(maxPrecision - 2, 0)
+        : 0,
       maximumFractionDigits: notNullOrUndefined(maxPrecision)
         ? // Percentage already gets multiplied by 100 by the formatter,
           // so we need to reduce the precision by 2 to get the
@@ -608,14 +610,14 @@ export function formatNumber(
       style: "currency",
       currency: "USD",
       currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: maxPrecision ?? 0,
+      minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "euro") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
-      minimumFractionDigits: maxPrecision ?? 0,
+      minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "yen") {
