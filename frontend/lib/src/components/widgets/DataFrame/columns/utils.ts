@@ -629,8 +629,7 @@ export function formatNumber(
     })
   } else if (["compact", "scientific", "engineering"].includes(format)) {
     return formatIntlNumberWithLocales(value, {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      notation: format as any,
+      notation: format as "compact" | "scientific" | "engineering",
     })
   } else if (format === "accounting") {
     return numbro(value).format({
@@ -646,8 +645,8 @@ export function formatNumber(
         style: "unit",
         unit: "byte",
         unitDisplay: "narrow",
-        // We don't apply maxPrecision here because
-        // of how bytes get transformed.
+        // We don't apply maxPrecision here since
+        // bytes already gets transformed to different units.
         maximumFractionDigits: 1,
       })
         // The intl number format renders gigabytes as BB
