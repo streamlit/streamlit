@@ -43,7 +43,7 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     pointerEvents: isTransparentBackground ? "none" : "auto",
     fontSize: theme.fontSizes.sm,
     "@media print": {
-      position: "static",
+      position: "absolute",
       background: "transparent",
       // Hide all descendants by default
       "& *": {
