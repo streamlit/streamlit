@@ -273,7 +273,7 @@ describe("Running Icon", () => {
     vi.useRealTimers()
   })
 
-  it("renders regular running gif before New Years", async () => {
+  it("renders regular running icon before New Years", async () => {
     vi.setSystemTime(new Date("December 30, 2022 23:59:00"))
 
     render(
@@ -285,8 +285,8 @@ describe("Running Icon", () => {
     vi.runAllTimers()
 
     await waitFor(() => {
-      const icon = screen.queryByRole("img")
-      expect(icon).toHaveAttribute("src", "/src/assets/img/icon_running.gif")
+      const icon = screen.getByTestId("stStatusWidgetRunningManIcon")
+      expect(icon).toBeVisible()
     })
   })
 
@@ -336,8 +336,8 @@ describe("Running Icon", () => {
     vi.runAllTimers()
 
     await waitFor(() => {
-      const icon = screen.queryByRole("img")
-      expect(icon).toHaveAttribute("src", "/src/assets/img/icon_running.gif")
+      const icon = screen.getByTestId("stStatusWidgetRunningManIcon")
+      expect(icon).toBeVisible()
     })
   })
 
@@ -357,11 +357,8 @@ describe("Running Icon", () => {
     vi.runAllTimers()
 
     await waitFor(() => {
-      const foundIcon = screen.getByRole("img")
-      expect(foundIcon).toHaveAttribute(
-        "src",
-        "/src/assets/img/icon_running.gif"
-      )
+      const icon = screen.getByTestId("stStatusWidgetRunningManIcon")
+      expect(icon).toBeVisible()
     })
   })
 })

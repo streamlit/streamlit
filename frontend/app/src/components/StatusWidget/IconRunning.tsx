@@ -79,8 +79,8 @@ const IconRunning: React.FC = () => {
   return (
     <StyledAppRunningIcon
       isNewYears={isNewYear}
-      role="img"
       aria-label="Running..."
+      data-testid="stStatusWidgetRunningIcon"
     >
       {isNewYear ? (
         <img
@@ -94,9 +94,11 @@ const IconRunning: React.FC = () => {
         />
       ) : (
         <IconComponent
+          role="img"
           size={theme.sizes.appRunningMen}
           color={theme.colors.fadedText60}
           aria-hidden="true"
+          data-testid="stStatusWidgetRunningManIcon"
         />
       )}
     </StyledAppRunningIcon>
