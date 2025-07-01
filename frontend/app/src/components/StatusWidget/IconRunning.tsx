@@ -96,10 +96,13 @@ const IconRunning: React.FC = () => {
         />
       ) : (
         <IconComponent
-          size={theme.sizes.appRunningMen}
           color={theme.colors.fadedText60}
           aria-hidden="true"
           data-testid="stStatusWidgetRunningManIcon"
+          style={{
+            width: theme.sizes.appRunningMen,
+            height: theme.sizes.appRunningMen,
+          }}
         />
       )}
     </StyledAppRunningIcon>
