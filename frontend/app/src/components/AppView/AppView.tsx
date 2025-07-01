@@ -32,6 +32,7 @@ import {
   IGuestToHostMessage,
   LibContext,
   Profiler,
+  useExecuteWhenChanged,
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -146,7 +147,7 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme,
   } = useContext(LibContext)
 
-  const { innerWidth, getWindowDimensions } = useWindowDimensionsContext()
+  const { innerWidth } = useWindowDimensionsContext()
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
@@ -215,8 +216,6 @@ function AppView(props: AppViewProps): ReactElement {
 
   // Initialize sidebar state once after stable width is achieved
   useLayoutEffect(() => {
-    const { innerWidth } = getWindowDimensions()
-
     if (!hasInitializedWidthRef.current && innerWidth > 0) {
       setSidebarIsCollapsed(
         shouldCollapse(
@@ -227,30 +226,22 @@ function AppView(props: AppViewProps): ReactElement {
       )
       hasInitializedWidthRef.current = true
     }
-  }, [
-    initialSidebarState,
-    activeTheme.emotion.breakpoints.md,
-    getWindowDimensions,
-  ])
+  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, innerWidth])
 
   // Handle updates to initialSidebarState after set_page_config
-  useEffect(() => {
-    const { innerWidth } = getWindowDimensions()
-
-    if (hasInitializedWidthRef.current) {
-      setSidebarIsCollapsed(
-        shouldCollapse(
-          initialSidebarState,
-          parseInt(activeTheme.emotion.breakpoints.md, 10),
-          innerWidth
-        )
-      )
+  useExecuteWhenChanged(() => {
+    if (!hasInitializedWidthRef.current) {
+      return
     }
-  }, [
-    initialSidebarState,
-    activeTheme.emotion.breakpoints.md,
-    getWindowDimensions,
-  ])
+
+    setSidebarIsCollapsed(
+      shouldCollapse(
+        initialSidebarState,
+        parseInt(activeTheme.emotion.breakpoints.md, 10),
+        innerWidth
+      )
+    )
+  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
 
   const toggleSidebar = useCallback(() => {
     setSidebarIsCollapsed(prev => !prev)

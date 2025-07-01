@@ -16,8 +16,9 @@
 
 import { createContext } from "react"
 
-import { WindowDimensionsResult } from "./useWindowDimensions"
+import { WindowDimensions } from "./useWindowDimensions"
 
-export const WindowDimensionsContext =
-  createContext<WindowDimensionsResult | null>(null)
+export const WindowDimensionsContext = createContext<WindowDimensions | null>(
+  null
+)
 WindowDimensionsContext.displayName = "WindowDimensionsContext"
