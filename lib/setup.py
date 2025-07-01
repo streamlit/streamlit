@@ -80,7 +80,7 @@ EXTRA_REQUIRES = {
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
     ],
     "pdf": [
-        "streamlit-pdf-viewer @ file:///Users/smohile/streamlit-pdf-component/component-template/streamlit-pdf-viewer/dist/streamlit_pdf_viewer-0.1.0-py3-none-any.whl",
+        "streamlit-pdf-viewer @ file:lib/streamlit_pdf_viewer-1.0.0.tar.gz",
     ],
 }
 
