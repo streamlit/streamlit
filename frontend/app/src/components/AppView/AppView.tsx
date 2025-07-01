@@ -31,7 +31,6 @@ import {
   ContainerContentsWrapper,
   FileUploadClient,
   IGuestToHostMessage,
-  isToolbarDisplayed,
   LibContext,
   Profiler,
   WidgetStateManager,
@@ -261,9 +260,7 @@ function AppView(props: AppViewProps): ReactElement {
     shouldShowLogo ||
     shouldShowExpandButton ||
     shouldShowNavigation ||
-    isToolbarDisplayed()
-
-  const isHeaderTransparent = !hasHeaderUserContent
+    showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -314,7 +311,6 @@ function AppView(props: AppViewProps): ReactElement {
             }
             rightContent={topRightContent}
             logoComponent={logoElement}
-            isTransparentBackground={isHeaderTransparent}
           />
           <Component
             tabIndex={0}

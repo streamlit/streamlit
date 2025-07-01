@@ -132,12 +132,14 @@ class CachedFuncInfo(Generic[P, R]):
     def __init__(
         self,
         func: Callable[P, R],
-        show_spinner: bool | str,
         hash_funcs: HashFuncsDict | None,
+        show_spinner: bool | str,
+        show_time: bool = False,
     ) -> None:
         self.func = func
-        self.show_spinner = show_spinner
         self.hash_funcs = hash_funcs
+        self.show_spinner = show_spinner
+        self.show_time = show_time
 
     @property
     def cache_type(self) -> CacheType:
@@ -257,7 +259,7 @@ class CachedFunc(Generic[P, R]):
         # on behalf of the user.
         is_nested_cache_function = in_cached_function.get()
         spinner_or_no_context = (
-            spinner(spinner_message, _cache=True)
+            spinner(spinner_message, _cache=True, show_time=self._info.show_time)
             if spinner_message is not None and not is_nested_cache_function
             else contextlib.nullcontext()
         )
