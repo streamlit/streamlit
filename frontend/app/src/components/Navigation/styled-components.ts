@@ -186,6 +186,7 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
 export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
   return {
     fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.semiBold,
     color: getNavTextColor(theme, false),
     lineHeight: theme.lineHeights.small,
     paddingRight: theme.spacing.sm,
@@ -226,6 +227,12 @@ export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   marginRight: getSidebarHorizontalSpacing(theme),
   marginLeft: getSidebarHorizontalSpacing(theme),
+}))
+
+export const StyledNavSectionContainer = styled.div(({ theme }) => ({
+  "&:not(:first-child)": {
+    marginTop: theme.spacing.lg,
+  },
 }))
 
 // TopNav styled components

@@ -37,6 +37,7 @@ import {
   createEmotionTheme,
   createTheme,
   CUSTOM_THEME_NAME,
+  ExtendedCustomThemeConfig,
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
@@ -1459,5 +1460,64 @@ describe("parseFont", () => {
     ["", ""],
   ])("correctly maps '%s' to '%s'", (input, expected) => {
     expect(parseFont(input)).toBe(expected)
+  })
+})
+
+describe("Font weight configuration coverage", () => {
+  it("ensures all font weights from typography.ts are handled in setFontWeights", () => {
+    // Import the default font weights from typography
+    const { fontWeights: defaultFontWeights } = lightTheme.emotion
+
+    // List of font weights that should NOT be affected by baseFontWeight
+    const UNAFFECTED_BY_BASE_WEIGHT = ["headerBold", "headerExtraBold"]
+
+    // List of font weights that SHOULD be calculated based on baseFontWeight
+    const AFFECTED_BY_BASE_WEIGHT = ["normal", "semiBold", "bold", "extrabold"]
+
+    // Get all font weight keys from the default theme
+    const allFontWeightKeys = Object.keys(defaultFontWeights)
+
+    // Filter out special cases
+    const fontWeightsToCheck = allFontWeightKeys.filter(
+      key => !UNAFFECTED_BY_BASE_WEIGHT.includes(key) && key !== "code" // code is handled separately
+    )
+
+    // Verify our expected list matches reality
+    const missingFromExpected = fontWeightsToCheck.filter(
+      key => !AFFECTED_BY_BASE_WEIGHT.includes(key)
+    )
+
+    if (missingFromExpected.length > 0) {
+      throw new Error(
+        `New font weight(s) detected in typography.ts that are not handled in utils.ts setFontWeights function:\n` +
+          `  ${missingFromExpected.join(", ")}\n\n` +
+          `When adding new font weights, you must:\n` +
+          `  1. Update the setFontWeights function in utils.ts to calculate the new weight based on baseFontWeight\n` +
+          `  2. Add the new font weight to the AFFECTED_BY_BASE_WEIGHT array in this test\n` +
+          `  3. Add test cases to verify the calculation logic\n\n` +
+          `Example: If you added 'medium', you might set it to baseFontWeight + 50`
+      )
+    }
+
+    // Test that baseFontWeight actually affects the expected weights
+    const testTheme = createEmotionTheme(
+      { baseFontWeight: 300 } as ExtendedCustomThemeConfig,
+      lightTheme
+    )
+
+    AFFECTED_BY_BASE_WEIGHT.forEach(weightKey => {
+      const typedKey = weightKey as keyof typeof testTheme.fontWeights
+      expect(testTheme.fontWeights[typedKey]).not.toBe(
+        defaultFontWeights[typedKey]
+      )
+    })
+
+    // Verify unaffected weights remain unchanged
+    UNAFFECTED_BY_BASE_WEIGHT.forEach(weightKey => {
+      const typedKey = weightKey as keyof typeof testTheme.fontWeights
+      expect(testTheme.fontWeights[typedKey]).toBe(
+        defaultFontWeights[typedKey]
+      )
+    })
   })
 })
