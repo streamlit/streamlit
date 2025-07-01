@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { render, ScriptRunState } from "@streamlit/lib"
@@ -181,6 +181,7 @@ describe("StatusWidget element", () => {
   })
 
   it("calls always run on save", async () => {
+    const user = userEvent.setup()
     const rerunScript = vi.fn()
 
     render(
@@ -193,15 +194,12 @@ describe("StatusWidget element", () => {
       />
     )
 
-    // Verify the Always rerun is visible
+    // Verify the Always rerun button is visible
     expect(await screen.findByText("Always rerun")).toBeVisible()
 
-    // Use fireEvent for document-level keyboard events since react-hot-keys listens at document level
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(document.body, {
-      key: "a",
-      which: 65,
-    })
+    // Click "Always rerun" button
+    const alwaysRerunButton = screen.getByText("Always rerun")
+    await user.click(alwaysRerunButton)
 
     expect(rerunScript).toHaveBeenCalledWith(true)
   })

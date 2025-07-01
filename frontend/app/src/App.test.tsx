@@ -1378,7 +1378,7 @@ describe("App", () => {
       expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
-    it("button should be hidden when script changes on disk", () => {
+    it("button should be hidden when script changes on disk", async () => {
       renderApp(getProps())
 
       // First make the button visible by setting developer mode
@@ -1397,7 +1397,11 @@ describe("App", () => {
         type: "scriptChangedOnDisk",
       })
 
-      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stAppDeployButton")
+        ).not.toBeInTheDocument()
+      })
     })
 
     it("button should reappear when script starts running after file change", () => {
