@@ -723,7 +723,7 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool or Iterable[str, int]
+        disabled : bool or Iterable[str | int]
             Controls the editing of columns. This can be one of the following:
 
             - ``False`` (default): All columns that support editing are editable.
