@@ -146,7 +146,7 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme,
   } = useContext(LibContext)
 
-  const { innerWidth } = useWindowDimensionsContext()
+  const { innerWidth, getWindowDimensions } = useWindowDimensionsContext()
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
@@ -215,6 +215,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   // Initialize sidebar state once after stable width is achieved
   useLayoutEffect(() => {
+    const { innerWidth } = getWindowDimensions()
+
     if (!hasInitializedWidthRef.current && innerWidth > 0) {
       setSidebarIsCollapsed(
         shouldCollapse(
@@ -225,10 +227,16 @@ function AppView(props: AppViewProps): ReactElement {
       )
       hasInitializedWidthRef.current = true
     }
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, innerWidth])
+  }, [
+    initialSidebarState,
+    activeTheme.emotion.breakpoints.md,
+    getWindowDimensions,
+  ])
 
   // Handle updates to initialSidebarState after set_page_config
   useEffect(() => {
+    const { innerWidth } = getWindowDimensions()
+
     if (hasInitializedWidthRef.current) {
       setSidebarIsCollapsed(
         shouldCollapse(
@@ -238,7 +246,11 @@ function AppView(props: AppViewProps): ReactElement {
         )
       )
     }
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, innerWidth])
+  }, [
+    initialSidebarState,
+    activeTheme.emotion.breakpoints.md,
+    getWindowDimensions,
+  ])
 
   const toggleSidebar = useCallback(() => {
     setSidebarIsCollapsed(prev => !prev)

@@ -16,10 +16,10 @@
 
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
-import { WindowDimensions } from "./useWindowDimensions"
+import { WindowDimensionsResult } from "./useWindowDimensions"
 
 import { WindowDimensionsContext } from "."
 
-export const useWindowDimensionsContext = (): WindowDimensions => {
+export const useWindowDimensionsContext = (): WindowDimensionsResult => {
   return useRequiredContext(WindowDimensionsContext)
 }

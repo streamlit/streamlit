@@ -61,7 +61,10 @@ export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkd
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
 export { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
 export { useWindowDimensionsContext } from "./components/shared/WindowDimensions/useWindowDimensionsContext"
-export type { WindowDimensions } from "./components/shared/WindowDimensions/useWindowDimensions"
+export type {
+  WindowDimensions,
+  WindowDimensionsResult,
+} from "./components/shared/WindowDimensions/useWindowDimensions"
 export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { Quiver } from "./dataframes/Quiver"

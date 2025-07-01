@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
@@ -26,7 +32,17 @@ export type WindowDimensions = {
   innerHeight: number
 }
 
-export const useWindowDimensions = (): WindowDimensions => {
+export type WindowDimensionsResult = WindowDimensions & {
+  /**
+   * Imperative function to get the current window dimensions. Generally, you
+   * should use the `innerWidth` and `innerHeight` properties instead, but this
+   * is provided for edge cases such as lazily evaluating window dimensions in a
+   * callback.
+   */
+  getWindowDimensions: () => WindowDimensions
+}
+
+export const useWindowDimensions = (): WindowDimensionsResult => {
   const theme = useEmotionTheme()
   const [windowDimensions, setWindowDimensions] = useState<WindowDimensions>({
     fullWidth: 0,
@@ -67,5 +83,11 @@ export const useWindowDimensions = (): WindowDimensions => {
     updateWindowDimensions()
   }, [updateWindowDimensions])
 
-  return windowDimensions
+  return useMemo(
+    () => ({
+      ...windowDimensions,
+      getWindowDimensions,
+    }),
+    [windowDimensions, getWindowDimensions]
+  )
 }
