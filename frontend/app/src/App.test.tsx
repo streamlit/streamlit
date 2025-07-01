@@ -234,6 +234,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     setImportedTheme: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
+  isMobileViewport: false,
   ...extend,
 })
 
@@ -1289,8 +1290,7 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      // Header/main menu should not render
-      expect(screen.queryByTestId("stHeader")).toBeNull()
+      // main menu should not render
       expect(screen.queryByTestId("stMainMenu")).toBeNull()
     })
 
@@ -3395,13 +3395,6 @@ describe("App", () => {
               label: "Print",
               type: "option",
             },
-            {
-              type: "separator",
-            },
-            {
-              label: "About",
-              type: "option",
-            },
           ],
         ])
 
@@ -3434,10 +3427,6 @@ describe("App", () => {
             },
             {
               label: "Fork this App",
-              type: "option",
-            },
-            {
-              label: "About",
               type: "option",
             },
           ],

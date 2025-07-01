@@ -388,7 +388,7 @@ SPECIAL_TYPES_DF = pd.DataFrame(
             [
                 Decimal("1.1"),
                 Decimal("-0.03864734299516908213"),
-                Decimal("1000"),
+                Decimal(1000),
                 Decimal("2.212"),
                 None,
             ]

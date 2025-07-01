@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-MULTISELECT_COUNT = 17
+MULTISELECT_COUNT = 19
 
 
 def select_for_kth_multiselect(
@@ -87,6 +87,8 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(multiselect_elements.nth(11), name="st_multiselect-narrow_column")
     assert_snapshot(multiselect_elements.nth(12), name="st_multiselect-markdown_label")
     assert_snapshot(multiselect_elements.nth(16), name="st_multiselect-maxHeight")
+    assert_snapshot(multiselect_elements.nth(17), name="st_multiselect-width_300px")
+    assert_snapshot(multiselect_elements.nth(18), name="st_multiselect-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):
@@ -97,8 +99,8 @@ def test_help_tooltip_works(app: Page):
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
     text_elements = app.get_by_test_id("stText")
-    # -1 because the last multiselect does not have accompanying text element
-    expect(text_elements).to_have_count(MULTISELECT_COUNT - 1)
+    # -3 because the last three multiselects do not have accompanying text elements
+    expect(text_elements).to_have_count(MULTISELECT_COUNT - 3)
 
     expected = [
         "value 1: []",

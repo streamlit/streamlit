@@ -24,7 +24,6 @@ import {
   ThemeConfig,
   ThemeProvider,
 } from "@streamlit/lib"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { notNullOrUndefined } from "@streamlit/utils"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
@@ -74,7 +73,6 @@ const ThemedSidebar = ({
   children,
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift">): ReactElement => {
-  const { sidebarChevronDownshift: chevronDownshift } = useAppContext()
   const { activeTheme } = useContext(LibContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
@@ -83,9 +81,7 @@ const ThemedSidebar = ({
       theme={sidebarTheme.emotion}
       baseuiTheme={sidebarTheme.basewebTheme}
     >
-      <Sidebar {...sidebarProps} chevronDownshift={chevronDownshift}>
-        {children}
-      </Sidebar>
+      <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )
 }

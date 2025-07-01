@@ -76,9 +76,14 @@ class JsonMixin:
             expand any key-value pair to show or hide any part of the object.
 
         width : "stretch" or int
-            The width of the JSON element. This can be either:
-            - "stretch" (default): The element will stretch to fill the container width
-            - An integer: The element will have a fixed width in pixels
+            The width of the JSON element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
