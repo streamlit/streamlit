@@ -24,7 +24,7 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, cast, overload
 
 from typing_extensions import ParamSpec
 
@@ -53,8 +53,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 
 if TYPE_CHECKING:
-    from types import FunctionType
-
     from streamlit.runtime.caching.cache_type import CacheType
 
 _LOGGER: Final = get_logger(__name__)
@@ -65,10 +63,10 @@ TTLCACHE_TIMER = time.monotonic
 
 # Type-annotate the cached function.
 P = ParamSpec("P")
-T_co = TypeVar("T_co", covariant=True)
+R = TypeVar("R")
 
 
-class Cache:
+class Cache(Generic[R]):
     """Function cache interface. Caches persist across script runs."""
 
     def __init__(self) -> None:
@@ -76,7 +74,7 @@ class Cache:
         self._value_locks_lock = threading.Lock()
 
     @abstractmethod
-    def read_result(self, value_key: str) -> CachedResult:
+    def read_result(self, value_key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.
 
         Raises
@@ -88,7 +86,7 @@ class Cache:
         raise NotImplementedError
 
     @abstractmethod
-    def write_result(self, value_key: str, value: Any, messages: list[MsgData]) -> None:
+    def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache, overwriting any existing
         result that uses the value_key.
         """
@@ -124,7 +122,7 @@ class Cache:
         raise NotImplementedError
 
 
-class CachedFuncInfo:
+class CachedFuncInfo(Generic[P, R]):
     """Encapsulates data for a cached function instance.
 
     CachedFuncInfo instances are scoped to a single script run - they're not
@@ -133,7 +131,7 @@ class CachedFuncInfo:
 
     def __init__(
         self,
-        func: FunctionType,
+        func: Callable[P, R],
         show_spinner: bool | str,
         hash_funcs: HashFuncsDict | None,
     ) -> None:
@@ -149,12 +147,12 @@ class CachedFuncInfo:
     def cached_message_replay_ctx(self) -> CachedMessageReplayContext:
         raise NotImplementedError
 
-    def get_function_cache(self, function_key: str) -> Cache:
+    def get_function_cache(self, function_key: str) -> Cache[R]:
         """Get or create the function cache for the given key."""
         raise NotImplementedError
 
 
-def make_cached_func_wrapper(info: CachedFuncInfo) -> Callable[..., Any]:
+def make_cached_func_wrapper(info: CachedFuncInfo[P, R]) -> CachedFunc[P, R]:
     """Create a callable wrapper around a CachedFunctionInfo.
 
     Calling the wrapper will return the cached value if it's already been
@@ -164,8 +162,8 @@ def make_cached_func_wrapper(info: CachedFuncInfo) -> Callable[..., Any]:
     The wrapper also has a `clear` function that can be called to clear
     some or all of the wrapper's cached values.
     """
-    cached_func: CachedFunc[..., Any] = CachedFunc(info)
-    return functools.update_wrapper(cached_func, info.func)
+    cached_func = CachedFunc(info)
+    return cast("CachedFunc[P, R]", functools.update_wrapper(cached_func, info.func))
 
 
 class BoundCachedFunc:
@@ -194,8 +192,8 @@ class BoundCachedFunc:
             self._cached_func.clear()
 
 
-class CachedFunc(Generic[P, T_co]):
-    def __init__(self, info: CachedFuncInfo) -> None:
+class CachedFunc(Generic[P, R]):
+    def __init__(self, info: CachedFuncInfo[P, R]) -> None:
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
 
@@ -209,7 +207,7 @@ class CachedFunc(Generic[P, T_co]):
 
         return functools.update_wrapper(BoundCachedFunc(self, instance), self)
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T_co:
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """The wrapper. We'll only call our underlying function on a cache miss."""
 
         spinner_message: str | None = None
@@ -229,7 +227,7 @@ class CachedFunc(Generic[P, T_co]):
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
         spinner_message: str | None = None,
-    ) -> T_co:
+    ) -> R:
         # Retrieve the function's cache object. We must do this "just-in-time"
         # (as opposed to in the constructor), because caches can be invalidated
         # at any time.
@@ -266,7 +264,7 @@ class CachedFunc(Generic[P, T_co]):
         with spinner_or_no_context:
             return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
 
-    def _handle_cache_hit(self, result: CachedResult) -> T_co:
+    def _handle_cache_hit(self, result: CachedResult[R]) -> R:
         """Handle a cache hit: replay the result's cached messages, and return its
         value.
         """
@@ -279,11 +277,11 @@ class CachedFunc(Generic[P, T_co]):
 
     def _handle_cache_miss(
         self,
-        cache: Cache,
+        cache: Cache[R],
         value_key: str,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
-    ) -> T_co:
+    ) -> R:
         """Handle a cache miss: compute a new cached value, write it back to the cache,
         and return that newly-computed value.
         """
@@ -410,7 +408,7 @@ class CachedFunc(Generic[P, T_co]):
 
 def _make_value_key(
     cache_type: CacheType,
-    func: FunctionType,
+    func: Callable[..., Any],
     func_args: tuple[Any, ...],
     func_kwargs: dict[str, Any],
     hash_funcs: HashFuncsDict | None,
@@ -475,7 +473,7 @@ def _make_value_key(
     return value_key
 
 
-def _make_function_key(cache_type: CacheType, func: FunctionType) -> str:
+def _make_function_key(cache_type: CacheType, func: Callable[..., Any]) -> str:
     """Create the unique key for a function's cache.
 
     A function's key is stable across reruns of the app, and changes when
@@ -515,7 +513,7 @@ def _make_function_key(cache_type: CacheType, func: FunctionType) -> str:
     return func_hasher.hexdigest()
 
 
-def _get_positional_arg_name(func: FunctionType, arg_index: int) -> str | None:
+def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> str | None:
     """Return the name of a function's positional argument.
 
     If arg_index is out of range, or refers to a parameter that is not a
