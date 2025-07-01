@@ -543,7 +543,7 @@ function formatIntlNumberWithLocales(
  *
  * @param format - The format to use. If not provided, the default format is used.
  * @param maxPrecision - The maximum number of decimals to show. If not provided,
- *                     a reasonable default is used based on the configured default.
+ *                     a reasonable default is used based on the configured format.
  *
  * @returns The formatted number as a string.
  */
