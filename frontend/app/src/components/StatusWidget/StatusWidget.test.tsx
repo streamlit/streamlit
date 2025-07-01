@@ -302,7 +302,8 @@ describe("Running Icon", () => {
     vi.runAllTimers()
 
     await waitFor(() => {
-      const icon = screen.queryByRole("img")
+      const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
+      expect(icon).toBeVisible()
       expect(icon).toHaveAttribute("src", "/src/assets/img/fireworks.gif")
     })
   })
@@ -319,7 +320,8 @@ describe("Running Icon", () => {
     vi.runAllTimers()
 
     await waitFor(() => {
-      const icon = screen.queryByRole("img")
+      const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
+      expect(icon).toBeVisible()
       expect(icon).toHaveAttribute("src", "/src/assets/img/fireworks.gif")
     })
   })
