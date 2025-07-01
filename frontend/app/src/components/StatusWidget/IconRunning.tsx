@@ -53,9 +53,7 @@ const isNewYears = (): boolean => {
 }
 
 type IconRunningProps = {
-  size?: number
   speed?: number
-  color?: string
 }
 
 const IconRunning: React.FC<IconRunningProps> = ({ speed = 200 }) => {
