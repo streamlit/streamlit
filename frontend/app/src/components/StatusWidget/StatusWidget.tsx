@@ -39,14 +39,12 @@ import {
 } from "@streamlit/lib"
 import { SessionEvent } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
-import iconRunning from "@streamlit/app/src/assets/img/icon_running.gif"
-import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
 import { ConnectionState } from "@streamlit/connection"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 
+import IconRunning from "./IconRunning"
 import {
   StyledAppButtonContainer,
-  StyledAppRunningIcon,
   StyledAppStatus,
   StyledAppStatusLabel,
   StyledConnectionStatus,
@@ -168,18 +166,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
     rerunScript(false)
   }
 
-  const isNewYears = (): boolean => {
-    // Test if current date between 12/31 & 1/06
-    const currentDate = new Date()
-    const month = currentDate.getMonth()
-    const date = currentDate.getDate()
-    // Check if Dec 31st
-    if (month === 11 && date === 31) return true
-    // Check if Jan 1st through 6th
-    if (month === 0 && date <= 6) return true
-    return false
-  }
-
   useEffect(() => {
     sessionEventConn.current =
       sessionEventDispatcher.onSessionEvent.connect(handleSessionEvent)
@@ -230,18 +216,10 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const renderScriptIsRunning = (): ReactNode => {
     const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
-    const isNewYear = isNewYears()
-    const runningSrc = isNewYear ? newYearsRunning : iconRunning
-    const runningIcon = (
-      <StyledAppRunningIcon
-        isNewYears={isNewYear}
-        src={runningSrc}
-        alt="Running..."
-      />
-    )
+
     return showRunningMan ? (
       <StyledAppStatus>
-        {runningIcon}
+        <IconRunning />
         <PromptButton
           title={stopRequested ? "Stopping..." : "Stop"}
           disabled={stopRequested}
