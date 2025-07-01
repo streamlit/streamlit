@@ -25,8 +25,6 @@ expander.button("I'm also not cut off (while focused)")
 collapsed = st.expander("_Expand_ **me**!")
 collapsed.write("I am already collapsed")
 
-st.expander("Empty expander")
-
 with st.expander("Expander with number input", expanded=True):
     # We deliberately use a list to implement this for the screenshot
     st.write("* Example list item")
@@ -92,3 +90,5 @@ with st.expander("Fixed width expander", width=200):
 
 with st.expander("Stretch width expander", width="stretch"):
     st.write("Hello")
+
+st.expander("Empty expander", expanded=True)

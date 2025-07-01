@@ -16,6 +16,11 @@
 
 import { GridCell, GridCellKind, UriCell } from "@glideapps/glide-data-grid"
 
+import {
+  isMaterialIcon,
+  parseIconPackEntry,
+} from "~lib/components/shared/Icon/DynamicIcon"
+import { genericFonts } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -27,11 +32,19 @@ import {
 } from "./utils"
 
 export interface LinkColumnParams {
-  // The maximum number of characters the user can enter into the text input.
+  /**
+   * The maximum number of characters the user can enter into the text input.
+   */
   readonly max_chars?: number
-  // Regular expression that the input's value must match for the value to pass
+  /**
+   * Regular expression that the input's value must match for the value to pass.
+   */
   readonly validate?: string
-  // a value to display in the link cell. Can be a regex to parse out a specific substring of the url to be displayed
+  /**
+   * A value to display in the link cell. This can be a regex to parse out a
+   * specific substring of the url to be displayed. This can also be a
+   * material icon specified via ":material/icon_name:".
+   */
   readonly display_text?: string
 }
 
@@ -57,32 +70,51 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     }
   }
 
+  let usesDisplayIcon = false
+  let configuredDisplayText = parameters.display_text
   // Determine if the user's provided display text is a regexp pattern or not.
   let displayTextRegex: RegExp | undefined = undefined
-  if (
-    !isNullOrUndefined(parameters.display_text) &&
-    parameters.display_text.includes("(") &&
-    parameters.display_text.includes(")")
-  ) {
-    try {
-      displayTextRegex = new RegExp(parameters.display_text, "us")
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // The regex is invalid, interpret it as static display text.
-      displayTextRegex = undefined
+  if (!isNullOrUndefined(configuredDisplayText)) {
+    if (
+      configuredDisplayText.startsWith(":material/") &&
+      isMaterialIcon(configuredDisplayText)
+    ) {
+      // We need to only use the icon name in the display text so
+      // that the icon font can correctly resolve the icon.
+      configuredDisplayText = parseIconPackEntry(configuredDisplayText).icon
+      usesDisplayIcon = true
+    } else if (
+      configuredDisplayText.includes("(") &&
+      configuredDisplayText.includes(")")
+    ) {
+      try {
+        displayTextRegex = new RegExp(configuredDisplayText, "us")
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
+        // The regex is invalid, interpret it as static display text.
+        displayTextRegex = undefined
+      }
     }
   }
 
   const cellTemplate: UriCell = {
     kind: GridCellKind.Uri,
     readonly: !props.isEditable,
-    allowOverlay: true,
-    contentAlign: props.contentAlignment,
+    allowOverlay: !usesDisplayIcon,
+    contentAlign:
+      props.contentAlignment ?? (usesDisplayIcon ? "center" : undefined),
     style: "normal",
     hoverEffect: true,
     data: "",
     displayData: "",
     copyData: "",
+    ...(usesDisplayIcon && {
+      themeOverride: {
+        // Configure icon font and reset link color to default text color:
+        fontFamily: genericFonts.iconFont,
+        linkColor: undefined,
+      },
+    }),
   }
 
   const validateInput = (href?: string): boolean => {
@@ -124,6 +156,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
           data: null as any,
           isMissingValue: true,
           onClickUri: () => {},
+          themeOverride: undefined,
         } as UriCell
       }
 
@@ -154,7 +187,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         } else {
           // Use user provided display_text unless it's null, undefined, or an empty string.
           // If it's any of those falsy values, use the href.
-          displayText = parameters.display_text || href
+          displayText = configuredDisplayText || href
         }
       }
 
