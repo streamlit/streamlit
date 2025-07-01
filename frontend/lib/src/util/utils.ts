@@ -383,13 +383,8 @@ export function isValidElementId(
  * If the element has a valid ID, returns it. Otherwise, returns undefined.
  */
 export function getElementId(element: Element): string | undefined {
-  // Guard against null/undefined element or element.type
-  if (!element || !element.type) {
-    return undefined
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const elementId = get(element as any, [element.type, "id"])
+  const elementId = get(element as any, [requireNonNull(element.type), "id"])
   if (elementId && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
