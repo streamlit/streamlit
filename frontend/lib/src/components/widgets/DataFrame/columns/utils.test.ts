@@ -411,25 +411,31 @@ describe("formatNumber", () => {
     [10.123, undefined, 2, "10.12"],
     [10.123, undefined, 5, "10.12300"],
     // localized
+    [10.12345, "localized", undefined, "10.123"],
     [10.12345, "localized", 2, "10.12"],
     [10, "localized", 3, "10.000"],
-    // percent - the max precision is applied to the raw valu:
+    // percent - the max precision is applied to the raw value:
+    [0.12345, "percent", undefined, "12.35%"],
     [0.12345, "percent", 3, "12.3%"],
     [0.12345, "percent", 4, "12.35%"],
     [0.123, "percent", 5, "12.300%"],
     [0.123, "percent", 0, "12%"],
     // dollar
+    [10.129, "dollar", undefined, "$10.13"],
     [10.129, "dollar", 2, "$10.13"],
     [10.129, "dollar", 0, "$10"],
     [10, "dollar", 3, "$10.000"],
     // euro
+    [10.129, "euro", undefined, "€10.13"],
     [10.129, "euro", 2, "€10.13"],
     [10.129, "euro", 0, "€10"],
     [10, "euro", 3, "€10.000"],
     // yen
+    [10.129, "yen", undefined, "¥10"],
     [10.129, "yen", 0, "¥10"],
     [10.129, "yen", 2, "¥10.13"],
     // accounting
+    [-10.129, "accounting", undefined, "(10.13)"],
     [-10.129, "accounting", 2, "(10.13)"],
     [-10.129, "accounting", 1, "(10.1)"],
     [1000, "accounting", 0, "1,000"],
