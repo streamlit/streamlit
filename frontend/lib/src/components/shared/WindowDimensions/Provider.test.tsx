@@ -63,7 +63,7 @@ describe("WindowDimensionsProvider", () => {
     )
 
     expect(() => render(<Provider />)).toThrowError(
-      "WindowDimensionsProvider should only be used once per app. If you need to read window dimensions, utilize `useRequiredContext(WindowDimensionsContext)` instead."
+      "WindowDimensionsProvider should only be used once per app. If you need to read window dimensions, utilize `useWindowDimensionsContext()` instead."
     )
     consoleError.mockRestore()
   })
