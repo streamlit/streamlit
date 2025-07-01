@@ -21,7 +21,6 @@ import { screen } from "@testing-library/react"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-import * as useRequiredContextModule from "~lib/hooks/useRequiredContext"
 
 import ArrowVegaLiteChart, { Props } from "./ArrowVegaLiteChart"
 import { VegaLiteChartElement } from "./arrowUtils"
@@ -73,10 +72,6 @@ describe("ArrowVegaLiteChart", () => {
       elementRef: { current: null },
       values: [250],
     })
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   it("renders without crashing", () => {
