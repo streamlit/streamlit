@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useState } from "react"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
@@ -22,6 +22,8 @@ import { convertRemToPx } from "~lib/theme/utils"
 export type WindowDimensions = {
   fullWidth: number
   fullHeight: number
+  innerWidth: number
+  innerHeight: number
 }
 
 export const useWindowDimensions = (): WindowDimensions => {
@@ -29,15 +31,22 @@ export const useWindowDimensions = (): WindowDimensions => {
   const [windowDimensions, setWindowDimensions] = useState<WindowDimensions>({
     fullWidth: 0,
     fullHeight: 0,
+    innerWidth: 0,
+    innerHeight: 0,
   })
 
   const getWindowDimensions = useCallback((): WindowDimensions => {
     const padding = convertRemToPx(theme.spacing.md)
     const paddingTop = convertRemToPx(theme.sizes.fullScreenHeaderHeight)
 
+    // eslint-disable-next-line no-restricted-properties -- The only expected usage of window.{innerWidth,innerHeight}
+    const { innerWidth, innerHeight } = window
+
     return {
-      fullWidth: window.innerWidth - padding * 2, // Left and right
-      fullHeight: window.innerHeight - (padding + paddingTop), // Bottom and Top
+      fullWidth: innerWidth - padding * 2, // Left and right
+      fullHeight: innerHeight - (padding + paddingTop), // Bottom and Top
+      innerWidth,
+      innerHeight,
     }
   }, [theme.sizes.fullScreenHeaderHeight, theme.spacing.md])
 
@@ -53,7 +62,7 @@ export const useWindowDimensions = (): WindowDimensions => {
     }
   }, [updateWindowDimensions])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Measure once on load, let resize handlers take over from there
     updateWindowDimensions()
   }, [updateWindowDimensions])

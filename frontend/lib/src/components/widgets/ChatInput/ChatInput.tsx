@@ -37,6 +37,7 @@ import {
   IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
+import { useWindowDimensionsContext } from "@streamlit/lib"
 
 import {
   AcceptFileValue,
@@ -112,6 +113,7 @@ function ChatInput({
   const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
 
   const [width, elementRef] = useCalculatedWidth()
+  const { innerWidth, innerHeight } = useWindowDimensionsContext()
 
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
   const [value, setValue] = useState(element.default)
@@ -374,8 +376,7 @@ function ChatInput({
         // event could fire when user is dragging within the window
         if (
           (event.clientX <= 0 && event.clientY <= 0) ||
-          (event.clientX >= window.innerWidth &&
-            event.clientY >= window.innerHeight)
+          (event.clientX >= innerWidth && event.clientY >= innerHeight)
         ) {
           setFileDragged(false)
         }
@@ -399,7 +400,7 @@ function ChatInput({
       window.removeEventListener("drop", handleDrop)
       window.removeEventListener("dragleave", handleDragLeave)
     }
-  }, [fileDragged])
+  }, [fileDragged, innerWidth, innerHeight])
 
   // Use a Layout Effect since we are dealing with measurements and we want to
   // avoid flickering.

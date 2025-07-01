@@ -24,7 +24,6 @@ import React, {
   useState,
 } from "react"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   AppRoot,
   BlockNode,
@@ -33,8 +32,10 @@ import {
   IGuestToHostMessage,
   LibContext,
   Profiler,
+  useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
+import { StreamlitEndpoints } from "@streamlit/connection"
 import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
 import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
@@ -145,6 +146,8 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme,
   } = useContext(LibContext)
 
+  const { innerWidth } = useWindowDimensionsContext()
+
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
   const hasEventElements = !elements.event.isEmpty
@@ -203,7 +206,8 @@ function AppView(props: AppViewProps): ReactElement {
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() =>
     shouldCollapse(
       initialSidebarState,
-      parseInt(activeTheme.emotion.breakpoints.md, 10)
+      parseInt(activeTheme.emotion.breakpoints.md, 10),
+      innerWidth
     )
   )
 
@@ -211,16 +215,17 @@ function AppView(props: AppViewProps): ReactElement {
 
   // Initialize sidebar state once after stable width is achieved
   useLayoutEffect(() => {
-    if (!hasInitializedWidthRef.current && window.innerWidth > 0) {
+    if (!hasInitializedWidthRef.current && innerWidth > 0) {
       setSidebarIsCollapsed(
         shouldCollapse(
           initialSidebarState,
-          parseInt(activeTheme.emotion.breakpoints.md, 10)
+          parseInt(activeTheme.emotion.breakpoints.md, 10),
+          innerWidth
         )
       )
       hasInitializedWidthRef.current = true
     }
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
+  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, innerWidth])
 
   // Handle updates to initialSidebarState after set_page_config
   useEffect(() => {
@@ -228,11 +233,12 @@ function AppView(props: AppViewProps): ReactElement {
       setSidebarIsCollapsed(
         shouldCollapse(
           initialSidebarState,
-          parseInt(activeTheme.emotion.breakpoints.md, 10)
+          parseInt(activeTheme.emotion.breakpoints.md, 10),
+          innerWidth
         )
       )
     }
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
+  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, innerWidth])
 
   const toggleSidebar = useCallback(() => {
     setSidebarIsCollapsed(prev => !prev)
