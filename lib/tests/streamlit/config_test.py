@@ -494,11 +494,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.codeFont",
                 "theme.codeFontSize",
                 "theme.codeFontWeight",
-                "theme.h2FontWeight",
-                "theme.h3FontWeight",
-                "theme.h4FontWeight",
-                "theme.h5FontWeight",
-                "theme.h6FontWeight",
+                "theme.headingFontWeights",
                 "theme.fontFaces",
                 "theme.borderColor",
                 "theme.dataframeBorderColor",
@@ -519,11 +515,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
                 "theme.sidebar.codeFontSize",
-                "theme.sidebar.h2FontWeight",
-                "theme.sidebar.h3FontWeight",
-                "theme.sidebar.h4FontWeight",
-                "theme.sidebar.h5FontWeight",
-                "theme.sidebar.h6FontWeight",
+                "theme.sidebar.headingFontWeights",
                 "theme.sidebar.borderColor",
                 "theme.sidebar.dataframeBorderColor",
                 "theme.sidebar.showWidgetBorder",
@@ -704,11 +696,7 @@ class ConfigTest(unittest.TestCase):
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
-            "h2FontWeight": None,
-            "h3FontWeight": None,
-            "h4FontWeight": None,
-            "h5FontWeight": None,
-            "h6FontWeight": None,
+            "headingFontWeights": None,
             "chartCategoricalColors": None,
         }
         assert config.get_options_for_section("theme") == expected
@@ -749,11 +737,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.baseFontWeight", 300, "test")
-        config._set_option("theme.h2FontWeight", 700, "test")
-        config._set_option("theme.h3FontWeight", 700, "test")
-        config._set_option("theme.h4FontWeight", 700, "test")
-        config._set_option("theme.h5FontWeight", 700, "test")
-        config._set_option("theme.h6FontWeight", 700, "test")
+        config._set_option("theme.headingFontWeights", [700, 600, 500], "test")
         config._set_option("theme.showSidebarBorder", True, "test")
         config._set_option(
             "theme.chartCategoricalColors", ["#000000", "#111111", "#222222"], "test"
@@ -777,11 +761,7 @@ class ConfigTest(unittest.TestCase):
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
             "codeFontWeight": 300,
-            "h2FontWeight": 700,
-            "h3FontWeight": 700,
-            "h4FontWeight": 700,
-            "h5FontWeight": 700,
-            "h6FontWeight": 700,
+            "headingFontWeights": [700, 600, 500],
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
             "fontFaces": [
@@ -817,11 +797,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.sidebar.codeFontSize", "12px", "test")
-        config._set_option("theme.sidebar.h2FontWeight", 700, "test")
-        config._set_option("theme.sidebar.h3FontWeight", 700, "test")
-        config._set_option("theme.sidebar.h4FontWeight", 700, "test")
-        config._set_option("theme.sidebar.h5FontWeight", 700, "test")
-        config._set_option("theme.sidebar.h6FontWeight", 700, "test")
+        config._set_option("theme.sidebar.headingFontWeights", [600, 500, 500], "test")
         config._set_option("theme.sidebar.codeBackgroundColor", "#29361e", "test")
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
@@ -843,11 +819,7 @@ class ConfigTest(unittest.TestCase):
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
-            "h2FontWeight": 700,
-            "h3FontWeight": 700,
-            "h4FontWeight": 700,
-            "h5FontWeight": 700,
-            "h6FontWeight": 700,
+            "headingFontWeights": [600, 500, 500],
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
         }

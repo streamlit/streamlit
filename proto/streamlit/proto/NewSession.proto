@@ -178,18 +178,14 @@ message CustomThemeConfig {
   optional int32 base_font_weight = 30;
   optional int32 code_font_weight = 32;
   optional string code_font_size = 28;
-  optional int32 h2_font_weight = 34;
-  optional int32 h3_font_weight = 35;
-  optional int32 h4_font_weight = 36;
-  optional int32 h5_font_weight = 37;
-  optional int32 h6_font_weight = 38;
+  repeated int32 heading_font_weights = 34;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
   repeated string chart_categorical_colors = 33;
 
-  // Next ID: 39
+  // Next ID: 35
 }
 
 message FontFace {

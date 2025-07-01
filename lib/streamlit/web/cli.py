@@ -53,10 +53,19 @@ def _convert_config_option_to_click_option(
             f"\n {config_option.deprecation_text} - {config_option.expiration_date}"
         )
 
+    # Special handling for headingFontWeights which needs JSON parsing
+    # Use str type for CLI to avoid Click splitting JSON into individual characters
+    cli_type = config_option.type
+    if config_option.key in (
+        "theme.headingFontWeights",
+        "theme.sidebar.headingFontWeights",
+    ):
+        cli_type = str
+
     return {
         "param": param,
         "description": description,
-        "type": config_option.type,
+        "type": cli_type,
         "option": option,
         "envvar": config_option.env_var,
         "multiple": config_option.multiple,

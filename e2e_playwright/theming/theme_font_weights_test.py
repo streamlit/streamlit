@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import json
 import os
 
 import pytest
@@ -28,30 +28,18 @@ def configure_custom_theme_font_weights():
     """Configure custom theme."""
     os.environ["STREAMLIT_THEME_BASE_FONT_WEIGHT"] = "200"
     os.environ["STREAMLIT_THEME_CODE_FONT_WEIGHT"] = "500"
-    os.environ["STREAMLIT_THEME_H2_FONT_WEIGHT"] = "700"
-    os.environ["STREAMLIT_THEME_H3_FONT_WEIGHT"] = "500"
-    os.environ["STREAMLIT_THEME_H4_FONT_WEIGHT"] = "400"
-    os.environ["STREAMLIT_THEME_H5_FONT_WEIGHT"] = "300"
-    os.environ["STREAMLIT_THEME_H6_FONT_WEIGHT"] = "200"
+    os.environ["STREAMLIT_THEME_HEADING_FONT_WEIGHTS"] = json.dumps(
+        [800, 700, 500, 400, 300, 200]
+    )
     # Configurable separately in sidebar
-    os.environ["STREAMLIT_THEME_SIDEBAR_H2_FONT_WEIGHT"] = "200"
-    os.environ["STREAMLIT_THEME_SIDEBAR_H3_FONT_WEIGHT"] = "300"
-    os.environ["STREAMLIT_THEME_SIDEBAR_H4_FONT_WEIGHT"] = "400"
-    os.environ["STREAMLIT_THEME_SIDEBAR_H5_FONT_WEIGHT"] = "500"
-    os.environ["STREAMLIT_THEME_SIDEBAR_H6_FONT_WEIGHT"] = "700"
+    os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT_WEIGHTS"] = json.dumps(
+        [200, 300, 400, 500, 700, 800]
+    )
     yield
     del os.environ["STREAMLIT_THEME_BASE_FONT_WEIGHT"]
     del os.environ["STREAMLIT_THEME_CODE_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_H2_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_H3_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_H4_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_H5_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_H6_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_SIDEBAR_H2_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_SIDEBAR_H3_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_SIDEBAR_H4_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_SIDEBAR_H5_FONT_WEIGHT"]
-    del os.environ["STREAMLIT_THEME_SIDEBAR_H6_FONT_WEIGHT"]
+    del os.environ["STREAMLIT_THEME_HEADING_FONT_WEIGHTS"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT_WEIGHTS"]
 
 
 @pytest.mark.usefixtures("configure_custom_theme_font_weights")

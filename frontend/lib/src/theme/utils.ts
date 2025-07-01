@@ -291,11 +291,7 @@ const isValidFontWeight = (
  * @param inSidebar: whether the theme is in the sidebar
  * @param baseFontWeight: the base font weight provided via theme config
  * @param codeFontWeight: the code font weight provided via theme config
- * @param h2FontWeight: the h2 font weight provided via theme config
- * @param h3FontWeight: the h3 font weight provided via theme config
- * @param h4FontWeight: the h4 font weight provided via theme config
- * @param h5FontWeight: the h5 font weight provided via theme config
- * @param h6FontWeight: the h6 font weight provided via theme config
+ * @param headingFontWeights: the h1-h6 heading font weights provided via theme config
  * @returns an updated emotion theme font weights object
  */
 const setFontWeights = (
@@ -303,11 +299,7 @@ const setFontWeights = (
   inSidebar: boolean,
   baseFontWeight: number | null | undefined,
   codeFontWeight: number | null | undefined,
-  h2FontWeight: number | null | undefined,
-  h3FontWeight: number | null | undefined,
-  h4FontWeight: number | null | undefined,
-  h5FontWeight: number | null | undefined,
-  h6FontWeight: number | null | undefined
+  headingFontWeights: number[] | null | undefined
 ): EmotionTheme["fontWeights"] => {
   const fontWeightOverrides = {
     ...defaultFontWeights,
@@ -337,39 +329,23 @@ const setFontWeights = (
     fontWeightOverrides.code = codeFontWeight
   }
 
-  if (
-    h2FontWeight &&
-    isValidFontWeight("h2FontWeight", h2FontWeight, 100, 900, inSidebar)
-  ) {
-    fontWeightOverrides.h2FontWeight = h2FontWeight
-  }
-
-  if (
-    h3FontWeight &&
-    isValidFontWeight("h3FontWeight", h3FontWeight, 100, 900, inSidebar)
-  ) {
-    fontWeightOverrides.h3FontWeight = h3FontWeight
-  }
-
-  if (
-    h4FontWeight &&
-    isValidFontWeight("h4FontWeight", h4FontWeight, 100, 900, inSidebar)
-  ) {
-    fontWeightOverrides.h4FontWeight = h4FontWeight
-  }
-
-  if (
-    h5FontWeight &&
-    isValidFontWeight("h5FontWeight", h5FontWeight, 100, 900, inSidebar)
-  ) {
-    fontWeightOverrides.h5FontWeight = h5FontWeight
-  }
-
-  if (
-    h6FontWeight &&
-    isValidFontWeight("h6FontWeight", h6FontWeight, 100, 900, inSidebar)
-  ) {
-    fontWeightOverrides.h6FontWeight = h6FontWeight
+  if (headingFontWeights) {
+    // Filling out the heading font weights array is handled in app_session.py
+    headingFontWeights.forEach((weight, index) => {
+      const headingFontWeightKey = `h${index + 1}FontWeight`
+      if (
+        isValidFontWeight(
+          `${headingFontWeightKey} in headingFontWeights`,
+          weight,
+          100,
+          900,
+          inSidebar
+        )
+      ) {
+        // @ts-expect-error
+        fontWeightOverrides[headingFontWeightKey] = weight
+      }
+    })
   }
 
   return fontWeightOverrides
@@ -404,11 +380,7 @@ export const createEmotionTheme = (
     codeFontWeight,
     showWidgetBorder,
     headingFont,
-    h2FontWeight,
-    h3FontWeight,
-    h4FontWeight,
-    h5FontWeight,
-    h6FontWeight,
+    headingFontWeights,
     bodyFont,
     codeFont,
     showSidebarBorder,
@@ -603,11 +575,7 @@ export const createEmotionTheme = (
     inSidebar,
     baseFontWeight,
     codeFontWeight,
-    h2FontWeight,
-    h3FontWeight,
-    h4FontWeight,
-    h5FontWeight,
-    h6FontWeight
+    headingFontWeights
   )
 
   if (notNullOrUndefined(showSidebarBorder)) {

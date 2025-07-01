@@ -81,13 +81,11 @@ function getMarkdownHeadingDefinitions(
         useSmallerHeadings,
         isCaption
       ),
-      fontWeight: useSmallerHeadings
-        ? theme.fontWeights.headerBold
-        : theme.fontWeights.headerExtraBold,
+      fontWeight: theme.fontWeights.h1FontWeight,
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
-      fontWeight: theme.fontWeights.headerExtraBold,
+      fontWeight: Math.max(theme.fontWeights.h1FontWeight + 100, 900),
     },
     "h2, h3": {
       letterSpacing: "-0.005em",
