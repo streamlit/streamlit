@@ -24,13 +24,14 @@ from typing import (
     Callable,
     Final,
     Literal,
+    Protocol,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import ParamSpec, TypeAlias
 
 import streamlit as st
 from streamlit import runtime
@@ -90,16 +91,18 @@ class CachedDataFuncInfo(CachedFuncInfo):
     def __init__(
         self,
         func: types.FunctionType,
-        show_spinner: bool | str,
         persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | str | None,
+        show_spinner: bool | str,
+        show_time: bool = False,
         hash_funcs: HashFuncsDict | None = None,
     ) -> None:
         super().__init__(
             func,
-            show_spinner=show_spinner,
             hash_funcs=hash_funcs,
+            show_spinner=show_spinner,
+            show_time=show_time,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -318,7 +321,25 @@ def get_data_cache_stats_provider() -> CacheStatsProvider:
 
 # Type-annotate the decorator function.
 # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
-F = TypeVar("F", bound=Callable[..., Any])
+P = ParamSpec("P")
+T_co = TypeVar("T_co", covariant=True)
+
+
+class CachedFunc(Protocol[P, T_co]):
+    """Protocol for cached functions that preserve the original function's signature and add a clear method."""
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T_co: ...
+
+    @overload
+    def clear(self) -> None: ...
+
+    @overload
+    def clear(self, *args: P.args, **kwargs: P.kwargs) -> None: ...
+
+    # Currently we can't define the "all-optional" argument overload with `P.args` and `P.kwargs` in Python.
+    # So we use `Any` as a fallback.
+    @overload
+    def clear(self, *args: Any, **kwargs: Any) -> None: ...
 
 
 class CacheDataAPI:
@@ -343,7 +364,7 @@ class CacheDataAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F: ...
+    def __call__(self, func: Callable[P, T_co]) -> CachedFunc[P, T_co]: ...
 
     # Decorator with arguments
     @overload
@@ -353,43 +374,47 @@ class CacheDataAPI:
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]: ...
+    ) -> Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]: ...
 
     def __call__(
         self,
-        func: F | None = None,
+        func: Callable[P, T_co] | None = None,
         *,
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> F | Callable[[F], F]:
+    ) -> CachedFunc[P, T_co] | Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]:
         return self._decorator(
             func,
             ttl=ttl,
             max_entries=max_entries,
             persist=persist,
             show_spinner=show_spinner,
+            show_time=show_time,
             experimental_allow_widgets=experimental_allow_widgets,
             hash_funcs=hash_funcs,
         )
 
     def _decorator(
         self,
-        func: F | None = None,
+        func: Callable[P, T_co] | None = None,
         *,
         ttl: float | timedelta | str | None,
         max_entries: int | None,
         show_spinner: bool | str,
+        show_time: bool = False,
         persist: CachePersistType | bool,
         experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> F | Callable[[F], F]:
+    ) -> CachedFunc[P, T_co] | Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
         Cached objects are stored in "pickled" form, which means that the return
@@ -437,6 +462,12 @@ class CacheDataAPI:
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
+
+        show_time : bool
+            Whether to show the elapsed time next to the spinner text. If this is
+            ``False`` (default), no time is displayed. If this is ``True``,
+            elapsed time is displayed with a precision of 0.1 seconds. The time
+            format is not configurable.
 
         persist : "disk", bool, or None
             Optional location to persist cached data to. Passing "disk" (or True)
@@ -567,14 +598,15 @@ class CacheDataAPI:
         if experimental_allow_widgets:
             show_widget_replay_deprecation("cache_data")
 
-        def wrapper(f: F) -> F:
+        def wrapper(f: Callable[P, T_co]) -> CachedFunc[P, T_co]:
             return cast(
-                "F",
+                "CachedFunc[P, T_co]",
                 make_cached_func_wrapper(
                     CachedDataFuncInfo(
                         func=f,  # type: ignore
                         persist=persist_string,
                         show_spinner=show_spinner,
+                        show_time=show_time,
                         max_entries=max_entries,
                         ttl=ttl,
                         hash_funcs=hash_funcs,
@@ -590,6 +622,7 @@ class CacheDataAPI:
                 func=cast("types.FunctionType", func),
                 persist=persist_string,
                 show_spinner=show_spinner,
+                show_time=show_time,
                 max_entries=max_entries,
                 ttl=ttl,
                 hash_funcs=hash_funcs,

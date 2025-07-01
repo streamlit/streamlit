@@ -70,14 +70,19 @@ export const computeDerivedColors = (
   }
 }
 
+function _isLightBackground(bgColor: string): boolean {
+  return getLuminance(bgColor) > 0.5
+}
+
 export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
-  return getLuminance(theme.colors.bgColor) > 0.5
+  return _isLightBackground(theme.colors.bgColor)
 }
 
 export const createEmotionColors = (genericColors: {
   [key: string]: string
 }): { [key: string]: string } => {
   const derivedColors = computeDerivedColors(genericColors)
+  const defaultCategoricalColors = defaultCategoricalColorsArray(genericColors)
 
   return {
     ...genericColors,
@@ -98,6 +103,9 @@ export const createEmotionColors = (genericColors: {
     dataframeHeaderBackgroundColor: derivedColors.bgMix,
 
     headingColor: genericColors.bodyText,
+
+    // @ts-expect-error -- defaultCategoricalColors is a string[] vs. string
+    chartCategoricalColors: defaultCategoricalColors,
   }
 }
 
@@ -263,32 +271,33 @@ export function getDivergingColorsArray(theme: EmotionTheme): string[] {
   ]
 }
 
-export function getCategoricalColorsArray(theme: EmotionTheme): string[] {
-  const { colors } = theme
-  return hasLightBackgroundColor(theme)
+function defaultCategoricalColorsArray(genericColors: {
+  [key: string]: string
+}): string[] {
+  return _isLightBackground(genericColors.bgColor)
     ? [
-        colors.blue80,
-        colors.blue40,
-        colors.red80,
-        colors.red40,
-        colors.blueGreen80,
-        colors.green40,
-        colors.orange80,
-        colors.orange50,
-        colors.purple80,
-        colors.gray40,
+        genericColors.blue80,
+        genericColors.blue40,
+        genericColors.red80,
+        genericColors.red40,
+        genericColors.blueGreen80,
+        genericColors.green40,
+        genericColors.orange80,
+        genericColors.orange50,
+        genericColors.purple80,
+        genericColors.gray40,
       ]
     : [
-        colors.blue40,
-        colors.blue80,
-        colors.red40,
-        colors.red80,
-        colors.green40,
-        colors.blueGreen80,
-        colors.orange50,
-        colors.orange80,
-        colors.purple80,
-        colors.gray40,
+        genericColors.blue40,
+        genericColors.blue80,
+        genericColors.red40,
+        genericColors.red80,
+        genericColors.green40,
+        genericColors.blueGreen80,
+        genericColors.orange50,
+        genericColors.orange80,
+        genericColors.purple80,
+        genericColors.gray40,
       ]
 }
 

@@ -27,7 +27,7 @@ interface IconPackEntry {
   icon: string
 }
 
-function parseIconPackEntry(iconName: string): IconPackEntry {
+export function parseIconPackEntry(iconName: string): IconPackEntry {
   // This is a regex to match icon pack and icon name from the strings of format
   // :pack/icon: like :material/settings_suggest:
   const matchResult = iconName.match(/^:(.+)\/(.+):$/)
@@ -43,7 +43,8 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
  * Returns true if the icon value is a material icon.
  */
 export function isMaterialIcon(iconName: string): boolean {
-  return parseIconPackEntry(iconName).pack === "material"
+  const parsedIcon = parseIconPackEntry(iconName)
+  return parsedIcon.pack === "material" && parsedIcon.icon !== ""
 }
 
 /**
