@@ -29,40 +29,57 @@ const outputJsFile = "proto.js"
 const outputDtsFile = "proto.d.ts"
 
 // Commands to run
-const pbjsCommand = ["yarn", "run", "--silent", "pbjs", protoGlob, "--path", protoDir, "-t", "static-module", "--wrap", "es6"]
+const pbjsCommand = [
+  "yarn",
+  "run",
+  "--silent",
+  "pbjs",
+  protoGlob,
+  "--path",
+  protoDir,
+  "-t",
+  "static-module",
+  "--wrap",
+  "es6",
+]
 const pbtsCommand = ["yarn", "run", "--silent", "pbts", "proto.js"]
 const TEMPLATE = "/* eslint-disable */\n\n"
 
 const runCommand = (commandAndArgs, outputFile) => {
-  return new Promise((resolve, reject) => {
-    const [cmd, ...args] = commandAndArgs
-    const result = spawnSync(cmd, args, { maxBuffer: 4096 * 1024, encoding: "utf8" })
-    if (result.error) {
-      console.error(`Error: ${result.error.message}`)
-      reject(result.error)
-      return
-    }
-    if (result.stderr) {
-      console.error(`stderr: ${result.stderr}`)
-    }
-    fs.writeFileSync(outputFile, `${TEMPLATE}${result.stdout}`, "utf8")
-    console.log(`Generated: ${outputFile}`)
-    resolve()
+  const [cmd, ...args] = commandAndArgs
+  const result = spawnSync(cmd, args, {
+    maxBuffer: 4096 * 1024,
+    encoding: "utf8",
   })
+
+  if (result.error) {
+    throw result.error
+  }
+
+  if (result.status !== 0) {
+    // command failed, stderr should have error
+    throw new Error(result.stderr)
+  }
+
+  if (result.stderr) {
+    // command succeeded, but there's something in stderr (e.g. warnings)
+    console.warn(`Warnings:\n${result.stderr}`)
+  }
+
+  fs.writeFileSync(outputFile, `${TEMPLATE}${result.stdout}`, "utf8")
+  console.log(`Generated: ${outputFile}`)
 }
 
 // Run the commands sequentially
-;(async () => {
-  try {
-    console.log("Generating proto.js...")
-    await runCommand(pbjsCommand, outputJsFile)
+try {
+  console.log("Generating proto.js...")
+  runCommand(pbjsCommand, outputJsFile)
 
-    console.log("Generating proto.d.ts...")
-    await runCommand(pbtsCommand, outputDtsFile)
+  console.log("Generating proto.d.ts...")
+  runCommand(pbtsCommand, outputDtsFile)
 
-    console.log("Protobuf files generated successfully!")
-  } catch (err) {
-    console.error("Failed to generate protobuf files:", err)
-    process.exit(1)
-  }
-})()
+  console.log("Protobuf files generated successfully!")
+} catch (err) {
+  console.error("Failed to generate protobuf files:", err)
+  process.exit(1)
+}
