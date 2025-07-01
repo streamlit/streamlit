@@ -694,6 +694,9 @@ class DataEditorMixin:
             ``"col2"`` first, followed by ``"col1"``, and will hide all other
             non-index columns.
 
+            ``column_order`` does not accept positional column indices and
+            can't move the index column(s).
+
         column_config : dict or None
             Configuration to customize how columns are displayed. If this is
             ``None`` (default), columns are styled based on the underlying data
