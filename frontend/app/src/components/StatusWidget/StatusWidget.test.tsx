@@ -20,9 +20,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { render, ScriptRunState } from "@streamlit/lib"
-import { SessionEvent } from "@streamlit/protobuf"
 import { ConnectionState } from "@streamlit/connection"
-import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
@@ -30,11 +28,11 @@ const getProps = (
   propOverrides: Partial<StatusWidgetProps> = {}
 ): StatusWidgetProps => ({
   connectionState: ConnectionState.CONNECTED,
-  sessionEventDispatcher: new SessionEventDispatcher(),
   scriptRunState: ScriptRunState.RUNNING,
   rerunScript: vi.fn(),
   stopScript: () => {},
   allowRunOnSave: true,
+  scriptChangedOnDisk: false,
   ...propOverrides,
 })
 
@@ -83,26 +81,6 @@ describe("StatusWidget element", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("sets and unsets the sessionEventConnection", () => {
-    const sessionEventDispatcher = new SessionEventDispatcher()
-    const connectSpy = vi.fn()
-    const disconnectSpy = vi.fn()
-    sessionEventDispatcher.onSessionEvent.connect =
-      connectSpy.mockImplementation(() => ({
-        disconnect: disconnectSpy,
-      }))
-
-    const { unmount } = render(
-      <StatusWidget {...getProps({ sessionEventDispatcher })} />
-    )
-
-    expect(connectSpy).toHaveBeenCalled()
-
-    unmount()
-
-    expect(disconnectSpy).toHaveBeenCalled()
-  })
-
   it("calls stopScript when clicked", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.useFakeTimers()
@@ -123,25 +101,16 @@ describe("StatusWidget element", () => {
 
   it("shows the rerun button when script changes", async () => {
     const user = userEvent.setup()
-    const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptChangedOnDisk: true,
         })}
       />
-    )
-
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
     )
 
     const buttons = await waitFor(() => {
@@ -161,25 +130,16 @@ describe("StatusWidget element", () => {
 
   it("shows the always rerun button when script changes", async () => {
     const user = userEvent.setup()
-    const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptChangedOnDisk: true,
         })}
       />
-    )
-
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
     )
 
     const buttons = await waitFor(() => {
@@ -198,26 +158,17 @@ describe("StatusWidget element", () => {
   })
 
   it("does not show the always rerun button when script changes", async () => {
-    const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
           allowRunOnSave: false,
+          scriptChangedOnDisk: true,
         })}
       />
-    )
-
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
     )
 
     const buttons = await waitFor(() => {
@@ -230,26 +181,18 @@ describe("StatusWidget element", () => {
   })
 
   it("calls always run on save", async () => {
-    const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
+          scriptChangedOnDisk: true,
         })}
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
-    )
     // Verify the Always rerun is visible
     expect(await screen.findByText("Always rerun")).toBeVisible()
 
