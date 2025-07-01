@@ -328,6 +328,7 @@ function AppView(props: AppViewProps): ReactElement {
                 hasBottom={hasBottomElements}
                 hasHeader={hasHeaderUserContent}
                 showToolbar={showToolbar}
+                hasTopNav={shouldShowNavigation}
               >
                 {renderBlock(elements.main)}
               </StyledAppViewBlockContainer>

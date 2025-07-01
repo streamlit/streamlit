@@ -124,6 +124,7 @@ export interface StyledAppViewBlockContainerProps {
   showPadding: boolean
   hasHeader: boolean
   showToolbar: boolean
+  hasTopNav: boolean
 }
 
 export const StyledAppViewBlockContainer =
@@ -134,21 +135,25 @@ export const StyledAppViewBlockContainer =
       showPadding,
       hasHeader,
       showToolbar,
+      hasTopNav,
       theme,
     }) => {
       const littlePadding = "2.25rem"
 
       // Top padding logic per specification:
-      // - 6rem by default (non-embedded)
-      // - 6rem if embedded with show_padding OR show_toolbar
-      // - 2.25rem if embedded with no header and no toolbar
-      // - 4.5rem if embedded with header but no toolbar
-      const topPadding =
-        showPadding || showToolbar
-          ? "6rem"
-          : hasHeader
-            ? "4.5rem"
-            : littlePadding
+      let topPadding = littlePadding // Default: 2.25rem
+
+      if (showPadding && hasTopNav) {
+        // 8rem when not in embedded mode and top nav is showing (>1 item)
+        topPadding = "8rem"
+      } else if (showPadding || showToolbar) {
+        // 6rem by default (non-embedded) or if embedded with show_toolbar
+        topPadding = "6rem"
+      } else if (hasHeader) {
+        // 4.5rem if embedded with header but no toolbar
+        topPadding = "4.5rem"
+      }
+      // Otherwise use default: 2.25rem if embedded with no header and no toolbar
 
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
