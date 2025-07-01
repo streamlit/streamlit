@@ -53,7 +53,6 @@ import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/Metric.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/PageLink.proto";
-import "streamlit/proto/Pdf.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Components.proto";
 import "streamlit/proto/Progress.proto";
@@ -121,7 +120,6 @@ message Element {
     MultiSelect multiselect = 28;
     NumberInput number_input = 32;
     PageLink page_link = 53;
-    Pdf pdf = 59;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
     Radio radio = 23;
@@ -140,7 +138,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 60
+    // Next ID: 59
   }
 
   reserved 9;

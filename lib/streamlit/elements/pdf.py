@@ -41,7 +41,7 @@ PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
 def _is_pdf_component_available() -> bool:
     """Check if the pdf-viewer component is installed."""
     try:
-        import pdf_viewer  # noqa: F401
+        import pdf_viewer  # type: ignore  # noqa: F401
 
         return True
     except ImportError:
@@ -51,7 +51,7 @@ def _is_pdf_component_available() -> bool:
 def _get_pdf_component() -> Any:
     """Get the PDF custom component if available."""
     try:
-        import pdf_viewer  # type: ignore[import-untyped]
+        import pdf_viewer  # type: ignore
 
         # Return the pdf_viewer function directly
         return pdf_viewer.pdf_viewer
@@ -117,6 +117,8 @@ class PdfMixin:
     ) -> DeltaGenerator:
         """Call the custom PDF component with the provided data."""
         # Convert data to the format expected by pdf_viewer component
+        file_param: str | bytes
+
         if isinstance(data, (str, Path)):
             data_str = str(data)
             if url_util.is_url(data_str, allowed_schemas=("http", "https")):

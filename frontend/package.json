@@ -23,8 +23,7 @@
     "dompurify": "^3.2.4",
     "vite": "^6.2.0",
     "prismjs": "^1.30.0",
-    "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch",
-    "pdfjs-dist": "5.3.31"
+    "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch"
   },
   "browserslist": [
     ">0.2%",
