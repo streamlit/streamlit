@@ -727,11 +727,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = [rehypeSetCodeInlineProperty, rehypeKatex]
+    const plugins: PluggableList = [rehypeKatex]
 
     if (allowHTML) {
       plugins.push(rehypeRaw)
     }
+
+    // This plugin must run last to ensure the inline property is set correctly
+    // and not overwritten by other plugins like rehypeRaw
+    plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
   }, [allowHTML])
