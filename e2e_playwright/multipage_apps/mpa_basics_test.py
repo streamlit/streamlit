@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_segment_button,
     goto_app,
 )
+from e2e_playwright.shared.react18_utils import take_stable_snapshot
 
 
 def test_loads_main_script_on_initial_page_load(app: Page):
@@ -283,7 +284,12 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
         "href", "https://www.example.com"
     )
-    assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
+    take_stable_snapshot(
+        app,
+        app.get_by_test_id("stSidebar"),
+        assert_snapshot,
+        name="sidebar-logo",
+    )
 
     # Collapse the sidebar
     app.get_by_test_id("stSidebarContent").hover()
@@ -300,7 +306,12 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
 
     collapsed_logo_image = logo_link_element.get_by_test_id("stHeaderLogo")
     expect(collapsed_logo_image).to_be_visible()
-    assert_snapshot(collapsed_logo_image, name="collapsed-header-logo")
+    take_stable_snapshot(
+        app,
+        collapsed_logo_image,
+        assert_snapshot,
+        name="collapsed-header-logo",
+    )
 
 
 @pytest.mark.flaky(reruns=4)
@@ -334,7 +345,12 @@ def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
         "href", "https://www.example.com"
     )
-    assert_snapshot(app.get_by_test_id("stSidebar"), name="large-sidebar-logo")
+    take_stable_snapshot(
+        app,
+        app.get_by_test_id("stSidebar"),
+        assert_snapshot,
+        name="large-sidebar-logo",
+    )
 
     # Collapse the sidebar
     app.get_by_test_id("stSidebarContent").hover()
@@ -354,7 +370,12 @@ def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
 
     collapsed_logo_image = logo_link_element.get_by_test_id("stHeaderLogo")
     expect(collapsed_logo_image).to_be_visible()
-    assert_snapshot(collapsed_logo_image, name="large-collapsed-header-logo")
+    take_stable_snapshot(
+        app,
+        collapsed_logo_image,
+        assert_snapshot,
+        name="large-collapsed-header-logo",
+    )
 
 
 def test_completes_script_lifecycle(app: Page):

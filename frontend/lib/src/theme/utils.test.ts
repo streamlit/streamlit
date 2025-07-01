@@ -976,6 +976,210 @@ describe("createEmotionTheme", () => {
     )
   })
 
+  it.each([
+    // Test valid color values
+    [
+      ["red", "orange", "blue", "pink", "purple"],
+      ["red", "orange", "blue", "pink", "purple"],
+    ],
+    // Valid hex codes passed without leading #
+    [
+      [
+        "7fc97f",
+        "beaed4",
+        "fdc086",
+        "ffff99",
+        "386cb0",
+        "f0027f",
+        "bf5b17",
+        "666666",
+      ],
+      [
+        "#7fc97f",
+        "#beaed4",
+        "#fdc086",
+        "#ffff99",
+        "#386cb0",
+        "#f0027f",
+        "#bf5b17",
+        "#666666",
+      ],
+    ],
+    [
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+    ],
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of categorical color config '%s'",
+    (chartCategoricalColors, expectedCategoricalColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartCategoricalColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartCategoricalColors).toEqual(
+        expectedCategoricalColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      ["red", "orange", "blue", "pink", "purple", "invalid"],
+      ["red", "orange", "blue", "pink", "purple"],
+    ],
+    [
+      [
+        "7fc97f",
+        "beaed4",
+        "fdc086",
+        "ffff99",
+        "386cb0",
+        "f0027f",
+        "bf5b17",
+        "666666",
+        "invalid",
+      ],
+      [
+        "#7fc97f",
+        "#beaed4",
+        "#fdc086",
+        "#ffff99",
+        "#386cb0",
+        "#f0027f",
+        "#bf5b17",
+        "#666666",
+      ],
+    ],
+    [
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+        "invalid",
+      ],
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+    ],
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+        "invalid",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+    ],
+    [
+      // When no valid colors are passed, returns default colors
+      ["invalid"],
+      [
+        "#0068c9",
+        "#83c9ff",
+        "#ff2b2b",
+        "#ffabab",
+        "#29b09d",
+        "#7defa1",
+        "#ff8700",
+        "#ffd16a",
+        "#6d3fc0",
+        "#d5dae5",
+      ],
+    ],
+  ])(
+    "logs a warning and removes any invalid categorical color configs '%s'",
+    (chartCategoricalColors, expectedCategoricalColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartCategoricalColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartCategoricalColors in theme: "invalid"`
+      )
+      expect(theme.colors.chartCategoricalColors).toEqual(
+        expectedCategoricalColors
+      )
+    }
+  )
+
+  it("showSidebarBorder config is set to false by default", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.showSidebarBorder).toBe(false)
+  })
+
+  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: true })
+    expect(theme.showSidebarBorder).toBe(true)
+  })
+
   it("sets the dataframeBorderColor if configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       borderColor: "red",
@@ -987,15 +1191,139 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.dataframeBorderColor).toBe("green")
   })
 
-  it("showSidebarBorder config is set to false by default", () => {
-    const theme = createEmotionTheme({})
-    expect(theme.showSidebarBorder).toBe(false)
+  it("sets the dataframeHeaderBackgroundColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderBackgroundColor: "green",
+    }
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("green")
   })
 
-  it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
-    const theme = createEmotionTheme({ showSidebarBorder: true })
-    expect(theme.showSidebarBorder).toBe(true)
+  it("uses default dataframeHeaderBackgroundColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      theme.colors.bgMix
+    )
   })
+
+  it.each([
+    // Test valid font weights
+    [100, 100, 300, 400],
+    [200, 200, 400, 500],
+    [300, 300, 500, 600],
+    [400, 400, 600, 700],
+    [500, 500, 700, 800],
+    [600, 600, 800, 900],
+  ])(
+    "sets the font weights based on the baseFontWeight config '%s'",
+    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+    }
+  )
+
+  it.each([
+    // Test invalid font weights
+    [150, 400, 600, 700], // Not an increment of 100
+    [700, 400, 600, 700], // Not between 100 and 600
+    [400.5, 400, 600, 700], // Not an integer
+  ])(
+    "logs a warning and falls back to default font weights if baseFontWeight is invalid '%s'",
+    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        baseFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid base font weight: ${baseFontWeight}. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weights.`
+      )
+
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+    }
+  )
+
+  it.each([
+    // Test valid font weights
+    [100, 400, 600, 700, 100],
+    [200, 400, 600, 700, 200],
+    [300, 400, 600, 700, 300],
+    [400, 400, 600, 700, 400],
+    [500, 400, 600, 700, 500],
+    [600, 400, 600, 700, 600],
+    [700, 400, 600, 700, 700],
+    [800, 400, 600, 700, 800],
+    [900, 400, 600, 700, 900],
+  ])(
+    "sets the font weights based on the codeFontWeight config '%s'",
+    (
+      codeFontWeight,
+      expectedNormal,
+      expectedBold,
+      expectedExtrabold,
+      expectedCode
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
+      // baseFontWeight is not set, so the default font weights are used
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+      // codeFontWeight is set, so it overrides the default code font weight
+      expect(theme.fontWeights.code).toBe(expectedCode)
+    }
+  )
+
+  it.each([
+    // Test invalid font weights
+    [150, 400, 600, 700, 400], // Not an increment of 100
+    [1000, 400, 600, 700, 400], // Not between 100 and 900
+    [400.5, 400, 600, 700, 400], // Not an integer
+  ])(
+    "logs a warning and falls back to default font weights if codeFontWeight is invalid '%s'",
+    (
+      codeFontWeight,
+      expectedNormal,
+      expectedBold,
+      expectedExtrabold,
+      expectedCode
+    ) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        codeFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid code font weight: ${codeFontWeight}. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weights.`
+      )
+
+      expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.bold).toBe(expectedBold)
+      expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
+      expect(theme.fontWeights.code).toBe(expectedCode)
+    }
+  )
 
   it("linkUnderline config is set to true by default", () => {
     const theme = createEmotionTheme({})

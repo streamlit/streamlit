@@ -438,3 +438,24 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "date_input_12")).to_be_visible()
+
+
+def test_quick_select_feature_visibility(app: Page):
+    """Test that quick select is visible for range inputs and hidden for single inputs."""
+    # Test range input (index 2 is "Range, no date")
+    range_date_input = app.get_by_test_id("stDateInput").nth(2)
+    range_date_input.click()
+
+    # Quick select should be visible for range inputs
+    quick_select = app.locator('[data-baseweb="select"]')
+    expect(quick_select).to_be_visible()
+
+    # Close the calendar
+    app.keyboard.press("Escape")
+
+    # Test single date input (index 0 is "Single date")
+    single_date_input = app.get_by_test_id("stDateInput").first
+    single_date_input.click()
+
+    # Quick select should not be visible for single date inputs
+    expect(quick_select).not_to_be_visible()

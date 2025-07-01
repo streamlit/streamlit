@@ -168,6 +168,19 @@ class CodeElement(DeltaGeneratorTestCase):
         )
         assert element.width_config.use_stretch
 
+    def test_st_code_with_width_content(self):
+        """Test st.code with content width."""
+        code = "print('My string = %d' % my_value)"
+        st.code(code, width="content")
+
+        element = self.get_delta_from_queue().new_element
+        assert element.code.code_text == code
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert element.width_config.use_content
+
     @parameterized.expand(
         [
             "invalid",
@@ -211,6 +224,19 @@ class CodeElement(DeltaGeneratorTestCase):
             == HeightConfigFields.USE_CONTENT.value
         )
         assert element.height_config.use_content
+
+    def test_st_code_with_height_stretch(self):
+        """Test st.code with stretch height."""
+        code = "print('My string = %d' % my_value)"
+        st.code(code, height="stretch")
+
+        element = self.get_delta_from_queue().new_element
+        assert element.code.code_text == code
+        assert (
+            element.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_STRETCH.value
+        )
+        assert element.height_config.use_stretch
 
     @parameterized.expand(["invalid", -100, 0, 100.5])
     def test_st_code_with_invalid_height(self, height):

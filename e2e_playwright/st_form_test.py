@@ -304,3 +304,39 @@ def test_form_height_configurations(app: Page, assert_snapshot: ImageCompareFunc
     form_16 = app.get_by_test_id("stForm").nth(15)
     expect(form_16.get_by_test_id("stFormSubmitButton").first).to_be_visible()
     assert_snapshot(form_16, name="st_form-content_height")
+
+    # Stretch height is tested inside containers and columns below.
+
+
+def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that forms render correctly within columns."""
+    # Get the columns container and snapshot the entire columns layout
+    columns_container = app.get_by_test_id("stHorizontalBlock").last
+    columns_container.scroll_into_view_if_needed()
+    assert_snapshot(columns_container, name="st_form-columns")
+
+
+def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that forms render correctly within containers with fixed height."""
+    # Get the container with height and snapshot the entire container
+    height_container = app.get_by_test_id("stVerticalBlock").nth(24)
+    height_container.scroll_into_view_if_needed()
+    assert_snapshot(height_container, name="st_form-height_container")
+
+
+def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a form with a dataframe renders correctly with the toolbar."""
+    form_container = app.get_by_test_id("stVerticalBlock").nth(27)
+    dataframe = form_container.get_by_test_id("stDataFrame")
+    dataframe.hover()
+
+    dataframe_toolbar = dataframe.get_by_test_id("stElementToolbar")
+    expect(dataframe_toolbar).to_be_visible()
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    # Take a snapshot of the container that contains the form and the dataframe so
+    # that we can see the toolbar.
+    assert_snapshot(
+        form_container,
+        name="st_form-with_dataframe_toolbar",
+    )
