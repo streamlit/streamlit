@@ -482,7 +482,7 @@ describe("DateInput widget", () => {
 
       // Quick select should be visible for range inputs
       const quickSelect = screen.getByRole("combobox")
-      expect(quickSelect).toBeInTheDocument()
+      expect(quickSelect).toBeVisible()
     })
 
     it("does not show quick select for single date inputs", async () => {
