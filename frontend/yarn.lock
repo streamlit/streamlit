@@ -3626,7 +3626,7 @@ __metadata:
     "@types/uuid": "npm:^10.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.35.0"
     "@vitejs/plugin-react-swc": "npm:^3.10.2"
-    "@vitest/eslint-plugin": "npm:^1.2.7"
+    "@vitest/eslint-plugin": "npm:^1.3.3"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     buffer: "npm:^6.0.3"
@@ -6155,9 +6155,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/eslint-plugin@npm:^1.2.7":
-  version: 1.2.7
-  resolution: "@vitest/eslint-plugin@npm:1.2.7"
+"@vitest/eslint-plugin@npm:^1.3.3":
+  version: 1.3.3
+  resolution: "@vitest/eslint-plugin@npm:1.3.3"
   dependencies:
     "@typescript-eslint/utils": "npm:^8.24.1"
   peerDependencies:
@@ -6169,7 +6169,7 @@ __metadata:
       optional: true
     vitest:
       optional: true
-  checksum: 10c0/85f71e977ed898345fbe32aaa3c149a5ec62b447a021978c002ce8c10494249f5d47f84eee7e5ee68df323fe893dd7a5fe2a04dab8daa6bd3e3f898196bdc340
+  checksum: 10c0/a79137f4baba8ea62e690b4ab43765009380c84cc16b4343aacce9387a9e3b71519d0df98afa6c0caae8a91ea0ed9432079cc09dcc3b5cea54ee013d3181800c
   languageName: node
   linkType: hard
 
