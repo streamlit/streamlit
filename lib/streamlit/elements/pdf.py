@@ -16,19 +16,15 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 from typing_extensions import TypeAlias
 
 from streamlit import url_util
-from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     validate_height,
     validate_width,
 )
-from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.proto.Pdf_pb2 import Pdf as PdfProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -41,6 +37,28 @@ if TYPE_CHECKING:
 PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
 
 
+# Check if the custom PDF component is available
+def _is_pdf_component_available() -> bool:
+    """Check if the pdf-viewer component is installed."""
+    try:
+        import pdf_viewer  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _get_pdf_component() -> Any:
+    """Get the PDF custom component if available."""
+    try:
+        import pdf_viewer  # type: ignore[import-untyped]
+
+        # Return the pdf_viewer function directly
+        return pdf_viewer.pdf_viewer
+    except Exception:
+        return None
+
+
 class PdfMixin:
     @gather_metrics("pdf")
     def pdf(
@@ -49,6 +67,7 @@ class PdfMixin:
         *,
         height: HeightWithoutContent = 500,
         width: WidthWithoutContent = "stretch",
+        key: str | None = None,
     ) -> DeltaGenerator:
         """Display a PDF viewer.
 
@@ -79,70 +98,80 @@ class PdfMixin:
         validate_height(height, allow_content=False)
         validate_width(width, allow_content=False)
 
-        # Compute element ID first, like other elements do
-        element_id = compute_and_register_element_id(
-            "pdf",
-            user_key=None,
-            form_id=current_form_id(self.dg),
-            dg=self.dg,
-            data=str(data) if isinstance(data, (str, Path)) else "binary_data",
-            height=height,
-            width=width,
+        # Check if custom PDF component is available
+        if _is_pdf_component_available():
+            pdf_component = _get_pdf_component()
+            if pdf_component is not None:
+                return self._call_pdf_component(pdf_component, data, height, width, key)
+
+        # Show warning if component is not available
+        return self._show_pdf_warning()
+
+    def _call_pdf_component(
+        self,
+        pdf_component: Any,
+        data: PdfData,
+        height: HeightWithoutContent,
+        width: WidthWithoutContent,
+        key: str | None,
+    ) -> DeltaGenerator:
+        """Call the custom PDF component with the provided data."""
+        # Convert data to the format expected by pdf_viewer component
+        if isinstance(data, (str, Path)):
+            data_str = str(data)
+            if url_util.is_url(data_str, allowed_schemas=("http", "https")):
+                # It's a URL - pass directly
+                file_param = data_str
+            else:
+                # It's a local file path - pass as string, component will handle reading
+                file_param = data_str
+        elif isinstance(data, bytes):
+            # Pass bytes directly
+            file_param = data
+        elif hasattr(data, "read") and hasattr(data, "getvalue"):
+            # Handle BytesIO and similar
+            file_param = data.getvalue()
+        elif hasattr(data, "read"):
+            # Handle other file-like objects
+            file_param = data.read()
+        else:
+            raise ValueError(f"Unsupported data type for PDF: {type(data)}")
+
+        # Convert height and width to appropriate format
+        if height == "stretch":
+            component_height = 600  # Default height when stretch
+        else:
+            component_height = height
+
+        if width == "stretch":
+            component_width = 700  # Default width when stretch
+        else:
+            component_width = width
+
+        # Call the custom component with correct parameter names
+        result = pdf_component(
+            file=file_param,
+            width=component_width,
+            height=component_height,
+            key=key,
         )
+        return cast("DeltaGenerator", result)
 
-        pdf_proto = PdfProto()
-        pdf_proto.id = element_id
+    def _show_pdf_warning(self) -> DeltaGenerator:
+        """Show a warning that the PDF component is not available."""
+        warning_message = """⚠️ **PDF Component Not Available**
 
-        # Create layout config for both width and height
-        layout_config = LayoutConfig(width=width, height=height)
+The PDF viewer requires the `streamlit-pdf-viewer` component to be installed.
 
-        _marshall_pdf(
-            pdf_proto,
-            data,
-        )
+To install it, run:
+```bash
+pip install streamlit[pdf]
+```
 
-        return self.dg._enqueue("pdf", pdf_proto, layout_config=layout_config)
+For more information, see the [Streamlit PDF documentation](https://docs.streamlit.io)."""
+        return self.dg.warning(warning_message)
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-
-def _marshall_pdf(
-    proto: PdfProto,
-    data: PdfData,
-) -> None:
-    """Marshall a PDF protobuf element."""
-
-    # Handle the PDF data
-    if isinstance(data, Path):
-        data = str(data)  # Convert Path to string
-
-    if isinstance(data, str):
-        if url_util.is_url(data, allowed_schemas=("http", "https")):
-            # It's a URL
-            proto.url = data
-        else:
-            # It's a local file path - read and set as file_data
-            try:
-                with open(data, "rb") as f:
-                    file_data = f.read()
-                proto.file_data = file_data
-            except Exception:
-                raise ValueError(
-                    "Could not read PDF file. Please check the URL or the file path."
-                )
-    elif isinstance(data, bytes):
-        # Handle raw bytes - set directly as file_data
-        proto.file_data = data
-    elif hasattr(data, "read") and hasattr(data, "getvalue"):
-        # Handle BytesIO and similar - set as file_data
-        file_data = data.getvalue()
-        proto.file_data = file_data
-    elif hasattr(data, "read"):
-        # Handle other file-like objects (including UploadedFile) - set as file_data
-        file_data = data.read()
-        proto.file_data = file_data
-    else:
-        raise ValueError(f"Unsupported data type for PDF: {type(data)}")

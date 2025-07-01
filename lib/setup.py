@@ -78,7 +78,10 @@ EXTRA_REQUIRES = {
     "snowflake": [
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
-    ]
+    ],
+    "pdf": [
+        "streamlit-pdf-viewer @ file:///Users/smohile/streamlit-pdf-component/component-template/streamlit-pdf-viewer/dist/streamlit_pdf_viewer-0.1.0-py3-none-any.whl",
+    ],
 }
 
 
