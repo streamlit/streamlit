@@ -37,6 +37,7 @@ import {
   createEmotionTheme,
   createTheme,
   CUSTOM_THEME_NAME,
+  ExtendedCustomThemeConfig,
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
@@ -47,7 +48,6 @@ import {
   removeCachedTheme,
   setCachedTheme,
   toThemeInput,
-  ExtendedCustomThemeConfig,
 } from "./utils"
 
 const matchMediaFillers = {
