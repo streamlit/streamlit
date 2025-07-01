@@ -354,6 +354,9 @@ class CachedFunc(Generic[P, R]):
     def clear(self) -> None: ...
 
     @overload
+    def clear(self, *args: P.args, **kwargs: P.kwargs) -> None: ...
+
+    @overload
     def clear(self, *args: Any, **kwargs: Any) -> None: ...
 
     def clear(self, *args: Any, **kwargs: Any) -> None:
