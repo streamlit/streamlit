@@ -16,8 +16,6 @@
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib"
-
 /*
   "ConnectionStatus" styles are used for displaying
   the status of our connection to the server (connected,
@@ -87,13 +85,17 @@ export interface StyledAppRunningIconProps {
 }
 
 export const StyledAppRunningIcon = styled.div<StyledAppRunningIconProps>(
-  ({ isNewYears, theme }: { isNewYears: boolean; theme: EmotionTheme }) => {
+  ({ isNewYears, theme }) => {
     // New years gif has unique styling - regular running man unchanged
     return {
-      opacity: 1,
       width: isNewYears ? "2.2rem" : theme.sizes.appRunningMen,
       height: isNewYears ? "2.2rem" : theme.sizes.appRunningMen,
       marginRight: `-${theme.spacing.sm}`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      transition: "opacity 0.3s ease-in-out",
+      cursor: "wait",
     }
   }
 )

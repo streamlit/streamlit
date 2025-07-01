@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 
 import { useTheme } from "@emotion/react"
 import {
@@ -29,6 +29,8 @@ import {
 import { EmotionTheme } from "@streamlit/lib"
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
 
+import { StyledAppRunningIcon } from "./styled-components"
+
 const icons = [
   { component: AccessibleForward, name: "accessible-forward" },
   { component: AccessibilityNew, name: "accessibility-new" },
@@ -38,69 +40,62 @@ const icons = [
   { component: Rowing, name: "rowing" },
 ]
 
+const isNewYears = (): boolean => {
+  // Test if current date between 12/31 & 1/06
+  const currentDate = new Date()
+  const month = currentDate.getMonth()
+  const date = currentDate.getDate()
+  // Check if Dec 31st
+  if (month === 11 && date === 31) return true
+  // Check if Jan 1st through 6th
+  if (month === 0 && date <= 6) return true
+  return false
+}
+
 type IconRunningProps = {
   size?: number
   speed?: number
   color?: string
-  isNewYears?: boolean
 }
 
-const IconRunning: React.FC<IconRunningProps> = ({
-  speed = 200,
-  isNewYears = false,
-}) => {
+const IconRunning: React.FC<IconRunningProps> = ({ speed = 200 }) => {
   const [index, setIndex] = useState(0)
   const theme = useTheme() as EmotionTheme
+  const isNewYear = useMemo(() => isNewYears(), [])
 
   useEffect(() => {
-    if (!isNewYears) {
+    if (!isNewYear) {
       const interval = setInterval(() => {
         setIndex(prev => (prev + 1) % icons.length)
       }, speed)
       return () => clearInterval(interval)
     }
-  }, [speed, isNewYears])
-
-  if (isNewYears) {
-    return (
-      <img
-        src={newYearsRunning}
-        alt="New Year's Celebration"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-        }}
-      />
-    )
-  }
+  }, [speed, isNewYear])
 
   const currentIcon = icons[index]
   const IconComponent = currentIcon.component
-  const resolvedColor = theme.colors.fadedText60
-  const ariaLabel = `Running ${currentIcon.name} icon`
-  const sizeIcon = theme.sizes.appRunningMen
 
   return (
-    <div
-      style={{
-        width: sizeIcon,
-        height: sizeIcon,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "opacity 0.3s ease-in-out",
-        border: `1px solid ${theme.colors.border}`,
-      }}
-      role="img"
-      aria-label={ariaLabel}
-    >
-      <IconComponent
-        size={sizeIcon}
-        color={resolvedColor}
-        aria-hidden="true"
-      />
-    </div>
+    <StyledAppRunningIcon isNewYears={isNewYear} aria-label="Running...">
+      {isNewYear ? (
+        <img
+          src={newYearsRunning}
+          alt="New Year's Celebration"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+        />
+      ) : (
+        <IconComponent
+          role="img"
+          size={theme.sizes.appRunningMen}
+          color={theme.colors.fadedText60}
+          aria-hidden="true"
+        />
+      )}
+    </StyledAppRunningIcon>
   )
 }
 
