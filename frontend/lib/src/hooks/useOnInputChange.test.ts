@@ -17,6 +17,7 @@
 import { renderHook, waitFor } from "@testing-library/react"
 
 import useOnInPutChange from "./useOnInputChange"
+import useOnInputChange from "./useOnInputChange"
 
 describe("useOnInputChange", () => {
   it("should call the setDirty, setUiValue, setValueWithSource callbacks because its in a form", async () => {
@@ -54,7 +55,7 @@ describe("useOnInputChange", () => {
     const setUiValueCallback = vi.fn()
     const setValueWithSource = vi.fn()
 
-    const { result: onInputChange } = renderHook(() =>
+    const { result: onInPutChange } = renderHook(() =>
       useOnInPutChange({
         formId: undefined,
         maxChars: 0,
@@ -64,7 +65,7 @@ describe("useOnInputChange", () => {
       })
     )
 
-    onInputChange.current({ target: { value: "someValue" } })
+    onInPutChange.current({ target: { value: "someValue" } })
 
     await waitFor(() => {
       expect(setDirtyCallback).toHaveBeenCalledWith(true)
@@ -112,8 +113,8 @@ describe("useOnInputChange", () => {
     const additionalAction1 = vi.fn()
     const additionalAction2 = vi.fn()
 
-    const { result: onInputChange } = renderHook(() =>
-      useOnInputChange({
+    const { result: onInPutChange } = renderHook(() =>
+      useOnInPutChange({
         formId: "someFormId",
         maxChars: 0,
         setDirty: setDirtyCallback,
@@ -123,7 +124,7 @@ describe("useOnInputChange", () => {
       })
     )
 
-    onInputChange.current({ target: { value: "someValue" } })
+    onInPutChange.current({ target: { value: "someValue" } })
 
     await waitFor(() => {
       expect(setDirtyCallback).toHaveBeenCalledWith(true)
