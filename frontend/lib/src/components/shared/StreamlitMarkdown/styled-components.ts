@@ -85,7 +85,7 @@ function getMarkdownHeadingDefinitions(
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
-      fontWeight: Math.max(theme.fontWeights.h1FontWeight + 100, 900),
+      fontWeight: Math.min(theme.fontWeights.h1FontWeight + 100, 900),
     },
     "h2, h3": {
       letterSpacing: "-0.005em",

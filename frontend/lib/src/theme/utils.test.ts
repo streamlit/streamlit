@@ -1556,7 +1556,14 @@ describe("Font weight configuration coverage", () => {
     const { fontWeights: defaultFontWeights } = lightTheme.emotion
 
     // List of font weights that should NOT be affected by baseFontWeight
-    const UNAFFECTED_BY_BASE_WEIGHT = ["headerBold", "headerExtraBold"]
+    const UNAFFECTED_BY_BASE_WEIGHT = [
+      "h1FontWeight",
+      "h2FontWeight",
+      "h3FontWeight",
+      "h4FontWeight",
+      "h5FontWeight",
+      "h6FontWeight",
+    ]
 
     // List of font weights that SHOULD be calculated based on baseFontWeight
     const AFFECTED_BY_BASE_WEIGHT = ["normal", "semiBold", "bold", "extrabold"]
