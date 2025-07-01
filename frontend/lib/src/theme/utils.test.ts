@@ -1508,8 +1508,7 @@ describe("Font weight configuration coverage", () => {
     AFFECTED_BY_BASE_WEIGHT.forEach(weightKey => {
       const typedKey = weightKey as keyof typeof testTheme.fontWeights
       expect(testTheme.fontWeights[typedKey]).not.toBe(
-        defaultFontWeights[typedKey],
-        `Font weight '${weightKey}' should be affected by baseFontWeight but it wasn't changed`
+        defaultFontWeights[typedKey]
       )
     })
 
@@ -1517,8 +1516,7 @@ describe("Font weight configuration coverage", () => {
     UNAFFECTED_BY_BASE_WEIGHT.forEach(weightKey => {
       const typedKey = weightKey as keyof typeof testTheme.fontWeights
       expect(testTheme.fontWeights[typedKey]).toBe(
-        defaultFontWeights[typedKey],
-        `Font weight '${weightKey}' should NOT be affected by baseFontWeight but it was changed`
+        defaultFontWeights[typedKey]
       )
     })
   })
