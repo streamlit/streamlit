@@ -13,7 +13,6 @@
 # limitations under the License.
 
 # mypy: disable-error-code="no-untyped-call"
-# ruff: noqa: ANN201
 
 from __future__ import annotations
 

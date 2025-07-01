@@ -74,10 +74,11 @@ class LayoutsMixin:
             to visually separate its scroll surface from the rest of the app.
 
             .. note::
-                Use containers with scroll sparingly. If you do, try to keep
-                the height small (below 500 pixels). Otherwise, the scroll
-                surface of the container might cover the majority of the screen
-                on mobile devices, which makes it hard to scroll the rest of the app.
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         border : bool or None
             Whether to show a border around the container. If ``None`` (default), a
@@ -159,10 +160,11 @@ class LayoutsMixin:
         block_proto.flex_container.border = border or False
         block_proto.flex_container.wrap = False
 
-        if height:
-            # Activate scrolling container behavior:
+        if isinstance(height, int) or border:
             block_proto.allow_empty = True
 
+        if height:
+            # Activate scrolling container behavior:
             height_config = HeightConfig()
             height_config.pixel_height = height
             # Use block-level height_config instead of flex_container
@@ -205,7 +207,8 @@ class LayoutsMixin:
         examples below.
 
         .. note::
-            We recommend against nesting columns more than once since it might look bad on smaller devices.
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest columns more than once.
 
         Parameters
         ----------
@@ -221,7 +224,16 @@ class LayoutsMixin:
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", "large", or None
-            The size of the gap between the columns. The default is ``"small"``.
+            The size of the gap between the columns. This can be one of the
+            following:
+
+            - ``"small"`` (default): 1rem gap between the columns.
+            - ``"medium"``: 2rem gap between the columns.
+            - ``"large"``: 4rem gap between the columns.
+            - ``None``: No gap between the columns.
+
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
 
         vertical_alignment : "top", "center", or "bottom"
             The vertical alignment of the content inside the columns. The
@@ -422,9 +434,12 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
-        .. warning::
-            All the content of every tab is always sent to and rendered on the frontend.
-            Conditional rendering is currently not supported.
+        .. note::
+            All content within every tab is computed and sent to the frontend,
+            regardless of which tab is selected. Tabs do not currently support
+            conditional rendering. If you have a slow-loading tab, consider
+            using a widget like ``st.segmented_control`` to conditionally
+            render content instead.
 
         Parameters
         ----------
@@ -446,6 +461,16 @@ class LayoutsMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        width : "stretch" or int
+            The width of the tab container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
@@ -536,6 +561,13 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        .. note::
+            All content within the expander is computed and sent to the
+            frontend, even if the expander is closed.
+
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest expanders.
+
         Parameters
         ----------
         label : str
@@ -575,6 +607,16 @@ class LayoutsMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
+        width : "stretch" or int
+            The width of the expander container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Examples
         --------
@@ -625,7 +667,7 @@ class LayoutsMixin:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
-        block_proto.allow_empty = False
+        block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
@@ -655,8 +697,8 @@ class LayoutsMixin:
         notation (preferred) or just call methods directly on the returned object.
         See examples below.
 
-        .. warning::
-            We strongly advise against nesting popovers.
+        .. note::
+            To follow best design practices, don't nest popovers.
 
         Parameters
         ----------
@@ -797,6 +839,13 @@ class LayoutsMixin:
         ``with`` notation, it automatically updates to the "complete" state at the end
         of the "with" block. See examples below for more details.
 
+        .. note::
+            All content within the status container is computed and sent to the
+            frontend, even if the status container is closed.
+
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest status containers.
+
         Parameters
         ----------
         label : str
@@ -825,10 +874,18 @@ class LayoutsMixin:
             shown:
 
             - ``running`` (default): A spinner icon is shown.
-
             - ``complete``: A checkmark icon is shown.
-
             - ``error``: An error icon is shown.
+
+        width : "stretch" or int
+            The width of the status container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------

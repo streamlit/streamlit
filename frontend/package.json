@@ -1,6 +1,6 @@
 {
   "name": "streamlit",
-  "version": "1.45.1",
+  "version": "1.46.1",
   "private": true,
   "workspaces": [
     "app",
@@ -14,7 +14,6 @@
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
     "buildWithProfiler": "yarn workspace @streamlit/app buildWithProfiler",
-    "dev": "concurrently \"yarn workspaces foreach --all --parallel --exclude @streamlit/app --exclude @streamlit/lib run buildWatch\" \"yarn workspace @streamlit/app start\"",
     "test": "vitest run",
     "testWatch": "vitest",
     "testCoverage": "vitest run --coverage"
@@ -34,8 +33,8 @@
   ],
   "packageManager": "yarn@4.5.3",
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.3",
-    "concurrently": "^9.1.2",
-    "vitest": "^3.2.3"
+    "@vitest/coverage-v8": "^3.2.4",
+    "concurrently": "^9.2.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -54,6 +54,7 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import (
     get_cookie_secret,
+    is_tornado_version_less_than,
     is_xsrf_enabled,
     make_url_path_regex,
 )
@@ -69,12 +70,12 @@ _LOGGER: Final = get_logger(__name__)
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
     "compress_response": True,
-    # Ping every 1s to keep WS alive.
-    # 2021.06.22: this value was previously 20s, and was causing
-    # connection instability for a small number of users. This smaller
-    # ping_interval fixes that instability.
-    # https://github.com/streamlit/streamlit/issues/3196
-    "websocket_ping_interval": 1,
+    # Ping every 30s to keep WS alive.
+    # With recent versions of Tornado, this value must be greater than or
+    # equal to websocket_ping_timeout.
+    # For details, see https://github.com/tornadoweb/tornado/pull/3376
+    # For compatibility with older versions of Tornado, we set the value to 1.
+    "websocket_ping_interval": 1 if is_tornado_version_less_than("6.5.0") else 30,
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,

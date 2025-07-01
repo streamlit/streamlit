@@ -305,11 +305,11 @@ class ArrowMixin:
 
             If ``data`` is a ``pandas.Styler``, it will be used to style its
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
-            values and colors. It does not support some of the more exotic
-            styling options, like bar charts, hovering, and captions. For
-            these styling options, use column configuration instead. Text and
-            number formatting from ``column_config`` always takes precedence
-            over text and number formatting from ``pandas.Styler``.
+            values, colors, and font weights. It does not support some of the
+            more exotic styling options, like bar charts, hovering, and
+            captions. For these styling options, use column configuration
+            instead. Text and number formatting from ``column_config`` always
+            takes precedence over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -645,7 +645,7 @@ class ArrowMixin:
                 value_type="string_value",
             )
             self.dg._enqueue("arrow_data_frame", proto)
-            return cast("DataframeState", widget_state.value)
+            return widget_state.value
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")

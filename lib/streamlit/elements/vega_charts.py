@@ -2001,7 +2001,7 @@ class VegaChartsMixin:
                 vega_lite_proto,
                 add_rows_metadata=add_rows_metadata,
             )
-            return cast("VegaLiteState", widget_state.value)
+            return widget_state.value
         # If its not used with selections activated, just return
         # the delta generator related to this element.
         return self.dg._enqueue(

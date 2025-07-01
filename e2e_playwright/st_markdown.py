@@ -24,7 +24,7 @@ st.markdown(
 st.markdown("This <b>HTML tag</b> is escaped!")
 
 st.markdown(
-    ":streamlit: :material/info: This <b>HTML tag</b> is :red[not] escaped!",
+    ":streamlit: :material/info: This <b>HTML tag</b> `is` :red[not] escaped!",
     unsafe_allow_html=True,
 )
 
@@ -176,7 +176,7 @@ with st.container(key="latex_elements"):
         import sympy
 
         a, b = sympy.symbols("a b")
-        out = a + b  # type: ignore[operator]
+        out = a + b
     except Exception:
         out = "a + b"
 

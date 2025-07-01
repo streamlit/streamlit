@@ -21,6 +21,7 @@ export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInSidebarOrDialog: boolean
   isLabel?: boolean
+  inheritFont?: boolean
   boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
@@ -35,7 +36,7 @@ function sharedMarkdownStyle(theme: Theme): any {
   return {
     a: {
       color: theme.colors.link,
-      textDecoration: "underline",
+      textDecoration: theme.linkUnderline ? "underline" : "none",
     },
   }
 }
@@ -69,7 +70,8 @@ function getMarkdownHeadingDefinitions(
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
-      fontWeight: theme.fontWeights.bold,
+      // Bold used for headers separate
+      fontWeight: theme.fontWeights.headerBold,
       lineHeight: theme.lineHeights.headings,
       margin: 0,
       color: "inherit",
@@ -82,12 +84,12 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: useSmallerHeadings
-        ? theme.fontWeights.bold
-        : theme.fontWeights.extrabold,
+        ? theme.fontWeights.headerBold
+        : theme.fontWeights.headerExtraBold,
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
-      fontWeight: theme.fontWeights.extrabold,
+      fontWeight: theme.fontWeights.headerExtraBold,
     },
     "h2, h3": {
       letterSpacing: "-0.005em",
@@ -147,6 +149,7 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInSidebarOrDialog,
       isLabel,
+      inheritFont,
       boldLabel,
       largerLabel,
       isToast,
@@ -157,8 +160,12 @@ export const StyledStreamlitMarkdown =
         (isLabel && !largerLabel) || isToast || isCaption
 
       return {
-        fontFamily: theme.genericFonts.bodyFont,
-        fontSize: useSmallerFontSize ? theme.fontSizes.sm : theme.fontSizes.md,
+        fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
+        fontSize: inheritFont
+          ? "inherit"
+          : useSmallerFontSize
+            ? theme.fontSizes.sm
+            : theme.fontSizes.md,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
@@ -178,7 +185,11 @@ export const StyledStreamlitMarkdown =
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? theme.spacing.none : "",
-          fontWeight: boldLabel ? theme.fontWeights.bold : "",
+          fontWeight: inheritFont
+            ? "inherit"
+            : boldLabel
+              ? theme.fontWeights.bold
+              : "",
           marginTop: theme.spacing.none,
           marginLeft: theme.spacing.none,
           marginRight: theme.spacing.none,
@@ -248,6 +259,8 @@ export const StyledStreamlitMarkdown =
         },
 
         th: {
+          // TODO: check whether this should be adjusted
+          // defaults to font-weight: "bold" (700)
           textAlign: "inherit",
         },
 

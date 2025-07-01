@@ -39,7 +39,7 @@ st.header("Pandas Styler: Background color")
 
 
 def highlight_first(value: float) -> str:
-    return "background-color: yellow" if value == 0 else ""
+    return "background-color: yellow;" if value == 0 else ""
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
@@ -64,7 +64,9 @@ styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
 )
 
 styled_df.apply(
-    highlight_max, props="color:white;background-color:rgb(255, 0, 0)", axis=0
+    highlight_max,
+    props="color:white;background-color:rgb(255, 0, 0);font-weight:800;",
+    axis=0,
 )
 
 styled_df.apply(

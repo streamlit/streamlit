@@ -3395,13 +3395,6 @@ describe("App", () => {
               label: "Print",
               type: "option",
             },
-            {
-              type: "separator",
-            },
-            {
-              label: "About",
-              type: "option",
-            },
           ],
         ])
 
@@ -3434,10 +3427,6 @@ describe("App", () => {
             },
             {
               label: "Fork this App",
-              type: "option",
-            },
-            {
-              label: "About",
               type: "option",
             },
           ],

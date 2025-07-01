@@ -19,6 +19,8 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -34,8 +36,9 @@ import {
   Profiler,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { IAppPage, Logo, Navigation, PageConfig } from "@streamlit/protobuf"
+import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
+import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
 import { TopNav } from "@streamlit/app/src/components/Navigation"
@@ -194,24 +197,42 @@ function AppView(props: AppViewProps): ReactElement {
       widgetMgr={widgetMgr}
       widgetsDisabled={widgetsDisabled}
       uploadClient={uploadClient}
+      height="auto"
     />
   )
 
-  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(
-    () =>
-      initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-      (initialSidebarState === PageConfig.SidebarState.AUTO &&
-        window.innerWidth <= parseInt(activeTheme.emotion.breakpoints.md, 10))
+  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() =>
+    shouldCollapse(
+      initialSidebarState,
+      parseInt(activeTheme.emotion.breakpoints.md, 10)
+    )
   )
 
-  // sometimes the initialSidebarState is not updated until after the script runs with a set_page_config
+  const hasInitializedWidthRef = useRef(false)
+
+  // Initialize sidebar state once after stable width is achieved
+  useLayoutEffect(() => {
+    if (!hasInitializedWidthRef.current && window.innerWidth > 0) {
+      setSidebarIsCollapsed(
+        shouldCollapse(
+          initialSidebarState,
+          parseInt(activeTheme.emotion.breakpoints.md, 10)
+        )
+      )
+      hasInitializedWidthRef.current = true
+    }
+  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
+
+  // Handle updates to initialSidebarState after set_page_config
   useEffect(() => {
-    setSidebarIsCollapsed(
-      initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-        (initialSidebarState === PageConfig.SidebarState.AUTO &&
-          window.innerWidth <=
-            parseInt(activeTheme.emotion.breakpoints.md, 10))
-    )
+    if (hasInitializedWidthRef.current) {
+      setSidebarIsCollapsed(
+        shouldCollapse(
+          initialSidebarState,
+          parseInt(activeTheme.emotion.breakpoints.md, 10)
+        )
+      )
+    }
   }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
 
   const toggleSidebar = useCallback(() => {

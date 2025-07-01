@@ -39,7 +39,8 @@ export const StyledDocContainer = styled.span(({ theme }) => ({
   borderRadius: theme.radii.default,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.codeFontSize,
+  fontWeight: theme.fontWeights.code,
 }))
 
 export const StyledDocHeader = styled.div(({ theme }) => ({
@@ -50,7 +51,7 @@ export const StyledDocHeader = styled.div(({ theme }) => ({
   // color from bleeding into the surrounding area.
   borderTopLeftRadius: theme.radii.default,
   borderTopRightRadius: theme.radii.default,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.codeFontSize,
   overflow: "auto",
 }))
 
@@ -59,7 +60,7 @@ export const StyledDocString = styled.div(({ theme }) => ({
   overflow: "auto",
   maxHeight: "30.5rem", // The extra 0.5rem is to show a little of the overflowing line.
   padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.codeFontSize,
 
   "&:not(:last-child)": {
     borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -68,7 +69,7 @@ export const StyledDocString = styled.div(({ theme }) => ({
 
 export const StyledMembersTable = styled.table(({ theme }) => ({
   width: "100%",
-  fontSize: theme.fontSizes.twoSm,
+  fontSize: theme.fontSizes.codeFontSize,
   backgroundColor: transparentize(theme.colors.secondaryBg, 0.6),
   tableLayout: "fixed", // Fix table to container's boundaries.
   borderCollapse: "collapse",

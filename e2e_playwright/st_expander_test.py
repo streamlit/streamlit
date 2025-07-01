@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 13
+NUMBER_OF_EXPANDERS: Final = 14
 
 
 def test_expander_displays_correctly(
@@ -76,9 +76,12 @@ def test_expander_collapses_and_expands(app: Page):
     expect(toggle).to_be_visible()
 
 
-def test_empty_expander_not_rendered(app: Page):
-    """Test that an empty expander is not rendered."""
-    expect(app.get_by_text("Empty expander")).not_to_be_attached()
+def test_empty_expander_rendered(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that an empty expander is rendered."""
+    empty_expander = app.get_by_test_id("stExpander").nth(13)
+    expect(empty_expander).to_be_visible()
+
+    assert_snapshot(empty_expander, name="st_expander-empty")
 
 
 def test_expander_session_state_set(app: Page):

@@ -28,7 +28,7 @@ def test_desktop_top_nav(app: Page):
 
     # The top nav is rendered using rc-overflow component
     # Check that navigation links exist and are visible
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links).to_have_count(3)  # 3 pages
 
     # Verify no sidebar is visible
@@ -83,7 +83,7 @@ def test_overflow_behavior(app: Page):
     app.set_viewport_size({"width": 800, "height": 600})
 
     # Verify we have 5 nav links total
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links).to_have_count(5)
 
     # Note: Due to our mock of rc-overflow in the JS tests, all links will be visible
@@ -137,7 +137,7 @@ def test_hidden_navigation_mode(app: Page):
     expect(app.get_by_test_id("stSidebar")).not_to_be_visible()
 
     # No nav links should be visible
-    expect(app.get_by_test_id("stSidebarNavLink")).not_to_be_visible()
+    expect(app.get_by_test_id("stTopNavLink")).not_to_be_visible()
 
     # Only first page content should be visible - check header
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 1")).to_be_visible()
@@ -166,7 +166,7 @@ def test_switching_navigation_modes(app: Page):
 
     # Verify switched to top nav - sidebar hidden, nav links visible at top
     expect(app.get_by_test_id("stSidebar")).not_to_be_visible()
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links).to_have_count(3)
     expect(nav_links.first).to_be_visible()
 
@@ -186,7 +186,7 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     wait_for_app_run(app)
 
     # Wait for app to stabilize
-    nav_links = app.get_by_test_id("stSidebarNavLink")
+    nav_links = app.get_by_test_id("stTopNavLink")
     expect(nav_links.first).to_be_visible()
 
     # Take screenshot of the navigation area
@@ -210,3 +210,79 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     popover = app.get_by_test_id("stTopNavSection").filter(has_text="Page 1")
     expect(popover).to_be_visible()
     assert_snapshot(popover, name="st_navigation-top_nav_section_popover")
+
+
+def test_mobile_sidebar_overlay_visual(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Visual regression test for mobile sidebar overlay behavior."""
+    # Set mobile viewport
+    app.set_viewport_size({"width": 375, "height": 667})
+
+    wait_for_app_run(app)
+
+    # Verify sidebar is visible on mobile
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    # Verify navigation has moved into the sidebar
+    nav_links = app.get_by_test_id("stSidebarNavLink")
+    expect(nav_links).to_have_count(3)
+    expect(nav_links.first).to_be_visible()
+
+    # Take screenshot showing sidebar overlaying content
+    # Capture the entire viewport to show overlay effect
+    assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_expanded")
+
+    # Test collapsed sidebar state
+    # Click the close button to collapse sidebar
+    close_button = app.get_by_test_id("stSidebarCollapseButton")
+    close_button.click()
+
+    # Wait for sidebar to collapse
+    # The sidebar aria-expanded attribute should be false
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
+
+    # Take screenshot of collapsed state showing more content visible
+    assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_collapsed")
+
+    # Test navigation interaction
+    # Expand sidebar again using the expand button in the header
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expand_button.click()
+
+    # Wait for sidebar to expand
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(nav_links.first).to_be_visible()
+
+    # Navigate to a different page
+    nav_links.nth(1).click()
+    wait_for_app_run(app)
+
+    # Verify navigation worked and content updated behind sidebar
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 2")).to_be_visible()
+
+    # Take screenshot showing different page content with sidebar overlay
+    assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_page2")
+
+    # Test with sections enabled on mobile
+    # First collapse sidebar to access the checkbox
+    close_button = app.get_by_test_id("stSidebarCollapseButton")
+    close_button.click()
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
+
+    # Now click the Test Sections checkbox
+    click_checkbox(app, "Test Sections")
+    wait_for_app_run(app)
+
+    # Expand sidebar to see sections
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expand_button.click()
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+    # Verify sections are rendered in sidebar on mobile
+    section_a = app.get_by_text("Section A").first
+    expect(section_a).to_be_visible()
+
+    # Take screenshot of sections in mobile sidebar
+    assert_snapshot(sidebar, name="st_navigation-mobile_sidebar_sections")

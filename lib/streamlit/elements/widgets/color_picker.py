@@ -142,10 +142,19 @@ class ColorPickerMixin:
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
-        width : int or "stretch" or "content"
-            The width of the color picker. Can be an integer (pixels),
-            "stretch" to use the full width of the container, or "content"
-            (default) to size based on the content.
+        width : "content", "stretch", or int
+            The width of the color picker widget. This can be one of the
+            following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
