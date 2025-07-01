@@ -105,6 +105,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // the tooltip element is drawn outside of this component.
   return (
     <StyledToolbarElementContainer
+      height={height}
       useContainerWidth={element.useContainerWidth}
     >
       <Toolbar
