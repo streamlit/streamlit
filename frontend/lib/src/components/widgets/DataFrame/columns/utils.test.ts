@@ -413,7 +413,7 @@ describe("formatNumber", () => {
     // localized
     [10.12345, "localized", 2, "10.12"],
     [10, "localized", 3, "10.000"],
-    // percent
+    // percent - the max precision is applied to the raw valu:
     [0.12345, "percent", 3, "12.3%"],
     [0.12345, "percent", 4, "12.35%"],
     [0.123, "percent", 5, "12.300%"],
