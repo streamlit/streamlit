@@ -65,12 +65,12 @@ const IconRunning: React.FC = () => {
   const isNewYear = useMemo(() => isNewYears(), [])
 
   useEffect(() => {
-    if (!isNewYear) {
-      const interval = setInterval(() => {
-        setIndex(prev => (prev + 1) % icons.length)
-      }, DEFAULT_SPEED)
-      return () => clearInterval(interval)
-    }
+    if (isNewYear) return
+
+    const interval = setInterval(() => {
+      setIndex(prev => (prev + 1) % icons.length)
+    }, DEFAULT_SPEED)
+    return () => clearInterval(interval)
   }, [isNewYear])
 
   const currentIcon = icons[index]
