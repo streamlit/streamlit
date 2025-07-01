@@ -160,11 +160,13 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
         hash_funcs: HashFuncsDict | None = None,
+        show_time: bool = False,
     ) -> None:
         super().__init__(
             func,
-            show_spinner=show_spinner,
             hash_funcs=hash_funcs,
+            show_spinner=show_spinner,
+            show_time=show_time,
         )
         self.max_entries = max_entries
         self.ttl = ttl
@@ -246,6 +248,7 @@ class CacheResourceAPI:
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
@@ -258,6 +261,7 @@ class CacheResourceAPI:
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
@@ -267,6 +271,7 @@ class CacheResourceAPI:
             ttl=ttl,
             max_entries=max_entries,
             show_spinner=show_spinner,
+            show_time=show_time,
             validate=validate,
             experimental_allow_widgets=experimental_allow_widgets,
             hash_funcs=hash_funcs,
@@ -279,6 +284,7 @@ class CacheResourceAPI:
         ttl: float | timedelta | str | None,
         max_entries: int | None,
         show_spinner: bool | str,
+        show_time: bool = False,
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
@@ -330,6 +336,12 @@ class CacheResourceAPI:
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached resource is being created. If string,
             value of show_spinner param will be used for spinner text.
+
+        show_time : bool
+            Whether to show the elapsed time next to the spinner text. If this is
+            ``False`` (default), no time is displayed. If this is ``True``,
+            elapsed time is displayed with a precision of 0.1 seconds. The time
+            format is not configurable.
 
         validate : callable or None
             An optional validation function for cached data. ``validate`` is called
@@ -448,6 +460,7 @@ class CacheResourceAPI:
                 CachedResourceFuncInfo(
                     func=f,  # type: ignore
                     show_spinner=show_spinner,
+                    show_time=show_time,
                     max_entries=max_entries,
                     ttl=ttl,
                     validate=validate,
@@ -459,6 +472,7 @@ class CacheResourceAPI:
             CachedResourceFuncInfo(
                 func=cast("types.FunctionType", func),
                 show_spinner=show_spinner,
+                show_time=show_time,
                 max_entries=max_entries,
                 ttl=ttl,
                 validate=validate,
