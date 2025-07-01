@@ -35,6 +35,19 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
+function isFacetChart(spec: any): boolean {
+  // Check for top-level facet property
+  if ("facet" in spec) return true
+  // Check for row/column encoding
+  if (
+    spec.encoding &&
+    (spec.encoding.row !== undefined || spec.encoding.column !== undefined)
+  ) {
+    return true
+  }
+  return false
+}
+
 export interface Props {
   element: VegaLiteChartElement
   widgetMgr: WidgetStateManager
@@ -77,6 +90,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
     fragmentId
   )
 
+  // Facet charts need the container element to have a width.
+  // We want to target this styling to facet charts since it
+  // causes the toolbar to be on the far right.
+  const isFacet = isFacetChart(element.spec)
+
   const { data, datasets, spec } = element
 
   // Create the view once the container is ready and re-create
@@ -106,7 +124,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   return (
     <StyledToolbarElementContainer
       height={height}
-      useContainerWidth={element.useContainerWidth}
+      useContainerWidth={element.useContainerWidth || isFacet}
     >
       <Toolbar
         target={StyledToolbarElementContainer}
@@ -119,7 +137,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
         className="stVegaLiteChart"
-        useContainerWidth={element.useContainerWidth}
+        useContainerWidth={element.useContainerWidth || isFacet}
         isFullScreen={isFullScreen}
         ref={containerRef}
       />
