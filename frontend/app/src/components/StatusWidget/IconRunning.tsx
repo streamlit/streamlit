@@ -52,11 +52,14 @@ const isNewYears = (): boolean => {
   return false
 }
 
-type IconRunningProps = {
-  speed?: number
-}
+// 200ms is the default transition time for the running man icon
+const DEFAULT_SPEED = 200
 
-const IconRunning: React.FC<IconRunningProps> = ({ speed = 200 }) => {
+/**
+ * The running indicator icon, either the default running man or the new year's
+ * fireworks.
+ */
+const IconRunning: React.FC = () => {
   const [index, setIndex] = useState(0)
   const theme = useTheme() as EmotionTheme
   const isNewYear = useMemo(() => isNewYears(), [])
@@ -65,10 +68,10 @@ const IconRunning: React.FC<IconRunningProps> = ({ speed = 200 }) => {
     if (!isNewYear) {
       const interval = setInterval(() => {
         setIndex(prev => (prev + 1) % icons.length)
-      }, speed)
+      }, DEFAULT_SPEED)
       return () => clearInterval(interval)
     }
-  }, [speed, isNewYear])
+  }, [isNewYear])
 
   const currentIcon = icons[index]
   const IconComponent = currentIcon.component
