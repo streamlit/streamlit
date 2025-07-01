@@ -49,6 +49,7 @@ export const fontSizes = {
 
 export const fontWeights = {
   normal: 400,
+  semiBold: 500,
   bold: 600,
   extrabold: 700,
   // codeFontWeight separately configurable

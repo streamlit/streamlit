@@ -50,6 +50,15 @@ import {
 } from "./getColors"
 import { fonts } from "./primitives/typography"
 
+// Extended theme config type to include properties not in the protobuf definition
+export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
+  baseFontWeight?: number | null
+  codeFontSize?: string | number | null
+  codeFontWeight?: number | null
+  linkUnderline?: boolean | null
+  chartCategoricalColors?: string[] | null
+}
+
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
 
@@ -313,6 +322,8 @@ const setFontWeights = (
     // Set each of the font weights based on the base weight provided
     // The provided baseFontWeight sets the normal weight
     fontWeightOverrides.normal = baseFontWeight
+    // The semiBold weight is set to the baseFontWeight + 100
+    fontWeightOverrides.semiBold = baseFontWeight + 100
     // The bold weight is set to the baseFontWeight + 200
     fontWeightOverrides.bold = baseFontWeight + 200
     // The extrabold weight is set to the baseFontWeight + 300
@@ -367,7 +378,7 @@ const validateCategoricalColors = (colors: string[]): string[] => {
 }
 
 export const createEmotionTheme = (
-  themeInput: Partial<ICustomThemeConfig>,
+  themeInput: ExtendedCustomThemeConfig,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
