@@ -74,7 +74,11 @@ const IconRunning: React.FC<IconRunningProps> = ({ speed = 200 }) => {
   const IconComponent = currentIcon.component
 
   return (
-    <StyledAppRunningIcon isNewYears={isNewYear} aria-label="Running...">
+    <StyledAppRunningIcon
+      isNewYears={isNewYear}
+      role="img"
+      aria-label="Running..."
+    >
       {isNewYear ? (
         <img
           src={newYearsRunning}
@@ -87,7 +91,6 @@ const IconRunning: React.FC<IconRunningProps> = ({ speed = 200 }) => {
         />
       ) : (
         <IconComponent
-          role="img"
           size={theme.sizes.appRunningMen}
           color={theme.colors.fadedText60}
           aria-hidden="true"
