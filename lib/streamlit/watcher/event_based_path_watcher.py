@@ -373,6 +373,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         if isinstance(changed_path, bytes):  # type: ignore[unreachable, unused-ignore]
             changed_path = changed_path.decode("utf-8")  # type: ignore[unreachable, unused-ignore]
 
+        if changed_path.endswith("~"):
+            # Files ending with ~ are typically backup files created by editors.
+            _LOGGER.debug("Ignoring editor backup file: %s", changed_path)
+            return
+
         abs_changed_path = os.path.realpath(changed_path)
 
         # To prevent a race condition, we hold a lock while accessing
@@ -418,18 +423,26 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         changed_path_info.modification_time = modification_time
 
-        new_md5 = util.calc_md5_with_blocking_retries(
-            abs_changed_path,
-            glob_pattern=changed_path_info.glob_pattern,
-            allow_nonexistent=changed_path_info.allow_nonexistent,
-        )
-        if new_md5 == changed_path_info.md5:
-            _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
-            return
+        try:
+            new_md5 = util.calc_md5_with_blocking_retries(
+                abs_changed_path,
+                glob_pattern=changed_path_info.glob_pattern,
+                allow_nonexistent=changed_path_info.allow_nonexistent,
+            )
+            if new_md5 == changed_path_info.md5:
+                _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
+                return
 
-        _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
-        changed_path_info.md5 = new_md5
-        changed_path_info.on_changed.send(abs_changed_path)
+            _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
+            changed_path_info.md5 = new_md5
+            changed_path_info.on_changed.send(abs_changed_path)
+        except Exception as e:
+            _LOGGER.debug(
+                "Ignoring file change. Failed to calculate MD5 for path %s: %s",
+                abs_changed_path,
+                e,
+            )
+            return
 
     def on_created(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)

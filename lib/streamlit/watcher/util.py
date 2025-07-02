@@ -170,15 +170,17 @@ def _do_with_retries(
             file_path, # For pretty error message.
         )
     """
-    for i in _retry_dance():
+    last_exception: Exception | None = None
+    for _ in _retry_dance():
         try:
             return orig_fn()
-        except exceptions:  # noqa: PERF203
-            if i >= _MAX_RETRIES - 1:
-                raise
-            # Continue with loop to either retry or raise MaxRetriesError.
+        except exceptions as e:  # noqa: PERF203
+            last_exception = e
+            # Continue with the loop to either retry or raise MaxRetriesError.
 
-    raise MaxRetriesError(f"Unable to access file or folder: {path}")
+    raise MaxRetriesError(
+        f"Unable to access file or folder: {path}"
+    ) from last_exception
 
 
 def _retry_dance() -> Generator[int, None, None]:
