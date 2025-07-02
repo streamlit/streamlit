@@ -36,11 +36,11 @@ help:
 	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")),c}1{c=0}' Makefile | column -s: -t
 
 .PHONY: all
-# Get dependencies, build frontend, install Streamlit into Python environment.
+# Install all dependencies, build frontend, and install editable Streamlit.
 all: init frontend
 
 .PHONY: all-dev
-# Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
+# Install all dependencies and editable Streamlit, but do not build the frontend.
 all-dev: init
 	pre-commit install
 	@echo ""
@@ -51,11 +51,11 @@ all-dev: init
 	@echo ""
 
 .PHONY: init
-# Installs all Python & JS dependencies and builds protobuf.
+# Install all dependencies and build protobufs.
 init: python-init frontend-init protobuf
 
 .PHONY: python-init
-# Install python dependencies and Streamlit as editable dependency.
+# Install Python dependencies and Streamlit in editable mode.
 python-init:
 	pip_args=("--editable" "./lib");\
 	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
@@ -76,7 +76,7 @@ python-init:
 	fi;
 
 .PHONY: python-lint
-# Verify that our Python files are properly formatted and that there are no lint errors.
+# Lint and check formatting of Python files.
 python-lint:
 	# Checks if the formatting is correct:
 	ruff format --check
@@ -84,7 +84,7 @@ python-lint:
 	ruff check
 
 .PHONY: python-format
-# Fix Python files that are not properly formatted.
+# Format Python files.
 python-format:
 	# Sort imports ( see https://docs.astral.sh/ruff/formatter/#sorting-imports )
 	ruff check --select I --fix
@@ -101,7 +101,7 @@ python-tests:
 			tests/
 
 .PHONY: python-performance-tests
-# Run Python benchmark tests
+# Run Python performance tests.
 python-performance-tests:
 	cd lib; \
 		PYTHONPATH=. \
@@ -112,7 +112,7 @@ python-performance-tests:
 			tests/
 
 .PHONY: python-integration-tests
-# Run Python integration tests. This requires the integration-requirements to be installed.
+# Run Python integration tests. Requires integration-requirements to be installed.
 python-integration-tests:
 	cd lib; \
 		PYTHONPATH=. \
@@ -121,30 +121,30 @@ python-integration-tests:
 			tests/
 
 .PHONY: python-types
-# Run Python type checkers.
+# Run the Python type checker.
 python-types:
 	mypy --config-file=mypy.ini
 
 .PHONY: bare-execution-tests
-# Run all our e2e tests in "bare" mode and check for non-zero exit codes.
+# Run all e2e tests in bare mode.
 bare-execution-tests:
 	PYTHONPATH=. \
 	python3 scripts/run_bare_execution_tests.py
 
 .PHONY: cli-smoke-tests
-# Verify that CLI boots as expected when called with `python -m streamlit`.
+# Run CLI smoke tests.
 cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
 .PHONY: package
-# Build lib and frontend, and create Python distribution files in dist/.
+# Create Python wheel files in dist/.
 package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
 	cd lib ; python3 setup.py bdist_wheel sdist
 
 .PHONY: conda-package
-# Build lib and (maybe) frontend assets, and then create conda distribution files.
+# Create conda distribution files.
 conda-package: init
 	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
 		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
@@ -230,7 +230,7 @@ frontend-init:
 	}
 
 .PHONY: frontend
-# Build frontend into static files.
+# Build the frontend.
 frontend:
 	cd frontend/ ; yarn workspaces foreach --all --topological run build
 	rsync -av --delete --delete-excluded --exclude=reports \
@@ -241,7 +241,7 @@ frontend:
 
 
 .PHONY: frontend-dependencies
-# Build frontend dependent libraries (excluding app and lib)
+# Build frontend dependent libraries (excluding app and lib).
 frontend-dependencies:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
 
@@ -253,41 +253,37 @@ frontend-with-profiler: frontend-dependencies
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-fast
-# Build the frontend (as fast as possible)
+# Build the frontend (as fast as possible).
 frontend-fast:
 	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/app --exclude @streamlit/lib run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-dev
-# Start the frontend dev server.
+# Start the frontend development server.
 frontend-dev:
 	cd frontend/ ; yarn start
 
-.PHONY: frontend-lib
-# Build the frontend library.
-frontend-lib:
-	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
 
 .PHONY: frontend-lint
-# Verify that our JS/TS code is formatted and that there are no lint errors.
+# Lint and check formatting of frontend files.
 frontend-lint:
 	cd frontend/ ; yarn workspaces foreach --all run formatCheck
 	cd frontend/ ; yarn workspaces foreach --all run lint
 
 .PHONY: frontend-types
-# Typecheck the JS/TS code.
+# Run the frontend type checker.
 frontend-types:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
 	cd frontend/ ; yarn workspaces foreach --all run typecheck
 
 .PHONY: frontend-format
-# Fix formatting issues in our JavaScript & TypeScript files.
+# Format frontend files.
 frontend-format:
 	cd frontend/ ; yarn workspaces foreach --all run format
 
 .PHONY: frontend-tests
-# Run JS unit tests and generate a coverage report.
+# Run frontend unit tests and generate coverage report.
 frontend-tests:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
@@ -297,12 +293,12 @@ update-snapshots:
 	python ./scripts/update_e2e_snapshots.py
 
 .PHONY: update-snapshots-changed
-# Update e2e playwright snapshots of changed files based on the latest completed CI run.
+# Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
 update-snapshots-changed:
 	python ./scripts/update_e2e_snapshots.py --changed
 
 .PHONY: update-material-icons
-# Update material icon names and font file based on latest google material symbol rounded font version.
+# Update material icons based on latest Google material symbol version.
 update-material-icons:
 	python ./scripts/update_material_icon_font_and_names.py
 
@@ -322,13 +318,13 @@ update-notices:
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
 
 .PHONY: update-headers
-# Update the license header on all source files.
+# Update all license headers.
 update-headers:
 	pre-commit run insert-license --all-files --hook-stage manual
 	pre-commit run license-headers --all-files --hook-stage manual
 
 .PHONY: update-min-deps
-# Write the minimum versions of our dependencies to a constraints file.
+# Update minimum dependency constraints file.
 update-min-deps:
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
 	python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
@@ -341,7 +337,7 @@ lighthouse-tests:
 	yarn run lighthouse:run
 
 .PHONY: debug-e2e-test
-# Run an e2e playwright test in debug mode with Playwright Inspector. Use it via make debug-e2e-test st_command_test.py
+# Run a playwright e2e test in debug mode. Use it via make debug-e2e-test st_command_test.py,
 debug-e2e-test:
 	@if [[ ! "$(filter-out $@,$(MAKECMDGOALS))" == *"_test"* ]]; then \
 		echo "Error: Test script name must contain '_test' in the filename"; \
@@ -356,7 +352,7 @@ debug-e2e-test:
 	)
 
 .PHONY: run-e2e-test
-# Run an e2e playwright test. Use it via make run-e2e-test st_command_test.py
+# Run a playwright e2e test. Use it via make run-e2e-test st_command_test.py.
 run-e2e-test:
 	@if [[ ! "$(filter-out $@,$(MAKECMDGOALS))" == *"_test"* ]]; then \
 		echo "Error: Test script name must contain '_test' in the filename"; \
@@ -386,8 +382,7 @@ autofix:
 	pre-commit run --all-files --hook-stage manual || true
 
 .PHONY: frontend-typesync
-# Run typesync in each frontend workspace to check for unsynced types.
-# If types are unsynced, print a message and exit with a non-zero exit code.
+# Check for unsynced frontend types.
 frontend-typesync:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync:ci --dry=fail || (\
 		echo -e "\033[0;31mTypesync check failed. Run 'make update-frontend-typesync' to fix.\033[0m"; \
