@@ -51,6 +51,7 @@ def test_range_date_calendar_picker_rendering(
     """Test that the range calendar picker renders correctly via screenshots matching."""
     date_input = themed_app.get_by_test_id("stDateInput").first
     expect(date_input).to_be_visible()
+    date_input.scroll_into_view_if_needed()
     date_input.click()
 
     calendar_popover = themed_app.locator('[data-baseweb="calendar"]').first
