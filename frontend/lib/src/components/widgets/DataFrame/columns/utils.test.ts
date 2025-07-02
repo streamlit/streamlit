@@ -308,10 +308,12 @@ describe("formatNumber", () => {
     [-1234.456789, "plain", "-1234.456789"],
     [0.00000001, "plain", "0.00000001"],
     // dollar
+    [10, "dollar", "$10.00"],
     [10.123, "dollar", "$10.12"],
     [-1234.456789, "dollar", "-$1,234.46"],
     [0.00000001, "dollar", "$0.00"],
     // euro
+    [10, "euro", "€10.00"],
     [10.123, "euro", "€10.12"],
     [-1234.456789, "euro", "-€1,234.46"],
     [0.00000001, "euro", "€0.00"],
@@ -401,6 +403,51 @@ describe("formatNumber", () => {
       expect(() => {
         formatNumber(input, format)
       }).toThrow()
+    }
+  )
+
+  it.each([
+    // No format (default)
+    [10.123, undefined, 2, "10.12"],
+    [10.123, undefined, 5, "10.12300"],
+    // localized
+    [10.12345, "localized", undefined, "10.123"],
+    [10.12345, "localized", 2, "10.12"],
+    [10, "localized", 3, "10.000"],
+    // percent - the max precision is applied to the raw value:
+    [0.12345, "percent", undefined, "12.35%"],
+    [0.12345, "percent", 3, "12.3%"],
+    [0.12345, "percent", 4, "12.35%"],
+    [0.123, "percent", 5, "12.300%"],
+    [0.123, "percent", 0, "12%"],
+    // dollar
+    [10.129, "dollar", undefined, "$10.13"],
+    [10.129, "dollar", 2, "$10.13"],
+    [10.129, "dollar", 0, "$10"],
+    [10, "dollar", 3, "$10.000"],
+    // euro
+    [10.129, "euro", undefined, "€10.13"],
+    [10.129, "euro", 2, "€10.13"],
+    [10.129, "euro", 0, "€10"],
+    [10, "euro", 3, "€10.000"],
+    // yen
+    [10.129, "yen", undefined, "¥10"],
+    [10.129, "yen", 0, "¥10"],
+    [10.129, "yen", 2, "¥10.13"],
+    // bytes - doesn't impact bytes:
+    [10.129, "bytes", undefined, "10.1B"],
+    [10.129, "bytes", 2, "10.1B"],
+    [10.129, "bytes", 0, "10.1B"],
+    // accounting
+    [-10.129, "accounting", undefined, "(10.13)"],
+    [-10.129, "accounting", 2, "(10.13)"],
+    [-10.129, "accounting", 1, "(10.1)"],
+    [1000, "accounting", 0, "1,000"],
+    [-10, "accounting", 3, "(10.000)"],
+  ])(
+    "formats %s with format %s and maxPrecision %d to '%s'",
+    (value, format, maxPrecision, expected) => {
+      expect(formatNumber(value, format, maxPrecision)).toEqual(expected)
     }
   )
 })

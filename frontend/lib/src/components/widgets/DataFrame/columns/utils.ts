@@ -544,8 +544,8 @@ function formatIntlNumberWithLocales(
  * Formats the given number to a string based on a provided format or the default format.
  *
  * @param format - The format to use. If not provided, the default format is used.
- * @param maxPrecision - The maximum number of decimals to show. This is only used by the default format.
- *                     If not provided, the default is 4 decimals and trailing zeros are hidden.
+ * @param maxPrecision - The maximum number of decimals to show. If not provided,
+ *                     a reasonable default is used based on the configured format.
  *
  * @returns The formatted number as a string.
  */
@@ -590,42 +590,54 @@ export function formatNumber(
       trimMantissa: true,
     })
   } else if (format === "localized") {
-    return formatIntlNumberWithLocales(value)
+    return formatIntlNumberWithLocales(value, {
+      minimumFractionDigits: maxPrecision ?? undefined,
+      maximumFractionDigits: maxPrecision ?? undefined,
+    })
   } else if (format === "percent") {
     return formatIntlNumberWithLocales(value, {
       style: "percent",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: notNullOrUndefined(maxPrecision)
+        ? Math.max(maxPrecision - 2, 0)
+        : 0,
+      maximumFractionDigits: notNullOrUndefined(maxPrecision)
+        ? // Percentage already gets multiplied by 100 by the formatter,
+          // so we need to reduce the precision by 2 to get the
+          // correct format based on the raw value.
+          Math.max(maxPrecision - 2, 0)
+        : 2,
     })
   } else if (format === "dollar") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "USD",
       currencyDisplay: "narrowSymbol",
-      maximumFractionDigits: 2,
+      minimumFractionDigits: maxPrecision ?? 2,
+      maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "euro") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
-      maximumFractionDigits: 2,
+      minimumFractionDigits: maxPrecision ?? 2,
+      maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "yen") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "JPY",
-      maximumFractionDigits: 0,
+      minimumFractionDigits: maxPrecision ?? 0,
+      maximumFractionDigits: maxPrecision ?? 0,
     })
   } else if (["compact", "scientific", "engineering"].includes(format)) {
     return formatIntlNumberWithLocales(value, {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      notation: format as any,
+      notation: format as "compact" | "scientific" | "engineering",
     })
   } else if (format === "accounting") {
     return numbro(value).format({
       thousandSeparated: true,
       negative: "parenthesis",
-      mantissa: 2,
+      mantissa: maxPrecision ?? 2,
       trimMantissa: false,
     })
   } else if (format === "bytes") {
@@ -635,6 +647,8 @@ export function formatNumber(
         style: "unit",
         unit: "byte",
         unitDisplay: "narrow",
+        // We don't apply maxPrecision here since
+        // bytes already gets transformed to different units.
         maximumFractionDigits: 1,
       })
         // The intl number format renders gigabytes as BB

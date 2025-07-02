@@ -71,8 +71,8 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
     {
       min_value: 0,
       max_value: isInteger ? 100 : 1,
-      step: isInteger ? 1 : 0.01,
       format: isInteger ? "%3d%%" : "percent",
+      step: isInteger ? 1 : undefined,
     } as ProgressColumnParams,
     // User parameters:
     props.columnTypeOptions
@@ -107,8 +107,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
       min: parameters.min_value!,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       max: parameters.max_value!,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      step: parameters.step!,
+      step: parameters.step ?? 0.01,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       value: parameters.min_value!,
       label: String(parameters.min_value),
@@ -142,7 +141,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
       }
 
       if (
-        isNullOrUndefined(parameters.step) ||
+        notNullOrUndefined(parameters.step) &&
         Number.isNaN(parameters.step)
       ) {
         return getErrorCell(

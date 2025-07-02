@@ -668,7 +668,7 @@ st.dataframe(
         "scientific": st.column_config.NumberColumn(format="scientific"),
         "engineering": st.column_config.NumberColumn(format="engineering"),
         "plain": st.column_config.NumberColumn(format="plain"),
-        "dollar": st.column_config.NumberColumn(format="dollar"),
+        "dollar": st.column_config.NumberColumn(format="dollar", step=0.1),
         "euro": st.column_config.NumberColumn(format="euro"),
         "yen": st.column_config.NumberColumn(format="yen"),
         "localized": st.column_config.NumberColumn(format="localized"),
