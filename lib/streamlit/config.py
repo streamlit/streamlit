@@ -1421,7 +1421,6 @@ _create_theme_options(
         If you want to set the font weight for all headings to 700, you can do the following:
             headingFontWeights = 700
     """,
-    type_=list[int],
 )
 
 _create_theme_options(
