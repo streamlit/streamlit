@@ -136,7 +136,7 @@ st.dataframe(
     column_config={
         "col_0": st.column_config.NumberColumn(
             "Number column",
-            width="medium",
+            width=200,
             help="This is a number column",
             required=True,  # Should be ignored
             disabled=False,  # Should be ignored
@@ -635,7 +635,7 @@ st.dataframe(
         },
     ),
     column_config={
-        "col_0": st.column_config.TextColumn("Text", width="large"),
+        "col_0": st.column_config.TextColumn("Text", width=400),
         "col_1": st.column_config.ImageColumn("Logo", width="medium"),
     },
     row_height=100,

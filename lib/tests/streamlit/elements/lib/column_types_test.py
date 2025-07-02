@@ -70,7 +70,7 @@ class ColumnTypesTest(unittest.TestCase):
         assert remove_none_values(
             NumberColumn(
                 "Col1",
-                width="small",
+                width=100,
                 help="Help text",
                 disabled=False,
                 required=True,
@@ -83,7 +83,7 @@ class ColumnTypesTest(unittest.TestCase):
             )
         ) == {
             "label": "Col1",
-            "width": "small",
+            "width": 100,
             "help": "Help text",
             "disabled": False,
             "required": True,
