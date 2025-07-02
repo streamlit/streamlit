@@ -72,7 +72,7 @@ python-init:
 		pip install $${pip_args[@]}; \
 	fi;\
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-			python -m playwright install --with-deps; \
+		python -m playwright install --with-deps; \
 	fi;
 
 .PHONY: pylint
