@@ -147,7 +147,7 @@ export const StyledAppViewBlockContainer =
 
       if (!embedded && hasTopNav) {
         // 8rem when not in embedded mode and top nav is showing (>1 item)
-        topPadding = "15rem"
+        topPadding = "8rem"
       } else if (showPadding || showToolbar) {
         // 6rem by default (non-embedded) or if embedded with show_toolbar
         topPadding = "6rem"
