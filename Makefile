@@ -300,7 +300,7 @@ update-material-icons:
 	python ./scripts/update_material_icon_font_and_names.py
 
 .PHONY: update-notices
-# Rebuild the NOTICES file.
+# Update the notices file (licenses of frontend assets and dependencies).
 update-notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
