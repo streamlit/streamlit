@@ -239,15 +239,12 @@ frontend:
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
 
-
-.PHONY: frontend-dependencies
-# Build frontend dependent libraries (excluding app and lib).
-frontend-dependencies:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
-
 .PHONY: frontend-with-profiler
 # Build the frontend with the profiler enabled.
-frontend-with-profiler: frontend-dependencies
+frontend-with-profiler:
+	# Build frontend dependent libraries (excluding app and lib):
+	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
+	# Build the app with the profiler enabled:
 	cd frontend/ ; yarn workspace @streamlit/app buildWithProfiler
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
