@@ -23,9 +23,7 @@ from typing import (
     Any,
     Callable,
     Final,
-    Protocol,
     TypeVar,
-    cast,
     overload,
 )
 
@@ -39,6 +37,7 @@ from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
+    CachedFunc,
     CachedFuncInfo,
     make_cached_func_wrapper,
 )
@@ -53,7 +52,6 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
-    import types
     from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -80,7 +78,7 @@ class ResourceCaches(CacheStatsProvider):
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, ResourceCache] = {}
+        self._function_caches: dict[str, ResourceCache[Any]] = {}
 
     def get_cache(
         self,
@@ -89,7 +87,7 @@ class ResourceCaches(CacheStatsProvider):
         max_entries: int | float | None,
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
-    ) -> ResourceCache:
+    ) -> ResourceCache[Any]:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -149,12 +147,16 @@ def get_resource_cache_stats_provider() -> CacheStatsProvider:
     return _resource_caches
 
 
-class CachedResourceFuncInfo(CachedFuncInfo):
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+class CachedResourceFuncInfo(CachedFuncInfo[P, R]):
     """Implements the CachedFuncInfo interface for @st.cache_resource."""
 
     def __init__(
         self,
-        func: types.FunctionType,
+        func: Callable[P, R],
         show_spinner: bool | str,
         max_entries: int | None,
         ttl: float | timedelta | str | None,
@@ -185,7 +187,7 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         """A human-readable name for the cached function."""
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
-    def get_function_cache(self, function_key: str) -> Cache:
+    def get_function_cache(self, function_key: str) -> Cache[R]:
         return _resource_caches.get_cache(
             key=function_key,
             display_name=self.display_name,
@@ -193,29 +195,6 @@ class CachedResourceFuncInfo(CachedFuncInfo):
             ttl=self.ttl,
             validate=self.validate,
         )
-
-
-# Type-annotate the decorator function.
-# (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
-P = ParamSpec("P")
-T_co = TypeVar("T_co", covariant=True)
-
-
-class CachedFunc(Protocol[P, T_co]):
-    """Protocol for cached functions that preserve the original function's signature and add a clear method."""
-
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T_co: ...
-
-    @overload
-    def clear(self) -> None: ...
-
-    @overload
-    def clear(self, *args: P.args, **kwargs: P.kwargs) -> None: ...
-
-    # Currently we can't define the "all-optional" argument overload with `P.args` and `P.kwargs` in Python.
-    # So we use `Any` as a fallback.
-    @overload
-    def clear(self, *args: Any, **kwargs: Any) -> None: ...
 
 
 class CacheResourceAPI:
@@ -236,9 +215,12 @@ class CacheResourceAPI:
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
         self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
 
+    # Type-annotate the decorator function.
+    # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
+
     # Bare decorator usage
     @overload
-    def __call__(self, func: Callable[P, T_co]) -> CachedFunc[P, T_co]: ...
+    def __call__(self, func: Callable[P, R]) -> CachedFunc[P, R]: ...
 
     # Decorator with arguments
     @overload
@@ -252,11 +234,11 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]: ...
+    ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
         self,
-        func: Callable[P, T_co] | None = None,
+        func: Callable[P, R] | None = None,
         *,
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
@@ -265,7 +247,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> CachedFunc[P, T_co] | Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]:
+    ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
             func,
             ttl=ttl,
@@ -279,7 +261,7 @@ class CacheResourceAPI:
 
     def _decorator(
         self,
-        func: Callable[P, T_co] | None,
+        func: Callable[P, R] | None,
         *,
         ttl: float | timedelta | str | None,
         max_entries: int | None,
@@ -288,7 +270,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> CachedFunc[P, T_co] | Callable[[Callable[P, T_co]], CachedFunc[P, T_co]]:
+    ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
         Cached objects are shared across all users, sessions, and reruns. They
@@ -456,9 +438,9 @@ class CacheResourceAPI:
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
-            return lambda f: make_cached_func_wrapper(  # type: ignore
+            return lambda f: make_cached_func_wrapper(
                 CachedResourceFuncInfo(
-                    func=f,  # type: ignore
+                    func=f,
                     show_spinner=show_spinner,
                     show_time=show_time,
                     max_entries=max_entries,
@@ -470,7 +452,7 @@ class CacheResourceAPI:
 
         return make_cached_func_wrapper(
             CachedResourceFuncInfo(
-                func=cast("types.FunctionType", func),
+                func=func,
                 show_spinner=show_spinner,
                 show_time=show_time,
                 max_entries=max_entries,
@@ -486,7 +468,7 @@ class CacheResourceAPI:
         _resource_caches.clear_all()
 
 
-class ResourceCache(Cache):
+class ResourceCache(Cache[R]):
     """Manages cached values for a single st.cache_resource function."""
 
     def __init__(
@@ -500,7 +482,7 @@ class ResourceCache(Cache):
         super().__init__()
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TTLCache[str, CachedResult] = TTLCache(
+        self._mem_cache: TTLCache[str, CachedResult[R]] = TTLCache(
             maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
@@ -514,7 +496,7 @@ class ResourceCache(Cache):
     def ttl_seconds(self) -> float:
         return self._mem_cache.ttl
 
-    def read_result(self, key: str) -> CachedResult:
+    def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.
         Raise `CacheKeyNotFoundError` if the value doesn't exist.
         """
@@ -533,7 +515,7 @@ class ResourceCache(Cache):
             return result
 
     @gather_metrics("_cache_resource_object")
-    def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
+    def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         main_id = st._main.id
         sidebar_id = st.sidebar.id
