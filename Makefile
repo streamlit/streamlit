@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Make uses /bin/sh by default, but we are using some bash features.  On Ubuntu
+# Make uses /bin/sh by default, but we are using some bash features. On Ubuntu
 # /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
 SHELL=/bin/bash
 
@@ -112,7 +112,7 @@ python-performance-tests:
 			tests/
 
 .PHONY: python-integration-tests
-# Run Python integration tests. Requires integration-requirements to be installed.
+# Run Python integration tests. Requires `integration-requirements.txt` to be installed.
 python-integration-tests:
 	cd lib; \
 		PYTHONPATH=. \
@@ -137,7 +137,7 @@ cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
 .PHONY: package
-# Create Python wheel files in dist/.
+# Create Python wheel files in `dist/`.
 package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
@@ -334,7 +334,7 @@ lighthouse-tests:
 	yarn run lighthouse:run
 
 .PHONY: debug-e2e-test
-# Run a playwright e2e test in debug mode. Use it via make debug-e2e-test st_command_test.py,
+# Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
 debug-e2e-test:
 	@if [[ ! "$(filter-out $@,$(MAKECMDGOALS))" == *"_test"* ]]; then \
 		echo "Error: Test script name must contain '_test' in the filename"; \
@@ -349,7 +349,7 @@ debug-e2e-test:
 	)
 
 .PHONY: run-e2e-test
-# Run a playwright e2e test. Use it via make run-e2e-test st_command_test.py.
+# Run a playwright e2e test. Use it via `make run-e2e-test st_command_test.py`.
 run-e2e-test:
 	@if [[ ! "$(filter-out $@,$(MAKECMDGOALS))" == *"_test"* ]]; then \
 		echo "Error: Test script name must contain '_test' in the filename"; \
