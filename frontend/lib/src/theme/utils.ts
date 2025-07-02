@@ -312,6 +312,9 @@ const setFontWeights = (
 ): EmotionTheme["fontWeights"] => {
   const fontWeightOverrides = {
     ...defaultFontWeights,
+    // Override default h1FontWeight for sidebar to 600
+    // Default for main theme set in typography (700)
+    h1FontWeight: inSidebar ? 600 : defaultFontWeights.h1FontWeight,
   }
 
   // Validate the baseFontWeight provided is an integer between 100 and 600
