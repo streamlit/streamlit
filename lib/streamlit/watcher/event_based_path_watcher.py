@@ -62,7 +62,7 @@ def _get_abs_folder_path(path: str) -> str:
     If the path is a directory, return the absolute path.
     Otherwise, return the absolute path of the parent directory.
     """
-    return os.path.abspath(path if os.path.isdir(path) else os.path.dirname(path))
+    return os.path.realpath(path if os.path.isdir(path) else os.path.dirname(path))
 
 
 class EventBasedPathWatcher:
@@ -100,7 +100,7 @@ class EventBasedPathWatcher:
             not exist. This can be used to watch for the creation of a file or
             directory at a given path.
         """
-        self._path = os.path.abspath(path)
+        self._path = os.path.realpath(path)
         self._on_changed = on_changed
 
         path_watcher = _MultiPathWatcher.get_singleton()
@@ -179,12 +179,28 @@ class _MultiPathWatcher:
             folder_handler = self._folder_handlers.get(folder_path)
 
             if folder_handler is None:
-                folder_handler = _FolderEventHandler()
-                self._folder_handlers[folder_path] = folder_handler
+                if not os.path.isdir(folder_path):
+                    # This can happen if the file is in a folder that does not exist.
+                    # In this case, we can't watch it.
+                    _LOGGER.warning(
+                        "Cannot watch path in a non-existent directory: %s", path
+                    )
+                    return
 
-                folder_handler.watch = self._observer.schedule(
-                    folder_handler, folder_path, recursive=True
-                )
+                folder_handler = _FolderEventHandler()
+
+                try:
+                    folder_handler.watch = self._observer.schedule(
+                        folder_handler, folder_path, recursive=True
+                    )
+                    self._folder_handlers[folder_path] = folder_handler
+                except Exception as e:
+                    _LOGGER.warning(
+                        "Failed to schedule watch observer for path %s: %s",
+                        folder_path,
+                        e,
+                    )
+                    return
 
             folder_handler.add_path_change_listener(
                 path,
@@ -220,15 +236,15 @@ class _MultiPathWatcher:
     def close(self) -> None:
         with self._lock:
             """Close this _MultiPathWatcher object forever."""
-            if len(self._folder_handlers) != 0:
-                self._folder_handlers = {}
+            if self._folder_handlers:
                 _LOGGER.debug(
                     "Stopping observer thread even though there is a non-zero "
                     "number of event observers!"
                 )
-            else:
-                _LOGGER.debug("Stopping observer thread")
+                self._observer.unschedule_all()
+                self._folder_handlers.clear()
 
+            _LOGGER.debug("Stopping observer thread")
             self._observer.stop()
             self._observer.join(timeout=5)
 
@@ -357,7 +373,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         if isinstance(changed_path, bytes):  # type: ignore[unreachable, unused-ignore]
             changed_path = changed_path.decode("utf-8")  # type: ignore[unreachable, unused-ignore]
 
-        abs_changed_path = os.path.abspath(changed_path)
+        abs_changed_path = os.path.realpath(changed_path)
 
         # To prevent a race condition, we hold a lock while accessing
         # _watched_paths.
