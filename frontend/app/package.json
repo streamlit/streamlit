@@ -85,7 +85,7 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.35.1",
     "@vitejs/plugin-react-swc": "^3.10.2",
-    "@vitest/eslint-plugin": "^1.3.3",
+    "@vitest/eslint-plugin": "^1.3.4",
     "axios-mock-adapter": "^2.1.0",
     "buffer": "^6.0.3",
     "chrome-launcher": "^1.2.0",
