@@ -41,10 +41,10 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+      - name: Run make frontend-lib
+        run: make frontend-lib
       - name: Audit frontend licenses
         run: ./scripts/audit_frontend_licenses.py
-      - name: Run make frontend
-        run: make frontend
       - name: Run frontend-typesync
         run: make frontend-typesync
       - name: Run type checks
