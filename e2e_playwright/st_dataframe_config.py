@@ -136,7 +136,7 @@ st.dataframe(
     column_config={
         "col_0": st.column_config.NumberColumn(
             "Number column",
-            width="medium",
+            width=200,
             help="This is a number column",
             required=True,  # Should be ignored
             disabled=False,  # Should be ignored
@@ -428,7 +428,16 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [[1, 2], [2, 3, 4], [], None],
-            "col_1": ["a,b", "c,d,e", "", None],
+            "col_1": [
+                [
+                    "Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo",
+                    "Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar",
+                ],
+                [],
+                [],
+                None,
+            ],
+            "col_2": ["a,b", "c,d,e", "", None],
         }
     ),
     column_config={
@@ -437,7 +446,8 @@ st.dataframe(
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.ListColumn(),
+        "col_1": st.column_config.ListColumn(width="medium"),
+        "col_2": st.column_config.ListColumn(),
     },
     use_container_width=False,
     hide_index=True,
@@ -589,9 +599,10 @@ st.dataframe(
 )
 
 df = pd.DataFrame(
-    np.random.randn(5, 25),
+    np.random.randn(15, 25),
     columns=(f"col_{i}" for i in range(25)),
 )
+
 st.header("Pinned columns:")
 st.dataframe(
     df,
@@ -625,7 +636,7 @@ st.dataframe(
         },
     ),
     column_config={
-        "col_0": st.column_config.TextColumn("Text", width="large"),
+        "col_0": st.column_config.TextColumn("Text", width=400),
         "col_1": st.column_config.ImageColumn("Logo", width="medium"),
     },
     row_height=100,
@@ -658,7 +669,7 @@ st.dataframe(
         "scientific": st.column_config.NumberColumn(format="scientific"),
         "engineering": st.column_config.NumberColumn(format="engineering"),
         "plain": st.column_config.NumberColumn(format="plain"),
-        "dollar": st.column_config.NumberColumn(format="dollar"),
+        "dollar": st.column_config.NumberColumn(format="dollar", step=0.1),
         "euro": st.column_config.NumberColumn(format="euro"),
         "yen": st.column_config.NumberColumn(format="yen"),
         "localized": st.column_config.NumberColumn(format="localized"),
