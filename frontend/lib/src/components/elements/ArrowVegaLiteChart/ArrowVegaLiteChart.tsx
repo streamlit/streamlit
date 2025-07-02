@@ -35,6 +35,7 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 function isFacetChart(spec: any): boolean {
   // Check for top-level facet property
   if ("facet" in spec) return true
@@ -47,7 +48,6 @@ function isFacetChart(spec: any): boolean {
   }
   return false
 }
-
 export interface Props {
   element: VegaLiteChartElement
   widgetMgr: WidgetStateManager
@@ -90,12 +90,12 @@ const ArrowVegaLiteChart: FC<Props> = ({
     fragmentId
   )
 
+  const { data, datasets, spec } = element
+
   // Facet charts need the container element to have a width.
   // We want to target this styling to facet charts since it
   // causes the toolbar to be on the far right.
-  const isFacet = isFacetChart(element.spec)
-
-  const { data, datasets, spec } = element
+  const isFacet = isFacetChart(spec)
 
   // Create the view once the container is ready and re-create
   // if the spec changes or the dimensions change.
