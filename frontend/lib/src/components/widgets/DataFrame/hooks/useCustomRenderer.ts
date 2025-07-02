@@ -52,14 +52,16 @@ export function drawAttentionIndicator(
 ): void {
   ctx.save()
   ctx.beginPath()
-  // We are first moving the drawing position under the top right corner
-  // 8 pixels from left side (this is the size triangle)
+  // We first move the drawing position under the top right corner
+  // by the number of pixels equal to theme.cellHorizontalPadding
+  // from left side (this is the size triangle)
   // and 1 pixel from top side (to be under the cell border).
-  ctx.moveTo(rect.x + rect.width - 8, rect.y + 1)
+  ctx.moveTo(rect.x + rect.width - theme.cellHorizontalPadding, rect.y + 1)
   // We draw the first line to the top right corner.
   ctx.lineTo(rect.x + rect.width, rect.y + 1)
-  // We draw the second line 8 pixel down on the right cell border
-  ctx.lineTo(rect.x + rect.width, rect.y + 1 + 8)
+  // We draw the second line with the number of pixels equal to theme.cellHorizontalPadding
+  // down the right cell border
+  ctx.lineTo(rect.x + rect.width, rect.y + 1 + theme.cellHorizontalPadding)
   // And now its enough to just fill it with a color to get a triangle.
   ctx.fillStyle = theme.accentColor
   ctx.fill()
