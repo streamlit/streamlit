@@ -16,6 +16,9 @@
 
 import os
 import sys
+import tarfile
+import tempfile
+import shutil
 from pathlib import Path
 
 from setuptools import find_packages, setup
@@ -74,13 +77,53 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
+# Extract PDF viewer component into streamlit package
+def _extract_pdf_viewer() -> None:
+    """Extract PDF viewer component from tar.gz and include it in the streamlit package."""
+    pdf_viewer_tar = THIS_DIRECTORY / "streamlit_pdf_viewer-1.0.0.tar.gz"
+    streamlit_dir = THIS_DIRECTORY / "streamlit"
+
+    if pdf_viewer_tar.exists() and streamlit_dir.exists():
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Extract tar file
+                with tarfile.open(pdf_viewer_tar, 'r:gz') as tar:
+                    tar.extractall(temp_dir)
+
+                # Find the extracted directory
+                extracted_dirs = [d for d in Path(temp_dir).iterdir() if d.is_dir()]
+                if extracted_dirs:
+                    src_dir = extracted_dirs[0]
+                    # Look for Python package files
+                    for item in src_dir.rglob("*"):
+                        if item.name == "pdf_viewer" and item.is_dir():
+                            # Copy pdf_viewer to streamlit package
+                            dest_dir = streamlit_dir / "pdf_viewer"
+                            if dest_dir.exists():
+                                shutil.rmtree(dest_dir)
+                            shutil.copytree(item, dest_dir)
+                            break
+                        elif item.name == "pdf_viewer.py":
+                            # Copy single file
+                            shutil.copy2(item, streamlit_dir / "pdf_viewer.py")
+                            break
+        except Exception as e:
+            print(f"Warning: Could not extract PDF viewer: {e}")
+
+# Try to extract PDF viewer during setup
+try:
+    _extract_pdf_viewer()
+except Exception:
+    # Silently continue if extraction fails
+    pass
+
 EXTRA_REQUIRES = {
     "snowflake": [
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
     ],
     "pdf": [
-        f"streamlit-pdf-viewer @ file:///home/runner/work/streamlit/streamlit/lib/streamlit_pdf_viewer-1.0.0.tar.gz",
+        # PDF viewer functionality will be bundled directly
     ],
 }
 
