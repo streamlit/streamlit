@@ -70,13 +70,15 @@ export const StyledToolbar = styled.div(({ theme }) => ({
 export const StyledToolbarElementContainer = styled.div<{
   width?: number | string
   height?: number
-  useContainerWidth: boolean
   topCentered?: boolean
-}>(({ height, useContainerWidth, topCentered }) => ({
+}>(({ topCentered }) => ({
   position: "relative",
-  height: useContainerWidth && height ? height : "fit-content",
+  // This container should resize responsively
+  // according to the styles set on the ElementContainer.
+  height: "100%",
   maxWidth: "100%",
-  width: useContainerWidth ? "100%" : "fit-content",
+  width: "100%",
+  flex: "1 1 100%",
   ...(topCentered
     ? {
         display: "flex",

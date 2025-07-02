@@ -98,9 +98,17 @@ interface StyledVegaLiteChartContainerProps {
 
 export const StyledVegaLiteChartContainer =
   styled.div<StyledVegaLiteChartContainerProps>(
-    ({ theme, useContainerWidth, isFullScreen }) => ({
-      width: useContainerWidth || isFullScreen ? "100%" : "auto",
-      height: isFullScreen ? "100%" : "auto",
+    ({ theme }) => ({
+      // This container should
+      // follow it's parent container.
+      // Styles are set on the ElementContainer
+      // and we want this container to resize responsively
+      // according to those styles. 
+      width: "100%",
+      height: "100%",
+      maxWidth: "100%",
+      flex: "1 1 100%",
+      overflow: "auto",
       // These styles come from VegaLite Library
       "&.vega-embed": {
         position: "relative",

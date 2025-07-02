@@ -34,6 +34,10 @@ from typing import (
 from typing_extensions import Required, TypeAlias
 
 from streamlit import dataframe_util, type_util
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.elements.lib import dicttools
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
@@ -43,6 +47,13 @@ from streamlit.elements.lib.built_in_chart_utils import (
     maybe_raise_stack_warning,
 )
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
@@ -596,9 +607,9 @@ class VegaChartsMixin:
         x_label: str | None = None,
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
-        width: int | None = None,
-        height: int | None = None,
-        use_container_width: bool = True,
+        width: Width = "stretch",
+        height: Height = "content",
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display a line chart.
 
@@ -778,6 +789,29 @@ class VegaChartsMixin:
 
         """
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
+        if width is not None:
+            validate_width(width, allow_content=True)
+        if height is not None:
+            validate_height(height, allow_content=True)
+
+        chart_width = width if isinstance(width, int) else None
+        chart_height = height if isinstance(height, int) else None
+
+        use_container_width_for_chart = width == "stretch" or isinstance(width, int)
+
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.LINE,
             data=data,
@@ -787,17 +821,18 @@ class VegaChartsMixin:
             y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
-            width=width,
-            height=height,
-            use_container_width=use_container_width,
+            width=chart_width,
+            height=chart_height,
+            use_container_width=use_container_width_for_chart,
         )
         return cast(
             "DeltaGenerator",
             self._altair_chart(
                 chart,
-                use_container_width=use_container_width,
                 theme="streamlit",
                 add_rows_metadata=add_rows_metadata,
+                width=width,
+                height=height,
             ),
         )
 
@@ -812,9 +847,9 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         stack: bool | ChartStackType | None = None,
-        width: int | None = None,
-        height: int | None = None,
-        use_container_width: bool = True,
+        width: Width = "stretch",
+        height: Height = "content",
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -1047,6 +1082,29 @@ class VegaChartsMixin:
         if stack is False or stack is None:
             stack = "layered"
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
+        if width is not None:
+            validate_width(width, allow_content=True)
+        if height is not None:
+            validate_height(height, allow_content=True)
+
+        chart_width = width if isinstance(width, int) else None
+        chart_height = height if isinstance(height, int) else None
+
+        use_container_width_for_chart = width == "stretch" or isinstance(width, int)
+
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.AREA,
             data=data,
@@ -1056,16 +1114,15 @@ class VegaChartsMixin:
             y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
-            width=width,
-            height=height,
+            width=chart_width,
+            height=chart_height,
             stack=stack,
-            use_container_width=use_container_width,
+            use_container_width=use_container_width_for_chart,
         )
         return cast(
             "DeltaGenerator",
             self._altair_chart(
                 chart,
-                use_container_width=use_container_width,
                 theme="streamlit",
                 add_rows_metadata=add_rows_metadata,
             ),
@@ -1083,9 +1140,9 @@ class VegaChartsMixin:
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
         stack: bool | ChartStackType | None = None,
-        width: int | None = None,
-        height: int | None = None,
-        use_container_width: bool = True,
+        width: Width = "stretch",
+        height: Height = "content",
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -1343,6 +1400,29 @@ class VegaChartsMixin:
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
+        if width is not None:
+            validate_width(width, allow_content=True)
+        if height is not None:
+            validate_height(height, allow_content=True)
+
+        chart_width = width if isinstance(width, int) else None
+        chart_height = height if isinstance(height, int) else None
+
+        use_container_width_for_chart = width == "stretch" or isinstance(width, int)
+
         chart, add_rows_metadata = generate_chart(
             chart_type=bar_chart_type,
             data=data,
@@ -1352,9 +1432,9 @@ class VegaChartsMixin:
             y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
-            width=width,
-            height=height,
-            use_container_width=use_container_width,
+            width=chart_width,
+            height=chart_height,
+            use_container_width=use_container_width_for_chart,
             stack=stack,
             horizontal=horizontal,
         )
@@ -1362,7 +1442,6 @@ class VegaChartsMixin:
             "DeltaGenerator",
             self._altair_chart(
                 chart,
-                use_container_width=use_container_width,
                 theme="streamlit",
                 add_rows_metadata=add_rows_metadata,
             ),
@@ -1379,9 +1458,9 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         size: str | float | int | None = None,
-        width: int | None = None,
-        height: int | None = None,
-        use_container_width: bool = True,
+        width: Width = "stretch",
+        height: Height = "content",
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
 
@@ -1575,6 +1654,29 @@ class VegaChartsMixin:
 
         """
 
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
+        if width is not None:
+            validate_width(width, allow_content=True)
+        if height is not None:
+            validate_height(height, allow_content=True)
+
+        chart_width = width if isinstance(width, int) else None
+        chart_height = height if isinstance(height, int) else None
+
+        use_container_width_for_chart = width == "stretch" or isinstance(width, int)
+
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.SCATTER,
             data=data,
@@ -1584,17 +1686,18 @@ class VegaChartsMixin:
             y_axis_label=y_label,
             color_from_user=color,
             size_from_user=size,
-            width=width,
-            height=height,
-            use_container_width=use_container_width,
+            width=chart_width,
+            height=chart_height,
+            use_container_width=use_container_width_for_chart,
         )
         return cast(
             "DeltaGenerator",
             self._altair_chart(
                 chart,
-                use_container_width=use_container_width,
                 theme="streamlit",
                 add_rows_metadata=add_rows_metadata,
+                width=width,
+                height=height,
             ),
         )
 
@@ -1609,6 +1712,8 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator: ...
 
     # When on_select=rerun, return VegaLiteState.
@@ -1622,6 +1727,8 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
+        width: Width = "stretch",
+        height: Height = "content",
     ) -> VegaLiteState: ...
 
     @gather_metrics("altair_chart")
@@ -1634,6 +1741,8 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Altair library.
 
@@ -1752,13 +1861,30 @@ class VegaChartsMixin:
            height: 450px
 
         """
+        validate_width(width, allow_content=True)
+        validate_height(height, allow_content=True)
+
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
         return self._altair_chart(
             altair_chart=altair_chart,
-            use_container_width=use_container_width,
             theme=theme,
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
+            width=width,
+            height=height,
         )
 
     # When on_select=Ignore, return DeltaGenerator.
@@ -1788,6 +1914,8 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
+        width: Width = "stretch",
+        height: Height = "content",
         **kwargs: Any,
     ) -> VegaLiteState: ...
 
@@ -1802,6 +1930,8 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        width: Width = "stretch",
+        height: Height = "content",
         **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
@@ -1936,26 +2066,45 @@ class VegaChartsMixin:
         translated to the syntax shown above.
 
         """
+
+        validate_width(width, allow_content=True)
+        validate_height(height, allow_content=True)
+
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                )
+            )
+            width = "stretch" if use_container_width else "content"
+
         return self._vega_lite_chart(
             data=data,
             spec=spec,
-            use_container_width=use_container_width,
             theme=theme,
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
+            width=width,
+            height=height,
             **kwargs,
         )
 
     def _altair_chart(
         self,
         altair_chart: AltairChart,
-        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
         add_rows_metadata: AddRowsMetadata | None = None,
+        width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on an Altair chart.
 
@@ -1974,24 +2123,26 @@ class VegaChartsMixin:
         return self._vega_lite_chart(
             data=None,  # The data is already part of the spec
             spec=vega_lite_spec,
-            use_container_width=use_container_width,
             theme=theme,
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
             add_rows_metadata=add_rows_metadata,
+            width=width,
+            height=height,
         )
 
     def _vega_lite_chart(
         self,
         data: Data = None,
         spec: VegaLiteSpec | None = None,
-        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
         add_rows_metadata: AddRowsMetadata | None = None,
+        width: Width = "stretch",
+        height: Height = "content",
         **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
@@ -2037,30 +2188,19 @@ class VegaChartsMixin:
         if spec is None:
             spec = {}
 
-        # Set the default value for `use_container_width`.
-        if use_container_width is None:
-            # Some multi-view charts (facet, horizontal concatenation, and repeat;
-            # see https://altair-viz.github.io/user_guide/compound_charts.html)
-            # don't work well with `use_container_width=True`, so we disable it for
-            # those charts (see https://github.com/streamlit/streamlit/issues/9091).
-            # All other charts (including vertical concatenation) default to
-            # `use_container_width=True`.
-            is_facet_chart = "facet" in spec or (
-                "encoding" in spec
-                and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
-            )
-            use_container_width = not (
-                is_facet_chart or "hconcat" in spec or "repeat" in spec
-            )
+        # TODO: maybe add back in exceptions to use_container_width
 
         vega_lite_proto = ArrowVegaLiteChartProto()
 
+        # we want the chart to autosize to the container when width is stretch
+        # or an integer. In the latter case, the element container will be sized
+        # to the specified pixel width.
+        use_container_width = width == "stretch" or isinstance(width, int)
         spec = _prepare_vega_lite_spec(spec, use_container_width, **kwargs)
         _marshall_chart_data(vega_lite_proto, spec, data)
 
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
-        vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
         if is_selection_activated:
@@ -2088,7 +2228,6 @@ class VegaChartsMixin:
                 # to contain hashes based on the dataset data.
                 named_datasets=[dataset.name for dataset in vega_lite_proto.datasets],
                 theme=theme,
-                use_container_width=use_container_width,
                 selection_mode=parsed_selection_modes,
             )
 
@@ -2109,12 +2248,16 @@ class VegaChartsMixin:
                 add_rows_metadata=add_rows_metadata,
             )
             return widget_state.value
+
+        layout_config = LayoutConfig(width=width, height=height)
+
         # If its not used with selections activated, just return
         # the delta generator related to this element.
         return self.dg._enqueue(
             "arrow_vega_lite_chart",
             vega_lite_proto,
             add_rows_metadata=add_rows_metadata,
+            layout_config=layout_config,
         )
 
     @property
