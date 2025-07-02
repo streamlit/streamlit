@@ -74,15 +74,13 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
-# PDF viewer is now handled as a wheel dependency
-
 EXTRA_REQUIRES = {
     "snowflake": [
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
     ],
     "pdf": [
-        f"streamlit-pdf-viewer @ file:{THIS_DIRECTORY / 'streamlit_pdf_viewer-1.0.0-py3-none-any.whl'}",
+        "streamlit-pdf-viewer @ file:streamlit_pdf_viewer-1.0.0-py3-none-any.whl",
     ],
 }
 
