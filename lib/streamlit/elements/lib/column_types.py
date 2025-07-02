@@ -462,7 +462,7 @@ def NumberColumn(
         (default), integer columns will have a step of 1 and float columns will
         have unrestricted precision. In this case, some floats may display like
         integers. Setting ``step`` for float columns will ensure a consistent
-        number of digits after the decimal even without setting ``format``.
+        number of digits after the decimal are displayed.
 
     Examples
     --------
