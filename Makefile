@@ -41,7 +41,8 @@ all: init frontend
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop pre-commit-install
+all-devel: init
+	pre-commit install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -49,36 +50,9 @@ all-devel: init develop pre-commit-install
 	@echo "    make frontend"
 	@echo ""
 
-.PHONY: mini-devel
-# Get minimal dependencies for development and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init
-
-.PHONY: build-deps
-# An even smaller installation than mini-devel. Installs the bare minimum necessary to build Streamlit (by leaving out some dependencies necessary for the development process). Does not build the frontend.
-build-deps: mini-init develop
-
 .PHONY: init
-# Install all Python and JS dependencies.
-init: python-init-all react-init protobuf
-
-.PHONY: mini-init
-# Install minimal Python and JS dependencies for development.
-mini-init: python-init-dev-only react-init protobuf
-
-.PHONY: develop
-# Installs Streamlit as editable install in your Python environment.
-develop:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init
-
-.PHONY: python-init-all
-# Install Streamlit and all (test and dev) requirements.
-python-init-all:
-	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=true make python-init
-
-.PHONY: python-init-dev-only
-# Install Streamlit and dev requirements.
-python-init-dev-only:
-	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=false make python-init
+# Installs all Python & JS dependencies and builds protobuf.
+init: python-init react-init protobuf
 
 .PHONY: python-init
 # Install python dependencies and Streamlit as editable install in your Python environment.
@@ -93,16 +67,13 @@ python-init:
 	if command -v "uv" > /dev/null; then \
 		echo "Running command: uv pip install $${pip_args[@]}"; \
 		uv pip install $${pip_args[@]}; \
-		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-			uv run python -m playwright install --with-deps; \
-		fi;\
 	else \
 		echo "Running command: pip install $${pip_args[@]}"; \
 		pip install $${pip_args[@]}; \
-		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-			python -m playwright install --with-deps; \
-		fi;\
 	fi;\
+	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+		python -m playwright install --with-deps; \
+	fi;
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted and that there are no lint errors.
@@ -165,36 +136,27 @@ bare-execution-tests:
 cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
-.PHONY: distribution
-# Create Python distribution files in dist/.
-distribution:
+.PHONY: package
+# Build lib and frontend, and create Python distribution files in dist/.
+package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
 	cd lib ; python3 setup.py bdist_wheel sdist
 
-.PHONY: package
-# Build lib and frontend, and then run 'distribution'.
-package: build-deps frontend distribution
-
-.PHONY: conda-distribution
-# Create conda distribution files in lib/conda-recipe/dist.
-conda-distribution:
+.PHONY: conda-package
+# Build lib and (maybe) frontend assets, and then create conda distribution files.
+conda-package: init
+	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
+		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
+	else \
+		make frontend; \
+	fi
 	rm -rf lib/conda-recipe/dist
 	mkdir lib/conda-recipe/dist
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
 	# NOTE: Running the following command requires both conda and conda-build to
 	# be installed.
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
-
-.PHONY: conda-package
-# Build lib and (maybe) frontend assets, and then run 'conda-distribution'.
-conda-package: build-deps
-	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
-		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
-	else \
-		make frontend; \
-	fi
-	make conda-distribution;
 
 .PHONY: clean
 # Remove all generated files.
@@ -325,13 +287,8 @@ jsformat:
 	cd frontend/ ; yarn workspaces foreach --all run format
 
 .PHONY: jstest
-# Run JS unit tests.
-jstest:
-	cd frontend; TESTPATH=$(TESTPATH) yarn test
-
-.PHONY: jstestcoverage
 # Run JS unit tests and generate a coverage report.
-jstestcoverage:
+jstest:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: update-snapshots
@@ -374,13 +331,9 @@ headers:
 .PHONY: gen-min-dep-constraints
 # Write the minimum versions of our dependencies to a constraints file.
 gen-min-dep-constraints:
-	make develop >/dev/null
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
 	python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
-.PHONY: pre-commit-install
-# Pre-commit install.
-pre-commit-install:
-	pre-commit install
 
 .PHONY: performance-lighthouse
 # Run Lighthouse performance tests.
