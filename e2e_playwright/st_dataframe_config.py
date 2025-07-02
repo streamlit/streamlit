@@ -428,7 +428,16 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [[1, 2], [2, 3, 4], [], None],
-            "col_1": ["a,b", "c,d,e", "", None],
+            "col_1": [
+                [
+                    "Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo",
+                    "Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar",
+                ],
+                [],
+                [],
+                None,
+            ],
+            "col_2": ["a,b", "c,d,e", "", None],
         }
     ),
     column_config={
@@ -437,7 +446,8 @@ st.dataframe(
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.ListColumn(),
+        "col_1": st.column_config.ListColumn(width="medium"),
+        "col_2": st.column_config.ListColumn(),
     },
     use_container_width=False,
     hide_index=True,

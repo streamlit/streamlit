@@ -82,6 +82,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
+      headerIconSize: Math.round(convertRemToPx("1.125rem")),
       headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:
       baseFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
@@ -89,22 +90,24 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),
       textLight: theme.colors.fadedText40,
-      textBubble: theme.colors.fadedText60,
       bgCell: theme.colors.bgColor,
       // uses same as bgCell to always have the same background color:
       bgCellMedium: theme.colors.bgColor,
       cellHorizontalPadding: Math.round(convertRemToPx(theme.spacing.sm)),
       cellVerticalPadding: Math.round(convertRemToPx("0.1875rem")),
       // Special cells:
+      textBubble: theme.colors.fadedText60,
       bgBubble: theme.colors.secondaryBg,
       bgBubbleSelected: theme.colors.secondaryBg,
+      bubbleHeight: Math.round(convertRemToPx("1.25rem")),
+      bubblePadding: Math.round(convertRemToPx(theme.spacing.sm)),
+      bubbleMargin: Math.round(convertRemToPx(theme.spacing.twoXS)),
       linkColor: theme.colors.link,
       drilldownBorder: theme.colors.darkenedBgMix25,
+      checkboxMaxSize: Math.round(convertRemToPx(theme.sizes.checkbox)),
       // Unused settings:
       // lineHeight
-      // headerIconSize: number;
       // markerFontStyle: string;
-      // resizeIndicatorColor?: string;
       // headerBottomBorderColor?: string;
     }
 

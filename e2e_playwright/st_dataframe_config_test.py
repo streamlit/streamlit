@@ -70,7 +70,13 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(
         dataframe_elements.nth(23), name="st_dataframe-hierarchical_headers"
     )
+
+    # The pinned columns webkit snapshot is a bit flaky (vertical scrollbar is sometimes visible)
+    # And needs a bit of extra handling:
+    dataframe_elements.nth(23).scroll_into_view_if_needed()
+    expect_canvas_to_be_stable(dataframe_elements.nth(23))
     assert_snapshot(dataframe_elements.nth(24), name="st_dataframe-pinned_columns")
+
     assert_snapshot(dataframe_elements.nth(25), name="st_dataframe-row_height")
     assert_snapshot(dataframe_elements.nth(26), name="st_dataframe-number_formatting")
     assert_snapshot(dataframe_elements.nth(27), name="st_dataframe-datetime_formatting")
@@ -136,6 +142,19 @@ def test_json_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(
         cell_overlay, name="st_dataframe-json_column_overlay_incompatible_values"
     )
+
+
+def test_list_cell_overlay(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the list cell overlay works correctly."""
+    dataframe_element = themed_app.get_by_test_id("stDataFrame").nth(17)
+    expect_canvas_to_be_visible(dataframe_element)
+    dataframe_element.scroll_into_view_if_needed()
+
+    # Click on the first cell of the list column
+    click_on_cell(dataframe_element, 1, 1, double_click=True, column_width="medium")
+
+    cell_overlay = get_open_cell_overlay(themed_app)
+    assert_snapshot(cell_overlay, name="st_dataframe-list_column_overlay")
 
 
 def test_number_column_formatting_via_ui(

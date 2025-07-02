@@ -45,7 +45,7 @@ export const StyledResizableContainer =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
         ["overflowY" as any]: "auto !important",
       },
-      "& .gdg-seveqep": {
+      "& .gdg-search-bar": {
         // Make the search field more responsive to the grid width and use
         // rem units for everything.
         // 19rem is the closest rem without decimals to the original size:
