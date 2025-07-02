@@ -37,6 +37,7 @@ import {
   DynamicIcon,
   IsSidebarContext,
   useEmotionTheme,
+  useExecuteWhenChanged,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
 import { IAppPage, Logo } from "@streamlit/protobuf"
@@ -145,21 +146,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     [initializeSidebarWidth]
   )
 
-  useEffect(() => {
-    const checkMobileOnResize = (): boolean => {
-      if (!window) return false
-
-      // Collapse the sidebar if the window was narrowed and is now mobile-sized
-      if (innerWidth < lastInnerWidth && innerWidth <= mediumBreakpointPx) {
-        if (!isCollapsed) {
-          onToggleCollapse(true)
-        }
+  useExecuteWhenChanged(() => {
+    // Collapse the sidebar if the window was narrowed and is now mobile-sized
+    if (innerWidth < lastInnerWidth && innerWidth <= mediumBreakpointPx) {
+      if (!isCollapsed) {
+        onToggleCollapse(true)
       }
-      setLastInnerWidth(innerWidth)
-
-      return true
     }
+    setLastInnerWidth(innerWidth)
+  }, [innerWidth])
 
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
       if (sidebarRef && window) {
         const { current } = sidebarRef
@@ -176,11 +173,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
     }
 
-    window.addEventListener("resize", checkMobileOnResize)
     document.addEventListener("mousedown", handleClickOutside)
 
     return () => {
-      window.removeEventListener("resize", checkMobileOnResize)
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [
