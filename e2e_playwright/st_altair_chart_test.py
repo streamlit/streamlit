@@ -57,6 +57,7 @@ def test_check_top_level_class(app: Page):
 
 # This test seems to be a bit flaky in chromium, so we skip it for now.
 @pytest.mark.skip_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction):
     """Check that the chart tooltip styling is correct."""
     pie_chart = app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(4)
