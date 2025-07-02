@@ -158,6 +158,16 @@ def test_single_column_select(app: Page):
         exact_match=True,
     )
 
+    # Clicking on an already selected column should unselect it:
+    select_column(canvas, 2)
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-column selection:",
+        "{'selection': {'rows': [], 'columns': []}}",
+        exact_match=True,
+    )
+
 
 def test_multi_row_select(app: Page):
     canvas = _get_multi_row_select_df(app)
@@ -232,6 +242,16 @@ def test_multi_column_select(app: Page):
         app,
         "Dataframe multi-column selection:",
         "{'selection': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        exact_match=True,
+    )
+
+    # Clicking on an already selected column should unselect this column:
+    select_column(canvas, 1)
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-column selection:",
+        "{'selection': {'rows': [], 'columns': ['col_3', 'col_4']}}",
         exact_match=True,
     )
 
