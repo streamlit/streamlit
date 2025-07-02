@@ -53,7 +53,7 @@ export function drawAttentionIndicator(
   ctx.save()
   ctx.beginPath()
   // We are first moving the drawing position under the top right corner
-  // number pixels equal to theme.cellHorizontalPadding
+  // by the number of pixels equal to theme.cellHorizontalPadding
   // from left side (this is the size triangle)
   // and 1 pixel from top side (to be under the cell border).
   ctx.moveTo(rect.x + rect.width - theme.cellHorizontalPadding, rect.y + 1)
