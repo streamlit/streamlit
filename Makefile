@@ -269,7 +269,6 @@ frontend-dev:
 frontend-lib:
 	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
 
-
 .PHONY: jslint
 # Verify that our JS/TS code is formatted and that there are no lint errors.
 jslint:
