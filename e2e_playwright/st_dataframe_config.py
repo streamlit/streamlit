@@ -428,7 +428,16 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [[1, 2], [2, 3, 4], [], None],
-            "col_1": ["a,b", "c,d,e", "", None],
+            "col_1": [
+                [
+                    "Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo",
+                    "Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar",
+                ],
+                [],
+                [],
+                None,
+            ],
+            "col_2": ["a,b", "c,d,e", "", None],
         }
     ),
     column_config={
@@ -437,7 +446,8 @@ st.dataframe(
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.ListColumn(),
+        "col_1": st.column_config.ListColumn(width="medium"),
+        "col_2": st.column_config.ListColumn(),
     },
     use_container_width=False,
     hide_index=True,
@@ -648,6 +658,7 @@ st.dataframe(
             "yen": [0.0123123, -1234.567, 12, 0],
             "localized": [0.0123123, -1234.567, 12, 0],
             "accounting": [0.0123123, -1234.567, 12, 0],
+            "bytes": [0.0123123, -1234.567, 12, 0],
             "custom format": [0.0123123, -1234.567, 12, 0],
         }
     ),
@@ -662,6 +673,7 @@ st.dataframe(
         "yen": st.column_config.NumberColumn(format="yen"),
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
+        "bytes": st.column_config.NumberColumn(format="bytes"),
         "custom format": st.column_config.NumberColumn(format="%.2f"),
     },
     hide_index=True,

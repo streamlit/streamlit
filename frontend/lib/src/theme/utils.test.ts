@@ -37,6 +37,7 @@ import {
   createEmotionTheme,
   createTheme,
   CUSTOM_THEME_NAME,
+  ExtendedCustomThemeConfig,
   getCachedTheme,
   getDefaultTheme,
   getHostSpecifiedTheme,
@@ -976,6 +977,200 @@ describe("createEmotionTheme", () => {
     )
   })
 
+  it.each([
+    // Test valid color values
+    [
+      ["red", "orange", "blue", "pink", "purple"],
+      ["red", "orange", "blue", "pink", "purple"],
+    ],
+    // Valid hex codes passed without leading #
+    [
+      [
+        "7fc97f",
+        "beaed4",
+        "fdc086",
+        "ffff99",
+        "386cb0",
+        "f0027f",
+        "bf5b17",
+        "666666",
+      ],
+      [
+        "#7fc97f",
+        "#beaed4",
+        "#fdc086",
+        "#ffff99",
+        "#386cb0",
+        "#f0027f",
+        "#bf5b17",
+        "#666666",
+      ],
+    ],
+    [
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+    ],
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of categorical color config '%s'",
+    (chartCategoricalColors, expectedCategoricalColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartCategoricalColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartCategoricalColors).toEqual(
+        expectedCategoricalColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      ["red", "orange", "blue", "pink", "purple", "invalid"],
+      ["red", "orange", "blue", "pink", "purple"],
+    ],
+    [
+      [
+        "7fc97f",
+        "beaed4",
+        "fdc086",
+        "ffff99",
+        "386cb0",
+        "f0027f",
+        "bf5b17",
+        "666666",
+        "invalid",
+      ],
+      [
+        "#7fc97f",
+        "#beaed4",
+        "#fdc086",
+        "#ffff99",
+        "#386cb0",
+        "#f0027f",
+        "#bf5b17",
+        "#666666",
+      ],
+    ],
+    [
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+        "invalid",
+      ],
+      [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+      ],
+    ],
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+        "invalid",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 0, 128)",
+      ],
+    ],
+    [
+      // When no valid colors are passed, returns default colors
+      ["invalid"],
+      [
+        "#0068c9",
+        "#83c9ff",
+        "#ff2b2b",
+        "#ffabab",
+        "#29b09d",
+        "#7defa1",
+        "#ff8700",
+        "#ffd16a",
+        "#6d3fc0",
+        "#d5dae5",
+      ],
+    ],
+  ])(
+    "logs a warning and removes any invalid categorical color configs '%s'",
+    (chartCategoricalColors, expectedCategoricalColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartCategoricalColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartCategoricalColors in theme: "invalid"`
+      )
+      expect(theme.colors.chartCategoricalColors).toEqual(
+        expectedCategoricalColors
+      )
+    }
+  )
+
   it("showSidebarBorder config is set to false by default", () => {
     const theme = createEmotionTheme({})
     expect(theme.showSidebarBorder).toBe(false)
@@ -1265,5 +1460,64 @@ describe("parseFont", () => {
     ["", ""],
   ])("correctly maps '%s' to '%s'", (input, expected) => {
     expect(parseFont(input)).toBe(expected)
+  })
+})
+
+describe("Font weight configuration coverage", () => {
+  it("ensures all font weights from typography.ts are handled in setFontWeights", () => {
+    // Import the default font weights from typography
+    const { fontWeights: defaultFontWeights } = lightTheme.emotion
+
+    // List of font weights that should NOT be affected by baseFontWeight
+    const UNAFFECTED_BY_BASE_WEIGHT = ["headerBold", "headerExtraBold"]
+
+    // List of font weights that SHOULD be calculated based on baseFontWeight
+    const AFFECTED_BY_BASE_WEIGHT = ["normal", "semiBold", "bold", "extrabold"]
+
+    // Get all font weight keys from the default theme
+    const allFontWeightKeys = Object.keys(defaultFontWeights)
+
+    // Filter out special cases
+    const fontWeightsToCheck = allFontWeightKeys.filter(
+      key => !UNAFFECTED_BY_BASE_WEIGHT.includes(key) && key !== "code" // code is handled separately
+    )
+
+    // Verify our expected list matches reality
+    const missingFromExpected = fontWeightsToCheck.filter(
+      key => !AFFECTED_BY_BASE_WEIGHT.includes(key)
+    )
+
+    if (missingFromExpected.length > 0) {
+      throw new Error(
+        `New font weight(s) detected in typography.ts that are not handled in utils.ts setFontWeights function:\n` +
+          `  ${missingFromExpected.join(", ")}\n\n` +
+          `When adding new font weights, you must:\n` +
+          `  1. Update the setFontWeights function in utils.ts to calculate the new weight based on baseFontWeight\n` +
+          `  2. Add the new font weight to the AFFECTED_BY_BASE_WEIGHT array in this test\n` +
+          `  3. Add test cases to verify the calculation logic\n\n` +
+          `Example: If you added 'medium', you might set it to baseFontWeight + 50`
+      )
+    }
+
+    // Test that baseFontWeight actually affects the expected weights
+    const testTheme = createEmotionTheme(
+      { baseFontWeight: 300 } as ExtendedCustomThemeConfig,
+      lightTheme
+    )
+
+    AFFECTED_BY_BASE_WEIGHT.forEach(weightKey => {
+      const typedKey = weightKey as keyof typeof testTheme.fontWeights
+      expect(testTheme.fontWeights[typedKey]).not.toBe(
+        defaultFontWeights[typedKey]
+      )
+    })
+
+    // Verify unaffected weights remain unchanged
+    UNAFFECTED_BY_BASE_WEIGHT.forEach(weightKey => {
+      const typedKey = weightKey as keyof typeof testTheme.fontWeights
+      expect(testTheme.fontWeights[typedKey]).toBe(
+        defaultFontWeights[typedKey]
+      )
+    })
   })
 })

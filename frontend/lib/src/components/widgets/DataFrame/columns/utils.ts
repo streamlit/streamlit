@@ -204,12 +204,14 @@ export function getEmptyCell(missingCell = false): LoadingCell {
       kind: GridCellKind.Loading,
       allowOverlay: false,
       isMissingValue: true,
+      copyData: "",
     } as LoadingCell
   }
 
   return {
     kind: GridCellKind.Loading,
     allowOverlay: false,
+    copyData: "",
   } as LoadingCell
 }
 
@@ -626,11 +628,23 @@ export function formatNumber(
       mantissa: 2,
       trimMantissa: false,
     })
+  } else if (format === "bytes") {
+    return (
+      formatIntlNumberWithLocales(value, {
+        notation: "compact",
+        style: "unit",
+        unit: "byte",
+        unitDisplay: "narrow",
+        maximumFractionDigits: 1,
+      })
+        // The intl number format renders gigabytes as BB
+        // which would be unexpected for users.
+        .replace("BB", "GB")
+    )
   }
 
   return sprintf(format, value)
 }
-
 /**
  * Formats the given date to a string with the given format.
  *
