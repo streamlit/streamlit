@@ -47,7 +47,7 @@ function sharedMarkdownStyle(theme: Theme): any {
  * inherits the <small>'s shrunk size. Also handles reduced heading font sizes
  * in dialogs.
  */
-function testConvertFontSizes(
+function convertFontSizes(
   fontSize: string,
   isInDialog: boolean,
   isCaption: boolean
@@ -67,25 +67,6 @@ function testConvertFontSizes(
   return isCaption ? convertRemToEm(fontSize) : fontSize
 }
 
-/**
- * Caption sizes taken from default styles, but using em instead of rem, so it
- * inherits the <small>'s shrunk size
- */
-function convertFontSizes(
-  fontSize: string,
-  smallFontSize: string,
-  useSmallerHeadings: boolean,
-  isCaption: boolean
-): string {
-  if (useSmallerHeadings) {
-    // For headers in `st.caption`, we use `em` values, so the headers automatically
-    // become a bit smaller by adapting to the font size of the caption.
-    return isCaption ? convertRemToEm(smallFontSize) : smallFontSize
-  }
-
-  return isCaption ? convertRemToEm(fontSize) : fontSize
-}
-
 function getMarkdownHeadingDefinitions(
   theme: Theme,
   isInDialog: boolean,
@@ -100,15 +81,7 @@ function getMarkdownHeadingDefinitions(
       color: "inherit",
     },
     h1: {
-      // fontSize: convertFontSizes(
-      //   theme.fontSizes.fourXL,
-      //   theme.fontSizes.xl,
-      //   useSmallerHeadings,
-      //   isCaption
-      // ),
-
-      // TESTING:
-      fontSize: testConvertFontSizes(
+      fontSize: convertFontSizes(
         theme.fontSizes.h1FontSize,
         isInDialog,
         isCaption
@@ -126,15 +99,7 @@ function getMarkdownHeadingDefinitions(
       letterSpacing: "-0.005em",
     },
     h2: {
-      // fontSize: convertFontSizes(
-      //   theme.fontSizes.threeXL,
-      //   theme.fontSizes.lg,
-      //   useSmallerHeadings,
-      //   isCaption
-      // ),
-
-      // TESTING:
-      fontSize: testConvertFontSizes(
+      fontSize: convertFontSizes(
         theme.fontSizes.h2FontSize,
         isInDialog,
         isCaption
@@ -143,15 +108,7 @@ function getMarkdownHeadingDefinitions(
       padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
-      // fontSize: convertFontSizes(
-      //   theme.fontSizes.twoXL,
-      //   theme.fontSizes.mdLg,
-      //   useSmallerHeadings,
-      //   isCaption
-      // ),
-
-      // TESTING:
-      fontSize: testConvertFontSizes(
+      fontSize: convertFontSizes(
         theme.fontSizes.h3FontSize,
         isInDialog,
         isCaption
@@ -161,15 +118,7 @@ function getMarkdownHeadingDefinitions(
       padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
-      // fontSize: convertFontSizes(
-      //   theme.fontSizes.xl,
-      //   theme.fontSizes.md,
-      //   useSmallerHeadings,
-      //   isCaption
-      // ),
-
-      // TESTING:
-      fontSize: testConvertFontSizes(
+      fontSize: convertFontSizes(
         theme.fontSizes.h4FontSize,
         isInDialog,
         isCaption
@@ -178,15 +127,7 @@ function getMarkdownHeadingDefinitions(
       padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
-      // fontSize: convertFontSizes(
-      //   theme.fontSizes.lg,
-      //   theme.fontSizes.sm,
-      //   useSmallerHeadings,
-      //   isCaption
-      // ),
-
-      // TESTING:
-      fontSize: testConvertFontSizes(
+      fontSize: convertFontSizes(
         theme.fontSizes.h5FontSize,
         isInDialog,
         isCaption
@@ -195,15 +136,7 @@ function getMarkdownHeadingDefinitions(
       padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
-      // fontSize: convertFontSizes(
-      //   theme.fontSizes.md,
-      //   theme.fontSizes.twoSm,
-      //   useSmallerHeadings,
-      //   isCaption
-      // ),
-
-      // TESTING:
-      fontSize: testConvertFontSizes(
+      fontSize: convertFontSizes(
         theme.fontSizes.h6FontSize,
         isInDialog,
         isCaption

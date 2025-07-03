@@ -1437,7 +1437,6 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.link_underline is False
         assert new_session_msg.custom_theme.base_font_size == 14
         assert new_session_msg.custom_theme.base_font_weight == 300
-        # app_session sets the default values for the missing heading font sizes
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",
@@ -1512,9 +1511,6 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "2.125rem",
             "2rem",
             "1.875rem",
-            "1.5rem",  # default value
-            "1.25rem",  # default value
-            "1rem",  # default value
         ]
         assert new_session_msg.custom_theme.sidebar.heading_font_weights == [
             700,

@@ -55,15 +55,6 @@ export const fontSizes = {
   h6FontSize: "1rem",
 }
 
-export const sidebarHeadingFontSizes = {
-  h1FontSize: "1.5rem",
-  h2FontSize: "1.25rem",
-  h3FontSize: "1.125rem",
-  h4FontSize: "1rem",
-  h5FontSize: "0.875rem",
-  h6FontSize: "0.75rem",
-}
-
 export const fontWeights = {
   normal: 400,
   semiBold: 500,

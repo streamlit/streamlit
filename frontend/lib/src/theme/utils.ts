@@ -48,7 +48,7 @@ import {
   createEmotionColors,
   DerivedColors,
 } from "./getColors"
-import { fonts, sidebarHeadingFontSizes } from "./primitives/typography"
+import { fonts } from "./primitives/typography"
 
 // Extended theme config type to include properties not in the protobuf definition
 export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
@@ -312,8 +312,8 @@ const convertHeadingFontSizeToRem = (
 
   // Need each heading font size to be in rem
   if (validatedSize && validatedSize.endsWith("rem")) {
-    return fontSize
-  } else if (validatedSize && fontSize.endsWith("px")) {
+    return validatedSize
+  } else if (validatedSize && validatedSize.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = parseInt(validatedSize) / baseFontSize
     const roundedRemValue = Math.round(remValue * 8) / 8
@@ -340,8 +340,6 @@ const setHeadingFontSizes = (
 ): EmotionTheme["fontSizes"] => {
   const headingFontSizesOverrides = {
     ...defaultFontSizes,
-    // Override default header font sizes for sidebar
-    ...(inSidebar ? sidebarHeadingFontSizes : {}),
   }
 
   if (headingFontSizes) {
@@ -349,7 +347,7 @@ const setHeadingFontSizes = (
       const headingFontSizeKey = `h${index + 1}FontSize`
       // Gets the heading font size in rem if not already & logs warning if invalid
       const convertedSize = convertHeadingFontSizeToRem(
-        headingFontSizeKey,
+        `${headingFontSizeKey} in headingFontSizes`,
         size,
         baseFontSize,
         inSidebar
@@ -627,23 +625,16 @@ export const createEmotionTheme = (
     }
   }
 
-  if (baseFontSize && baseFontSize > 0) {
-    conditionalOverrides.fontSizes = {
-      ...baseThemeConfig.emotion.fontSizes,
-    }
+  conditionalOverrides.fontSizes = {
+    ...baseThemeConfig.emotion.fontSizes,
+  }
 
+  if (baseFontSize && baseFontSize > 0) {
     // Set the root font size to the configured value (used on global styles):
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
   }
 
   if (codeFontSize) {
-    // Handles case where codeFontSize is set, but not baseFontSize
-    if (!conditionalOverrides.fontSizes) {
-      conditionalOverrides.fontSizes = {
-        ...baseThemeConfig.emotion.fontSizes,
-      }
-    }
-
     // Returns font size as a string, or undefined if invalid
     const parsedCodeFontSize = parseFontSize(
       "codeFontSize",
@@ -657,12 +648,13 @@ export const createEmotionTheme = (
     // inlineCodeFontSize set in typography primitives (0.75em)
   }
 
+  console.log("========== headingFontSizes", headingFontSizes)
+
   // Set the heading font sizes based on the heading font sizes config provided
   conditionalOverrides.fontSizes = setHeadingFontSizes(
-    baseThemeConfig.emotion.fontSizes,
+    conditionalOverrides.fontSizes,
     inSidebar,
-    // If baseFontSize not configured, use the default base font size
-    baseFontSize || baseThemeConfig.emotion.fontSizes.baseFontSize,
+    conditionalOverrides.fontSizes.baseFontSize,
     headingFontSizes
   )
 

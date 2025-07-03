@@ -1015,6 +1015,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     # it's a json string that needs to be parsed.
 
     if isinstance(heading_font_sizes, str):
+        heading_font_sizes = heading_font_sizes.strip().lower()
         if heading_font_sizes.endswith(("px", "rem")):
             # Handle the case where headingFontSizes is a single string value to be applied to all headings
             heading_font_sizes = [heading_font_sizes] * 6
