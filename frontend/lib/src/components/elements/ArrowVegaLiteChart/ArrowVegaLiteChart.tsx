@@ -86,6 +86,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const element = useVegaElementPreprocessor(
     inputElement,
     isFullScreen,
+    // Facet charts enter a loop when using the width from the StyledVegaLiteChartContainer.
     isFacet ? (fullScreenWidth ?? 0) : width,
     height ?? 0
   )
@@ -111,6 +112,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
 
     return finalizeView
+    // We can't use width in this dependency array because it causes facet charts to enter a loop.
+    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
+    // Are the changes in the spec enough?
   }, [createView, finalizeView, spec, fullScreenWidth, height, containerRef])
 
   // The references to data and datasets will always change each rerun
