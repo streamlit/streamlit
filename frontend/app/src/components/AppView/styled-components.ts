@@ -145,17 +145,17 @@ export const StyledAppViewBlockContainer =
       // Top padding logic per specification:
       let topPadding = littlePadding // Default: 2.25rem
 
-      if (!embedded && hasTopNav) {
-        // 8rem when not in embedded mode and top nav is showing (>1 item)
-        topPadding = "8rem"
+      if (!embedded) {
+        // Non-embedded apps always get 6rem or 8rem
+        topPadding = hasTopNav ? "8rem" : "6rem"
       } else if (showPadding || showToolbar) {
-        // 6rem by default (non-embedded) or if embedded with show_toolbar
+        // 6rem if embedded with show_padding or show_toolbar
         topPadding = "6rem"
       } else if (hasHeader) {
-        // 4.5rem if embedded with header but no toolbar
+        // 4.5rem if embedded with header but no padding/toolbar
         topPadding = "4.5rem"
       }
-      // Otherwise use default: 2.25rem if embedded with no header and no toolbar
+      // Otherwise use default: 2.25rem if embedded with no header and no padding/toolbar
 
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
