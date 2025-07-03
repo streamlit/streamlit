@@ -44,7 +44,7 @@ alwaysApply: true
 
 ## Available `make` commands
 
-Available `make` commands that can be run from the repository root (generated via `make help`):
+Available `make` commands that can be run from the repository root:
 
 {make_commands}
 """
