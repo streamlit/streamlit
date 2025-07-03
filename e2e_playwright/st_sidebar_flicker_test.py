@@ -42,13 +42,7 @@ def test_sidebar_no_flicker_on_initial_load(
     else:  # auto
         expected_final_state = "collapsed" if viewport == "mobile" else "expanded"
 
-        # Use CDP to capture sidebar state changes during page load
-    client = page.context.new_cdp_session(page)
-
-    # Enable runtime domain to execute JavaScript early
-    client.send("Runtime.enable")
-
-    # Script to inject that will monitor sidebar
+        # Use add_init_script to capture sidebar state changes during page load (works across all browsers)
     monitor_script = """
     window.__sidebarStates = [];
     window.__monitorStarted = Date.now();
@@ -91,8 +85,8 @@ def test_sidebar_no_flicker_on_initial_load(
     });
     """
 
-    # Inject the script before page loads
-    client.send("Page.addScriptToEvaluateOnNewDocument", {"source": monitor_script})
+    # Inject the script before page loads (works across all browsers)
+    page.add_init_script(monitor_script)
 
     # Navigate to the page
     page.goto(f"http://localhost:{app_port}/?test_mode={initial_sidebar_state}")
@@ -138,10 +132,7 @@ def test_sidebar_no_flicker_without_page_config(page: Page, app_port: int):
 
     Should default to auto behavior (expanded on desktop).
     """
-    # Track sidebar states
-    client = page.context.new_cdp_session(page)
-    client.send("Runtime.enable")
-
+    # Track sidebar states (works across all browsers)
     monitor_script = """
     window.__sidebarStates = [];
     window.__monitorStarted = Date.now();
@@ -168,7 +159,7 @@ def test_sidebar_no_flicker_without_page_config(page: Page, app_port: int):
     });
     """
 
-    client.send("Page.addScriptToEvaluateOnNewDocument", {"source": monitor_script})
+    page.add_init_script(monitor_script)
 
     page.goto(f"http://localhost:{app_port}/?test_mode=no_config")
     wait_for_app_loaded(page)
