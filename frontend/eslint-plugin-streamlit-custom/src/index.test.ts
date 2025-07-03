@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
+
 import plugin from "./index"
 
 describe("eslint-plugin-streamlit-custom", () => {

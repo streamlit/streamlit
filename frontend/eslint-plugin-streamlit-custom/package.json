@@ -3,14 +3,13 @@
   "license": "Apache-2.0",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/eslint-plugin-streamlit-custom.cjs.js",
+  "main": "./dist/eslint-plugin-streamlit-custom.es.js",
   "module": "./dist/eslint-plugin-streamlit-custom.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/eslint-plugin-streamlit-custom.es.js",
-      "require": "./dist/eslint-plugin-streamlit-custom.cjs.js"
+      "import": "./dist/eslint-plugin-streamlit-custom.es.js"
     }
   },
   "files": [

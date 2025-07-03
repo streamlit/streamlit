@@ -15,6 +15,8 @@
  */
 
 import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
+import { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
+
 import { createRule } from "./utils/createRule"
 
 type MessageIds = "enforceMemo"
@@ -180,7 +182,7 @@ const enforceMemo = createRule<[], MessageIds>({
      * Adds the memo import if not already present in the file
      * Returns a fixer or null if import already exists
      */
-    const ensureMemoImport = (fixer: any) => {
+    const ensureMemoImport = (fixer: RuleFixer): RuleFix | null => {
       if (hasMemoImport()) return null
 
       const allImports = sourceCode.ast.body.filter(
@@ -210,10 +212,9 @@ const enforceMemo = createRule<[], MessageIds>({
           const lastSpecifier =
             reactImport.specifiers[reactImport.specifiers.length - 1]
           return fixer.insertTextAfter(lastSpecifier, ", memo")
-        } else {
-          // Add as new named import alongside default import
-          return fixer.insertTextAfter(reactImport.specifiers[0], ", { memo }")
         }
+        // Add as new named import alongside default import
+        return fixer.insertTextAfter(reactImport.specifiers[0], ", { memo }")
       } else if (allImports.length > 0) {
         // Add after the last import
         const lastImport = allImports[allImports.length - 1]
@@ -221,13 +222,12 @@ const enforceMemo = createRule<[], MessageIds>({
           lastImport,
           "\nimport { memo } from 'react';"
         )
-      } else {
-        // Add at the beginning of the file
-        return fixer.insertTextBefore(
-          sourceCode.ast,
-          "import { memo } from 'react';\n\n"
-        )
       }
+      // Add at the beginning of the file
+      return fixer.insertTextBefore(
+        sourceCode.ast,
+        "import { memo } from 'react';\n\n"
+      )
     }
 
     /**
@@ -336,7 +336,11 @@ const enforceMemo = createRule<[], MessageIds>({
     /**
      * Creates fixes for all export statements that reference a component
      */
-    const fixExportStatements = (fixer: any, componentName: string) => {
+
+    const fixExportStatements = (
+      fixer: RuleFixer,
+      componentName: string
+    ): RuleFix[] => {
       const regex = new RegExp(
         `(export\\s+default\\s+)(${componentName})([^\\w]|$)`,
         "g"
@@ -538,7 +542,9 @@ const enforceMemo = createRule<[], MessageIds>({
               fixes.push(...fixExportStatements(fixer, componentName))
             } else {
               // Wrap the function definition with memo
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
               const nodeText = sourceCode.getText(node.init!)
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
               fixes.push(fixer.replaceText(node.init!, `memo(${nodeText})`))
             }
 
