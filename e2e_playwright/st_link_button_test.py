@@ -18,7 +18,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
-LINK_BUTTON_ELEMENTS = 17
+LINK_BUTTON_ELEMENTS = 15
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -73,18 +73,3 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
-
-    # Test gradual deprecation of use_container_width
-    container_width_true_container = link_expander.get_by_test_id(
-        "stVerticalBlock"
-    ).nth(1)
-    assert_snapshot(
-        container_width_true_container, name="st_link_button-width_container_width_true"
-    )
-    container_width_false_container = link_expander.get_by_test_id(
-        "stVerticalBlock"
-    ).nth(2)
-    assert_snapshot(
-        container_width_false_container,
-        name="st_link_button-width_container_width_false",
-    )

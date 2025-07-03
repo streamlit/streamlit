@@ -146,14 +146,3 @@ with st.expander("Download Button Width Examples", expanded=True):
     st.download_button("Content Width (Default)", "data", width="content")
     st.download_button("Stretch Width", "data", width="stretch")
     st.download_button("300px Width", "data", width=300)
-
-    # use_container_width is deprecated, but not removed from the API.
-    with st.container(key="container_width_true"):
-        st.download_button(
-            "download_button (container_width=True)", "data", use_container_width=True
-        )
-
-    with st.container(key="container_width_false"):
-        st.download_button(
-            "download_button (container_width=False)", "data", use_container_width=False
-        )

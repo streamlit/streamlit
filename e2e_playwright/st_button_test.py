@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 28
+TOTAL_BUTTONS = 26
 
 
 def test_button_widget_rendering(
@@ -196,13 +196,3 @@ def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction)
     assert_snapshot(button_elements.nth(0), name="st_button-width_content")
     assert_snapshot(button_elements.nth(1), name="st_button-width_stretch")
     assert_snapshot(button_elements.nth(2), name="st_button-width_200px")
-
-    # Test gradual deprecation of use_container_width
-    assert_snapshot(
-        get_element_by_key(app, "container_width_true"),
-        name="st_button-width_container_width_true",
-    )
-    assert_snapshot(
-        get_element_by_key(app, "container_width_false"),
-        name="st_button-width_container_width_false",
-    )

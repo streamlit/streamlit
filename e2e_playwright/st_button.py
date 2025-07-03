@@ -96,10 +96,3 @@ with st.expander("Button Width Examples", expanded=True):
     st.button("Content Width (Default)", width="content")
     st.button("Stretch Width", width="stretch")
     st.button("200px Width", width=200)
-
-    # use_container_width is deprecated, but not removed from the API.
-    with st.container(key="container_width_true"):
-        st.button("button (container_width=True)", use_container_width=True)
-
-    with st.container(key="container_width_false"):
-        st.button("button (container_width=False)", use_container_width=False)

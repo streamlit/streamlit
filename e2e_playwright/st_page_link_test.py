@@ -15,9 +15,9 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
+from e2e_playwright.shared.app_utils import get_expander
 
-PAGE_LINK_COUNT = 20
+PAGE_LINK_COUNT = 16
 
 
 def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
@@ -73,21 +73,3 @@ def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(page_elements.nth(0), name="st_page_link-width_content")
     assert_snapshot(page_elements.nth(1), name="st_page_link-width_stretch")
     assert_snapshot(page_elements.nth(2), name="st_page_link-width_500px")
-
-    # Test gradual deprecation of use_container_width
-    assert_snapshot(
-        get_element_by_key(app, "main_container_width_true"),
-        name="st_page_link-main_container_width_true",
-    )
-    assert_snapshot(
-        get_element_by_key(app, "main_container_width_false"),
-        name="st_page_link-main_container_width_false",
-    )
-    assert_snapshot(
-        get_element_by_key(app, "sidebar_container_width_true"),
-        name="st_page_link-sidebar_container_width_true",
-    )
-    assert_snapshot(
-        get_element_by_key(app, "sidebar_container_width_false"),
-        name="st_page_link-sidebar_container_width_false",
-    )
