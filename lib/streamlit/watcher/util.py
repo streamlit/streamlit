@@ -25,7 +25,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, TypeVar
 
-from streamlit.errors import Error
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
@@ -170,15 +170,18 @@ def _do_with_retries(
             file_path, # For pretty error message.
         )
     """
+
     for i in _retry_dance():
         try:
             return orig_fn()
-        except exceptions:  # noqa: PERF203
+        except exceptions as ex:  # noqa: PERF203
             if i >= _MAX_RETRIES - 1:
-                raise
+                raise StreamlitMaxRetriesError(
+                    f"Unable to access file or folder: {path}"
+                ) from ex
             # Continue with loop to either retry or raise MaxRetriesError.
 
-    raise MaxRetriesError(f"Unable to access file or folder: {path}")
+    raise StreamlitMaxRetriesError(f"Unable to access file or folder: {path}")
 
 
 def _retry_dance() -> Generator[int, None, None]:
@@ -202,7 +205,3 @@ def _retry_dance() -> Generator[int, None, None]:
     for i in range(_MAX_RETRIES):
         yield i
         time.sleep(_RETRY_WAIT_SECS)
-
-
-class MaxRetriesError(Error):
-    pass

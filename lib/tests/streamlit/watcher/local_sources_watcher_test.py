@@ -341,9 +341,8 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         args1, _ = fob.call_args_list[0]
         args2, _ = fob.call_args_list[1]
-
-        assert "streamlit_app.py" in args1[0]
-        assert "streamlit_app2.py" in args2[0]
+        assert os.path.basename(args1[0]) == "streamlit_app.py"
+        assert os.path.basename(args2[0]) == "streamlit_app2.py"
 
     @patch(
         "streamlit.runtime.pages_manager.PagesManager.get_pages",
@@ -380,12 +379,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         args1, _ = fob.call_args_list[0]
         args2, _ = fob.call_args_list[1]
 
-        assert "streamlit_app.py" in args1[0]
-        assert "streamlit_app2.py" in args2[0]
+        assert os.path.basename(args1[0]) == "streamlit_app.py"
+        assert os.path.basename(args2[0]) == "streamlit_app2.py"
 
         lsw.update_watched_pages()
         args3, _ = fob.call_args_list[2]
-        assert "streamlit_app3.py" in args3[0]
+        assert os.path.basename(args3[0]) == "streamlit_app3.py"
 
     @patch(
         "streamlit.runtime.pages_manager.PagesManager.get_pages",
