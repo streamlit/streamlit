@@ -90,7 +90,9 @@ function generateNavSections(
   navSections: string[],
   appPages: IAppPage[],
   needsCollapse: boolean,
-  generateNavLink: (page: IAppPage, index: number) => ReactElement
+  generateNavLink: (page: IAppPage, index: number) => ReactElement,
+  expandedSections: Record<string, boolean>,
+  toggleSection: (section: string) => void
 ): ReactNode[] {
   const contents: ReactNode[] = []
   const pagesBySectionHeader = groupBy(
@@ -101,26 +103,29 @@ function generateNavSections(
   navSections.forEach(header => {
     const sectionPages = pagesBySectionHeader[header] ?? []
     let viewablePages = sectionPages
+    const isExpanded = expandedSections[header]
 
     if (needsCollapse) {
-      if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
-        // We cannot even show the section
-        return
-      } else if (
-        currentPageCount + sectionPages.length >
-        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
-      ) {
-        // We can partially show the section
-        viewablePages = sectionPages.slice(
-          0,
-          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
-        )
+      const availableSlots =
+        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
+      if (availableSlots <= 0) {
+        viewablePages = []
+      } else if (sectionPages.length > availableSlots) {
+        viewablePages = sectionPages.slice(0, availableSlots)
       }
     }
-    currentPageCount += viewablePages.length
+
+    if (isExpanded) {
+      currentPageCount += viewablePages.length
+    }
 
     contents.push(
-      <NavSection key={header} header={header}>
+      <NavSection
+        key={header}
+        header={header}
+        isExpanded={isExpanded}
+        onToggle={() => toggleSection(header)}
+      >
         {viewablePages.map(generateNavLink)}
       </NavSection>
     )
@@ -128,6 +133,9 @@ function generateNavSections(
 
   return contents
 }
+
+const getLocalStorageKey = (pageLinkBaseUrl: string): string =>
+  `sidebarSectionsState-${pageLinkBaseUrl}`
 
 /** Displays a list of navigable app page links for multi-page apps. */
 const SidebarNav = ({
@@ -143,6 +151,11 @@ const SidebarNav = ({
   const [expanded, setExpanded] = useState(false)
   const { pageLinkBaseUrl } = useAppContext()
 
+  const localStorageKey = getLocalStorageKey(pageLinkBaseUrl)
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({})
+
   useEffect(() => {
     const cachedSidebarNavExpanded =
       localStorageAvailable() &&
@@ -152,6 +165,41 @@ const SidebarNav = ({
       setExpanded(true)
     }
   }, [expanded, expandSidebarNav])
+
+  useEffect(() => {
+    if (localStorageAvailable()) {
+      const storedState = window.localStorage.getItem(localStorageKey)
+      const initialState = storedState ? JSON.parse(storedState) : {}
+      const allSections = navSections.reduce(
+        (acc, sectionName) => {
+          // Default to expanded
+          acc[sectionName] = initialState[sectionName] ?? true
+          return acc
+        },
+        {} as Record<string, boolean>
+      )
+      setExpandedSections(allSections)
+    }
+  }, [navSections, localStorageKey])
+
+  useEffect(() => {
+    if (localStorageAvailable() && Object.keys(expandedSections).length > 0) {
+      window.localStorage.setItem(
+        localStorageKey,
+        JSON.stringify(expandedSections)
+      )
+    }
+  }, [expandedSections, localStorageKey])
+
+  const toggleSection = useCallback(
+    (sectionName: string) => {
+      setExpandedSections(prev => ({
+        ...prev,
+        [sectionName]: !prev[sectionName],
+      }))
+    },
+    [setExpandedSections]
+  )
 
   const handleViewButtonClick = useCallback(() => {
     const nextState = !expanded
@@ -206,7 +254,9 @@ const SidebarNav = ({
       navSections,
       appPages,
       needsCollapse,
-      generateNavLink
+      generateNavLink,
+      expandedSections,
+      toggleSection
     )
   } else {
     const viewablePages = needsCollapse

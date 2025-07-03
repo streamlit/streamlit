@@ -374,24 +374,63 @@ describe("SidebarNav", () => {
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
+    // 10 links are visible, 7 from section 1 and 3 from section 2
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
     expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
+
+    // Collapse the first section
+    const section1Header = screen.getAllByTestId("stNavSectionHeader")[0]
+    await user.click(section1Header)
+
+    // Now all 7 links from section 2 should be visible
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(7)
+
+    // Expand the first section again
+    await user.click(section1Header)
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
 
     // Expand the pages menu
     await user.click(screen.getByTestId("stSidebarNavViewButton"))
 
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(14)
     expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
+
     // Collapse the pages menu
     await user.click(screen.getByTestId("stSidebarNavViewButton"))
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
     expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
   })
 
+  it("restores section expansion state from localStorage", () => {
+    const pageLinkBaseUrl = "test_app"
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({ pageLinkBaseUrl })
+    )
+    window.localStorage.setItem(
+      `sidebarSectionsState-${pageLinkBaseUrl}`,
+      JSON.stringify({ "section 1": false, "section 2": true })
+    )
+
+    render(
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          navSections: ["section 1", "section 2"],
+          appPages: generateAppPages(14, {
+            sectionHeaders: ["section 1", "section 2"],
+          }),
+        })}
+      />
+    )
+
+    // Section 1 should be collapsed, so only pages from section 2 are visible
+    // There are 7 pages in section 2
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(7)
+  })
+
   it("will not display a section if no pages in it are visible", async () => {
     const user = userEvent.setup()
-    // First section has 6 pages, second section has 4 pages, third section has 4 pages
-    // Since 6+4 = 10, only the first two sections should be visible
+    // First section has 5 pages, second section has 5 pages, third section has 4 pages
     render(
       <SidebarNav
         {...getProps({

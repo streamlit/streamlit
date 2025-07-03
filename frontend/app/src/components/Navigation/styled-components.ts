@@ -17,8 +17,8 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 import { getSidebarHorizontalSpacing } from "@streamlit/app/src/components/Sidebar/styled-components"
+import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
 /**
  * Returns the color of the text in the sidebar nav.
@@ -183,17 +183,41 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   }
 )
 
-export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
+export const StyledNavSectionHeaderText = styled.span(() => ({
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+}))
+
+export const StyledSidebarNavSectionHeader = styled.header<{
+  isExpanded: boolean
+}>(({ theme }) => {
   return {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.semiBold,
     color: getNavTextColor(theme, false),
     lineHeight: theme.lineHeights.small,
-    paddingRight: theme.spacing.sm,
-    marginLeft: getSidebarHorizontalSpacing(theme),
-    marginRight: getSidebarHorizontalSpacing(theme),
+    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+    marginLeft: `calc(${getSidebarHorizontalSpacing(
+      theme
+    )} - ${theme.spacing.sm})`,
+    marginRight: `calc(${getSidebarHorizontalSpacing(
+      theme
+    )} - ${theme.spacing.sm})`,
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.twoXS,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    borderRadius: theme.radii.default,
+    cursor: "pointer",
+
+    "&:hover": {
+      "& > div": {
+        visibility: "visible",
+      },
+    },
   }
 })
 
@@ -302,3 +326,15 @@ export const StyledPopoverContent = styled.div(({ theme }) => ({
 export const StyledIconContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.twoXS,
 }))
+
+export const StyledChevronContainer = styled.div<{ isExpanded: boolean }>(
+  ({ isExpanded }) => ({
+    visibility: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+    transition: "transform 200ms ease",
+    flexShrink: 0,
+  })
+)
