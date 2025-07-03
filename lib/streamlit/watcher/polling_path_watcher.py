@@ -93,18 +93,21 @@ class PollingPathWatcher:
             # Don't call self._schedule()
             return
 
-        modification_time = util.path_modification_time(
-            str(self._path), self._allow_nonexistent
-        )
-        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-        # modification_time is always 0.0 because of file system limitations.
-        if modification_time != 0.0 and modification_time <= self._modification_time:
-            self._schedule()
-            return
-
-        self._modification_time = modification_time
-
         try:
+            modification_time = util.path_modification_time(
+                str(self._path), self._allow_nonexistent
+            )
+            # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+            # modification_time is always 0.0 because of file system limitations.
+            if (
+                modification_time != 0.0
+                and modification_time <= self._modification_time
+            ):
+                self._schedule()
+                return
+
+            self._modification_time = modification_time
+
             md5 = util.calc_md5_with_blocking_retries(
                 str(self._path),
                 glob_pattern=self._glob_pattern,
