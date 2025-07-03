@@ -87,8 +87,14 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
-      - id: copilot-instructions
-        name: Check copilot instructions
+      - id: generate-cursor-rules
+        name: Check generated cursor rules
+        entry: ./scripts/generate_cursor_rules.py
+        language: system
+        files: ^Makefile$
+        pass_filenames: false
+      - id: generate-copilot-instructions
+        name: Check generated copilot instructions
         entry: ./scripts/generate_copilot_instructions.py
         language: system
         files: ^.cursor/.*\.(mdc)$
