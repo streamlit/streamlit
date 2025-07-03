@@ -230,11 +230,12 @@ class _MultiPathWatcher:
             """Close this _MultiPathWatcher object forever."""
 
             if len(self._folder_handlers) != 0:
-                self._folder_handlers = {}
                 _LOGGER.debug(
                     "Stopping observer thread even though there is a non-zero "
                     "number of event observers!"
                 )
+                self._observer.unschedule_all()
+                self._folder_handlers = {}
             else:
                 _LOGGER.debug("Stopping observer thread")
 
