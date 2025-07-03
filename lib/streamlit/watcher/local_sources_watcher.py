@@ -47,7 +47,7 @@ PathWatcher = None
 class LocalSourcesWatcher:
     def __init__(self, pages_manager: PagesManager) -> None:
         self._pages_manager = pages_manager
-        self._main_script_path = os.path.realpath(self._pages_manager.main_script_path)
+        self._main_script_path = os.path.abspath(self._pages_manager.main_script_path)
         self._watch_folders = config.get_option("server.folderWatchList")
         self._script_folder = os.path.dirname(self._main_script_path)
         self._on_path_changed: list[Callable[[str], None]] = []
@@ -72,7 +72,7 @@ class LocalSourcesWatcher:
             if not page_info["script_path"]:
                 continue
 
-            page_path = os.path.realpath(page_info["script_path"])
+            page_path = os.path.abspath(page_info["script_path"])
             new_pages_paths.add(page_path)
             if page_path not in self._watched_pages:
                 self._register_watcher(
@@ -88,7 +88,7 @@ class LocalSourcesWatcher:
                 _LOGGER.warning("Watch folder is not a directory: %s", watch_folder)
                 continue
             _LOGGER.debug("Registering watch folder: %s", watch_folder)
-            watch_folder_path = os.path.realpath(watch_folder)
+            watch_folder_path = os.path.abspath(watch_folder)
             if watch_folder_path not in self._watched_pages:
                 self._register_watcher(
                     watch_folder_path,
@@ -112,7 +112,7 @@ class LocalSourcesWatcher:
     def on_path_changed(self, filepath: str) -> None:
         _LOGGER.debug("Path changed: %s", filepath)
 
-        norm_filepath = os.path.realpath(filepath)
+        norm_filepath = os.path.abspath(filepath)
         if norm_filepath not in self._watched_modules:
             # Check if this is a file in a watched directory
             for watched_path in self._watched_modules:
@@ -221,7 +221,7 @@ class LocalSourcesWatcher:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
-                    self._register_watcher(os.path.realpath(path), name)
+                    self._register_watcher(os.path.abspath(path), name)
 
     def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}

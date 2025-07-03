@@ -170,7 +170,6 @@ def _do_with_retries(
             file_path, # For pretty error message.
         )
     """
-
     for i in _retry_dance():
         try:
             return orig_fn()
