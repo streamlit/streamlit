@@ -147,5 +147,3 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
     },
   ],
 })
-
-console.log("All 'no-hardcoded-theme-values' tests passed!")

@@ -61,5 +61,3 @@ ruleTester.run(
     ],
   }
 )
-
-console.log("All 'use-strict-null-equality-checks' tests passed!")

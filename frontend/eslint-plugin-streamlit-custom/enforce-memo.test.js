@@ -294,5 +294,3 @@ function MyComponent() {
     },
   ],
 })
-
-console.log("All 'enforce-memo' tests passed!")

@@ -10601,6 +10601,9 @@ __metadata:
 "eslint-plugin-streamlit-custom@workspace:^, eslint-plugin-streamlit-custom@workspace:eslint-plugin-streamlit-custom":
   version: 0.0.0-use.local
   resolution: "eslint-plugin-streamlit-custom@workspace:eslint-plugin-streamlit-custom"
+  dependencies:
+    "@vitest/coverage-v8": "npm:^3.2.4"
+    vitest: "npm:^3.2.4"
   languageName: unknown
   linkType: soft
 
