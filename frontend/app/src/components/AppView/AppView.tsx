@@ -19,7 +19,6 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useState,
 } from "react"
 
@@ -32,6 +31,7 @@ import {
   IGuestToHostMessage,
   LibContext,
   Profiler,
+  useExecuteWhenChanged,
   useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
@@ -155,11 +155,12 @@ function AppView(props: AppViewProps): ReactElement {
   const [showSidebarOverride, setShowSidebarOverride] = useState(false)
 
   const showSidebar =
-    hasSidebarElements ||
-    (navigationPosition === Navigation.Position.SIDEBAR &&
-      !hideSidebarNav &&
-      appPages.length > 1) ||
-    showSidebarOverride
+    innerWidth > 0 &&
+    (hasSidebarElements ||
+      (navigationPosition === Navigation.Position.SIDEBAR &&
+        !hideSidebarNav &&
+        appPages.length > 1) ||
+      showSidebarOverride)
 
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
@@ -204,9 +205,9 @@ function AppView(props: AppViewProps): ReactElement {
 
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(true)
 
-  // Initialize sidebar state once after stable width is achieved
-  useLayoutEffect(() => {
-    if (showSidebar) {
+  // Update sidebar state when innerWidth changes and is > 0
+  useExecuteWhenChanged(() => {
+    if (innerWidth > 0 && showSidebar) {
       setSidebarIsCollapsed(
         shouldCollapse(
           initialSidebarState,
@@ -216,10 +217,10 @@ function AppView(props: AppViewProps): ReactElement {
       )
     }
   }, [
+    innerWidth,
+    showSidebar,
     initialSidebarState,
     activeTheme.emotion.breakpoints.md,
-    showSidebar,
-    innerWidth,
   ])
 
   // Handle updates to initialSidebarState after set_page_config
