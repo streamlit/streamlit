@@ -811,7 +811,7 @@ function DataFrame({
             <ToolbarAction
               label="Show/hide columns"
               icon={Visibility}
-              onClick={() => setShowColumnVisibilityMenu(true)}
+              onClick={() => setShowColumnVisibilityMenu(show => !show)}
             />
           </ColumnVisibilityMenu>
         )}

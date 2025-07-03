@@ -810,6 +810,13 @@ def test_column_hiding_via_visibility_menu(
     unfocus_dataframe(app)
     assert_snapshot(df_element, name="st_dataframe-column_hidden_via_visibility_menu")
 
+    # Make sure the column visibility menu is still open:
+    expect(column_visibility_menu).to_be_visible()
+
+    # Click the toolbar action again to close the column visibility menu:
+    open_visibility_menu_button.click()
+    expect(column_visibility_menu).not_to_be_visible()
+
 
 def test_column_pinning_via_ui(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a column can be pinned via the column menu."""
