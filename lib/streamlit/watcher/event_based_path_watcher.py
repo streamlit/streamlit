@@ -186,11 +186,11 @@ class _MultiPathWatcher:
                         folder_handler, folder_path, recursive=True
                     )
                     self._folder_handlers[folder_path] = folder_handler
-                except Exception as e:
+                except Exception as ex:
                     _LOGGER.warning(
-                        "Failed to schedule watch observer for path %s: %s",
+                        "Failed to schedule watch observer for path %s",
                         folder_path,
-                        e,
+                        exc_info=ex,
                     )
                     return
 
