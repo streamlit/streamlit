@@ -20,7 +20,6 @@ import styled from "@emotion/styled"
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
-  isInSidebar: boolean
   isLabel?: boolean
   inheritFont?: boolean
   boldLabel?: boolean

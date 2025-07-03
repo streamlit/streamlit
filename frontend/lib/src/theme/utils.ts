@@ -648,8 +648,6 @@ export const createEmotionTheme = (
     // inlineCodeFontSize set in typography primitives (0.75em)
   }
 
-  console.log("========== headingFontSizes", headingFontSizes)
-
   // Set the heading font sizes based on the heading font sizes config provided
   conditionalOverrides.fontSizes = setHeadingFontSizes(
     conditionalOverrides.fontSizes,
