@@ -66,7 +66,7 @@ class PdfTest(DeltaGeneratorTestCase):
 
         json_args = json.loads(element.component_instance.json_args)
         assert json_args["file"] == url
-        assert json_args["height"] == 600  # default height when stretch
+        assert json_args["height"] == 500  # default height when stretch
 
     def test_pdf_with_width_pixels(self):
         """Test PDF with width in pixels."""
