@@ -35,7 +35,6 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 function isFacetChart(spec: string | object): boolean {
   try {
     const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
