@@ -599,6 +599,11 @@ class CliTest(unittest.TestCase):
 
 
 class HTTPServerIntegrationTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
+
+        EventBasedPathWatcher.close_all()
+
     def get_http_session(self) -> requests.Session:
         http_session = requests.Session()
         http_session.mount(
