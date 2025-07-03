@@ -197,20 +197,15 @@ export const StyledSidebarNavSectionHeader = styled.header<{
     fontWeight: theme.fontWeights.semiBold,
     color: getNavTextColor(theme, false),
     lineHeight: theme.lineHeights.small,
-    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
-    marginLeft: `calc(${getSidebarHorizontalSpacing(
-      theme
-    )} - ${theme.spacing.sm})`,
-    marginRight: `calc(${getSidebarHorizontalSpacing(
-      theme
-    )} - ${theme.spacing.sm})`,
+    paddingRight: theme.spacing.sm,
+    marginLeft: getSidebarHorizontalSpacing(theme),
+    marginRight: getSidebarHorizontalSpacing(theme),
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.twoXS,
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
     gap: theme.spacing.sm,
-    borderRadius: theme.radii.default,
     cursor: "pointer",
 
     "&:hover": {
