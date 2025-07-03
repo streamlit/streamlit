@@ -52,6 +52,13 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
     "element.offsetWidth = 100",
     "element.scrollTop = 0",
     "element.clientHeight = 200",
+    // Methods that are allowed
+    "element.scrollBy(10, 10)",
+    "element.scrollTo(0, 0)",
+    "element.scrollIntoView()",
+    "element.scrollIntoViewIfNeeded()",
+    "element.focus()",
+    "input.select()",
   ],
   invalid: [
     // Element box metrics
@@ -60,7 +67,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetLeft' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetLeft' forces layout/reflow and can hurt performance. Consider using ResizeObserver for size tracking instead.",
         },
       ],
     },
@@ -69,7 +76,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetTop' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetTop' forces layout/reflow and can hurt performance. Consider using ResizeObserver for size tracking instead.",
         },
       ],
     },
@@ -78,7 +85,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetWidth' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetWidth' forces layout/reflow and can hurt performance. Consider using ResizeObserver for size tracking instead.",
         },
       ],
     },
@@ -87,7 +94,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetHeight' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetHeight' forces layout/reflow and can hurt performance. Consider using ResizeObserver for size tracking instead.",
         },
       ],
     },
@@ -96,7 +103,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetParent' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetParent' forces layout/reflow and can hurt performance. Consider alternative layout approaches that don't require offset calculations.",
         },
       ],
     },
@@ -105,7 +112,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'clientLeft' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'clientLeft' forces layout/reflow and can hurt performance. Consider using ResizeObserver or batching DOM measurements.",
         },
       ],
     },
@@ -114,7 +121,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'clientTop' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'clientTop' forces layout/reflow and can hurt performance. Consider using ResizeObserver or batching DOM measurements.",
         },
       ],
     },
@@ -123,7 +130,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'clientWidth' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'clientWidth' forces layout/reflow and can hurt performance. Consider using ResizeObserver or batching DOM measurements.",
         },
       ],
     },
@@ -132,7 +139,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'clientHeight' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'clientHeight' forces layout/reflow and can hurt performance. Consider using ResizeObserver or batching DOM measurements.",
         },
       ],
     },
@@ -142,7 +149,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'scrollWidth' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'scrollWidth' forces layout/reflow and can hurt performance. Consider using ResizeObserver to track content size changes.",
         },
       ],
     },
@@ -151,7 +158,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'scrollHeight' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'scrollHeight' forces layout/reflow and can hurt performance. Consider using ResizeObserver to track content size changes.",
         },
       ],
     },
@@ -160,7 +167,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'scrollLeft' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'scrollLeft' forces layout/reflow and can hurt performance. Consider using scroll event listeners to track position changes.",
         },
       ],
     },
@@ -169,7 +176,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'scrollTop' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'scrollTop' forces layout/reflow and can hurt performance. Consider using scroll event listeners to track position changes.",
         },
       ],
     },
@@ -179,7 +186,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'computedRole' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'computedRole' forces layout/reflow and can hurt performance. Consider using aria attributes directly when possible.",
         },
       ],
     },
@@ -188,7 +195,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'computedName' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'computedName' forces layout/reflow and can hurt performance. Consider using aria attributes directly when possible.",
         },
       ],
     },
@@ -197,7 +204,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'innerText' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'innerText' forces layout/reflow and can hurt performance. Consider using textContent instead, which doesn't trigger reflow.",
         },
       ],
     },
@@ -207,7 +214,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'scrollX' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'scrollX' forces layout/reflow and can hurt performance. Consider using scroll event listeners instead of direct property access.",
         },
       ],
     },
@@ -216,7 +223,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'scrollY' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'scrollY' forces layout/reflow and can hurt performance. Consider using scroll event listeners instead of direct property access.",
         },
       ],
     },
@@ -225,7 +232,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'innerHeight' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'innerHeight' forces layout/reflow and can hurt performance. Consider using ResizeObserver on document.documentElement instead.",
         },
       ],
     },
@@ -234,7 +241,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'innerWidth' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'innerWidth' forces layout/reflow and can hurt performance. Consider using ResizeObserver on document.documentElement instead.",
         },
       ],
     },
@@ -244,7 +251,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'scrollingElement' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'scrollingElement' forces layout/reflow and can hurt performance. Consider using document.documentElement directly when possible.",
         },
       ],
     },
@@ -254,7 +261,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'layerX' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'layerX' forces layout/reflow and can hurt performance. Consider calculating coordinates using clientX/clientY and element bounds.",
         },
       ],
     },
@@ -263,7 +270,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'layerY' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'layerY' forces layout/reflow and can hurt performance. Consider calculating coordinates using clientX/clientY and element bounds.",
         },
       ],
     },
@@ -272,7 +279,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetX' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetX' forces layout/reflow and can hurt performance. Consider calculating coordinates using clientX/clientY and element bounds.",
         },
       ],
     },
@@ -281,7 +288,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetY' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetY' forces layout/reflow and can hurt performance. Consider calculating coordinates using clientX/clientY and element bounds.",
         },
       ],
     },
@@ -291,7 +298,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'visualViewport.height' forces layout/reflow and can hurt performance.",
+            "Accessing 'visualViewport.height' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.",
         },
       ],
     },
@@ -300,7 +307,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'visualViewport.width' forces layout/reflow and can hurt performance.",
+            "Accessing 'visualViewport.width' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.",
         },
       ],
     },
@@ -309,7 +316,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'visualViewport.offsetTop' forces layout/reflow and can hurt performance.",
+            "Accessing 'visualViewport.offsetTop' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.",
         },
       ],
     },
@@ -318,7 +325,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'visualViewport.offsetLeft' forces layout/reflow and can hurt performance.",
+            "Accessing 'visualViewport.offsetLeft' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.",
         },
       ],
     },
@@ -328,7 +335,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getClientRects()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getClientRects()' forces layout/reflow and can hurt performance. Consider batching these calls or using IntersectionObserver for visibility detection.",
         },
       ],
     },
@@ -337,7 +344,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getBoundingClientRect()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getBoundingClientRect()' forces layout/reflow and can hurt performance. Consider batching these calls or using IntersectionObserver for visibility detection.",
         },
       ],
     },
@@ -346,7 +353,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getComputedStyle()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getComputedStyle()' forces layout/reflow and can hurt performance. Consider using CSS custom properties or batching style calculations.",
         },
       ],
     },
@@ -355,7 +362,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'elementFromPoint()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'elementFromPoint()' forces layout/reflow and can hurt performance. Consider using event delegation or alternative element selection methods.",
         },
       ],
     },
@@ -365,7 +372,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getClientRects()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getClientRects()' forces layout/reflow and can hurt performance. Consider batching these calls or using IntersectionObserver for visibility detection.",
         },
       ],
     },
@@ -374,7 +381,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getBoundingClientRect()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getBoundingClientRect()' forces layout/reflow and can hurt performance. Consider batching these calls or using IntersectionObserver for visibility detection.",
         },
       ],
     },
@@ -384,7 +391,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'computeCTM()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'computeCTM()' forces layout/reflow and can hurt performance. Consider using viewBox/transform attributes or alternative SVG approaches.",
         },
       ],
     },
@@ -393,7 +400,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getBBox()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getBBox()' forces layout/reflow and can hurt performance. Consider using viewBox/transform attributes or alternative SVG approaches.",
         },
       ],
     },
@@ -402,7 +409,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getComputedTextLength()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getComputedTextLength()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -411,7 +418,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getEndPositionOfChar()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getEndPositionOfChar()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -420,7 +427,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getExtentOfChar()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getExtentOfChar()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -429,7 +436,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getNumberOfChars()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getNumberOfChars()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -438,7 +445,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getRotationOfChar()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getRotationOfChar()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -447,7 +454,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getStartPositionOfChar()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getStartPositionOfChar()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -456,7 +463,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getSubStringLength()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getSubStringLength()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -465,7 +472,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'selectSubString()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'selectSubString()' forces layout/reflow and can hurt performance. Consider using alternative text selection methods.",
         },
       ],
     },
@@ -474,7 +481,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Calling 'getCharNumAtPosition()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Calling 'getCharNumAtPosition()' forces layout/reflow and can hurt performance. Consider alternative approaches that don't require text measurement calculations.",
         },
       ],
     },
@@ -484,7 +491,7 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'instanceRoot' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'instanceRoot' forces layout/reflow and can hurt performance. Avoid accessing SVG instance properties that trigger layout calculations.",
         },
       ],
     },
@@ -494,11 +501,11 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'offsetWidth' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetWidth' forces layout/reflow and can hurt performance. Consider using ResizeObserver for size tracking instead.",
         },
         {
           message:
-            "Accessing 'offsetHeight' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'offsetHeight' forces layout/reflow and can hurt performance. Consider using ResizeObserver for size tracking instead.",
         },
       ],
     },
@@ -507,29 +514,9 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       errors: [
         {
           message:
-            "Accessing 'clientWidth' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
+            "Accessing 'clientWidth' forces layout/reflow and can hurt performance. Consider using ResizeObserver or batching DOM measurements.",
         },
       ],
-    },
-  ],
-  valid: [
-    {
-      code: "element.scrollBy(10, 10)",
-    },
-    {
-      code: "element.scrollTo(0, 0)",
-    },
-    {
-      code: "element.scrollIntoView()",
-    },
-    {
-      code: "element.scrollIntoViewIfNeeded()",
-    },
-    {
-      code: "element.focus()",
-    },
-    {
-      code: "input.select()",
     },
   ],
 })

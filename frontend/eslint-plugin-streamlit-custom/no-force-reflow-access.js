@@ -109,6 +109,104 @@ module.exports = {
       "offsetLeft",
     ])
 
+    function getPropertyAlternative(propertyName) {
+      // Element box metrics
+      if (
+        ["offsetLeft", "offsetTop", "offsetWidth", "offsetHeight"].includes(
+          propertyName
+        )
+      ) {
+        return "Consider using ResizeObserver for size tracking instead."
+      }
+      if (propertyName === "offsetParent") {
+        return "Consider alternative layout approaches that don't require offset calculations."
+      }
+      if (
+        ["clientLeft", "clientTop", "clientWidth", "clientHeight"].includes(
+          propertyName
+        )
+      ) {
+        return "Consider using ResizeObserver or batching DOM measurements."
+      }
+
+      // Scroll properties
+      if (["scrollWidth", "scrollHeight"].includes(propertyName)) {
+        return "Consider using ResizeObserver to track content size changes."
+      }
+      if (["scrollLeft", "scrollTop"].includes(propertyName)) {
+        return "Consider using scroll event listeners to track position changes."
+      }
+
+      // Computed properties
+      if (propertyName === "innerText") {
+        return "Consider using textContent instead, which doesn't trigger reflow."
+      }
+      if (["computedRole", "computedName"].includes(propertyName)) {
+        return "Consider using aria attributes directly when possible."
+      }
+
+      // Window dimensions
+      if (["scrollX", "scrollY"].includes(propertyName)) {
+        return "Consider using scroll event listeners instead of direct property access."
+      }
+      if (["innerHeight", "innerWidth"].includes(propertyName)) {
+        return "Consider using ResizeObserver on document.documentElement instead."
+      }
+
+      // Mouse event offset data
+      if (["layerX", "layerY", "offsetX", "offsetY"].includes(propertyName)) {
+        return "Consider calculating coordinates using clientX/clientY and element bounds."
+      }
+
+      // Document
+      if (propertyName === "scrollingElement") {
+        return "Consider using document.documentElement directly when possible."
+      }
+
+      // SVG properties
+      if (propertyName === "instanceRoot") {
+        return "Avoid accessing SVG instance properties that trigger layout calculations."
+      }
+
+      return "Consider alternative approaches that don't require layout calculations."
+    }
+
+    function getMethodAlternative(methodName) {
+      if (["getClientRects", "getBoundingClientRect"].includes(methodName)) {
+        return "Consider batching these calls or using IntersectionObserver for visibility detection."
+      }
+      if (methodName === "getComputedStyle") {
+        return "Consider using CSS custom properties or batching style calculations."
+      }
+      if (methodName === "elementFromPoint") {
+        return "Consider using event delegation or alternative element selection methods."
+      }
+
+      // SVG methods
+      if (["computeCTM", "getBBox"].includes(methodName)) {
+        return "Consider using viewBox/transform attributes or alternative SVG approaches."
+      }
+      if (
+        [
+          "getCharNumAtPosition",
+          "getComputedTextLength",
+          "getEndPositionOfChar",
+          "getExtentOfChar",
+          "getNumberOfChars",
+          "getRotationOfChar",
+          "getStartPositionOfChar",
+          "getSubStringLength",
+        ].includes(methodName)
+      ) {
+        return "Consider alternative approaches that don't require text measurement calculations."
+      }
+      if (methodName === "selectSubString") {
+        return "Consider using alternative text selection methods."
+      }
+
+      return "Consider alternative approaches that don't trigger layout calculations."
+    }
+
     function checkMemberExpression(node) {
       if (node.property.type === "Identifier") {
         const propertyName = node.property.name
@@ -138,7 +236,7 @@ module.exports = {
         ) {
           context.report({
             node,
-            message: `Accessing 'visualViewport.${propertyName}' forces layout/reflow and can hurt performance.`,
+            message: `Accessing 'visualViewport.${propertyName}' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.`,
           })
           return
         }
@@ -158,9 +256,10 @@ module.exports = {
             return
           }
 
+          const alternative = getPropertyAlternative(propertyName)
           context.report({
             node,
-            message: `Accessing '${propertyName}' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.`,
+            message: `Accessing '${propertyName}' forces layout/reflow and can hurt performance. ${alternative}`,
           })
         }
       }
@@ -174,9 +273,10 @@ module.exports = {
         const methodName = node.callee.property.name
 
         if (forceReflowMethods.has(methodName)) {
+          const alternative = getMethodAlternative(methodName)
           context.report({
             node,
-            message: `Calling '${methodName}()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.`,
+            message: `Calling '${methodName}()' forces layout/reflow and can hurt performance. ${alternative}`,
           })
         }
       }
