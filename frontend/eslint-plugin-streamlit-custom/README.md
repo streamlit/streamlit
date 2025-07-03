@@ -19,8 +19,9 @@ This is necessary because ESLint caches the plugin and won't automatically pick 
 ### Common Commands:
 
 - `yarn build` - Build the plugin
-- `yarn dev` - Build the plugin and watch for changes
+- `yarn buildWatch` - Build the plugin and watch for changes
 - `yarn test` - Run the tests
+- `yarn testWatch` - Run the tests and watch for changes
 - `yarn typecheck` - Run the type checker
 
 ## Usage in a Package
