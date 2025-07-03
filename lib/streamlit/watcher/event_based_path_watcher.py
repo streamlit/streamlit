@@ -179,14 +179,6 @@ class _MultiPathWatcher:
             folder_handler = self._folder_handlers.get(folder_path)
 
             if folder_handler is None:
-                if not os.path.isdir(folder_path):
-                    # This can happen if the file is in a folder that does not exist.
-                    # In this case, we can't watch it.
-                    _LOGGER.warning(
-                        "Cannot watch path in a non-existent directory: %s", path
-                    )
-                    return
-
                 folder_handler = _FolderEventHandler()
 
                 try:
