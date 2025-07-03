@@ -62,7 +62,7 @@ def _get_abs_folder_path(path: str) -> str:
     If the path is a directory, return the absolute path.
     Otherwise, return the absolute path of the parent directory.
     """
-    return os.path.abspath(path if os.path.isdir(path) else os.path.dirname(path))
+    return os.path.realpath(path if os.path.isdir(path) else os.path.dirname(path))
 
 
 class EventBasedPathWatcher:
@@ -100,7 +100,7 @@ class EventBasedPathWatcher:
             not exist. This can be used to watch for the creation of a file or
             directory at a given path.
         """
-        self._path = os.path.abspath(path)
+        self._path = os.path.realpath(path)
         self._on_changed = on_changed
 
         path_watcher = _MultiPathWatcher.get_singleton()
@@ -371,7 +371,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Ignoring editor backup file: %s", changed_path)
             return
 
-        abs_changed_path = os.path.abspath(changed_path)
+        abs_changed_path = os.path.realpath(changed_path)
 
         # To prevent a race condition, we hold a lock while accessing
         # _watched_paths.
