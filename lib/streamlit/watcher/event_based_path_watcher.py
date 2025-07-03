@@ -432,7 +432,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             changed_path_info.on_changed.send(abs_changed_path)
         except Exception as ex:
             _LOGGER.debug(
-                "Ignoring file change. Failed to calculate MD5 for path %s: %s",
+                "Ignoring file change. Failed to calculate MD5 for path %s",
                 abs_changed_path,
                 exc_info=ex,
             )
