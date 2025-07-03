@@ -174,11 +174,9 @@ def _do_with_retries(
     for i in _retry_dance():
         try:
             return orig_fn()
-        except exceptions as ex:  # noqa: PERF203
+        except exceptions:  # noqa: PERF203
             if i >= _MAX_RETRIES - 1:
-                raise StreamlitMaxRetriesError(
-                    f"Unable to access file or folder: {path}"
-                ) from ex
+                raise
             # Continue with loop to either retry or raise MaxRetriesError.
 
     raise StreamlitMaxRetriesError(f"Unable to access file or folder: {path}")
