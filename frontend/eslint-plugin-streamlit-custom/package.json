@@ -2,12 +2,38 @@
   "name": "eslint-plugin-streamlit-custom",
   "license": "Apache-2.0",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "./dist/eslint-plugin-streamlit-custom.cjs.js",
+  "module": "./dist/eslint-plugin-streamlit-custom.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/eslint-plugin-streamlit-custom.es.js",
+      "require": "./dist/eslint-plugin-streamlit-custom.cjs.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "vitest run"
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run --config vitest.test.config.ts",
+    "test:watch": "vitest --config vitest.test.config.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@typescript-eslint/types": "^8.0.0",
+    "@typescript-eslint/utils": "^8.0.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "typescript": "^5.0.0",
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "^4.0.0",
+    "vite-tsconfig-paths": "^5.0.0",
     "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "@typescript-eslint/utils": "^8.0.0"
   }
 }

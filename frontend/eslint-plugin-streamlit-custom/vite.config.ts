@@ -34,6 +34,8 @@ export default defineConfig({
     viteTsconfigPaths(),
     dts({
       insertTypesEntry: true,
+      include: ["src/**/*.ts"],
+      exclude: ["src/**/*.test.ts", "**/*.test.ts"],
     }),
   ],
   build: {
@@ -41,17 +43,21 @@ export default defineConfig({
     sourcemap: DEV_BUILD || DEV_WATCH,
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
-      name: "@streamlit/utils",
-      fileName: format => `streamlit-utils.${format}.js`,
+      name: "eslint-plugin-streamlit-custom",
+      fileName: format => `eslint-plugin-streamlit-custom.${format}.js`,
       // For development, only build es format since that is what Streamlit uses
       formats: DEV_WATCH ? ["es"] : ["es", "umd", "cjs"],
     },
-  },
-  test: {
-    globals: true,
-    environment: "jsdom",
-    css: true,
-    reporters: ["verbose"],
-    setupFiles: ["../vitest.setup.ts"],
+    rollupOptions: {
+      // Make sure to externalize deps that shouldn't be bundled
+      external: ["@typescript-eslint/utils", "@typescript-eslint/types"],
+      output: {
+        // Provide global variables to use in the UMD build
+        globals: {
+          "@typescript-eslint/utils": "TypeScriptESLintUtils",
+          "@typescript-eslint/types": "TypeScriptESLintTypes",
+        },
+      },
+    },
   },
 })
