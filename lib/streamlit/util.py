@@ -21,7 +21,7 @@ import functools
 import hashlib
 from typing import TYPE_CHECKING, Any, Callable
 
-from lib.streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
     from lib.streamlit.delta_generator import DeltaGenerator
