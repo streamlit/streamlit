@@ -1100,8 +1100,10 @@ describe("AppView element", () => {
 
       const { rerender } = render(<AppView {...props} />)
 
-      // Sidebar should not be rendered when initialSidebarState is AUTO
-      expect(screen.queryByTestId("stSidebar")).not.toBeInTheDocument()
+      // Sidebar should be rendered and expanded when initialSidebarState is AUTO
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toBeInTheDocument()
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
 
       // Now simulate receiving page config with collapsed state
       vi.spyOn(
@@ -1231,8 +1233,10 @@ describe("AppView element", () => {
         />
       )
 
-      // Sidebar should not be rendered initially
-      expect(screen.queryByTestId("stSidebar")).not.toBeInTheDocument()
+      // Sidebar should be rendered and expanded initially
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toBeInTheDocument()
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
     })
 
     it("sidebar shows after first script run when no page config is set", () => {
@@ -1271,9 +1275,11 @@ describe("AppView element", () => {
         ),
       })
 
-      // Initially AUTO state, no sidebar
+      // Initially AUTO state, sidebar should be rendered and expanded
       render(<AppView {...props} />)
-      expect(screen.queryByTestId("stSidebar")).not.toBeInTheDocument()
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toBeInTheDocument()
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
 
       // Simulate script finished event without page config change
       // This tests the showSidebarOverride logic would apply
