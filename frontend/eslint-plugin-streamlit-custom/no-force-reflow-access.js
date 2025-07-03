@@ -76,9 +76,6 @@ module.exports = {
       "getComputedStyle",
       // Document methods
       "elementFromPoint",
-      // Range methods
-      "getClientRects",
-      "getBoundingClientRect",
       // SVG methods
       "computeCTM",
       "getBBox",
@@ -91,7 +88,7 @@ module.exports = {
       "getStartPositionOfChar",
       "getSubStringLength",
       "selectSubString",
-      // This section is for methods that we are choosing to disablesince there
+      // This section is for methods that we are choosing to disable since there
       // are legitimate uses of these methods without any real alternative.
       // "scrollBy",
       // "scrollTo",
