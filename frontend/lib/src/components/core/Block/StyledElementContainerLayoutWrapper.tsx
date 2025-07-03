@@ -56,11 +56,6 @@ export const StyledElementContainerLayoutWrapper: FC<
         height: "auto",
         flex: "",
       }
-    } else if (node.element.type === "pageLink" && isInSidebar) {
-      // The page link needs to be full width when it is in the sidebar.
-      return {
-        width: "100%",
-      }
     } else if (
       node.element.type === "iframe" ||
       node.element.type === "deckGlJsonChart" ||

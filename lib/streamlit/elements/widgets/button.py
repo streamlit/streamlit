@@ -67,6 +67,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
+from streamlit.util import in_sidebar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -890,6 +891,10 @@ class ButtonMixin:
                 show_in_browser=False,
             )
             width = "stretch" if use_container_width else "content"
+
+        if in_sidebar(self.dg):
+            # Sidebar page links should always be stretch width.
+            width = "stretch"
 
         return self._page_link(
             page=page,

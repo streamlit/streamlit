@@ -72,7 +72,7 @@ with st.sidebar:
     st.page_link("http://www.example.com", label="Icon Sidebar", icon="🌎")
     st.page_link("http://www.example.com", label="Help Sidebar", help="Some help text")
     st.page_link("http://www.example.com", label="Disabled Sidebar", disabled=True)
-    # Page links are container width by default in the sidebar
+    # Page links are container width in the sidebar, so width should be overridden.
     st.page_link(
         "http://www.example.com",
         label="Sidebar content width",

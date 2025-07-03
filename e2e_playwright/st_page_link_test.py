@@ -46,6 +46,7 @@ def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(page_link_links.nth(1), name="st_page_link-sidebar-icon")
     # help button before this means three in between these.
     assert_snapshot(page_link_links.nth(4), name="st_page_link-sidebar-disabled")
+    assert_snapshot(page_link_links.nth(5), name="st_page_link-sidebar-width_content")
 
 
 def test_page_link_help_tooltip(app: Page):
