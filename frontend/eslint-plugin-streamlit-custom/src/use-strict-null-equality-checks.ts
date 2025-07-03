@@ -14,24 +14,54 @@
  * limitations under the License.
  */
 
-// TODO: Convert from JavaScript implementation
-const useStrictNullEqualityChecks = {
+import { AST_NODE_TYPES } from "@typescript-eslint/utils"
+import { createRule } from "./createRule"
+
+type MessageIds = "useStrictEquality"
+
+const useStrictNullEqualityChecks = createRule<[], MessageIds>({
+  name: "use-strict-null-equality-checks",
   meta: {
-    type: "problem" as const,
+    type: "suggestion",
     docs: {
-      description: "Enforce strict null equality checks",
+      description: "Disallow == null and != null comparisons",
     },
+    fixable: "code",
     schema: [],
     messages: {
       useStrictEquality:
-        "Use strict equality (=== or !==) instead of loose equality (== or !=)",
+        "Use isNullOrUndefined or notNullOrUndefined instead of == null or != null",
     },
   },
-  create(context: any) {
+  defaultOptions: [],
+  create(context) {
     return {
-      // Rule implementation will be migrated from JavaScript version
+      BinaryExpression(node) {
+        if (node.operator === "==" || node.operator === "!=") {
+          if (
+            (node.right.type === AST_NODE_TYPES.Literal &&
+              node.right.value === null) ||
+            (node.right.type === AST_NODE_TYPES.Identifier &&
+              node.right.name === "undefined")
+          ) {
+            context.report({
+              node,
+              messageId: "useStrictEquality",
+              fix(fixer) {
+                const isNegated = node.operator === "!="
+                const replacement = isNegated
+                  ? "notNullOrUndefined"
+                  : "isNullOrUndefined"
+                const sourceCode = context.getSourceCode()
+                const leftText = sourceCode.getText(node.left)
+                return fixer.replaceText(node, `${replacement}(${leftText})`)
+              },
+            })
+          }
+        }
+      },
     }
   },
-}
+})
 
 export default useStrictNullEqualityChecks

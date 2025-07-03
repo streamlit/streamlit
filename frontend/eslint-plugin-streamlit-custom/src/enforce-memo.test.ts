@@ -14,20 +14,8 @@
  * limitations under the License.
  */
 
-const { RuleTester } = require("eslint")
-const enforceMemo = require("./enforce-memo")
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    ecmaVersion: 2018,
-    sourceType: "module",
-    parserOptions: {
-      ecmaFeatures: {
-        jsx: true,
-      },
-    },
-  },
-})
+import enforceMemo from "./enforce-memo"
+import { ruleTester } from "./ruleTester"
 
 ruleTester.run("enforce-memo", enforceMemo, {
   valid: [
@@ -186,7 +174,7 @@ ruleTester.run("enforce-memo", enforceMemo, {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `
@@ -209,7 +197,7 @@ function MyComponent() {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `
@@ -242,7 +230,7 @@ function MyComponent() {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `
@@ -278,7 +266,7 @@ function MyComponent() {
       `,
       errors: [
         {
-          message: "React components should be wrapped with memo",
+          messageId: "enforceMemo",
         },
       ],
       output: `import { memo } from 'react'

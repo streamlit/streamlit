@@ -30,7 +30,7 @@ describe("eslint-plugin-streamlit-custom", () => {
     expect(ruleNames).toHaveLength(3)
 
     ruleNames.forEach(ruleName => {
-      const rule = plugin.rules[ruleName]
+      const rule = plugin.rules[ruleName as keyof typeof plugin.rules]
       expect(rule).toHaveProperty("meta")
       expect(rule).toHaveProperty("create")
       expect(rule.meta).toHaveProperty("type")
