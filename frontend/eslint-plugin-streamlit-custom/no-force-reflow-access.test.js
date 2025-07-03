@@ -342,60 +342,6 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       ],
     },
     {
-      code: "element.scrollBy(10, 10)",
-      errors: [
-        {
-          message:
-            "Calling 'scrollBy()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
-        },
-      ],
-    },
-    {
-      code: "element.scrollTo(0, 0)",
-      errors: [
-        {
-          message:
-            "Calling 'scrollTo()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
-        },
-      ],
-    },
-    {
-      code: "element.scrollIntoView()",
-      errors: [
-        {
-          message:
-            "Calling 'scrollIntoView()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
-        },
-      ],
-    },
-    {
-      code: "element.scrollIntoViewIfNeeded()",
-      errors: [
-        {
-          message:
-            "Calling 'scrollIntoViewIfNeeded()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
-        },
-      ],
-    },
-    {
-      code: "element.focus()",
-      errors: [
-        {
-          message:
-            "Calling 'focus()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
-        },
-      ],
-    },
-    {
-      code: "input.select()",
-      errors: [
-        {
-          message:
-            "Calling 'select()' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
-        },
-      ],
-    },
-    {
       code: "window.getComputedStyle(element)",
       errors: [
         {
@@ -564,6 +510,26 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
             "Accessing 'clientWidth' forces layout/reflow and can hurt performance. Consider batching DOM reads or using alternatives.",
         },
       ],
+    },
+  ],
+  valid: [
+    {
+      code: "element.scrollBy(10, 10)",
+    },
+    {
+      code: "element.scrollTo(0, 0)",
+    },
+    {
+      code: "element.scrollIntoView()",
+    },
+    {
+      code: "element.scrollIntoViewIfNeeded()",
+    },
+    {
+      code: "element.focus()",
+    },
+    {
+      code: "input.select()",
     },
   ],
 })

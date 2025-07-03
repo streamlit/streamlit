@@ -72,12 +72,6 @@ module.exports = {
       // Element methods
       "getClientRects",
       "getBoundingClientRect",
-      "scrollBy",
-      "scrollTo",
-      "scrollIntoView",
-      "scrollIntoViewIfNeeded",
-      "focus",
-      "select",
       // Window methods
       "getComputedStyle",
       // Document methods
@@ -97,6 +91,14 @@ module.exports = {
       "getStartPositionOfChar",
       "getSubStringLength",
       "selectSubString",
+      // This section is for methods that we are choosing to disablesince there
+      // are legitimate uses of these methods without any real alternative.
+      // "scrollBy",
+      // "scrollTo",
+      // "scrollIntoView",
+      // "scrollIntoViewIfNeeded",
+      // "focus",
+      // "select",
     ])
 
     // Visual viewport properties that force reflow
