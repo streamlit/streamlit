@@ -299,19 +299,29 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         with self._lock:
             watched_path = self._watched_paths.get(path, None)
             if watched_path is None:
-                md5 = util.calc_md5_with_blocking_retries(
-                    path,
-                    glob_pattern=glob_pattern,
-                    allow_nonexistent=allow_nonexistent,
-                )
-                modification_time = util.path_modification_time(path, allow_nonexistent)
-                watched_path = WatchedPath(
-                    md5=md5,
-                    modification_time=modification_time,
-                    glob_pattern=glob_pattern,
-                    allow_nonexistent=allow_nonexistent,
-                )
-                self._watched_paths[path] = watched_path
+                try:
+                    md5 = util.calc_md5_with_blocking_retries(
+                        path,
+                        glob_pattern=glob_pattern,
+                        allow_nonexistent=allow_nonexistent,
+                    )
+                    modification_time = util.path_modification_time(
+                        path, allow_nonexistent
+                    )
+                    watched_path = WatchedPath(
+                        md5=md5,
+                        modification_time=modification_time,
+                        glob_pattern=glob_pattern,
+                        allow_nonexistent=allow_nonexistent,
+                    )
+                    self._watched_paths[path] = watched_path
+                except Exception as ex:
+                    _LOGGER.debug(
+                        "Failed to calculate MD5 for path %s",
+                        path,
+                        exc_info=ex,
+                    )
+                    return
 
             watched_path.on_changed.connect(callback, weak=False)
 
