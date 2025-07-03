@@ -24,6 +24,7 @@ import React, {
   useState,
 } from "react"
 
+import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   AppRoot,
   BlockNode,
@@ -32,11 +33,8 @@ import {
   IGuestToHostMessage,
   LibContext,
   Profiler,
-  useExecuteWhenChanged,
-  useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { StreamlitEndpoints } from "@streamlit/connection"
 import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
 import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
@@ -147,14 +145,12 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme,
   } = useContext(LibContext)
 
-  const { innerWidth } = useWindowDimensionsContext()
-
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
   const hasEventElements = !elements.event.isEmpty
   const hasBottomElements = !elements.bottom.isEmpty
 
-  const [showSidebarOverride, setShowSidebarOverride] = useState(() => false)
+  const [showSidebarOverride, setShowSidebarOverride] = useState(false)
 
   const showSidebar =
     hasSidebarElements ||
@@ -204,44 +200,25 @@ function AppView(props: AppViewProps): ReactElement {
     />
   )
 
-  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() =>
-    shouldCollapse(
-      initialSidebarState,
-      parseInt(activeTheme.emotion.breakpoints.md, 10),
-      innerWidth
-    )
-  )
+  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(true)
 
   const hasInitializedWidthRef = useRef(false)
 
   // Initialize sidebar state once after stable width is achieved
   useLayoutEffect(() => {
-    if (!hasInitializedWidthRef.current && innerWidth > 0) {
+    if (showSidebar) {
       setSidebarIsCollapsed(
         shouldCollapse(
           initialSidebarState,
-          parseInt(activeTheme.emotion.breakpoints.md, 10),
-          innerWidth
+          parseInt(activeTheme.emotion.breakpoints.md, 10)
         )
       )
-      hasInitializedWidthRef.current = true
     }
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, innerWidth])
+
+    hasInitializedWidthRef.current = true
+  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, showSidebar])
 
   // Handle updates to initialSidebarState after set_page_config
-  useExecuteWhenChanged(() => {
-    if (!hasInitializedWidthRef.current) {
-      return
-    }
-
-    setSidebarIsCollapsed(
-      shouldCollapse(
-        initialSidebarState,
-        parseInt(activeTheme.emotion.breakpoints.md, 10),
-        innerWidth
-      )
-    )
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
 
   const toggleSidebar = useCallback(() => {
     setSidebarIsCollapsed(prev => !prev)
@@ -270,6 +247,15 @@ function AppView(props: AppViewProps): ReactElement {
     shouldShowExpandButton ||
     shouldShowNavigation ||
     showToolbar
+
+  console.log({
+    initialSidebarState,
+    isSidebarCollapsed,
+    showSidebar,
+    hasSidebarElements,
+    hideSidebarNav,
+    showSidebarOverride,
+  })
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
