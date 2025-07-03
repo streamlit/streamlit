@@ -163,7 +163,7 @@ class PdfMixin:
         """Show a warning that the PDF component is not available."""
         warning_message = """⚠️ **PDF Component Not Available**
 
-The PDF viewer requires the `streamlit-pdf-viewer` component to be installed.
+The PDF viewer requires the `streamlit_pdf` component to be installed.
 
 To install it, run:
 ```bash
