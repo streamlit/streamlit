@@ -333,7 +333,6 @@ class FormMixin:
             ``enter_to_submit=False``.
 
         use_container_width : bool
-            .. deprecated:: 1.0.0
                 This parameter will be removed in a future version. Use the
                 ``width`` parameter instead. For ``use_container_width=True``,
                 use ``width="stretch"``. For ``use_container_width=False``,
