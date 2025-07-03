@@ -243,7 +243,7 @@ class ScriptRunnerTest(AsyncTestCase):
     @parameterized.expand(
         [
             ("good_script.py", text_utf),
-            # These files are .txt to avoid being broken by "make headers".
+            # These files are .txt to avoid being broken by "make update-headers".
             ("good_script_no_encoding.py.txt", text_no_encoding),
             ("good_script_latin_encoding.py.txt", text_latin),
         ]

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script should be invoked using `make gen-min-dep-constraints`.
+# This script should be invoked using `make update-min-deps`.
 # It has the precondition that you must have installed streamlit locally since
 # you last updated its dependencies, which the make command takes care of.
 from __future__ import annotations
