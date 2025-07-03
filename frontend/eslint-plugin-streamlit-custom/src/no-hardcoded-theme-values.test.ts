@@ -134,10 +134,7 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
     },
     {
       name: "template strings with hardcoded values are not allowed",
-      code: `var MyComponent = styled.div\`
-        color: 1px;
-        line-height: theme.lineHeights.body;
-        \``,
+      code: "var MyComponent = styled.div`\n        color: 1px;\n        line-height: theme.lineHeights.body;\n        `",
       errors: [{ messageId: "noHardcodedThemeTemplate" }],
     },
   ],

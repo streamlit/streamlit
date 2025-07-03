@@ -54,6 +54,9 @@ const enforceMemo = createRule<[], MessageIds>({
     const sourceCode = context.getSourceCode()
     const sourceText = sourceCode.getText()
 
+    // Cache for HOC pattern matching to avoid recompiling regex on every call
+    const hocPatternCache = new Map<string, string[]>() // Maps component name to array of HOC variable names
+
     /**
      * Checks if a component is already wrapped with React.memo in an export statement
      */
@@ -81,22 +84,34 @@ const enforceMemo = createRule<[], MessageIds>({
      * export default memo(EnhancedComponent)
      */
     const isComponentUsedInMemoizedHOC = (componentName: string): boolean => {
-      const hocPattern = new RegExp(
-        `const\\s+(\\w+)\\s*=\\s*\\w+\\(\\s*${componentName}\\s*\\)`,
-        "g"
-      )
+      // Check cache first
+      if (!hocPatternCache.has(componentName)) {
+        const hocVarNames: string[] = []
+        const hocPattern = new RegExp(
+          `const\\s+(\\w+)\\s*=\\s*\\w+\\(\\s*${componentName}\\s*\\)`,
+          "g"
+        )
 
-      let match
-      while ((match = hocPattern.exec(sourceText)) !== null) {
-        if (match?.[1]) {
-          const hocVarName = match[1]
-          const memoExportPattern = new RegExp(
-            `export\\s+default\\s+(React\\.memo|memo)\\(\\s*${hocVarName}\\s*\\)`
-          )
-
-          if (memoExportPattern.test(sourceText)) {
-            return true
+        let match
+        while ((match = hocPattern.exec(sourceText)) !== null) {
+          if (match?.[1]) {
+            hocVarNames.push(match[1])
           }
+        }
+
+        hocPatternCache.set(componentName, hocVarNames)
+      }
+
+      const hocVarNames = hocPatternCache.get(componentName) || []
+
+      // Check if any of the HOC variables are exported with memo
+      for (const hocVarName of hocVarNames) {
+        const memoExportPattern = new RegExp(
+          `export\\s+default\\s+(React\\.memo|memo)\\(\\s*${hocVarName}\\s*\\)`
+        )
+
+        if (memoExportPattern.test(sourceText)) {
+          return true
         }
       }
 
@@ -214,7 +229,17 @@ const enforceMemo = createRule<[], MessageIds>({
           return fixer.insertTextAfter(lastSpecifier, ", memo")
         }
         // Add as new named import alongside default import
-        return fixer.insertTextAfter(reactImport.specifiers[0], ", { memo }")
+        // Check if we have a default import to add named imports after
+        const defaultImport = reactImport.specifiers.find(
+          spec => spec.type === AST_NODE_TYPES.ImportDefaultSpecifier
+        )
+        if (defaultImport) {
+          return fixer.insertTextAfter(defaultImport, ", { memo }")
+        }
+        // If no default import, add at the end of specifiers
+        const lastSpecifier =
+          reactImport.specifiers[reactImport.specifiers.length - 1]
+        return fixer.insertTextAfter(lastSpecifier, ", memo")
       } else if (allImports.length > 0) {
         // Add after the last import
         const lastImport = allImports[allImports.length - 1]

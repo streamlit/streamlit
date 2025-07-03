@@ -43,7 +43,11 @@ const useStrictNullEqualityChecks = createRule<[], MessageIds>({
             (node.right.type === AST_NODE_TYPES.Literal &&
               node.right.value === null) ||
             (node.right.type === AST_NODE_TYPES.Identifier &&
-              node.right.name === "undefined")
+              node.right.name === "undefined") ||
+            (node.left.type === AST_NODE_TYPES.Literal &&
+              node.left.value === null) ||
+            (node.left.type === AST_NODE_TYPES.Identifier &&
+              node.left.name === "undefined")
           ) {
             context.report({
               node,
