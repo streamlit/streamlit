@@ -18,7 +18,6 @@ import React, { FC, useContext, useMemo } from "react"
 
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import type { ElementNode } from "~lib/AppNode"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
 import { StyledElementContainer } from "./styled-components"
 
@@ -30,7 +29,6 @@ export const StyledElementContainerLayoutWrapper: FC<
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
-  const isInSidebar = useContext(IsSidebarContext)
   const styleOverrides = useMemo(() => {
     if (node.element.type === "imgs") {
       // The st.image element is potentially a list of images, so we always want
