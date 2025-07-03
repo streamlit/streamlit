@@ -110,7 +110,7 @@
     "source-map-explorer": "^2.5.3",
     "tree-kill": "^1.2.2",
     "tsconfig-paths-webpack-plugin": "^4.2.0",
-    "typescript-eslint": "^8.33.0",
+    "typescript-eslint": "^8.35.1",
     "typesync": "^0.14.3",
     "util": "^0.12.5",
     "vite": "^7.0.0",
