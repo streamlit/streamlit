@@ -20,7 +20,6 @@ import React, {
   useContext,
   useEffect,
   useLayoutEffect,
-  useRef,
   useState,
 } from "react"
 
@@ -33,6 +32,7 @@ import {
   IGuestToHostMessage,
   LibContext,
   Profiler,
+  useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
 import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
@@ -145,6 +145,8 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme,
   } = useContext(LibContext)
 
+  const { innerWidth } = useWindowDimensionsContext()
+
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
   const hasEventElements = !elements.event.isEmpty
@@ -202,21 +204,23 @@ function AppView(props: AppViewProps): ReactElement {
 
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(true)
 
-  const hasInitializedWidthRef = useRef(false)
-
   // Initialize sidebar state once after stable width is achieved
   useLayoutEffect(() => {
     if (showSidebar) {
       setSidebarIsCollapsed(
         shouldCollapse(
           initialSidebarState,
-          parseInt(activeTheme.emotion.breakpoints.md, 10)
+          parseInt(activeTheme.emotion.breakpoints.md, 10),
+          innerWidth
         )
       )
     }
-
-    hasInitializedWidthRef.current = true
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md, showSidebar])
+  }, [
+    initialSidebarState,
+    activeTheme.emotion.breakpoints.md,
+    showSidebar,
+    innerWidth,
+  ])
 
   // Handle updates to initialSidebarState after set_page_config
 
