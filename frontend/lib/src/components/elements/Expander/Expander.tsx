@@ -188,7 +188,9 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     }
 
     detailsEl.style.overflow = "hidden"
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const detailsHeight = detailsEl.getBoundingClientRect().height
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const summaryHeight = summaryRef.current.getBoundingClientRect().height
 
     if (!expanded) {
@@ -215,6 +217,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           }
 
           const contentHeight =
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             contentRef.current.getBoundingClientRect().height
           toggleAnimation(
             detailsEl,
