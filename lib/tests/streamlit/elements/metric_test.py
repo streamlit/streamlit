@@ -23,7 +23,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 class MetricTest(DeltaGeneratorTestCase):
@@ -247,6 +250,65 @@ class MetricTest(DeltaGeneratorTestCase):
         st.metric("label_test", value="500", help="   help text")
         c = self.get_delta_from_queue().new_element.metric
         assert c.help == "help text"
+
+    def test_height_default(self):
+        """Test that height defaults to content."""
+        st.metric("label_test", "123")
+
+        c = self.get_delta_from_queue().new_element
+        assert c.metric.label == "label_test"
+        assert c.metric.body == "123"
+        assert (
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert c.height_config.use_content
+
+    def test_height_types(self):
+        """Test that metric can be called with different height types."""
+        test_cases = [
+            (500, HeightConfigFields.PIXEL_HEIGHT.value, "pixel_height", 500),
+            ("stretch", HeightConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", HeightConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for height_value, expected_height_spec, field_name, field_value in test_cases:
+            with self.subTest(height_value=height_value):
+                st.metric("label_test", "123", height=height_value)
+
+                c = self.get_delta_from_queue().new_element
+                assert c.metric.label == "label_test"
+                assert c.metric.body == "123"
+                assert c.height_config.WhichOneof("height_spec") == expected_height_spec
+                assert getattr(c.height_config, field_name) == field_value
+
+    def test_invalid_height(self):
+        """Test that metric raises an error with invalid height."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid height value: 'invalid'. Height must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid height value: -100. Height must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid height value: 0. Height must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid height value: 100.5. Height must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for height_value, expected_error_message in test_cases:
+            with self.subTest(height_value=height_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    st.metric("label_test", "123", height=height_value)
+
+                assert str(exc.value) == expected_error_message
 
     def test_width_types(self):
         """Test that metric can be called with different width types."""

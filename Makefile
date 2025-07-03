@@ -21,9 +21,6 @@ INSTALL_TEST_REQS ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
-# Black magic to get module directories
-PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
-
 # Check if Python is installed and can be executed, otherwise show an error message in red (but continue)
 ifeq ($(PYTHON_VERSION),)
 error_message="Error: Python version is not detected. Please ensure Python is installed and accessible in your PATH."
@@ -40,11 +37,12 @@ help:
 
 .PHONY: all
 # Get dependencies, build frontend, install Streamlit into Python environment.
-all: init frontend install
+all: init frontend
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop pre-commit-install frontend-dependencies
+all-devel: init
+	pre-commit install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -52,36 +50,9 @@ all-devel: init develop pre-commit-install frontend-dependencies
 	@echo "    make frontend"
 	@echo ""
 
-.PHONY: mini-devel
-# Get minimal dependencies for development and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init frontend-dependencies
-
-.PHONY: build-deps
-# An even smaller installation than mini-devel. Installs the bare minimum necessary to build Streamlit (by leaving out some dependencies necessary for the development process). Does not build the frontend.
-build-deps: mini-init develop
-
 .PHONY: init
-# Install all Python and JS dependencies.
-init: python-init-all react-init protobuf
-
-.PHONY: mini-init
-# Install minimal Python and JS dependencies for development.
-mini-init: python-init-dev-only react-init protobuf
-
-.PHONY: develop
-# Installs Streamlit as editable install in your Python environment.
-develop:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init
-
-.PHONY: python-init-all
-# Install Streamlit and all (test and dev) requirements.
-python-init-all:
-	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=true make python-init
-
-.PHONY: python-init-dev-only
-# Install Streamlit and dev requirements.
-python-init-dev-only:
-	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=false make python-init
+# Installs all Python & JS dependencies and builds protobuf.
+init: python-init react-init protobuf
 
 .PHONY: python-init
 # Install python dependencies and Streamlit as editable install in your Python environment.
@@ -102,7 +73,7 @@ python-init:
 	fi;\
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		python -m playwright install --with-deps; \
-	fi;\
+	fi;
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted and that there are no lint errors.
@@ -125,32 +96,29 @@ pyformat:
 pytest:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
-			-l tests/ \
+		pytest -v -l \
 			-m "not performance" \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: performance-pytest
 # Run Python benchmark tests
 performance-pytest:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
-			-l tests/ \
+		pytest -v -l \
 			-m "performance" \
 			--benchmark-autosave \
 			--benchmark-storage file://../.benchmarks/pytest \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: pytest-integration
 # Run Python integration tests. This requires the integration-requirements to be installed.
 pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
-		pytest -v \
+		pytest -v -l \
 			--require-integration \
-			-l tests/ \
-			$(PYTHON_MODULES)
+			tests/
 
 .PHONY: mypy
 # Run Mypy static type checker.
@@ -168,36 +136,27 @@ bare-execution-tests:
 cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
-.PHONY: distribution
-# Create Python distribution files in dist/.
-distribution:
+.PHONY: package
+# Build lib and frontend, and create Python distribution files in dist/.
+package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
 	cd lib ; python3 setup.py bdist_wheel sdist
 
-.PHONY: package
-# Build lib and frontend, and then run 'distribution'.
-package: build-deps frontend distribution
-
-.PHONY: conda-distribution
-# Create conda distribution files in lib/conda-recipe/dist.
-conda-distribution:
+.PHONY: conda-package
+# Build lib and (maybe) frontend assets, and then create conda distribution files.
+conda-package: init
+	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
+		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
+	else \
+		make frontend; \
+	fi
 	rm -rf lib/conda-recipe/dist
 	mkdir lib/conda-recipe/dist
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
 	# NOTE: Running the following command requires both conda and conda-build to
 	# be installed.
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
-
-.PHONY: conda-package
-# Build lib and (maybe) frontend assets, and then run 'conda-distribution'.
-conda-package: build-deps
-	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
-		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
-	else \
-		make frontend; \
-	fi
-	make conda-distribution;
 
 .PHONY: clean
 # Remove all generated files.
@@ -260,11 +219,15 @@ protobuf:
 .PHONY: react-init
 # Install all frontend dependencies.
 react-init:
-	cd frontend/ ; \
-	if command -v "corepack" > /dev/null; then \
-		corepack install ; \
-	fi;\
-	yarn install --immutable
+	@cd frontend/ && { \
+		corepack enable yarn; \
+		if [ $$? -ne 0 ]; then \
+			echo "Error: 'corepack' command not found or failed to enable."; \
+			echo "Please ensure you are running the expected version of Node.js as defined in '.nvmrc'."; \
+			exit 1; \
+		fi; \
+		corepack install && yarn install --immutable; \
+	}
 
 .PHONY: frontend
 # Build frontend into static files.
@@ -275,6 +238,7 @@ frontend:
 	# Move manifest.json to a location that can actually be served by the Tornado
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
+
 
 .PHONY: frontend-dependencies
 # Build frontend dependent libraries (excluding app and lib)
@@ -296,9 +260,9 @@ frontend-fast:
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-dev
-# Build frontend dependencies and start the dev server.
-frontend-dev: frontend-dependencies
-	cd frontend/ ; yarn dev
+# Start the frontend dev server.
+frontend-dev:
+	cd frontend/ ; yarn start
 
 .PHONY: frontend-lib
 # Build the frontend library.
@@ -307,13 +271,13 @@ frontend-lib:
 
 .PHONY: jslint
 # Verify that our JS/TS code is formatted and that there are no lint errors.
-jslint: frontend-dependencies
+jslint:
 	cd frontend/ ; yarn workspaces foreach --all run formatCheck
 	cd frontend/ ; yarn workspaces foreach --all run lint
 
 .PHONY: tstypecheck
 # Typecheck the JS/TS code.
-tstypecheck: frontend-dependencies
+tstypecheck:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
 	cd frontend/ ; yarn workspaces foreach --all run typecheck
 
@@ -323,13 +287,8 @@ jsformat:
 	cd frontend/ ; yarn workspaces foreach --all run format
 
 .PHONY: jstest
-# Run JS unit tests.
-jstest: frontend-dependencies
-	cd frontend; TESTPATH=$(TESTPATH) yarn test
-
-.PHONY: jstestcoverage
 # Run JS unit tests and generate a coverage report.
-jstestcoverage: frontend-dependencies
+jstest:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: update-snapshots
@@ -372,16 +331,12 @@ headers:
 .PHONY: gen-min-dep-constraints
 # Write the minimum versions of our dependencies to a constraints file.
 gen-min-dep-constraints:
-	make develop >/dev/null
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
 	python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
-.PHONY: pre-commit-install
-# Pre-commit install.
-pre-commit-install:
-	pre-commit install
 
 .PHONY: performance-lighthouse
-# Run Lighthouse performance tests
+# Run Lighthouse performance tests.
 performance-lighthouse:
 	cd frontend/app; \
 	yarn run lighthouse:run

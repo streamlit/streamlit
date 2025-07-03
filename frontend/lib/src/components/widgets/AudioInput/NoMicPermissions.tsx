@@ -30,7 +30,11 @@ const NoMicPermissions = (): ReactElement => {
       <StyledErrorTextSpan>
         This app would like to use your microphone.
       </StyledErrorTextSpan>{" "}
-      <StyledNoMicInputLearnMoreLink href={ENABLE_PERIPHERALS_DOCS_URL}>
+      <StyledNoMicInputLearnMoreLink
+        href={ENABLE_PERIPHERALS_DOCS_URL}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
         Learn how to allow access.
       </StyledNoMicInputLearnMoreLink>
     </StyledErrorContainerDiv>

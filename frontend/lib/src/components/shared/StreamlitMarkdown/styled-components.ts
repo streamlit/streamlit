@@ -21,6 +21,7 @@ export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInSidebarOrDialog: boolean
   isLabel?: boolean
+  inheritFont?: boolean
   boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
@@ -35,7 +36,7 @@ function sharedMarkdownStyle(theme: Theme): any {
   return {
     a: {
       color: theme.colors.link,
-      textDecoration: "underline",
+      textDecoration: theme.linkUnderline ? "underline" : "none",
     },
   }
 }
@@ -69,7 +70,6 @@ function getMarkdownHeadingDefinitions(
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
-      fontWeight: theme.fontWeights.bold,
       lineHeight: theme.lineHeights.headings,
       margin: 0,
       color: "inherit",
@@ -81,13 +81,13 @@ function getMarkdownHeadingDefinitions(
         useSmallerHeadings,
         isCaption
       ),
-      fontWeight: useSmallerHeadings
-        ? theme.fontWeights.bold
-        : theme.fontWeights.extrabold,
+      fontWeight: theme.fontWeights.h1FontWeight,
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
-      fontWeight: theme.fontWeights.extrabold,
+      // Per Pull Request #9395, setting text to bold in headers
+      // should NOT change its font-weight
+      fontWeight: theme.fontWeights.h1FontWeight,
     },
     "h2, h3": {
       letterSpacing: "-0.005em",
@@ -99,6 +99,7 @@ function getMarkdownHeadingDefinitions(
         useSmallerHeadings,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h2FontWeight,
       padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
@@ -108,6 +109,7 @@ function getMarkdownHeadingDefinitions(
         useSmallerHeadings,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h3FontWeight,
       padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
@@ -117,6 +119,7 @@ function getMarkdownHeadingDefinitions(
         useSmallerHeadings,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h4FontWeight,
       padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
@@ -126,6 +129,7 @@ function getMarkdownHeadingDefinitions(
         useSmallerHeadings,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h5FontWeight,
       padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
@@ -135,6 +139,7 @@ function getMarkdownHeadingDefinitions(
         useSmallerHeadings,
         isCaption
       ),
+      fontWeight: theme.fontWeights.h6FontWeight,
       padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
   }
@@ -147,6 +152,7 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInSidebarOrDialog,
       isLabel,
+      inheritFont,
       boldLabel,
       largerLabel,
       isToast,
@@ -157,8 +163,12 @@ export const StyledStreamlitMarkdown =
         (isLabel && !largerLabel) || isToast || isCaption
 
       return {
-        fontFamily: theme.genericFonts.bodyFont,
-        fontSize: useSmallerFontSize ? theme.fontSizes.sm : theme.fontSizes.md,
+        fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
+        fontSize: inheritFont
+          ? "inherit"
+          : useSmallerFontSize
+            ? theme.fontSizes.sm
+            : theme.fontSizes.md,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
@@ -178,7 +188,11 @@ export const StyledStreamlitMarkdown =
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? theme.spacing.none : "",
-          fontWeight: boldLabel ? theme.fontWeights.bold : "",
+          fontWeight: inheritFont
+            ? "inherit"
+            : boldLabel
+              ? theme.fontWeights.bold
+              : "",
           marginTop: theme.spacing.none,
           marginLeft: theme.spacing.none,
           marginRight: theme.spacing.none,
@@ -248,6 +262,8 @@ export const StyledStreamlitMarkdown =
         },
 
         th: {
+          // TODO: check whether this should be adjusted
+          // defaults to font-weight: "bold" (700)
           textAlign: "inherit",
         },
 

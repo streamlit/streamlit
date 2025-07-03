@@ -89,6 +89,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
         style={{
           fontFamily: theme.genericFonts.codeFont,
           fontSize: theme.fontSizes.codeFontSize,
+          fontWeight: theme.fontWeights.code,
           backgroundColor: theme.colors.bgColor,
           whiteSpace: "pre-wrap", // preserve whitespace
         }}

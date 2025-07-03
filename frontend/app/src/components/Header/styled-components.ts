@@ -17,10 +17,11 @@
 import styled from "@emotion/styled"
 
 import { EmotionTheme } from "@streamlit/lib"
-import { getSidebarHorizontalSpacing } from "@streamlit/app/src/components/Sidebar/styled-components"
+
 export const StyledLogoContainer = styled.div(({ theme }) => ({
-  marginLeft: getSidebarHorizontalSpacing(theme),
+  marginLeft: theme.spacing.lg,
 }))
+
 export interface StyledHeaderProps {
   isTransparentBackground?: boolean
 }
@@ -42,7 +43,7 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     pointerEvents: isTransparentBackground ? "none" : "auto",
     fontSize: theme.fontSizes.sm,
     "@media print": {
-      position: "static",
+      position: "absolute",
       background: "transparent",
       // Hide all descendants by default
       "& *": {

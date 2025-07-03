@@ -424,8 +424,6 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
 
-  const isDisabled = disabled || hasNoMicPermissions
-
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -433,7 +431,7 @@ const AudioInput: React.FC<Props> = ({
     >
       <WidgetLabel
         label={element.label}
-        disabled={isDisabled}
+        disabled={disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -481,7 +479,7 @@ const AudioInput: React.FC<Props> = ({
             handleClear({ updateWidgetManager: false, deleteFile: true })
             setIsError(false)
           }}
-          disabled={isDisabled}
+          disabled={disabled || hasNoMicPermissions}
         />
         <StyledWaveformInnerDiv>
           {isError && <AudioInputErrorState />}

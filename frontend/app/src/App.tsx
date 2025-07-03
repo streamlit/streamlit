@@ -905,8 +905,11 @@ export class App extends PureComponent<Props, State> {
     }
 
     // Only change layout/sidebar when the page config has changed.
-    // This preserves the user's previous choice, and prevents extra re-renders.
-    if (layout !== this.state.layout) {
+    // This preserves the user's previous choice/default, and prevents extra re-renders.
+    if (
+      layout !== this.state.layout &&
+      layout !== PageConfig.Layout.LAYOUT_UNSET
+    ) {
       this.setState((prevState: State) => ({
         layout,
         userSettings: {
@@ -915,7 +918,11 @@ export class App extends PureComponent<Props, State> {
         },
       }))
     }
-    if (initialSidebarState !== this.state.initialSidebarState) {
+
+    if (
+      initialSidebarState !== this.state.initialSidebarState &&
+      initialSidebarState !== PageConfig.SidebarState.SIDEBAR_UNSET
+    ) {
       this.setState(() => ({
         initialSidebarState,
       }))
@@ -1846,6 +1853,7 @@ export class App extends PureComponent<Props, State> {
   settingsCallback = (animateModal = true): void => {
     const newDialog: DialogProps = {
       type: DialogType.SETTINGS,
+      sessionInfo: this.sessionInfo,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
       allowRunOnSave: this.state.allowRunOnSave,
@@ -1866,7 +1874,6 @@ export class App extends PureComponent<Props, State> {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
-      sessionInfo: this.sessionInfo,
       onClose: this.closeDialog,
       aboutSectionMd: menuItems?.aboutSectionMd,
     }
@@ -2037,6 +2044,26 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  /**
+   * Determines whether the toolbar should be visible based on embed mode,
+   * toolbar mode settings, and availability of host menu/toolbar items.
+   */
+  private shouldShowToolbar = (
+    hostMenuItems: IMenuItem[],
+    hostToolbarItems: IToolbarItem[]
+  ): boolean => {
+    // Show toolbar if not embedded or if specifically configured to display in embed mode
+    const isToolbarAllowedInEmbed = !isEmbed() || isToolbarDisplayed()
+
+    // Show toolbar if not in minimal mode or if there are host items to display
+    const hasContentToShow =
+      this.state.toolbarMode !== Config.ToolbarMode.MINIMAL ||
+      hostMenuItems.length > 0 ||
+      hostToolbarItems.length > 0
+
+    return isToolbarAllowedInEmbed && hasContentToShow
+  }
+
   override render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -2092,7 +2119,8 @@ export class App extends PureComponent<Props, State> {
         })
       : null
 
-    const showToolbar = !isEmbed() || isToolbarDisplayed()
+    // Determine toolbar visibility using helper method
+    const showToolbar = this.shouldShowToolbar(hostMenuItems, hostToolbarItems)
     const showColoredLine =
       (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
     const showPadding = !isEmbed() || isPaddingDisplayed()

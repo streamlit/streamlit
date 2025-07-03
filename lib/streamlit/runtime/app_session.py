@@ -940,7 +940,17 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     for option_name, option_val in theme_opts.items():
         # We need to ignore some config options here that need special handling
         # and cannot directly be set on the protobuf.
-        if option_name not in {"base", "font", "fontFaces"} and option_val is not None:
+        if (
+            option_name
+            not in {
+                "base",
+                "font",
+                "fontFaces",
+                "headingFontWeights",
+                "chartCategoricalColors",
+            }
+            and option_val is not None
+        ):
             setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base and font will default to the protobuf enum zero
@@ -995,6 +1005,73 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
+                    exc_info=e,
+                )
+
+    heading_font_weights = theme_opts.get("headingFontWeights", None)
+    # headingFontWeights is either an integer (set for all headings) or
+    # a list of integers (set specific headings). However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(heading_font_weights, str):
+        try:
+            heading_font_weights = json.loads(heading_font_weights)
+        except Exception as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.headingFontWeights config option with json.loads: %s.",
+                heading_font_weights,
+                exc_info=e,
+            )
+            heading_font_weights = None
+
+    if isinstance(heading_font_weights, int):
+        # Set all heading font weights to the same value
+        for _ in range(1, 7):
+            msg.heading_font_weights.append(heading_font_weights)
+    elif isinstance(heading_font_weights, list):
+        # Check that the list has between 1 and 6 values
+        if not heading_font_weights or len(heading_font_weights) > 6:
+            raise ValueError(
+                f"Config theme.headingFontWeights should have 1-6 values corresponding to h1-h6, "
+                f"but got {len(heading_font_weights)}"
+            )
+        # Ensure we have exactly 6 heading font weights (h1-h6), padding with 600 as default
+        heading_weights = heading_font_weights[:6] + [600] * (
+            6 - len(heading_font_weights)
+        )
+
+        for weight in heading_weights:
+            try:
+                msg.heading_font_weights.append(weight)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontWeights config option: %s.",
+                    weight,
+                    exc_info=e,
+                )
+
+    chart_categorical_colors = theme_opts.get("chartCategoricalColors", None)
+    # If chartCategoricalColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_categorical_colors, str):
+        try:
+            chart_categorical_colors = json.loads(chart_categorical_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                chart_categorical_colors,
+                exc_info=e,
+            )
+            chart_categorical_colors = None
+
+    if chart_categorical_colors is not None:
+        for color in chart_categorical_colors:
+            try:
+                msg.chart_categorical_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                    color,
                     exc_info=e,
                 )
 

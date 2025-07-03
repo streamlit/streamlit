@@ -825,6 +825,19 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.customComponentBaseUrlPath",
+    description="""
+        The base path for the URL where Streamlit should serve custom
+        components. If this config var is set and a call to ``declare_component``
+        does not specify a URL, the component's URL will be set to
+        ``f"{server.customComponentBaseUrlPath}/{component_name}/"``.
+    """,
+    default_val="",
+    type_=str,
+    visibility="hidden",
+)
+
 # TODO: Rename to server.enableCorsProtection.
 _create_option(
     "server.enableCORS",
@@ -1145,6 +1158,15 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "linkUnderline",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Whether or not links should be displayed with an underline.
+    """,
+    type_=bool,
+)
+
+_create_theme_options(
     "codeBackgroundColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
@@ -1199,6 +1221,20 @@ _create_theme_options(
 
         When unset, the code font size will be 0.875rem.
     """,
+)
+
+_create_theme_options(
+    "codeFontWeight",
+    categories=["theme"],
+    description="""
+        The font weight for code blocks and code text.
+
+        This applies to inline code, code blocks (ex: `st.code`), and font in `st.json` and `st.help`.
+        Valid values are 100-900, in increments of 100.
+
+        When unset, the default code font weight will be 400.
+    """,
+    type_=int,
 )
 
 _create_theme_options(
@@ -1310,10 +1346,31 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "dataframeHeaderBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        The background color of the dataframe's header.
+
+        If no dataframe header background color is set, Streamlit uses a mix of
+        `theme.bgColor` and `theme.secondaryBg`.
+    """,
+)
+
+_create_theme_options(
     "showWidgetBorder",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         Whether to show a border around input widgets.
+    """,
+    type_=bool,
+)
+
+_create_theme_options(
+    "showSidebarBorder",
+    categories=["theme"],
+    description="""
+        Whether to show a vertical separator between the sidebar and the main
+        content area.
     """,
     type_=bool,
 )
@@ -1332,13 +1389,75 @@ _create_theme_options(
 )
 
 _create_theme_options(
-    "showSidebarBorder",
+    "baseFontWeight",
     categories=["theme"],
     description="""
-        Whether to show a vertical separator between the sidebar and the main
-        content area.
+        Sets the root font weight for the app.
+
+        This determines the overall weight of text and UI elements.
+        Valid values are 100-600, in increments of 100.
+
+        When unset, the font weight will be set to normal 400.
     """,
-    type_=bool,
+    type_=int,
+)
+
+_create_theme_options(
+    "headingFontWeights",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Sets the font weight for h1-h6 headings. Valid values are 100-900, in increments of 100.
+
+        When unset, the font weights will be set to defaults:
+        - h1: bold 700
+        - h2-h6: semi-bold 600
+
+        For example, you can use the following to set the font weight for h1 to 700 and h2-h6 to 600:
+            headingFontWeights = [700, 600, 600, 600, 600, 600]
+
+        If you only want to set h1-h3:
+            headingFontWeights = [700, 600, 500]
+
+        If you want to set the font weight for all headings to 700, you can do the following:
+            headingFontWeights = 700
+    """,
+)
+
+_create_theme_options(
+    "chartCategoricalColors",
+    categories=["theme"],
+    description="""
+        An array of colors to use for categorical charts.
+
+        If no chart categorical colors are set, Streamlit uses a default set of
+        colors.
+        For light themes the default colors are:
+        [
+            "#0068c9", # blue80
+            "#83c9ff", # blue40
+            "#ff2b2b", # red80
+            "#ffabab", # red40
+            "#29b09d", # blueGreen80
+            "#7defa1", # green40
+            "#ff8700", # orange80
+            "#ffd16a", # orange50
+            "#6d3fc0", # purple80
+            "#d5dae5", # gray40
+        ]
+        For dark themes the default colors are:
+        [
+            "#83c9ff", # blue40
+            "#0068c9", # blue80
+            "#ffabab", # red40
+            "#ff2b2b", # red80
+            "#7defa1", # green40
+            "#29b09d", # blueGreen80
+            "#ffd16a", # orange50
+            "#ff8700", # orange80
+            "#6d3fc0", # purple80
+            "#d5dae5", # gray40
+        ]
+    """,
 )
 
 # Config Section: Secrets #

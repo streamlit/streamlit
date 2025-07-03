@@ -215,9 +215,17 @@ export const StyledIFrameResizerAnchor = styled.div(({ theme }) => ({
   bottom: theme.spacing.none,
 }))
 
-export const StyledMainContent = styled.div({
-  width: "100%",
+export const StyledMainContent = styled.div(({ theme }) => ({
+  width: theme.sizes.full,
+  minWidth: 0,
   height: "100vh",
-  display: "flex",
-  flexDirection: "column",
-})
+
+  // Apply relative positioning only on desktop to fix header positioning when sidebar opens.
+  // On mobile, relative positioning is omitted to allow the sidebar to properly overlay
+  // the app content for st.navigation(position='top') functionality (#11349).
+  // Without this conditional positioning, the sidebar would overlap the top navigation
+  // when opened on desktop devices.
+  [`@media (min-width: ${theme.breakpoints.md})`]: {
+    position: "relative",
+  },
+}))

@@ -18,6 +18,7 @@ import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
 import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import { getSidebarHorizontalSpacing } from "@streamlit/app/src/components/Sidebar/styled-components"
 
 /**
  * Returns the color of the text in the sidebar nav.
@@ -48,22 +49,6 @@ export const getNavTextColor = (
   return isLightTheme
     ? transparentize(theme.colors.bodyText, 0.2)
     : transparentize(theme.colors.bodyText, 0.25)
-}
-
-/**
- * Returns the horizontal spacing for the sidebar. Since scrollbarGutter is set
- * to `stable both-edges`, we need to match the prior spacing from when we were
- * reliant on overlay scrollbars. This doesn't directly map to a value in the
- * theme.spacing object. We add 2px to achieve this as a close approximation for
- * Chrome. The space reserved for the scrollbar is dependent upon browser and
- * OS, so this will be an imperfect match to prior behavior due to the
- * deprecated browser API of `overflow: overlay`.
- *
- * @param theme The theme to use.
- * @returns The horizontal spacing for the sidebar.
- */
-const getSidebarHorizontalSpacing = (theme: EmotionTheme): string => {
-  return `calc(${theme.spacing.lg} + 2px)`
 }
 
 export const StyledSidebarNavContainer = styled.div({
@@ -201,6 +186,7 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
 export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
   return {
     fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.semiBold,
     color: getNavTextColor(theme, false),
     lineHeight: theme.lineHeights.small,
     paddingRight: theme.spacing.sm,
@@ -241,6 +227,12 @@ export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   marginRight: getSidebarHorizontalSpacing(theme),
   marginLeft: getSidebarHorizontalSpacing(theme),
+}))
+
+export const StyledNavSectionContainer = styled.div(({ theme }) => ({
+  "&:not(:first-child)": {
+    marginTop: theme.spacing.lg,
+  },
 }))
 
 // TopNav styled components

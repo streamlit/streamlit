@@ -51,3 +51,39 @@ if st.button("Add message"):
 with st.container(height=200):
     for i in range(10):
         st.chat_message("user").write(f"Message {i}")
+
+# Test that an empty container with a border is rendered.
+with st.container(border=True):
+    st.container(border=True)
+
+# Test that an empty container with height is rendered.
+with st.container(border=True):
+    st.container(height=200)
+
+# Test that an empty container without height or border is not rendered.
+with st.container(border=True):
+    st.container()
+
+with st.container(height=200, border=True):
+    st.write("Inside container 1")
+    with st.container(height=250, border=True):
+        st.write("Inside container 2")
+
+with st.container(height=200, border=True):
+    st.write("Inside container 3")
+    with st.container(border=True):
+        st.write("Inside container 4")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    with st.container(height=200, border=True):
+        st.write("Inside container 5")
+    with st.container(border=True):
+        st.write("Inside container 6")
+
+with col2:
+    with st.container(border=True):
+        st.write("Inside container 7")
+    with st.container(height=100, border=True):
+        st.write("Inside container 8")

@@ -15,7 +15,6 @@
 from playwright.sync_api import Page, Route, expect
 
 from e2e_playwright.conftest import wait_until
-from e2e_playwright.shared.app_utils import goto_app
 
 # The timeout value from ComponentInstance.tsx
 COMPONENT_READY_WARNING_TIME_MS = 60000  # 60 seconds
@@ -43,10 +42,12 @@ def test_component_source_failure(page: Page, app_port: int):
     page.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(page, f"http://localhost:{app_port}")
+    page.goto(f"http://localhost:{app_port}")
 
     # Expect the iframe to be attached
-    expect(page.get_by_test_id("stCustomComponentV1")).to_be_attached()
+    # Use a higher timeout since the goto triggers a rerun which sometimes can take
+    # > 5 seconds.
+    expect(page.get_by_test_id("stCustomComponentV1")).to_be_attached(timeout=10000)
 
     # Wait until the expected error is logged, which indicates CLIENT_ERROR was sent
     wait_until(
@@ -71,10 +72,12 @@ def test_component_timeout_failure(page: Page, app_port: int):
     page.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(page, f"http://localhost:{app_port}")
+    page.goto(f"http://localhost:{app_port}")
 
     # Expect the iframe to be attached
-    expect(page.get_by_test_id("stCustomComponentV1")).to_be_attached()
+    # Use a higher timeout since the goto triggers a rerun which sometimes can take
+    # > 5 seconds.
+    expect(page.get_by_test_id("stCustomComponentV1")).to_be_attached(timeout=10000)
 
     # Fetch error should be logged
     wait_until(

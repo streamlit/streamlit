@@ -40,6 +40,7 @@ export const StyledDocContainer = styled.span(({ theme }) => ({
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.codeFontSize,
+  fontWeight: theme.fontWeights.code,
 }))
 
 export const StyledDocHeader = styled.div(({ theme }) => ({
