@@ -15,7 +15,7 @@
  */
 
 import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
-import { createRule } from "./createRule"
+import { createRule } from "./utils/createRule"
 
 type MessageIds = "enforceMemo"
 

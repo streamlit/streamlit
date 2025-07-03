@@ -15,7 +15,7 @@
  */
 
 import enforceMemo from "./enforce-memo"
-import { ruleTester } from "./ruleTester"
+import { ruleTester } from "./utils/ruleTester"
 
 ruleTester.run("enforce-memo", enforceMemo, {
   valid: [

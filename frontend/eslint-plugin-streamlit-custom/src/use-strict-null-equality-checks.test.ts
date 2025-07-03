@@ -15,7 +15,7 @@
  */
 
 import useStrictNullEqualityChecks from "./use-strict-null-equality-checks"
-import { ruleTester } from "./ruleTester"
+import { ruleTester } from "./utils/ruleTester"
 
 // Throws error if the tests do not pass
 ruleTester.run(

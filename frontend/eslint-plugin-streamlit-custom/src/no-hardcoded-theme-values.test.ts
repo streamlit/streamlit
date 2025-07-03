@@ -15,7 +15,7 @@
  */
 
 import noHardcodedThemeValues from "./no-hardcoded-theme-values"
-import { ruleTester } from "./ruleTester"
+import { ruleTester } from "./utils/ruleTester"
 
 ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
   valid: [
