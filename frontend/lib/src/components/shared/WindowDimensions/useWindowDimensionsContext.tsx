@@ -14,22 +14,12 @@
  * limitations under the License.
  */
 
-import { PageConfig } from "@streamlit/protobuf"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
-export function shouldCollapse(
-  initialSidebarState: PageConfig.SidebarState | undefined,
-  mediumBreakpointPx: number,
-  windowInnerWidth: number
-): boolean {
-  switch (initialSidebarState) {
-    case PageConfig.SidebarState.EXPANDED:
-      return false
-    case PageConfig.SidebarState.COLLAPSED:
-      return true
-    case PageConfig.SidebarState.AUTO:
-    default: {
-      // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
-      return windowInnerWidth <= mediumBreakpointPx
-    }
-  }
+import { WindowDimensions } from "./useWindowDimensions"
+
+import { WindowDimensionsContext } from "."
+
+export const useWindowDimensionsContext = (): WindowDimensions => {
+  return useRequiredContext(WindowDimensionsContext)
 }

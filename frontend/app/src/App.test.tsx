@@ -45,6 +45,7 @@ import {
   SessionInfo,
   toExportedTheme,
   WidgetStateManager,
+  WindowDimensionsProvider,
 } from "@streamlit/lib"
 import {
   Config,
@@ -318,7 +319,9 @@ window.ResizeObserver = ResizeObserver
 function renderApp(props: Props): RenderResult {
   return render(
     <RootStyleProvider theme={getDefaultTheme()}>
-      <App {...props} />
+      <WindowDimensionsProvider>
+        <App {...props} />
+      </WindowDimensionsProvider>
     </RootStyleProvider>
   )
 }

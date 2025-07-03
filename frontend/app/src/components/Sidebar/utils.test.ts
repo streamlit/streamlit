@@ -19,33 +19,29 @@ import { PageConfig } from "@streamlit/protobuf"
 import { shouldCollapse } from "./utils"
 
 describe("shouldCollapse", () => {
-  const { innerWidth: originalInnerWidth } = window
-  beforeEach(() => {
-    // Replace window.innerWidth with a mutable object that otherwise has
-    // the same contents so that we can change innerWidth below.
-    // @ts-expect-error
-    delete window.innerWidth
-    window.innerWidth = originalInnerWidth
-  })
-  afterEach(() => {
-    window.innerWidth = originalInnerWidth
-  })
-
   it("should collapse given state is collapsed", () => {
-    expect(shouldCollapse(PageConfig.SidebarState.COLLAPSED, 50)).toBeTruthy()
+    expect(
+      shouldCollapse(PageConfig.SidebarState.COLLAPSED, 50, 100)
+    ).toBeTruthy()
   })
 
   it("should not collapse given state is expanded", () => {
-    expect(shouldCollapse(PageConfig.SidebarState.EXPANDED, 50)).toBeFalsy()
+    expect(
+      shouldCollapse(PageConfig.SidebarState.EXPANDED, 50, 100)
+    ).toBeFalsy()
   })
 
   it("should collapse given state is auto and width is less than breakpoint", () => {
-    window.innerWidth = 40
-    expect(shouldCollapse(PageConfig.SidebarState.AUTO, 50)).toBeTruthy()
+    const windowInnerWidth = 40
+    expect(
+      shouldCollapse(PageConfig.SidebarState.AUTO, 50, windowInnerWidth)
+    ).toBeTruthy()
   })
 
   it("should not collapse given state is auto and width greater less than breakpoint", () => {
-    window.innerWidth = 60
-    expect(shouldCollapse(PageConfig.SidebarState.AUTO, 50)).toBeFalsy()
+    const windowInnerWidth = 60
+    expect(
+      shouldCollapse(PageConfig.SidebarState.AUTO, 50, windowInnerWidth)
+    ).toBeFalsy()
   })
 })

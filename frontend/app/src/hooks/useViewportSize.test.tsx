@@ -18,7 +18,12 @@ import React from "react"
 
 import { act, renderHook } from "@testing-library/react"
 
-import { LibContext } from "@streamlit/lib"
+import {
+  LibContext,
+  mockTheme,
+  ThemeProvider,
+  WindowDimensionsProvider,
+} from "@streamlit/lib"
 import type { LibContextProps } from "@streamlit/lib"
 
 import { useViewportSize } from "./useViewportSize"
@@ -36,7 +41,9 @@ const mockContextValue = {
 // Wrapper component to provide context
 const wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => (
   <LibContext.Provider value={mockContextValue}>
-    {children}
+    <ThemeProvider theme={mockTheme.emotion}>
+      <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
+    </ThemeProvider>
   </LibContext.Provider>
 )
 

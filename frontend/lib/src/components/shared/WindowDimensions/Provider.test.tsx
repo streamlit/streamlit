@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 
 import { render, screen } from "@testing-library/react"
 
 import ThemeProvider from "~lib/components/core/ThemeProvider"
-import { mockTheme } from "~lib/mocks/mockTheme"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WindowDimensionsProvider } from "~lib/components/shared/WindowDimensions/Provider"
-import { WindowDimensionsContext } from "~lib/components/shared/WindowDimensions"
+import { mockTheme } from "~lib/mocks/mockTheme"
+
+import { useWindowDimensionsContext } from "./useWindowDimensionsContext"
 
 describe("WindowDimensionsProvider", () => {
   it("should provide the width and height of the window and take into account the theme padding", () => {
@@ -32,7 +32,7 @@ describe("WindowDimensionsProvider", () => {
     } as any)
 
     const MyComponent: FC = () => {
-      const dimensions = useRequiredContext(WindowDimensionsContext)
+      const dimensions = useWindowDimensionsContext()
       return <div>{`${dimensions.fullWidth}x${dimensions.fullHeight}`}</div>
     }
 
@@ -63,7 +63,7 @@ describe("WindowDimensionsProvider", () => {
     )
 
     expect(() => render(<Provider />)).toThrowError(
-      "WindowDimensionsProvider should only be used once per app. If you need to read window dimensions, utilize `useRequiredContext(WindowDimensionsContext)` instead."
+      "WindowDimensionsProvider should only be used once per app. If you need to read window dimensions, utilize `useWindowDimensionsContext()` instead."
     )
     consoleError.mockRestore()
   })

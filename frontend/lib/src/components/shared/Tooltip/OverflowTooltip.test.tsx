@@ -19,8 +19,7 @@ import React from "react"
 import { render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { mockTheme } from "~lib/mocks/mockTheme"
-import ThemeProvider from "~lib/components/core/ThemeProvider"
+import { TestAppWrapper } from "~lib/test_util"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
@@ -51,9 +50,7 @@ describe("Tooltip component", () => {
         the child
       </OverflowTooltip>,
       {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
+        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
       }
     )
 
@@ -86,9 +83,7 @@ describe("Tooltip component", () => {
         the child
       </OverflowTooltip>,
       {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
+        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
       }
     )
 

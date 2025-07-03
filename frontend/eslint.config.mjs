@@ -183,6 +183,27 @@ export default tseslint.config([
             "Please use window.localStorage instead since localStorage is not " +
             "supported in some browsers (e.g. Android WebView).",
         },
+        {
+          name: "innerWidth",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          name: "innerHeight",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "window",
+          property: "innerWidth",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          object: "window",
+          property: "innerHeight",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
