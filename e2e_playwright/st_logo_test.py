@@ -16,6 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    wait_for_app_run,
 )
 
 
@@ -24,8 +25,10 @@ def test_logo_no_sidebar(
 ) -> None:
     select_subtest(themed_app, "logo_no_sidebar_subtest")
 
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-no_sidebar")
+
+    assert_snapshot(themed_app.get_by_test_id("stHeader"), name="logo-no_sidebar")
 
 
 def test_small_logo_w_sidebar(
@@ -34,14 +37,22 @@ def test_small_logo_w_sidebar(
     select_subtest(themed_app, "small_logo_w_sidebar_subtest")
 
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-small_w_sidebar_expanded")
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-small_w_sidebar_expanded",
+    )
 
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
 
     expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-small_w_sidebar_collapsed")
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
+    assert_snapshot(
+        themed_app.get_by_test_id("stHeader"),
+        name="logo-small_w_sidebar_collapsed",
+    )
 
 
 def test_medium_logo_w_sidebar(
@@ -51,13 +62,21 @@ def test_medium_logo_w_sidebar(
 
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-medium_w_sidebar_expanded")
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-medium_w_sidebar_expanded",
+    )
 
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
 
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-medium_w_sidebar_collapsed")
+    assert_snapshot(
+        themed_app.get_by_test_id("stHeader"),
+        name="logo-medium_w_sidebar_collapsed",
+    )
 
 
 def test_large_logo_w_sidebar(
@@ -66,14 +85,22 @@ def test_large_logo_w_sidebar(
     select_subtest(themed_app, "large_logo_w_sidebar_subtest")
 
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-large_w_sidebar_expanded")
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-large_w_sidebar_expanded",
+    )
 
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
-
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-large_w_sidebar_collapsed")
+    assert_snapshot(
+        themed_app.get_by_test_id("stHeader"),
+        name="logo-large_w_sidebar_collapsed",
+    )
 
 
 def test_logo_w_sidebar_and_nav(
@@ -82,11 +109,13 @@ def test_logo_w_sidebar_and_nav(
     select_subtest(themed_app, "logo_w_sidebar_and_nav_subtest")
 
     expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
     expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
-    assert_snapshot(themed_app, name="logo-navbar")
+    assert_snapshot(themed_app.get_by_test_id("stSidebarHeader"), name="logo-navbar")
 
 
 def select_subtest(app: Page, name: str) -> None:
     selectbox_input = app.get_by_test_id("stSelectbox").nth(0).locator("input")
     selectbox_input.type(name)
     selectbox_input.press("Enter")
+    wait_for_app_run(app)
