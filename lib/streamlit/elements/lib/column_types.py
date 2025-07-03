@@ -2061,7 +2061,7 @@ def ProgressColumn(
     step: int, float, or None
         The precision of numbers. If this is ``None`` (default), integer columns
         will have a step of 1 and float columns will have a step of 0.01.
-        Setting ``step`` for  float columns will ensure a consistent number of
+        Setting ``step`` for float columns will ensure a consistent number of
         digits after the decimal are displayed.
 
     Examples
