@@ -154,6 +154,7 @@ class ProgressColumnConfig(TypedDict):
     format: NotRequired[str | NumberFormat | None]
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
+    step: NotRequired[int | float | None]
 
 
 class JsonColumnConfig(TypedDict):
@@ -1984,6 +1985,7 @@ def ProgressColumn(
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
+    step: int | float | None = None,
 ) -> ColumnConfig:
     """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2056,6 +2058,12 @@ def ProgressColumn(
         The maximum value of the progress bar. If this is ``None`` (default),
         the maximum will be 100 for integer values and 1.0 for float values.
 
+    step: int, float, or None
+        The precision of numbers. If this is ``None`` (default), integer columns
+        will have a step of 1 and float columns will have a step of 0.01.
+        Setting ``step`` for float columns will ensure a consistent number of
+        digits after the decimal are displayed.
+
     Examples
     --------
     >>> import pandas as pd
@@ -2096,6 +2104,7 @@ def ProgressColumn(
             format=format,
             min_value=min_value,
             max_value=max_value,
+            step=step,
         ),
     )
 
