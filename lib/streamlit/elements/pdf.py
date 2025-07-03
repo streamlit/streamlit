@@ -61,14 +61,16 @@ def _get_pdf_component() -> Any:
 
 class PdfMixin:
     @gather_metrics("pdf")
+
     def pdf(
         self,
         data: PdfData,
         *,
         height: HeightWithoutContent = 500,
         width: WidthWithoutContent = "stretch",
-        key: str | None = None,
+        key: Optional[str] = None,
     ) -> DeltaGenerator:
+
         """Display a PDF viewer.
 
         Parameters
