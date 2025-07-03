@@ -228,9 +228,13 @@ class _MultiPathWatcher:
     def close(self) -> None:
         with self._lock:
             """Close this _MultiPathWatcher object forever."""
-            # TODO: Change:
-            if len(self._folder_handlers) != 0:
-                self._folder_handlers = {}
+            if self._folder_handlers:
+                _LOGGER.debug(
+                    "Stopping observer thread even though there is a non-zero "
+                    "number of event observers!"
+                )
+                self._observer.unschedule_all()
+                self._folder_handlers.clear()
 
             _LOGGER.debug("Stopping observer thread")
             self._observer.stop()
