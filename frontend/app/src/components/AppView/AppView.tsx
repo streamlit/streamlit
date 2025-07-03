@@ -252,15 +252,6 @@ function AppView(props: AppViewProps): ReactElement {
     shouldShowNavigation ||
     showToolbar
 
-  console.log({
-    initialSidebarState,
-    isSidebarCollapsed,
-    showSidebar,
-    hasSidebarElements,
-    hideSidebarNav,
-    showSidebarOverride,
-  })
-
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <>
