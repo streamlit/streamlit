@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 31
+TOTAL_BUTTONS = 28
 
 
 def test_button_widget_rendering(
