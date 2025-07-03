@@ -154,6 +154,9 @@ export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
   gap?: streamlit.GapSize | undefined
   flex?: React.CSSProperties["flex"]
+  // This marks the prop as a transient property so it is
+  // not passed to the DOM. It overlaps with a valid attibute
+  // so passing it to the DOM will cause an error in the console.
   $wrap?: boolean
   height?: React.CSSProperties["height"]
   border: boolean
