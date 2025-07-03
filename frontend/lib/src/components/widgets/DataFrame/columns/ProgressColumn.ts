@@ -201,7 +201,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
           measureLabel:
             displayData.length > measureLabel.length
               ? // Use displayData if it's longer than measureLabel to determine
-                // the width of the progress bar lable.
+                // the width of the progress bar label.
                 displayData
               : measureLabel,
         },
