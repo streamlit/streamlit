@@ -141,7 +141,7 @@ class PdfMixin:
 
         # Convert height and width to appropriate format
         if height == "stretch":
-            component_height = 600  # Default height when stretch
+            component_height = 500  # Default height when stretch
         else:
             component_height = height
 
