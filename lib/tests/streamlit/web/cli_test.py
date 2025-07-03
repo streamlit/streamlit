@@ -353,6 +353,7 @@ class CliTest(unittest.TestCase):
                     "streamlit.runtime.credentials._check_credential_file_exists",
                     return_value=False,
                 ),
+                patch("streamlit.web.bootstrap.run"),
             ):
                 result = self.runner.invoke(cli, ["run", "file_name.py"])
 
@@ -377,6 +378,7 @@ class CliTest(unittest.TestCase):
                     "streamlit.runtime.credentials._check_credential_file_exists",
                     return_value=False,
                 ),
+                patch("streamlit.web.bootstrap.run"),
             ):
                 result = self.runner.invoke(cli, ["run", "file_name.py"])
 
