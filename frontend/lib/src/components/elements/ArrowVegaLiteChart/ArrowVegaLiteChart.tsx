@@ -36,17 +36,19 @@ import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function isFacetChart(spec: any): boolean {
-  // Check for top-level facet property
-  if ("facet" in spec) return true
-  // Check for row/column encoding
-  if (
-    spec.encoding &&
-    (spec.encoding.row !== undefined || spec.encoding.column !== undefined)
-  ) {
-    return true
+function isFacetChart(spec: string | object): boolean {
+  try {
+    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+
+    return !!(
+      parsedSpec.facet ||
+      parsedSpec.encoding?.row ||
+      parsedSpec.encoding?.column ||
+      parsedSpec.encoding?.facet
+    )
+  } catch {
+    return false
   }
-  return false
 }
 export interface Props {
   element: VegaLiteChartElement
@@ -64,10 +66,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const {
     expanded: isFullScreen,
     height,
+    width: fullScreenWidth,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
   const [width, containerRef] = useCalculatedWidth()
+
+  // Facet charts need the container element to have a width and also
+  // do not work well with stretch/container width
+  // so they cannot use the width from the StyledVegaLiteChartContainer.
+  const isFacet = isFacetChart(inputElement.spec)
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -78,7 +86,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const element = useVegaElementPreprocessor(
     inputElement,
     isFullScreen,
-    width,
+    isFacet ? (fullScreenWidth ?? 0) : width,
     height ?? 0
   )
 
@@ -92,11 +100,6 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   const { data, datasets, spec } = element
 
-  // Facet charts need the container element to have a width.
-  // We want to target this styling to facet charts since it
-  // causes the toolbar to be on the far right.
-  const isFacet = isFacetChart(spec)
-
   // Create the view once the container is ready and re-create
   // if the spec changes or the dimensions change.
   // We utilize useLayoutEffect to ensure that the view is created
@@ -108,7 +111,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
 
     return finalizeView
-  }, [createView, finalizeView, spec, width, height, containerRef])
+  }, [createView, finalizeView, spec, fullScreenWidth, height, containerRef])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
@@ -124,7 +127,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   return (
     <StyledToolbarElementContainer
       height={height}
-      useContainerWidth={element.useContainerWidth || isFacet}
+      useContainerWidth={element.useContainerWidth}
     >
       <Toolbar
         target={StyledToolbarElementContainer}
@@ -137,7 +140,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
         className="stVegaLiteChart"
-        useContainerWidth={element.useContainerWidth || isFacet}
+        useContainerWidth={element.useContainerWidth}
         isFullScreen={isFullScreen}
         ref={containerRef}
       />
