@@ -16,7 +16,10 @@
 
 import React, { ReactElement } from "react"
 
-import { StyledSidebarNavSectionHeader } from "./styled-components"
+import {
+  StyledNavSectionContainer,
+  StyledSidebarNavSectionHeader,
+} from "./styled-components"
 
 export interface NavSectionProps {
   header?: string
@@ -28,14 +31,14 @@ const NavSection = ({
   children,
 }: NavSectionProps): ReactElement => {
   return (
-    <>
+    <StyledNavSectionContainer>
       {header && (
         <StyledSidebarNavSectionHeader data-testid="stNavSectionHeader">
           {header}
         </StyledSidebarNavSectionHeader>
       )}
       {children}
-    </>
+    </StyledNavSectionContainer>
   )
 }
 

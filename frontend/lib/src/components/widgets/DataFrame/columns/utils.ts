@@ -545,7 +545,7 @@ function formatIntlNumberWithLocales(
  *
  * @param format - The format to use. If not provided, the default format is used.
  * @param maxPrecision - The maximum number of decimals to show. If not provided,
- *                     a reasonable default is used based on the configured default.
+ *                     a reasonable default is used based on the configured format.
  *
  * @returns The formatted number as a string.
  */
@@ -597,7 +597,9 @@ export function formatNumber(
   } else if (format === "percent") {
     return formatIntlNumberWithLocales(value, {
       style: "percent",
-      minimumFractionDigits: maxPrecision ?? 0,
+      minimumFractionDigits: notNullOrUndefined(maxPrecision)
+        ? Math.max(maxPrecision - 2, 0)
+        : 0,
       maximumFractionDigits: notNullOrUndefined(maxPrecision)
         ? // Percentage already gets multiplied by 100 by the formatter,
           // so we need to reduce the precision by 2 to get the
@@ -610,14 +612,14 @@ export function formatNumber(
       style: "currency",
       currency: "USD",
       currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: maxPrecision ?? 0,
+      minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "euro") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
-      minimumFractionDigits: maxPrecision ?? 0,
+      minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "yen") {
@@ -629,8 +631,7 @@ export function formatNumber(
     })
   } else if (["compact", "scientific", "engineering"].includes(format)) {
     return formatIntlNumberWithLocales(value, {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      notation: format as any,
+      notation: format as "compact" | "scientific" | "engineering",
     })
   } else if (format === "accounting") {
     return numbro(value).format({
@@ -646,6 +647,8 @@ export function formatNumber(
         style: "unit",
         unit: "byte",
         unitDisplay: "narrow",
+        // We don't apply maxPrecision here since
+        // bytes already gets transformed to different units.
         maximumFractionDigits: 1,
       })
         // The intl number format renders gigabytes as BB

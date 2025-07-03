@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
@@ -42,7 +42,7 @@ NumberFormat: TypeAlias = Literal[
     "bytes",
 ]
 
-ColumnWidth: TypeAlias = Literal["small", "medium", "large"]
+ColumnWidth: TypeAlias = Union[Literal["small", "medium", "large"], int]
 
 # Type alias that represents all available column types
 # which are configurable by the user.
@@ -170,7 +170,7 @@ class ColumnConfig(TypedDict, total=False):
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -178,6 +178,7 @@ class ColumnConfig(TypedDict, total=False):
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -274,7 +275,7 @@ def Column(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -282,6 +283,7 @@ def Column(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -378,7 +380,7 @@ def NumberColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -386,6 +388,7 @@ def NumberColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -460,7 +463,7 @@ def NumberColumn(
         (default), integer columns will have a step of 1 and float columns will
         have unrestricted precision. In this case, some floats may display like
         integers. Setting ``step`` for float columns will ensure a consistent
-        number of digits after the decimal even without setting ``format``.
+        number of digits after the decimal are displayed.
 
     Examples
     --------
@@ -536,7 +539,7 @@ def TextColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -544,6 +547,7 @@ def TextColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -658,7 +662,7 @@ def LinkColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -666,6 +670,7 @@ def LinkColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -816,7 +821,7 @@ def CheckboxColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -824,6 +829,7 @@ def CheckboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -924,7 +930,7 @@ def SelectboxColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -932,6 +938,7 @@ def SelectboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1047,7 +1054,7 @@ def BarChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1055,6 +1062,7 @@ def BarChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1143,7 +1151,7 @@ def LineChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1151,6 +1159,7 @@ def LineChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1240,7 +1249,7 @@ def AreaChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1248,6 +1257,7 @@ def AreaChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1343,7 +1353,7 @@ def ImageColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1351,6 +1361,7 @@ def ImageColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1425,7 +1436,7 @@ def ListColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1433,6 +1444,7 @@ def ListColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1518,7 +1530,7 @@ def DatetimeColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1526,6 +1538,7 @@ def DatetimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1680,7 +1693,7 @@ def TimeColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1688,6 +1701,7 @@ def TimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1833,7 +1847,7 @@ def DateColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1841,6 +1855,7 @@ def DateColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1984,7 +1999,7 @@ def ProgressColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1992,6 +2007,7 @@ def ProgressColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -2113,7 +2129,7 @@ def JsonColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -2121,6 +2137,7 @@ def JsonColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If

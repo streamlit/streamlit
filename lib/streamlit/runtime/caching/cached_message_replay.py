@@ -17,7 +17,9 @@ from __future__ import annotations
 import contextlib
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union
+
+from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime, util
@@ -29,7 +31,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from types import FunctionType
 
     from google.protobuf.message import Message
 
@@ -70,13 +71,16 @@ class BlockMsgData:
 MsgData = Union[ElementMsgData, BlockMsgData]
 
 
+R = TypeVar("R")
+
+
 @dataclass
-class CachedResult:
+class CachedResult(Generic[R]):
     """The full results of calling a cache-decorated function, enough to
     replay the st functions called while executing it.
     """
 
-    value: Any
+    value: R
     messages: list[MsgData]
     main_id: str
     sidebar_id: str
@@ -132,7 +136,7 @@ class CachedMessageReplayContext(threading.local):
         return util.repr_(self)
 
     @contextlib.contextmanager
-    def calling_cached_function(self, func: FunctionType) -> Iterator[None]:  # noqa: ARG002
+    def calling_cached_function(self, func: Callable[..., Any]) -> Iterator[None]:  # noqa: ARG002
         """Context manager that should wrap the invocation of a cached function.
         It allows us to track any `st.foo` messages that are generated from inside the
         function for playback during cache retrieval.
@@ -233,8 +237,11 @@ class CachedMessageReplayContext(threading.local):
         self._media_data.append(MediaMsgData(media_data, mimetype, media_id))
 
 
+P = ParamSpec("P")
+
+
 def replay_cached_messages(
-    result: CachedResult, cache_type: CacheType, cached_func: FunctionType
+    result: CachedResult[R], cache_type: CacheType, cached_func: Callable[P, R]
 ) -> None:
     """Replay the st element function calls that happened when executing a
     cache-decorated function.
