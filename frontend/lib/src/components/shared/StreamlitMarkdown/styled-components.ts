@@ -19,7 +19,8 @@ import styled from "@emotion/styled"
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
-  isInSidebarOrDialog: boolean
+  isInDialog: boolean
+  isInSidebar: boolean
   isLabel?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
@@ -43,8 +44,32 @@ function sharedMarkdownStyle(theme: Theme): any {
 
 /**
  * Caption sizes taken from default styles, but using em instead of rem, so it
+ * inherits the <small>'s shrunk size. Also handles reduced heading font sizes
+ * in dialogs.
+ */
+function testConvertFontSizes(
+  fontSize: string,
+  isInDialog: boolean,
+  isCaption: boolean
+): string {
+  // For headers in `st.caption`, we use `em` values, so the headers automatically
+  // become a bit smaller by adapting to the font size of the caption.
+
+  if (isInDialog) {
+    // Dialogs also reduce the font size of the headings
+    const roundedDialogFontSize =
+      Math.round(parseFloat(fontSize) * 0.65 * 8) / 8
+    const dialogFontSize = roundedDialogFontSize.toString() + "rem"
+    // TODO: Handle whether there should be a floor (1rem?)
+    return isCaption ? convertRemToEm(dialogFontSize) : dialogFontSize
+  }
+
+  return isCaption ? convertRemToEm(fontSize) : fontSize
+}
+
+/**
+ * Caption sizes taken from default styles, but using em instead of rem, so it
  * inherits the <small>'s shrunk size
- *
  */
 function convertFontSizes(
   fontSize: string,
@@ -63,7 +88,7 @@ function convertFontSizes(
 
 function getMarkdownHeadingDefinitions(
   theme: Theme,
-  useSmallerHeadings: boolean,
+  isInDialog: boolean,
   isCaption: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
@@ -75,12 +100,20 @@ function getMarkdownHeadingDefinitions(
       color: "inherit",
     },
     h1: {
-      fontSize: convertFontSizes(
-        theme.fontSizes.fourXL,
-        theme.fontSizes.xl,
-        useSmallerHeadings,
+      // fontSize: convertFontSizes(
+      //   theme.fontSizes.fourXL,
+      //   theme.fontSizes.xl,
+      //   useSmallerHeadings,
+      //   isCaption
+      // ),
+
+      // TESTING:
+      fontSize: testConvertFontSizes(
+        theme.fontSizes.h1FontSize,
+        isInDialog,
         isCaption
       ),
+
       fontWeight: theme.fontWeights.h1FontWeight,
       padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
@@ -93,52 +126,89 @@ function getMarkdownHeadingDefinitions(
       letterSpacing: "-0.005em",
     },
     h2: {
-      fontSize: convertFontSizes(
-        theme.fontSizes.threeXL,
-        theme.fontSizes.lg,
-        useSmallerHeadings,
+      // fontSize: convertFontSizes(
+      //   theme.fontSizes.threeXL,
+      //   theme.fontSizes.lg,
+      //   useSmallerHeadings,
+      //   isCaption
+      // ),
+
+      // TESTING:
+      fontSize: testConvertFontSizes(
+        theme.fontSizes.h2FontSize,
+        isInDialog,
         isCaption
       ),
       fontWeight: theme.fontWeights.h2FontWeight,
       padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
-      fontSize: convertFontSizes(
-        theme.fontSizes.twoXL,
-        theme.fontSizes.mdLg,
-        useSmallerHeadings,
+      // fontSize: convertFontSizes(
+      //   theme.fontSizes.twoXL,
+      //   theme.fontSizes.mdLg,
+      //   useSmallerHeadings,
+      //   isCaption
+      // ),
+
+      // TESTING:
+      fontSize: testConvertFontSizes(
+        theme.fontSizes.h3FontSize,
+        isInDialog,
         isCaption
       ),
+
       fontWeight: theme.fontWeights.h3FontWeight,
       padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
-      fontSize: convertFontSizes(
-        theme.fontSizes.xl,
-        theme.fontSizes.md,
-        useSmallerHeadings,
+      // fontSize: convertFontSizes(
+      //   theme.fontSizes.xl,
+      //   theme.fontSizes.md,
+      //   useSmallerHeadings,
+      //   isCaption
+      // ),
+
+      // TESTING:
+      fontSize: testConvertFontSizes(
+        theme.fontSizes.h4FontSize,
+        isInDialog,
         isCaption
       ),
       fontWeight: theme.fontWeights.h4FontWeight,
       padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
-      fontSize: convertFontSizes(
-        theme.fontSizes.lg,
-        theme.fontSizes.sm,
-        useSmallerHeadings,
+      // fontSize: convertFontSizes(
+      //   theme.fontSizes.lg,
+      //   theme.fontSizes.sm,
+      //   useSmallerHeadings,
+      //   isCaption
+      // ),
+
+      // TESTING:
+      fontSize: testConvertFontSizes(
+        theme.fontSizes.h5FontSize,
+        isInDialog,
         isCaption
       ),
       fontWeight: theme.fontWeights.h5FontWeight,
       padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
-      fontSize: convertFontSizes(
-        theme.fontSizes.md,
-        theme.fontSizes.twoSm,
-        useSmallerHeadings,
+      // fontSize: convertFontSizes(
+      //   theme.fontSizes.md,
+      //   theme.fontSizes.twoSm,
+      //   useSmallerHeadings,
+      //   isCaption
+      // ),
+
+      // TESTING:
+      fontSize: testConvertFontSizes(
+        theme.fontSizes.h6FontSize,
+        isInDialog,
         isCaption
       ),
+
       fontWeight: theme.fontWeights.h6FontWeight,
       padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
@@ -150,7 +220,7 @@ export const StyledStreamlitMarkdown =
     ({
       theme,
       isCaption,
-      isInSidebarOrDialog,
+      isInDialog,
       isLabel,
       inheritFont,
       boldLabel,
@@ -173,11 +243,7 @@ export const StyledStreamlitMarkdown =
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
         ...sharedMarkdownStyle(theme),
-        ...getMarkdownHeadingDefinitions(
-          theme,
-          isInSidebarOrDialog,
-          isCaption
-        ),
+        ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
 
         // This is required so that long Latex formulas in `st.latex` are scrollable
         // when `help` is set (see below).

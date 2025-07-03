@@ -1550,6 +1550,8 @@ describe("parseFont", () => {
   })
 })
 
+// TODO: Add a font size configuration test
+
 describe("Font weight configuration coverage", () => {
   it("ensures all font weights from typography.ts are handled in setFontWeights", () => {
     // Import the default font weights from typography

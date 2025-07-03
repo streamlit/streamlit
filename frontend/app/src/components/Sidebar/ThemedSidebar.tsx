@@ -35,6 +35,8 @@ export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
     sidebarOverride = theme.themeInput.sidebar
   }
 
+  // TODO: Handle sidebar heading font sizes if set in theme, but not theme.sidebar
+
   // Either use the configured background color or secondary background from main theme:
   const sidebarBackground =
     theme.themeInput?.sidebar?.backgroundColor ||

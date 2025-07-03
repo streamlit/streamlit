@@ -48,7 +48,7 @@ import {
   createEmotionColors,
   DerivedColors,
 } from "./getColors"
-import { fonts } from "./primitives/typography"
+import { fonts, sidebarHeadingFontSizes } from "./primitives/typography"
 
 // Extended theme config type to include properties not in the protobuf definition
 export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
@@ -294,6 +294,79 @@ const isValidFontWeight = (
 }
 
 /**
+ * Helper function to handle each heading font size in the headingFontSizes config
+ * @param configName: the name of the config option
+ * @param fontSize: the heading font size provided via theme config
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param inSidebar: whether this is the sidebar theme
+ * @returns the heading font size in rem
+ */
+const convertHeadingFontSizeToRem = (
+  configName: string,
+  fontSize: string,
+  baseFontSize: number,
+  inSidebar: boolean
+): string | undefined => {
+  // Validates the font size (logs warning & returns undefined if invalid)
+  const validatedSize = parseFontSize(configName, fontSize, inSidebar)
+
+  // Need each heading font size to be in rem
+  if (validatedSize && validatedSize.endsWith("rem")) {
+    return fontSize
+  } else if (validatedSize && fontSize.endsWith("px")) {
+    // Convert the font size to rem, and round to nearest 8th
+    const remValue = parseInt(validatedSize) / baseFontSize
+    const roundedRemValue = Math.round(remValue * 8) / 8
+    return `${roundedRemValue}rem`
+  }
+
+  // If invalid, return undefined
+  return undefined
+}
+
+/**
+ * Set the heading font sizes in the theme config
+ * @param defaultFontSizes: the default theme font sizes
+ * @param inSidebar: whether this is the sidebar theme
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param headingFontSizes: the h1-h6 heading font sizes provided via theme config
+ * @returns an updated emotion theme font sizes object
+ */
+const setHeadingFontSizes = (
+  defaultFontSizes: EmotionTheme["fontSizes"],
+  inSidebar: boolean,
+  baseFontSize: number,
+  headingFontSizes: string[] | null | undefined
+): EmotionTheme["fontSizes"] => {
+  const headingFontSizesOverrides = {
+    ...defaultFontSizes,
+    // Override default header font sizes for sidebar
+    ...(inSidebar ? sidebarHeadingFontSizes : {}),
+  }
+
+  if (headingFontSizes) {
+    headingFontSizes.forEach((size, index) => {
+      const headingFontSizeKey = `h${index + 1}FontSize`
+      // Gets the heading font size in rem if not already & logs warning if invalid
+      const convertedSize = convertHeadingFontSizeToRem(
+        headingFontSizeKey,
+        size,
+        baseFontSize,
+        inSidebar
+      )
+
+      // If valid configured value, overwrite the default heading font size
+      if (convertedSize) {
+        // @ts-expect-error
+        headingFontSizesOverrides[headingFontSizeKey] = convertedSize
+      }
+    })
+  }
+
+  return headingFontSizesOverrides
+}
+
+/**
  * Helper function to set the normal, bold, and extrabold font weights based
  * on the baseFontWeight option
  * @param defaultFontWeights: the default theme font weights
@@ -394,6 +467,7 @@ export const createEmotionTheme = (
     codeFontWeight,
     showWidgetBorder,
     headingFont,
+    headingFontSizes,
     headingFontWeights,
     bodyFont,
     codeFont,
@@ -582,6 +656,15 @@ export const createEmotionTheme = (
     // codeFontSize default (fallback) set in typography primitives (0.875rem)
     // inlineCodeFontSize set in typography primitives (0.75em)
   }
+
+  // Set the heading font sizes based on the heading font sizes config provided
+  conditionalOverrides.fontSizes = setHeadingFontSizes(
+    baseThemeConfig.emotion.fontSizes,
+    inSidebar,
+    // If baseFontSize not configured, use the default base font size
+    baseFontSize || baseThemeConfig.emotion.fontSizes.baseFontSize,
+    headingFontSizes
+  )
 
   // Set the font weights based on the font weight configs provided
   conditionalOverrides.fontWeights = setFontWeights(
