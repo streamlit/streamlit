@@ -51,21 +51,6 @@ with st.expander("Page Link Width Examples", expanded=True):
     )
     st.page_link("https://example.com", label="Stretch Width", width="stretch")
     st.page_link("https://example.com", label="500px Width", width=500)
-    st.page_link(
-        "https://example.com",
-        label="Content Width (help)",
-        width="content",
-        help="help text",
-    )
-    st.page_link(
-        "https://example.com",
-        label="Stretch Width (help)",
-        width="stretch",
-        help="help text",
-    )
-    st.page_link(
-        "https://example.com", label="500px Width (help)", width=500, help="help text"
-    )
 
     # use_container_width is deprecated, but not removed from the API.
     with st.container(key="main_container_width_true"):

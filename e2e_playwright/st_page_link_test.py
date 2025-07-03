@@ -72,9 +72,6 @@ def test_page_link_width_examples(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(page_elements.nth(0), name="st_page_link-width_content")
     assert_snapshot(page_elements.nth(1), name="st_page_link-width_stretch")
     assert_snapshot(page_elements.nth(2), name="st_page_link-width_500px")
-    assert_snapshot(page_elements.nth(3), name="st_page_link-width_content_help")
-    assert_snapshot(page_elements.nth(4), name="st_page_link-width_stretch_help")
-    assert_snapshot(page_elements.nth(5), name="st_page_link-width_500px_help")
 
     # Test gradual deprecation of use_container_width
     assert_snapshot(

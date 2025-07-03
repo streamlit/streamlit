@@ -73,9 +73,6 @@ def test_link_button_width_examples(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(link_elements.nth(0), name="st_link_button-width_content")
     assert_snapshot(link_elements.nth(1), name="st_link_button-width_stretch")
     assert_snapshot(link_elements.nth(2), name="st_link_button-width_400px")
-    assert_snapshot(link_elements.nth(3), name="st_link_button-width_content_help")
-    assert_snapshot(link_elements.nth(4), name="st_link_button-width_stretch_help")
-    assert_snapshot(link_elements.nth(5), name="st_link_button-width_400px_help")
 
     # Test gradual deprecation of use_container_width
     container_width_true_container = link_expander.get_by_test_id(

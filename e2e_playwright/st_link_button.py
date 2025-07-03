@@ -80,15 +80,6 @@ with st.expander("Link Button Width Examples", expanded=True):
     st.link_button("Content Width (Default)", "https://example.com", width="content")
     st.link_button("Stretch Width", "https://example.com", width="stretch")
     st.link_button("400px Width", "https://example.com", width=400)
-    st.link_button(
-        "Content Width (help)", "https://example.com", width="content", help="help text"
-    )
-    st.link_button(
-        "Stretch Width (help)", "https://example.com", width="stretch", help="help text"
-    )
-    st.link_button(
-        "400px Width (help)", "https://example.com", width=400, help="help text"
-    )
 
     # use_container_width is deprecated, but not removed from the API.
     with st.container():

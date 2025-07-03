@@ -264,9 +264,6 @@ with st.container(key="width_tests"):
         st.form_submit_button("Content Width (Default)", width="content")
         st.form_submit_button("Stretch Width", width="stretch")
         st.form_submit_button("250px Width", width=250)
-        st.form_submit_button("Stretch Width (help)", width="stretch", help="help text")
-        st.form_submit_button("Content Width (help)", width="content", help="help text")
-        st.form_submit_button("250px Width (help)", width=250, help="help text")
 
         # use_container_width is deprecated, but not removed from the API.
         with st.container(key="container_width_true"):

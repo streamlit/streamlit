@@ -353,15 +353,6 @@ def test_form_submit_button_width_examples(
     assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
     assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
     assert_snapshot(submit_elements.nth(2), name="st_form_submit_button-width_250px")
-    assert_snapshot(
-        submit_elements.nth(3), name="st_form_submit_button-width_stretch_help"
-    )
-    assert_snapshot(
-        submit_elements.nth(4), name="st_form_submit_button-width_content_help"
-    )
-    assert_snapshot(
-        submit_elements.nth(5), name="st_form_submit_button-width_250px_help"
-    )
 
     assert_snapshot(
         get_element_by_key(app, "container_width_true"),

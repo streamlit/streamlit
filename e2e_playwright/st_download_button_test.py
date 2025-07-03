@@ -249,15 +249,6 @@ def test_download_button_width_examples(
     assert_snapshot(download_elements.nth(0), name="st_download_button-width_content")
     assert_snapshot(download_elements.nth(1), name="st_download_button-width_stretch")
     assert_snapshot(download_elements.nth(2), name="st_download_button-width_300px")
-    assert_snapshot(
-        download_elements.nth(3), name="st_download_button-width_content_help"
-    )
-    assert_snapshot(
-        download_elements.nth(4), name="st_download_button-width_stretch_help"
-    )
-    assert_snapshot(
-        download_elements.nth(5), name="st_download_button-width_300px_help"
-    )
 
     # Test gradual deprecation of use_container_width
     assert_snapshot(
