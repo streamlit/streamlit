@@ -269,8 +269,6 @@ with st.container(width="content", border=True):
     with st.spinner("Loading..."):
         st.write("This content is loading...")
 
-with st.container(width="content", border=True):
-    st.toast("🎉 New update available!", icon="🎉")
 
 # Alert messages
 with st.container(width="content", border=True):
