@@ -116,7 +116,7 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     # the 'exp' (and it is not expired), and 'provider' field exists.
     claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
     try:
-        payload: JWTClaims = jwt.decode(  # type: ignore[no-untyped-call]
+        payload: JWTClaims = jwt.decode(
             provider_token, get_signing_secret(), claims_options=claim_options
         )
         payload.validate()
