@@ -33,22 +33,24 @@ interface OnInputChangeProps {
   setValueWithSource: Dispatch<
     SetStateAction<ValueWithSource<string | null> | null>
   >
-  /** Optional additional functions to run after input change */
-  additionalActions?: (() => void)[]
+  /** Optional additional function to run after input change
+   * Use useCallback to prevent unnecessary re-renders.
+   */
+  additionalAction?: () => void
 }
 
 /**
  * Will return a memoized function that accepts an HTMLInputElement and will call
  * commitWidgetValue and setDirty with its value, unless the value is longer than
  * maxChars. Will also call the setValueWithSource callback if the input is in a form.
- * Can also run additional actions after the main logic.
+ * Can also run an additional action after the main logic.
  *
  * @param formId if is in a form
  * @param maxChars if the input element's value length is greater than this, nothing will be called. Set to 0 to disable.
  * @param setDirty calls setDirty with true
  * @param setUiValue calls setUiValue with the input element's value
  * @param setValueWithSource calls setValueWithSource with the input element's value
- * @param additionalActions optional array of functions to run after the main input change logic
+ * @param additionalAction optional function to run after the main input change logic
  * @return memoized callback
  */
 export default function useOnInputChange({
@@ -57,7 +59,7 @@ export default function useOnInputChange({
   setDirty,
   setUiValue,
   setValueWithSource,
-  additionalActions = [],
+  additionalAction,
 }: OnInputChangeProps): (e: OnInputChangeEventType) => void {
   return useCallback(
     (e: OnInputChangeEventType): void => {
@@ -82,8 +84,10 @@ export default function useOnInputChange({
       // update its value in the WidgetMgr. This means that individual keypresses
       // won't trigger a script re-run.
 
-      // Run additional actions after the main logic
-      additionalActions.forEach(action => action())
+      // Run additional action after the main logic
+      if (additionalAction) {
+        additionalAction()
+      }
     },
     [
       formId,
@@ -91,7 +95,7 @@ export default function useOnInputChange({
       setDirty,
       setUiValue,
       setValueWithSource,
-      additionalActions,
+      additionalAction,
     ]
   )
 }

@@ -168,13 +168,19 @@ const TextArea: FC<Props> = ({
     setFocused(true)
   }, [])
 
+  const additionalAction = useCallback(() => {
+    if (isAutoHeight) {
+      autoExpand.updateScrollHeight()
+    }
+  }, [isAutoHeight, autoExpand.updateScrollHeight])
+
   const onChange = useOnInputChange({
     formId: element.formId,
     maxChars: element.maxChars,
     setDirty,
     setUiValue,
     setValueWithSource,
-    additionalActions: isAutoHeight ? [autoExpand.updateScrollHeight] : [],
+    additionalAction,
   })
 
   const onKeyDown = useSubmitFormViaEnterKey(
