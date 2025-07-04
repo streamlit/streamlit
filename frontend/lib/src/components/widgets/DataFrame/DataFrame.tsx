@@ -172,6 +172,16 @@ function DataFrame({
   const [showColumnVisibilityMenu, setShowColumnVisibilityMenu] =
     useState(false)
 
+  const handleToggleColumnVisibilityMenu = useCallback(
+    (): void => setShowColumnVisibilityMenu(show => !show),
+    []
+  )
+
+  const handleCloseColumnVisibilityMenu = useCallback(
+    () => setShowColumnVisibilityMenu(false),
+    []
+  )
+
   // Determine if the device is primary using touch as input:
   const isTouchDevice = useMemo<boolean>(
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
@@ -806,12 +816,12 @@ function DataFrame({
             hideColumn={hideColumn}
             showColumn={showColumn}
             isOpen={showColumnVisibilityMenu}
-            onClose={() => setShowColumnVisibilityMenu(false)}
+            onClose={handleCloseColumnVisibilityMenu}
           >
             <ToolbarAction
               label="Show/hide columns"
               icon={Visibility}
-              onClick={() => setShowColumnVisibilityMenu(true)}
+              onClick={handleToggleColumnVisibilityMenu}
             />
           </ColumnVisibilityMenu>
         )}
@@ -819,7 +829,7 @@ function DataFrame({
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
-            onClick={() => exportToCsv()}
+            onClick={exportToCsv}
           />
         )}
         {!isEmptyTable && (
