@@ -74,35 +74,17 @@ When adding or modifying tests for an element, ensure the following are covered:
 ---
 
 <!--
-description:
+description: List of all available make commands
 globs:
-alwaysApply: true
+alwaysApply: false
 -->
 
 
-## Streamlit Repo Overview
+## Available `make` commands
 
-### Repo Structure
+List of all `make` commands that are available for execution from the repository root folder:
 
-- `lib/`: Core Python library containing the Streamlit backend code.
-- `lib/streamlit/`: The main Python package with all Streamlit functionality.
-- `lib/streamlit/elements/`: UI elements and widgets.
-- `lib/streamlit/runtime/`: Runtime execution engine.
-- `lib/streamlit/web/`: Web server implementation.
-- `frontend/`: TypeScript code for the web interface.
-- `frontend/app/`: Main application UI.
-- `frontend/lib/`: Shared frontend library that contains elements, widgets, and layouts.
-- `frontend/utils/`: Some shared utils used across Streamlit frontend.
-- `frontend/connection/`: WebSocket connection handling logic.
-- `proto/`: Protobuf definitions for client-server communication.
-- `e2e_playwright/`: End-to-end tests using playwright and pytest for testing the UI.
-- `scripts/`: Utility scripts for development and CI/CD.
-- `component-lib/`: Library for building custom components.
-
-### Available `make` commands
-
-Available `make` commands that can be run from the repository root:
-
+help                       Show all available make commands.
 all                        Install all dependencies, build frontend, and install editable Streamlit.
 all-dev                    Install all dependencies and editable Streamlit, but do not build the frontend.
 init                       Install all dependencies and build protobufs.
@@ -140,6 +122,52 @@ cli-smoke-tests            Run CLI smoke tests.
 autofix                    Autofix linting and formatting errors.
 package                    Create Python wheel files in `dist/`.
 conda-package              Create conda distribution files.
+
+---
+
+<!--
+description:
+globs:
+alwaysApply: true
+-->
+
+
+## Streamlit Repo Overview
+
+### Repo Structure
+
+- `lib/`: All backend code and assets.
+- `lib/streamlit/`: The main Streamlit library package.
+- `lib/streamlit/elements/`: Backend code of elements and widgets.
+- `lib/tests`: Python unit tests.
+- `frontend/`: All frontend code and assets.
+- `frontend/app/`: Streamlit application UI.
+- `frontend/lib/`: Shared TS library that contains elements, widgets, and layouts.
+- `frontend/utils/`: Shared utils.
+- `frontend/connection/`: WebSocket connection handling logic.
+- `proto/`: Protobuf definitions for client-server communication.
+- `e2e_playwright/`: E2E tests using playwright.
+- `scripts/`: Utility scripts for development and CI/CD.
+- `component-lib/`: Library for building custom components.
+
+### `make` commands
+
+Selection of `make` commands executable from root relevant for development:
+
+help                       Show all available commands.
+protobuf                   Recompile Protobufs for Python and the frontend.
+python-lint                Lint and check formatting of Python files.
+python-tests               Run all Python unit tests.
+python-types               Run the Python type checker.
+frontend-fast              Build the frontend.
+frontend-dev               Start the frontend development server.
+frontend-lint              Lint and check formatting of frontend files.
+frontend-types             Run the frontend type checker.
+frontend-format            Format frontend files.
+frontend-tests             Run all frontend unit tests.
+autofix                    Autofix linting and formatting errors.
+debug-e2e-test             Run e2e test in debug mode, via: `make debug-e2e-test st_command_test.py`.
+run-e2e-test               Run e2e test, via: `make run-e2e-test st_command_test.py`.
 
 ---
 

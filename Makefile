@@ -29,6 +29,7 @@ $(warning ${error_message_red_colored})
 endif
 
 .PHONY: help
+# Show all available make commands.
 help:
 	@# Magic line used to create self-documenting makefiles.
 	@# Note that this means the documenting comment just before the command (but after the .PHONY) must be all one line, and should begin with a capital letter and end with a period.

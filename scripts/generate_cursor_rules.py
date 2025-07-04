@@ -17,41 +17,22 @@
 import os
 import subprocess
 
-OVERVIEW_RULE_TEMPLATE = """---
-description:
+MAKE_COMMANDS_RULE_TEMPLATE = """---
+description: List of all available make commands
 globs:
-alwaysApply: true
+alwaysApply: false
 ---
 
-# Streamlit Repo Overview
+# Available `make` commands
 
-## Repo Structure
-
-- `lib/`: Core Python library containing the Streamlit backend code.
-- `lib/streamlit/`: The main Python package with all Streamlit functionality.
-- `lib/streamlit/elements/`: UI elements and widgets.
-- `lib/streamlit/runtime/`: Runtime execution engine.
-- `lib/streamlit/web/`: Web server implementation.
-- `frontend/`: TypeScript code for the web interface.
-- `frontend/app/`: Main application UI.
-- `frontend/lib/`: Shared frontend library that contains elements, widgets, and layouts.
-- `frontend/utils/`: Some shared utils used across Streamlit frontend.
-- `frontend/connection/`: WebSocket connection handling logic.
-- `proto/`: Protobuf definitions for client-server communication.
-- `e2e_playwright/`: End-to-end tests using playwright and pytest for testing the UI.
-- `scripts/`: Utility scripts for development and CI/CD.
-- `component-lib/`: Library for building custom components.
-
-## Available `make` commands
-
-Available `make` commands that can be run from the repository root:
+List of all `make` commands that are available for execution from the repository root folder:
 
 {make_commands}
 """
 
 
-def generate_overview_rule() -> None:
-    """Generate the overview rule file."""
+def generate_make_commands_rule() -> None:
+    """Generate the make commands rule file."""
     # Run `make help` and capture the output
     result = subprocess.run(
         ["make", "help"], capture_output=True, text=True, check=True
@@ -59,13 +40,13 @@ def generate_overview_rule() -> None:
     make_commands = result.stdout.strip()
 
     # Format the template with the make commands
-    formatted_content = OVERVIEW_RULE_TEMPLATE.format(make_commands=make_commands)
+    formatted_content = MAKE_COMMANDS_RULE_TEMPLATE.format(make_commands=make_commands)
 
     # Define the output path
     workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     output_dir = os.path.join(workspace_root, ".cursor", "rules")
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "overview.mdc")
+    output_path = os.path.join(output_dir, "make_commands.mdc")
 
     # Write the formatted content to the file
     with open(output_path, "w") as f:
@@ -74,4 +55,4 @@ def generate_overview_rule() -> None:
 
 
 if __name__ == "__main__":
-    generate_overview_rule()
+    generate_make_commands_rule()
