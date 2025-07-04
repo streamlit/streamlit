@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TYPE_CHECKING, cast
+
 import numpy as np
 import requests
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 
 @st.cache_data
@@ -56,10 +61,10 @@ if "run_counter" not in st.session_state:
 
 
 @st.cache_data
-def replay_element():
+def replay_element() -> int:
     st.session_state.run_counter += 1
     st.markdown(f"Cache executions: {st.session_state.run_counter}")
-    return st.session_state.run_counter
+    return cast("int", st.session_state.run_counter)
 
 
 if st.button("Cached function with element replay"):
@@ -86,7 +91,7 @@ video()
 
 @st.cache_data
 def image():
-    img = np.repeat(0, 10000).reshape(100, 100)
+    img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
     st.image(img, caption="A black square", width=200)
 
 

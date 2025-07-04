@@ -1,0 +1,15 @@
+[run]
+omit =
+    */streamlit/proto/*
+    */streamlit/vendor/*
+    */streamlit/static/*
+
+[report]
+omit =
+    */streamlit/proto/*
+    */streamlit/vendor/*
+    */streamlit/static/*
+exclude_also =
+    if TYPE_CHECKING:
+    def dg\(self\)
+    raise NotImplementedError

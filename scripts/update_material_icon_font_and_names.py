@@ -15,14 +15,18 @@
 # limitations under the License.
 
 """Update the list of material icon names in `lib/streamlit/material_icon_names.py.
-and download the latest material symbols font file to
+
+And download the latest material symbols font file to
 ./frontend/app/src/assets/fonts/MaterialSymbols/MaterialSymbols-Rounded.woff2
 """
+
+from __future__ import annotations
 
 import os
 import re
 import sys
 import urllib.request
+
 import requests
 
 from streamlit.material_icon_names import ALL_MATERIAL_ICONS
@@ -34,6 +38,11 @@ MATERIAL_ICONS_FONT_URL = (
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 NAMES_SET_REGEX = re.compile(
     r"### MATERIAL ICON NAMES START ###(.+?)### MATERIAL ICON NAMES END ###", re.DOTALL
+)
+
+PLAYWRIGHT_TEST_REGEX = re.compile(
+    r"### LATEST MATERIAL ICON TEST START ###(.+?)### LATEST MATERIAL ICON TEST END ###",
+    re.DOTALL,
 )
 
 FONT_FILE_URL_REGEX = (
@@ -51,6 +60,7 @@ FONT_FILE_PATH = os.path.join(
     "MaterialSymbols",
     "MaterialSymbols-Rounded.woff2",
 )
+PLAYWRIGHT_TEST_MODULE_PATH = os.path.join(BASE_DIR, "e2e_playwright", "st_alert.py")
 
 
 # Fetch the content from the URL
@@ -68,16 +78,22 @@ for line in lines:
     name = line.split()[0]
     icon_names.add(name)
 
+new_icon_names = icon_names.difference(ALL_MATERIAL_ICONS)
+
 print(f"Existing number of icon names: {len(ALL_MATERIAL_ICONS)}")
 print(f"New number of icon names:  {len(icon_names)}")
-print(f"New icon names:  {icon_names.difference(ALL_MATERIAL_ICONS)}")
+print(f"New icon names:  {new_icon_names}")
 
+
+if len(icon_names) == len(ALL_MATERIAL_ICONS):
+    print("No new icon names found. Exiting.")
+    sys.exit(0)
 
 generated_code = f"""### MATERIAL ICON NAMES START ###
 ALL_MATERIAL_ICONS = {{{", ".join([f'"{icon_name}"' for icon_name in sorted(icon_names)])}}}
 ### MATERIAL ICON NAMES END ###"""
 
-with open(NAMES_MODULE_PATH, "r") as file:
+with open(NAMES_MODULE_PATH) as file:
     script_content = file.read()
 
 updated_script_content = re.sub(NAMES_SET_REGEX, generated_code, script_content)
@@ -90,7 +106,8 @@ with open(NAMES_MODULE_PATH, "w") as file:
 response = requests.get(
     MATERIAL_ICONS_FONT_URL,
     headers={
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_1) AppleWebKit/605.1.15 "
+        "(KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
     },
 )
 
@@ -116,3 +133,20 @@ if font_url is not None:
 else:
     print("Font file not downloaded")
     sys.exit(1)
+
+
+icon_from_latest_font = next(iter(new_icon_names))
+
+generated_code = f"""### LATEST MATERIAL ICON TEST START ###
+st.success(
+    "Success message to test material icon from latest material symbols font",
+    icon=":material/{icon_from_latest_font}:",
+)
+### LATEST MATERIAL ICON TEST END ###"""
+
+with open(PLAYWRIGHT_TEST_MODULE_PATH) as file:
+    script_content = file.read()
+
+updated_script_content = re.sub(PLAYWRIGHT_TEST_REGEX, generated_code, script_content)
+with open(PLAYWRIGHT_TEST_MODULE_PATH, "w") as file:
+    file.write(updated_script_content)

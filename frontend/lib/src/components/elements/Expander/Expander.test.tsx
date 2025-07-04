@@ -19,8 +19,9 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { Block as BlockProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 
 import Expander, { ExpanderProps } from "./Expander"
 
@@ -34,7 +35,6 @@ const getProps = (
     ...elementProps,
   }),
   isStale: false,
-  empty: false,
   ...props,
 })
 
@@ -70,14 +70,6 @@ describe("Expander container", () => {
       </Expander>
     )
     expect(screen.getByText(props.element.label)).toBeInTheDocument()
-  })
-
-  it("does not render collapse/expand icon if empty", () => {
-    const props = getProps({}, { empty: true })
-    render(<Expander {...props}></Expander>)
-    expect(
-      screen.queryByTestId("stExpanderToggleIcon")
-    ).not.toBeInTheDocument()
   })
 
   it("renders expander with a spinner icon", () => {

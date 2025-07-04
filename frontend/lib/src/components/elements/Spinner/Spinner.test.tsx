@@ -17,12 +17,13 @@
 import React from "react"
 
 import { BaseProvider, LightTheme } from "baseui"
-import { screen } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 
-import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
-import { render } from "@streamlit/lib/src/test_util"
+import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
-import Spinner, { formatTime, SpinnerProps } from "./Spinner"
+import { render } from "~lib/test_util"
+
+import Spinner, { SpinnerProps } from "./Spinner"
 
 const getProps = (
   propOverrides: Partial<SpinnerProps> = {},
@@ -32,11 +33,18 @@ const getProps = (
     text: "Loading...",
     ...elementOverrides,
   }),
-  width: 0,
   ...propOverrides,
 })
 
 describe("Spinner component", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("renders without crashing", () => {
     render(
       <BaseProvider theme={LightTheme}>
@@ -52,16 +60,12 @@ describe("Spinner component", () => {
   it("sets the text and width correctly", () => {
     render(
       <BaseProvider theme={LightTheme}>
-        <Spinner {...getProps({ width: 100 })} />
+        <Spinner {...getProps()} />
       </BaseProvider>
     )
 
     const markdownText = screen.getByText("Loading...")
     expect(markdownText).toBeInTheDocument()
-
-    // For the width, as it's a style attribute, we can test it this way:
-    const spinnerElement = screen.getByTestId("stSpinner")
-    expect(spinnerElement).toHaveStyle(`width: 100px`)
   })
 
   it("sets additional className/CSS for caching spinner", () => {
@@ -90,21 +94,79 @@ describe("Spinner component", () => {
     expect(spinnerContainer).toBeInTheDocument()
     expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
   })
-})
 
-describe("formatTime", () => {
-  it.each([
-    [0, "(0.0 seconds)"],
-    [1.5, "(1.5 seconds)"],
-    [45.2, "(45.2 seconds)"],
-    [60, "(1 minute)"],
-    [61.5, "(1 minute, 1.5 seconds)"],
-    [122.2, "(2 minutes, 2.2 seconds)"],
-    [3600, "(1 hour)"],
-    [3660, "(1 hour, 1 minute)"],
-    [3661.5, "(1 hour, 1 minute, 1.5 seconds)"],
-    [7384.2, "(2 hours, 3 minutes, 4.2 seconds)"],
-  ])("formats %s to %s", (value, expected) => {
-    expect(formatTime(value)).toEqual(expected)
+  it("updates timer based on system time", async () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { showTime: true })} />
+      </BaseProvider>
+    )
+
+    // Initially shows 0.0 seconds
+    expect(screen.getByText("(0.0 seconds)")).toBeInTheDocument()
+
+    // Advance time by 1.5 seconds and trigger timer update
+    act(() => {
+      vi.advanceTimersByTime(1500)
+    })
+
+    // Wait for the component to update - allow for some timing variance
+    await waitFor(() => {
+      expect(screen.getByText(/\(1\.[0-9] seconds\)/)).toBeInTheDocument()
+    })
+
+    // Advance time by another 3.2 seconds (total 4.7 seconds)
+    act(() => {
+      vi.advanceTimersByTime(3200)
+    })
+
+    await waitFor(() => {
+      // Allow for some variance in timing - should be around 4.7 seconds
+      expect(
+        screen.getByText(/\([4-6]\.\d{1,2} seconds\)/)
+      ).toBeInTheDocument()
+    })
+  })
+
+  it("formats time correctly for different durations", async () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { showTime: true })} />
+      </BaseProvider>
+    )
+
+    // Test seconds
+    act(() => {
+      vi.advanceTimersByTime(5300) // 5.3 seconds
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/\(5\.[0-9] seconds\)/)).toBeInTheDocument()
+    })
+
+    // Test minutes
+    act(() => {
+      vi.advanceTimersByTime(60000) // Additional 60 seconds (total 65.3 seconds)
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/\(1 minute, [5-7]\.[0-9] seconds\)/)
+      ).toBeInTheDocument()
+    })
+  })
+
+  it("does not show timer when showTime is false", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { showTime: false })} />
+      </BaseProvider>
+    )
+
+    const spinnerContainer = screen.getByTestId("stSpinner")
+    expect(spinnerContainer).toBeInTheDocument()
+
+    // Should not find any timer text
+    expect(screen.queryByText(/seconds/)).not.toBeInTheDocument()
   })
 })

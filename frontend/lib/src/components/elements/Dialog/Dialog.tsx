@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState } from "react"
+import React, { memo, ReactElement, useEffect, useState } from "react"
 
-import Modal, {
-  ModalBody,
-  ModalHeader,
-} from "@streamlit/lib/src/components/shared/Modal"
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { Block as BlockProto } from "@streamlit/protobuf"
 
+import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
+import IsDialogContext from "~lib/components/core/IsDialogContext"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { notNullOrUndefined } from "~lib/util/utils"
+
+import { StyledDialogTitle } from "./styled-components"
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
@@ -60,7 +60,16 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       onClose={() => setIsOpen(false)}
       size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
-      <ModalHeader>{title}</ModalHeader>
+      <ModalHeader>
+        <StyledDialogTitle>
+          <StreamlitMarkdown
+            source={title}
+            allowHTML={false}
+            isLabel
+            inheritFont
+          />
+        </StyledDialogTitle>
+      </ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>
   )
@@ -76,4 +85,4 @@ function DialogWithProvider(
   )
 }
 
-export default DialogWithProvider
+export default memo(DialogWithProvider)

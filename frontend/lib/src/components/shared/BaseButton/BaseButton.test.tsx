@@ -19,8 +19,8 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { lightTheme } from "@streamlit/lib/src/theme"
+import { render } from "~lib/test_util"
+import { lightTheme } from "~lib/theme"
 
 import BaseButton, {
   BaseButtonKind,
@@ -35,7 +35,7 @@ const getProps = (
   size: BaseButtonSize.MEDIUM,
   onClick: () => {},
   disabled: false,
-  fluidWidth: false,
+  containerWidth: false,
   children: null,
   ...propOverrides,
 })
@@ -108,18 +108,11 @@ describe("Button element", () => {
   })
 
   it("renders use container width buttons correctly", () => {
-    render(<BaseButton {...getProps({ fluidWidth: true })}>Hello</BaseButton>)
+    render(
+      <BaseButton {...getProps({ containerWidth: true })}>Hello</BaseButton>
+    )
 
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle("width: 100%")
-  })
-
-  it("renders use container width buttons correctly when explicit width passed", () => {
-    // Fluid width is a number when the button has a help tooltip
-    // (need to pass explicit width down otherwise tooltip breaks use_container_width=True)
-    render(<BaseButton {...getProps({ fluidWidth: 250 })}>Hello</BaseButton>)
-
-    const buttonWidget = screen.getByRole("button")
-    expect(buttonWidget).toHaveStyle("width: 250px")
   })
 })

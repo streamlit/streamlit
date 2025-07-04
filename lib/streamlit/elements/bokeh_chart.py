@@ -16,14 +16,13 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from bokeh.plotting.figure import Figure
@@ -52,6 +51,12 @@ class BokehMixin:
         .. Important::
             You must install ``bokeh==2.4.3`` and ``numpy<2`` to use this
             command.
+
+            If you need a newer version of Bokeh, use our |streamlit-bokeh|_
+            custom component instead.
+
+        .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
+        .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh
 
         Parameters
         ----------
@@ -91,13 +96,15 @@ class BokehMixin:
                 f"Streamlit only supports Bokeh version {ST_BOKEH_VERSION}, "
                 f"but you have version {bokeh.__version__} installed. Please "
                 f"run `pip install --force-reinstall --no-deps bokeh=="
-                f"{ST_BOKEH_VERSION}` to install the correct version."
+                f"{ST_BOKEH_VERSION}` to install the correct version.\n\n\n"
+                f"To use the latest version of Bokeh, install our custom component, "
+                f"[streamlit-bokeh](https://github.com/streamlit/streamlit-bokeh)."
             )
 
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
 
-        element_id = hashlib.md5(delta_path.encode(), **HASHLIB_KWARGS).hexdigest()
+        element_id = calc_md5(delta_path.encode())
         bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width, element_id)
         return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)

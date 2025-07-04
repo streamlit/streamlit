@@ -16,6 +16,20 @@ import time
 
 import streamlit as st
 
+# we use session_state to store the callback function value
+# instead of using st.write directly in the button callback,
+# because we have observed that the button-click is sometimes not
+# dispatched correctly when the rerun from the textArea's onBlur event
+# is too fast which leads to a changing number of elements per rerun (because the
+# callback's write would disappear briefly).
+default_input = "Input: "
+if "btn_callback" not in st.session_state:
+    st.session_state.btn_callback = default_input
+
+st.write(st.session_state.btn_callback)
+# reset to harden the test against reruns
+st.session_state.btn_callback = default_input
+
 st.header("Widget State - Heavy Usage Test")
 # Test for https://github.com/streamlit/streamlit/issues/4836
 
@@ -40,8 +54,9 @@ st.header("Test for input change & button click in one motion")
 
 
 def btn_callback():
-    st.write("Input: " + st.session_state["key1"])
+    st.session_state.btn_callback = f"Input: {st.session_state['key1']}"
 
 
-st.text_area("Type something into the text area", key="key1")
+txt = st.text_area("Type something into the text area", key="key1")
 st.button("Submit text_area", on_click=btn_callback)
+st.write(f"Res: {txt}")

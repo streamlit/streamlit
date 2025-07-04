@@ -66,12 +66,12 @@ def page_10():
     get_input()
 
 
-def page_14():
+def page_14() -> None:
     time.sleep(0.5)
     st.number_input("mynum", value=1, key="mynum")
 
     @st.fragment
-    def fragment_number_input():
+    def fragment_number_input() -> None:
         st.number_input("mynum 2", value=1, key="mynum2")
 
     fragment_number_input()
@@ -120,5 +120,7 @@ pg.run()
 st.page_link("page_5.py", label="page 5 page link")
 
 st.page_link(page9, label="page 9 page link")
+
+st.write("Context URL:", st.context.url)
 
 st.write("End of Script")

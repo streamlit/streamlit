@@ -21,17 +21,17 @@ import streamlit as st
 from streamlit.hello.utils import show_code
 
 
-def mapping_demo():
+def mapping_demo() -> None:
     @st.cache_data
-    def from_data_file(filename):
+    def from_data_file(filename: str) -> pd.DataFrame:
         url = (
             "https://raw.githubusercontent.com/streamlit/"
-            "example-data/master/hello/v1/%s" % filename
+            f"example-data/master/hello/v1/{filename}"
         )
         return pd.read_json(url)
 
     try:
-        ALL_LAYERS = {
+        all_layers = {
             "Bike rentals": pdk.Layer(
                 "HexagonLayer",
                 data=from_data_file("bike_rental_stats.json"),
@@ -75,7 +75,7 @@ def mapping_demo():
         st.sidebar.subheader("Map layers")
         selected_layers = [
             layer
-            for layer_name, layer in ALL_LAYERS.items()
+            for layer_name, layer in all_layers.items()
             if st.sidebar.checkbox(layer_name, True)
         ]
         if selected_layers:
@@ -95,11 +95,10 @@ def mapping_demo():
             st.error("Please choose at least one layer above.")
     except URLError as e:
         st.error(
-            """
+            f"""
             **This demo requires internet access.**
-            Connection error: %s
+            Connection error: {e.reason}
         """
-            % e.reason
         )
 
 

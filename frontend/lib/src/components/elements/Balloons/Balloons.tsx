@@ -20,15 +20,15 @@ import React, { FC, memo } from "react"
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
  * served from a subpath.
  */
-import Balloon0 from "@streamlit/lib/src/assets/img/balloons/balloon-0.png"
-import Balloon1 from "@streamlit/lib/src/assets/img/balloons/balloon-1.png"
-import Balloon2 from "@streamlit/lib/src/assets/img/balloons/balloon-2.png"
-import Balloon3 from "@streamlit/lib/src/assets/img/balloons/balloon-3.png"
-import Balloon4 from "@streamlit/lib/src/assets/img/balloons/balloon-4.png"
-import Balloon5 from "@streamlit/lib/src/assets/img/balloons/balloon-5.png"
-import Particles from "@streamlit/lib/src/components/elements/Particles"
-import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
-import { RenderInPortalIfExists } from "@streamlit/lib/src/components/core/Portal/RenderInPortalIfExists"
+import Balloon0 from "~lib/assets/img/balloons/balloon-0.png"
+import Balloon1 from "~lib/assets/img/balloons/balloon-1.png"
+import Balloon2 from "~lib/assets/img/balloons/balloon-2.png"
+import Balloon3 from "~lib/assets/img/balloons/balloon-3.png"
+import Balloon4 from "~lib/assets/img/balloons/balloon-4.png"
+import Balloon5 from "~lib/assets/img/balloons/balloon-5.png"
+import Particles from "~lib/components/elements/Particles"
+import { ParticleProps } from "~lib/components/elements/Particles/Particles"
+import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
 
 import { StyledBalloon } from "./styled-components"
 

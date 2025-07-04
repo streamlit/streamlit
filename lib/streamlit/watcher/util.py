@@ -20,12 +20,16 @@ functions that use streamlit.config can go here to avoid a dependency cycle.
 
 from __future__ import annotations
 
-import hashlib
 import os
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING, Callable, TypeVar
 
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.errors import StreamlitMaxRetriesError
+from streamlit.util import calc_md5
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 # How many times to try to grab the MD5 hash.
 _MAX_RETRIES = 5
@@ -56,13 +60,16 @@ def calc_md5_with_blocking_retries(
         glob_pattern = glob_pattern or "*"
         content = _stable_dir_identifier(path, glob_pattern).encode("UTF-8")
     else:
-        content = _get_file_content_with_blocking_retries(path)
+        # There's a race condition where sometimes file_path no longer exists when
+        # we try to read it (since the file is in the process of being written).
+        # So here we retry a few times using this loop. See issue #186.
+        content = _do_with_retries(
+            lambda: _get_file_content(path),
+            (FileNotFoundError, PermissionError),
+            path,
+        )
 
-    md5 = hashlib.md5(**HASHLIB_KWARGS)
-    md5.update(content)
-
-    # Use hexdigest() instead of digest(), so it's easier to debug.
-    return md5.hexdigest()
+    return calc_md5(content)
 
 
 def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
@@ -81,24 +88,19 @@ def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
     """
     if allow_nonexistent and not os.path.exists(path):
         return 0.0
-    return os.stat(path).st_mtime
+
+    # Use retries to avoid race condition where file may be in the process of being
+    # modified.
+    return _do_with_retries(
+        lambda: os.stat(path).st_mtime,
+        (FileNotFoundError, PermissionError),
+        path,
+    )
 
 
-def _get_file_content_with_blocking_retries(file_path: str) -> bytes:
-    content = b""
-    # There's a race condition where sometimes file_path no longer exists when
-    # we try to read it (since the file is in the process of being written).
-    # So here we retry a few times using this loop. See issue #186.
-    for i in range(_MAX_RETRIES):
-        try:
-            with open(file_path, "rb") as f:
-                content = f.read()
-                break
-        except FileNotFoundError as e:
-            if i >= _MAX_RETRIES - 1:
-                raise e
-            time.sleep(_RETRY_WAIT_SECS)
-    return content
+def _get_file_content(file_path: str) -> bytes:
+    with open(file_path, "rb") as f:
+        return f.read()
 
 
 def _dirfiles(dir_path: str, glob_pattern: str) -> str:
@@ -134,9 +136,7 @@ def _stable_dir_identifier(dir_path: str, glob_pattern: str) -> str:
     """
     dirfiles = _dirfiles(dir_path, glob_pattern)
 
-    for _ in range(_MAX_RETRIES):
-        time.sleep(_RETRY_WAIT_SECS)
-
+    for _ in _retry_dance():
         new_dirfiles = _dirfiles(dir_path, glob_pattern)
         if dirfiles == new_dirfiles:
             break
@@ -144,3 +144,64 @@ def _stable_dir_identifier(dir_path: str, glob_pattern: str) -> str:
         dirfiles = new_dirfiles
 
     return f"{dir_path}+{dirfiles}"
+
+
+T = TypeVar("T")
+
+
+def _do_with_retries(
+    orig_fn: Callable[[], T],
+    exceptions: type[Exception] | tuple[type[Exception], ...],
+    path: str | Path,
+) -> T:
+    """Helper for retrying a function.
+
+    Calls `orig_fn`. If any exception in `exceptions` is raised, retry.
+
+    To use this, just replace things like this...
+
+        result = thing_to_do(file_path, a, b, c)
+
+    ...with this:
+
+        result = _do_with_retries(
+            lambda: thing_to_do(file_path, a, b, c),
+            exceptions=(ExceptionType1, ExceptionType2),
+            file_path, # For pretty error message.
+        )
+    """
+
+    for i in _retry_dance():
+        try:
+            return orig_fn()
+        except exceptions as ex:  # noqa: PERF203
+            if i >= _MAX_RETRIES - 1:
+                raise StreamlitMaxRetriesError(
+                    f"Unable to access file or folder: {path}"
+                ) from ex
+            # Continue with loop to either retry or raise MaxRetriesError.
+
+    raise StreamlitMaxRetriesError(f"Unable to access file or folder: {path}")
+
+
+def _retry_dance() -> Generator[int, None, None]:
+    """Helper for writing a retry loop.
+
+    This is useful to make sure all our retry loops work the same way. For example,
+    prior to this helper, some loops had time.sleep() *before the first try*, which just
+    slowed things down for no reason.
+
+    Usage:
+
+    for i in _retry_dance():
+        # Do the thing you want to retry automatically.
+        the_thing_worked = do_thing()
+
+        # Don't forget to include a break/return when the thing you're trying to do
+        # works.
+        if the_thing_worked:
+            break
+    """
+    for i in range(_MAX_RETRIES):
+        yield i
+        time.sleep(_RETRY_WAIT_SECS)

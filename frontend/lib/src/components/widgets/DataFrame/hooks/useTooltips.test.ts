@@ -15,13 +15,15 @@
  */
 
 import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
+import { Field, Int64, Utf8 } from "apache-arrow"
 
 import {
   BaseColumn,
   NumberColumn,
   TextColumn,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+} from "~lib/components/widgets/DataFrame/columns"
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import useTooltips, {
   DEBOUNCE_TIME_MS,
@@ -36,8 +38,15 @@ const MOCK_COLUMNS: BaseColumn[] = [
     title: "column_1",
     indexNumber: 0,
     arrowType: {
-      pandas_type: "int64",
-      numpy_type: "int64",
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("column_1", new Int64(), true),
+      pandasType: {
+        field_name: "column_1",
+        name: "column_1",
+        pandas_type: "int64",
+        numpy_type: "int64",
+        metadata: null,
+      },
     },
     isEditable: true,
     isRequired: true,
@@ -53,8 +62,15 @@ const MOCK_COLUMNS: BaseColumn[] = [
     title: "column_2",
     indexNumber: 1,
     arrowType: {
-      pandas_type: "unicode",
-      numpy_type: "object",
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("column_2", new Utf8(), true),
+      pandasType: {
+        field_name: "column_2",
+        name: "column_2",
+        pandas_type: "unicode",
+        numpy_type: "object",
+        metadata: null,
+      },
     },
     isEditable: true,
     isRequired: false,
@@ -186,6 +202,25 @@ describe("useTooltips hook", () => {
 
     act(() => {
       result.current.clearTooltip()
+    })
+
+    expect(result.current.tooltip).toBeUndefined()
+  })
+
+  it("does not render a tooltip when hovering a cell in an ignored row", () => {
+    const { result } = renderHook(() => {
+      return useTooltips(MOCK_COLUMNS, getCellContentMock, [1])
+    })
+
+    act(() => {
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+      result.current.onItemHovered!({
+        kind: "cell",
+        location: [0, 1], // This is row index 1, which is ignored
+        bounds: { x: 0, y: 30, width: 100, height: 30 },
+      } as object as GridMouseEventArgs)
+
+      vi.advanceTimersByTime(DEBOUNCE_TIME_MS)
     })
 
     expect(result.current.tooltip).toBeUndefined()

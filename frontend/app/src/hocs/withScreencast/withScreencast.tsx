@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, PureComponent, ReactNode } from "react"
+import React, {
+  ComponentType,
+  FC,
+  PropsWithChildren,
+  useCallback,
+  useRef,
+  useState,
+} from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
+import { getLogger } from "loglevel"
 
-import { isNullOrUndefined, logWarning } from "@streamlit/lib"
+import { isNullOrUndefined } from "@streamlit/utils"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   ScreencastDialog,
@@ -35,13 +43,6 @@ export type Steps =
   | "RECORDING"
   | "PREVIEW_FILE"
 
-interface WithScreenCastState {
-  fileName: string
-  recordAudio: boolean
-  outputBlob?: Blob
-  currentState: Steps
-}
-
 export interface ScreenCastHOC {
   currentState: Steps
   toggleRecordAudio: () => void
@@ -56,171 +57,170 @@ interface InjectedProps {
 
 type WrappedProps<P extends InjectedProps> = Omit<P, "screenCast">
 
+const LOG = getLogger("withScreencast")
+
 function withScreencast<P extends InjectedProps>(
-  WrappedComponent: ComponentType<React.PropsWithChildren<P>>
-): ComponentType<React.PropsWithChildren<WrappedProps<P>>> {
-  class ComponentWithScreencast extends PureComponent<
-    WrappedProps<P>,
-    WithScreenCastState
-  > {
-    public static readonly displayName = `withScreencast(${
-      WrappedComponent.displayName || WrappedComponent.name
-    })`
+  WrappedComponent: ComponentType<PropsWithChildren<P>>
+): FC<PropsWithChildren<WrappedProps<P>>> {
+  const ComponentWithScreencast: FC<
+    PropsWithChildren<WrappedProps<P>>
+  > = props => {
+    const { testOverride } = props as P
 
-    private recorder?: ScreenCastRecorder | null
+    // Recorder ref to persist instance between renders
+    const recorderRef = useRef<ScreenCastRecorder | null>(null)
 
-    state = {
-      fileName: "streamlit-screencast",
-      recordAudio: false,
-      currentState: this.props.testOverride || ("OFF" as Steps),
-    }
+    const [fileName, setFileName] = useState("streamlit-screencast")
+    const [recordAudio, setRecordAudio] = useState(false)
+    const [outputBlob, setOutputBlob] = useState<Blob | undefined>(undefined)
+    const [currentState, setCurrentState] = useState<Steps>(
+      testOverride || "OFF"
+    )
 
-    private toggleRecordAudio = (): void => {
-      const { recordAudio } = this.state
-      this.setState({ recordAudio: !recordAudio })
-    }
+    // Toggle audio recording
+    const toggleRecordAudio = useCallback((): void => {
+      setRecordAudio(prev => !prev)
+    }, [])
 
-    private showDialog = (fileName: string): void => {
-      const { currentState } = this.state
-
-      if (!ScreenCastRecorder.isSupportedBrowser()) {
-        this.setState({ currentState: "UNSUPPORTED" })
-      } else if (currentState === "OFF") {
-        this.setState({
-          fileName,
-          currentState: "SETUP",
-        })
-      } else {
-        this.stopRecording().catch(err =>
-          logWarning(`withScreencast.stopRecording threw an error: ${err}`)
-        )
-      }
-    }
-
-    public startRecording = async (): Promise<any> => {
-      const { recordAudio } = this.state
-
-      this.recorder = new ScreenCastRecorder({
-        recordAudio,
-        onErrorOrStop: () => this.stopRecording(),
-      })
-
-      try {
-        await this.recorder.initialize()
-      } catch (e) {
-        logWarning(`ScreenCastRecorder.initialize error: ${e}`)
-        this.setState({ currentState: "UNSUPPORTED" })
-        return
-      }
-
-      this.setState({ currentState: "COUNTDOWN" })
-    }
-
-    private stopRecording = async (): Promise<any> => {
-      let outputBlob
-      const { currentState } = this.state
-
-      // We should do nothing if the user try to stop recording when it is not started
-      if (currentState === "OFF" || isNullOrUndefined(this.recorder)) {
+    // Stop recording and produce the output blob if needed
+    const stopRecording = useCallback(async (): Promise<void> => {
+      if (currentState === "OFF" || isNullOrUndefined(recorderRef.current)) {
+        // No-op if we never started
         return
       }
 
       if (currentState === "COUNTDOWN") {
-        this.setState({
-          currentState: "OFF",
-        })
+        setCurrentState("OFF")
+        return
       }
 
       if (currentState === "RECORDING") {
-        if (this.recorder.getState() === "inactive") {
-          this.setState({
-            currentState: "OFF",
-          })
+        const recorder = recorderRef.current
+        if (!recorder || recorder.getState() === "inactive") {
+          setCurrentState("OFF")
         } else {
-          outputBlob = await this.recorder.stop()
-          this.setState({
-            outputBlob,
-            currentState: "PREVIEW_FILE",
-          })
+          const blob = await recorder.stop()
+          setOutputBlob(blob)
+          setCurrentState("PREVIEW_FILE")
         }
       }
-    }
+    }, [currentState])
 
-    private onCountdownEnd = async (): Promise<any> => {
-      if (isNullOrUndefined(this.recorder)) {
+    // Actually start the recording (called after the user sees the setup dialog)
+    const startActualRecording = useCallback(async (): Promise<void> => {
+      if (!ScreenCastRecorder.isSupportedBrowser()) {
+        setCurrentState("UNSUPPORTED")
+        return
+      }
+      recorderRef.current = new ScreenCastRecorder({
+        recordAudio,
+        onErrorOrStop: () => {
+          stopRecording().catch(err =>
+            LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+          )
+        },
+      })
+
+      try {
+        await recorderRef.current.initialize()
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        LOG.warn(`ScreenCastRecorder.initialize error: ${e}`)
+        setCurrentState("UNSUPPORTED")
+        return
+      }
+
+      setCurrentState("COUNTDOWN")
+    }, [recordAudio, stopRecording])
+
+    const showDialog = useCallback(
+      (newFileName: string): void => {
+        if (!ScreenCastRecorder.isSupportedBrowser()) {
+          setCurrentState("UNSUPPORTED")
+          return
+        }
+
+        if (currentState === "OFF") {
+          setFileName(newFileName)
+          setCurrentState("SETUP")
+          return
+        }
+
+        // If we are currently in any other state, stop any ongoing recording
+        stopRecording().catch(err =>
+          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+        )
+      },
+      [currentState, stopRecording]
+    )
+
+    // Called when countdown ends (the actual start of the recording)
+    const onCountdownEnd = useCallback(() => {
+      if (isNullOrUndefined(recorderRef.current)) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
       }
-
-      const hasStarted = this.recorder.start()
-
+      const hasStarted = recorderRef.current.start()
       if (hasStarted) {
-        this.setState({
-          currentState: "RECORDING",
-        })
+        setCurrentState("RECORDING")
       } else {
-        this.stopRecording().catch(err =>
-          logWarning(`withScreencast.stopRecording threw an error: ${err}`)
+        stopRecording().catch(err =>
+          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
         )
       }
+    }, [stopRecording])
+
+    // Close the recording dialog
+    const closeDialog = useCallback((): void => {
+      setCurrentState("OFF")
+    }, [])
+
+    // The object we inject into the wrapped component
+    const screenCast: ScreenCastHOC = {
+      currentState,
+      toggleRecordAudio,
+      startRecording: showDialog, // triggers the setup/showDialog process
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      stopRecording,
     }
 
-    private getScreenCastProps = (): ScreenCastHOC => ({
-      currentState: this.state.currentState,
-      toggleRecordAudio: this.toggleRecordAudio,
-      startRecording: this.showDialog,
-      stopRecording: this.stopRecording,
-    })
+    // Render
+    return (
+      <div className="withScreencast" data-testid="stScreencast">
+        <WrappedComponent {...(props as P)} screenCast={screenCast} />
+        {currentState === "UNSUPPORTED" && (
+          <UnsupportedBrowserDialog onClose={closeDialog} />
+        )}
 
-    private closeDialog = (): void => {
-      this.setState({
-        currentState: "OFF",
-      })
-    }
-
-    public render = (): ReactNode => {
-      const {
-        outputBlob,
-        fileName,
-        recordAudio,
-        currentState,
-      }: WithScreenCastState = this.state
-
-      return (
-        <div className="withScreencast" data-testid="stScreencast">
-          <WrappedComponent
-            {...(this.props as P)}
-            screenCast={this.getScreenCastProps()}
+        {currentState === "SETUP" && (
+          <ScreencastDialog
+            recordAudio={recordAudio}
+            onClose={closeDialog}
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+            startRecording={startActualRecording}
+            toggleRecordAudio={toggleRecordAudio}
           />
+        )}
 
-          {currentState === "UNSUPPORTED" && (
-            <UnsupportedBrowserDialog onClose={this.closeDialog} />
-          )}
+        {currentState === "COUNTDOWN" && (
+          <Countdown countdown={3} endCallback={onCountdownEnd} />
+        )}
 
-          {currentState === "SETUP" && (
-            <ScreencastDialog
-              recordAudio={recordAudio}
-              onClose={this.closeDialog}
-              startRecording={this.startRecording}
-              toggleRecordAudio={this.toggleRecordAudio}
-            />
-          )}
-
-          {currentState === "COUNTDOWN" && (
-            <Countdown countdown={3} endCallback={this.onCountdownEnd} />
-          )}
-
-          {currentState === "PREVIEW_FILE" && outputBlob && (
-            <VideoRecordedDialog
-              onClose={this.closeDialog}
-              videoBlob={outputBlob}
-              fileName={fileName}
-            />
-          )}
-        </div>
-      )
-    }
+        {currentState === "PREVIEW_FILE" && outputBlob && (
+          <VideoRecordedDialog
+            onClose={closeDialog}
+            videoBlob={outputBlob}
+            fileName={fileName}
+          />
+        )}
+      </div>
+    )
   }
+
+  // Set the display name for easier debugging
+  ComponentWithScreencast.displayName = `withScreencast(${
+    WrappedComponent.displayName || WrappedComponent.name || "Component"
+  })`
 
   // Static methods must be copied over
   // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over

@@ -24,8 +24,8 @@ import {
   RANGE,
   UINT64,
   UNICODE,
-} from "@streamlit/lib/src/mocks/arrow"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+} from "~lib/mocks/arrow"
+import { Quiver } from "~lib/dataframes/Quiver"
 
 import { getDataArray } from "./arrowUtils"
 

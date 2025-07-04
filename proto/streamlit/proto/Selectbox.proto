@@ -28,9 +28,17 @@ message Selectbox {
   repeated string options = 4;
   string help = 5;
   string form_id = 6;
-  optional int32 value = 7;
+
+  optional int32 value = 7 [deprecated = true];
+  // after we introduced accept_new_options, we send the option as a string
+  // instead of an index to keep it simple.
+  optional string raw_value = 13;
+
   bool set_value = 8;
   bool disabled = 9;
   LabelVisibilityMessage label_visibility = 10;
   string placeholder = 11;
+  optional bool accept_new_options = 12;
+
+  // Next: 15
 }

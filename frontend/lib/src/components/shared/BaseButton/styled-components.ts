@@ -19,15 +19,13 @@ import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { EmotionTheme } from "~lib/theme"
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
   SECONDARY = "secondary",
   TERTIARY = "tertiary",
   GHOST = "ghost",
-  LINK = "link",
-  ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
   BORDERLESS_ICON_ACTIVE = "borderlessIconActive",
   MINIMAL = "minimal",
@@ -53,10 +51,11 @@ export enum BaseButtonSize {
 export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
-  // If true or number, the button should take up container's full width
-  fluidWidth?: boolean | number
+  // If true, the button should take up container's full width
+  containerWidth?: boolean
   children: ReactNode
   autoFocus?: boolean
   "data-testid"?: string
@@ -88,17 +87,14 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
 }
 
 export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
-  ({ fluidWidth, size, theme }) => {
-    const buttonWidth =
-      typeof fluidWidth == "number" ? `${fluidWidth}px` : "100%"
-
+  ({ containerWidth, size, theme }) => {
     return {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       fontWeight: theme.fontWeights.normal,
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-      borderRadius: theme.radii.default,
+      borderRadius: theme.radii.button,
       minHeight: theme.sizes.minElementHeight,
       margin: theme.spacing.none,
       lineHeight: theme.lineHeights.base,
@@ -106,9 +102,17 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
       fontSize: "inherit",
       fontFamily: "inherit",
       color: "inherit",
-      width: fluidWidth ? buttonWidth : "auto",
+      width: containerWidth ? "100%" : "auto",
       cursor: "pointer",
       userSelect: "none",
+      "&:hover": {
+        // override text color on hover for colored text - note since text color applied
+        // as inline style (highest specificity) we need to use !important
+        // use inherit to handle all button types
+        "span.stMarkdownColoredText": {
+          color: "inherit !important",
+        },
+      },
       "&:focus": {
         outline: "none",
       },
@@ -221,28 +225,6 @@ export const StyledGhostButton = styled(
   },
 }))
 
-export const StyledLinkButton = styled(
-  StyledBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.transparent,
-  padding: theme.spacing.none,
-  border: "none",
-  color: theme.colors.primary,
-  "&:hover": {
-    textDecoration: "underline",
-  },
-  "&:active": {
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.primary,
-    textDecoration: "underline",
-  },
-  "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.lightGray,
-    borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
-  },
-}))
-
 export const StyledMinimalButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
@@ -265,51 +247,6 @@ export const StyledSecondaryFormSubmitButton = styled(
 export const StyledTertiaryFormSubmitButton = styled(
   StyledTertiaryButton
 )<RequiredBaseButtonProps>()
-
-export const StyledIconButton = styled(
-  StyledBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => {
-  return {
-    backgroundColor: theme.colors.transparent,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-    flex: "1 1 0",
-    padding: 0,
-
-    "&:hover": {
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
-    },
-    "&:active": {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-      color: theme.colors.white,
-    },
-    "&:not(:active)": {
-      boxShadow: "none",
-    },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
-      cursor: "not-allowed",
-    },
-  }
-})
-
-export const StyledIconButtonActive = styled(
-  StyledIconButton
-)<RequiredBaseButtonProps>(({ theme }) => {
-  return {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-    color: theme.colors.white,
-    "&:hover": {
-      backgroundColor: theme.colors.transparent,
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
-    },
-  }
-})
 
 const StyledButtonGroupBaseButton = styled(
   StyledBaseButton
@@ -345,7 +282,6 @@ const StyledButtonGroupBaseButton = styled(
       overflow: "hidden",
     },
     "& p": {
-      fontSize: theme.fontSizes.sm,
       textOverflow: "ellipsis",
       overflow: "hidden",
     },
@@ -354,10 +290,12 @@ const StyledButtonGroupBaseButton = styled(
 
 export const StyledPillsButton = styled(
   StyledButtonGroupBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => {
+)<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
   return {
     borderRadius: theme.radii.full,
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
+    // When containerWidth is true, the buttons will stretch to fill the container.
+    flex: containerWidth ? "1 1 fit-content" : "",
   }
 })
 
@@ -378,21 +316,22 @@ export const StyledPillsButtonActive = styled(
 
 export const StyledSegmentedControlButton = styled(
   StyledButtonGroupBaseButton
-)<RequiredBaseButtonProps>(({ theme }) => {
+)<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
   return {
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
     borderRadius: "0",
-    flex: "1 0 fit-content",
+    // When containerWidth is true, the buttons will stretch to fill the container.
+    flex: containerWidth ? "1 1 fit-content" : "",
     maxWidth: "100%",
     marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
 
     "&:first-child": {
-      borderTopLeftRadius: theme.radii.default,
-      borderBottomLeftRadius: theme.radii.default,
+      borderTopLeftRadius: theme.radii.button,
+      borderBottomLeftRadius: theme.radii.button,
     },
     "&:last-child": {
-      borderTopRightRadius: theme.radii.default,
-      borderBottomRightRadius: theme.radii.default,
+      borderTopRightRadius: theme.radii.button,
+      borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
     "&:hover": {
@@ -421,16 +360,15 @@ export const StyledHeaderButton = styled(
   return {
     backgroundColor: theme.colors.transparent,
     border: "none",
-    padding: theme.spacing.sm,
+    padding: `0 ${theme.spacing.sm}`,
     fontSize: theme.fontSizes.sm,
     marginLeft: theme.spacing.threeXS,
     marginRight: theme.spacing.threeXS,
 
     lineHeight: theme.lineHeights.none,
 
-    // Override buttons min width and height, to ensure the hover state for icon buttons on the header is square
-    minWidth: theme.spacing.threeXL,
-    minHeight: theme.spacing.threeXL,
+    minWidth: theme.sizes.headerItemHeight,
+    minHeight: theme.sizes.headerItemHeight,
 
     "&:focus": {
       outline: "none",
@@ -439,6 +377,9 @@ export const StyledHeaderButton = styled(
       boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
     },
     "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&:active": {
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
@@ -474,6 +415,10 @@ export const StyledBorderlessIconButton = styled(
     padding: iconPadding[size],
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
+
+    // Keeps the buttons from stacking when in containerWidth mode.
+    // These buttons should stay together and not stretch to fill the container.
+    flex: "0 0 fit-content",
 
     border: "none",
     display: "flex",
@@ -529,7 +474,7 @@ export const StyledElementToolbarButton = styled(
   return {
     backgroundColor: theme.colors.transparent,
     border: "none",
-    padding: theme.spacing.xs,
+    padding: theme.spacing.twoXS,
     fontSize: theme.fontSizes.twoSm,
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
@@ -539,6 +484,7 @@ export const StyledElementToolbarButton = styled(
     minHeight: "unset",
     // line height should be the same as the icon size
     lineHeight: theme.iconSizes.md,
+    width: "auto",
 
     "&:focus": {
       outline: "none",
@@ -552,6 +498,9 @@ export const StyledElementToolbarButton = styled(
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&:active": {
       backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
@@ -561,3 +510,9 @@ export const StyledElementToolbarButton = styled(
     },
   }
 })
+
+export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
+  ({ containerWidth }) => ({
+    width: containerWidth ? "100%" : "auto",
+  })
+)

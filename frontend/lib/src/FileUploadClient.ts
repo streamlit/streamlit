@@ -16,14 +16,13 @@
 
 import { CancelToken } from "axios"
 import isEqual from "lodash/isEqual"
+import { getLogger } from "loglevel"
 import { v4 as uuidv4 } from "uuid"
 
-import { IFileURLs, IFileURLsResponse } from "@streamlit/lib/src/proto"
+import { IFileURLs, IFileURLsResponse } from "@streamlit/protobuf"
 
 import { SessionInfo } from "./SessionInfo"
 import { StreamlitEndpoints } from "./StreamlitEndpoints"
-import { logWarning } from "./util/log"
-import Resolver from "./util/Resolver"
 import { isValidFormId } from "./util/utils"
 
 /** Common widget protobuf fields that are used by the FileUploadClient. */
@@ -39,6 +38,8 @@ interface Props {
   formsWithPendingRequestsChanged: (formIds: Set<string>) => void
   requestFileURLs?: (requestId: string, files: File[]) => void
 }
+
+const LOG = getLogger("FileUploadClient")
 
 /**
  * Handles operations related to the widgets that require file uploading.
@@ -76,7 +77,7 @@ export class FileUploadClient {
    */
   private readonly pendingFileURLsRequests = new Map<
     string,
-    Resolver<IFileURLs[]>
+    PromiseWithResolvers<IFileURLs[]>
   >()
 
   public constructor(props: Props) {
@@ -102,6 +103,7 @@ export class FileUploadClient {
     widget: WidgetInfo,
     fileUploadUrl: string,
     file: File,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<void> {
@@ -145,7 +147,7 @@ export class FileUploadClient {
       return Promise.resolve([])
     }
 
-    const resolver = new Resolver<IFileURLs[]>()
+    const resolver = Promise.withResolvers<IFileURLs[]>()
 
     const requestId = uuidv4()
     this.pendingFileURLsRequests.set(requestId, resolver)
@@ -172,9 +174,7 @@ export class FileUploadClient {
       }
       this.pendingFileURLsRequests.delete(id)
     } else {
-      logWarning(
-        "fileURLsResponse received for nonexistent request, ignoring."
-      )
+      LOG.warn("fileURLsResponse received for nonexistent request, ignoring.")
     }
   }
 

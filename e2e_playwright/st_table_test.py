@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
-TOTAL_TABLE_ELEMENTS = 31
+TOTAL_TABLE_ELEMENTS = 33
 
 
 def test_table_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -38,6 +38,15 @@ def test_themed_table_rendering(
 
     # Only test a single table element to ensure theming is applied correctly:
     assert_snapshot(table_elements.nth(30), name="st_table-themed")
+
+
+def test_pandas_styler_tooltips(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that pandas styler tooltips render correctly."""
+    styled_table = app.get_by_test_id("stTable").nth(31)
+    table_cell = styled_table.locator("td", has_text="38").first
+    table_cell.hover()
+    expect(table_cell.locator(".pd-t")).to_have_css("visibility", "visible")
+    assert_snapshot(styled_table, name="st_table-styler_tooltip")
 
 
 def test_check_top_level_class(app: Page):

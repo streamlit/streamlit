@@ -19,13 +19,12 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import { render } from "~lib/test_util"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Radio, { Props } from "./Radio"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  width: 0,
   disabled: false,
   horizontal: false,
   value: 0,
@@ -77,13 +76,12 @@ describe("Radio widget", () => {
     expect(widgetLabel).not.toBeVisible()
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<Radio {...props} />)
     const radioElement = screen.getByTestId("stRadio")
 
     expect(radioElement).toHaveClass("stRadio")
-    expect(radioElement).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {

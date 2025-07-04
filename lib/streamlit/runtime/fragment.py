@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import inspect
 from abc import abstractmethod
 from copy import deepcopy
@@ -36,6 +35,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.time_util import time_to_seconds
+from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -61,7 +61,8 @@ class FragmentStorage(Protocol):
     @abstractmethod
     def clear(self, new_fragment_ids: set[str] | None = None) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
-        new_fragment_ids."""
+        new_fragment_ids.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -154,11 +155,10 @@ def _fragment(
             )
 
         return wrapper
-    else:
-        non_optional_func = func
+    non_optional_func = func
 
     @wraps(non_optional_func)
-    def wrap(*args, **kwargs):
+    def wrap(*args: Any, **kwargs: Any) -> Any:
         from streamlit.delta_generator_singletons import context_dg_stack
 
         ctx = get_script_run_ctx()
@@ -167,17 +167,15 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
-        h = hashlib.new("md5")
-        h.update(
-            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}".encode()
+        fragment_id = calc_md5(
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
-        fragment_id = h.hexdigest()
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
         initialized_active_script_hash = ctx.active_script_hash
 
-        def wrapped_fragment():
+        def wrapped_fragment() -> Any:
             import streamlit as st
 
             if should_show_deprecation_warning:
@@ -194,7 +192,8 @@ def _fragment(
             # fragment runs will generally run in a new script run, thus we'll have a
             # new ctx.
             ctx = get_script_run_ctx(suppress_warning=True)
-            assert ctx is not None
+            if ctx is None:
+                raise RuntimeError("ctx is None. This should never happen.")
 
             if ctx.fragment_ids_this_run:
                 # This script run is a run of one or more fragments. We restore the
@@ -247,11 +246,11 @@ def _fragment(
                         except (
                             RerunException,
                             StopException,
-                        ) as e:
+                        ):
                             # The wrapped_fragment function is executed
                             # inside of a exec_func_with_error_handling call, so
                             # there is a correct handler for these exceptions.
-                            raise e
+                            raise
                         except Exception as e:
                             # render error here so that the delta path is correct
                             # for full app runs, the error will be displayed by the

@@ -122,3 +122,15 @@ class TestQueryParamsProxy(unittest.TestCase):
         assert self.query_params_proxy["test_multi"] == "value2"
         assert self.query_params_proxy.get_all("test_multi") == ["value1", "value2"]
         assert len(self.query_params_proxy) == 2
+
+    def test_key_error_message(self):
+        with pytest.raises(KeyError) as e:
+            self.query_params_proxy["nonexistent"]
+
+        assert str(e.value) == """'st.query_params has no key "nonexistent".'"""
+
+    def test_attribute_error_message(self):
+        with pytest.raises(AttributeError) as e:
+            self.query_params_proxy.nonexistent  # noqa: B018
+
+        assert str(e.value) == 'st.query_params has no attribute "nonexistent".'

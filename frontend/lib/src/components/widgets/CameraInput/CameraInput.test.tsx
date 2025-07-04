@@ -19,13 +19,15 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import createFetchMock from "vitest-fetch-mock"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   CameraInput as CameraInputProto,
   FileURLs as FileURLsProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import CameraInput, { Props } from "./CameraInput"
 
@@ -74,6 +76,14 @@ const getProps = (
 
 describe("CameraInput widget", () => {
   fetchMocker.enableMocks()
+
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")

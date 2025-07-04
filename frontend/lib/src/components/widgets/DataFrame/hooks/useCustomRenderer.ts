@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback, useMemo } from "react"
 
 import {
   BaseDrawArgs,
@@ -36,7 +36,7 @@ import {
   CustomCells,
   isErrorCell,
   isMissingValueCell,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+} from "~lib/components/widgets/DataFrame/columns"
 
 // Token used for missing values (null, NaN, etc.)
 const NULL_VALUE_TOKEN = "None"
@@ -52,14 +52,16 @@ export function drawAttentionIndicator(
 ): void {
   ctx.save()
   ctx.beginPath()
-  // We are first moving the drawing position under the top right corner
-  // 8 pixels from left side (this is the size triangle)
+  // We first move the drawing position under the top right corner
+  // by the number of pixels equal to theme.cellHorizontalPadding
+  // from left side (this is the size triangle)
   // and 1 pixel from top side (to be under the cell border).
-  ctx.moveTo(rect.x + rect.width - 8, rect.y + 1)
+  ctx.moveTo(rect.x + rect.width - theme.cellHorizontalPadding, rect.y + 1)
   // We draw the first line to the top right corner.
   ctx.lineTo(rect.x + rect.width, rect.y + 1)
-  // We draw the second line 8 pixel down on the right cell border
-  ctx.lineTo(rect.x + rect.width, rect.y + 1 + 8)
+  // We draw the second line with the number of pixels equal to theme.cellHorizontalPadding
+  // down the right cell border
+  ctx.lineTo(rect.x + rect.width, rect.y + 1 + theme.cellHorizontalPadding)
   // And now its enough to just fill it with a color to get a triangle.
   ctx.fillStyle = theme.accentColor
   ctx.fill()
@@ -116,7 +118,7 @@ type CustomRendererReturn = Pick<
  *    that can be passed to the `DataEditor` component.
  */
 function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
-  const drawCell: DrawCellCallback = React.useCallback(
+  const drawCell: DrawCellCallback = useCallback(
     (args, draw) => {
       const { cell, theme, ctx, rect } = args
       const colPos = args.col
@@ -152,7 +154,7 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:
-  const customRenderers = React.useMemo(
+  const customRenderers = useMemo(
     () =>
       [
         SparklineCell,
@@ -163,9 +165,6 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
       ] as DataEditorProps["customRenderers"],
     // This doesn't change during the lifetime of the component,
     // so we can just run it once at creation time.
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
-    /* eslint-disable react-hooks/exhaustive-deps */
     []
   )
 

@@ -16,10 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { getGray90 } from "@streamlit/lib/src/theme"
-
-export const StyledCaptionText = styled.div(({ theme }) => ({
+export const StyledProgressLabelContainer = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   lineHeight: "normal",
-  color: getGray90(theme),
 }))

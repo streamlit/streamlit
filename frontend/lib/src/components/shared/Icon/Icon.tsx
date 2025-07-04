@@ -18,7 +18,7 @@ import React, { ReactElement, ReactNode } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
-import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
+import { IconSize } from "~lib/theme"
 
 import { StyledEmojiIcon, StyledIcon } from "./styled-components"
 
@@ -26,28 +26,32 @@ interface GetDefaultPropsArgs {
   size?: IconSize
   margin?: string
   padding?: string
+  color?: string
 }
 
 interface DefaultProps {
   size: IconSize
   margin: string
   padding: string
+  color: string | undefined
 }
 
 const getDefaultProps = ({
   size,
   margin,
   padding,
+  color,
 }: GetDefaultPropsArgs): DefaultProps => ({
   size: size || "md",
   margin: margin || "",
   padding: padding || "",
+  color: color || undefined,
 })
 
 interface IconProps {
   content: EmotionIcon
   size?: IconSize
-  color?: ThemeColor
+  color?: string
   margin?: string
   padding?: string
   testid?: string
@@ -63,10 +67,9 @@ const Icon = ({
 }: IconProps): ReactElement => (
   <StyledIcon
     as={content}
-    color={color || "inherit"}
     aria-hidden="true"
     data-testid={testid}
-    {...getDefaultProps({ size, margin, padding })}
+    {...getDefaultProps({ size, margin, padding, color })}
   />
 )
 
@@ -76,6 +79,7 @@ interface EmojiIconProps {
   padding?: string
   children: ReactNode
   testid?: string
+  color?: string
 }
 
 export const EmojiIcon = ({
@@ -83,15 +87,23 @@ export const EmojiIcon = ({
   margin,
   padding,
   children,
+  color,
   testid,
-}: EmojiIconProps): ReactElement => (
-  <StyledEmojiIcon
-    data-testid={testid || "stIconEmoji"}
-    aria-hidden="true"
-    {...getDefaultProps({ size, margin, padding })}
-  >
-    {children}
-  </StyledEmojiIcon>
-)
+}: EmojiIconProps): ReactElement => {
+  // Handle the case where the emoji is prefixed with emoji:
+  if (typeof children === "string") {
+    children = children.replace(/^emoji:/, "")
+  }
+
+  return (
+    <StyledEmojiIcon
+      data-testid={testid || "stIconEmoji"}
+      aria-hidden="true"
+      {...getDefaultProps({ size, margin, padding, color })}
+    >
+      {children}
+    </StyledEmojiIcon>
+  )
+}
 
 export default Icon

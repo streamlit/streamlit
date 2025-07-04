@@ -16,15 +16,16 @@
 
 import React from "react"
 
-import { Mock } from "vitest"
+import { Mock, MockInstance } from "vitest"
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
 
-import { logError } from "@streamlit/lib/src/util/log"
-import { render } from "@streamlit/lib/src/test_util"
-import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
+import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 
-import GraphVizChart, { GraphVizChartProps } from "./GraphVizChart"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { render } from "~lib/test_util"
+
+import GraphVizChart, { GraphVizChartProps, LOG } from "./GraphVizChart"
 
 vi.mock("d3-graphviz", () => ({
   graphviz: vi.fn().mockReturnValue({
@@ -41,10 +42,6 @@ vi.mock("d3-graphviz", () => ({
     }),
   }),
 }))
-vi.mock("@streamlit/lib/src/util/log", () => ({
-  logError: vi.fn(),
-  logMessage: vi.fn(),
-}))
 
 const getProps = (
   elementProps: Partial<GraphVizChartProto> = {}
@@ -54,13 +51,18 @@ const getProps = (
     elementId: "1",
     ...elementProps,
   }),
-  width: 700,
 })
 
 describe("GraphVizChart Element", () => {
+  let logErrorSpy: MockInstance
+
   beforeEach(() => {
-    // @ts-expect-error
-    logError.mockClear()
+    logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
   })
 
   afterEach(() => {
@@ -76,7 +78,7 @@ describe("GraphVizChart Element", () => {
     expect(graphvizElement).toBeInTheDocument()
     expect(graphvizElement).toHaveClass("stGraphVizChart")
 
-    expect(logError).not.toHaveBeenCalled()
+    expect(logErrorSpy).not.toHaveBeenCalled()
     expect(graphviz).toHaveBeenCalled()
   })
 
@@ -110,12 +112,12 @@ describe("GraphVizChart Element", () => {
 
     render(<GraphVizChart {...props} />)
 
-    expect(logError).toHaveBeenCalledTimes(1)
+    expect(logErrorSpy).toHaveBeenCalledTimes(1)
     expect(mockRenderDot).toHaveBeenCalledWith("crash")
     expect(graphviz).toHaveBeenCalledTimes(1)
   })
 
-  it("shoud render with height and width set to auto", () => {
+  it("should render with height and width set to auto", () => {
     const props = {
       ...getProps(),
     }

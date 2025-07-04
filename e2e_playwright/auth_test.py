@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import time
 from tempfile import NamedTemporaryFile
-from typing import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -27,6 +27,9 @@ from e2e_playwright.conftest import (
     wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import get_button, get_markdown
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 AUTH_SECRETS_TEMPLATE = """
 [auth]
@@ -48,7 +51,7 @@ def oidc_server_port() -> int:
 
 @pytest.fixture(scope="module")
 def fake_oidc_server(
-    request, oidc_server_port: int
+    request: pytest.FixtureRequest, oidc_server_port: int
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the OIDC app server."""
 
@@ -73,7 +76,7 @@ def fake_oidc_server(
 
 
 @pytest.fixture(scope="module")
-def prepare_secrets_file(app_port: int, oidc_server_port: int) -> None:
+def prepare_secrets_file(app_port: int, oidc_server_port: int):
     """Fixture that inject the correct port to auth_secrets.toml file redirect_uri."""
     # Read in the file
     rendered_secrets = AUTH_SECRETS_TEMPLATE.format(
@@ -86,7 +89,7 @@ def prepare_secrets_file(app_port: int, oidc_server_port: int) -> None:
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args(prepare_secrets_file) -> list[str]:
+def app_server_extra_args(prepare_secrets_file: str) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
     return [
         "--secrets.files",
@@ -95,7 +98,8 @@ def app_server_extra_args(prepare_secrets_file) -> list[str]:
 
 
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
-def test_login_successful(app: Page, fake_oidc_server, prepare_secrets_file):
+@pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
+def test_login_successful(app: Page):
     """Test authentication flow with test provider."""
     button_element = get_button(app, "TEST LOGIN")
     button_element.click()
@@ -110,7 +114,8 @@ def test_login_successful(app: Page, fake_oidc_server, prepare_secrets_file):
 
 
 @pytest.mark.parametrize("fake_oidc_server", ["failure"], indirect=True)
-def test_login_failure(app: Page, fake_oidc_server, prepare_secrets_file):
+@pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
+def test_login_failure(app: Page):
     """Test authentication flow with error response from oidc server."""
     button_element = get_button(app, "TEST LOGIN")
     button_element.click()

@@ -19,14 +19,13 @@ import streamlit as st
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
-
 data = np.random.randn(100, 100)
 
 df = pd.DataFrame(data)
-st.dataframe(df)
+st.dataframe(df, use_container_width=False)
 st.dataframe(df, 250, 150)
 st.dataframe(df, width=250)
-st.dataframe(df, height=150)
+st.dataframe(df, height=150, use_container_width=False)
 st.dataframe(df, 5000, 5000)
 st.dataframe(df, use_container_width=True)
 

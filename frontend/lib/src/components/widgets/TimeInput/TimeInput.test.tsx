@@ -19,12 +19,13 @@ import React from "react"
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TimeInput as TimeInputProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TimeInput, { Props } from "./TimeInput"
 
@@ -39,7 +40,6 @@ const getProps = (
     step: 900,
     ...elementProps,
   }),
-  width: 0,
   disabled: disabled,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -115,13 +115,12 @@ describe("TimeInput widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
     const timeInput = screen.getByTestId("stTimeInput")
     expect(timeInput).toHaveClass("stTimeInput")
-    expect(timeInput).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("can be disabled", () => {

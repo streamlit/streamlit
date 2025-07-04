@@ -17,14 +17,14 @@
 import React, { ReactElement } from "react"
 
 import ReactMarkdown from "react-markdown"
-// eslint-disable-next-line testing-library/no-manual-cleanup
 import { cleanup, screen } from "@testing-library/react"
 import { transparentize } from "color2k"
 
-import { render } from "@streamlit/lib/src/test_util"
-import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
-import { colors } from "@streamlit/lib/src/theme/primitives/colors"
-import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
+import { render } from "~lib/test_util"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { colors } from "~lib/theme/primitives/colors"
+import IsDialogContext from "~lib/components/core/IsDialogContext"
+import { mockTheme } from "~lib/mocks/mockTheme"
 
 import StreamlitMarkdown, {
   createAnchorFromText,
@@ -43,16 +43,41 @@ const getMarkdownElement = (body: string): ReactElement => {
 }
 
 describe("createAnchorFromText", () => {
-  it("generates slugs correctly", () => {
-    const cases = [
-      ["some header", "some-header"],
-      ["some -24$35-9824  header", "some-24-35-9824-header"],
-      ["blah___blah___blah", "blah-blah-blah"],
-    ]
+  it.each([
+    // Basic cases
+    ["UPPERCASE", "uppercase"],
+    ["some header", "some-header"],
+    ["some -24$35-9824  header", "some-24-35-9824-header"],
+    ["blah___blah___blah", "blah-blah-blah"],
 
-    cases.forEach(([s, want]) => {
-      expect(createAnchorFromText(s)).toEqual(want)
-    })
+    // Special characters and symbols
+    ["header!@#$%^&*()", "header-and"],
+    ["  spaces  everywhere  ", "spaces-everywhere"],
+    ["multiple---dashes", "multiple-dashes"],
+    ["dots...and,commas", "dots-and-commas"],
+    ["emoji 👋 test", "emoji-test"],
+    ["mixed_case_UPPER", "mixed-case-upper"],
+
+    // Non-English languages and special characters that we can transliterate and slugify
+    ["Présentation", "presentation"],
+    ["Привет мир", "privet-mir"],
+    ["مرحبا بالعالم", "mrhba-balealm"],
+    ["Γεια σας κόσμος", "geia-sas-kosmos"],
+
+    // Languages we are not able to slugify - fallback to hash
+    ["안녕하세요", "c40769b7"],
+    ["こんにちは世界", "f73d32df"],
+
+    // Empty string
+    ["", ""],
+
+    // Edge cases that fallback to hash
+    [" ", "aa76e70b"],
+    ["###", "3ec1ca7"],
+    ["---", "6110bfd"],
+    ["___", "647ce586"],
+  ])("converts '%s' to '%s'", (input, expected) => {
+    expect(createAnchorFromText(input)).toEqual(expected)
   })
 })
 
@@ -220,10 +245,23 @@ describe("StreamlitMarkdown", () => {
     )
     const image = screen.getByRole("img")
     expect(image).toHaveAttribute("alt", "Streamlit logo")
-    expect(image).toHaveAttribute(
-      "src",
-      expect.stringContaining("streamlit-mark-color")
-    )
+  })
+
+  it("renders streamlit logo with allowHTML=true", () => {
+    render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
+    const image = screen.getByRole("img")
+    expect(image).toHaveAttribute("alt", "Streamlit logo")
+    expect(image).toHaveStyle("display: inline-block")
+    expect(image).toHaveStyle("user-select: none")
+  })
+
+  it("renders material icons with allowHTML=true", () => {
+    const source = `:material/search: Icon`
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const markdown = screen.getByText("search")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
   })
 
   // Typographical symbol replacements
@@ -336,7 +374,7 @@ describe("StreamlitMarkdown", () => {
 
     // Use the smaller font size for the markdown container
     const markdownContainer = screen.getByTestId("stMarkdownContainer")
-    expect(markdownContainer).toHaveStyle("font-size: 14px")
+    expect(markdownContainer).toHaveStyle("font-size: 0.875rem")
   })
 
   it("renders regular text sizing when largerLabel is true", () => {
@@ -389,6 +427,7 @@ describe("StreamlitMarkdown", () => {
       const tagName = markdown.nodeName.toLowerCase()
       expect(tagName).toBe("span")
       expect(markdown).toHaveStyle(`color: ${style}`)
+      expect(markdown).toHaveClass("stMarkdownColoredText")
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
@@ -473,18 +512,26 @@ describe("StreamlitMarkdown", () => {
       cleanup()
     })
   })
+
+  it("renders small text properly", () => {
+    const source = `:small[text]`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("text")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle(
+      `font-size: ${mockTheme.emotion.fontSizes.sm}`
+    )
+  })
 })
 
 const getCustomCodeTagProps = (
   props: Partial<CustomCodeTagProps> = {}
 ): CustomCodeTagProps => ({
-  children: [
-    `import streamlit as st
+  children: `import streamlit as st
 
 st.write("Hello")
 `,
-  ],
-  node: { type: "element", tagName: "tagName", children: [] },
   ...props,
 })
 
@@ -507,7 +554,7 @@ describe("CustomCodeTag Element", () => {
 
   it("should render copy button when code block has content", () => {
     const props = getCustomCodeTagProps({
-      children: ["i am not empty"],
+      children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
     const copyButton = screen.getByTitle("Copy to clipboard")
@@ -517,11 +564,11 @@ describe("CustomCodeTag Element", () => {
 
   it("should not render copy button when code block is empty", () => {
     const props = getCustomCodeTagProps({
-      children: [""],
+      children: "",
     })
     render(<CustomCodeTag {...props} />)
     // queryBy returns null vs. error
-    const copyButton = screen.queryByRole("button") // eslint-disable-line testing-library/prefer-presence-queries
+    const copyButton = screen.queryByRole("button")
 
     expect(copyButton).toBeNull()
   })

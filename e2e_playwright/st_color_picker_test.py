@@ -29,10 +29,27 @@ def test_color_picker_widget_display(
 ):
     """Test that st.color_picker renders correctly."""
     color_pickers = themed_app.get_by_test_id("stColorPicker")
-    expect(color_pickers).to_have_count(7)
+    expect(color_pickers).to_have_count(11)
+    assert_snapshot(color_pickers.nth(0), name="st_color_picker-regular")
+    assert_snapshot(color_pickers.nth(1), name="st_color_picker-default_help")
+    assert_snapshot(color_pickers.nth(2), name="st_color_picker-disabled")
+    assert_snapshot(color_pickers.nth(3), name="st_color_picker-hidden_label")
+    assert_snapshot(color_pickers.nth(4), name="st_color_picker-collapsed_label")
+    # The other color pickers do not need to be snapshot tested since they
+    # don't have any visually interesting differences.
+    assert_snapshot(color_pickers.nth(7), name="st_color_picker-markdown_label")
 
-    for i in range(5):
-        assert_snapshot(color_pickers.nth(i), name=f"st_color_picker-{i}")
+
+def test_color_picker_popover_display(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that color picker popover renders correctly in both themes."""
+    color_pickers = themed_app.get_by_test_id("stColorPicker")
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
+
+    popover = themed_app.get_by_test_id("stColorPickerPopover")
+    expect(popover).to_be_visible()
+    assert_snapshot(popover, name="st_color_picker-popover")
 
 
 def test_help_tooltip_works(app: Page):
@@ -77,7 +94,7 @@ def test_typing_new_hex_color_on_color_picker_works_with_callback(
     assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_hex_color")
 
 
-def test_typing_new_RGB_color_on_color_picker_works(
+def test_typing_new_rgb_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
@@ -100,7 +117,7 @@ def test_typing_new_RGB_color_on_color_picker_works(
     assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_rgb_color")
 
 
-def test_typing_new_HSL_color_on_color_picker_works(
+def test_typing_new_hsl_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
@@ -180,3 +197,15 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "color_picker_1")).to_be_visible()
+
+
+def test_color_picker_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that color picker elements with different width configurations are displayed correctly."""
+    color_pickers = themed_app.get_by_test_id("stColorPicker")
+
+    # Test width examples (these are the last 3 color picker elements)
+    assert_snapshot(color_pickers.nth(8), name="st_color_picker-width_content")
+    assert_snapshot(color_pickers.nth(9), name="st_color_picker-width_stretch")
+    assert_snapshot(color_pickers.nth(10), name="st_color_picker-width_100px")

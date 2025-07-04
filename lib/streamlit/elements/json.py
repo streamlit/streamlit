@@ -19,6 +19,11 @@ import types
 from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
@@ -34,7 +39,8 @@ if TYPE_CHECKING:
 
 def _ensure_serialization(o: object) -> str | list[Any]:
     """A repr function for json.dumps default arg, which tries to serialize sets
-    as lists."""
+    as lists.
+    """
     return list(o) if isinstance(o, set) else repr(o)
 
 
@@ -45,12 +51,12 @@ class JsonMixin:
         body: object,
         *,  # keyword-only arguments:
         expanded: bool | int = True,
+        width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display an object or string as a pretty-printed, interactive JSON string.
 
         Parameters
         ----------
-
         body : object or str
             The object to print as JSON. All referenced objects should be
             serializable to JSON as well. If object is a string, we assume it
@@ -68,6 +74,16 @@ class JsonMixin:
 
             Regardless of the initial expansion state, users can collapse or
             expand any key-value pair to show or hide any part of the object.
+
+        width : "stretch" or int
+            The width of the JSON element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -127,11 +143,14 @@ class JsonMixin:
             json_proto.max_expand_depth = expanded
         else:
             raise TypeError(
-                f"The type {str(type(expanded))} of `expanded` is not supported"
+                f"The type {type(expanded)} of `expanded` is not supported"
                 ", must be bool or int."
             )
 
-        return self.dg._enqueue("json", json_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("json", json_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

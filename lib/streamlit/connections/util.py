@@ -21,7 +21,10 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Collection, cast
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 SNOWSQL_CONNECTION_FILE = "~/.snowsql/config"
 
@@ -89,6 +92,6 @@ def running_in_sis() -> bool:
             is_in_stored_procedure,
         )
 
-        return cast(bool, is_in_stored_procedure())
+        return is_in_stored_procedure()  # type: ignore
     except ModuleNotFoundError:
         return False

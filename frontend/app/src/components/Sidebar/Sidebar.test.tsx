@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
 
 import {
   fireEvent,
@@ -22,350 +22,381 @@ import {
   screen,
   within,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
-import {
-  emotionLightTheme,
-  Logo,
-  mockEndpoints,
-  PageConfig,
-  render,
-} from "@streamlit/lib"
+import { mockEndpoints, render } from "@streamlit/lib"
+import { Logo, PageConfig } from "@streamlit/protobuf"
+import { AppContextProps } from "@streamlit/app/src/components/AppContext"
+import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 
-vi.mock("@streamlit/lib/src/util/Hooks", async () => ({
+vi.mock("~lib/util/Hooks", async () => ({
   __esModule: true,
-  ...(await vi.importActual("@streamlit/lib/src/util/Hooks")),
+  ...(await vi.importActual("~lib/util/Hooks")),
   useIsOverflowing: vi.fn(),
 }))
 
-const mockEndpointProp = mockEndpoints()
+const buildMediaURL = vi.fn((url: string) => url)
+const sendClientErrorToHost = vi.fn()
+const mockEndpointProp = mockEndpoints({
+  buildMediaURL,
+  sendClientErrorToHost,
+})
 
-function renderSidebar(props: Partial<SidebarProps> = {}): RenderResult {
-  return render(
+function SidebarWrapper(props: Partial<SidebarProps> = {}): ReactElement {
+  const context = StreamlitContextProviderModule.useAppContext()
+  return (
     <Sidebar
       endpoints={mockEndpointProp}
-      chevronDownshift={0}
-      theme={emotionLightTheme}
-      appLogo={null}
-      appPages={[]}
-      navSections={[]}
-      onPageChange={vi.fn()}
-      currentPageScriptHash={""}
       hasElements
-      hideSidebarNav={false}
-      expandSidebarNav={false}
+      // Props from context
+      appLogo={context.appLogo}
+      appPages={context.appPages}
+      navSections={context.navSections}
+      onPageChange={context.onPageChange}
+      currentPageScriptHash={context.currentPageScriptHash}
+      hideSidebarNav={context.hideSidebarNav}
+      expandSidebarNav={context.expandSidebarNav}
+      // Defaulted props for Sidebar itself
+      isCollapsed={false}
+      onToggleCollapse={vi.fn()}
       {...props}
     />
   )
 }
 
+function renderSidebar(props: Partial<SidebarProps> = {}): RenderResult {
+  return render(<SidebarWrapper {...props} />)
+}
+
+// Helper function to create mock app context with overrides
+function getContextOutput(
+  context: Partial<AppContextProps> = {}
+): AppContextProps {
+  return {
+    initialSidebarState: PageConfig.SidebarState.AUTO,
+    pageLinkBaseUrl: "",
+    currentPageScriptHash: "",
+    onPageChange: vi.fn(),
+    navSections: [],
+    appPages: [],
+    appLogo: null,
+    sidebarChevronDownshift: 0,
+    expandSidebarNav: false,
+    hideSidebarNav: false,
+    widgetsDisabled: false,
+    gitInfo: null,
+    showToolbar: true,
+    showColoredLine: true,
+    ...context,
+  }
+}
+
+// Helper function to setup app context mock
+function mockAppContext(context: Partial<AppContextProps> = {}): void {
+  vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+    getContextOutput(context)
+  )
+}
+
+// Test data constants
+const LOGO_IMAGE_URL =
+  "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
+const LOGO_ICON_URL = "https://docs.streamlit.io/logo.svg"
+const EXAMPLE_LINK = "www.example.com"
+
+const SAMPLE_PAGES = [
+  { pageName: "first_page", pageScriptHash: "page_hash" },
+  { pageName: "second_page", pageScriptHash: "page_hash2" },
+]
+
+const SAMPLE_PAGES_WITH_URLS = [
+  {
+    pageName: "first page",
+    pageScriptHash: "page_hash",
+    urlPathname: "first_page",
+  },
+  {
+    pageName: "second page",
+    pageScriptHash: "page_hash2",
+    urlPathname: "second_page",
+  },
+]
+
 describe("Sidebar Component", () => {
+  beforeEach(() => {
+    mockAppContext({})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("should render without crashing", () => {
     renderSidebar({})
-
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
-  it("should render expanded", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.EXPANDED,
-    })
-
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "true"
-    )
-  })
-
-  it("should render collapsed", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "false"
-    )
-  })
-
-  it("should collapse on toggle if expanded", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.EXPANDED,
-    })
-
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "true"
-    )
-
-    // Click the close sidebar <
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
-    const sidebarCollapseButton = within(
-      screen.getByTestId("stSidebarCollapseButton")
-    ).getByRole("button")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(sidebarCollapseButton)
-
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "false"
-    )
-  })
-
-  it("should expand on toggle if collapsed", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "false"
-    )
-
-    // Click the expand sidebar > button
-    const expandButton = within(
-      screen.getByTestId("stSidebarCollapsedControl")
-    ).getByRole("button")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(expandButton)
-
-    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-      "aria-expanded",
-      "true"
-    )
-  })
-
-  it("shows/hides the collapse arrow when hovering over top of sidebar", () => {
-    const appPages = [
-      { pageName: "first_page", pageScriptHash: "page_hash" },
-      { pageName: "second_page", pageScriptHash: "page_hash2" },
-    ]
-
-    renderSidebar({ appPages })
-
-    // Hidden when not hovering near the top of sidebar
-    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
-      "display: none"
-    )
-
-    // Hover over the sidebar header
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
-
-    // Displays the collapse <
-    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
-      "display: inline"
-    )
-  })
-
-  it("has no top padding if no SidebarNav is displayed", () => {
-    renderSidebar({
-      appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
-    })
-
-    expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
-      "padding-top: 0"
-    )
-  })
-
-  it("has small padding if the SidebarNav is displayed", () => {
-    renderSidebar({
-      appPages: [
-        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
-      ],
-    })
-
-    expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
-      "padding-top: 1.5rem"
-    )
-  })
-
-  it("uses the default chevron spacing if chevronDownshift is zero", () => {
-    renderSidebar({
-      chevronDownshift: 0,
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
-      "top: 1.25rem"
-    )
-  })
-
-  it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
-    renderSidebar({
-      chevronDownshift: 50,
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
-      "top: 50px"
-    )
-  })
-
-  it("renders SidebarNav component", () => {
-    const appPages = [
+  describe("Collapse/Expand Behavior", () => {
+    it.each([
       {
-        pageName: "first page",
-        pageScriptHash: "page_hash",
-        urlPathname: "first_page",
+        state: PageConfig.SidebarState.EXPANDED,
+        isCollapsed: false,
+        expectedAria: "true",
       },
       {
-        pageName: "second page",
-        pageScriptHash: "page_hash2",
-        urlPathname: "second_page",
+        state: PageConfig.SidebarState.COLLAPSED,
+        isCollapsed: true,
+        expectedAria: "false",
       },
-    ]
-    renderSidebar({ appPages })
+    ])(
+      "should render $state correctly",
+      ({ state, isCollapsed, expectedAria }) => {
+        mockAppContext({ initialSidebarState: state })
+        renderSidebar({ isCollapsed })
 
-    expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
+        expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+          "aria-expanded",
+          expectedAria
+        )
+      }
+    )
 
-    const sidebarAppPages = screen.getAllByRole("listitem")
-    expect(sidebarAppPages).toHaveLength(2)
-    expect(sidebarAppPages[0]).toHaveTextContent("first page")
-    expect(sidebarAppPages[1]).toHaveTextContent("second page")
+    it.each([
+      {
+        initialCollapsed: false,
+        expectedToggleValue: true,
+        description: "collapse when expanded",
+      },
+      {
+        initialCollapsed: true,
+        expectedToggleValue: false,
+        description: "expand when collapsed",
+      },
+    ])(
+      "should $description on toggle",
+      async ({ initialCollapsed, expectedToggleValue }) => {
+        const mockOnToggleCollapse = vi.fn()
+        const user = userEvent.setup()
+
+        renderSidebar({
+          isCollapsed: initialCollapsed,
+          onToggleCollapse: mockOnToggleCollapse,
+        })
+
+        // Hover to show collapse button
+        await user.hover(screen.getByTestId("stSidebarHeader"))
+
+        // Click the collapse button
+        const collapseButton = within(
+          screen.getByTestId("stSidebarCollapseButton")
+        ).getByRole("button")
+        await user.click(collapseButton)
+
+        expect(mockOnToggleCollapse).toHaveBeenCalledWith(expectedToggleValue)
+      }
+    )
   })
 
-  it("can hide SidebarNav with the hideSidebarNav option", () => {
-    const appPages = [
-      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
-    ]
-    renderSidebar({ appPages, hideSidebarNav: true })
+  describe("Collapse Button Visibility", () => {
+    it("shows/hides the collapse arrow when hovering over top of sidebar", async () => {
+      const user = userEvent.setup()
+      mockAppContext({ appPages: SAMPLE_PAGES })
+      renderSidebar()
 
-    expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
+      const collapseButton = screen.getByTestId("stSidebarCollapseButton")
+
+      // Hidden when not hovering
+      expect(collapseButton).toHaveStyle("display: none")
+
+      // Visible when hovering over header
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      expect(collapseButton).toHaveStyle("display: inline")
+    })
   })
 
-  describe("handles appLogo rendering", () => {
-    const imageOnly = Logo.create({
-      image:
-        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+  describe("Sidebar Navigation", () => {
+    it("renders SidebarNav component when multiple pages exist", () => {
+      mockAppContext({ appPages: SAMPLE_PAGES_WITH_URLS })
+      renderSidebar()
+
+      expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
+
+      const sidebarAppPages = screen.getAllByRole("listitem")
+      expect(sidebarAppPages).toHaveLength(2)
+      expect(sidebarAppPages[0]).toHaveTextContent("first page")
+      expect(sidebarAppPages[1]).toHaveTextContent("second page")
     })
 
-    const imageWithLink = Logo.create({
-      image:
-        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
-      link: "www.example.com",
+    it("can hide SidebarNav with the hideSidebarNav option", () => {
+      mockAppContext({
+        hideSidebarNav: true,
+        appPages: SAMPLE_PAGES,
+      })
+      renderSidebar()
+
+      expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
     })
 
-    const fullAppLogo = Logo.create({
-      image:
-        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
-      link: "www.example.com",
-      iconImage: "https://docs.streamlit.io/logo.svg",
-    })
+    it.each([
+      {
+        description: "has no top padding if no SidebarNav is displayed",
+        appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
+        expectedPadding: "0",
+      },
+      {
+        description: "has small padding if the SidebarNav is displayed",
+        appPages: SAMPLE_PAGES,
+        expectedPadding: "1.5rem",
+      },
+    ])("$description", ({ appPages, expectedPadding }) => {
+      mockAppContext({ appPages })
+      renderSidebar()
 
-    const logoWithSize = Logo.create({
-      image:
-        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
-      link: "www.example.com",
-      iconImage: "https://docs.streamlit.io/logo.svg",
-      size: "small",
+      expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
+        `padding-top: ${expectedPadding}`
+      )
     })
+  })
+
+  it("applies scrollbarGutter style to sidebar content", () => {
+    renderSidebar({})
+
+    const sidebarContent = screen.getByTestId("stSidebarContent")
+    const styles = window.getComputedStyle(sidebarContent)
+
+    expect(styles.scrollbarGutter).toBe("stable both-edges")
+  })
+
+  describe("Logo Rendering", () => {
+    const testLogos = {
+      imageOnly: Logo.create({ image: LOGO_IMAGE_URL }),
+      imageWithLink: Logo.create({
+        image: LOGO_IMAGE_URL,
+        link: EXAMPLE_LINK,
+      }),
+      fullAppLogo: Logo.create({
+        image: LOGO_IMAGE_URL,
+        link: EXAMPLE_LINK,
+        iconImage: LOGO_ICON_URL,
+      }),
+      logoWithSize: Logo.create({
+        image: LOGO_IMAGE_URL,
+        link: EXAMPLE_LINK,
+        iconImage: LOGO_ICON_URL,
+        size: "small",
+      }),
+    }
 
     it("renders spacer if no logo provided", () => {
-      renderSidebar({ appLogo: null })
+      renderSidebar()
+
       const sidebarLogoSpacer = within(
         screen.getByTestId("stSidebar")
       ).getByTestId("stLogoSpacer")
       expect(sidebarLogoSpacer).toBeInTheDocument()
     })
 
-    it("renders logo when sidebar collapsed - uses iconImage if provided", () => {
-      const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      renderSidebar({
-        initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-        appLogo: fullAppLogo,
-      })
-      const openSidebarContainer = screen.getByTestId(
-        "stSidebarCollapsedControl"
-      )
-      expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
-      expect(collapsedLogo).toBeInTheDocument()
-      expect(sourceSpy).toHaveBeenCalledWith(
-        "https://docs.streamlit.io/logo.svg"
-      )
-    })
+    describe("Logo rendering when collapsed", () => {
+      it.each([
+        {
+          description: "uses iconImage if provided",
+          logo: testLogos.fullAppLogo,
+          expectedUrl: LOGO_ICON_URL,
+        },
+        {
+          description: "defaults to image if no iconImage",
+          logo: testLogos.imageOnly,
+          expectedUrl: LOGO_IMAGE_URL,
+        },
+      ])("$description", ({ logo, expectedUrl }) => {
+        mockAppContext({ appLogo: logo })
+        const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
+        renderSidebar({ isCollapsed: true })
 
-    it("renders logo when sidebar collapsed - defaults to image if no iconImage", () => {
-      const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      renderSidebar({
-        initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-        appLogo: imageOnly,
+        const collapsedLogo = screen.getByTestId("stSidebarLogo")
+        expect(collapsedLogo).toBeInTheDocument()
+        expect(sourceSpy).toHaveBeenCalledWith(expectedUrl)
       })
-      const openSidebarContainer = screen.getByTestId(
-        "stSidebarCollapsedControl"
-      )
-      expect(openSidebarContainer).toBeInTheDocument()
-      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
-      expect(collapsedLogo).toBeInTheDocument()
-      expect(sourceSpy).toHaveBeenCalledWith(
-        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
-      )
     })
 
     it("renders logo's image param when sidebar expanded", () => {
+      mockAppContext({ appLogo: testLogos.fullAppLogo })
       const sourceSpy = vi.spyOn(mockEndpointProp, "buildMediaURL")
-      renderSidebar({ appLogo: fullAppLogo })
+      renderSidebar({})
+
       const sidebarLogoContainer = screen.getByTestId("stSidebarHeader")
       expect(sidebarLogoContainer).toBeInTheDocument()
-      const sidebarLogo = within(sidebarLogoContainer).getByTestId("stLogo")
+
+      const sidebarLogo = within(sidebarLogoContainer).getByTestId(
+        "stSidebarLogo"
+      )
       expect(sidebarLogo).toBeInTheDocument()
-      expect(sourceSpy).toHaveBeenCalledWith(
-        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
+      expect(sourceSpy).toHaveBeenCalledWith(LOGO_IMAGE_URL)
+    })
+
+    describe("Logo properties", () => {
+      it.each([
+        {
+          description: "default image has no link & medium size",
+          logo: testLogos.imageOnly,
+          expectLink: false,
+          expectedHeight: "1.5rem",
+        },
+        {
+          description: "image has link if provided",
+          logo: testLogos.imageWithLink,
+          expectLink: true,
+          expectedHeight: "1.5rem",
+          expectedHref: EXAMPLE_LINK,
+        },
+        {
+          description: "small size when specified",
+          logo: testLogos.logoWithSize,
+          expectLink: true,
+          expectedHeight: "1.25rem",
+          expectedHref: EXAMPLE_LINK,
+        },
+      ])(
+        "renders logo - $description",
+        ({ logo, expectLink, expectedHeight, expectedHref }) => {
+          mockAppContext({ appLogo: logo })
+          renderSidebar()
+
+          const sidebar = screen.getByTestId("stSidebar")
+          const sidebarLogo = within(sidebar).getByTestId("stSidebarLogo")
+
+          expect(sidebarLogo).toHaveStyle({ height: expectedHeight })
+
+          if (expectLink) {
+            const sidebarLogoLink = within(sidebar).getByTestId("stLogoLink")
+            expect(sidebarLogoLink).toHaveAttribute("href", expectedHref)
+          } else {
+            const sidebarLogoLink = within(sidebar).queryByTestId("stLogoLink")
+            expect(sidebarLogoLink).not.toBeInTheDocument()
+          }
+        }
       )
     })
 
-    it("renders logo - default image has no link & medium size", () => {
-      renderSidebar({ appLogo: imageOnly })
-      const sidebarLogoLink = within(
-        screen.getByTestId("stSidebar")
-      ).queryByTestId("stLogoLink")
-      expect(sidebarLogoLink).not.toBeInTheDocument()
-      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
-      )
-      expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
-    })
+    it("sends an CLIENT_ERROR message when the logo source fails to load", () => {
+      mockAppContext({ appLogo: testLogos.fullAppLogo })
+      renderSidebar()
 
-    it("renders logo - image has link if provided", () => {
-      renderSidebar({ appLogo: imageWithLink })
-      const sidebarLogoLink = within(
-        screen.getByTestId("stSidebar")
-      ).getByTestId("stLogoLink")
-      expect(sidebarLogoLink).toHaveAttribute("href", "www.example.com")
-      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
-      )
-      expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
-    })
+      const sidebarLogo = within(
+        screen.getByTestId("stSidebarHeader")
+      ).getByTestId("stSidebarLogo")
+      expect(sidebarLogo).toBeInTheDocument()
 
-    it("renders logo - small size when specified", () => {
-      renderSidebar({ appLogo: logoWithSize })
-      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
-      )
-      expect(sidebarLogo).toHaveStyle({ height: "1.25rem" })
-    })
+      // Trigger the onerror event for the logo
+      fireEvent.error(sidebarLogo)
 
-    it("sets maxWidth of logo based on sidebar width", () => {
-      renderSidebar({ appLogo: imageWithLink })
-      const sidebarWidth = window.getComputedStyle(
-        screen.getByTestId("stSidebar")
-      ).width
-      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
-        "stLogo"
-      )
-      // L & R padding (twoXL) + R margin (sm) + collapse button (2.25rem)
-      expect(sidebarLogo).toHaveStyle(
-        `max-width: calc(${sidebarWidth} - 2 * 1.5rem - 0.5rem - 2.25rem)`
+      expect(sendClientErrorToHost).toHaveBeenCalledWith(
+        "Sidebar Logo",
+        "Logo source failed to load",
+        "onerror triggered",
+        LOGO_IMAGE_URL
       )
     })
   })

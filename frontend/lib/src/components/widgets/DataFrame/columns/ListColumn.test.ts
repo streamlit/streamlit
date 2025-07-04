@@ -15,6 +15,9 @@
  */
 
 import { BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { Field, List, Utf8 } from "apache-arrow"
+
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import ListColumn from "./ListColumn"
 
@@ -29,10 +32,19 @@ const MOCK_LIST_COLUMN_PROPS = {
   isPinned: false,
   isStretched: false,
   arrowType: {
-    // The arrow type of the underlying data is
-    // not used for anything inside the column.
-    pandas_type: "object",
-    numpy_type: "list[unicode]",
+    type: DataFrameCellType.DATA,
+    arrowField: new Field(
+      "list_column",
+      new List(new Field("item", new Utf8(), true)),
+      true
+    ),
+    pandasType: {
+      field_name: "list_column",
+      name: "list_column",
+      pandas_type: "object",
+      numpy_type: "list[unicode]",
+      metadata: null,
+    },
   },
 }
 
@@ -88,6 +100,7 @@ describe("ListColumn", () => {
     ],
   ])(
     "supports array-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: any[] | null) => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
@@ -106,9 +119,11 @@ describe("ListColumn", () => {
     [[true, false], "true,false"],
   ])(
     "correctly prepares data for copy (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, copyData: string | undefined) => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       expect((cell as any).copyData).toEqual(copyData)
     }
   )

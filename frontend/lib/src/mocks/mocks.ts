@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-import {
-  SessionInfo,
-  Props as SessionInfoProps,
-} from "@streamlit/lib/src/SessionInfo"
-import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { IAppPage } from "@streamlit/lib/src/proto"
+import { IAppPage } from "@streamlit/protobuf"
+
+import { SessionInfo, Props as SessionInfoProps } from "~lib/SessionInfo"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(
@@ -30,10 +28,14 @@ export function mockSessionInfoProps(
     sessionId: "mockSessionId",
     streamlitVersion: "mockStreamlitVersion",
     pythonVersion: "mockPythonVersion",
+    serverOS: "mockServerOS",
+    hasDisplay: true,
     installationId: "mockInstallationId",
     installationIdV3: "mockInstallationIdV3",
+    installationIdV4: "mockInstallationIdV4",
     maxCachedMessageAge: 123,
     isHello: false,
+    isConnected: true,
     ...overrides,
   }
 }
@@ -52,13 +54,16 @@ export function mockEndpoints(
   overrides: Partial<StreamlitEndpoints> = {}
 ): StreamlitEndpoints {
   return {
+    setStaticConfigUrl: vi.fn(),
+    sendClientErrorToHost: vi.fn(),
+    checkSourceUrlResponse: vi.fn(),
     buildComponentURL: vi.fn(),
     buildMediaURL: vi.fn(),
     buildFileUploadURL: vi.fn(),
     buildAppPageURL: vi
       .fn()
       .mockImplementation(
-        (pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
+        (_pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
           return `http://mock/app/page/${page.pageName}.${pageIndex}`
         }
       ),
@@ -66,9 +71,6 @@ export function mockEndpoints(
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
     deleteFileAtURL: vi
-      .fn()
-      .mockRejectedValue(new Error("unimplemented mock endpoint")),
-    fetchCachedForwardMsg: vi
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
     ...overrides,

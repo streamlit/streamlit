@@ -16,7 +16,7 @@
 
 import React, { Suspense } from "react"
 
-import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
+import { IconSize } from "~lib/theme"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
@@ -27,7 +27,7 @@ interface IconPackEntry {
   icon: string
 }
 
-function parseIconPackEntry(iconName: string): IconPackEntry {
+export function parseIconPackEntry(iconName: string): IconPackEntry {
   // This is a regex to match icon pack and icon name from the strings of format
   // :pack/icon: like :material/settings_suggest:
   const matchResult = iconName.match(/^:(.+)\/(.+):$/)
@@ -37,6 +37,14 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   const iconPack = matchResult[1]
   const iconNameInPack = matchResult[2]
   return { pack: iconPack, icon: iconNameInPack }
+}
+
+/**
+ * Returns true if the icon value is a material icon.
+ */
+export function isMaterialIcon(iconName: string): boolean {
+  const parsedIcon = parseIconPackEntry(iconName)
+  return parsedIcon.pack === "material" && parsedIcon.icon !== ""
 }
 
 /**
@@ -53,7 +61,7 @@ export interface DynamicIconProps {
   margin?: string
   padding?: string
   testid?: string
-  color?: ThemeColor
+  color?: string
 }
 
 const DynamicIconDispatcher = ({

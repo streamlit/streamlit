@@ -46,7 +46,8 @@ def test_collapsed_toast_rendering(
     toasts.nth(1).hover()
 
     expect(toasts.nth(1)).to_contain_text(
-        "🦄Random toast message that is a really really really really really really really long message, going wayview moreClose"
+        "🦄Random toast message that is a really really really really really really "
+        "really long message, going wayview moreClose"
     )
     assert_snapshot(toasts.nth(1), name="toast-collapsed")
 
@@ -68,7 +69,8 @@ def test_expanded_toast_rendering(
     expand.click()
 
     expect(toasts.nth(1)).to_contain_text(
-        "🦄Random toast message that is a really really really really really really really long message, going way past the 3 line limitview lessClose"
+        "🦄Random toast message that is a really really really really really really "
+        "really long message, going way past the 3 line limitview lessClose"
     )
     assert_snapshot(toasts.nth(1), name="toast-expanded")
 
@@ -87,3 +89,27 @@ def test_toast_with_material_icon_rendering(
 
     expect(toasts.nth(0)).to_contain_text("cabinYour edited image was saved!Close")
     assert_snapshot(toasts.nth(0), name="toast-material-icon")
+
+
+def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that toasts are correctly rendered above dialog."""
+    # Set viewport size to better show dialog/toast interaction
+    app.set_viewport_size({"width": 650, "height": 958})
+
+    app.keyboard.press("r")
+    wait_for_app_loaded(app)
+    app.wait_for_timeout(250)
+
+    # Trigger dialog
+    app.get_by_text("Trigger dialog").click()
+    # Ensure previous toasts have timed out
+    app.wait_for_timeout(4500)
+
+    # Trigger toast from dialog
+    app.get_by_text("Toast from dialog").click()
+
+    toasts = app.get_by_test_id("stToast")
+    expect(toasts).to_have_count(1)
+    expect(toasts.nth(0)).to_contain_text("🎉Toast above dialogClose")
+    toaster = app.get_by_test_id("stToastContainer")
+    assert_snapshot(toaster, name="toast-above-dialog")

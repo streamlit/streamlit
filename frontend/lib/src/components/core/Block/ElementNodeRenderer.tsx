@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, Suspense } from "react"
+import React, { lazy, ReactElement, Suspense, useContext } from "react"
 
 import debounceRender from "react-debounce-render"
 import classNames from "classnames"
@@ -64,28 +64,29 @@ import {
   TimeInput as TimeInputProto,
   Toast as ToastProto,
   Video as VideoProto,
-} from "@streamlit/lib/src/proto"
-import { ElementNode } from "@streamlit/lib/src/AppNode"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+} from "@streamlit/protobuf"
+
+import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
-import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
-import ArrowTable from "@streamlit/lib/src/components/elements/ArrowTable"
-import DocString from "@streamlit/lib/src/components/elements/DocString"
-import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import ExceptionElement from "@streamlit/lib/src/components/elements/ExceptionElement"
-import Json from "@streamlit/lib/src/components/elements/Json"
-import Markdown from "@streamlit/lib/src/components/elements/Markdown"
-import Metric from "@streamlit/lib/src/components/elements/Metric"
-import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
-import TextElement from "@streamlit/lib/src/components/elements/TextElement"
-import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
-import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
-import Maybe from "@streamlit/lib/src/components/core/Maybe"
-import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
-import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { getElementId } from "@streamlit/lib/src/util/utils"
+import AlertElement, {
+  getAlertElementKind,
+} from "~lib/components/elements/AlertElement"
+import ArrowTable from "~lib/components/elements/ArrowTable"
+import DocString from "~lib/components/elements/DocString"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
+import ExceptionElement from "~lib/components/elements/ExceptionElement"
+import Json from "~lib/components/elements/Json"
+import Markdown from "~lib/components/elements/Markdown"
+import Metric from "~lib/components/elements/Metric"
+import { Skeleton } from "~lib/components/elements/Skeleton"
+import TextElement from "~lib/components/elements/TextElement"
+import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
+import Maybe from "~lib/components/core/Maybe"
+import { FormSubmitContent } from "~lib/components/widgets/Form"
+import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
+import { LibContext } from "~lib/components/core/LibContext"
+import { getElementId } from "~lib/util/utils"
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 
 import {
   BaseBlockProps,
@@ -94,142 +95,74 @@ import {
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
-import { StyledElementContainer } from "./styled-components"
+import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 
 // Lazy-load elements.
-const Audio = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Audio")
+const Audio = lazy(() => import("~lib/components/elements/Audio"))
+const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
+const Snow = lazy(() => import("~lib/components/elements/Snow"))
+const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
+const ArrowVegaLiteChart = lazy(
+  () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
-const Balloons = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Balloons")
-)
-const Snow = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Snow")
-)
-const ArrowDataFrame = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/DataFrame")
-)
-const ArrowVegaLiteChart = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/ArrowVegaLiteChart")
-)
-const Toast = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Toast")
-)
+const Toast = lazy(() => import("~lib/components/elements/Toast"))
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
 // when the sidebar is toggled, which significantly slows down the app.
-const BokehChart = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/BokehChart")
+const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
+
+const DebouncedBokehChart = withCalculatedWidth(
+  debounceRender(BokehChart, 100)
 )
 
-// RTL ESLint triggers a false positive on this render function
-// eslint-disable-next-line testing-library/render-result-naming-convention
-const DebouncedBokehChart = debounceRender(BokehChart, 100)
+const DeckGlJsonChart = lazy(
+  () => import("~lib/components/elements/DeckGlJsonChart")
+)
+const GraphVizChart = lazy(
+  () => import("~lib/components/elements/GraphVizChart")
+)
+const IFrame = lazy(() => import("~lib/components/elements/IFrame"))
+const ImageList = lazy(() => import("~lib/components/elements/ImageList"))
 
-const DeckGlJsonChart = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/DeckGlJsonChart")
-)
-const GraphVizChart = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/GraphVizChart")
-)
-const IFrame = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/IFrame")
-)
-const ImageList = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/ImageList")
-)
+const LinkButton = lazy(() => import("~lib/components/elements/LinkButton"))
 
-const LinkButton = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/LinkButton")
-)
+const PageLink = lazy(() => import("~lib/components/elements/PageLink"))
 
-const PageLink = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/PageLink")
-)
-
-const PlotlyChart = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/PlotlyChart")
-)
-const Video = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Video")
-)
+const PlotlyChart = lazy(() => import("~lib/components/elements/PlotlyChart"))
+const Video = lazy(() => import("~lib/components/elements/Video"))
 
 // Lazy-load widgets.
-const AudioInput = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/AudioInput")
-)
+const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
 
-const Button = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/Button")
+const Button = lazy(() => import("~lib/components/widgets/Button"))
+const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
+const DownloadButton = lazy(
+  () => import("~lib/components/widgets/DownloadButton")
 )
-const ButtonGroup = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/ButtonGroup")
-)
-const DownloadButton = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/DownloadButton")
-)
-const CameraInput = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/CameraInput")
-)
-const ChatInput = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/ChatInput")
-)
-const Checkbox = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/Checkbox")
-)
-const ColorPicker = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/ColorPicker")
-)
-const DateInput = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/DateInput")
-)
-const Html = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Html")
-)
-const Multiselect = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/Multiselect")
-)
-const Progress = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Progress")
-)
-const Spinner = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/Spinner")
-)
-const Radio = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/Radio")
-)
-const Selectbox = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/Selectbox")
-)
-const Slider = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/Slider")
-)
-const FileUploader = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/FileUploader")
-)
-const TextArea = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/TextArea")
-)
-const TextInput = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/TextInput")
-)
-const TimeInput = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/TimeInput")
-)
-const NumberInput = React.lazy(
-  () => import("@streamlit/lib/src/components/widgets/NumberInput")
-)
-const StreamlitSyntaxHighlighter = React.lazy(
-  () =>
-    import(
-      "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
-    )
+const CameraInput = lazy(() => import("~lib/components/widgets/CameraInput"))
+const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
+const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
+const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
+const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
+const Html = lazy(() => import("~lib/components/elements/Html"))
+const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
+const Progress = lazy(() => import("~lib/components/elements/Progress"))
+const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const Radio = lazy(() => import("~lib/components/widgets/Radio"))
+const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
+const Slider = lazy(() => import("~lib/components/widgets/Slider"))
+const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
+const TextArea = lazy(() => import("~lib/components/widgets/TextArea"))
+const TextInput = lazy(() => import("~lib/components/widgets/TextInput"))
+const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
+const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
+const StreamlitSyntaxHighlighter = lazy(
+  () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
-  width: number
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -251,8 +184,8 @@ const RawElementNodeRenderer = (
   }
 
   const elementProps = {
-    width: props.width,
     disableFullscreenMode: props.disableFullscreenMode,
+    widthConfig: node.element.widthConfig,
   }
 
   const widgetProps = {
@@ -276,9 +209,7 @@ const RawElementNodeRenderer = (
     }
 
     case "arrowTable":
-      return (
-        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
-      )
+      return <ArrowTable element={node.quiverElement} {...elementProps} />
 
     case "audio":
       return (
@@ -291,9 +222,11 @@ const RawElementNodeRenderer = (
       )
 
     case "balloons":
+      // Specifically use node.scriptRunId vs. scriptRunId from context
+      // See issue #10961: https://github.com/streamlit/streamlit/issues/10961
       return hideIfStale(
         props.isStale,
-        <Balloons scriptRunId={props.scriptRunId} />
+        <Balloons scriptRunId={node.scriptRunId} />
       )
 
     case "bokehChart":
@@ -311,7 +244,6 @@ const RawElementNodeRenderer = (
           language={codeProto.language}
           showLineNumbers={codeProto.showLineNumbers}
           wrapLines={codeProto.wrapLines}
-          height={codeProto.height}
         >
           {codeProto.codeText}
         </StreamlitSyntaxHighlighter>
@@ -424,9 +356,11 @@ const RawElementNodeRenderer = (
     }
 
     case "snow":
+      // Specifically use node.scriptRunId vs. scriptRunId from context
+      // See issue #10961: https://github.com/streamlit/streamlit/issues/10961
       return hideIfStale(
         props.isStale,
-        <Snow scriptRunId={props.scriptRunId} />
+        <Snow scriptRunId={node.scriptRunId} />
       )
 
     case "spinner":
@@ -475,22 +409,20 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
       return (
         <ArrowDataFrame
-          element={arrowProto}
-          data={node.quiverElement as Quiver}
           // Arrow dataframe can be used as a widget (data_editor) or
           // an element (dataframe). We only want to set the key in case of
           // it being used as a widget. For the non-widget usage, the id will
           // be undefined.
-          {...(arrowProto.id && {
-            key: arrowProto.id,
-          })}
+          key={arrowProto.id || undefined}
+          element={arrowProto}
+          data={node.quiverElement}
           {...widgetProps}
         />
       )
     }
 
-    case "arrowVegaLiteChart":
-      const vegaLiteElement = node.vegaLiteChartElement as VegaLiteChartElement
+    case "arrowVegaLiteChart": {
+      const vegaLiteElement = node.vegaLiteChartElement
       return (
         <ArrowVegaLiteChart
           element={vegaLiteElement}
@@ -502,6 +434,7 @@ const RawElementNodeRenderer = (
           {...widgetProps}
         />
       )
+    }
 
     case "audioInput": {
       const audioInputProto = node.element.audioInput as AudioInputProto
@@ -521,16 +454,7 @@ const RawElementNodeRenderer = (
       const buttonProto = node.element.button as ButtonProto
       widgetProps.disabled = widgetProps.disabled || buttonProto.disabled
       if (buttonProto.isFormSubmitter) {
-        const { formId } = buttonProto
-        const hasInProgressUpload =
-          props.formsData.formsWithUploads.has(formId)
-        return (
-          <FormSubmitContent
-            element={buttonProto}
-            hasInProgressUpload={hasInProgressUpload}
-            {...widgetProps}
-          />
-        )
+        return <FormSubmitContent element={buttonProto} {...widgetProps} />
       }
       return <Button element={buttonProto} {...widgetProps} />
     }
@@ -582,6 +506,7 @@ const RawElementNodeRenderer = (
         <ChatInput
           key={chatInputProto.id}
           element={chatInputProto}
+          uploadClient={props.uploadClient}
           {...widgetProps}
         />
       )
@@ -614,7 +539,6 @@ const RawElementNodeRenderer = (
     case "componentInstance":
       return (
         <ComponentInstance
-          registry={props.componentRegistry}
           element={node.element.componentInstance as ComponentInstanceProto}
           {...widgetProps}
         />
@@ -647,8 +571,7 @@ const RawElementNodeRenderer = (
 
     case "linkButton": {
       const linkButtonProto = node.element.linkButton as LinkButtonProto
-      widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
-      return <LinkButton element={linkButtonProto} {...widgetProps} />
+      return <LinkButton element={linkButtonProto} {...elementProps} />
     }
 
     case "multiselect": {
@@ -760,16 +683,18 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen, fragmentIdsThisRun } = React.useContext(LibContext)
-  const { node, width } = props
+  const { isFullScreen, fragmentIdsThisRun, scriptRunState, scriptRunId } =
+    useContext(LibContext)
+  const { node } = props
 
   const elementType = node.element.type || ""
-  const enable = shouldComponentBeEnabled(elementType, props.scriptRunState)
+
+  const enable = shouldComponentBeEnabled(elementType, scriptRunState)
   const isStale = isComponentStale(
     enable,
     node,
-    props.scriptRunState,
-    props.scriptRunId,
+    scriptRunState,
+    scriptRunId,
     fragmentIdsThisRun
   )
 
@@ -777,13 +702,13 @@ const ElementNodeRenderer = (
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
 
-  // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
+  // TODO: It would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
 
   return (
     <Maybe enable={enable}>
-      <StyledElementContainer
+      <StyledElementContainerLayoutWrapper
         className={classNames(
           "stElementContainer",
           "element-container",
@@ -794,10 +719,10 @@ const ElementNodeRenderer = (
         // Applying stale opacity in fullscreen mode
         // causes the fullscreen overlay to be transparent.
         isStale={isStale && !isFullScreen}
-        width={width}
         elementType={elementType}
+        node={node}
       >
-        <ErrorBoundary width={width}>
+        <ErrorBoundary>
           <Suspense
             fallback={
               <Skeleton
@@ -810,7 +735,7 @@ const ElementNodeRenderer = (
             <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>
-      </StyledElementContainer>
+      </StyledElementContainerLayoutWrapper>
     </Maybe>
   )
 }

@@ -17,19 +17,14 @@
 import React, { ReactElement } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
-import { useTheme } from "@emotion/react"
 import { StyledComponent } from "@emotion/styled"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import Tooltip, {
-  Placement,
-} from "@streamlit/lib/src/components/shared/Tooltip"
-import Button, {
-  BaseButtonKind,
-} from "@streamlit/lib/src/components/shared/BaseButton"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import Button, { BaseButtonKind } from "~lib/components/shared/BaseButton"
+import Icon from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledToolbar, StyledToolbarWrapper } from "./styled-components"
 
@@ -46,7 +41,7 @@ export function ToolbarAction({
   icon,
   onClick,
 }: ToolbarActionProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const displayLabel = show_label ? label : ""
   return (
@@ -94,6 +89,7 @@ export interface ToolbarProps {
   onCollapse?: () => void
   isFullScreen?: boolean
   locked?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   target?: StyledComponent<any, any, any>
   disableFullscreenMode?: boolean
 }
@@ -107,6 +103,11 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   target,
   disableFullscreenMode,
 }): ReactElement => {
+  const showFullscreenButton =
+    onExpand && !disableFullscreenMode && !isFullScreen
+  const showCloseFullscreenButton =
+    onCollapse && !disableFullscreenMode && isFullScreen
+
   return (
     <StyledToolbarWrapper
       className="stElementToolbar"
@@ -114,16 +115,16 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
       locked={locked || isFullScreen}
       target={target}
     >
-      <StyledToolbar>
+      <StyledToolbar data-testid="stElementToolbarButtonContainer">
         {children}
-        {onExpand && !disableFullscreenMode && !isFullScreen && (
+        {showFullscreenButton && (
           <ToolbarAction
             label="Fullscreen"
             icon={Fullscreen}
             onClick={() => onExpand()}
           />
         )}
-        {onCollapse && !disableFullscreenMode && isFullScreen && (
+        {showCloseFullscreenButton && (
           <ToolbarAction
             label="Close fullscreen"
             icon={FullscreenExit}

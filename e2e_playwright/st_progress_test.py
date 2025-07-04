@@ -22,13 +22,17 @@ def test_progress_renders_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     progress_bars = themed_app.get_by_test_id("stProgress")
+    expect(progress_bars).to_have_count(5)
     expect(progress_bars.get_by_role("progressbar").nth(0)).to_have_attribute(
         "aria-valuenow", "50"
     )
-    for i in range(len(progress_bars.all())):
-        assert_snapshot(
-            themed_app.get_by_test_id("stProgress").nth(i), name=f"st_progress-{i}"
-        )
+
+    # Use descriptive names for each progress bar snapshot
+    assert_snapshot(progress_bars.nth(0), name="st_progress-default")
+    assert_snapshot(progress_bars.nth(1), name="st_progress-long-text")
+    assert_snapshot(progress_bars.nth(2), name="st_progress-with-markdown")
+    assert_snapshot(progress_bars.nth(3), name="st_progress-stretch-width")
+    assert_snapshot(progress_bars.nth(4), name="st_progress-fixed-width")
 
 
 def test_check_top_level_class(app: Page):

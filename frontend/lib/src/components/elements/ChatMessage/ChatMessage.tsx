@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Face, SmartToy } from "@emotion-icons/material-outlined"
 
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import Icon, { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { Block as BlockProto } from "@streamlit/protobuf"
+
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 import {
   StyledAvatarBackground,
@@ -43,7 +43,7 @@ function ChatMessageAvatar(
   props: Readonly<ChatMessageAvatarProps>
 ): ReactElement {
   const { avatar, avatarType, name, endpoints } = props
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   if (avatar) {
     switch (avatarType) {
@@ -131,4 +131,4 @@ const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
   )
 }
 
-export default ChatMessage
+export default memo(ChatMessage)

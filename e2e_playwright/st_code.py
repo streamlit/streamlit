@@ -46,6 +46,19 @@ st.code(
     language="diff",
 )
 
+code_with_leading_whitespace = """
+    def hello():
+        print("Hello, Streamlit!")
+"""
+
+st.code(code_with_leading_whitespace, language="python")
+
+st.markdown("```python\n" + code_with_leading_whitespace + "\n```")
+
+st.code("\n" + code_with_leading_whitespace + "\n", language="python")
+
+st.markdown("```python\n\n" + code_with_leading_whitespace + "\n\n```")
+
 with st.expander("`st.code` usage", expanded=True):
     st.code(code, language="python")
     st.code(code, language="python")
@@ -95,3 +108,45 @@ print("That will scroll")
 
 st.code(long_code, height=200)
 st.code(code, height=200)
+
+# width tests
+long_code = """
+def process_data(data):
+    result = []
+    for item in data:
+        if item % 2 == 0:
+            result.append(item * 2)
+        else:
+            result.append(item * 3)
+    return result
+
+# Example usage
+data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+processed = process_data(data)
+print(processed)
+"""
+
+st.code(long_code, width=500, wrap_lines=True)
+st.code(long_code, width="stretch")
+st.code(long_code, width="content")
+
+long_single_word_string = "askldfjlweklrjweifjlsdfliwjlierjilsildfjlslfij" * 3
+
+st.code(long_single_word_string)
+st.code(long_single_word_string, wrap_lines=True)
+
+with st.form("form with a code block", height=400):
+    st.code(code, height="stretch")
+    st.form_submit_button("Submit")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.code(code, height=300)
+    st.code(code, height="stretch")
+with col2:
+    st.code(code, height="stretch")
+
+with st.container(height=300, key="container_with_code"):
+    st.code(code, height=100)
+    st.code(code, height="stretch")

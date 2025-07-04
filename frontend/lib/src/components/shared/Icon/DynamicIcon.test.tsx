@@ -18,7 +18,7 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import {
   DynamicIcon,
@@ -49,6 +49,17 @@ describe("Dynamic icon", () => {
 
   it("renders without crashing with Emoji icon", () => {
     const props = getProps({ iconValue: "⛰️" })
+    render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stIconEmoji")
+    const icon = screen.getByText("⛰️")
+
+    expect(testId).toBeInTheDocument()
+    expect(icon).toBeInTheDocument()
+    expect(testId.textContent).toEqual(icon.textContent)
+  })
+
+  it("renders without crashing with prefixed Emoji icon", () => {
+    const props = getProps({ iconValue: "emoji:⛰️" })
     render(<DynamicIcon {...props} />)
     const testId = screen.getByTestId("stIconEmoji")
     const icon = screen.getByText("⛰️")

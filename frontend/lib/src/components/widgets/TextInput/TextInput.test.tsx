@@ -16,15 +16,17 @@
 
 import React from "react"
 
-import { act, screen, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextInput as TextInputProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import TextInput, { Props } from "./TextInput"
 
@@ -39,7 +41,6 @@ const getProps = (
     type: TextInputProto.Type.DEFAULT,
     ...elementProps,
   }),
-  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -49,6 +50,13 @@ const getProps = (
 })
 
 describe("TextInput widget", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [190],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<TextInput {...props} />)
@@ -161,13 +169,12 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<TextInput {...props} />)
     const textInput = screen.getByTestId("stTextInput")
 
     expect(textInput).toHaveClass("stTextInput")
-    expect(textInput).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("can be disabled", () => {
@@ -423,11 +430,13 @@ describe("TextInput widget", () => {
 
     // Remove focus
     textInput.blur()
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
 
     // Then focus again
     textInput.focus()
-    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
+    expect(await screen.findByText("Press Enter to submit form")).toBeVisible()
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
@@ -445,8 +454,12 @@ describe("TextInput widget", () => {
   })
 
   it("hides Please enter to apply text when width is smaller than 180px", async () => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [100],
+    })
     const user = userEvent.setup()
-    const props = getProps({}, { width: 100 })
+    const props = getProps({}, {})
     render(<TextInput {...props} />)
 
     // Focus on input
@@ -458,7 +471,7 @@ describe("TextInput widget", () => {
 
   it("shows Please enter to apply text when width is bigger than 180px", async () => {
     const user = userEvent.setup()
-    const props = getProps({}, { width: 190 })
+    const props = getProps({}, {})
     render(<TextInput {...props} />)
 
     // Focus on input
@@ -496,5 +509,25 @@ describe("TextInput widget", () => {
     const forId2 = textInputLabel2.getAttribute("for")
 
     expect(forId2).toBe(forId1)
+  })
+
+  it("handles an emoji icon", () => {
+    const props = getProps({ icon: "🔎" })
+    render(<TextInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stTextInputIcon")).toBeInTheDocument()
+    // Element rendering emoji icon
+    const emojiIcon = screen.getByTestId("stIconEmoji")
+    expect(emojiIcon).toHaveTextContent("🔎")
+  })
+
+  it("handles a material icon", () => {
+    const props = getProps({ icon: ":material/search:" })
+    render(<TextInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stTextInputIcon")).toBeInTheDocument()
+    // Element rendering material icon
+    const materialIcon = screen.getByTestId("stIconMaterial")
+    expect(materialIcon).toHaveTextContent("search")
   })
 })

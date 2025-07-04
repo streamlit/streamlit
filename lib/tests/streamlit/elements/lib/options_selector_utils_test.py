@@ -24,6 +24,7 @@ from streamlit.elements.lib.options_selector_utils import (
     _coerce_enum,
     check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
+    create_mappings,
     get_default_indices,
     index_,
     maybe_coerce_enum,
@@ -122,40 +123,40 @@ class TestIndexMethod(unittest.TestCase):
             (list(np.arange(0.0, 0.25, 0.05)), 0.150002),
         ]
     )
-    def test_unsuccessful_index_(self, input, find_value):
-        with pytest.raises(ValueError):
-            index_(input, find_value)
+    def test_unsuccessful_index_(self, input_options, find_value):
+        with pytest.raises(ValueError, match=f"{find_value} is not in iterable"):
+            index_(input_options, find_value)
 
     def test_index_list(self):
-        self.assertEqual(index_([1, 2, 3, 4], 1), 0)
-        self.assertEqual(index_([1, 2, 3, 4], 4), 3)
+        assert index_([1, 2, 3, 4], 1) == 0
+        assert index_([1, 2, 3, 4], 4) == 3
 
     def test_index_list_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_([1, 2, 3, 4], 5)
 
     def test_index_tuple(self):
-        self.assertEqual(index_((1, 2, 3, 4), 1), 0)
-        self.assertEqual(index_((1, 2, 3, 4), 4), 3)
+        assert index_((1, 2, 3, 4), 1) == 0
+        assert index_((1, 2, 3, 4), 4) == 3
 
     def test_index_tuple_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_((1, 2, 3, 4), 5)
 
     def test_index_numpy_array(self):
-        self.assertEqual(index_(np.array([1, 2, 3, 4]), 1), 0)
-        self.assertEqual(index_(np.array([1, 2, 3, 4]), 4), 3)
+        assert index_(np.array([1, 2, 3, 4]), 1) == 0
+        assert index_(np.array([1, 2, 3, 4]), 4) == 3
 
     def test_index_numpy_array_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_(np.array([1, 2, 3, 4]), 5)
 
     def test_index_pandas_series(self):
-        self.assertEqual(index_(pd.Series([1, 2, 3, 4]), 1), 0)
-        self.assertEqual(index_(pd.Series([1, 2, 3, 4]), 4), 3)
+        assert index_(pd.Series([1, 2, 3, 4]), 1) == 0
+        assert index_(pd.Series([1, 2, 3, 4]), 4) == 3
 
     def test_index_pandas_series_fails(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="5 is not in iterable"):
             index_(pd.Series([1, 2, 3, 4]), 5)
 
 
@@ -265,7 +266,7 @@ class TestEnumCoercion:
         EnumADiffValues,
     ):
         assert _coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAEqual.A
-        # Different values are coercable by default
+        # Different values are coercible by default
         assert _coerce_enum(EnumAOrig.A, EnumADiffValues) is EnumADiffValues.A
 
     def test_coerce_enum_not_coercable(
@@ -276,7 +277,7 @@ class TestEnumCoercion:
         EnumADiffQualname,
         EnumB,
     ):
-        # Things that are not coercable
+        # Things that are not coercible
         assert _coerce_enum(EnumAOrig.A, EnumADiffMembers) is EnumAOrig.A
         assert _coerce_enum(EnumAOrig.A, EnumAExtraMembers) is EnumAOrig.A
         assert _coerce_enum(EnumAOrig.A, EnumB) is EnumAOrig.A
@@ -388,3 +389,63 @@ class TestEnumCoercion:
             )
             is tuple_result
         )
+
+
+class TestCreateMappings:
+    """Test class for create_mappings utility function."""
+
+    def test_create_mappings_with_default_format_func(self):
+        # Using default str format_func
+        options = ["apple", "banana", "cherry"]
+        formatted_options, mapping = create_mappings(options)
+
+        # Check formatted options
+        assert formatted_options == ["apple", "banana", "cherry"]
+
+        # Check mapping
+        assert mapping == {"apple": 0, "banana": 1, "cherry": 2}
+
+    def test_create_mappings_with_custom_format_func(self):
+        # Using a custom format function
+        options = ["apple", "banana", "cherry"]
+
+        formatted_options, mapping = create_mappings(
+            options, lambda x: f"fruit-{x.upper()}"
+        )
+
+        # Check formatted options
+        assert formatted_options == ["fruit-APPLE", "fruit-BANANA", "fruit-CHERRY"]
+
+        # Check mapping
+        assert mapping == {"fruit-APPLE": 0, "fruit-BANANA": 1, "fruit-CHERRY": 2}
+
+    def test_create_mappings_with_numeric_options(self):
+        # Test with numeric options
+        options = [1, 2, 3, 4]
+        formatted_options, mapping = create_mappings(options)
+
+        # Check formatted options
+        assert formatted_options == ["1", "2", "3", "4"]
+
+        # Check mapping
+        assert mapping == {"1": 0, "2": 1, "3": 2, "4": 3}
+
+    def test_create_mappings_with_mixed_types(self):
+        # Test with a mix of types
+        options = [1, "two", 3.0, None]
+        formatted_options, mapping = create_mappings(options)
+
+        # Check formatted options
+        assert formatted_options == ["1", "two", "3.0", "None"]
+
+        # Check mapping
+        assert mapping == {"1": 0, "two": 1, "3.0": 2, "None": 3}
+
+    def test_create_mappings_with_empty_list(self):
+        # Test with empty list
+        options = []
+        formatted_options, mapping = create_mappings(options)
+
+        # Check both results are empty
+        assert formatted_options == []
+        assert mapping == {}

@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
@@ -25,7 +24,7 @@ from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     import graphviz
@@ -110,7 +109,7 @@ class GraphvizMixin:
         """
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
-        element_id = hashlib.md5(delta_path.encode(), **HASHLIB_KWARGS).hexdigest()
+        element_id = calc_md5(delta_path.encode())
 
         graphviz_chart_proto = GraphVizChartProto()
 
@@ -142,7 +141,7 @@ def marshall(
         engine = "dot"
     else:
         raise StreamlitAPIException(
-            "Unhandled type for graphviz chart: %s" % type(figure_or_dot)
+            f"Unhandled type for graphviz chart: {type(figure_or_dot)}"
         )
 
     proto.spec = dot

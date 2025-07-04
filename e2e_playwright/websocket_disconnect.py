@@ -16,6 +16,21 @@ from datetime import date, time
 
 import streamlit as st
 
+
+# Make a MPA to verify that sidebar page nav links
+# are also disabled when the websocket disconnects.
+def page1():
+    pass
+
+
+def page2():
+    pass
+
+
+st.navigation([page1, page2])
+
+st.subheader("Widgets should be disabled")
+
 options = ("female", "male")
 
 w1 = st.checkbox("I am human", True)
@@ -36,3 +51,17 @@ w7 = st.selectbox("Options", options, 1)
 w8 = st.time_input("Set an alarm for", time(8, 45))
 
 w9 = st.date_input("A date to celebrate", date(2019, 7, 6))
+
+st.subheader("Non-widget elements should not be disabled")
+
+st.link_button("Link Button", "https://streamlit.io")
+
+tab1, tab2 = st.tabs(["Tab 1", "Tab 2"])
+
+with tab1:
+    st.write("Hello")
+
+with tab2:
+    st.write("World")
+
+st.expander("Expander").write("Hello")

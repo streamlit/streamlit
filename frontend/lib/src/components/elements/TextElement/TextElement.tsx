@@ -14,37 +14,31 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
-import { Text as TextProto } from "@streamlit/lib/src/proto"
+import { Text as TextProto } from "@streamlit/protobuf"
+
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
-} from "@streamlit/lib/src/components/shared/TooltipIcon"
+} from "~lib/components/shared/TooltipIcon"
 
 import { StyledText } from "./styled-components"
 
 export interface TextProps {
-  width: number
   element: TextProto
 }
 
 /**
  * Functional element representing preformatted (plain) text.
  */
-export default function TextElement({
-  width,
-  element,
-}: Readonly<TextProps>): ReactElement {
-  const styleProp = { width }
+function TextElement({ element }: Readonly<TextProps>): ReactElement {
   return (
-    <StyledLabelHelpWrapper
-      style={styleProp}
-      className="stText"
-      data-testid="stText"
-    >
+    <StyledLabelHelpWrapper className="stText" data-testid="stText">
       <StyledText>{element.body}</StyledText>
       {element.help && <InlineTooltipIcon content={element.help} />}
     </StyledLabelHelpWrapper>
   )
 }
+
+export default memo(TextElement)

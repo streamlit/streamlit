@@ -15,11 +15,17 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_help_tooltip,
+    get_expander,
+)
 
 
 def test_st_text_rendering(app: Page, assert_snapshot: ImageCompareFunction):
-    assert_snapshot(app.get_by_test_id("stVerticalBlock"), name="st_text-rendering")
+    assert_snapshot(
+        get_expander(app, "Various text elements"), name="st_text-rendering"
+    )
 
 
 def test_st_text_shows_correct_text(app: Page):
@@ -47,7 +53,8 @@ def test_multiline_text(app: Page):
 
     # check that the text is displayed as multiline with its div's height > width
     bounding_box = multiline_text.locator("div").bounding_box()
-    assert bounding_box is not None and bounding_box["height"] > bounding_box["width"]
+    assert bounding_box is not None
+    assert bounding_box["height"] > bounding_box["width"]
 
 
 def test_singleline_text_with_escape_char(app: Page):
@@ -65,3 +72,18 @@ def test_no_scrollbar_for_long_text(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stText")
+
+
+def test_width_settings(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that different width settings are applied correctly."""
+    # Get the last three text elements (the ones with width settings)
+    text_elements = app.get_by_test_id("stText")
+    content_text = text_elements.nth(7)
+    stretch_text = text_elements.nth(8)
+    fixed_text = text_elements.nth(9)
+
+    expect(content_text).to_contain_text("This is a text with content width.")
+
+    assert_snapshot(stretch_text, name="st_text-stretch-width")
+    assert_snapshot(fixed_text, name="st_text-fixed-width")
+    assert_snapshot(content_text, name="st_text-content-width")

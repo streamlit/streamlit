@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any
+from typing import TYPE_CHECKING, cast
 
 from streamlit import util
+
+if TYPE_CHECKING:
+    from git import Commit, Remote, RemoteReference, Repo
 
 # Github has two URLs, one that is https and one that is ssh
 GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+)(?:.git)?$"
@@ -31,19 +34,17 @@ MIN_GIT_VERSION = (2, 7, 0)
 
 
 class GitRepo:
-    def __init__(self, path):
-        # If we have a valid repo, git_version will be a tuple of 3+ ints:
-        # (major, minor, patch, possible_additional_patch_number)
+    repo: Repo | None
+
+    def __init__(self, path: str) -> None:
+        # If we have a valid repo, git_version will be a tuple
+        # of 3+ ints: (major, minor, patch, possible_additional_patch_number)
         self.git_version: tuple[int, ...] | None = None
 
         try:
             import git
 
-            # GitPython is not fully typed, and mypy is outputting inconsistent
-            # type errors on Mac and Linux. We bypass type checking entirely
-            # by re-declaring the `git` import as an "Any".
-            git_package: Any = git
-            self.repo = git_package.Repo(path, search_parent_directories=True)
+            self.repo = git.Repo(path, search_parent_directories=True)
             self.git_version = self.repo.git.version_info
 
             if self.git_version >= MIN_GIT_VERSION:
@@ -69,8 +70,8 @@ class GitRepo:
         )
 
     @property
-    def tracking_branch(self):
-        if not self.is_valid():
+    def tracking_branch(self) -> RemoteReference | None:
+        if self.repo is None or not self.is_valid():
             return None
 
         if self.is_head_detached:
@@ -79,41 +80,45 @@ class GitRepo:
         return self.repo.active_branch.tracking_branch()
 
     @property
-    def untracked_files(self):
-        if not self.is_valid():
+    def untracked_files(self) -> list[str] | None:
+        if self.repo is None or not self.is_valid():
             return None
 
         return self.repo.untracked_files
 
     @property
-    def is_head_detached(self):
-        if not self.is_valid():
+    def is_head_detached(self) -> bool:
+        if self.repo is None or not self.is_valid():
             return False
 
         return self.repo.head.is_detached
 
     @property
-    def uncommitted_files(self):
-        if not self.is_valid():
+    def uncommitted_files(self) -> list[str] | None:
+        if self.repo is None or not self.is_valid():
             return None
 
-        return [item.a_path for item in self.repo.index.diff(None)]
+        return [cast("str", item.a_path) for item in self.repo.index.diff(None)]
 
     @property
-    def ahead_commits(self):
-        if not self.is_valid():
+    def ahead_commits(self) -> list[Commit] | None:
+        if self.repo is None or not self.is_valid():
             return None
 
         try:
-            remote, branch_name = self.get_tracking_branch_remote()
+            tracking_branch_info = self.get_tracking_branch_remote()
+            if tracking_branch_info is None:
+                return None
+
+            remote, branch_name = tracking_branch_info
             remote_branch = f"{remote.name}/{branch_name}"
 
             return list(self.repo.iter_commits(f"{remote_branch}..{branch_name}"))
         except Exception:
             return []
 
-    def get_tracking_branch_remote(self):
-        if not self.is_valid():
+    def get_tracking_branch_remote(self) -> tuple[Remote, str] | None:
+        if self.repo is None or not self.is_valid():
             return None
 
         tracking_branch = self.tracking_branch
@@ -145,7 +150,7 @@ class GitRepo:
 
         return False
 
-    def get_repo_info(self):
+    def get_repo_info(self) -> tuple[str, str, str] | None:
         if not self.is_valid():
             return None
 

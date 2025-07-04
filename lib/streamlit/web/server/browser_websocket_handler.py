@@ -14,11 +14,9 @@
 
 from __future__ import annotations
 
-import base64
-import binascii
 import hmac
 import json
-from typing import TYPE_CHECKING, Any, Awaitable, Final
+from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
 
 import tornado.concurrent
@@ -41,13 +39,15 @@ from streamlit.web.server.server_util import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 _LOGGER: Final = get_logger(__name__)
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
-    """Handles a WebSocket connection from the browser"""
+    """Handles a WebSocket connection from the browser."""
 
     def initialize(self, runtime: Runtime) -> None:
         self._runtime = runtime
@@ -69,6 +69,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     ) -> bytes | None:
         """Get a signed cookie from the request. Added for compatibility with
         Tornado < 6.3.0.
+
         See release notes: https://www.tornadoweb.org/en/stable/releases/v6.3.0.html#deprecation-notices
         """
         try:
@@ -94,7 +95,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             return False
         return hmac.compare_digest(decoded_token, decoded_expected_token)
 
-    def _parse_user_cookie(self, raw_cookie_value: bytes, email: str) -> dict[str, Any]:
+    def _parse_user_cookie(self, raw_cookie_value: bytes) -> dict[str, Any]:
         """Process the user cookie and extract the user info after
         validating the origin. Origin is validated for security reasons.
         """
@@ -111,6 +112,12 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             del cookie_value["origin"]
             del cookie_value["is_logged_in"]
             user_info.update(cookie_value)
+
+        else:
+            _LOGGER.error(
+                "Origin mismatch, the origin of websocket request is not the "
+                "same origin of redirect_uri in secrets.toml",
+            )
 
         return user_info
 
@@ -147,24 +154,8 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         return None
 
-    def open(self, *args, **kwargs) -> Awaitable[None] | None:
-        # Extract user info from the X-Streamlit-User header
-        is_public_cloud_app = False
-
-        try:
-            header_content = self.request.headers["X-Streamlit-User"]
-            payload = base64.b64decode(header_content)
-            user_obj = json.loads(payload)
-            email = user_obj["email"]
-            is_public_cloud_app = user_obj["isPublicCloudApp"]
-        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
-            email = "test@example.com"
-        user_info: dict[str, str | bool | None] = {
-            "email": None if is_public_cloud_app else email,
-        }
-
-        if is_public_cloud_app or email == "test@example.com":
-            user_info.pop("email", None)
+    def open(self, *args: Any, **kwargs: Any) -> Awaitable[None] | None:
+        user_info: dict[str, str | bool | None] = {}
 
         existing_session_id = None
         try:
@@ -178,7 +169,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 csrf_protocol_value = ws_protocols[1]
 
                 if self._validate_xsrf_token(csrf_protocol_value):
-                    user_info.update(self._parse_user_cookie(raw_cookie_value, email))
+                    user_info.update(self._parse_user_cookie(raw_cookie_value))
 
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above
@@ -222,7 +213,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if isinstance(payload, str):
                 # Sanity check. (The frontend should only be sending us bytes;
                 # Protobuf.ParseFromString does not accept str input.)
-                raise RuntimeError(
+                raise TypeError(  # noqa: TRY301
                     "WebSocket received an unexpected `str` message. "
                     "(We expect `bytes` only.)"
                 )

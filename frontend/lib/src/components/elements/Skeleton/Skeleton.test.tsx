@@ -18,8 +18,9 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
+import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 
 import { Skeleton } from "./Skeleton"
 

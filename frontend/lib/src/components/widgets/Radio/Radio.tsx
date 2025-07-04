@@ -16,20 +16,20 @@
 
 import React, { memo, ReactElement, useCallback } from "react"
 
-import UIRadio from "@streamlit/lib/src/components/shared/Radio"
-import { Radio as RadioProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { Radio as RadioProto } from "@streamlit/protobuf"
+
+import UIRadio from "~lib/components/shared/Radio"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
   ValueWithSource,
-} from "@streamlit/lib/src/hooks/useBasicWidgetState"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+} from "~lib/hooks/useBasicWidgetState"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 export interface Props {
   disabled: boolean
   element: RadioProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -39,7 +39,6 @@ function Radio({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }: Readonly<Props>): ReactElement {
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -71,7 +70,6 @@ function Radio({
       onChange={onChange}
       options={options}
       captions={captions}
-      width={width}
       disabled={disabled}
       horizontal={horizontal}
       labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}

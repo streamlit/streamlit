@@ -1,0 +1,11 @@
+# Ignore all rules
+rules/*
+# Only track certain rules so that we don't track a user's local rules
+# You can add more rules to this list as needed!
+!rules/typescript.mdc
+!rules/typescript_tests.mdc
+!rules/python.mdc
+!rules/python_lib.mdc
+!rules/python_tests.mdc
+!rules/protobuf.mdc
+!rules/e2e_playwright.mdc

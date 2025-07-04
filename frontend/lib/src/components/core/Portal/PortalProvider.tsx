@@ -15,7 +15,7 @@
  */
 import React, { FC, PropsWithChildren, useCallback, useRef } from "react"
 
-import { StyledDataFrameOverlay } from "@streamlit/lib/src/styled-components"
+import { StyledDataFrameOverlay } from "~lib/styled-components"
 
 import { PortalContext } from "./PortalContext"
 

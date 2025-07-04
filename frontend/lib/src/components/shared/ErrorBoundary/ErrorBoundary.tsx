@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 
-import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
-import { logError } from "@streamlit/lib/src/util/log"
-import { StyledInlineCode } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
+import { getLogger } from "loglevel"
+
+import ErrorElement from "~lib/components/shared/ErrorElement"
+import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
 
 export interface Props {
   width?: number
@@ -28,15 +29,17 @@ export interface State {
   error?: Error | null
 }
 
+const LOG = getLogger("ErrorBoundary")
+
 /**
  * A component that catches errors that take place when React is asynchronously
  * rendering child components.
  */
-class ErrorBoundary extends React.PureComponent<
+class ErrorBoundary extends PureComponent<
   React.PropsWithChildren<Props>,
   State
 > {
-  public state: State = {
+  public override state: State = {
     error: null,
   }
 
@@ -47,11 +50,11 @@ class ErrorBoundary extends React.PureComponent<
     }
   }
 
-  public componentDidCatch = (error: Error): void => {
-    logError(`${error.name}: ${error.message}\n${error.stack}`)
+  public override componentDidCatch = (error: Error): void => {
+    LOG.error(`${error.name}: ${error.message}\n${error.stack}`)
   }
 
-  public render(): React.ReactNode {
+  public override render(): React.ReactNode {
     const { error } = this.state
 
     if (error) {

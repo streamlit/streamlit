@@ -19,8 +19,9 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
+import { Markdown as MarkdownProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 
 import Markdown, { MarkdownProps } from "./Markdown"
 
@@ -35,7 +36,6 @@ const getProps = (
     allowHtml: false,
     ...elementProps,
   }),
-  width: 100,
 })
 
 describe("Markdown element", () => {
@@ -45,7 +45,6 @@ describe("Markdown element", () => {
     const markdown = screen.getByTestId("stMarkdown")
     expect(markdown).toBeInTheDocument()
     expect(markdown).toHaveClass("stMarkdown")
-    expect(markdown).toHaveStyle("width: 100px")
   })
 })
 

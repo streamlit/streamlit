@@ -26,8 +26,6 @@ import {
   StyledGhostButton,
   StyledHeaderButton,
   StyledHeaderNoPaddingButton,
-  StyledIconButton,
-  StyledLinkButton,
   StyledMinimalButton,
   StyledPillsButton,
   StyledPillsButtonActive,
@@ -42,8 +40,15 @@ import {
 } from "./styled-components"
 
 function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
-  const { kind, size, disabled, onClick, fluidWidth, children, autoFocus } =
-    props
+  const {
+    kind,
+    size,
+    disabled,
+    onClick,
+    containerWidth,
+    children,
+    autoFocus,
+  } = props
 
   let ComponentType = StyledPrimaryButton
 
@@ -53,10 +58,6 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
     ComponentType = StyledTertiaryButton
   } else if (kind === BaseButtonKind.GHOST) {
     ComponentType = StyledGhostButton
-  } else if (kind === BaseButtonKind.LINK) {
-    ComponentType = StyledLinkButton
-  } else if (kind === BaseButtonKind.ICON) {
-    ComponentType = StyledIconButton
   } else if (kind === BaseButtonKind.PILLS) {
     ComponentType = StyledPillsButton
   } else if (kind === BaseButtonKind.PILLS_ACTIVE) {
@@ -89,7 +90,7 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
     <ComponentType
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
-      fluidWidth={fluidWidth || false}
+      containerWidth={containerWidth || false}
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}

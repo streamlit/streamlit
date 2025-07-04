@@ -23,10 +23,16 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidWidthError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class SliderTest(DeltaGeneratorTestCase):
@@ -37,20 +43,20 @@ class SliderTest(DeltaGeneratorTestCase):
         st.slider("the label")
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, [0])
-        self.assertEqual(c.disabled, False)
+        assert c.default == [0]
+        assert not c.disabled
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.slider("the label", disabled=True)
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     PST = timezone(timedelta(hours=-8), "PST")
     AWARE_DT = datetime(2020, 1, 1, tzinfo=PST)
@@ -103,11 +109,11 @@ class SliderTest(DeltaGeneratorTestCase):
         """Test that it supports different types of values."""
         ret = st.slider("the label", value=value)
 
-        self.assertEqual(ret, return_value)
+        assert ret == return_value
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, proto_value)
+        assert c.label == "the label"
+        assert c.default == proto_value
 
     @parameterized.expand(
         [
@@ -135,7 +141,7 @@ class SliderTest(DeltaGeneratorTestCase):
         ret = st.slider(
             "the label", min_value=min_value, max_value=max_value, value=value
         )
-        self.assertEqual(ret, return_value)
+        assert ret == return_value
 
     NAIVE_DT = datetime(2020, 2, 1)
     NAIVE_DT_END = datetime(2020, 2, 4)
@@ -162,8 +168,8 @@ class SliderTest(DeltaGeneratorTestCase):
         ret = st.slider("the label", value=value)
         c = self.get_delta_from_queue().new_element.slider
 
-        self.assertEqual(ret, return_value)
-        self.assertEqual(c.label, "the label")
+        assert ret == return_value
+        assert c.label == "the label"
 
     def test_range_session_state(self):
         """Test a range set by session state."""
@@ -183,23 +189,23 @@ class SliderTest(DeltaGeneratorTestCase):
         ret = st.slider("Slider label", 10, 100, 0)
         c = self.get_delta_from_queue().new_element.slider
 
-        self.assertEqual(ret, 0)
-        self.assertEqual(c.min, 0)
+        assert ret == 0
+        assert c.min == 0
 
     def test_value_smaller_than_max(self):
         ret = st.slider("Slider label", 10, 100, 101)
         c = self.get_delta_from_queue().new_element.slider
 
-        self.assertEqual(ret, 101)
-        self.assertEqual(c.max, 101)
+        assert ret == 101
+        assert c.max == 101
 
     def test_max_min(self):
         ret = st.slider("Slider label", 101, 100, 101)
         c = self.get_delta_from_queue().new_element.slider
 
-        (self.assertEqual(ret, 101),)
-        self.assertEqual(c.min, 100)
-        self.assertEqual(c.max, 101)
+        assert ret == 101
+        assert c.min == 100
+        assert c.max == 101
 
     def test_min_equals_max(self):
         with pytest.raises(StreamlitAPIException):
@@ -213,41 +219,32 @@ class SliderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             max_value = JSNumber.MAX_SAFE_INTEGER + 1
             st.slider("Label", max_value=max_value)
-        self.assertEqual(
-            "`max_value` (%s) must be <= (1 << 53) - 1" % str(max_value), str(exc.value)
-        )
+        assert f"`max_value` ({max_value}) must be <= (1 << 53) - 1" == str(exc.value)
 
         # Min int
         with pytest.raises(StreamlitAPIException) as exc:
             min_value = JSNumber.MIN_SAFE_INTEGER - 1
             st.slider("Label", min_value=min_value)
-        self.assertEqual(
-            "`min_value` (%s) must be >= -((1 << 53) - 1)" % str(min_value),
-            str(exc.value),
+        assert f"`min_value` ({min_value}) must be >= -((1 << 53) - 1)" == str(
+            exc.value
         )
 
         # Max float
         with pytest.raises(StreamlitAPIException) as exc:
             max_value = 2e308
             st.slider("Label", value=0.5, max_value=max_value)
-        self.assertEqual(
-            "`max_value` (%s) must be <= 1.797e+308" % str(max_value), str(exc.value)
-        )
+        assert f"`max_value` ({max_value}) must be <= 1.797e+308" == str(exc.value)
 
         # Min float
         with pytest.raises(StreamlitAPIException) as exc:
             min_value = -2e308
             st.slider("Label", value=0.5, min_value=min_value)
-        self.assertEqual(
-            "`min_value` (%s) must be >= -1.797e+308" % str(min_value), str(exc.value)
-        )
+        assert f"`min_value` ({min_value}) must be >= -1.797e+308" == str(exc.value)
 
     def test_step_zero(self):
         with pytest.raises(StreamlitAPIException) as exc:
             st.slider("Label", min_value=0, max_value=10, step=0)
-        self.assertEqual(
-            "Slider components cannot be passed a `step` of 0.", str(exc.value)
-        )
+        assert str(exc.value) == "Slider components cannot be passed a `step` of 0."
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -255,7 +252,7 @@ class SliderTest(DeltaGeneratorTestCase):
         st.slider("foo")
 
         proto = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -265,11 +262,11 @@ class SliderTest(DeltaGeneratorTestCase):
             st.slider("foo")
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         slider_proto = self.get_delta_from_queue(1).new_element.slider
-        self.assertEqual(slider_proto.form_id, form_proto.form.form_id)
+        assert slider_proto.form_id == form_proto.form.form_id
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
@@ -281,10 +278,10 @@ class SliderTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
-        self.assertEqual(len(all_deltas), 4)
+        assert len(all_deltas) == 4
         slider_proto = self.get_delta_from_queue().new_element.slider
 
-        self.assertEqual(slider_proto.label, "foo")
+        assert slider_proto.label == "foo"
 
     @parameterized.expand(
         [
@@ -298,15 +295,14 @@ class SliderTest(DeltaGeneratorTestCase):
         st.slider("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.slider("the label", label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):
@@ -315,8 +311,92 @@ class SliderTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
+
+    def test_should_raise_exception_when_session_state_value_out_of_range(self):
+        """Test out of range using st.session_state to set slider values beyond min/max."""
+        # Test for integer values
+        with pytest.raises(StreamlitValueAboveMaxError) as e:
+            st.session_state.slider = 10
+            st.slider("slider", min_value=1, max_value=5, key="slider")
+        assert str(e.value) == "The `value` 10 is greater than the `max_value` 5."
+        with pytest.raises(StreamlitValueBelowMinError) as e:
+            st.session_state.slider_1 = 10
+            st.slider("slider_1", min_value=15, max_value=20, key="slider_1")
+        assert str(e.value) == "The `value` 10 is less than the `min_value` 15."
+
+        # Test for dates
+        with pytest.raises(StreamlitValueAboveMaxError) as e:
+            st.session_state.slider_2 = date(2025, 1, 1)
+            st.slider(
+                "slider_2",
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
+                key="slider_2",
+            )
+        assert (
+            str(e.value)
+            == "The `value` 2025-01-01 is greater than the `max_value` 2024-12-31."
+        )
+
+        with pytest.raises(StreamlitValueBelowMinError) as e:
+            st.session_state.slider_3 = date(2023, 1, 1)
+            st.slider(
+                "slider_3",
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
+                key="slider_3",
+            )
+        assert (
+            str(e.value)
+            == "The `value` 2023-01-01 is less than the `min_value` 2024-01-01."
+        )
+
+
+class SliderWidthTest(DeltaGeneratorTestCase):
+    def test_slider_with_width_pixels(self):
+        """Test that slider can be displayed with a specific width in pixels."""
+        st.slider("Label", min_value=0, max_value=10, width=500)
+        element = self.get_delta_from_queue().new_element
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert element.width_config.pixel_width == 500
+
+    def test_slider_with_width_stretch(self):
+        """Test that slider can be displayed with a width of 'stretch'."""
+        st.slider("Label", min_value=0, max_value=10, width="stretch")
+        element = self.get_delta_from_queue().new_element
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert element.width_config.use_stretch is True
+
+    def test_slider_with_default_width(self):
+        """Test that the default width is used when not specified."""
+        st.slider("Label", min_value=0, max_value=10)
+        element = self.get_delta_from_queue().new_element
+        assert (
+            element.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert element.width_config.use_stretch is True
+
+    @parameterized.expand(
+        [
+            ("invalid_string", "invalid"),
+            ("negative", -1),
+            ("zero", 0),
+            ("float", 100.5),
+        ]
+    )
+    def test_width_config_invalid(self, name, invalid_width):
+        """Test width config with various invalid values."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.slider("the label", width=invalid_width)
 
 
 def test_id_stability():

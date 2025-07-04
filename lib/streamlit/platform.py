@@ -21,9 +21,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 
 
 def post_parent_message(message: str) -> None:
-    """
-    Sends a string message to the parent window (when host configuration allows).
-    """
+    """Sends a string message to the parent window (when host configuration allows)."""
     ctx = get_script_run_ctx()
     if ctx is None:
         return

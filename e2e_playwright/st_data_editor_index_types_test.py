@@ -20,7 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_data_editor_index_types(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.data_editor renders various index types correctly."""
     dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(7)
+    expect(dataframe_elements).to_have_count(8)
 
     # The dataframe component might require a bit more time for rendering the canvas
     app.wait_for_timeout(250)
@@ -32,3 +32,4 @@ def test_data_editor_index_types(app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(dataframe_elements.nth(4), name="st_data_editor-date_index")
     assert_snapshot(dataframe_elements.nth(5), name="st_data_editor-time_index")
     assert_snapshot(dataframe_elements.nth(6), name="st_data_editor-datetime_index")
+    assert_snapshot(dataframe_elements.nth(7), name="st_data_editor-categorical_index")

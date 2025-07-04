@@ -21,15 +21,16 @@ import { act, screen } from "@testing-library/react"
 import { PickingInfo } from "@deck.gl/core"
 import { userEvent } from "@testing-library/user-event"
 
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+
 import {
   render,
   renderHook,
-} from "@streamlit/lib/src/components/shared/ElementFullscreen/testUtils"
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
+} from "~lib/components/shared/ElementFullscreen/testUtils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import type { DeckGLProps } from "./types"
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
@@ -45,8 +46,8 @@ const mockInitialViewState = {
   zoom: 6,
 }
 
-vi.mock("@streamlit/lib/src/theme", async () => ({
-  ...(await vi.importActual("@streamlit/lib/src/theme")),
+vi.mock("~lib/theme", async () => ({
+  ...(await vi.importActual("~lib/theme")),
   hasLightBackgroundColor: vi.fn(() => false),
 }))
 
@@ -84,7 +85,6 @@ const getProps = (
       json: JSON.stringify(json),
       ...elementProps,
     }),
-    mapboxToken: "mapboxToken",
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: vi.fn(),
       formsDataChanged: vi.fn(),
@@ -287,7 +287,11 @@ describe("#useDeckGl", () => {
         useDeckGl(props)
         const { expand } = useRequiredContext(ElementFullscreenContext)
 
-        return <button onClick={expand}>Expand</button>
+        return (
+          <button type="button" onClick={expand}>
+            Expand
+          </button>
+        )
       }
 
       render(<MyComponent {...getUseDeckGlProps()} />)
@@ -400,7 +404,7 @@ describe("#useDeckGl", () => {
         })
       })
 
-      rerender()
+      rerender(initialProps)
 
       expect(result.current.hasActiveSelection).toBe(true)
     })

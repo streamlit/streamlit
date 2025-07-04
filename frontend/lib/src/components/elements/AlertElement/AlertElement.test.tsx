@@ -18,21 +18,19 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
-import { Alert as AlertProto } from "@streamlit/lib/src/proto"
+import { Alert as AlertProto } from "@streamlit/protobuf"
 
-import AlertElement, {
-  AlertElementProps,
-  getAlertElementKind,
-} from "./AlertElement"
+import { render } from "~lib/test_util"
+import { Kind } from "~lib/components/shared/AlertContainer"
+
+import AlertElement, { AlertElementProps } from "./AlertElement"
+import { getAlertElementKind } from "./utils"
 
 const getProps = (
   elementProps: Partial<AlertElementProps> = {}
 ): AlertElementProps => ({
   body: "Something happened!",
   kind: Kind.INFO,
-  width: 100,
   ...elementProps,
 })
 
@@ -102,10 +100,4 @@ describe("Alert element", () => {
     expect(screen.getByTestId("stAlertDynamicIcon")).toHaveTextContent("👉🏻")
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
-})
-
-test("getAlertElementKind throws an error on invalid format", () => {
-  expect(() => getAlertElementKind(AlertProto.Format.UNUSED)).toThrow(
-    `Unexpected alert type: ${AlertProto.Format.UNUSED}`
-  )
 })

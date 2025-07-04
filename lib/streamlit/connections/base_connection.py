@@ -43,7 +43,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         reads and a ``session`` property for more complex operations.
     """
 
-    def __init__(self, connection_name: str, **kwargs) -> None:
+    def __init__(self, connection_name: str, **kwargs: Any) -> None:
         """Create a BaseConnection.
 
         This constructor is called by the connection factory machinery when a user
@@ -78,16 +78,16 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     def __getattribute__(self, name: str) -> Any:
         try:
             return object.__getattribute__(self, name)
-        except AttributeError as e:
+        except AttributeError:
             if hasattr(self._instance, name):
                 raise AttributeError(
                     f"`{name}` doesn't exist here, but you can call `._instance.{name}` instead"
                 )
-            raise e
+            raise
 
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
-    def _on_secrets_changed(self, _) -> None:
+    def _on_secrets_changed(self, _: str) -> None:
         """Reset the raw connection object when this connection's secrets change.
 
         We don't expect either user scripts or connection authors to have to use or
@@ -155,7 +155,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
 
     # Abstract fields/methods that subclasses of BaseConnection must implement
     @abstractmethod
-    def _connect(self, **kwargs) -> RawConnectionT:
+    def _connect(self, **kwargs: Any) -> RawConnectionT:
         """Create an instance of an underlying connection object.
 
         This abstract method is the one method that we require subclasses of

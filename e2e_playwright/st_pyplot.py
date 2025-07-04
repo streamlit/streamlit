@@ -16,8 +16,7 @@ import textwrap
 
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
-from matplotlib import pyplot
+import seaborn as sns  # type: ignore
 
 import streamlit as st
 
@@ -25,9 +24,9 @@ np.random.seed(0)
 
 
 st.write("Normal figure:")
-data = np.random.normal(1, 1, size=100)
+data1 = np.random.normal(1, 1, size=100)
 fig, ax = plt.subplots()
-ax.hist(data, bins=20)
+ax.hist(data1, bins=20)
 st.pyplot(fig)
 
 st.write("Resized figure:")
@@ -44,14 +43,14 @@ st.pyplot(fig, use_container_width=False)
 st.write("Advanced Seaborn figure:")
 # Generate data
 data_points = 100
-xData: "np.typing.NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
-yData: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
-data: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 2)
+x_data: "np.typing.NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
+y_data: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
+data2: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 2)
 
 # Generate plot
 fig, ax = plt.subplots(figsize=(4.5, 4.5))
 sns.set_context(rc={"font.size": 10})
-p = sns.regplot(x=xData, y=yData, data=data, ci=None, ax=ax, color="grey")
+p = sns.regplot(x=x_data, y=y_data, data=data2, ci=None, ax=ax, color="grey")
 
 p.set_title("An Extremely and Really Really Long Long Long Title", fontweight="bold")
 p.set_xlabel("Very long long x label")
@@ -81,12 +80,12 @@ kwargs = {
 
 # We need to set clear_figure=True, otherwise the global object
 # test below would not work.
-st.pyplot(fig, clear_figure=True, **kwargs)
+st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type]
 
 st.write("Figure using deprecated global object:")
-plot = pyplot.plot(data)
+plot = plt.plot(data2)
 st.pyplot()
-pyplot.clf()
+plt.clf()
 
 fig, ax = plt.subplots()
 st.pyplot(fig)

@@ -28,11 +28,18 @@ message MetricsEvent {
   string event = 1;
   string anonymous_id = 2;
   string machine_id_v3 = 3;
+  string machine_id_v4 = 41;
   string report_hash = 4;
   bool dev = 5;
   string source = 6;
   string streamlit_version = 7;
   bool is_hello = 8;
+  string app_id = 33;
+  string session_id = 35;
+  string python_version = 36;
+  string server_os = 42;
+  bool has_display = 43;
+  bool is_webdriver = 44;
 
   // Host tracking fields:
   string hosted_at = 9;
@@ -70,16 +77,13 @@ message MetricsEvent {
   bool is_fragment_run = 32;
 
   // Addtl for page profile metrics
-  string app_id = 33;
   int64 numPages = 34;
-  string session_id = 35;
-  string python_version = 36;
   string page_script_hash = 37;
   string active_theme = 38;
   int64 total_load_time = 39;
   BrowserInfo browser_info = 40;
 
-  // Next ID: 41
+  // Next ID: 45
 }
 
 message BrowserInfo {

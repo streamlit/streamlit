@@ -18,11 +18,8 @@ import { useEffect } from "react"
 
 import { SignalConnection } from "typed-signals"
 
-import {
-  isValidFormId,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export class FormClearHelper {
   private formClearListener?: SignalConnection

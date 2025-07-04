@@ -12,12 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: ERA001
 import random
 
 import numpy as np
 
 import streamlit as st
-from shared.data_mocks import BASE_TYPES_DF, DATETIME_TYPES_DF, NUMBER_TYPES_DF
+from shared.data_mocks import (
+    BASE_TYPES_DF,
+    DATETIME_TYPES_DF,
+    NUMBER_TYPES_DF,
+    SPECIAL_TYPES_DF,
+)
 
 np.random.seed(0)
 random.seed(0)
@@ -63,14 +69,12 @@ st.data_editor(
     num_rows="dynamic",
 )
 
-# Categorical index doesn't work since arrow
-# does serialize the options:
-# st.subheader("Categorical Index (pd.CategoricalIndex)")
-# st.data_editor(
-#     SPECIAL_TYPES_DF.set_index("categorical"),
-#     use_container_width=True,
-#     num_rows="dynamic",
-# )
+st.subheader("Categorical Index (pd.CategoricalIndex)")
+st.data_editor(
+    SPECIAL_TYPES_DF.set_index("categorical"),
+    use_container_width=True,
+    num_rows="dynamic",
+)
 
 # List index isn't editable currently:
 # st.subheader("List Index (pd.Index)")

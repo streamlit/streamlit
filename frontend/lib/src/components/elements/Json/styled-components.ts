@@ -16,19 +16,12 @@
 
 import styled from "@emotion/styled"
 
-interface StyledJsonWrapperProps {
-  width: number
-}
-
-export const StyledJsonWrapper = styled.div<StyledJsonWrapperProps>(
-  ({ theme, width }) => ({
-    width: width,
-    overflowY: "auto",
-    ".react-json-view .copy-icon svg": {
-      // Make the copy icon responsive to the root font size.
-      fontSize: `1em !important`,
-      marginRight: `${theme.spacing.threeXS} !important`,
-      verticalAlign: "middle !important",
-    },
-  })
-)
+export const StyledJsonWrapper = styled.div(({ theme }) => ({
+  overflowY: "auto",
+  ".react-json-view .copy-icon svg": {
+    // Make the copy icon responsive to the root font size.
+    fontSize: `1em !important`,
+    marginRight: `${theme.spacing.threeXS} !important`,
+    verticalAlign: "middle !important",
+  },
+}))

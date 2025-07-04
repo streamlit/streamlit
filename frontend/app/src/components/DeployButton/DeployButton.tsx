@@ -21,6 +21,7 @@ import { BaseButton, BaseButtonKind } from "@streamlit/lib"
 import { DeployButtonContainer } from "./styled-components"
 
 interface IDeployButtonProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onClick: (event: MouseEvent<HTMLButtonElement>) => any
 }
 

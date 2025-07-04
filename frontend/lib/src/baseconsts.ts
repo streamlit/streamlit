@@ -15,25 +15,6 @@
  */
 
 /**
- * When in dev mode, this is the port used to connect to the web server that is
- * serving the current page (i.e. the actual web page server, not the API
- * server, which in dev are actually different servers.)
- */
-export const WWW_PORT_DEV = 3000
-
-/**
- * This is the port used to connect to the server web socket when in dev.
- * IMPORTANT: If changed, also change config.py
- */
-export const WEBSOCKET_PORT_DEV = 8501
-
-/**
- * True when in development mode. We disable if we are testing to ensure
- * production conditions.
- */
-export const IS_DEV_ENV = import.meta.env.MODE === "development"
-
-/**
  * Parameters for our fetch() requests.
  */
 export const FETCH_PARAMS: RequestInit = {

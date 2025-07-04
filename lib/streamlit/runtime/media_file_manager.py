@@ -38,14 +38,13 @@ def _get_session_id() -> str:
         # "streamlit run myscript.py". In which case the session ID doesn't
         # matter and can just be a constant, as there's only ever "session".
         return "dontcare"
-    else:
-        return ctx.session_id
+    return ctx.session_id
 
 
 class MediaFileMetadata:
     """Metadata that the MediaFileManager needs for each file it manages."""
 
-    def __init__(self, kind: MediaFileKind = MediaFileKind.MEDIA):
+    def __init__(self, kind: MediaFileKind = MediaFileKind.MEDIA) -> None:
         self._kind = kind
         self._is_marked_for_delete = False
 
@@ -80,7 +79,7 @@ class MediaFileManager:
       we should address it at some point.)
     """
 
-    def __init__(self, storage: MediaFileStorage):
+    def __init__(self, storage: MediaFileStorage) -> None:
         self._storage = storage
 
         # Dict of [file_id -> MediaFileMetadata]

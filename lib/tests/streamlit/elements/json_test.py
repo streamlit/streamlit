@@ -13,9 +13,13 @@
 # limitations under the License.
 
 import numpy as np
+import pytest
+from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitInvalidWidthError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class StJsonAPITest(DeltaGeneratorTestCase):
@@ -29,6 +33,11 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         assert el.json.body == '{"some": "json"}'
         assert el.json.expanded is True
         assert el.json.HasField("max_expand_depth") is False
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
 
         # Test that an object containing non-json-friendly keys can still
         # be displayed.  Resultant json body will be missing those keys.
@@ -39,9 +48,14 @@ class StJsonAPITest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert el.json.body == '{"array": "array([1, 2, 3, 4, 5])"}'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
 
     def test_expanded_param(self):
-        """Test expanded paramter for `st.json`"""
+        """Test expanded parameter for `st.json`"""
         st.json(
             {
                 "level1": {"level2": {"level3": {"a": "b"}}, "c": "d"},
@@ -52,11 +66,53 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.json.expanded is True
         assert el.json.max_expand_depth == 2
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.json(
                 {
                     "level1": {"level2": {"level3": {"a": "b"}}, "c": "d"},
                 },
                 expanded=["foo"],  # type: ignore
             )
+
+    def test_st_json_with_width_pixels(self):
+        """Test st.json with width in pixels."""
+        st.json('{"some": "json"}', width=500)
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 500
+
+    def test_st_json_with_width_stretch(self):
+        """Test st.json with stretch width."""
+        st.json('{"some": "json"}', width="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_st_json_with_invalid_width(self, width):
+        """Test st.json with invalid width values."""
+        with pytest.raises(StreamlitInvalidWidthError) as e:
+            st.json('{"some": "json"}', width=width)
+        assert "Invalid width" in str(e.value)

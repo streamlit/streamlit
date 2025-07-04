@@ -22,12 +22,12 @@
 import range from "lodash/range"
 import zip from "lodash/zip"
 
-import { Data, IndexData, PandasColumnTypes } from "./arrowParseUtils"
+import { Data, IndexData } from "./arrowParseUtils"
 import {
-  getTypeName,
-  PandasColumnType,
+  ArrowType,
+  getPandasTypeName,
+  isRangeIndexType,
   PandasRangeIndex,
-  PandasRangeIndexType,
 } from "./arrowTypeUtils"
 
 /** True if both arrays contain the same data types in the same order.
@@ -36,40 +36,36 @@ import {
  * also exist in t2 in the same order and with the same type. t2 can be larger
  * than t1 but not the other way around.
  */
-function sameDataTypes(
-  t1: PandasColumnType[],
-  t2: PandasColumnType[]
-): boolean {
+function sameDataTypes(t1: ArrowType[], t2: ArrowType[]): boolean {
+  // Make sure both datasets have same data types.
   return t1.every(
-    (type: PandasColumnType, index: number) =>
-      type.pandas_type === t2[index]?.pandas_type
+    (type: ArrowType, index: number) =>
+      type.pandasType?.pandas_type === t2[index]?.pandasType?.pandas_type
   )
 }
 
 /** True if both arrays contain the same index types in the same order.
  * If the arrays have different lengths, they are never the same
  */
-function sameIndexTypes(
-  t1: PandasColumnType[],
-  t2: PandasColumnType[]
-): boolean {
+function sameIndexTypes(t1: ArrowType[], t2: ArrowType[]): boolean {
   // Make sure both indexes have same dimensions.
   if (t1.length !== t2.length) {
     return false
   }
 
   return t1.every(
-    (type: PandasColumnType, index: number) =>
-      index < t2.length && getTypeName(type) === getTypeName(t2[index])
+    (type: ArrowType, index: number) =>
+      index < t2.length &&
+      getPandasTypeName(type) === getPandasTypeName(t2[index])
   )
 }
 
 /** Concatenate the original DataFrame index with the given one. */
 function concatIndexes(
   baseIndex: IndexData,
-  baseIndexTypes: PandasColumnType[],
+  baseIndexTypes: ArrowType[],
   appendIndex: IndexData,
-  appendIndexTypes: PandasColumnType[]
+  appendIndexTypes: ArrowType[]
 ): IndexData {
   // If one of the `index` arrays is empty, return the other one.
   // Otherwise, they will have different types and an error will be thrown.
@@ -83,9 +79,11 @@ function concatIndexes(
   // Make sure indexes have same types.
   if (!sameIndexTypes(baseIndexTypes, appendIndexTypes)) {
     const receivedIndexTypes = appendIndexTypes.map(index =>
-      getTypeName(index)
+      getPandasTypeName(index)
     )
-    const expectedIndexTypes = baseIndexTypes.map(index => getTypeName(index))
+    const expectedIndexTypes = baseIndexTypes.map(index =>
+      getPandasTypeName(index)
+    )
 
     throw new Error(`
 Unsupported operation. The data passed into \`add_rows()\` must have the same
@@ -103,13 +101,14 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   // NOTE: "range" index cannot be a part of a multi-index, i.e.
   // if the index type is "range", there will only be one element in the index array.
-  if (baseIndexTypes[0].pandas_type === PandasRangeIndexType) {
+  if (isRangeIndexType(baseIndexTypes[0])) {
     // Continue the sequence for a "range" index.
     // NOTE: The metadata of the original index will be used, i.e.
     // if both indexes are of type "range" and they have different
     // metadata (start, step, stop) values, the metadata of the given
     // index will be ignored.
-    const { step, stop } = baseIndexTypes[0].meta as PandasRangeIndex
+    const { step, stop } = baseIndexTypes[0].pandasType
+      ?.metadata as PandasRangeIndex
     appendIndex = [
       range(
         stop,
@@ -129,9 +128,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 /** Concatenate the original DataFrame data with the given one. */
 function concatData(
   baseData: Data,
-  baseDataType: PandasColumnType[],
+  baseDataType: ArrowType[],
   appendData: Data,
-  appendDataType: PandasColumnType[]
+  appendDataType: ArrowType[]
 ): Data {
   // If one of the `data` arrays is empty, return the other one.
   // Otherwise, they will have different types and an error will be thrown.
@@ -144,8 +143,10 @@ function concatData(
 
   // Make sure `data` arrays have the same types.
   if (!sameDataTypes(baseDataType, appendDataType)) {
-    const receivedDataTypes = appendDataType.map(t => t.pandas_type)
-    const expectedDataTypes = baseDataType.map(t => t.pandas_type)
+    const receivedDataTypes = appendDataType.map(
+      t => t.pandasType?.pandas_type
+    )
+    const expectedDataTypes = baseDataType.map(t => t.pandasType?.pandas_type)
 
     throw new Error(`
 Unsupported operation. The data passed into \`add_rows()\` must have the same
@@ -164,19 +165,21 @@ but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
 
 /** Concatenate index and data types. */
 function concatTypes(
-  baseTypes: PandasColumnTypes,
-  appendTypes: PandasColumnTypes
-): PandasColumnTypes {
-  const index = concatIndexTypes(baseTypes.index, appendTypes.index)
-  const data = concatDataTypes(baseTypes.data, appendTypes.data)
-  return { index, data }
+  baseIndexTypes: ArrowType[],
+  baseDataTypes: ArrowType[],
+  appendIndexTypes: ArrowType[],
+  appendDataTypes: ArrowType[]
+): { indexTypes: ArrowType[]; dataTypes: ArrowType[] } {
+  const indexTypes = concatIndexTypes(baseIndexTypes, appendIndexTypes)
+  const dataTypes = concatDataTypes(baseDataTypes, appendDataTypes)
+  return { indexTypes, dataTypes }
 }
 
 /** Concatenate index types. */
 function concatIndexTypes(
-  baseIndexTypes: PandasColumnType[],
-  appendIndexTypes: PandasColumnType[]
-): PandasColumnType[] {
+  baseIndexTypes: ArrowType[],
+  appendIndexTypes: ArrowType[]
+): ArrowType[] {
   // If one of the `types` arrays is empty, return the other one.
   // Otherwise, an empty array will be returned.
   if (appendIndexTypes.length === 0) {
@@ -189,9 +192,11 @@ function concatIndexTypes(
   // Make sure indexes have same types.
   if (!sameIndexTypes(baseIndexTypes, appendIndexTypes)) {
     const receivedIndexTypes = appendIndexTypes.map(index =>
-      getTypeName(index)
+      getPandasTypeName(index)
     )
-    const expectedIndexTypes = baseIndexTypes.map(index => getTypeName(index))
+    const expectedIndexTypes = baseIndexTypes.map(index =>
+      getPandasTypeName(index)
+    )
 
     throw new Error(`
 Unsupported operation. The data passed into \`add_rows()\` must have the same
@@ -206,20 +211,23 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   return baseIndexTypes.map(indexType => {
     // NOTE: "range" index cannot be a part of a multi-index, i.e.
     // if the index type is "range", there will only be one element in the index array.
-    if (indexType.pandas_type === PandasRangeIndexType) {
-      const { stop, step } = indexType.meta as PandasRangeIndex
+    if (isRangeIndexType(indexType) && indexType.pandasType) {
+      const { stop, step } = indexType.pandasType.metadata as PandasRangeIndex
       const {
         start: appendStart,
         stop: appendStop,
         step: appendStep,
-      } = appendIndexTypes[0].meta as PandasRangeIndex
+      } = appendIndexTypes[0].pandasType?.metadata as PandasRangeIndex
       const appendRangeIndexLength = (appendStop - appendStart) / appendStep
       const newStop = stop + appendRangeIndexLength * step
       return {
         ...indexType,
-        meta: {
-          ...indexType.meta,
-          stop: newStop,
+        pandasType: {
+          ...indexType.pandasType,
+          metadata: {
+            ...indexType.pandasType.metadata,
+            stop: newStop,
+          },
         },
       }
     }
@@ -229,9 +237,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
 /** Concatenate types of data columns. */
 function concatDataTypes(
-  baseDataTypes: PandasColumnType[],
-  appendDataTypes: PandasColumnType[]
-): PandasColumnType[] {
+  baseDataTypes: ArrowType[],
+  appendDataTypes: ArrowType[]
+): ArrowType[] {
   if (baseDataTypes.length === 0) {
     return appendDataTypes
   }
@@ -241,29 +249,36 @@ function concatDataTypes(
 
 /** Concatenate the index, data, and types of parsed arrow tables. */
 export function concat(
-  baseTypes: PandasColumnTypes,
+  baseDataTypes: ArrowType[],
+  baseIndexTypes: ArrowType[],
   baseIndex: IndexData,
   baseData: Data,
-  appendTypes: PandasColumnTypes,
+  appendDataTypes: ArrowType[],
+  appendIndexTypes: ArrowType[],
   appendIndex: IndexData,
   appendData: Data
-): { index: IndexData; data: Data; types: PandasColumnTypes } {
+): {
+  index: IndexData
+  data: Data
+  indexTypes: ArrowType[]
+  dataTypes: ArrowType[]
+} {
   // Concatenate all data into temporary variables. If any of
   // these operations fail, an error will be thrown and we'll prematurely
   // exit the function.
   const index = concatIndexes(
     baseIndex,
-    baseTypes.index,
+    baseIndexTypes,
     appendIndex,
-    appendTypes.index
+    appendIndexTypes
   )
-  const data = concatData(
-    baseData,
-    baseTypes.data,
-    appendData,
-    appendTypes.data
+  const data = concatData(baseData, baseDataTypes, appendData, appendDataTypes)
+  const { indexTypes, dataTypes } = concatTypes(
+    baseIndexTypes,
+    baseDataTypes,
+    appendIndexTypes,
+    appendDataTypes
   )
-  const types = concatTypes(baseTypes, appendTypes)
 
-  return { index, data, types }
+  return { index, data, indexTypes, dataTypes }
 }

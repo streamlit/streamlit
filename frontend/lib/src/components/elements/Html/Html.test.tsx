@@ -18,8 +18,10 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Html as HtmlProto } from "@streamlit/lib/src/proto"
+import { Html as HtmlProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import * as UseCalculatedWidth from "~lib/hooks/useCalculatedWidth"
 
 import Html, { HtmlProps } from "./Html"
 
@@ -28,17 +30,23 @@ const getProps = (elementProps: Partial<HtmlProto> = {}): HtmlProps => ({
     body: "<div>Test Html</div>",
     ...elementProps,
   }),
-  width: 100,
 })
 
 describe("HTML element", () => {
+  beforeEach(() => {
+    vi.spyOn(UseCalculatedWidth, "useCalculatedWidth").mockReturnValue([
+      100,
+      { current: null },
+    ])
+  })
+
   it("renders the element as expected", () => {
     const props = getProps()
     render(<Html {...props} />)
     const html = screen.getByTestId("stHtml")
     expect(html).toBeInTheDocument()
     expect(html).toHaveTextContent("Test Html")
-    expect(html).toHaveStyle("width: 100px")
+    expect(html).toHaveStyle("width: 100%")
     expect(html).toHaveClass("stHtml")
   })
 
@@ -58,9 +66,6 @@ describe("HTML element", () => {
     expect(screen.getByText("Test Html")).toHaveStyle(
       "color: rgb(255, 165, 0)"
     )
-    // Check that the unnecessary spacing handling by hiding parent
-    // eslint-disable-next-line testing-library/no-node-access
-    expect(html.parentElement).toHaveClass("stHtml-empty")
   })
 
   it("sanitizes <script> tags", () => {

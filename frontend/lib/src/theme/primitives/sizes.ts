@@ -21,7 +21,9 @@ export const sizes = {
   fullScreenHeaderHeight: "2.875rem",
   sidebarTopSpace: "6rem",
   toastWidth: "21rem",
-  contentMaxWidth: "46rem",
+  // Use px here since we want to keep the width the same
+  // regardless of the root font size.
+  contentMaxWidth: "736px",
   maxChartTooltipWidth: "30rem",
   // Used for checkboxes, radio, and toggles:
   checkbox: "1rem",
@@ -54,4 +56,12 @@ export const sizes = {
   dropdownItemHeight: "2.5rem",
   maxDropdownHeight: "18.75rem",
   appDefaultBottomPadding: "3.5rem",
+  defaultMapHeight: "31.25rem",
+  defaultChartHeight: "21.875rem",
+  defaultChartWidth: "25rem",
+  // The minimum width of the menu (used for the dataframe column menu)
+  minMenuWidth: "8rem",
+  minChatInputFileListHeight: "3rem",
+  headerItemHeight: "1.75rem",
+  headerRightContentMaxWidth: "12.5rem",
 }

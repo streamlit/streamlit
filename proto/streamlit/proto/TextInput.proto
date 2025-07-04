@@ -43,4 +43,5 @@ message TextInput {
   string placeholder = 11;
   bool disabled = 12;
   LabelVisibilityMessage label_visibility = 13;
+  string icon = 14;
 }

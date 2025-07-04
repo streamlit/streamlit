@@ -74,9 +74,9 @@ def test_chat():
     def script():
         import streamlit as st
 
-        input = st.chat_input(placeholder="Type a thing")
+        input_text = st.chat_input(placeholder="Type a thing")
         with st.chat_message("user"):
-            st.write(input)
+            st.write(input_text)
 
     at = AppTest.from_function(script).run()
     assert at.chat_input[0].value is None
@@ -593,7 +593,7 @@ def test_selectbox():
     assert sr6.selectbox[0].value == "male"
     assert sr6.selectbox[3].value == "Lisp"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="'invalid' is not in list"):
         sr6.selectbox[0].select("invalid").run()
 
     with pytest.raises(IndexError):

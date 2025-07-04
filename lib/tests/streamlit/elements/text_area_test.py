@@ -17,13 +17,15 @@
 import re
 from unittest.mock import MagicMock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class TextAreaTest(DeltaGeneratorTestCase):
@@ -34,21 +36,21 @@ class TextAreaTest(DeltaGeneratorTestCase):
         st.text_area("the label")
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.HasField("default"), True)
-        self.assertEqual(c.disabled, False)
+        assert c.default == ""
+        assert c.HasField("default")
+        assert not c.disabled
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.text_area("the label", disabled=True)
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     def test_value_types(self):
         """Test that it supports different types of values."""
@@ -59,37 +61,37 @@ class TextAreaTest(DeltaGeneratorTestCase):
             st.text_area("the label", arg_value)
 
             c = self.get_delta_from_queue().new_element.text_area
-            self.assertEqual(c.label, "the label")
-            self.assertTrue(re.match(proto_value, c.default))
+            assert c.label == "the label"
+            assert re.match(proto_value, c.default)
 
     def test_none_value(self):
         """Test that it can be called with None as initial value."""
         st.text_area("the label", value=None)
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
+        assert c.label == "the label"
         # If a proto property is null, it is not determined by
         # this value, but by the check via the HasField method:
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.HasField("default"), False)
+        assert c.default == ""
+        assert not c.HasField("default")
 
     def test_height(self):
         """Test that it can be called with height"""
         st.text_area("the label", "", 300)
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.height, 300)
+        assert c.label == "the label"
+        assert c.default == ""
+        assert c.height == 300
 
     def test_invalid_height(self):
         """Test that it raises an error when passed an invalid height"""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.text_area("the label", "", height=50)
 
-        self.assertEqual(
-            str(e.exception),
-            "Invalid height 50px for `st.text_area` - must be at least 68 pixels.",
+        assert (
+            str(e.value)
+            == "Invalid height 50px for `st.text_area` - must be at least 68 pixels."
         )
 
     def test_placeholder(self):
@@ -97,9 +99,9 @@ class TextAreaTest(DeltaGeneratorTestCase):
         st.text_area("the label", "", placeholder="testing")
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.placeholder, "testing")
+        assert c.label == "the label"
+        assert c.default == ""
+        assert c.placeholder == "testing"
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -107,7 +109,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         st.text_area("foo")
 
         proto = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -117,11 +119,11 @@ class TextAreaTest(DeltaGeneratorTestCase):
             st.text_area("foo")
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         text_area_proto = self.get_delta_from_queue(1).new_element.text_area
-        self.assertEqual(text_area_proto.form_id, form_proto.form.form_id)
+        assert text_area_proto.form_id == form_proto.form.form_id
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
@@ -133,10 +135,10 @@ class TextAreaTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
 
         # 5 elements will be created: 1 horizontal block, 3 columns, 1 widget
-        self.assertEqual(len(all_deltas), 5)
+        assert len(all_deltas) == 5
         text_area_proto = self.get_delta_from_queue().new_element.text_area
 
-        self.assertEqual(text_area_proto.label, "foo")
+        assert text_area_proto.label == "foo"
 
     @parameterized.expand(
         [
@@ -149,16 +151,62 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that it can be called with label_visibility param."""
         st.text_area("the label", label_visibility=label_visibility_value)
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.text_area("the label", label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
+
+    def test_width_config_default(self):
+        """Test that default width is 'stretch'."""
+        st.text_area("the label")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    def test_width_config_pixel(self):
+        """Test that pixel width works properly."""
+        st.text_area("the label", width=100)
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert c.width_config.pixel_width == 100
+
+    def test_width_config_stretch(self):
+        """Test that 'stretch' width works properly."""
+        st.text_area("the label", width="stretch")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_invalid_width(self, width):
+        """Test that invalid width values raise exceptions."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.text_area("the label", width=width)
 
     def test_help_dedents(self):
         """Test that help properly dedents"""
@@ -174,16 +222,9 @@ class TextAreaTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, "TESTING")
-        self.assertEqual(
-            c.help,
-            """Hello World!
-This is a test
-
-
-""",
-        )
+        assert c.label == "the label"
+        assert c.default == "TESTING"
+        assert c.help == """Hello World!\nThis is a test\n\n\n"""
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -191,8 +232,8 @@ This is a test
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
 
 class SomeObj:

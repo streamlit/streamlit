@@ -19,8 +19,9 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Text as TextProto } from "@streamlit/lib/src/proto"
+import { Text as TextProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
 
 import TextElement, { TextProps } from "./TextElement"
 
@@ -29,7 +30,6 @@ const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
     body: "some plain text",
     ...elementProps,
   }),
-  width: 100,
 })
 
 describe("TextElement element", () => {

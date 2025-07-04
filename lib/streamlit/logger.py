@@ -35,25 +35,25 @@ def set_log_level(level: str | int) -> None:
 
     if isinstance(level, str):
         level = level.upper()
-    if level == "CRITICAL" or level == logging.CRITICAL:
+    if level in {"CRITICAL", logging.CRITICAL}:
         log_level = logging.CRITICAL
-    elif level == "ERROR" or level == logging.ERROR:
+    elif level in {"ERROR", logging.ERROR}:
         log_level = logging.ERROR
-    elif level == "WARNING" or level == logging.WARNING:
+    elif level in {"WARNING", logging.WARNING}:
         log_level = logging.WARNING
-    elif level == "INFO" or level == logging.INFO:
+    elif level in {"INFO", logging.INFO}:
         log_level = logging.INFO
-    elif level == "DEBUG" or level == logging.DEBUG:
+    elif level in {"DEBUG", logging.DEBUG}:
         log_level = logging.DEBUG
     else:
-        msg = 'undefined log level "%s"' % level
+        msg = f'undefined log level "{level}"'
         logger.critical(msg)
         sys.exit(1)
 
     for log in _loggers.values():
         log.setLevel(log_level)
 
-    global _global_log_level
+    global _global_log_level  # noqa: PLW0603
     _global_log_level = log_level
 
 
@@ -113,13 +113,12 @@ def get_logger(name: str) -> logging.Logger:
     Logger
 
     """
-    if name in _loggers.keys():
+    if name in _loggers:
         return _loggers[name]
 
-    if name == "root":
-        logger = logging.getLogger("streamlit")
-    else:
-        logger = logging.getLogger(name)
+    logger = (
+        logging.getLogger("streamlit") if name == "root" else logging.getLogger(name)
+    )
 
     logger.setLevel(_global_log_level)
     logger.propagate = False

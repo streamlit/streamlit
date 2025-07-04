@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from streamlit.cursor import make_delta_path
 from streamlit.elements import arrow
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 
@@ -32,6 +33,19 @@ def create_dataframe_msg(df: Data, id: int = 1) -> ForwardMsg:
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
     arrow.marshall(msg.delta.new_element.arrow_data_frame, df)
+    return msg
+
+
+def create_container_msg(id: int = 1) -> ForwardMsg:
+    """Create a mock container ForwardMsg."""
+    msg = ForwardMsg()
+    msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
+
+    new_block = BlockProto()
+    new_block.allow_empty = False
+    new_block.vertical.border = False
+
+    msg.delta.add_block.CopyFrom(new_block)
     return msg
 
 

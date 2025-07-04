@@ -23,37 +23,41 @@ import React, {
   useMemo,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
+
+import {
+  ButtonGroup as ButtonGroupProto,
+  LabelVisibilityMessage,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   DynamicButtonLabel,
-} from "@streamlit/lib/src/components/shared/BaseButton"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import {
-  ButtonGroup as ButtonGroupProto,
-  LabelVisibilityMessage,
-} from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "~lib/components/shared/BaseButton"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+} from "~lib/components/widgets/BaseWidget"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,
-} from "@streamlit/lib/src/hooks/useBasicWidgetState"
+} from "~lib/hooks/useBasicWidgetState"
+import { EmotionTheme } from "~lib/theme"
+import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
 
 export interface Props {
   disabled: boolean
   element: ButtonGroupProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  widthConfig: streamlit.IWidthConfig | undefined | null
 }
 
 function handleMultiSelection(
@@ -109,18 +113,27 @@ export function getContentElement(
     style === ButtonGroupProto.Style.PILLS
       ? BaseButtonKind.PILLS
       : style === ButtonGroupProto.Style.BORDERLESS
-      ? BaseButtonKind.BORDERLESS_ICON
-      : BaseButtonKind.SEGMENTED_CONTROL
+        ? BaseButtonKind.BORDERLESS_ICON
+        : BaseButtonKind.SEGMENTED_CONTROL
   const size =
     style === ButtonGroupProto.Style.BORDERLESS
       ? BaseButtonSize.XSMALL
       : BaseButtonSize.MEDIUM
 
+  // Use smaller font if kind is pills or segmented control
+  const useSmallerFont =
+    kind === BaseButtonKind.PILLS || kind === BaseButtonKind.SEGMENTED_CONTROL
+
   const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
 
   return {
     element: (
-      <DynamicButtonLabel icon={icon} label={content} iconSize={iconSize} />
+      <DynamicButtonLabel
+        icon={icon}
+        label={content}
+        iconSize={iconSize}
+        useSmallerFont={useSmallerFont}
+      />
     ),
     kind: kind,
     size: size,
@@ -172,9 +185,27 @@ function getButtonKindAndSize(
 
 function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
-  spacing: EmotionTheme["spacing"]
+  spacing: EmotionTheme["spacing"],
+  containerWidth: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): Record<string, any> {
-  const baseStyle = { flexWrap: "wrap", maxWidth: "fit-content" }
+  const baseStyle = {
+    flexWrap: "wrap",
+    maxWidth: "100%",
+    // This ensures that the button
+    // group does not overflow the container due
+    // to the negative margins that BaseWeb adds.
+    // When maxWidth is set to 100%, without this,
+    // the buttons will wrap to the next line.
+    margin: "0 0",
+  }
+  const width = containerWidth ? "100%" : "auto"
+  const segmentedControlNoStretch = containerWidth
+    ? {}
+    : {
+        content: "''",
+        flex: 10000,
+      }
 
   switch (style) {
     case ButtonGroupProto.Style.BORDERLESS:
@@ -188,6 +219,7 @@ function getButtonGroupOverridesStyle(
         ...baseStyle,
         columnGap: spacing.twoXS,
         rowGap: spacing.twoXS,
+        width,
       }
     case ButtonGroupProto.Style.SEGMENTED_CONTROL:
       return {
@@ -196,10 +228,9 @@ function getButtonGroupOverridesStyle(
         rowGap: spacing.twoXS,
         // Adding an empty pseudo-element after the last button in the group.
         // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
-        "::after": {
-          content: "''",
-          flex: 10000,
-        },
+        // This is only needed if the button group has content width.
+        "::after": segmentedControlNoStretch,
+        width,
       }
     default:
       return baseStyle
@@ -212,7 +243,8 @@ function createOptionChild(
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
-  style: ButtonGroupProto.Style
+  style: ButtonGroupProto.Style,
+  containerWidth: boolean
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
@@ -231,6 +263,7 @@ function createOptionChild(
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
   return forwardRef(function BaseButtonGroup(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     props: any,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
@@ -248,7 +281,12 @@ function createOptionChild(
       kind
     )
     return (
-      <BaseButton {...props} size={size} kind={buttonKind}>
+      <BaseButton
+        {...props}
+        size={size}
+        kind={buttonKind}
+        containerWidth={containerWidth}
+      >
         {element}
       </BaseButton>
     )
@@ -275,7 +313,7 @@ function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
-  const { disabled, element, fragmentId, widgetMgr } = props
+  const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const {
     clickMode,
     options,
@@ -285,7 +323,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     labelVisibility,
     help,
   } = element
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
@@ -299,6 +337,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     widgetMgr,
     fragmentId,
   })
+
+  // This determines whether the buttons will stretch to fill the container or if they should take up the width of their content.
+  const containerWidth = !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
@@ -324,15 +365,22 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           selectionVisualization,
           clickMode,
           value,
-          style
+          style,
+          containerWidth
         )
+        // TODO: Update to match React best practices
+        // eslint-disable-next-line @eslint-react/no-array-index-key
         return <Element key={`${option.content}-${index}`} />
       }),
-    [clickMode, options, selectionVisualization, style, value]
+    [clickMode, options, selectionVisualization, style, value, containerWidth]
   )
 
   return (
-    <div className="stButtonGroup" data-testid="stButtonGroup">
+    <StyledButtonGroup
+      className="stButtonGroup"
+      data-testid="stButtonGroup"
+      containerWidth={containerWidth}
+    >
       <WidgetLabel
         label={label}
         disabled={disabled}
@@ -359,15 +407,20 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         overrides={{
           Root: {
             style: useCallback(
-              () => getButtonGroupOverridesStyle(style, theme.spacing),
-              [style, theme.spacing]
+              () =>
+                getButtonGroupOverridesStyle(
+                  style,
+                  theme.spacing,
+                  containerWidth
+                ),
+              [style, theme.spacing, containerWidth]
             ),
           },
         }}
       >
         {optionElements}
       </BasewebButtonGroup>
-    </div>
+    </StyledButtonGroup>
   )
 }
 

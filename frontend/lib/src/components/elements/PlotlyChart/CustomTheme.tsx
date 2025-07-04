@@ -15,12 +15,12 @@
  */
 
 import merge from "lodash/merge"
+import { getLogger } from "loglevel"
 
 import {
   convertRemToPx,
   EmotionTheme,
   getBlue80,
-  getCategoricalColorsArray,
   getDecreasingRed,
   getDivergingColorsArray,
   getGray30,
@@ -28,17 +28,18 @@ import {
   getGray90,
   getIncreasingGreen,
   getSequentialColorsArray,
-} from "@streamlit/lib/src/theme"
-import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
-import { logError } from "@streamlit/lib/src/util/log"
+} from "~lib/theme"
+import { ensureError } from "~lib/util/ErrorHandling"
 
+const LOG = getLogger("PlotlyChart:CustomTheme")
 /**
  * This applies general layout changes to things such as x axis,
  * y axis, legends, titles, grid changes, background, etc.
  * @param layout - spec.layout.template.layout
- * @param theme - Theme from useTheme()
+ * @param theme - Theme from useEmotionTheme()
  */
 export function applyStreamlitThemeTemplateLayout(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   layout: any,
   theme: EmotionTheme
 ): void {
@@ -48,7 +49,7 @@ export function applyStreamlitThemeTemplateLayout(
     font: {
       color: getGray70(theme),
       family: genericFonts.bodyFont,
-      size: fontSizes.twoSmPx,
+      size: convertRemToPx(fontSizes.twoSm),
     },
     title: {
       color: colors.headingColor,
@@ -67,7 +68,7 @@ export function applyStreamlitThemeTemplateLayout(
     legend: {
       title: {
         font: {
-          size: fontSizes.twoSmPx,
+          size: convertRemToPx(fontSizes.twoSm),
           color: getGray70(theme),
         },
         side: "top",
@@ -76,7 +77,7 @@ export function applyStreamlitThemeTemplateLayout(
       bordercolor: colors.transparent,
       borderwidth: 0,
       font: {
-        size: fontSizes.twoSmPx,
+        size: convertRemToPx(fontSizes.twoSm),
         color: getGray90(theme),
       },
     },
@@ -88,14 +89,14 @@ export function applyStreamlitThemeTemplateLayout(
       title: {
         font: {
           color: getGray70(theme),
-          size: fontSizes.smPx,
+          size: convertRemToPx(fontSizes.sm),
         },
         standoff: convertRemToPx(theme.spacing.twoXL),
       },
       tickcolor: getGray30(theme),
       tickfont: {
         color: getGray70(theme),
-        size: fontSizes.twoSmPx,
+        size: convertRemToPx(fontSizes.twoSm),
       },
       gridcolor: getGray30(theme),
       minor: {
@@ -109,13 +110,13 @@ export function applyStreamlitThemeTemplateLayout(
       showgrid: false,
       tickfont: {
         color: getGray70(theme),
-        size: fontSizes.twoSmPx,
+        size: convertRemToPx(fontSizes.twoSm),
       },
       tickcolor: getGray30(theme),
       title: {
         font: {
           color: getGray70(theme),
-          size: fontSizes.smPx,
+          size: convertRemToPx(fontSizes.sm),
         },
         standoff: convertRemToPx(theme.spacing.xl),
       },
@@ -143,7 +144,7 @@ export function applyStreamlitThemeTemplateLayout(
       font: {
         color: getGray70(theme),
         family: genericFonts.bodyFont,
-        size: fontSizes.twoSmPx,
+        size: convertRemToPx(fontSizes.twoSm),
       },
     },
     coloraxis: {
@@ -158,12 +159,12 @@ export function applyStreamlitThemeTemplateLayout(
         title: {
           font: {
             color: getGray70(theme),
-            size: fontSizes.smPx,
+            size: convertRemToPx(fontSizes.sm),
           },
         },
         tickfont: {
           color: getGray70(theme),
-          size: fontSizes.twoSmPx,
+          size: convertRemToPx(fontSizes.twoSm),
         },
       },
     },
@@ -174,7 +175,7 @@ export function applyStreamlitThemeTemplateLayout(
       title: {
         font: {
           family: genericFonts.bodyFont,
-          size: fontSizes.smPx,
+          size: convertRemToPx(fontSizes.sm),
         },
       },
       color: getGray70(theme),
@@ -183,7 +184,7 @@ export function applyStreamlitThemeTemplateLayout(
         linecolor: getGray70(theme),
         tickfont: {
           family: genericFonts.bodyFont,
-          size: fontSizes.twoSmPx,
+          size: convertRemToPx(fontSizes.twoSm),
         },
       },
       baxis: {
@@ -191,7 +192,7 @@ export function applyStreamlitThemeTemplateLayout(
         gridcolor: getGray70(theme),
         tickfont: {
           family: genericFonts.bodyFont,
-          size: fontSizes.twoSmPx,
+          size: convertRemToPx(fontSizes.twoSm),
         },
       },
       caxis: {
@@ -199,7 +200,7 @@ export function applyStreamlitThemeTemplateLayout(
         gridcolor: getGray70(theme),
         tickfont: {
           family: genericFonts.bodyFont,
-          size: fontSizes.twoSmPx,
+          size: convertRemToPx(fontSizes.twoSm),
         },
       },
     },
@@ -235,7 +236,7 @@ function replaceCategoricalColors(
   const CATEGORY_9 = "#000010"
 
   if (elementTheme === "streamlit") {
-    const categoryColors = getCategoricalColorsArray(theme)
+    const categoryColors = theme.colors.chartCategoricalColors
     spec = spec.replaceAll(CATEGORY_0, categoryColors[0])
     spec = spec.replaceAll(CATEGORY_1, categoryColors[1])
     spec = spec.replaceAll(CATEGORY_2, categoryColors[2])
@@ -403,12 +404,13 @@ export function replaceTemporaryColors(
  * spec.data, spec.layout.template.data, and spec.layout.template.layout
  * @param spec - spec
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
   try {
     applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
   } catch (e) {
     const err = ensureError(e)
-    logError(err)
+    LOG.error(err)
   }
   if ("title" in spec.layout) {
     spec.layout.title = merge(spec.layout.title, {
@@ -420,12 +422,14 @@ export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
 /**
  * Apply minimum changes to graph to fit streamlit
  * @param layout - spec.layout
- * @param theme - theme from useTheme()
+ * @param theme - theme from useEmotionTheme()
  * @returns modified spec.layout
  */
 export function layoutWithThemeDefaults(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   layout: any,
   theme: EmotionTheme
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
   const { colors, genericFonts } = theme
 

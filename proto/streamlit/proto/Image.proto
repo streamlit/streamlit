@@ -47,4 +47,3 @@ message ImageList {
   // -5 means use the larger of image width & container width
   int32 width = 2;
 }
-

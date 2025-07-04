@@ -12,12 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
+    from pandas.io.formats.style import Styler
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
@@ -26,13 +33,13 @@ random.seed(0)
 
 st.header("Pandas Styler: Value formatting")
 df = pd.DataFrame({"test": [3.1423424, 3.1]})
-st.dataframe(df.style.format({"test": "{:.2f}"}))
+st.dataframe(df.style.format({"test": "{:.2f}"}), use_container_width=False)
 
 st.header("Pandas Styler: Background color")
 
 
-def highlight_first(value):
-    return "background-color: yellow" if value == 0 else ""
+def highlight_first(value: float) -> str:
+    return "background-color: yellow;" if value == 0 else ""
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
@@ -43,11 +50,11 @@ st.header("Pandas Styler: Background and font styling")
 df = pd.DataFrame(np.random.randn(20, 4), columns=["A", "B", "C", "D"])
 
 
-def style_negative(v, props=""):
+def style_negative(v: float, props: str = "") -> str | None:
     return props if v < 0 else None
 
 
-def highlight_max(s, props=""):
+def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
     return np.where(s == np.nanmax(s.values), props, "")
 
 
@@ -57,7 +64,9 @@ styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
 )
 
 styled_df.apply(
-    highlight_max, props="color:white;background-color:rgb(255, 0, 0)", axis=0
+    highlight_max,
+    props="color:white;background-color:rgb(255, 0, 0);font-weight:800;",
+    axis=0,
 )
 
 styled_df.apply(
@@ -75,15 +84,15 @@ weather_df = pd.DataFrame(
 )
 
 
-def rain_condition(v):
+def rain_condition(v: float) -> str:
     if v < 1.75:
         return "Dry"
-    elif v < 2.75:
+    if v < 2.75:
         return "Rain"
     return "Heavy Rain"
 
 
-def make_pretty(styler):
+def make_pretty(styler: Styler) -> Styler:
     styler.set_caption("Weather Conditions")
     styler.format(rain_condition)
     styler.background_gradient(axis=None, vmin=1, vmax=5, cmap="YlGnBu")
@@ -105,7 +114,9 @@ st.dataframe(
                 None,
             ]
         }
-    ).style.format(lambda url: url.replace("https://", "Website: ") if url else ""),
+    ).style.format(
+        lambda url: str(url).replace("https://", "Website: ") if url else ""
+    ),
     column_config={"col_0": st.column_config.LinkColumn()},
 )
 
@@ -137,7 +148,7 @@ st.dataframe(
                 pd.Timestamp("2024-01-03"),
             ],
         }
-    ).style.format(lambda v: "pd styler"),
+    ).style.format(lambda _: "pd styler"),
     column_config={
         "number (formatted)": st.column_config.NumberColumn(format="$%.2f"),
         "url (formatted)": st.column_config.LinkColumn(display_text="Open"),
@@ -145,6 +156,27 @@ st.dataframe(
         "number": st.column_config.NumberColumn(),
         "url": st.column_config.LinkColumn(),
         "datetime": st.column_config.DatetimeColumn(),
+    },
+    hide_index=True,
+)
+
+st.header("Pandas Styler: text color support")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "text": ["a", "b"],
+            "number": [1, 2],
+            "link": ["streamlit.io", "docs.streamlit.io"],
+            "list": [["a", "b", "c"], ["a", "d", "e"]],
+            "datetime": [pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-02")],
+        }
+    ).style.apply(
+        lambda x: x.apply(lambda _: "color: green"),
+    ),
+    column_config={
+        "list": st.column_config.ListColumn(),
+        "link": st.column_config.LinkColumn(),
     },
     hide_index=True,
 )

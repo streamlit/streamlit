@@ -21,11 +21,12 @@ import { act, fireEvent, screen } from "@testing-library/react"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Slider as SliderProto,
-} from "@streamlit/lib/src/proto"
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "@streamlit/protobuf"
 
-import { withTimezones } from "src/util/withTimezones"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { withTimezones } from "~lib/util/withTimezones"
 
 import Slider, { Props } from "./Slider"
 
@@ -72,6 +73,11 @@ describe("Slider widget", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.clearAllTimers()
+
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
   })
 
   it("shows a label", () => {
@@ -172,6 +178,7 @@ describe("Slider widget", () => {
       const slider = screen.getByRole("slider")
       expect(slider).toHaveAttribute(
         "aria-valuetext",
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         `${props.element.default}`
       )
       expect(slider).toHaveAttribute("aria-valuemin", `${props.element.min}`)

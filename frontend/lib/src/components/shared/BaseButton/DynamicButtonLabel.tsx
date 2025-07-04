@@ -16,20 +16,22 @@
 
 import React from "react"
 
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { IconSize } from "@streamlit/lib/src/theme"
+import { DynamicIcon } from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { IconSize } from "~lib/theme"
 
 export interface DynamicButtonLabelProps {
   icon?: string
   label?: string
   iconSize?: IconSize
+  useSmallerFont?: boolean
 }
 
 export const DynamicButtonLabel = ({
   icon,
   label,
   iconSize,
+  useSmallerFont = false,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const isMaterialIcon = icon?.startsWith(":material")
   const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
@@ -51,7 +53,7 @@ export const DynamicButtonLabel = ({
           source={label}
           allowHTML={false}
           isLabel
-          largerLabel
+          largerLabel={!useSmallerFont}
           disableLinks
         />
       )}

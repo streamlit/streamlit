@@ -18,19 +18,17 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { Form, Props } from "./Form"
+import Form, { Props } from "./Form"
 
 describe("Form", () => {
   function getProps(props: Partial<Props> = {}): Props {
     return {
       formId: "mockFormId",
-      width: 100,
       hasSubmitButton: false,
-      scriptRunState: ScriptRunState.RUNNING,
+      scriptNotRunning: false,
       clearOnSubmit: false,
       enterToSubmit: true,
       widgetMgr: new WidgetStateManager({
@@ -51,7 +49,6 @@ describe("Form", () => {
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {
     const props = getProps({
       hasSubmitButton: false,
-      scriptRunState: ScriptRunState.RUNNING,
     })
     const { rerender } = render(<Form {...props} />)
 
@@ -60,15 +57,11 @@ describe("Form", () => {
 
     // When the app stops running, we show an error if the submit button
     // is still missing.
-    rerender(
-      <Form {...getProps({ scriptRunState: ScriptRunState.NOT_RUNNING })} />
-    )
+    rerender(<Form {...getProps({ scriptNotRunning: true })} />)
     expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
 
     // If the app restarts, we continue to show the error...
-    rerender(
-      <Form {...getProps({ scriptRunState: ScriptRunState.RUNNING })} />
-    )
+    rerender(<Form {...getProps({ scriptNotRunning: false })} />)
     expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
 
     // Until we get a submit button, and the error is removed immediately,

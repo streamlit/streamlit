@@ -18,8 +18,8 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import { render } from "~lib/test_util"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import { LabelProps, WidgetLabel } from "./WidgetLabel"
 
@@ -44,7 +44,7 @@ describe("Widget Label", () => {
 
     // Use the smaller font size for the markdown container
     const markdownContainer = screen.getByTestId("stMarkdownContainer")
-    expect(markdownContainer).toHaveStyle("font-size: 14px")
+    expect(markdownContainer).toHaveStyle("font-size: 0.875rem")
   })
 
   it("can be disabled", () => {

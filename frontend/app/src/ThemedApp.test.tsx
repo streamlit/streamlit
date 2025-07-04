@@ -20,7 +20,7 @@ import { render, screen } from "@testing-library/react"
 
 import ThemedApp from "./ThemedApp"
 
-vi.mock("@streamlit/app/src/connection/ConnectionManager")
+vi.mock("@streamlit/connection")
 
 // Mock needed for Block.tsx
 class ResizeObserver {

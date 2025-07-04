@@ -31,8 +31,7 @@ def validate_text(toast_text: SupportsStr) -> SupportsStr:
         raise StreamlitAPIException(
             "Toast body cannot be blank - please provide a message."
         )
-    else:
-        return toast_text
+    return toast_text
 
 
 class ToastMixin:
@@ -44,7 +43,7 @@ class ToastMixin:
         icon: str | None = None,
     ) -> DeltaGenerator:
         """Display a short message, known as a notification "toast".
-        The toast appears in the app's bottom-right corner and disappears after four seconds.
+        The toast appears in the app's top-right corner and disappears after four seconds.
 
         .. warning::
             ``st.toast`` is not compatible with Streamlit's `caching \
