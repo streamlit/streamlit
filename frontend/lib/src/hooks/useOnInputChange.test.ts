@@ -105,12 +105,11 @@ describe("useOnInputChange", () => {
     })
   })
 
-  it("should call additional actions after main logic", async () => {
+  it("should call an additional action after main logic", async () => {
     const setDirtyCallback = vi.fn()
     const setUiValueCallback = vi.fn()
     const setValueWithSource = vi.fn()
-    const additionalAction1 = vi.fn()
-    const additionalAction2 = vi.fn()
+    const additionalAction = vi.fn()
 
     const { result: onInPutChange } = renderHook(() =>
       useOnInPutChange({
@@ -119,7 +118,7 @@ describe("useOnInputChange", () => {
         setDirty: setDirtyCallback,
         setUiValue: setUiValueCallback,
         setValueWithSource,
-        additionalActions: [additionalAction1, additionalAction2],
+        additionalAction,
       })
     )
 
@@ -138,10 +137,7 @@ describe("useOnInputChange", () => {
       })
     })
     await waitFor(() => {
-      expect(additionalAction1).toHaveBeenCalled()
-    })
-    await waitFor(() => {
-      expect(additionalAction2).toHaveBeenCalled()
+      expect(additionalAction).toHaveBeenCalled()
     })
   })
 
@@ -157,7 +153,6 @@ describe("useOnInputChange", () => {
         setDirty: setDirtyCallback,
         setUiValue: setUiValueCallback,
         setValueWithSource,
-        // additionalActions not provided - should default to empty array
       })
     )
 
@@ -188,7 +183,7 @@ describe("useOnInputChange", () => {
         setDirty: setDirtyCallback,
         setUiValue: setUiValueCallback,
         setValueWithSource,
-        additionalActions: [additionalAction],
+        additionalAction: additionalAction,
       })
     )
 
@@ -221,7 +216,7 @@ describe("useOnInputChange", () => {
         setDirty: setDirtyCallback,
         setUiValue: setUiValueCallback,
         setValueWithSource,
-        additionalActions: [additionalAction],
+        additionalAction: additionalAction,
       })
     )
 
