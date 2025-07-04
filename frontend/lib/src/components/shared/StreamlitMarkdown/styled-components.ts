@@ -56,10 +56,9 @@ function convertFontSizes(
 
   if (isInDialog) {
     // Dialogs also reduce the font size of the headings
-    const roundedDialogFontSize =
-      Math.round(parseFloat(fontSize) * 0.65 * 8) / 8
-    const dialogFontSize = roundedDialogFontSize.toString() + "rem"
-    // TODO: Handle whether there should be a floor (1rem?)
+    const roundedFontSize = Math.round(parseFloat(fontSize) * 0.65 * 8) / 8
+    // Ensure the font size is in rem and at least 0.75rem
+    const dialogFontSize = Math.max(roundedFontSize, 0.75).toString() + "rem"
     return isCaption ? convertRemToEm(dialogFontSize) : dialogFontSize
   }
 
