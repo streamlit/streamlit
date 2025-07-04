@@ -101,7 +101,7 @@ export const StyledVegaLiteChartContainer =
     ({ theme, useContainerWidth, isFullScreen }) => ({
       width: useContainerWidth || isFullScreen ? "100%" : "auto",
       height: isFullScreen ? "100%" : "auto",
-      minWidth: "15rem",
+      minWidth: "11rem",
       // These styles come from VegaLite Library
       "&.vega-embed": {
         position: "relative",
