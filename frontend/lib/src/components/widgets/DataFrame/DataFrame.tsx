@@ -173,7 +173,7 @@ function DataFrame({
     useState(false)
 
   const handleToggleColumnVisibilityMenu = useCallback(
-    () => setShowColumnVisibilityMenu(show => !show),
+    (): void => setShowColumnVisibilityMenu(show => !show),
     []
   )
 
