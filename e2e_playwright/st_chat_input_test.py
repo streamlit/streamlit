@@ -425,7 +425,7 @@ def test_custom_css_class_via_key(app: Page):
 
 def test_programmatically_set_value_in_session_state(app: Page):
     """Test that the value is correctly set in session state."""
-    chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(2)
+    chat_input_area = get_element_by_key(app, "chat_input_3")
 
     click_button(app, "Set Value")
     expect(chat_input_area.locator("textarea")).to_have_value("Hello, world!")
