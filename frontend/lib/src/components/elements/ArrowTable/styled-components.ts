@@ -22,7 +22,6 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.small,
-
   captionSide: "bottom",
 }))
 
