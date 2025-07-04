@@ -111,7 +111,7 @@ const TextArea: FC<Props> = ({
 
   // For text area, we need to set the height on the input element and let
   // that determine the height of the overall element so that resizing works.
-  const height = getTextAreaHeight(outerElement, element)
+  const inputHeight = getTextAreaHeight(outerElement, element)
 
   // Create ref for auto-expansion
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -147,7 +147,11 @@ const TextArea: FC<Props> = ({
 
   const theme = useEmotionTheme()
 
-  const autoExpand = useTextInputAutoExpand({
+  const {
+    height: autoExpandHeight,
+    maxHeight: autoExpandMaxHeight,
+    updateScrollHeight,
+  } = useTextInputAutoExpand({
     textareaRef,
     dependencies: [element.placeholder],
   })
@@ -170,9 +174,9 @@ const TextArea: FC<Props> = ({
 
   const additionalAction = useCallback(() => {
     if (isAutoHeight) {
-      autoExpand.updateScrollHeight()
+      updateScrollHeight()
     }
-  }, [isAutoHeight, autoExpand.updateScrollHeight])
+  }, [isAutoHeight, updateScrollHeight])
 
   const onChange = useOnInputChange({
     formId: element.formId,
@@ -243,8 +247,8 @@ const TextArea: FC<Props> = ({
             style: {
               lineHeight: theme.lineHeights.inputWidget,
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height: isAutoHeight ? autoExpand.height : height,
-              maxHeight: isAutoHeight ? autoExpand.maxHeight : "",
+              height: isAutoHeight ? autoExpandHeight : inputHeight,
+              maxHeight: isAutoHeight ? autoExpandMaxHeight : "",
               minHeight: theme.sizes.largestElementHeight,
               resize: isStretchHeight ? "none" : "vertical",
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
