@@ -3553,7 +3553,7 @@ __metadata:
     "@types/iframe-resizer": "npm:~4.0.0"
     "@types/jsdom": "npm:~21.1.7"
     "@types/lodash": "npm:^4.17.17"
-    "@types/node": "npm:^24.0.8"
+    "@types/node": "npm:^24.0.10"
     "@types/prop-types": "npm:~15.7.15"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
@@ -3615,7 +3615,7 @@ __metadata:
     ua-parser-js: "npm:^1.0.40"
     util: "npm:^0.12.5"
     uuid: "npm:^11.1.0"
-    vite: "npm:^7.0.1"
+    vite: "npm:^7.0.2"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.2.4"
@@ -3639,7 +3639,7 @@ __metadata:
     loglevel: "npm:^1.9.2"
     prettier: "npm:^3.5.3"
     typesync: "npm:^0.14.3"
-    vite: "npm:^7.0.1"
+    vite: "npm:^7.0.2"
     vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
@@ -3772,7 +3772,7 @@ __metadata:
     vega-embed: "npm:^6.29.0"
     vega-interpreter: "npm:^2.0.0"
     vega-lite: "npm:5.23.0"
-    vite: "npm:^7.0.1"
+    vite: "npm:^7.0.2"
     vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
@@ -3812,7 +3812,7 @@ __metadata:
     eslint: "npm:^9.30.1"
     prettier: "npm:^3.5.3"
     typesync: "npm:^0.14.3"
-    vite: "npm:^7.0.1"
+    vite: "npm:^7.0.2"
     vite-plugin-dts: "npm:^4.5.4"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.2.4"
@@ -5084,12 +5084,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24.0.8":
-  version: 24.0.8
-  resolution: "@types/node@npm:24.0.8"
+"@types/node@npm:^24.0.10":
+  version: 24.0.10
+  resolution: "@types/node@npm:24.0.10"
   dependencies:
     undici-types: "npm:~7.8.0"
-  checksum: 10c0/afc014193a1a58f545be023bd63a47639f09fddcaaf1ce271ae1b0f700d422aae425f453a8f428d98f772e08cc9bc54815da2b46ace2d1d4362f657c4172065f
+  checksum: 10c0/11dbd869d3e12ee7b7818113588950e538783e45d227122174c763cb05977defbd1e01b44b5ccd4b8997e42c3df7f7b83c6ee05cfa43d924c8882886bc5f6582
   languageName: node
   linkType: hard
 
