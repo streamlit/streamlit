@@ -6,7 +6,7 @@ alwaysApply: true
 
 # Streamlit Repo Overview
 
-## Repo Structure
+## Folder Structure
 
 - `lib/`: All backend code and assets.
 - `lib/streamlit/`: The main Streamlit library package.
