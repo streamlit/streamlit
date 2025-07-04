@@ -583,6 +583,20 @@ class ChatMixin:
             https://doc-chat-input-file-uploader.streamlit.app/
             height: 350px
 
+        **Example 4: Programmatically set the text via session state**
+
+        You can use ``st.session_state`` to set the text of the chat input widget.
+
+        >>> import streamlit as st
+        >>>
+        >>> if st.button("Set Value"):
+        >>>     st.session_state.chat_input = "Hello, world!"
+        >>> st.chat_input(key="chat_input")
+        >>> st.write("Chat input value:", st.session_state.chat_input)
+
+        .. output ::
+            https://doc-chat-input-session-state.streamlit.app/
+            height: 350px
         """
         key = to_key(key)
 
