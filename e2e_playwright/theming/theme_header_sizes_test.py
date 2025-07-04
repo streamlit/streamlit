@@ -31,7 +31,7 @@ def configure_custom_header_font_sizes():
     )
     # Configurable separately in sidebar
     os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT_SIZES"] = json.dumps(
-        ["2rem", "1.5rem", "1.25rem"]
+        ["1.125rem", "1.25rem", "1.5rem", "1.625rem", "1.75rem", "2rem"]
     )
     yield
     del os.environ["STREAMLIT_THEME_HEADING_FONT_SIZES"]

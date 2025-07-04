@@ -20,7 +20,6 @@ import { Components } from "react-markdown"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 
 import {
@@ -71,7 +70,6 @@ const OVERRIDE_COMPONENTS: Components = {
 function Heading(props: HeadingProtoProps): ReactElement {
   const { element } = props
   const { tag, anchor, body, help, hideAnchor, divider } = element
-  const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
@@ -82,7 +80,6 @@ function Heading(props: HeadingProtoProps): ReactElement {
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
         isInDialog={isInDialog}
-        isInSidebar={isInSidebar}
         data-testid="stMarkdownContainer"
       >
         <HeadingWithActionElements

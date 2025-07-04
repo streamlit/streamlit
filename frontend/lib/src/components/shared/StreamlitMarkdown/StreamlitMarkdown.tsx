@@ -793,14 +793,12 @@ const StreamlitMarkdown: FC<Props> = ({
   isToast,
   inheritFont,
 }) => {
-  const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
 
   return (
     <StyledStreamlitMarkdown
       isCaption={Boolean(isCaption)}
       isInDialog={isInDialog}
-      isInSidebar={isInSidebar}
       isLabel={isLabel}
       inheritFont={inheritFont}
       boldLabel={boldLabel}
