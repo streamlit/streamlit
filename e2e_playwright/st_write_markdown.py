@@ -72,3 +72,10 @@ st.write(stream_text)
 st.write(stream_text())
 
 st.write((["zero", " one", "    two"], 3))
+
+with st.container(
+    width="content",
+    border=True,
+    key="container_width_content_with_divider_write_markdown",
+):
+    st.write("---")

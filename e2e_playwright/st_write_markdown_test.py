@@ -15,13 +15,14 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 
 def test_displays_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that markdown is displayed correctly."""
 
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(14)
+    expect(markdown_elements).to_have_count(15)
 
     expect(markdown_elements.nth(0)).to_contain_text("Hello World")
     expect(markdown_elements.nth(1)).to_contain_text("This markdown is awesome! 😎")
@@ -47,3 +48,8 @@ def test_displays_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     expect(markdown_elements.nth(10)).to_contain_text("This is a string IO object!")
     expect(markdown_elements.nth(11)).to_contain_text("This is streamed text")
     expect(markdown_elements.nth(12)).to_contain_text("This is streamed text")
+
+    assert_snapshot(
+        get_element_by_key(app, "container_width_content_with_divider_write_markdown"),
+        name="write_divider_in_content_width_container",
+    )

@@ -26,6 +26,13 @@ def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(markdown_elements.nth(2), name="st_divider_width_stretch")
 
 
+def test_divider_layouts(app: Page, assert_snapshot: ImageCompareFunction):
+    assert_snapshot(
+        app.get_by_test_id("container_width_content_with_divider"),
+        name="st_divider_width_stretch_in_container",
+    )
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stMarkdown")
