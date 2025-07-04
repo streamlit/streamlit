@@ -30,9 +30,6 @@ def test_altair_chart_displays_correctly(
     ).to_have_count(NUM_CHARTS)
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
-    # We use a higher threshold here to prevent some flakiness
-    # We should probably remove this once we have refactored the
-    # altair frontend component.
 
     assert_snapshot(charts.nth(0), name="st_altair_chart-pie_chart_large_legend_items")
     assert_snapshot(charts.nth(1), name="st_altair_chart-scatter_chart_default_theme")
