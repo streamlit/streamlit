@@ -20,6 +20,27 @@ import streamlit as st
 
 np.random.seed(0)
 
+# mark_arc was added in 4.2, but we have to support altair 4.0-4.1, so we
+# have to skip this part of the test when testing min versions.
+major, minor, patch = alt.__version__.split(".")
+if not (major == "4" and minor < "2"):
+    source = pd.DataFrame(
+        {"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]}
+    )
+
+    chart = (
+        alt.Chart(source)
+        .mark_arc(innerRadius=50)
+        .encode(
+            theta=alt.Theta(field="value", type="quantitative"),
+            color=alt.Color(field="category", type="nominal"),
+        )
+    )
+
+    st.write("Pie Chart with more than 4 Legend items")
+    st.altair_chart(chart, theme="streamlit", use_container_width=False)
+
+
 df1 = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
 chart = alt.Chart(df1).mark_circle().encode(x="a", y="b", size="c", color="c")
 
@@ -48,26 +69,6 @@ chart = alt.Chart(df2).mark_bar().encode(x="a", y="b")
 
 st.write("Bar chart with overwritten theme props:")
 st.altair_chart(chart.configure_mark(color="black"), theme="streamlit")
-
-# mark_arc was added in 4.2, but we have to support altair 4.0-4.1, so we
-# have to skip this part of the test when testing min versions.
-major, minor, patch = alt.__version__.split(".")
-if not (major == "4" and minor < "2"):
-    source = pd.DataFrame(
-        {"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]}
-    )
-
-    chart = (
-        alt.Chart(source)
-        .mark_arc(innerRadius=50)
-        .encode(
-            theta=alt.Theta(field="value", type="quantitative"),
-            color=alt.Color(field="category", type="nominal"),
-        )
-    )
-
-    st.write("Pie Chart with more than 4 Legend items")
-    st.altair_chart(chart, theme="streamlit", use_container_width=False)
 
 # taken from vega_datasets barley example
 barley = alt.UrlData(
