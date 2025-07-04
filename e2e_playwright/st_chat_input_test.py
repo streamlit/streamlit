@@ -154,10 +154,7 @@ def test_submit_hover_state_with_input_value(
 
 def test_enter_submits_clears_input(app: Page):
     """Test that pressing Enter submits and clears the input."""
-    markdown_output = app.get_by_test_id("stMarkdown").nth(5)
-    expect(markdown_output).to_have_text(
-        "Chat input 8 (bottom, max_chars) - value: None"
-    )
+    expect_markdown(app, "Chat input 8 (bottom, max_chars) - value: None")
 
     chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(7)
     chat_input_area.type("Corgi")
@@ -166,9 +163,7 @@ def test_enter_submits_clears_input(app: Page):
 
     expect(chat_input_area).to_have_value("")
 
-    expect(markdown_output).to_have_text(
-        "Chat input 8 (bottom, max_chars) - value: Corgi"
-    )
+    expect_markdown(app, "Chat input 8 (bottom, max_chars) - value: Corgi")
 
 
 def test_shift_enter_creates_new_line(app: Page, assert_snapshot: ImageCompareFunction):
@@ -201,8 +196,7 @@ def test_click_button_to_submit_clears_input(app: Page):
 
     expect(chat_input_area).to_have_value("")
 
-    markdown_output = app.get_by_test_id("stMarkdown").nth(0)
-    expect(markdown_output).to_have_text("Chat input 1 (inline) - value: Corgi")
+    expect_markdown(app, "Chat input 1 (inline) - value: Corgi")
 
 
 def test_chat_input_focus_state(app: Page, assert_snapshot: ImageCompareFunction):
