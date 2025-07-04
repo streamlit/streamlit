@@ -646,6 +646,7 @@ class ChatMixin:
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
 
+        # Setting a default value is currently not supported for chat input.
         chat_input_proto.default = ""
 
         chat_input_proto.accept_file = get_chat_input_accept_file_proto_value(
@@ -675,12 +676,24 @@ class ChatMixin:
 
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:
+            # Support for programmatically setting the text in the chat input
+            # via session state. Since chat input has a trigger state,
+            # it works a bit differently to other widgets. We are not changing
+            # the actual widget state here, but only inserting the provided value
+            # into the chat input field. The user needs to submit the value in
+            # order for the chat input to reflect the value in the backend state.
             chat_input_proto.value = widget_state.value
             chat_input_proto.set_value = True
 
             session_state = get_session_state()
             if key is not None and key in session_state:
+                # Reset the session state value to None to reflect the actual state
+                # of the widget. Which is None since the value hasn't been submitted yet.
+
+                # We need to first delete the value and than set it to `None`
+                # to not trigger the "state value cannot be modified" error.
                 del session_state[key]
+                session_state[key] = None
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)

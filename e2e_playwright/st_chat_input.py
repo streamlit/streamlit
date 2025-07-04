@@ -41,7 +41,7 @@ if runtime.exists():
     )
     st.write(
         "Chat input 3 (callback) - session state value:",
-        st.session_state.get("chat_input_3"),
+        st.session_state["chat_input_3"],
     )
     st.write("Chat input 3 (callback) - return value:", v3)
 
