@@ -224,20 +224,11 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     useContext(LibContext)
   const { formsData } = useRequiredContext(FormsContext)
 
-  let styleOverrides = {}
-  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    // Because of the scrolling and the border flex containers
-    // set their height in the component.
-    styleOverrides = {
-      height: "auto",
-    }
-  }
   const styles = useLayoutStyles({
     element: node.deltaBlock,
     subElement:
       (node.deltaBlock.type && node.deltaBlock[node.deltaBlock.type]) ||
       undefined,
-    styleOverrides,
   })
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
