@@ -27,6 +27,5 @@ export const StyledComponentIframe = styled.iframe<StyledComponentIframeProps>(
     padding: theme.spacing.none,
     margin: theme.spacing.none,
     display: componentReady ? "initial" : "none",
-    minWidth: "19rem",
   })
 )
