@@ -34,7 +34,7 @@ if st.button("Set Value"):
 if runtime.exists():
 
     def on_submit():
-        st.text("chat input submitted")
+        st.markdown("chat input submitted")
 
     v3 = st.container().chat_input(
         "Chat input 3 (callback)", key="chat_input_3", on_submit=on_submit

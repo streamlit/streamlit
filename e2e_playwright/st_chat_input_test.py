@@ -21,6 +21,7 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_button,
     expect_markdown,
     get_element_by_key,
     goto_app,
@@ -161,6 +162,8 @@ def test_enter_submits_clears_input(app: Page):
     chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(7)
     chat_input_area.type("Corgi")
     chat_input_area.press("Enter")
+    wait_for_app_run(app)
+
     expect(chat_input_area).to_have_value("")
 
     expect(markdown_output).to_have_text(
@@ -236,18 +239,16 @@ def test_calls_callback_on_submit(app: Page):
 
     chat_input_area.type("hello world")
     chat_input_area.press("Enter")
+    wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stText").nth(0)).to_have_text(
-        "chat input submitted",
-        use_inner_text=True,
-    )
+    expect_markdown(app, "chat input submitted")
     expect_markdown(app, "Chat input 3 (callback) - session state value: hello world")
     expect_markdown(app, "Chat input 3 (callback) - return value: hello world")
 
     rerun_app(app)
 
     # Expect the callback to not be triggered:
-    expect(app.get_by_test_id("stText")).not_to_be_attached()
+    expect(app.get_by_text("chat input submitted")).not_to_be_attached()
     # And the session state value to be reset
     expect_markdown(app, "Chat input 3 (callback) - session state value: None")
     # Also expect the return value to be None
@@ -426,3 +427,25 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "chat_input_3")).to_be_visible()
+
+
+def test_programmatically_set_value_in_session_state(app: Page):
+    """Test that the value is correctly set in session state."""
+    chat_input_area = app.get_by_test_id("stChatInputTextArea").nth(2)
+
+    click_button(app, "Set Value")
+    expect(chat_input_area.locator("textarea")).to_have_value("Hello, world!")
+
+    # And the session state value should be reset to None after widget execution:
+    expect_markdown(app, "Chat input 3 (callback) - session state value: None")
+    # Also expect the return value to be None
+    expect_markdown(app, "Chat input 3 (callback) - return value: None")
+
+    # Submit value
+    chat_input_area.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "chat input submitted")
+
+    expect_markdown(app, "Chat input 3 (callback) - session state value: Hello, world!")
+    expect_markdown(app, "Chat input 3 (callback) - return value: Hello, world!")
