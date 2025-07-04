@@ -24,7 +24,7 @@ runs:
       run: |
         # Create the cache directory if it does not exist.
         mkdir -p $(yarn cache dir)
-        make react-init
+        make frontend-init
       shell: bash
     # We require protoc >= 3.20, but Ubuntu 22.04 - the OS that these Github
     # Actions are running as of 2024.06.04 - doesn't have recent versions

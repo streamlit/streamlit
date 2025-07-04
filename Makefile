@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Make uses /bin/sh by default, but we are using some bash features.  On Ubuntu
+# Make uses /bin/sh by default, but we are using some bash features. On Ubuntu
 # /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
 SHELL=/bin/bash
 
@@ -36,12 +36,13 @@ help:
 	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")),c}1{c=0}' Makefile | column -s: -t
 
 .PHONY: all
-# Get dependencies, build frontend, install Streamlit into Python environment.
+# Install all dependencies, build frontend, and install editable Streamlit.
 all: init frontend
 
-.PHONY: all-devel
-# Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop pre-commit-install
+.PHONY: all-dev
+# Install all dependencies and editable Streamlit, but do not build the frontend.
+all-dev: init
+	pre-commit install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -49,39 +50,12 @@ all-devel: init develop pre-commit-install
 	@echo "    make frontend"
 	@echo ""
 
-.PHONY: mini-devel
-# Get minimal dependencies for development and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init
-
-.PHONY: build-deps
-# An even smaller installation than mini-devel. Installs the bare minimum necessary to build Streamlit (by leaving out some dependencies necessary for the development process). Does not build the frontend.
-build-deps: mini-init develop
-
 .PHONY: init
-# Install all Python and JS dependencies.
-init: python-init-all react-init protobuf
-
-.PHONY: mini-init
-# Install minimal Python and JS dependencies for development.
-mini-init: python-init-dev-only react-init protobuf
-
-.PHONY: develop
-# Installs Streamlit as editable install in your Python environment.
-develop:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init
-
-.PHONY: python-init-all
-# Install Streamlit and all (test and dev) requirements.
-python-init-all:
-	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=true make python-init
-
-.PHONY: python-init-dev-only
-# Install Streamlit and dev requirements.
-python-init-dev-only:
-	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=false make python-init
+# Install all dependencies and build protobufs.
+init: python-init frontend-init protobuf
 
 .PHONY: python-init
-# Install python dependencies and Streamlit as editable install in your Python environment.
+# Install Python dependencies and Streamlit in editable mode.
 python-init:
 	pip_args=("--editable" "./lib");\
 	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
@@ -93,45 +67,42 @@ python-init:
 	if command -v "uv" > /dev/null; then \
 		echo "Running command: uv pip install $${pip_args[@]}"; \
 		uv pip install $${pip_args[@]}; \
-		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-			uv run python -m playwright install --with-deps; \
-		fi;\
 	else \
 		echo "Running command: pip install $${pip_args[@]}"; \
 		pip install $${pip_args[@]}; \
-		if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
-			python -m playwright install --with-deps; \
-		fi;\
 	fi;\
+	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+		python -m playwright install --with-deps; \
+	fi;
 
-.PHONY: pylint
-# Verify that our Python files are properly formatted and that there are no lint errors.
-pylint:
+.PHONY: python-lint
+# Lint and check formatting of Python files.
+python-lint:
 	# Checks if the formatting is correct:
 	ruff format --check
 	# Run linter:
 	ruff check
 
-.PHONY: pyformat
-# Fix Python files that are not properly formatted.
-pyformat:
+.PHONY: python-format
+# Format Python files.
+python-format:
 	# Sort imports ( see https://docs.astral.sh/ruff/formatter/#sorting-imports )
 	ruff check --select I --fix
 	# Run code formatter
 	ruff format
 
-.PHONY: pytest
+.PHONY: python-tests
 # Run Python unit tests.
-pytest:
+python-tests:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v -l \
 			-m "not performance" \
 			tests/
 
-.PHONY: performance-pytest
-# Run Python benchmark tests
-performance-pytest:
+.PHONY: python-performance-tests
+# Run Python performance tests.
+python-performance-tests:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v -l \
@@ -140,61 +111,52 @@ performance-pytest:
 			--benchmark-storage file://../.benchmarks/pytest \
 			tests/
 
-.PHONY: pytest-integration
-# Run Python integration tests. This requires the integration-requirements to be installed.
-pytest-integration:
+.PHONY: python-integration-tests
+# Run Python integration tests. Requires `integration-requirements.txt` to be installed.
+python-integration-tests:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v -l \
 			--require-integration \
 			tests/
 
-.PHONY: mypy
-# Run Mypy static type checker.
-mypy:
+.PHONY: python-types
+# Run the Python type checker.
+python-types:
 	mypy --config-file=mypy.ini
 
 .PHONY: bare-execution-tests
-# Run all our e2e tests in "bare" mode and check for non-zero exit codes.
+# Run all e2e tests in bare mode.
 bare-execution-tests:
 	PYTHONPATH=. \
 	python3 scripts/run_bare_execution_tests.py
 
 .PHONY: cli-smoke-tests
-# Verify that CLI boots as expected when called with `python -m streamlit`.
+# Run CLI smoke tests.
 cli-smoke-tests:
 	python3 scripts/cli_smoke_tests.py
 
-.PHONY: distribution
-# Create Python distribution files in dist/.
-distribution:
+.PHONY: package
+# Create Python wheel files in `dist/`.
+package: init frontend
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
 	cd lib ; python3 setup.py bdist_wheel sdist
 
-.PHONY: package
-# Build lib and frontend, and then run 'distribution'.
-package: build-deps frontend distribution
-
-.PHONY: conda-distribution
-# Create conda distribution files in lib/conda-recipe/dist.
-conda-distribution:
+.PHONY: conda-package
+# Create conda distribution files.
+conda-package: init
+	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
+		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
+	else \
+		make frontend; \
+	fi
 	rm -rf lib/conda-recipe/dist
 	mkdir lib/conda-recipe/dist
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
 	# NOTE: Running the following command requires both conda and conda-build to
 	# be installed.
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
-
-.PHONY: conda-package
-# Build lib and (maybe) frontend assets, and then run 'conda-distribution'.
-conda-package: build-deps
-	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
-		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
-	else \
-		make frontend; \
-	fi
-	make conda-distribution;
 
 .PHONY: clean
 # Remove all generated files.
@@ -254,9 +216,9 @@ protobuf:
 	@# JS/TS protobuf generation
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
-.PHONY: react-init
+.PHONY: frontend-init
 # Install all frontend dependencies.
-react-init:
+frontend-init:
 	@cd frontend/ && { \
 		corepack enable yarn; \
 		if [ $$? -ne 0 ]; then \
@@ -268,7 +230,7 @@ react-init:
 	}
 
 .PHONY: frontend
-# Build frontend into static files.
+# Build the frontend.
 frontend:
 	cd frontend/ ; yarn workspaces foreach --all --topological run build
 	rsync -av --delete --delete-excluded --exclude=reports \
@@ -277,61 +239,49 @@ frontend:
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
 
-
-.PHONY: frontend-dependencies
-# Build frontend dependent libraries (excluding app and lib)
-frontend-dependencies:
-	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
-
-.PHONY: frontend-build-with-profiler
+.PHONY: frontend-with-profiler
 # Build the frontend with the profiler enabled.
-frontend-build-with-profiler: frontend-dependencies
+frontend-with-profiler:
+	# Build frontend dependent libraries (excluding app and lib):
+	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological run build
+	# Build the app with the profiler enabled:
 	cd frontend/ ; yarn workspace @streamlit/app buildWithProfiler
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-fast
-# Build the frontend (as fast as possible)
+# Build the frontend (as fast as possible).
 frontend-fast:
 	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/app --exclude @streamlit/lib run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-dev
-# Start the frontend dev server.
+# Start the frontend development server.
 frontend-dev:
 	cd frontend/ ; yarn start
 
-.PHONY: frontend-lib
-# Build the frontend library.
-frontend-lib:
-	cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
 
-.PHONY: jslint
-# Verify that our JS/TS code is formatted and that there are no lint errors.
-jslint:
+.PHONY: frontend-lint
+# Lint and check formatting of frontend files.
+frontend-lint:
 	cd frontend/ ; yarn workspaces foreach --all run formatCheck
 	cd frontend/ ; yarn workspaces foreach --all run lint
 
-.PHONY: tstypecheck
-# Typecheck the JS/TS code.
-tstypecheck:
+.PHONY: frontend-types
+# Run the frontend type checker.
+frontend-types:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/lib --exclude @streamlit/app run typecheck
 	cd frontend/ ; yarn workspaces foreach --all run typecheck
 
-.PHONY: jsformat
-# Fix formatting issues in our JavaScript & TypeScript files.
-jsformat:
+.PHONY: frontend-format
+# Format frontend files.
+frontend-format:
 	cd frontend/ ; yarn workspaces foreach --all run format
 
-.PHONY: jstest
-# Run JS unit tests.
-jstest:
-	cd frontend; TESTPATH=$(TESTPATH) yarn test
-
-.PHONY: jstestcoverage
-# Run JS unit tests and generate a coverage report.
-jstestcoverage:
+.PHONY: frontend-tests
+# Run frontend unit tests and generate coverage report.
+frontend-tests:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
 .PHONY: update-snapshots
@@ -340,19 +290,18 @@ update-snapshots:
 	python ./scripts/update_e2e_snapshots.py
 
 .PHONY: update-snapshots-changed
-# Update e2e playwright snapshots of changed files based on the latest completed CI run.
+# Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
 update-snapshots-changed:
 	python ./scripts/update_e2e_snapshots.py --changed
 
 .PHONY: update-material-icons
-# Update material icon names and font file based on latest google material symbol rounded font version.
+# Update material icons based on latest Google material symbol version.
 update-material-icons:
 	python ./scripts/update_material_icon_font_and_names.py
 
-
-.PHONY: notices
-# Rebuild the NOTICES file.
-notices:
+.PHONY: update-notices
+# Update the notices file (licenses of frontend assets and dependencies).
+update-notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
 
@@ -365,31 +314,27 @@ notices:
 	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh frontend/lib/src/vendor/fzy.js/fzyjs-LICENSE.txt
 
-.PHONY: headers
-# Update the license header on all source files.
-headers:
+.PHONY: update-headers
+# Update all license headers.
+update-headers:
 	pre-commit run insert-license --all-files --hook-stage manual
 	pre-commit run license-headers --all-files --hook-stage manual
 
-.PHONY: gen-min-dep-constraints
-# Write the minimum versions of our dependencies to a constraints file.
-gen-min-dep-constraints:
-	make develop >/dev/null
+.PHONY: update-min-deps
+# Update minimum dependency constraints file.
+update-min-deps:
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init >/dev/null
 	python scripts/get_min_versions.py >scripts/assets/min-constraints-gen.txt
 
-.PHONY: pre-commit-install
-# Pre-commit install.
-pre-commit-install:
-	pre-commit install
 
-.PHONY: performance-lighthouse
+.PHONY: lighthouse-tests
 # Run Lighthouse performance tests.
-performance-lighthouse:
+lighthouse-tests:
 	cd frontend/app; \
 	yarn run lighthouse:run
 
 .PHONY: debug-e2e-test
-# Run an e2e playwright test in debug mode with Playwright Inspector. Use it via make debug-e2e-test st_command_test.py
+# Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
 debug-e2e-test:
 	@if [[ ! "$(filter-out $@,$(MAKECMDGOALS))" == *"_test"* ]]; then \
 		echo "Error: Test script name must contain '_test' in the filename"; \
@@ -404,7 +349,7 @@ debug-e2e-test:
 	)
 
 .PHONY: run-e2e-test
-# Run an e2e playwright test. Use it via make run-e2e-test st_command_test.py
+# Run a playwright e2e test. Use it via `make run-e2e-test st_command_test.py`.
 run-e2e-test:
 	@if [[ ! "$(filter-out $@,$(MAKECMDGOALS))" == *"_test"* ]]; then \
 		echo "Error: Test script name must contain '_test' in the filename"; \
@@ -422,29 +367,28 @@ run-e2e-test:
 # Autofix linting and formatting errors.
 autofix:
 	# Python fixes:
-	make pyformat
+	make python-format
 	ruff check --fix
 	# JS fixes:
-	make react-init
-	make jsformat
+	make frontend-init
+	make frontend-format
 	cd frontend/ ; yarn workspaces foreach --all run lint --fix
 	# Other fixes:
-	make notices
+	make update-notices
 	# Run all pre-commit fixes but not fail if any of them don't work.
 	pre-commit run --all-files --hook-stage manual || true
 
 .PHONY: frontend-typesync
-# Run typesync in each frontend workspace to check for unsynced types.
-# If types are unsynced, print a message and exit with a non-zero exit code.
+# Check for unsynced frontend types.
 frontend-typesync:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync:ci --dry=fail || (\
-		echo -e "\033[0;31mTypesync check failed. Run 'make frontend-typesync-update' to fix.\033[0m"; \
+		echo -e "\033[0;31mTypesync check failed. Run 'make update-frontend-typesync' to fix.\033[0m"; \
 		exit 1 \
 	)
 
-.PHONY: frontend-typesync-update
-# Run typesync in each frontend workspace to update types.
-frontend-typesync-update:
+.PHONY: update-frontend-typesync
+# Installs missing typescript typings for dependencies.
+update-frontend-typesync:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync
 	cd frontend/ ; yarn
 	cd component-lib/ ; yarn typesync

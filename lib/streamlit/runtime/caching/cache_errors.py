@@ -14,14 +14,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any, Callable, Generic, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
-
-if TYPE_CHECKING:
-    from types import FunctionType
 
 CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/caching"
 
@@ -49,7 +46,7 @@ class UnhashableParamError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        func: FunctionType,
+        func: Callable[..., Any],
         arg_name: str | None,
         arg_value: Any,
         orig_exc: BaseException,
@@ -61,7 +58,7 @@ class UnhashableParamError(StreamlitAPIException):
     @staticmethod
     def _create_message(
         cache_type: CacheType,
-        func: FunctionType,
+        func: Callable[..., Any],
         arg_name: str | None,
         arg_value: Any,
     ) -> str:
@@ -98,7 +95,7 @@ class CacheReplayClosureError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        cached_func: FunctionType,
+        cached_func: Callable[..., Any],
     ) -> None:
         func_name = get_cached_func_name_md(cached_func)
         decorator_name = get_decorator_api_name(cache_type)
@@ -120,8 +117,11 @@ How to fix this:
         super().__init__(msg)
 
 
-class UnserializableReturnValueError(MarkdownFormattedException):
-    def __init__(self, func: FunctionType, return_value: FunctionType) -> None:
+R = TypeVar("R")
+
+
+class UnserializableReturnValueError(MarkdownFormattedException, Generic[R]):
+    def __init__(self, func: Callable[..., R], return_value: R) -> None:
         MarkdownFormattedException.__init__(
             self,
             f"""

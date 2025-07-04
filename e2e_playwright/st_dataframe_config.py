@@ -404,8 +404,9 @@ st.header("Progress column:")
 st.dataframe(
     pd.DataFrame(
         {
-            "col_0": [0.1, 0.4, 1.1, None],
+            "col_0": [0.1, 0.4872, 10.1, None],
             "col_1": ["200", "550", "1000", None],
+            "col_2": [0.1, 0.4872, 1.1, None],
         }
     ),
     column_config={
@@ -416,6 +417,9 @@ st.dataframe(
         ),
         "col_1": st.column_config.ProgressColumn(
             format="$%f", min_value=0, max_value=1000
+        ),
+        "col_2": st.column_config.ProgressColumn(
+            step=0.0001,
         ),
     },
     use_container_width=False,
