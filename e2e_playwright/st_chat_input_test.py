@@ -425,10 +425,10 @@ def test_custom_css_class_via_key(app: Page):
 
 def test_programmatically_set_value_in_session_state(app: Page):
     """Test that the value is correctly set in session state."""
-    chat_input_area = get_element_by_key(app, "chat_input_3")
+    chat_input = get_element_by_key(app, "chat_input_3")
 
     click_button(app, "Set Value")
-    expect(chat_input_area.locator("textarea")).to_have_value("Hello, world!")
+    expect(chat_input.locator("textarea")).to_have_value("Hello, world!")
 
     # And the session state value should be reset to None after widget execution:
     expect_markdown(app, "Chat input 3 (callback) - session state value: None")
@@ -436,7 +436,10 @@ def test_programmatically_set_value_in_session_state(app: Page):
     expect_markdown(app, "Chat input 3 (callback) - return value: None")
 
     # Submit value
-    chat_input_area.press("Enter")
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    expect(submit_button).to_be_visible()
+    submit_button.click()
+
     wait_for_app_run(app)
 
     expect_markdown(app, "chat input submitted")
