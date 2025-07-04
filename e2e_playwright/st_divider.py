@@ -17,6 +17,7 @@ import streamlit as st
 st.divider()
 st.divider(width=600)
 st.divider(width="stretch")
+
 with st.container(
     width="content", border=True, key="container_width_content_with_divider"
 ):
