@@ -680,7 +680,7 @@ class ChatMixin:
 
             session_state = get_session_state()
             if key is not None and key in session_state:
-                del session_state[key]
+                session_state.pop(key, None)
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
