@@ -353,10 +353,10 @@ class CliTest(unittest.TestCase):
                     "streamlit.runtime.credentials._check_credential_file_exists",
                     return_value=False,
                 ),
+                patch("streamlit.web.bootstrap.run"),
             ):
                 result = self.runner.invoke(cli, ["run", "file_name.py"])
 
-            assert result.exit_code != 0
             assert ("Collecting usage statistics" in result.output) == headless_mode, (
                 f"Telemetry message mode is {headless_mode} "
                 f"yet output is: {result.output}"
@@ -377,10 +377,10 @@ class CliTest(unittest.TestCase):
                     "streamlit.runtime.credentials._check_credential_file_exists",
                     return_value=False,
                 ),
+                patch("streamlit.web.bootstrap.run"),
             ):
                 result = self.runner.invoke(cli, ["run", "file_name.py"])
 
-            assert result.exit_code != 0
             assert (prompt_mode and not headless_mode) == (
                 "like to receive helpful onboarding emails, news, offers, promotions,"
                 in result.output
@@ -599,6 +599,11 @@ class CliTest(unittest.TestCase):
 
 
 class HTTPServerIntegrationTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
+
+        EventBasedPathWatcher.close_all()
+
     def get_http_session(self) -> requests.Session:
         http_session = requests.Session()
         http_session.mount(

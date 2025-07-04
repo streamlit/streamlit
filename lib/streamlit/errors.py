@@ -79,6 +79,12 @@ class MarkdownFormattedException(Error):  # noqa: N818
     pass
 
 
+class StreamlitMaxRetriesError(Error):
+    """An exception raised when a file or folder cannot be accessed after multiple retries."""
+
+    pass
+
+
 class StreamlitAPIException(MarkdownFormattedException):
     """Base class for Streamlit API exceptions.
 
