@@ -21,14 +21,19 @@ import {
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 
+/**
+ * Determines the height of the input that will correspond to the outer element
+ * height provided by the user. Because text areas can be resized by dragging
+ * the corners, we need to set the height on the input itself.
+ *
+ * @param outerElement - The outer element containing height configuration
+ * @param element - The TextArea protocol buffer element
+ * @returns The calculated height as a CSS string (e.g., "100px", "100%", "auto")
+ */
 export const getTextAreaHeight = (
   outerElement: Element,
   element: TextAreaProto
 ): string => {
-  // This function is used to determine the height of the input that will
-  // correspond to the outer element height provided by the user. Because
-  // text areas can be resized by dragging the corners, we need to set the
-  // height on the input itself.
   let height = "auto"
   if (outerElement.heightConfig?.useStretch) {
     height = "100%"
