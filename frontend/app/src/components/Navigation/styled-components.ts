@@ -199,6 +199,7 @@ export const StyledNavSectionHeaderText = styled.span(() => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
+  minWidth: 0,
 }))
 
 export const StyledSidebarNavSectionHeader = styled.header<{
