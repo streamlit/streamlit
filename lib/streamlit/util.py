@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
-    from lib.streamlit.delta_generator import DeltaGenerator
+    from streamlit.delta_generator import DeltaGenerator
 
 
 def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
