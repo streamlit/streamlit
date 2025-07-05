@@ -20,8 +20,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
+from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
 
@@ -41,9 +44,11 @@ class ToastMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
+        duration: float | int | str | timedelta | None = 4.0,
     ) -> DeltaGenerator:
         """Display a short message, known as a notification "toast".
-        The toast appears in the app's top-right corner and disappears after four seconds.
+        The toast appears in the app's top-right corner and disappears after a
+        configurable duration.
 
         .. warning::
             ``st.toast`` is not compatible with Streamlit's `caching \
@@ -79,16 +84,32 @@ class ToastMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
+        duration : float, int, timedelta, str, or None
+            The time to display the toast message. Can be one of:
+
+            - A number specifying the time in seconds.
+            - A string specifying the time in a format supported by `Pandas's
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"1s"``.
+            - A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=1)``.
+
+            If ``None`` (default), the toast message will be displayed for 4 seconds.
+            A value of ``0`` will make the toast message persistent.
 
         Example
         -------
         >>> import streamlit as st
         >>>
         >>> st.toast('Your edited image was saved!', icon='😍')
+        >>> st.toast('This toast will disappear in 10 seconds.', duration=10)
         """
         toast_proto = ToastProto()
         toast_proto.body = clean_text(validate_text(body))
         toast_proto.icon = validate_icon_or_emoji(icon)
+        if duration is not None:
+            toast_proto.duration = time_to_seconds(duration)
         return self.dg._enqueue("toast", toast_proto)
 
     @property

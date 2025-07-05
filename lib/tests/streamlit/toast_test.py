@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 
 import streamlit as st
@@ -31,6 +33,7 @@ class ToastTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.toast
         assert c.body == "toast text"
         assert c.icon == ""
+        assert c.duration == 4.0
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
@@ -45,6 +48,7 @@ class ToastTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.toast
         assert c.body == "toast text"
         assert c.icon == "🦄"
+        assert c.duration == 4.0
 
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""
@@ -54,3 +58,43 @@ class ToastTest(DeltaGeneratorTestCase):
             'The value "invalid" is not a valid emoji. Shortcodes '
             "are not allowed, please use a single character instead."
         )
+
+    def test_duration_int(self):
+        """Test that it can be called with an int duration."""
+        st.toast("toast text", duration=10)
+
+        c = self.get_delta_from_queue().new_element.toast
+        assert c.body == "toast text"
+        assert c.duration == 10.0
+
+    def test_duration_float(self):
+        """Test that it can be called with a float duration."""
+        st.toast("toast text", duration=0.5)
+
+        c = self.get_delta_from_queue().new_element.toast
+        assert c.body == "toast text"
+        assert c.duration == 0.5
+
+    def test_duration_timedelta(self):
+        """Test that it can be called with a timedelta duration."""
+        st.toast("toast text", duration=timedelta(seconds=5))
+
+        c = self.get_delta_from_queue().new_element.toast
+        assert c.body == "toast text"
+        assert c.duration == 5.0
+
+    def test_duration_str(self):
+        """Test that it can be called with a string duration."""
+        st.toast("toast text", duration="1s500ms")
+
+        c = self.get_delta_from_queue().new_element.toast
+        assert c.body == "toast text"
+        assert c.duration == 1.5
+
+    def test_duration_none(self):
+        """Test that duration is not set when it is None."""
+        st.toast("toast text", duration=None)
+
+        c = self.get_delta_from_queue().new_element.toast
+        assert c.body == "toast text"
+        assert not c.HasField("duration")

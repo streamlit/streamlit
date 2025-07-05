@@ -25,6 +25,9 @@ st.toast(
 
 st.toast("Your edited image was saved!", icon=":material/cabin:")
 
+st.toast("I am a toast with a short duration", duration="2s")
+st.toast("I am a persistent toast", duration=0)
+
 
 @st.dialog("Streamlit Toast Notification")
 def toast_notification():

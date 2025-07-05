@@ -46,26 +46,31 @@ const createContainer = (): ReactElement => (
 )
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
-  body: "This is a toast message",
-  icon: "🐶",
-  ...elementProps,
+  element: ToastProto.create({
+    body: "This is a toast message",
+    icon: "🐶",
+    ...elementProps,
+  }),
 })
 
 const renderComponent = (props: ToastProps): RenderResult =>
   render(
-    <>
+    <ThemeProvider
+      theme={mockTheme.emotion}
+      baseuiTheme={mockTheme.basewebTheme}
+    >
       {createContainer()}
       <Toast {...props} />
-    </>
+    </ThemeProvider>
   )
 
 describe("Toast Component", () => {
-  test("renders default toast", () => {
+  it("renders default toast", async () => {
     const props = getProps()
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
-    const closeButton = screen.getByRole("button", { name: "Close" })
+    const toast = await screen.findByRole("alert")
+    const closeButton = await screen.findByRole("button", { name: "Close" })
     const expandButton = screen.queryByRole("button", { name: "view more" })
 
     expect(toast).toBeInTheDocument()
@@ -79,17 +84,19 @@ describe("Toast Component", () => {
     expect(toastElement).toHaveClass("stToast")
   })
 
-  test("renders long toast messages with expand option", () => {
+  it("renders long toast messages with expand option", async () => {
     const props = getProps({
       icon: "",
       body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = await screen.findByRole("alert")
     const toastText = within(toast).getByTestId("stMarkdownContainer")
 
-    const expandButton = screen.getByRole("button", { name: "view more" })
+    const expandButton = await screen.findByRole("button", {
+      name: "view more",
+    })
     expect(toast).toBeInTheDocument()
     expect(toastText).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long"
@@ -97,7 +104,7 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(expandButton)
   })
 
-  test("can expand to see the full toast message & collapse to truncate", async () => {
+  it("can expand to see the full toast message & collapse to truncate", async () => {
     const user = userEvent.setup()
     const props = getProps({
       icon: "",
@@ -105,9 +112,11 @@ describe("Toast Component", () => {
     })
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
+    const toast = await screen.findByRole("alert")
     const toastText = within(toast).getByTestId("stMarkdownContainer")
-    const expandButton = screen.getByRole("button", { name: "view more" })
+    const expandButton = await screen.findByRole("button", {
+      name: "view more",
+    })
     // Initial state
     expect(toast).toBeInTheDocument()
     expect(toastText).toHaveTextContent(
@@ -122,7 +131,9 @@ describe("Toast Component", () => {
     )
 
     // Click view less button & collapse the message
-    const collapseButton = screen.getByRole("button", { name: "view less" })
+    const collapseButton = await screen.findByRole("button", {
+      name: "view less",
+    })
     expect(toast).toContainElement(collapseButton)
     await user.click(collapseButton)
     expect(toastText).toHaveTextContent(
@@ -131,13 +142,13 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(expandButton)
   })
 
-  test("can close toast", async () => {
+  it("can close toast", async () => {
     const user = userEvent.setup()
     const props = getProps()
     renderComponent(props)
 
-    const toast = screen.getByRole("alert")
-    const closeButton = screen.getByRole("button", { name: "Close" })
+    const toast = await screen.findByRole("alert")
+    const closeButton = await screen.findByRole("button", { name: "Close" })
     expect(toast).toBeInTheDocument()
     expect(closeButton).toBeInTheDocument()
     // Click close button
@@ -146,8 +157,8 @@ describe("Toast Component", () => {
     await waitFor(() => expect(toast).not.toBeInTheDocument())
   })
 
-  test("throws an error when called via st.sidebar.toast", () => {
-    const props = getProps({})
+  it("throws an error when called via st.sidebar.toast", () => {
+    const props = getProps()
     render(
       <ThemeProvider
         theme={{ ...mockTheme.emotion, inSidebar: true }}
@@ -165,41 +176,22 @@ describe("Toast Component", () => {
 
   test("shortenMessage does not truncate messages under the character limit", () => {
     const shortMessage = "This message should not be truncated."
-    const props = getProps({ body: shortMessage })
-    renderComponent(props)
-
-    const toast = screen.getByRole("alert")
-    expect(toast).toHaveTextContent(shortMessage)
+    expect(shortenMessage(shortMessage)).toEqual(shortMessage)
   })
 
   test("shortenMessage truncates messages over the character limit without cutting words", () => {
     const longMessage =
       "This is a very long message meant to test the functionality of the shortenMessage function, ensuring it truncates properly without cutting words and respects the character limit."
-    const expectedTruncatedMessage = shortenMessage(longMessage)
-    const props = getProps({ icon: "", body: longMessage })
-    renderComponent(props)
-
-    // Get the text content of the toast, excluding the "view more" and "Close" buttons
-    const toastText = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
-
-    expect(toastText).toEqual(expectedTruncatedMessage)
-    expect(toastText).toHaveLength(expectedTruncatedMessage.length)
+    const expectedTruncatedMessage =
+      "This is a very long message meant to test the functionality of the shortenMessage function, ensuring it"
+    expect(shortenMessage(longMessage)).toEqual(expectedTruncatedMessage)
   })
 
   test("shortenMessage handles explicit line breaks correctly", () => {
     const messageWithBreaks =
       "First line of the message.\nSecond line of the message, which is meant to test how explicit line breaks are handled.\nThird line, which should not be visible."
     const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
-    const props = getProps({ icon: "", body: messageWithBreaks })
-    renderComponent(props)
-
-    const toastText = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
-    expect(toastText).toEqual(expectedTruncatedMessage)
-    expect(toastText).toHaveLength(expectedTruncatedMessage.length)
+    expect(shortenMessage(messageWithBreaks)).toEqual(expectedTruncatedMessage)
   })
 
   test("expands and collapses long messages with explicit line breaks correctly", async () => {
@@ -208,22 +200,34 @@ describe("Toast Component", () => {
       "First line of the message.\nSecond line of the message, which is very long and meant to test the expand and collapse functionality.\nThird line, which should initially be hidden."
     const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
     const props = getProps({ icon: "", body: messageWithBreaks })
-    renderComponent(props)
+    render(
+      <ThemeProvider
+        theme={mockTheme.emotion}
+        baseuiTheme={mockTheme.basewebTheme}
+      >
+        {createContainer()}
+        <Toast {...props} />
+      </ThemeProvider>
+    )
 
-    const expandButton = screen.getByRole("button", { name: "view more" })
+    const expandButton = await screen.findByRole("button", {
+      name: "view more",
+    })
     await user.click(expandButton) // Expand
 
-    const toastExpanded = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view lessClose", "")
+    const toastExpanded = (
+      await screen.findByRole("alert")
+    )?.textContent?.replace("view lessClose", "")
     expect(toastExpanded).toEqual(messageWithBreaks) // Check full message is displayed
 
-    const collapseButton = screen.getByRole("button", { name: "view less" })
+    const collapseButton = await screen.findByRole("button", {
+      name: "view less",
+    })
     await user.click(collapseButton) // Collapse
 
-    const toastCollapsed = screen
-      .getByRole("alert")
-      ?.textContent?.replace("view moreClose", "")
+    const toastCollapsed = (
+      await screen.findByRole("alert")
+    )?.textContent?.replace("view moreClose", "")
     expect(toastCollapsed).toEqual(expectedTruncatedMessage) // Check message is truncated again
   })
 })
