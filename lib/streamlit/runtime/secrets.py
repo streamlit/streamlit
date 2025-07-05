@@ -429,14 +429,9 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except Exception:  # noqa: PERF203
-                    _LOGGER.debug(
-                        "Failed to install file watcher for secret file path %s",
-                        path,
-                        exc_info=True,
-                    )
+                except Exception:  # noqa: PERF203, S110
                     # A user may only have one secrets.toml file defined, so we'd expect
-                    # exceptions to be raised when attempting to install a
+                    # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.
                     pass
 
