@@ -438,7 +438,6 @@ class Secrets(Mapping[str, Any]):
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised when attempting to install a
                     # watcher on the nonexistent ones.
-                    pass
 
             # We set file_watchers_installed to True even if the installation attempt
             # failed to avoid repeatedly trying to install it.
