@@ -581,12 +581,6 @@ export class App extends PureComponent<Props, State> {
         scriptRunState: this.state.scriptRunState,
       })
     }
-    // Rerun script if the theme changed
-    if (
-      _prevProps.theme.activeTheme.name !== this.props.theme.activeTheme.name
-    ) {
-      this.sendRerunBackMsg()
-    }
   }
 
   override componentWillUnmount(): void {
