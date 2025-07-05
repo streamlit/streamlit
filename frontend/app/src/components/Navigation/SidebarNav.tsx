@@ -119,16 +119,18 @@ function generateNavSections(
       currentPageCount += viewablePages.length
     }
 
-    contents.push(
-      <NavSection
-        key={header}
-        header={header}
-        isExpanded={isExpanded}
-        onToggle={() => toggleSection(header)}
-      >
-        {viewablePages.map(generateNavLink)}
-      </NavSection>
-    )
+    if (viewablePages.length > 0) {
+      contents.push(
+        <NavSection
+          key={header}
+          header={header}
+          isExpanded={isExpanded}
+          onToggle={() => toggleSection(header)}
+        >
+          {viewablePages.map(generateNavLink)}
+        </NavSection>
+      )
+    }
   })
 
   return contents
