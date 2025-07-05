@@ -430,7 +430,8 @@ describe("SidebarNav", () => {
 
   it("will not display a section if no pages in it are visible", async () => {
     const user = userEvent.setup()
-    // First section has 5 pages, second section has 5 pages, third section has 4 pages
+    // First section has 6 pages, second section has 4 pages, third section has 4 pages
+    // Since 6+4 = 10, only the first two sections should be visible
     render(
       <SidebarNav
         {...getProps({

@@ -183,6 +183,18 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   }
 )
 
+export const StyledChevronContainer = styled.div<{ isExpanded: boolean }>(
+  ({ isExpanded }) => ({
+    visibility: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+    transition: "transform 200ms ease",
+    flexShrink: 0,
+  })
+)
+
 export const StyledNavSectionHeaderText = styled.span(() => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
@@ -207,9 +219,9 @@ export const StyledSidebarNavSectionHeader = styled.header<{
     alignItems: "center",
     gap: theme.spacing.sm,
     cursor: "pointer",
-
+    userSelect: "none",
     "&:hover": {
-      "& > div": {
+      [`& > ${StyledChevronContainer}`]: {
         visibility: "visible",
       },
     },
@@ -321,15 +333,3 @@ export const StyledPopoverContent = styled.div(({ theme }) => ({
 export const StyledIconContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.twoXS,
 }))
-
-export const StyledChevronContainer = styled.div<{ isExpanded: boolean }>(
-  ({ isExpanded }) => ({
-    visibility: "hidden",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
-    transition: "transform 200ms ease",
-    flexShrink: 0,
-  })
-)
