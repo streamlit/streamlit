@@ -20,6 +20,7 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
@@ -158,6 +159,25 @@ const SidebarNav = ({
     Record<string, boolean>
   >({})
 
+  const pagesBySectionHeader = useMemo(
+    () => groupBy(appPages, page => page.sectionHeader || ""),
+    [appPages]
+  )
+
+  const numVisiblePages = useMemo(() => {
+    if (navSections.length === 0) {
+      return appPages.length
+    }
+
+    // Only count pages in expanded sections
+    return navSections.reduce((count, sectionName) => {
+      if (expandedSections[sectionName]) {
+        return count + (pagesBySectionHeader[sectionName]?.length || 0)
+      }
+      return count
+    }, 0)
+  }, [appPages.length, navSections, expandedSections, pagesBySectionHeader])
+
   useEffect(() => {
     const cachedSidebarNavExpanded =
       localStorageAvailable() &&
@@ -246,9 +266,10 @@ const SidebarNav = ({
   )
 
   let contents: ReactNode[] = []
-  const totalPages = appPages.length
   const shouldShowViewButton =
-    hasSidebarElements && totalPages > COLLAPSE_THRESHOLD && !expandSidebarNav
+    hasSidebarElements &&
+    numVisiblePages > COLLAPSE_THRESHOLD &&
+    !expandSidebarNav
   const needsCollapse = shouldShowViewButton && !expanded
   if (navSections.length > 0) {
     // For MPAv2 with headers: renders a NavSection for each header with its respective pages
@@ -280,7 +301,9 @@ const SidebarNav = ({
         >
           {expanded
             ? "View less"
-            : `View ${totalPages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED} more`}
+            : `View ${
+                numVisiblePages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+              } more`}
         </StyledViewButton>
       )}
       {hasSidebarElements && (
