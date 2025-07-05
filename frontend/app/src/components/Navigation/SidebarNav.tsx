@@ -155,9 +155,10 @@ const SidebarNav = ({
   const { pageLinkBaseUrl } = useAppContext()
 
   const localStorageKey = getLocalStorageKey(pageLinkBaseUrl)
-  const [expandedSections, setExpandedSections] = useState<
-    Record<string, boolean>
-  >({})
+  const [expandedSections, setExpandedSections] = useState<Record<
+    string,
+    boolean
+  > | null>(null)
 
   const pagesBySectionHeader = useMemo(
     () => groupBy(appPages, page => page.sectionHeader || ""),
@@ -171,7 +172,7 @@ const SidebarNav = ({
 
     // Only count pages in expanded sections
     return navSections.reduce((count, sectionName) => {
-      if (expandedSections[sectionName]) {
+      if (expandedSections && expandedSections[sectionName]) {
         return count + (pagesBySectionHeader[sectionName]?.length || 0)
       }
       return count
@@ -191,7 +192,21 @@ const SidebarNav = ({
   useEffect(() => {
     if (localStorageAvailable()) {
       const storedState = window.localStorage.getItem(localStorageKey)
-      const initialState = storedState ? JSON.parse(storedState) : {}
+      let initialState: Record<string, boolean> = {}
+      if (storedState) {
+        try {
+          initialState = JSON.parse(storedState)
+        } catch (e) {
+          // The stored state is invalid, so we'll just use the default.
+          initialState = {}
+          // eslint-disable-next-line no-console
+          console.warn(
+            "Could not parse sidebar nav state from localStorage",
+            e
+          )
+        }
+      }
+
       const allSections = navSections.reduce(
         (acc, sectionName) => {
           // Default to expanded
@@ -201,11 +216,21 @@ const SidebarNav = ({
         {} as Record<string, boolean>
       )
       setExpandedSections(allSections)
+    } else {
+      // If localStorage is not available, default to all expanded.
+      const allSections = navSections.reduce(
+        (acc, sectionName) => {
+          acc[sectionName] = true
+          return acc
+        },
+        {} as Record<string, boolean>
+      )
+      setExpandedSections(allSections)
     }
   }, [navSections, localStorageKey])
 
   useEffect(() => {
-    if (localStorageAvailable() && Object.keys(expandedSections).length > 0) {
+    if (localStorageAvailable() && expandedSections) {
       window.localStorage.setItem(
         localStorageKey,
         JSON.stringify(expandedSections)
@@ -215,10 +240,15 @@ const SidebarNav = ({
 
   const toggleSection = useCallback(
     (sectionName: string) => {
-      setExpandedSections(prev => ({
-        ...prev,
-        [sectionName]: !prev[sectionName],
-      }))
+      setExpandedSections(prev => {
+        if (!prev) {
+          return null
+        }
+        return {
+          ...prev,
+          [sectionName]: !prev[sectionName],
+        }
+      })
     },
     [setExpandedSections]
   )
@@ -264,6 +294,12 @@ const SidebarNav = ({
       pageLinkBaseUrl,
     ]
   )
+
+  if (!expandedSections) {
+    // Return null while waiting for the expanded sections state to be initialized
+    // to avoid a flicker on the first render.
+    return null
+  }
 
   let contents: ReactNode[] = []
   const shouldShowViewButton =
