@@ -29,7 +29,7 @@ from blinker import Signal
 
 import streamlit.watcher.path_watcher
 from streamlit import config, runtime
-from streamlit.errors import StreamlitSecretNotFoundError
+from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -429,7 +429,7 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except Exception:  # noqa: PERF203, S110
+                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.
