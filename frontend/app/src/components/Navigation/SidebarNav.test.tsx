@@ -431,7 +431,7 @@ describe("SidebarNav", () => {
       getContextOutput({ pageLinkBaseUrl })
     )
     window.localStorage.setItem(
-      `sidebarSectionsState-${pageLinkBaseUrl}`,
+      `stSidebarSectionsState-${pageLinkBaseUrl}`,
       JSON.stringify({ "section 1": false, "section 2": true })
     )
 

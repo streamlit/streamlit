@@ -32,6 +32,8 @@ import { StreamlitEndpoints } from "@streamlit/connection"
 import { IAppPage } from "@streamlit/protobuf"
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 
+import { LOG } from "../../../../connection/src/StaticConnection"
+
 import NavSection from "./NavSection"
 import SidebarNavLink from "./SidebarNavLink"
 import {
@@ -112,6 +114,7 @@ function generateNavSections(
       if (availableSlots <= 0) {
         viewablePages = []
       } else if (sectionPages.length > availableSlots) {
+        // We can partially show the section
         viewablePages = sectionPages.slice(0, availableSlots)
       }
     }
@@ -137,9 +140,6 @@ function generateNavSections(
   return contents
 }
 
-const getLocalStorageKey = (pageLinkBaseUrl: string): string =>
-  `sidebarSectionsState-${pageLinkBaseUrl}`
-
 /** Displays a list of navigable app page links for multi-page apps. */
 const SidebarNav = ({
   endpoints,
@@ -154,7 +154,7 @@ const SidebarNav = ({
   const [expanded, setExpanded] = useState(false)
   const { pageLinkBaseUrl } = useAppContext()
 
-  const localStorageKey = getLocalStorageKey(pageLinkBaseUrl)
+  const localStorageKey = `stSidebarSectionsState-${pageLinkBaseUrl}`
   const [expandedSections, setExpandedSections] = useState<Record<
     string,
     boolean
@@ -199,11 +199,7 @@ const SidebarNav = ({
         } catch (e) {
           // The stored state is invalid, so we'll just use the default.
           initialState = {}
-          // eslint-disable-next-line no-console
-          console.warn(
-            "Could not parse sidebar nav state from localStorage",
-            e
-          )
+          LOG.warn("Could not parse sidebar nav state from localStorage", e)
         }
       }
 
@@ -238,20 +234,17 @@ const SidebarNav = ({
     }
   }, [expandedSections, localStorageKey])
 
-  const toggleSection = useCallback(
-    (sectionName: string) => {
-      setExpandedSections(prev => {
-        if (!prev) {
-          return null
-        }
-        return {
-          ...prev,
-          [sectionName]: !prev[sectionName],
-        }
-      })
-    },
-    [setExpandedSections]
-  )
+  const toggleSection = useCallback((sectionName: string) => {
+    setExpandedSections(prev => {
+      if (!prev) {
+        return null
+      }
+      return {
+        ...prev,
+        [sectionName]: !prev[sectionName],
+      }
+    })
+  }, [])
 
   const handleViewButtonClick = useCallback(() => {
     const nextState = !expanded
