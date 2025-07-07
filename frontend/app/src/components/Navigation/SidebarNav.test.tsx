@@ -480,10 +480,13 @@ describe("SidebarNav", () => {
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
 
     const section1Header = screen.getByText("Section 1").closest("header")
-    expect(section1Header).not.toBeNull()
+
+    if (!section1Header) {
+      throw new Error("Section 1 header not found")
+    }
 
     // Collapse Section 1 (10 pages)
-    await user.click(section1Header as HTMLElement)
+    await user.click(section1Header)
 
     // Now only 10 pages are "visible" in expanded sections (S2 + S3).
     // This is below the threshold of 12, so the view more button should disappear.
@@ -494,7 +497,7 @@ describe("SidebarNav", () => {
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
 
     // Expand Section 1 again
-    await user.click(section1Header as HTMLElement)
+    await user.click(section1Header)
 
     // Back to 20 visible pages, so "View more" re-appears.
     const newViewButton = screen.getByTestId("stSidebarNavViewButton")
