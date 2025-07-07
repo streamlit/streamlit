@@ -116,6 +116,6 @@
       }
     }
   },
-  "updateContentCommand": "make all-devel",
+  "updateContentCommand": "make all-dev",
   "postStartCommand": "make frontend-dev"
 }

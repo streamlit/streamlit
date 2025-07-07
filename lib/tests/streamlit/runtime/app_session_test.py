@@ -735,6 +735,7 @@ def _mock_get_options_for_section(
         "codeFont": "Monaspace Argon",
         "codeFontSize": "12px",
         "codeFontWeight": 300,
+        "headingFontWeights": [700, 700, 600, 600],
         "font": "Inter",
         "fontFaces": [
             {
@@ -1236,6 +1237,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
+                    "headingFontWeights": None,
                     "linkColor": None,
                     "linkUnderline": None,
                     "primaryColor": None,
@@ -1277,6 +1279,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
+                    "headingFontWeights": None,
                     "linkColor": None,
                     "linkUnderline": None,
                     "primaryColor": None,
@@ -1317,6 +1320,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeFont": None,
                     "codeFontSize": None,
                     "codeFontWeight": None,
+                    "headingFontWeights": None,
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
@@ -1434,6 +1438,16 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.link_underline is False
         assert new_session_msg.custom_theme.base_font_size == 14
         assert new_session_msg.custom_theme.base_font_weight == 300
+        # app_session sets the default value (600) for the missing values, so even with only
+        # 4 values set in the config, we should have 6 values
+        assert new_session_msg.custom_theme.heading_font_weights == [
+            700,
+            700,
+            600,
+            600,
+            600,
+            600,
+        ]
         assert new_session_msg.custom_theme.code_background_color == "blue"
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
@@ -1509,6 +1523,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0
         assert not new_session_msg.custom_theme.sidebar.font_faces
+        assert not new_session_msg.custom_theme.sidebar.heading_font_weights
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")

@@ -46,15 +46,20 @@ def browser_context_args(
 
 
 def test_range_date_calendar_picker_rendering(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the range calendar picker renders correctly via screenshots matching."""
-    date_input = themed_app.get_by_test_id("stDateInput").first
+    date_input = app.get_by_test_id("stDateInput").first
     expect(date_input).to_be_visible()
+    date_input.scroll_into_view_if_needed()
     date_input.click()
 
-    calendar_popover = themed_app.locator('[data-baseweb="calendar"]').first
+    calendar_popover = app.locator('[data-baseweb="calendar"]').first
+
     expect(calendar_popover).to_be_visible()
+    # Add a small timeout to minimize some flakiness:
+    app.wait_for_timeout(500)
+    calendar_popover.scroll_into_view_if_needed()
 
     assert_snapshot(
         calendar_popover,

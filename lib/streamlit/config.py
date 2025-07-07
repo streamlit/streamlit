@@ -1403,6 +1403,27 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "headingFontWeights",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Sets the font weight for h1-h6 headings. Valid values are 100-900, in increments of 100.
+
+        When unset, the font weights will be set to defaults:
+        - h1: bold 700
+        - h2-h6: semi-bold 600
+
+        For example, you can use the following to set the font weight for h1 to 700 and h2-h6 to 600:
+            headingFontWeights = [700, 600, 600, 600, 600, 600]
+
+        If you only want to set h1-h3:
+            headingFontWeights = [700, 600, 500]
+
+        If you want to set the font weight for all headings to 700, you can do the following:
+            headingFontWeights = 700
+    """,
+)
+
+_create_theme_options(
     "chartCategoricalColors",
     categories=["theme"],
     description="""

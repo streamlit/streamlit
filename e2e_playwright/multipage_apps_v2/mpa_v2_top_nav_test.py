@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox
+from e2e_playwright.shared.app_utils import click_checkbox, goto_app
 
 
 def test_desktop_top_nav(app: Page):
@@ -286,3 +286,119 @@ def test_mobile_sidebar_overlay_visual(
 
     # Take screenshot of sections in mobile sidebar
     assert_snapshot(sidebar, name="st_navigation-mobile_sidebar_sections")
+
+
+# ===== TOP PADDING VISUAL REGRESSION TESTS =====
+# These tests validate the top padding logic in frontend/app/src/components/AppView/styled-components.ts
+# which sets different top padding values based on embedded mode, toolbar visibility, and navigation presence:
+# - 2.25rem: embedded minimal (no header, no toolbar)
+# - 4.5rem: embedded with header but no toolbar
+# - 6rem: non-embedded default OR embedded with show_toolbar
+# - 8rem: non-embedded with top navigation present
+
+
+def test_top_padding_visual_regression_embedded_modes(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Visual regression test for top padding in different embedded modes.
+
+    Tests the top padding logic from styled-components.ts:
+    - 2.25rem: embedded minimal (no header, no toolbar)
+    - 4.5rem: embedded with header but no toolbar
+    - 6rem: embedded with show_toolbar
+    """
+    app.set_viewport_size({"width": 1280, "height": 800})
+    wait_for_app_run(app)
+
+    # Get the current URL for embedding tests
+    current_url = app.url
+    base_url = current_url.split("?")[0]
+
+    # Test 1: Embedded minimal mode (2.25rem) - enable hidden nav first to remove headers
+    click_checkbox(app, "Test Hidden Navigation")
+    wait_for_app_run(app)
+
+    goto_app(app, f"{base_url}?embed=true")
+    wait_for_app_run(app)
+
+    # Should have minimal UI - this triggers the 2.25rem padding case
+    main_content = app.get_by_test_id("stMain")
+    expect(main_content).to_be_visible()
+    assert_snapshot(main_content, name="st_app_top_padding-embedded_minimal_2_25rem")
+
+    # Test 2: Embedded with toolbar (6rem)
+    goto_app(app, f"{base_url}?embed=true&show_toolbar=true")
+    wait_for_app_run(app)
+
+    # Should show toolbar, triggering 6rem padding
+    assert_snapshot(main_content, name="st_app_top_padding-embedded_with_toolbar_6rem")
+
+    # Test 3: Go back to normal mode and test embedded with header (4.5rem)
+    goto_app(app, base_url)
+    wait_for_app_run(app)
+
+    # Uncheck hidden navigation to enable normal page headers
+    click_checkbox(app, "Test Hidden Navigation")  # This unchecks it
+    wait_for_app_run(app)
+
+    goto_app(app, f"{base_url}?embed=true")
+    wait_for_app_run(app)
+
+    # Should have headers but no toolbar, triggering 4.5rem padding
+    assert_snapshot(main_content, name="st_app_top_padding-embedded_with_header_4_5rem")
+
+
+def test_top_padding_visual_regression_non_embedded_modes(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Visual regression test for top padding in non-embedded modes.
+
+    Tests the top padding logic from styled-components.ts:
+    - 6rem: non-embedded default (no top nav)
+    - 8rem: non-embedded with top nav (when navigation is present)
+    """
+    app.set_viewport_size({"width": 1280, "height": 800})
+    wait_for_app_run(app)
+
+    main_content = app.get_by_test_id("stMain")
+    expect(main_content).to_be_visible()
+
+    # Test 1: Non-embedded default (6rem) - enable hidden navigation to remove top nav
+    click_checkbox(app, "Test Hidden Navigation")
+    wait_for_app_run(app)
+
+    # Should have 6rem padding when no top nav is present
+    assert_snapshot(main_content, name="st_app_top_padding-non_embedded_default_6rem")
+
+    # Test 2: Non-embedded with top nav (8rem) - disable hidden navigation
+    click_checkbox(app, "Test Hidden Navigation")  # This unchecks it
+    wait_for_app_run(app)
+
+    # Should have 8rem padding when top nav is present (if navigation works)
+    # Note: This test may capture the state regardless of whether nav links are visible
+    assert_snapshot(
+        main_content, name="st_app_top_padding-non_embedded_with_top_nav_8rem"
+    )
+
+
+def test_top_padding_mobile_responsive_behavior(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test top padding behavior on mobile viewports."""
+    # Mobile view
+    app.set_viewport_size({"width": 375, "height": 667})
+    wait_for_app_run(app)
+
+    main_content = app.get_by_test_id("stMain")
+    expect(main_content).to_be_visible()
+
+    # Mobile should have different top padding since navigation behavior changes
+    assert_snapshot(main_content, name="st_app_top_padding-mobile_responsive")
+
+    # Test embedded mobile as well
+    current_url = app.url
+    base_url = current_url.split("?")[0]
+    goto_app(app, f"{base_url}?embed=true")
+    wait_for_app_run(app)
+
+    assert_snapshot(main_content, name="st_app_top_padding-mobile_embedded")

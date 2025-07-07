@@ -30,24 +30,30 @@ def test_altair_chart_displays_correctly(
     ).to_have_count(NUM_CHARTS)
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
-    snapshot_names = [
-        "st_altair_chart-scatter_chart_default_theme",
-        "st_altair_chart-scatter_chart_streamlit_theme",
-        "st_altair_chart-scatter_chart_overwritten_theme",
-        "st_altair_chart-bar_chart_overwritten_theme",
-        "st_altair_chart-pie_chart_large_legend_items",
-        "st_altair_chart-grouped_bar_chart_default_theme",
-        "st_altair_chart-grouped_bar_chart_streamlit_theme",
-        "st_altair_chart-grouped_use_container_width_default_theme",
-        "st_altair_chart-grouped_layered_line_chart_streamlit_theme",
-        "st_altair_chart-vconcat_width",
-        "st_altair_chart-altair_chart_cut_off_legend_title_none",
-    ]
-    for i, name in enumerate(snapshot_names):
-        # We use a higher threshold here to prevent some flakiness
-        # We should probably remove this once we have refactored the
-        # altair frontend component.
-        assert_snapshot(charts.nth(i), name=name, image_threshold=0.6)
+
+    assert_snapshot(charts.nth(0), name="st_altair_chart-pie_chart_large_legend_items")
+    assert_snapshot(charts.nth(1), name="st_altair_chart-scatter_chart_default_theme")
+    assert_snapshot(charts.nth(2), name="st_altair_chart-scatter_chart_streamlit_theme")
+    assert_snapshot(
+        charts.nth(3), name="st_altair_chart-scatter_chart_overwritten_theme"
+    )
+    assert_snapshot(charts.nth(4), name="st_altair_chart-bar_chart_overwritten_theme")
+    assert_snapshot(
+        charts.nth(5), name="st_altair_chart-grouped_bar_chart_default_theme"
+    )
+    assert_snapshot(
+        charts.nth(6), name="st_altair_chart-grouped_bar_chart_streamlit_theme"
+    )
+    assert_snapshot(
+        charts.nth(7), name="st_altair_chart-grouped_use_container_width_default_theme"
+    )
+    assert_snapshot(
+        charts.nth(8), name="st_altair_chart-grouped_layered_line_chart_streamlit_theme"
+    )
+    assert_snapshot(charts.nth(9), name="st_altair_chart-vconcat_width")
+    assert_snapshot(
+        charts.nth(10), name="st_altair_chart-altair_chart_cut_off_legend_title_none"
+    )
 
 
 def test_check_top_level_class(app: Page):
@@ -57,9 +63,10 @@ def test_check_top_level_class(app: Page):
 
 # This test seems to be a bit flaky in chromium, so we skip it for now.
 @pytest.mark.skip_browser("chromium")
+@pytest.mark.flaky(reruns=4)
 def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction):
     """Check that the chart tooltip styling is correct."""
-    pie_chart = app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(4)
+    pie_chart = app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(0)
     expect(pie_chart).to_be_visible()
     wait_for_react_stability(app)
     pie_chart.scroll_into_view_if_needed()

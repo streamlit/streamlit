@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-import { useContext, useEffect, useState } from "react"
+import { useContext } from "react"
 
-import { LibContext } from "@streamlit/lib"
+import { LibContext, useWindowDimensionsContext } from "@streamlit/lib"
 
 export const useViewportSize = (): { isMobile: boolean } => {
   const { activeTheme } = useContext(LibContext)
-  const [width, setWidth] = useState(window.innerWidth)
-
-  useEffect(() => {
-    const handleResize = (): void => setWidth(window.innerWidth)
-    window.addEventListener("resize", handleResize)
-    return (): void => window.removeEventListener("resize", handleResize)
-  }, [])
+  const { innerWidth } = useWindowDimensionsContext()
 
   const breakpoint = parseInt(activeTheme.emotion.breakpoints.md, 10)
-  return { isMobile: width < breakpoint }
+  return { isMobile: innerWidth < breakpoint }
 }

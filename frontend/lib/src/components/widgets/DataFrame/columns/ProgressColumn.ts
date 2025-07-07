@@ -71,29 +71,30 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
     {
       min_value: 0,
       max_value: isInteger ? 100 : 1,
-      step: isInteger ? 1 : 0.01,
       format: isInteger ? "%3d%%" : "percent",
+      step: isInteger ? 1 : undefined,
     } as ProgressColumnParams,
     // User parameters:
     props.columnTypeOptions
   ) as ProgressColumnParams
+
+  const fixedDecimals =
+    isNullOrUndefined(parameters.step) || Number.isNaN(parameters.step)
+      ? undefined
+      : countDecimals(parameters.step)
 
   // Measure the display value of the max value, so that all progress bars are aligned correctly:
   let measureLabel: string
   try {
     measureLabel = formatNumber(
       parameters.max_value as number,
-      parameters.format
+      parameters.format,
+      fixedDecimals
     )
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     measureLabel = toSafeString(parameters.max_value)
   }
-
-  const fixedDecimals =
-    isNullOrUndefined(parameters.step) || Number.isNaN(parameters.step)
-      ? undefined
-      : countDecimals(parameters.step)
 
   const cellTemplate: RangeCellType = {
     kind: GridCellKind.Custom,
@@ -107,8 +108,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
       min: parameters.min_value!,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       max: parameters.max_value!,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      step: parameters.step!,
+      step: parameters.step ?? 0.01,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       value: parameters.min_value!,
       label: String(parameters.min_value),
@@ -142,7 +142,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
       }
 
       if (
-        isNullOrUndefined(parameters.step) ||
+        notNullOrUndefined(parameters.step) &&
         Number.isNaN(parameters.step)
       ) {
         return getErrorCell(
@@ -198,6 +198,12 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
           ...cellTemplate.data,
           value: normalizeCellValue,
           label: displayData,
+          measureLabel:
+            displayData.length > measureLabel.length
+              ? // Use displayData if it's longer than measureLabel to determine
+                // the width of the progress bar label.
+                displayData
+              : measureLabel,
         },
       } as RangeCellType
     },
