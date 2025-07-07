@@ -21,18 +21,13 @@ from typing import TYPE_CHECKING, Any, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit import url_util
-from streamlit.elements.lib.layout_utils import (
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import validate_height
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.layout_utils import (
-        HeightWithoutContent,
-        WidthWithoutContent,
-    )
+    from streamlit.elements.lib.layout_utils import HeightWithoutContent
 
 PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
 
@@ -41,7 +36,7 @@ PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
 def _is_pdf_component_available() -> bool:
     """Check if the pdf-viewer component is installed."""
     try:
-        import streamlit_pdf  # type: ignore  # noqa: F401
+        import streamlit_pdf  # type: ignore # noqa: F401
 
         return True
     except ImportError:
@@ -60,17 +55,14 @@ def _get_pdf_component() -> Any:
 
 
 class PdfMixin:
-    @gather_metrics("pdf")
-
+    @gather_metrics("pdf")  # type: ignore
     def pdf(
         self,
         data: PdfData,
         *,
         height: HeightWithoutContent = 500,
-        width: WidthWithoutContent = "stretch",
-        key: Optional[str] = None,
+        key: str | None = None,
     ) -> DeltaGenerator:
-
         """Display a PDF viewer.
 
         Parameters
@@ -83,8 +75,6 @@ class PdfMixin:
             - Raw bytes data.
         height : int or "stretch"
             Height of the PDF viewer. Can be "stretch" for full height or an integer for pixel height.
-        width : int or "stretch"
-            Desired width of the PDF viewer. Can be "stretch" for full width or an integer for pixel width.
 
         Returns
         -------
@@ -94,17 +84,16 @@ class PdfMixin:
         Example
         -------
         >>> st.pdf("https://example.com/sample.pdf")
-        >>> st.pdf("https://example.com/sample.pdf", width=500)
+        >>> st.pdf("https://example.com/sample.pdf", height=600)
         """
-        # Validate height and width parameters
+        # Validate height parameter
         validate_height(height, allow_content=False)
-        validate_width(width, allow_content=False)
 
         # Check if custom PDF component is available
         if _is_pdf_component_available():
             pdf_component = _get_pdf_component()
             if pdf_component is not None:
-                return self._call_pdf_component(pdf_component, data, height, width, key)
+                return self._call_pdf_component(pdf_component, data, height, key)
 
         # Show warning if component is not available
         return self._show_pdf_warning()
@@ -114,7 +103,6 @@ class PdfMixin:
         pdf_component: Any,
         data: PdfData,
         height: HeightWithoutContent,
-        width: WidthWithoutContent,
         key: str | None,
     ) -> DeltaGenerator:
         """Call the custom PDF component with the provided data."""
@@ -141,39 +129,28 @@ class PdfMixin:
         else:
             raise ValueError(f"Unsupported data type for PDF: {type(data)}")
 
-        # Convert height and width to appropriate format
+        # Convert height to appropriate format
         if height == "stretch":
             component_height = 500  # Default height when stretch
         else:
             component_height = height
 
-        if width == "stretch":
-            component_width = 700  # Default width when stretch
-        else:
-            component_width = width
-
         # Call the custom component with correct parameter names
         result = pdf_component(
             file=file_param,
-            width=component_width,
             height=component_height,
             key=key,
         )
         return cast("DeltaGenerator", result)
 
     def _show_pdf_warning(self) -> DeltaGenerator:
-        """Show a warning that the PDF component is not available."""
-        warning_message = """⚠️ **PDF Component Not Available**
-
-The PDF viewer requires the `streamlit_pdf` component to be installed.
-
-To install it, run:
-```bash
-pip install streamlit[pdf]
-```
-
-For more information, see the [Streamlit PDF documentation](https://docs.streamlit.io)."""
-        return self.dg.warning(warning_message)
+        """Raise an exception that the PDF component is not available."""
+        raise StreamlitAPIException(
+            "The PDF viewer requires the `streamlit-pdf` component to be installed. "
+            "Please run `pip install streamlit-pdf` to install it.\n\n\n"
+            "For more information, see the Streamlit PDF documentation at "
+            "https://docs.streamlit.io."
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
