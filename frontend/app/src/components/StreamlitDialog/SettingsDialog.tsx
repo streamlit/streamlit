@@ -193,6 +193,8 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                 disabled={false}
                 onChange={handleThemeChange}
                 value={libContext.activeTheme.name}
+                placeholder=""
+                acceptNewOptions={false}
               />
               {developerMode && (
                 <ThemeCreatorButton openThemeCreator={openThemeCreator} />

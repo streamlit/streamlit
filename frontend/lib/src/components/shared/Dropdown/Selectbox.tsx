@@ -33,7 +33,11 @@ import sortBy from "lodash/sortBy"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
-import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
+import {
+  getSelectPlaceholder,
+  isNullOrUndefined,
+  LabelVisibilityOptions,
+} from "~lib/util/utils"
 import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -53,9 +57,9 @@ export interface Props {
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
-  placeholder?: string
+  placeholder: string
   clearable?: boolean
-  acceptNewOptions?: boolean | null
+  acceptNewOptions: boolean
 }
 
 interface SelectOption {
@@ -149,7 +153,6 @@ const Selectbox: React.FC<Props> = ({
     []
   )
 
-  let selectDisabled = disabled
   const opts = propOptions
 
   let selectValue: Option[] = []
@@ -157,16 +160,16 @@ const Selectbox: React.FC<Props> = ({
     selectValue = [{ label: value, value }]
   }
 
-  let selectboxPlaceholder = placeholder
-  if (opts.length === 0) {
-    if (!acceptNewOptions) {
-      selectboxPlaceholder = "No options to select"
-      // When a user cannot add new options and there are no options to select from, we disable the selectbox
-      selectDisabled = true
-    } else {
-      selectboxPlaceholder = "Add an option"
-    }
-  }
+  // Get placeholder and disabled state using utility function
+  const { placeholder: selectboxPlaceholder, shouldDisable } =
+    getSelectPlaceholder(
+      placeholder,
+      opts,
+      acceptNewOptions,
+      false // isMultiSelect = false for single select
+    )
+
+  const selectDisabled = disabled || shouldDisable
 
   const selectOptions: SelectOption[] = opts.map(
     (option: string, index: number) => ({
@@ -196,7 +199,7 @@ const Selectbox: React.FC<Props> = ({
         )}
       </WidgetLabel>
       <UISelect
-        creatable={acceptNewOptions ?? false}
+        creatable={acceptNewOptions}
         disabled={selectDisabled}
         labelKey="label"
         aria-label={label || ""}

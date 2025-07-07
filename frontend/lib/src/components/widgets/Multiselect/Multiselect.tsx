@@ -39,7 +39,10 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import {
+  getSelectPlaceholder,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
@@ -200,17 +203,16 @@ const Multiselect: FC<Props> = props => {
   )
 
   const { options } = element
-  let disabled = props.disabled
-  let placeholder = element.placeholder
-  if (options.length === 0) {
-    if (!element.acceptNewOptions) {
-      placeholder = "No options to select"
-      // When a user cannot add new options and there are no options to select from, we disable the selectbox
-      disabled = true
-    } else {
-      placeholder = "Add options"
-    }
-  }
+
+  // Get placeholder and disabled state using utility function
+  const { placeholder, shouldDisable } = getSelectPlaceholder(
+    element.placeholder,
+    options,
+    element.acceptNewOptions ?? false,
+    true // isMultiSelect = true for multi-select
+  )
+
+  const disabled = props.disabled || shouldDisable
   const selectOptions: MultiselectOption[] = options.map(
     (option: string, index: number) => {
       return {

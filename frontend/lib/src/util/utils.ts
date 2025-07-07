@@ -402,6 +402,52 @@ export function isInForm(widget: { formId?: string }): boolean {
   return isValidFormId(widget.formId)
 }
 
+/**
+ * Determines the appropriate placeholder text for select-type widgets.
+ * Handles both single-select and multi-select cases with appropriate pluralization.
+ *
+ * @param placeholder - The custom placeholder provided by the user (empty string means use defaults)
+ * @param options - Array of available options
+ * @param acceptNewOptions - Whether the widget accepts new options
+ * @param isMultiSelect - Whether this is for a multi-select widget (affects pluralization)
+ * @returns Object containing the placeholder text and whether the widget should be disabled
+ */
+export function getSelectPlaceholder(
+  placeholder: string,
+  options: readonly string[],
+  acceptNewOptions: boolean,
+  isMultiSelect = false
+): { placeholder: string; shouldDisable: boolean } {
+  let shouldDisable = false
+
+  // If custom placeholder is provided (not empty string), use it as-is
+  if (placeholder !== "") {
+    return { placeholder, shouldDisable }
+  }
+
+  // Determine appropriate default placeholder based on widget state
+  if (options.length === 0) {
+    if (!acceptNewOptions) {
+      placeholder = "No options to select"
+      // When a user cannot add new options and there are no options to select from, we disable the widget
+      shouldDisable = true
+    } else {
+      placeholder = isMultiSelect ? "Add options" : "Add an option"
+    }
+  } else {
+    // For non-empty options, set appropriate default placeholder
+    if (acceptNewOptions) {
+      placeholder = isMultiSelect
+        ? "Choose or add options"
+        : "Choose or add an option"
+    } else {
+      placeholder = isMultiSelect ? "Choose options" : "Choose an option"
+    }
+  }
+
+  return { placeholder, shouldDisable }
+}
+
 export enum LabelVisibilityOptions {
   Visible,
   Hidden,

@@ -310,13 +310,18 @@ class MultiSelectMixin:
 
         placeholder: str or  None
             A string to display when no options are selected.
-            If this is ``None`` (default), the widget displays one of the two
-            following placeholder strings:
+            If this is ``None`` (default), the widget displays appropriate
+            default placeholder text based on the widget's configuration:
 
-            - "Choose an option" is displayed if you set
+            - "Choose options" is displayed when options are available and
               ``accept_new_options=False``.
-            - "Choose or add an option" is displayed if you set
+            - "Choose or add options" is displayed when options are available
+              and ``accept_new_options=True``.
+            - "Add options" is displayed when no options are available and
               ``accept_new_options=True``.
+            - "No options to select" is displayed when no options are available
+              and ``accept_new_options=False`` (the widget is also disabled in
+              this case).
 
         disabled: bool
             An optional boolean that disables the multiselect widget if set
@@ -401,6 +406,13 @@ class MultiSelectMixin:
            height: 350px
 
         """
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
+        if placeholder == "":
+            placeholder = " "
+
         ctx = get_script_run_ctx()
         return self._multiselect(
             label=label,
@@ -425,8 +437,8 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        default: Sequence[Any] | Any | None = None,
-        format_func: Callable[[Any], Any] = str,
+        default: Any | None = None,
+        format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -459,12 +471,12 @@ class MultiSelectMixin:
 
         default_values = get_default_indices(indexable_options, default)
 
-        if placeholder is None:
-            placeholder = (
-                "Choose an option"
-                if not accept_new_options
-                else "Choose or add an option"
-            )
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
+        if placeholder == "":
+            placeholder = " "
 
         form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(
@@ -489,7 +501,7 @@ class MultiSelectMixin:
         proto.disabled = disabled
         proto.label = label
         proto.max_selections = max_selections or 0
-        proto.placeholder = placeholder
+        proto.placeholder = placeholder or ""
         proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )

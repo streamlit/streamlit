@@ -146,7 +146,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.default[:] == expected
         assert c.options == ["Coffee", "Tea", "Water"]
-        assert c.placeholder == "Choose an option"
+        # Default placeholders are now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
 
     @parameterized.expand(
         [
@@ -216,7 +217,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.accept_new_options
-        assert c.placeholder == "Choose or add an option"
+        # Placeholder logic is now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
 
     @parameterized.expand(
         [
@@ -318,6 +320,32 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.placeholder == "Select your beverage"
+
+    def test_empty_string_placeholder(self):
+        """Test that empty string placeholder is converted to single space to allow explicit empty placeholder."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder="")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == " "
+
+    def test_none_placeholder_uses_default(self):
+        """Test that None placeholder gets converted to empty string for frontend to handle."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder=None)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == ""
+
+    def test_none_placeholder_with_accept_new_options(self):
+        """Test that None placeholder gets converted to empty string with accept_new_options."""
+        st.multiselect(
+            "the label",
+            ["Coffee", "Tea", "Water"],
+            placeholder=None,
+            accept_new_options=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == ""
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
