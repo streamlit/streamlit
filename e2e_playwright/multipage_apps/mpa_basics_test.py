@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -25,7 +24,9 @@ from e2e_playwright.shared.app_utils import (
     get_button_group,
     get_segment_button,
     goto_app,
+    wait_for_all_images_to_be_loaded,
 )
+from e2e_playwright.shared.react18_utils import take_stable_snapshot
 
 
 def test_loads_main_script_on_initial_page_load(app: Page):
@@ -269,7 +270,6 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
     )
 
 
-@pytest.mark.flaky(reruns=4)
 def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that logos display properly in sidebar and main sections."""
 
@@ -283,12 +283,21 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
         "href", "https://www.example.com"
     )
-    assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
+    wait_for_all_images_to_be_loaded(app)
+    take_stable_snapshot(
+        app,
+        app.get_by_test_id("stSidebar"),
+        assert_snapshot,
+        name="sidebar-logo",
+    )
 
     # Collapse the sidebar
     app.get_by_test_id("stSidebarContent").hover()
     collapse_button = app.get_by_test_id("stSidebarCollapseButton").locator("button")
+    expect(collapse_button).to_be_visible()
     collapse_button.click()
+
+    app.wait_for_timeout(1000)
     # Wait for sidebar to be collapsed, the expand button should now be visible in the header
     expect(app.get_by_test_id("stExpandSidebarButton")).to_be_visible()
 
@@ -300,10 +309,15 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
 
     collapsed_logo_image = logo_link_element.get_by_test_id("stHeaderLogo")
     expect(collapsed_logo_image).to_be_visible()
-    assert_snapshot(collapsed_logo_image, name="collapsed-header-logo")
+    wait_for_all_images_to_be_loaded(app)
+    take_stable_snapshot(
+        app,
+        collapsed_logo_image,
+        assert_snapshot,
+        name="collapsed-header-logo",
+    )
 
 
-@pytest.mark.flaky(reruns=4)
 def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that small logos display properly in sidebar and main sections."""
 
@@ -320,7 +334,6 @@ def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(app.get_by_test_id("stSidebar"), name="small-sidebar-logo")
 
 
-@pytest.mark.flaky(reruns=4)
 def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large logos display properly in sidebar and main sections."""
 
@@ -334,14 +347,21 @@ def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
         "href", "https://www.example.com"
     )
-    assert_snapshot(app.get_by_test_id("stSidebar"), name="large-sidebar-logo")
+    wait_for_all_images_to_be_loaded(app)
+    take_stable_snapshot(
+        app,
+        app.get_by_test_id("stSidebar"),
+        assert_snapshot,
+        name="large-sidebar-logo",
+    )
 
     # Collapse the sidebar
     app.get_by_test_id("stSidebarContent").hover()
     collapse_button = app.get_by_test_id("stSidebarCollapseButton").locator("button")
+    expect(collapse_button).to_be_visible()
     collapse_button.click()
 
-    app.wait_for_timeout(500)
+    app.wait_for_timeout(1000)
 
     # Wait for sidebar to be collapsed, the expand button should now be visible in the header
     expect(app.get_by_test_id("stExpandSidebarButton")).to_be_visible()
@@ -354,7 +374,13 @@ def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
 
     collapsed_logo_image = logo_link_element.get_by_test_id("stHeaderLogo")
     expect(collapsed_logo_image).to_be_visible()
-    assert_snapshot(collapsed_logo_image, name="large-collapsed-header-logo")
+    wait_for_all_images_to_be_loaded(app)
+    take_stable_snapshot(
+        app,
+        collapsed_logo_image,
+        assert_snapshot,
+        name="large-collapsed-header-logo",
+    )
 
 
 def test_completes_script_lifecycle(app: Page):

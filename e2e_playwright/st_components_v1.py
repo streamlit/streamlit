@@ -36,11 +36,12 @@ components.iframe(src, width=200, height=100, scrolling=True, tab_index=-1)
 # Zero tab_index
 components.iframe(src, width=200, height=100, scrolling=True, tab_index=0)
 
-# Set a query parameter to ensure that it doesn't affect the path of the custom component,
-# since that would trigger a reload if the query param changes
-st.query_params["hello"] = "world"
+if st.toggle("Show custom component"):
+    # Set a query parameter to ensure that it doesn't affect the path of the custom component,
+    # since that would trigger a reload if the query param changes
+    st.query_params["hello"] = "world"
 
-url = "http://not.a.real.url"
-test_component = components.declare_component("test_component", url=url)
+    url = "http://not.a.real.url"
+    test_component = components.declare_component("test_component", url=url)
 
-test_component(key="component_1")
+    test_component(key="component_1")

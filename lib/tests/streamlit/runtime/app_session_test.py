@@ -706,6 +706,7 @@ def _mock_get_options_for_section(
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
         "codeFontSize": "12px",
+        "codeFontWeight": 500,
         "font": "Inter",
         "headingFont": "Inter Bold",
         "linkColor": "#2EC163",
@@ -733,6 +734,8 @@ def _mock_get_options_for_section(
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
         "codeFontSize": "12px",
+        "codeFontWeight": 300,
+        "headingFontWeights": [700, 700, 600, 600],
         "font": "Inter",
         "fontFaces": [
             {
@@ -760,6 +763,16 @@ def _mock_get_options_for_section(
         "textColor": "black",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "chartCategoricalColors": [
+            "#7fc97f",
+            "#beaed4",
+            "#fdc086",
+            "#ffff99",
+            "#386cb0",
+            "#f0027f",
+            "#bf5b17",
+            "#666666",
+        ],
     }
 
     for k, v in overrides.items():
@@ -1208,9 +1221,11 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeBorderColor": None,
                     "codeFont": None,
                     "codeFontSize": None,
+                    "codeFontWeight": None,
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
+                    "headingFontWeights": None,
                     "linkColor": None,
                     "linkUnderline": None,
                     "primaryColor": None,
@@ -1221,6 +1236,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "sidebar": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "chartCategoricalColors": None,
                 }
             )
         )
@@ -1246,9 +1262,11 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeBorderColor": None,
                     "codeFont": None,
                     "codeFontSize": None,
+                    "codeFontWeight": None,
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
+                    "headingFontWeights": None,
                     "linkColor": None,
                     "linkUnderline": None,
                     "primaryColor": None,
@@ -1259,6 +1277,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "sidebar": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "chartCategoricalColors": None,
                 }
             )
         )
@@ -1286,6 +1305,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeBorderColor": None,
                     "codeFont": None,
                     "codeFontSize": None,
+                    "codeFontWeight": None,
+                    "headingFontWeights": None,
                     "font": None,
                     "fontFaces": None,
                     "headingFont": None,
@@ -1297,6 +1318,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "textColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "chartCategoricalColors": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1306,6 +1328,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "dataframeBorderColor": None,
                         "codeFont": None,
                         "codeFontSize": None,
+                        "codeFontWeight": None,
                         "font": None,
                         "headingFont": None,
                         "linkColor": None,
@@ -1335,6 +1358,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # font field uses a deprecated enum:
         assert new_session_msg.custom_theme.body_font == ""
         assert not new_session_msg.custom_theme.font_faces
+        assert not new_session_msg.custom_theme.chart_categorical_colors
 
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.HasField("base_radius")
@@ -1398,6 +1422,16 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.link_underline is False
         assert new_session_msg.custom_theme.base_font_size == 14
         assert new_session_msg.custom_theme.base_font_weight == 300
+        # app_session sets the default value (600) for the missing values, so even with only
+        # 4 values set in the config, we should have 6 values
+        assert new_session_msg.custom_theme.heading_font_weights == [
+            700,
+            700,
+            600,
+            600,
+            600,
+            600,
+        ]
         assert new_session_msg.custom_theme.code_background_color == "blue"
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
@@ -1408,6 +1442,16 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.heading_font == "Inter Bold"
         assert new_session_msg.custom_theme.body_font == "Inter"
         assert new_session_msg.custom_theme.code_font == "Monaspace Argon"
+        assert list(new_session_msg.custom_theme.chart_categorical_colors) == [
+            "#7fc97f",
+            "#beaed4",
+            "#fdc086",
+            "#ffff99",
+            "#386cb0",
+            "#f0027f",
+            "#bf5b17",
+            "#666666",
+        ]
         assert list(new_session_msg.custom_theme.font_faces) == [
             FontFace(
                 family="Inter Bold",
@@ -1451,6 +1495,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Default values for unsupported fields in sidebar
         assert new_session_msg.custom_theme.sidebar.base == 0
         assert not new_session_msg.custom_theme.sidebar.font_faces
+        assert not new_session_msg.custom_theme.sidebar.heading_font_weights
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")

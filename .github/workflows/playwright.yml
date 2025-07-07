@@ -45,8 +45,8 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Install playwright
         run: python -m playwright install --with-deps
-      - name: Run make frontend-build-with-profiler
-        run: make frontend-build-with-profiler
+      - name: Run make frontend-with-profiler
+        run: make frontend-with-profiler
       - name: Run playwright tests
         run: |
           cd e2e_playwright

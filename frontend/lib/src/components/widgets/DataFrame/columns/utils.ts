@@ -40,47 +40,51 @@ import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
  * These options can also be used to overwrite from user-defined column config.
  */
 export interface BaseColumnProps {
-  // The id of the column:
+  /** The id of the column. */
   readonly id: string
-  // The name of the column from the original data:
+  /** The name of the column from the original data. */
   readonly name: string
-  // The display title of the column:
+  /** The display title of the column. */
   readonly title: string
-  // The index number of the column:
+  /** The index number of the column. */
   readonly indexNumber: number
-  // The arrow data type of the column:
+  /** The arrow data type of the column. */
   readonly arrowType: ArrowType
-  // If `True`, the column can be edited:
+  /** If `True`, the column can be edited. */
   readonly isEditable: boolean
-  // If `True`, the column is hidden (will not be shown):
+  /** If `True`, the column is hidden (will not be shown). */
   readonly isHidden: boolean
-  // If `True`, the column is a table index:
+  /** If `True`, the column is a table index. */
   readonly isIndex: boolean
-  // If `True`, the column is pinned/frozen:
+  /** If `True`, the column is pinned/frozen. */
   readonly isPinned: boolean
-  // If `True`, the column is a stretched:
+  /** If `True`, the column is a stretched. */
   readonly isStretched: boolean
-  // If `True`, a value is required before the cell or row can be submitted:
+  /** If `True`, a value is required before the cell or row can be submitted. */
   readonly isRequired?: boolean
-  // If `True`, the content of the cell is allowed to be wrapped
-  // to fill the available height of the cell.
+  /**
+   * If `True`, the content of the cell is allowed to be wrapped to fill the
+   * available height of the cell.
+   */
   readonly isWrappingAllowed?: boolean
-  // The initial width of the column:
+  /** The initial width of the column. */
   readonly width?: number
-  // A help text that is displayed on hovering the column header.
+  /** A help text that is displayed on hovering the column header. */
   readonly help?: string
-  // Configuration options related to the column type:
+  /**
+   * Configuration options related to the column type.
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   readonly columnTypeOptions?: Record<string, any>
-  // The content alignment of the column:
+  /** The content alignment of the column. */
   readonly contentAlignment?: "left" | "center" | "right"
-  // The default value of the column used when adding a new row:
+  /** The default value of the column used when adding a new row. */
   readonly defaultValue?: string | number | boolean
-  // Theme overrides for this column:
+  /** Theme overrides for this column. */
   readonly themeOverride?: Partial<GlideTheme>
-  // A custom icon to be displayed in the column header:
+  /** A custom icon to be displayed in the column header. */
   readonly icon?: string
-  // The group that this column belongs to.
+  /** The group that this column belongs to. */
   readonly group?: string
 }
 
@@ -200,12 +204,14 @@ export function getEmptyCell(missingCell = false): LoadingCell {
       kind: GridCellKind.Loading,
       allowOverlay: false,
       isMissingValue: true,
+      copyData: "",
     } as LoadingCell
   }
 
   return {
     kind: GridCellKind.Loading,
     allowOverlay: false,
+    copyData: "",
   } as LoadingCell
 }
 
@@ -538,8 +544,8 @@ function formatIntlNumberWithLocales(
  * Formats the given number to a string based on a provided format or the default format.
  *
  * @param format - The format to use. If not provided, the default format is used.
- * @param maxPrecision - The maximum number of decimals to show. This is only used by the default format.
- *                     If not provided, the default is 4 decimals and trailing zeros are hidden.
+ * @param maxPrecision - The maximum number of decimals to show. If not provided,
+ *                     a reasonable default is used based on the configured format.
  *
  * @returns The formatted number as a string.
  */
@@ -584,49 +590,75 @@ export function formatNumber(
       trimMantissa: true,
     })
   } else if (format === "localized") {
-    return formatIntlNumberWithLocales(value)
+    return formatIntlNumberWithLocales(value, {
+      minimumFractionDigits: maxPrecision ?? undefined,
+      maximumFractionDigits: maxPrecision ?? undefined,
+    })
   } else if (format === "percent") {
     return formatIntlNumberWithLocales(value, {
       style: "percent",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: notNullOrUndefined(maxPrecision)
+        ? Math.max(maxPrecision - 2, 0)
+        : 0,
+      maximumFractionDigits: notNullOrUndefined(maxPrecision)
+        ? // Percentage already gets multiplied by 100 by the formatter,
+          // so we need to reduce the precision by 2 to get the
+          // correct format based on the raw value.
+          Math.max(maxPrecision - 2, 0)
+        : 2,
     })
   } else if (format === "dollar") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "USD",
       currencyDisplay: "narrowSymbol",
-      maximumFractionDigits: 2,
+      minimumFractionDigits: maxPrecision ?? 2,
+      maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "euro") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "EUR",
-      maximumFractionDigits: 2,
+      minimumFractionDigits: maxPrecision ?? 2,
+      maximumFractionDigits: maxPrecision ?? 2,
     })
   } else if (format === "yen") {
     return formatIntlNumberWithLocales(value, {
       style: "currency",
       currency: "JPY",
-      maximumFractionDigits: 0,
+      minimumFractionDigits: maxPrecision ?? 0,
+      maximumFractionDigits: maxPrecision ?? 0,
     })
   } else if (["compact", "scientific", "engineering"].includes(format)) {
     return formatIntlNumberWithLocales(value, {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      notation: format as any,
+      notation: format as "compact" | "scientific" | "engineering",
     })
   } else if (format === "accounting") {
     return numbro(value).format({
       thousandSeparated: true,
       negative: "parenthesis",
-      mantissa: 2,
+      mantissa: maxPrecision ?? 2,
       trimMantissa: false,
     })
+  } else if (format === "bytes") {
+    return (
+      formatIntlNumberWithLocales(value, {
+        notation: "compact",
+        style: "unit",
+        unit: "byte",
+        unitDisplay: "narrow",
+        // We don't apply maxPrecision here since
+        // bytes already gets transformed to different units.
+        maximumFractionDigits: 1,
+      })
+        // The intl number format renders gigabytes as BB
+        // which would be unexpected for users.
+        .replace("BB", "GB")
+    )
   }
 
   return sprintf(format, value)
 }
-
 /**
  * Formats the given date to a string with the given format.
  *

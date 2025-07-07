@@ -116,6 +116,11 @@ export interface Props {
    * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
+
+  /**
+   * Inherit font family, size, and weight from parent
+   */
+  inheritFont?: boolean
 }
 
 /**
@@ -722,11 +727,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = [rehypeSetCodeInlineProperty, rehypeKatex]
+    const plugins: PluggableList = [rehypeKatex]
 
     if (allowHTML) {
       plugins.push(rehypeRaw)
     }
+
+    // This plugin must run last to ensure the inline property is set correctly
+    // and not overwritten by other plugins like rehypeRaw
+    plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
   }, [allowHTML])
@@ -782,6 +791,7 @@ const StreamlitMarkdown: FC<Props> = ({
   largerLabel,
   disableLinks,
   isToast,
+  inheritFont,
 }) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
@@ -791,6 +801,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isCaption={Boolean(isCaption)}
       isInSidebarOrDialog={isInSidebar || isInDialog}
       isLabel={isLabel}
+      inheritFont={inheritFont}
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}
