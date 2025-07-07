@@ -105,7 +105,9 @@ function generateNavSections(
   )
   let currentPageCount = 0
   navSections.forEach(header => {
-    const sectionPages = pagesBySectionHeader[header] ?? []
+    // Create a shallow copy to prevent mutations below from affecting
+    // the original array.
+    const sectionPages = [...(pagesBySectionHeader[header] ?? [])]
     let viewablePages = sectionPages
     const isExpanded = expandedSections[header]
 
