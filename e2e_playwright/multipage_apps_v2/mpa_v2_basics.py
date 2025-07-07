@@ -94,7 +94,7 @@ pg = st.navigation(
         [page2, page3, page5, page9]
         if dynamic_nav
         else {
-            "Section 1": [page2, page3],
+            "Section 1 - long title that should be truncated": [page2, page3],
             "Section 2": [page4, page5],
             "Section 3": [page6],
             "Section 4": [page7, page8, page9],

@@ -113,6 +113,30 @@ const generateAppPages = (
   return pages
 }
 
+/**
+ * Generates a collection of app pages for testing purposes based on section counts.
+ */
+const createAppPagesForSections = (sectionPageCounts: {
+  [key: string]: number
+}): IAppPage[] => {
+  const pages: IAppPage[] = []
+  let pageIndex = 0
+  Object.entries(sectionPageCounts).forEach(([sectionHeader, count]) => {
+    for (let i = 0; i < count; i++) {
+      const pageName = `${sectionHeader} page ${i + 1}`
+      pages.push({
+        pageScriptHash: `hash_${pageName.replace(/ /g, "_")}`,
+        pageName: pageName,
+        urlPathname: pageName.replace(/ /g, "_"),
+        sectionHeader: sectionHeader,
+        isDefault: pageIndex === 0,
+      })
+      pageIndex++
+    }
+  })
+  return pages
+}
+
 const getProps = (props: Partial<Props> = {}): Props => ({
   appPages: generateAppPages(2),
   collapseSidebar: vi.fn(),
@@ -374,24 +398,117 @@ describe("SidebarNav", () => {
     )
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
+    // 10 links are visible, 7 from section 1 and 3 from section 2
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
     expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
+
+    // Collapse the first section
+    const section1Header = screen.getAllByTestId("stNavSectionHeader")[0]
+    await user.click(section1Header)
+
+    // Now all 7 links from section 2 should be visible
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(7)
+
+    // Expand the first section again
+    await user.click(section1Header)
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
 
     // Expand the pages menu
     await user.click(screen.getByTestId("stSidebarNavViewButton"))
 
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(14)
     expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
+
     // Collapse the pages menu
     await user.click(screen.getByTestId("stSidebarNavViewButton"))
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
     expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
   })
 
+  it("restores section expansion state from localStorage", () => {
+    const pageLinkBaseUrl = "test_app"
+    vi.spyOn(StreamlitContextProviderModule, "useAppContext").mockReturnValue(
+      getContextOutput({ pageLinkBaseUrl })
+    )
+    window.localStorage.setItem(
+      `stSidebarSectionsState-${pageLinkBaseUrl}`,
+      JSON.stringify({ "section 1": false, "section 2": true })
+    )
+
+    render(
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          navSections: ["section 1", "section 2"],
+          appPages: generateAppPages(14, {
+            sectionHeaders: ["section 1", "section 2"],
+          }),
+        })}
+      />
+    )
+
+    // Section 1 should be collapsed, so only pages from section 2 are visible
+    // There are 7 pages in section 2
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(7)
+  })
+
+  it("handles view more/less button visibility based on expanded sections", async () => {
+    const user = userEvent.setup()
+
+    const sectionPageCounts = {
+      "Section 1": 10,
+      "Section 2": 5,
+      "Section 3": 5,
+    }
+    const appPages = createAppPagesForSections(sectionPageCounts)
+    const navSections = Object.keys(sectionPageCounts)
+
+    render(
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          navSections,
+          appPages,
+        })}
+      />
+    )
+
+    // Initially, all sections are expanded, 20 pages total.
+    // The view should be collapsed with a "View more" button.
+    const viewButton = screen.getByTestId("stSidebarNavViewButton")
+    expect(viewButton).toHaveTextContent("View 10 more") // 20 total - 10 shown
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
+
+    const section1Header = screen.getByText("Section 1").closest("header")
+
+    if (!section1Header) {
+      throw new Error("Section 1 header not found")
+    }
+
+    // Collapse Section 1 (10 pages)
+    await user.click(section1Header)
+
+    // Now only 10 pages are "visible" in expanded sections (S2 + S3).
+    // This is below the threshold of 12, so the view more button should disappear.
+    expect(
+      screen.queryByTestId("stSidebarNavViewButton")
+    ).not.toBeInTheDocument()
+    // And all 10 pages from S2 and S3 should be visible.
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
+
+    // Expand Section 1 again
+    await user.click(section1Header)
+
+    // Back to 20 visible pages, so "View more" re-appears.
+    const newViewButton = screen.getByTestId("stSidebarNavViewButton")
+    expect(newViewButton).toHaveTextContent("View 10 more")
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
+  })
+
   it("will not display a section if no pages in it are visible", async () => {
     const user = userEvent.setup()
-    // First section has 6 pages, second section has 4 pages, third section has 4 pages
-    // Since 6+4 = 10, only the first two sections should be visible
+    // First section has 5 pages, second section has 5 pages, third section has 4 pages
+    // Since 5+5 = 10, only the first two sections should be visible
     render(
       <SidebarNav
         {...getProps({

@@ -20,10 +20,12 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
 import groupBy from "lodash/groupBy"
+import { getLogger } from "loglevel"
 
 import { isMobile } from "@streamlit/lib"
 import { localStorageAvailable } from "@streamlit/utils"
@@ -56,6 +58,8 @@ export interface Props {
 const COLLAPSE_THRESHOLD = 12
 // However, we show the first 10 pages when the sidebar is collapsed.
 const NUM_PAGES_TO_SHOW_WHEN_COLLAPSED = 10
+
+const LOG = getLogger("SidebarNav")
 
 interface NavLinkProps {
   pageUrl: string
@@ -90,7 +94,9 @@ function generateNavSections(
   navSections: string[],
   appPages: IAppPage[],
   needsCollapse: boolean,
-  generateNavLink: (page: IAppPage, index: number) => ReactElement
+  generateNavLink: (page: IAppPage, index: number) => ReactElement,
+  expandedSections: Record<string, boolean>,
+  toggleSection: (section: string) => void
 ): ReactNode[] {
   const contents: ReactNode[] = []
   const pagesBySectionHeader = groupBy(
@@ -99,31 +105,39 @@ function generateNavSections(
   )
   let currentPageCount = 0
   navSections.forEach(header => {
-    const sectionPages = pagesBySectionHeader[header] ?? []
+    // Create a shallow copy to prevent mutations below from affecting
+    // the original array.
+    const sectionPages = [...(pagesBySectionHeader[header] ?? [])]
     let viewablePages = sectionPages
+    const isExpanded = expandedSections[header]
 
     if (needsCollapse) {
-      if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
-        // We cannot even show the section
-        return
-      } else if (
-        currentPageCount + sectionPages.length >
-        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
-      ) {
+      const availableSlots =
+        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
+      if (availableSlots <= 0) {
+        viewablePages = []
+      } else if (sectionPages.length > availableSlots) {
         // We can partially show the section
-        viewablePages = sectionPages.slice(
-          0,
-          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
-        )
+        viewablePages = sectionPages.slice(0, availableSlots)
       }
     }
-    currentPageCount += viewablePages.length
 
-    contents.push(
-      <NavSection key={header} header={header}>
-        {viewablePages.map(generateNavLink)}
-      </NavSection>
-    )
+    if (isExpanded) {
+      currentPageCount += viewablePages.length
+    }
+
+    if (viewablePages.length > 0) {
+      contents.push(
+        <NavSection
+          key={header}
+          header={header}
+          isExpanded={isExpanded}
+          onToggle={() => toggleSection(header)}
+        >
+          {viewablePages.map(generateNavLink)}
+        </NavSection>
+      )
+    }
   })
 
   return contents
@@ -143,6 +157,31 @@ const SidebarNav = ({
   const [expanded, setExpanded] = useState(false)
   const { pageLinkBaseUrl } = useAppContext()
 
+  const localStorageKey = `stSidebarSectionsState-${pageLinkBaseUrl}`
+  const [expandedSections, setExpandedSections] = useState<Record<
+    string,
+    boolean
+  > | null>(null)
+
+  const pagesBySectionHeader = useMemo(
+    () => groupBy(appPages, page => page.sectionHeader || ""),
+    [appPages]
+  )
+
+  const numVisiblePages = useMemo(() => {
+    if (navSections.length === 0) {
+      return appPages.length
+    }
+
+    // Only count pages in expanded sections
+    return navSections.reduce((count, sectionName) => {
+      if (expandedSections && expandedSections[sectionName]) {
+        return count + (pagesBySectionHeader[sectionName]?.length || 0)
+      }
+      return count
+    }, 0)
+  }, [appPages.length, navSections, expandedSections, pagesBySectionHeader])
+
   useEffect(() => {
     const cachedSidebarNavExpanded =
       localStorageAvailable() &&
@@ -152,6 +191,65 @@ const SidebarNav = ({
       setExpanded(true)
     }
   }, [expanded, expandSidebarNav])
+
+  // Loading the state of sections (expanded/collapsed) from localStorage:
+  useEffect(() => {
+    if (localStorageAvailable()) {
+      const storedState = window.localStorage.getItem(localStorageKey)
+      let initialState: Record<string, boolean> = {}
+      if (storedState) {
+        try {
+          initialState = JSON.parse(storedState)
+        } catch (e) {
+          // The stored state is invalid, so we'll just use the default.
+          initialState = {}
+          LOG.warn("Could not parse sidebar nav state from localStorage", e)
+        }
+      }
+
+      const allSections = navSections.reduce(
+        (acc, sectionName) => {
+          // Default to expanded
+          acc[sectionName] = initialState[sectionName] ?? true
+          return acc
+        },
+        {} as Record<string, boolean>
+      )
+      setExpandedSections(allSections)
+    } else {
+      // If localStorage is not available, default to all expanded.
+      const allSections = navSections.reduce(
+        (acc, sectionName) => {
+          acc[sectionName] = true
+          return acc
+        },
+        {} as Record<string, boolean>
+      )
+      setExpandedSections(allSections)
+    }
+  }, [navSections, localStorageKey])
+
+  // Store the current expanded sections state in localStorage:
+  useEffect(() => {
+    if (localStorageAvailable() && expandedSections) {
+      window.localStorage.setItem(
+        localStorageKey,
+        JSON.stringify(expandedSections)
+      )
+    }
+  }, [expandedSections, localStorageKey])
+
+  const toggleSection = useCallback((sectionName: string) => {
+    setExpandedSections(prev => {
+      if (!prev) {
+        return null
+      }
+      return {
+        ...prev,
+        [sectionName]: !prev[sectionName],
+      }
+    })
+  }, [])
 
   const handleViewButtonClick = useCallback(() => {
     const nextState = !expanded
@@ -195,10 +293,17 @@ const SidebarNav = ({
     ]
   )
 
+  if (!expandedSections) {
+    // Return null while waiting for the expanded sections state to be initialized
+    // to avoid a flicker on the first render.
+    return null
+  }
+
   let contents: ReactNode[] = []
-  const totalPages = appPages.length
   const shouldShowViewButton =
-    hasSidebarElements && totalPages > COLLAPSE_THRESHOLD && !expandSidebarNav
+    hasSidebarElements &&
+    numVisiblePages > COLLAPSE_THRESHOLD &&
+    !expandSidebarNav
   const needsCollapse = shouldShowViewButton && !expanded
   if (navSections.length > 0) {
     // For MPAv2 with headers: renders a NavSection for each header with its respective pages
@@ -206,7 +311,9 @@ const SidebarNav = ({
       navSections,
       appPages,
       needsCollapse,
-      generateNavLink
+      generateNavLink,
+      expandedSections,
+      toggleSection
     )
   } else {
     const viewablePages = needsCollapse
@@ -228,7 +335,9 @@ const SidebarNav = ({
         >
           {expanded
             ? "View less"
-            : `View ${totalPages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED} more`}
+            : `View ${
+                numVisiblePages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+              } more`}
         </StyledViewButton>
       )}
       {hasSidebarElements && (
