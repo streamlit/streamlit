@@ -38,7 +38,10 @@ const getProps = (
 
 describe("StatusWidget element", () => {
   it("renders a StatusWidget", () => {
-    render(<StatusWidget {...getProps()} />)
+    // StatusWidget only renders when there's something to show
+    // For CONNECTED state with NOT_RUNNING script, it doesn't render
+    // So we test with a showScriptChangedActions=true to make it render
+    render(<StatusWidget {...getProps({ showScriptChangedActions: true })} />)
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
   })
@@ -70,9 +73,13 @@ describe("StatusWidget element", () => {
   })
 
   it("does not render its tooltip when connected", () => {
+    // When connected with script changes, it should render without tooltip
     render(
       <StatusWidget
-        {...getProps({ connectionState: ConnectionState.CONNECTED })}
+        {...getProps({
+          connectionState: ConnectionState.CONNECTED,
+          showScriptChangedActions: true,
+        })}
       />
     )
 
@@ -85,7 +92,11 @@ describe("StatusWidget element", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.useFakeTimers()
     const stopScript = vi.fn()
-    render(<StatusWidget {...getProps({ stopScript })} />)
+    render(
+      <StatusWidget
+        {...getProps({ stopScript, scriptRunState: ScriptRunState.RUNNING })}
+      />
+    )
 
     // Advance timers to ensure the running animation is shown
     vi.runAllTimers()
@@ -113,11 +124,14 @@ describe("StatusWidget element", () => {
       />
     )
 
-    const buttons = await waitFor(() => {
-      const foundButtons = screen.getAllByRole("button")
-      expect(foundButtons).toHaveLength(2)
-      return foundButtons
-    })
+    const buttons = await waitFor(
+      () => {
+        const foundButtons = screen.getAllByRole("button")
+        expect(foundButtons).toHaveLength(2)
+        return foundButtons
+      },
+      { timeout: 1000 }
+    )
 
     expect(buttons[0]).toHaveTextContent("Rerun")
     expect(buttons[1]).toHaveTextContent("Always rerun")
@@ -142,11 +156,14 @@ describe("StatusWidget element", () => {
       />
     )
 
-    const buttons = await waitFor(() => {
-      const foundButtons = screen.getAllByRole("button")
-      expect(foundButtons).toHaveLength(2)
-      return foundButtons
-    })
+    const buttons = await waitFor(
+      () => {
+        const foundButtons = screen.getAllByRole("button")
+        expect(foundButtons).toHaveLength(2)
+        return foundButtons
+      },
+      { timeout: 1000 }
+    )
 
     expect(buttons[0]).toHaveTextContent("Rerun")
     expect(buttons[1]).toHaveTextContent("Always rerun")
@@ -171,11 +188,14 @@ describe("StatusWidget element", () => {
       />
     )
 
-    const buttons = await waitFor(() => {
-      const foundButtons = screen.getAllByRole("button")
-      expect(foundButtons).toHaveLength(1)
-      return foundButtons
-    })
+    const buttons = await waitFor(
+      () => {
+        const foundButtons = screen.getAllByRole("button")
+        expect(foundButtons).toHaveLength(1)
+        return foundButtons
+      },
+      { timeout: 1000 }
+    )
 
     expect(buttons[0]).toHaveTextContent("Rerun")
   })
@@ -195,7 +215,9 @@ describe("StatusWidget element", () => {
     )
 
     // Verify the Always rerun button is visible
-    expect(await screen.findByText("Always rerun")).toBeVisible()
+    expect(
+      await screen.findByText("Always rerun", {}, { timeout: 1000 })
+    ).toBeVisible()
 
     // Click "Always rerun" button
     const alwaysRerunButton = screen.getByText("Always rerun")
