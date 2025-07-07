@@ -9,7 +9,7 @@ A TypeScript-based ESLint plugin package for Streamlit-specific linting rules.
 When making changes to this plugin during development:
 
 1. Make your changes to the plugin code
-1. Build the plugin: `yarn build` (or use `yarn dev`, to automatically build the plugin when you save a file)
+1. Build the plugin: `yarn build` (or use `yarn buildWatch`, to automatically build the plugin when you save a file)
 1. Restart the ESLint server in any packages that use this plugin to pick up the changes
    - In VS Code: Use the command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run "ESLint: Restart ESLint Server"
    - Or restart your IDE/editor
