@@ -189,6 +189,7 @@ const SidebarNav = ({
     }
   }, [expanded, expandSidebarNav])
 
+  // Loading the state of sections (expanded/collapsed) from localStorage:
   useEffect(() => {
     if (localStorageAvailable()) {
       const storedState = window.localStorage.getItem(localStorageKey)
@@ -225,6 +226,7 @@ const SidebarNav = ({
     }
   }, [navSections, localStorageKey])
 
+  // Store the current expanded sections state in localStorage:
   useEffect(() => {
     if (localStorageAvailable() && expandedSections) {
       window.localStorage.setItem(
