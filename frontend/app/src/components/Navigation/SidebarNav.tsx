@@ -25,14 +25,13 @@ import React, {
 } from "react"
 
 import groupBy from "lodash/groupBy"
+import { getLogger } from "loglevel"
 
 import { isMobile } from "@streamlit/lib"
 import { localStorageAvailable } from "@streamlit/utils"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import { IAppPage } from "@streamlit/protobuf"
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
-
-import { LOG } from "../../../../connection/src/StaticConnection"
 
 import NavSection from "./NavSection"
 import SidebarNavLink from "./SidebarNavLink"
@@ -59,6 +58,8 @@ export interface Props {
 const COLLAPSE_THRESHOLD = 12
 // However, we show the first 10 pages when the sidebar is collapsed.
 const NUM_PAGES_TO_SHOW_WHEN_COLLAPSED = 10
+
+const LOG = getLogger("SidebarNav")
 
 interface NavLinkProps {
   pageUrl: string
