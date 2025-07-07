@@ -206,6 +206,7 @@ interface State {
   appConfig: AppConfig
   autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
+  scriptChangedOnDisk: boolean
 }
 
 const INITIAL_SCRIPT_RUN_ID = "<null>"
@@ -330,6 +331,7 @@ export class App extends PureComponent<Props, State> {
       autoReruns: [],
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
+      scriptChangedOnDisk: false,
     }
 
     this.connectionManager = null
@@ -1053,6 +1055,10 @@ export class App extends PureComponent<Props, State> {
         },
         dialog,
         scriptRunState,
+        // Reset scriptChangedOnDisk when script starts running
+        scriptChangedOnDisk: statusChangeProto.scriptIsRunning
+          ? false
+          : prevState.scriptChangedOnDisk,
       }
     })
   }
@@ -1074,6 +1080,8 @@ export class App extends PureComponent<Props, State> {
         newDialog,
         sessionEvent.scriptCompilationException?.message ?? "No message"
       )
+    } else if (sessionEvent.type === "scriptChangedOnDisk") {
+      this.setState({ scriptChangedOnDisk: true })
     }
   }
 
@@ -2091,6 +2099,7 @@ export class App extends PureComponent<Props, State> {
       appPages,
       navSections,
       navigationPosition,
+      scriptChangedOnDisk,
     } = this.state
 
     // Always use sidebar navigation on mobile, regardless of the server setting
@@ -2201,11 +2210,11 @@ export class App extends PureComponent<Props, State> {
                   {!hideTopBar && (
                     <StatusWidget
                       connectionState={connectionState}
-                      sessionEventDispatcher={this.sessionEventDispatcher}
                       scriptRunState={scriptRunState}
                       rerunScript={this.rerunScript}
                       stopScript={this.stopScript}
                       allowRunOnSave={allowRunOnSave}
+                      showScriptChangedActions={scriptChangedOnDisk}
                     />
                   )}
                   {!hideTopBar && (
@@ -2217,7 +2226,7 @@ export class App extends PureComponent<Props, State> {
                       metricsMgr={this.metricsMgr}
                     />
                   )}
-                  {this.showDeployButton() && (
+                  {this.showDeployButton() && !scriptChangedOnDisk && (
                     <DeployButton onClick={this.deployButtonClicked} />
                   )}
                   {!hideTopBar && (
