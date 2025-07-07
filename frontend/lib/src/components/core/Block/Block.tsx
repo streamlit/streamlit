@@ -186,9 +186,9 @@ export const FlexBoxContainer = (
       props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
       streamlit.GapSize.SMALL,
     direction: direction,
-    // This is also backwards capatible since previously wrap was not added
+    // This is also backwards compatible since previously wrap was not added
     // to the flex container.
-    wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
     height,
     flex,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),

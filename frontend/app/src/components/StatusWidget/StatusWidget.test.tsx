@@ -16,13 +16,11 @@
 
 import React from "react"
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { render, ScriptRunState } from "@streamlit/lib"
-import { SessionEvent } from "@streamlit/protobuf"
 import { ConnectionState } from "@streamlit/connection"
-import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
@@ -30,17 +28,20 @@ const getProps = (
   propOverrides: Partial<StatusWidgetProps> = {}
 ): StatusWidgetProps => ({
   connectionState: ConnectionState.CONNECTED,
-  sessionEventDispatcher: new SessionEventDispatcher(),
-  scriptRunState: ScriptRunState.RUNNING,
+  scriptRunState: ScriptRunState.NOT_RUNNING,
   rerunScript: vi.fn(),
-  stopScript: () => {},
+  stopScript: vi.fn(),
   allowRunOnSave: true,
+  showScriptChangedActions: false,
   ...propOverrides,
 })
 
 describe("StatusWidget element", () => {
   it("renders a StatusWidget", () => {
-    render(<StatusWidget {...getProps()} />)
+    // StatusWidget only renders when there's something to show
+    // For CONNECTED state with NOT_RUNNING script, it doesn't render
+    // So we test with a showScriptChangedActions=true to make it render
+    render(<StatusWidget {...getProps({ showScriptChangedActions: true })} />)
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
   })
@@ -72,9 +73,13 @@ describe("StatusWidget element", () => {
   })
 
   it("does not render its tooltip when connected", () => {
+    // When connected with script changes, it should render without tooltip
     render(
       <StatusWidget
-        {...getProps({ connectionState: ConnectionState.CONNECTED })}
+        {...getProps({
+          connectionState: ConnectionState.CONNECTED,
+          showScriptChangedActions: true,
+        })}
       />
     )
 
@@ -83,31 +88,15 @@ describe("StatusWidget element", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("sets and unsets the sessionEventConnection", () => {
-    const sessionEventDispatcher = new SessionEventDispatcher()
-    const connectSpy = vi.fn()
-    const disconnectSpy = vi.fn()
-    sessionEventDispatcher.onSessionEvent.connect =
-      connectSpy.mockImplementation(() => ({
-        disconnect: disconnectSpy,
-      }))
-
-    const { unmount } = render(
-      <StatusWidget {...getProps({ sessionEventDispatcher })} />
-    )
-
-    expect(connectSpy).toHaveBeenCalled()
-
-    unmount()
-
-    expect(disconnectSpy).toHaveBeenCalled()
-  })
-
   it("calls stopScript when clicked", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.useFakeTimers()
     const stopScript = vi.fn()
-    render(<StatusWidget {...getProps({ stopScript })} />)
+    render(
+      <StatusWidget
+        {...getProps({ stopScript, scriptRunState: ScriptRunState.RUNNING })}
+      />
+    )
 
     // Advance timers to ensure the running animation is shown
     vi.runAllTimers()
@@ -123,32 +112,26 @@ describe("StatusWidget element", () => {
 
   it("shows the rerun button when script changes", async () => {
     const user = userEvent.setup()
-    const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
         })}
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
+    const buttons = await waitFor(
+      () => {
+        const foundButtons = screen.getAllByRole("button")
+        expect(foundButtons).toHaveLength(2)
+        return foundButtons
+      },
+      { timeout: 1000 }
     )
-
-    const buttons = await waitFor(() => {
-      const foundButtons = screen.getAllByRole("button")
-      expect(foundButtons).toHaveLength(2)
-      return foundButtons
-    })
 
     expect(buttons[0]).toHaveTextContent("Rerun")
     expect(buttons[1]).toHaveTextContent("Always rerun")
@@ -161,32 +144,26 @@ describe("StatusWidget element", () => {
 
   it("shows the always rerun button when script changes", async () => {
     const user = userEvent.setup()
-    const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
         })}
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
+    const buttons = await waitFor(
+      () => {
+        const foundButtons = screen.getAllByRole("button")
+        expect(foundButtons).toHaveLength(2)
+        return foundButtons
+      },
+      { timeout: 1000 }
     )
-
-    const buttons = await waitFor(() => {
-      const foundButtons = screen.getAllByRole("button")
-      expect(foundButtons).toHaveLength(2)
-      return foundButtons
-    })
 
     expect(buttons[0]).toHaveTextContent("Rerun")
     expect(buttons[1]).toHaveTextContent("Always rerun")
@@ -198,67 +175,53 @@ describe("StatusWidget element", () => {
   })
 
   it("does not show the always rerun button when script changes", async () => {
-    const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
           allowRunOnSave: false,
+          showScriptChangedActions: true,
         })}
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
+    const buttons = await waitFor(
+      () => {
+        const foundButtons = screen.getAllByRole("button")
+        expect(foundButtons).toHaveLength(1)
+        return foundButtons
+      },
+      { timeout: 1000 }
     )
-
-    const buttons = await waitFor(() => {
-      const foundButtons = screen.getAllByRole("button")
-      expect(foundButtons).toHaveLength(1)
-      return foundButtons
-    })
 
     expect(buttons[0]).toHaveTextContent("Rerun")
   })
 
   it("calls always run on save", async () => {
-    const sessionEventDispatcher = new SessionEventDispatcher()
+    const user = userEvent.setup()
     const rerunScript = vi.fn()
 
     render(
       <StatusWidget
         {...getProps({
           rerunScript,
-          sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
         })}
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
-    )
-    // Verify the Always rerun is visible
-    expect(await screen.findByText("Always rerun")).toBeVisible()
+    // Verify the Always rerun button is visible
+    expect(
+      await screen.findByText("Always rerun", {}, { timeout: 1000 })
+    ).toBeVisible()
 
-    // Use fireEvent for document-level keyboard events since react-hot-keys listens at document level
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(document.body, {
-      key: "a",
-      which: 65,
-    })
+    // Click "Always rerun" button
+    const alwaysRerunButton = screen.getByText("Always rerun")
+    await user.click(alwaysRerunButton)
 
     expect(rerunScript).toHaveBeenCalledWith(true)
   })

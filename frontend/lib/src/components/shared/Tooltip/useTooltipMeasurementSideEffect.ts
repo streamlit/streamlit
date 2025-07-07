@@ -16,6 +16,8 @@
 
 import { useEffect } from "react"
 
+import { useWindowDimensionsContext } from "@streamlit/lib"
+
 /**
  * A hook that handles tooltip positioning and measurement with retry logic to
  * ensure proper positioning even when initial measurements are invalid.
@@ -37,6 +39,8 @@ export function useTooltipMeasurementSideEffect(
   tooltipElement: HTMLDivElement | null,
   isOpen: boolean
 ): void {
+  const { innerWidth } = useWindowDimensionsContext()
+
   useEffect(() => {
     const parentElement = tooltipElement?.parentElement
     if (!parentElement) {
@@ -75,8 +79,7 @@ export function useTooltipMeasurementSideEffect(
 
       const xCoordinate = boundingClientRect.x
 
-      const overflowRight =
-        xCoordinate + boundingClientRect.width - window.innerWidth
+      const overflowRight = xCoordinate + boundingClientRect.width - innerWidth
 
       // this is the out-of-tree Basweb DOM structure. For the right overflow,
       // this is the element that has the transform-style property set that needs
@@ -100,5 +103,5 @@ export function useTooltipMeasurementSideEffect(
     }
 
     void handleMeasurement()
-  }, [tooltipElement, isOpen])
+  }, [tooltipElement, isOpen, innerWidth])
 }

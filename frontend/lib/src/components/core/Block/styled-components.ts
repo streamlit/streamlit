@@ -154,14 +154,17 @@ export interface StyledFlexContainerBlockProps {
   direction: React.CSSProperties["flexDirection"]
   gap?: streamlit.GapSize | undefined
   flex?: React.CSSProperties["flex"]
-  wrap?: boolean
+  // This marks the prop as a transient property so it is
+  // not passed to the DOM. It overlaps with a valid attribute
+  // so passing it to the DOM will cause an error in the console.
+  $wrap?: boolean
   height?: React.CSSProperties["height"]
   border: boolean
 }
 
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
-    ({ theme, direction, gap, flex, wrap, height, border }) => {
+    ({ theme, direction, gap, flex, $wrap, height, border }) => {
       let gapWidth
       if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
@@ -176,7 +179,7 @@ export const StyledFlexContainerBlock =
         overflow: isInteger(height) ? "auto" : "visible",
         flexDirection: direction,
         flex,
-        flexWrap: wrap ? "wrap" : "nowrap",
+        flexWrap: $wrap ? "wrap" : "nowrap",
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,
