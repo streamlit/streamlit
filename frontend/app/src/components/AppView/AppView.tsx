@@ -223,8 +223,6 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme.emotion.breakpoints.md,
   ])
 
-  // Handle updates to initialSidebarState after set_page_config
-
   const toggleSidebar = useCallback(() => {
     setSidebarIsCollapsed(prev => !prev)
   }, [])
