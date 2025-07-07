@@ -44,6 +44,12 @@ export const StyledElementContainerLayoutWrapper: FC<
       // flex with height to be set on the element container.
       // TODO(lawilby): The PR expanding the height of text_area elements will
       // make st.text_area consistent with the other elements and we can remove this.
+      if (node.element.heightConfig?.useStretch) {
+        return {
+          height: "auto",
+          flex: "1 1 auto",
+        }
+      }
       return {
         height: "auto",
         flex: "",
@@ -61,7 +67,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     }
 
     return {}
-  }, [node.element.type])
+  }, [node.element.type, node.element.heightConfig?.useStretch])
 
   const styles = useLayoutStyles({
     element: node.element,

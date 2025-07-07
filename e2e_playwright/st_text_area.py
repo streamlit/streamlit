@@ -14,7 +14,6 @@
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.errors import StreamlitAPIException
 
 v1 = st.text_area("text area 1 (default)")
 st.write("value 1:", v1)
@@ -70,32 +69,60 @@ st.write("value 11:", v11)
 v12 = st.text_area("text area 12 (height=75)", "default text", height=75)
 st.write("value 12:", v12)
 
-# Error case: height < 68px
-try:
-    st.text_area("text area 13 (height=65)", "default text", height=65)
-except StreamlitAPIException as ex:
-    st.exception(ex)
+# Expect this to default to the minimum height of 68px
+v13 = st.text_area("text area 13 (height=60)", "default text", height=60)
+st.write("value 13:", v13)
 
-if "text_area_13" not in st.session_state:
-    st.session_state["text_area_13"] = "xyz"
+if "text_area_14" not in st.session_state:
+    st.session_state["text_area_14"] = "xyz"
 
-v13 = st.text_area(
-    "text area 13 (value from state)",
+v14 = st.text_area(
+    "text area 14 (value from state)",
     value=None,
-    key="text_area_13",
+    key="text_area_14",
 )
-st.write("text area 13 (value from state) - value: ", v13)
+st.write("text area 14 (value from state) - value: ", v14)
 
 with st.form("form"):
-    st.text_area("text area 14 (value from form)", key="text_area_14")
+    st.text_area("text area 15 (value from form)", key="text_area_15")
     st.form_submit_button("submit")
 
-form_value = st.session_state.get("text_area_14", None)
-st.write("text area 14 (value from form) - value: ", form_value)
+form_value = st.session_state.get("text_area_15", None)
+st.write("text area 15 (value from form) - value: ", form_value)
 
 st.text_area(
-    "text area 15 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
+    "text area 16 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
 )
 
-st.text_area("text area 16 (width=200px)", "width test", width=200)
-st.text_area("text area 17 (width='stretch')", "width test", width="stretch")
+st.text_area("text area 17 (width=200px)", "width test", width=200)
+st.text_area("text area 18 (width='stretch')", "width test", width="stretch")
+
+with st.form("form2", height=500):
+    st.text_area(
+        "text area 19 (height='content') - Height adjusts to content.",
+        """Line 1\nLine 2\nLine 3""",
+        height="content",
+    )
+    st.form_submit_button("submit")
+
+with st.form("form3", height=500):
+    st.text_area(
+        "text area 20 (height='stretch)",
+        "Height stretches to fill space in fixed height form.",
+        height="stretch",
+    )
+    st.form_submit_button("submit")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.text_area(
+        "text area 21 (height='500')",
+        """Fixed height of 500px""",
+        height=500,
+    )
+with col2:
+    st.text_area(
+        "text area 22 (height='stretch')",
+        """Height matches partner column""",
+        height="stretch",
+    )
