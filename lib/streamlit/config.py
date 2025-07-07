@@ -1443,10 +1443,10 @@ _create_theme_options(
     "chartSequentialColors",
     categories=["theme"],
     description="""
-        An array of colors to use for sequential charts.
+        An array of 10 colors to use for sequential charts.
 
-        If no chart sequential colors are set, Streamlit uses a default set of
-        colors.
+        If no chart sequential colors are set (or less than 10 colors provided),
+        Streamlit uses a default set of colors.
         For light themes the default colors are:
         [
             "#e4f5ff", #blue10
