@@ -2214,7 +2214,7 @@ export class App extends PureComponent<Props, State> {
                       rerunScript={this.rerunScript}
                       stopScript={this.stopScript}
                       allowRunOnSave={allowRunOnSave}
-                      scriptChangedOnDisk={scriptChangedOnDisk}
+                      showScriptChangedActions={scriptChangedOnDisk}
                     />
                   )}
                   {!hideTopBar && (

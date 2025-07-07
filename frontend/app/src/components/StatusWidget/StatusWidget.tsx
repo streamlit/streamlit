@@ -74,8 +74,8 @@ export interface StatusWidgetProps {
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
 
-  /** Whether the script has changed on disk */
-  scriptChangedOnDisk: boolean
+  /** Whether to show script changed actions (rerun/always rerun buttons) */
+  showScriptChangedActions: boolean
 }
 
 // Delay time for displaying running man animation.
@@ -112,7 +112,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   rerunScript,
   stopScript,
   allowRunOnSave,
-  scriptChangedOnDisk,
+  showScriptChangedActions,
 }) => {
   const [showRunningMan, setShowRunningMan] = useState(false)
   const minimizePromptTimer: React.MutableRefObject<Timer | null> =
@@ -262,7 +262,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
         // more responsive by claiming it's started immediately.
         return renderScriptIsRunning()
       }
-      if (scriptChangedOnDisk) {
+      if (showScriptChangedActions) {
         return renderRerunScriptPrompt()
       }
     }

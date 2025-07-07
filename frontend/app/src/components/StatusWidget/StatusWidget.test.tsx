@@ -28,11 +28,11 @@ const getProps = (
   propOverrides: Partial<StatusWidgetProps> = {}
 ): StatusWidgetProps => ({
   connectionState: ConnectionState.CONNECTED,
-  scriptRunState: ScriptRunState.RUNNING,
+  scriptRunState: ScriptRunState.NOT_RUNNING,
   rerunScript: vi.fn(),
-  stopScript: () => {},
+  stopScript: vi.fn(),
   allowRunOnSave: true,
-  scriptChangedOnDisk: false,
+  showScriptChangedActions: false,
   ...propOverrides,
 })
 
@@ -108,7 +108,7 @@ describe("StatusWidget element", () => {
         {...getProps({
           rerunScript,
           scriptRunState: ScriptRunState.NOT_RUNNING,
-          scriptChangedOnDisk: true,
+          showScriptChangedActions: true,
         })}
       />
     )
@@ -137,7 +137,7 @@ describe("StatusWidget element", () => {
         {...getProps({
           rerunScript,
           scriptRunState: ScriptRunState.NOT_RUNNING,
-          scriptChangedOnDisk: true,
+          showScriptChangedActions: true,
         })}
       />
     )
@@ -166,7 +166,7 @@ describe("StatusWidget element", () => {
           rerunScript,
           scriptRunState: ScriptRunState.NOT_RUNNING,
           allowRunOnSave: false,
-          scriptChangedOnDisk: true,
+          showScriptChangedActions: true,
         })}
       />
     )
@@ -189,7 +189,7 @@ describe("StatusWidget element", () => {
         {...getProps({
           rerunScript,
           scriptRunState: ScriptRunState.NOT_RUNNING,
-          scriptChangedOnDisk: true,
+          showScriptChangedActions: true,
         })}
       />
     )
