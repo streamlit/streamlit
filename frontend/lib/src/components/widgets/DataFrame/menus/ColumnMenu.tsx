@@ -115,7 +115,7 @@ function ColumnMenu({
     onCloseMenu()
   }, [onCloseMenu])
 
-  const handleCopyNameToClipboard = React.useCallback((): void => {
+  const handleCopyNameToClipboard = useCallback((): void => {
     navigator.clipboard.writeText(columnName).catch(error => {
       LOG.error("Failed to copy column name to clipboard:", error)
     })
