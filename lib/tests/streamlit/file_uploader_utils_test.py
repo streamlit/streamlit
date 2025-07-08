@@ -81,6 +81,37 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
             ("no_extension", "file_without_extension", [".pdf", ".png"], False),
             ("empty_filename", "", [".pdf", ".tar.gz"], False),
             ("filename_is_period", ".", [".pdf", ".tar.gz"], False),
+            (
+                "ads_bypass_attempt",
+                "file.txt:$fakeStream.pdf",
+                [".pdf", ".png"],
+                False,
+            ),
+            (
+                "ads_valid_extension",
+                "document.pdf:$fakeStream.txt",
+                [".pdf", ".png"],
+                True,
+            ),
+            (
+                "regular_filename_with_colon_no_ads_extension",
+                "config.ini:section",
+                [".ini"],
+                False,
+            ),
+            (
+                "ads_no_main_extension",
+                "file:$fakeStream.pdf",
+                [".pdf"],
+                False,
+            ),
+            ("filename_starts_with_colon", ":foo.txt", [".txt"], False),
+            (
+                "multiple_colons_in_filename",
+                "file.pdf:stream1.txt:stream2.log",
+                [".pdf"],
+                True,
+            ),
         ]
     )
     def test_filename_valid(self, _, filename, allowed_types, expected_valid):
