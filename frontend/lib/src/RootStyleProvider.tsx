@@ -60,6 +60,7 @@ const useScrollbarWidth = (): void => {
     outer.appendChild(inner)
 
     // Calculate the scrollbar width
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const calculatedWidth = outer.offsetWidth - inner.offsetWidth
 
     // Remove the temporary divs

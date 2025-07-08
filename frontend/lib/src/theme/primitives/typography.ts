@@ -45,6 +45,14 @@ export const fontSizes = {
   // Inline code font size as em value for proper scaling w/ headers, captions,
   // sidebar, etc.
   inlineCodeFontSize: "0.75em",
+
+  // Header font sizes - unaffected by baseFontSize, configured via headingFontSizes
+  h1FontSize: "2.75rem",
+  h2FontSize: "2.25rem",
+  h3FontSize: "1.75rem",
+  h4FontSize: "1.5rem",
+  h5FontSize: "1.25rem",
+  h6FontSize: "1rem",
 }
 
 export const fontWeights = {

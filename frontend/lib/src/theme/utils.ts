@@ -135,6 +135,15 @@ export const isColor = (strColor: string): boolean => {
   return s.color !== ""
 }
 
+/**
+ * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
+ * This is generally used to keep configured font sizes to round values.
+ * (ex: 0.78 -> 0.75)
+ */
+export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
+  return Math.round(remFontSize * 8) / 8
+}
+
 export const parseFont = (font: string): string => {
   // Try to map a short font family to our default
   // font families
@@ -294,6 +303,77 @@ const isValidFontWeight = (
 }
 
 /**
+ * Helper function to handle each heading font size in the headingFontSizes config
+ * @param configName: the name of the config option
+ * @param fontSize: the heading font size provided via theme config
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param inSidebar: whether this is the sidebar theme
+ * @returns the heading font size in rem
+ */
+const convertHeadingFontSizeToRem = (
+  configName: string,
+  fontSize: string,
+  baseFontSize: number,
+  inSidebar: boolean
+): string | undefined => {
+  // Validates the font size (logs warning & returns undefined if invalid)
+  const validatedSize = parseFontSize(configName, fontSize, inSidebar)
+
+  // Need each heading font size to be in rem
+  if (validatedSize && validatedSize.endsWith("rem")) {
+    return validatedSize
+  } else if (validatedSize && validatedSize.endsWith("px")) {
+    // Convert the font size to rem, and round to nearest 8th
+    const remValue = parseFloat(validatedSize) / baseFontSize
+    const roundedRemValue = roundFontSizeToNearestEighth(remValue)
+    return `${roundedRemValue}rem`
+  }
+
+  // If invalid, return undefined
+  return undefined
+}
+
+/**
+ * Set the heading font sizes in the theme config
+ * @param defaultFontSizes: the default theme font sizes
+ * @param inSidebar: whether this is the sidebar theme
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param headingFontSizes: the h1-h6 heading font sizes provided via theme config
+ * @returns an updated emotion theme font sizes object
+ */
+const setHeadingFontSizes = (
+  defaultFontSizes: EmotionTheme["fontSizes"],
+  inSidebar: boolean,
+  baseFontSize: number,
+  headingFontSizes: string[] | null | undefined
+): EmotionTheme["fontSizes"] => {
+  const headingFontSizesOverrides = {
+    ...defaultFontSizes,
+  }
+
+  if (headingFontSizes) {
+    headingFontSizes.forEach((size, index) => {
+      const headingFontSizeKey = `h${index + 1}FontSize`
+      // Gets the heading font size in rem if not already & logs warning if invalid
+      const convertedSize = convertHeadingFontSizeToRem(
+        `${headingFontSizeKey} in headingFontSizes`,
+        size,
+        baseFontSize,
+        inSidebar
+      )
+
+      // If valid configured value, overwrite the default heading font size
+      if (convertedSize) {
+        // @ts-expect-error
+        headingFontSizesOverrides[headingFontSizeKey] = convertedSize
+      }
+    })
+  }
+
+  return headingFontSizesOverrides
+}
+
+/**
  * Helper function to set the normal, bold, and extrabold font weights based
  * on the baseFontWeight option
  * @param defaultFontWeights: the default theme font weights
@@ -366,15 +446,19 @@ const setFontWeights = (
 }
 
 /**
- * Helper function to validate each of the colors passed in the categorical colors config
- * @param colors: the categorical colors config passed in (array of strings)
+ * Helper function to validate each of the colors passed in the chart colors configs
+ * @param configName: the name of the config ("chartCategoricalColors", "chartSequentialColors" or "chartDivergingColors")
+ * @param colors: the colors config passed in (array of strings)
  * @returns the valid colors from the config
  */
-const validateCategoricalColors = (colors: string[]): string[] => {
+const validateChartColors = (
+  configName: string,
+  colors: string[]
+): string[] => {
   return (
     colors
       // parseColor returns undefined for invalid colors
-      .map(color => parseColor(color, "chartCategoricalColors"))
+      .map(color => parseColor(color, configName))
       // Filter any invalid colors
       .filter((color): color is string => color !== undefined)
   )
@@ -394,13 +478,15 @@ export const createEmotionTheme = (
     codeFontWeight,
     showWidgetBorder,
     headingFont,
+    headingFontSizes,
     headingFontWeights,
     bodyFont,
     codeFont,
     showSidebarBorder,
     linkUnderline,
-    // Since categorical colors passed as array, handle separate from parsedColors
+    // Since chart color configs passed as array, handle separate from parsedColors
     chartCategoricalColors,
+    chartSequentialColors,
     ...customColors
   } = themeInput
 
@@ -487,13 +573,35 @@ export const createEmotionTheme = (
     chartCategoricalColors.length > 0
   ) {
     // Validate the categorical colors config
-    const validatedCategoricalColors = validateCategoricalColors(
+    const validatedCategoricalColors = validateChartColors(
+      "chartCategoricalColors",
       chartCategoricalColors
     )
     // Set the validated colors if non-empty array
     if (validatedCategoricalColors.length > 0) {
       conditionalOverrides.colors.chartCategoricalColors =
         validatedCategoricalColors
+    }
+  }
+
+  if (
+    notNullOrUndefined(chartSequentialColors) &&
+    chartSequentialColors.length > 0
+  ) {
+    // Validate the sequential colors config
+    const validatedSequentialColors = validateChartColors(
+      "chartSequentialColors",
+      chartSequentialColors
+    )
+    // Set the validated colors, sequential colors should be an array of length 10
+    // Also checked on BE, but check here again in case one of the entries is not a valid color
+    if (validatedSequentialColors.length === 10) {
+      conditionalOverrides.colors.chartSequentialColors =
+        validatedSequentialColors
+    } else {
+      LOG.warn(
+        `Invalid chartSequentialColors: ${chartSequentialColors.toString()}. Falling back to default chartSequentialColors.`
+      )
     }
   }
 
@@ -553,23 +661,16 @@ export const createEmotionTheme = (
     }
   }
 
-  if (baseFontSize && baseFontSize > 0) {
-    conditionalOverrides.fontSizes = {
-      ...baseThemeConfig.emotion.fontSizes,
-    }
+  conditionalOverrides.fontSizes = {
+    ...baseThemeConfig.emotion.fontSizes,
+  }
 
+  if (baseFontSize && baseFontSize > 0) {
     // Set the root font size to the configured value (used on global styles):
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
   }
 
   if (codeFontSize) {
-    // Handles case where codeFontSize is set, but not baseFontSize
-    if (!conditionalOverrides.fontSizes) {
-      conditionalOverrides.fontSizes = {
-        ...baseThemeConfig.emotion.fontSizes,
-      }
-    }
-
     // Returns font size as a string, or undefined if invalid
     const parsedCodeFontSize = parseFontSize(
       "codeFontSize",
@@ -582,6 +683,14 @@ export const createEmotionTheme = (
     // codeFontSize default (fallback) set in typography primitives (0.875rem)
     // inlineCodeFontSize set in typography primitives (0.75em)
   }
+
+  // Set the heading font sizes based on the heading font sizes config provided
+  conditionalOverrides.fontSizes = setHeadingFontSizes(
+    conditionalOverrides.fontSizes,
+    inSidebar,
+    conditionalOverrides.fontSizes.baseFontSize,
+    headingFontSizes
+  )
 
   // Set the font weights based on the font weight configs provided
   conditionalOverrides.fontWeights = setFontWeights(

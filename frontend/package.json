@@ -21,7 +21,6 @@
   "resolutions": {
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
-    "vite": "^6.2.0",
     "prismjs": "^1.30.0",
     "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch"
   },
