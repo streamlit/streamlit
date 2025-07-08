@@ -208,6 +208,8 @@ def test_no_rerun_on_drag(app: Page):
     app.mouse.down()
     app.mouse.move(0, 0)
 
+    wait_for_app_run(app)
+
     # The number of runs should not have changed
     expect(runs_text).to_be_visible()
 
