@@ -26,6 +26,12 @@ with st.sidebar:
 
 
 columns_ = st.columns([9, 1.5, 1.5])
+
+with columns_[0]:
+    st.number_input(
+        "Tooltip with code test", 0, 10, 1, help="Tooltip `with some code` in it"
+    )
+
 with columns_[1].popover("Some popover"):
     pass
 
