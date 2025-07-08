@@ -241,6 +241,29 @@ class WebsocketSessionManagerTests(unittest.TestCase):
     def test_close_session_on_invalid_session_id(self):
         self.session_mgr.close_session("nonexistent_session")
 
+    def test_clear_cache_on_last_session_disconnect(self):
+        """Test that script cache is cleared on last session disconnect."""
+        session_id_1 = self.connect_session()
+        session_id_2 = self.connect_session()
+
+        self.session_mgr.disconnect_session(session_id_1)
+        self.session_mgr._script_cache.clear.assert_not_called()
+
+        self.session_mgr.disconnect_session(session_id_2)
+        self.session_mgr._script_cache.clear.assert_called_once()
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    def test_clear_cache_on_last_session_close(self):
+        """Test that script cache is cleared on last session close."""
+        session_id_1 = self.connect_session()
+        session_id_2 = self.connect_session()
+
+        self.session_mgr.close_session(session_id_1)
+        self.session_mgr._script_cache.clear.assert_not_called()
+
+        self.session_mgr.close_session(session_id_2)
+        self.session_mgr._script_cache.clear.assert_called_once()
+
     def test_get_session_info_on_active_session(self):
         session_id = self.connect_session()
         session_info = self.session_mgr.get_session_info(session_id)
