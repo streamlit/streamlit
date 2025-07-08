@@ -24,7 +24,6 @@ import {
   getDivergingColorsArray,
   getGray30,
   getGray70,
-  getSequentialColorsArray,
 } from "~lib/theme"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -104,8 +103,8 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
     range: {
       category: theme.colors.chartCategoricalColors,
       diverging: getDivergingColorsArray(theme),
-      ramp: getSequentialColorsArray(theme),
-      heatmap: getSequentialColorsArray(theme),
+      ramp: theme.colors.chartSequentialColors,
+      heatmap: theme.colors.chartSequentialColors,
     },
     view: {
       columns: 1,

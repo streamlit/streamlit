@@ -783,6 +783,18 @@ def _mock_get_options_for_section(
             "#bf5b17",
             "#666666",
         ],
+        "chartSequentialColors": [
+            "#dffde9",
+            "#c0fcd3",
+            "#9ef6bb",
+            "#7defa1",
+            "#5ce488",
+            "#3dd56d",
+            "#21c354",
+            "#09ab3b",
+            "#158237",
+            "#177233",
+        ],
     }
 
     for k, v in overrides.items():
@@ -1248,6 +1260,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
+                    "chartSequentialColors": None,
                 }
             )
         )
@@ -1290,6 +1303,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
+                    "chartSequentialColors": None,
                 }
             )
         )
@@ -1332,6 +1346,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
+                    "chartSequentialColors": None,
                     "sidebar": {
                         # primaryColor not set to None
                         "backgroundColor": None,
@@ -1374,6 +1389,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.body_font == ""
         assert not new_session_msg.custom_theme.font_faces
         assert not new_session_msg.custom_theme.chart_categorical_colors
+        assert not new_session_msg.custom_theme.chart_sequential_colors
 
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.HasField("base_radius")
@@ -1474,6 +1490,18 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "#f0027f",
             "#bf5b17",
             "#666666",
+        ]
+        assert list(new_session_msg.custom_theme.chart_sequential_colors) == [
+            "#dffde9",
+            "#c0fcd3",
+            "#9ef6bb",
+            "#7defa1",
+            "#5ce488",
+            "#3dd56d",
+            "#21c354",
+            "#09ab3b",
+            "#158237",
+            "#177233",
         ]
         assert list(new_session_msg.custom_theme.font_faces) == [
             FontFace(

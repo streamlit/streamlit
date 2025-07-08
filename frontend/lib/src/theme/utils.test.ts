@@ -1267,6 +1267,198 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  it.each([
+    // Test valid color values
+    [
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "white",
+      ],
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "white",
+      ],
+    ],
+    // Valid hex codes
+    [
+      [
+        "#dffde9",
+        "#c0fcd3",
+        "#9ef6bb",
+        "#7defa1",
+        "#5ce488",
+        "#3dd56d",
+        "#21c354",
+        "#09ab3b",
+        "#158237",
+        "#177233",
+      ],
+      [
+        "#dffde9",
+        "#c0fcd3",
+        "#9ef6bb",
+        "#7defa1",
+        "#5ce488",
+        "#3dd56d",
+        "#21c354",
+        "#09ab3b",
+        "#158237",
+        "#177233",
+      ],
+    ],
+    // Valid hex codes passed without leading #
+    [
+      [
+        "dffde9",
+        "c0fcd3",
+        "9ef6bb",
+        "7defa1",
+        "5ce488",
+        "3dd56d",
+        "21c354",
+        "09ab3b",
+        "158237",
+        "177233",
+      ],
+      [
+        "#dffde9",
+        "#c0fcd3",
+        "#9ef6bb",
+        "#7defa1",
+        "#5ce488",
+        "#3dd56d",
+        "#21c354",
+        "#09ab3b",
+        "#158237",
+        "#177233",
+      ],
+    ],
+    // Valid rgb values
+    [
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(255, 255, 0)",
+        "rgb(0, 255, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(128, 0, 128)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 128, 128)",
+        "rgb(0, 0, 0)",
+        "rgb(255, 255, 255)",
+      ],
+      [
+        "rgb(255, 0, 0)",
+        "rgb(255, 165, 0)",
+        "rgb(255, 255, 0)",
+        "rgb(0, 255, 0)",
+        "rgb(0, 0, 255)",
+        "rgb(128, 0, 128)",
+        "rgb(255, 192, 192)",
+        "rgb(128, 128, 128)",
+        "rgb(0, 0, 0)",
+        "rgb(255, 255, 255)",
+      ],
+    ],
+  ])(
+    "correctly handles setting of sequential color config '%s'",
+    (chartSequentialColors, expectedSequentialColors) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartSequentialColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.colors.chartSequentialColors).toEqual(
+        expectedSequentialColors
+      )
+    }
+  )
+
+  it.each([
+    // Test invalid color values
+    [
+      [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "black",
+        "invalid",
+      ],
+      [
+        "#e4f5ff",
+        "#c7ebff",
+        "#a6dcff",
+        "#83c9ff",
+        "#60b4ff",
+        "#3d9df3",
+        "#1c83e1",
+        "#0068c9",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+    [
+      // When the array doesn't contain 10 colors, returns default colors
+      ["invalid"],
+      [
+        "#e4f5ff",
+        "#c7ebff",
+        "#a6dcff",
+        "#83c9ff",
+        "#60b4ff",
+        "#3d9df3",
+        "#1c83e1",
+        "#0068c9",
+        "#0054a3",
+        "#004280",
+      ],
+    ],
+  ])(
+    "logs a warning and removes any invalid sequential color configs '%s'",
+    (chartSequentialColors, expectedSequentialColors) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        chartSequentialColors,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Error log from parseColor (invalid color)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for chartSequentialColors in theme: "invalid"`
+      )
+      // Error log from validateChartColors (<10 colors)
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid chartSequentialColors: ${chartSequentialColors.toString()}. Falling back to default chartSequentialColors.`
+      )
+      expect(theme.colors.chartSequentialColors).toEqual(
+        expectedSequentialColors
+      )
+    }
+  )
+
   it("showSidebarBorder config is set to false by default", () => {
     const theme = createEmotionTheme({})
     expect(theme.showSidebarBorder).toBe(false)

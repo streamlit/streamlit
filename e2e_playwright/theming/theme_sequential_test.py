@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import json
 import os
 
@@ -25,28 +24,29 @@ from e2e_playwright.shared.app_utils import expect_no_skeletons, reset_hovering
 
 @pytest.fixture(scope="module")
 @pytest.mark.early
-def configure_custom_categorical_colors():
+def configure_custom_sequential_colors():
     """Configure custom theme."""
-    os.environ["STREAMLIT_THEME_CHART_CATEGORICAL_COLORS"] = json.dumps(
+    os.environ["STREAMLIT_THEME_CHART_SEQUENTIAL_COLORS"] = json.dumps(
         [
-            "#7fc97f",
-            "#beaed4",
-            "#fdc086",
-            "#ffff99",
-            "#386cb0",
-            "#f0027f",
-            "#bf5b17",
-            "#666666",
-            "#7fc97f",
-            "#beaed4",
+            "#bad0e4",
+            "#a8c2dd",
+            "#9ab0d4",
+            "#919cc9",
+            "#8d85be",
+            "#8b6db2",
+            "#8a55a6",
+            "#873c99",
+            "#822287",
+            "#6a00a8",
         ]
     )
     yield
-    del os.environ["STREAMLIT_THEME_CHART_CATEGORICAL_COLORS"]
+    del os.environ["STREAMLIT_THEME_CHART_SEQUENTIAL_COLORS"]
 
 
-@pytest.mark.usefixtures("configure_custom_categorical_colors")
-def test_custom_categorical_colors(app: Page, assert_snapshot: ImageCompareFunction):
+@pytest.mark.usefixtures("configure_custom_sequential_colors")
+def test_custom_sequential_colors(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that custom sequential colors are correctly applied to charts."""
     # Set bigger viewport to better show the charts
     app.set_viewport_size({"width": 1280, "height": 1000})
     # Make sure that all elements are rendered and no skeletons are shown:
@@ -57,4 +57,4 @@ def test_custom_categorical_colors(app: Page, assert_snapshot: ImageCompareFunct
     # creating flakiness:
     app.wait_for_timeout(10000)
 
-    assert_snapshot(app, name="custom_categorical_colors", image_threshold=0.0003)
+    assert_snapshot(app, name="custom_sequential_colors", image_threshold=0.0003)
