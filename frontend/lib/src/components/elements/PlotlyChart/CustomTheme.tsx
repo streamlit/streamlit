@@ -50,6 +50,7 @@ export function applyStreamlitThemeTemplateLayout(
       color: getGray70(theme),
       family: genericFonts.bodyFont,
       size: convertRemToPx(fontSizes.twoSm),
+      weight: theme.fontWeights.normal,
     },
     title: {
       color: colors.headingColor,

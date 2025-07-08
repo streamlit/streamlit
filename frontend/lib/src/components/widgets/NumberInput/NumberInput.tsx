@@ -425,6 +425,7 @@ const NumberInput: React.FC<Props> = ({
                 inputMode: "",
               },
               style: {
+                fontWeight: theme.fontWeights.normal,
                 lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: theme.spacing.sm,
