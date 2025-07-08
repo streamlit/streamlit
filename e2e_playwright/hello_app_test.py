@@ -170,6 +170,10 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     """
     app = themed_app
 
+    # Note: this was moved up to the top because the sidebar has logic that when
+    # resizing the window could cause the sidebar to be open or closed
+    _set_portrait_dimensions(app)
+
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button
     # when printing
@@ -179,7 +183,6 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _set_portrait_dimensions(app)
     _evaluate_match_media_print(app)
 
     assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_closed")
@@ -211,6 +214,10 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     """
     app = themed_app
 
+    # Note: this was moved up to the top because the sidebar has logic that when
+    # resizing the window could cause the sidebar to be open or closed
+    _set_landscape_dimensions(app)
+
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button
     # when printing
@@ -220,7 +227,6 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _set_landscape_dimensions(app)
     _evaluate_match_media_print(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
