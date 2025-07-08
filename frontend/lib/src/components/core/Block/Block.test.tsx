@@ -159,3 +159,103 @@ describe("FlexBoxContainer Block Component", () => {
     })
   })
 })
+
+describe("FlexBoxContainer layout props", () => {
+  it.each([
+    [
+      "align: start",
+      { align: BlockProto.FlexContainer.Align.ALIGN_START },
+      "align-items: start;",
+    ],
+    [
+      "align: center",
+      { align: BlockProto.FlexContainer.Align.ALIGN_CENTER },
+      "align-items: center;",
+    ],
+    [
+      "align: end",
+      { align: BlockProto.FlexContainer.Align.ALIGN_END },
+      "align-items: end;",
+    ],
+    [
+      "align: stretch",
+      { align: BlockProto.FlexContainer.Align.STRETCH },
+      "align-items: stretch;",
+    ],
+  ])("should apply %s", (_desc, flexContainer, expectedStyle) => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer,
+    })
+    renderWithContexts(makeVerticalBlockComponent(block), {})
+    expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+
+  it.each([
+    [
+      "justify: start",
+      { justify: BlockProto.FlexContainer.Justify.JUSTIFY_START },
+      "justify-content: start;",
+    ],
+    [
+      "justify: center",
+      { justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER },
+      "justify-content: center;",
+    ],
+    [
+      "justify: end",
+      { justify: BlockProto.FlexContainer.Justify.JUSTIFY_END },
+      "justify-content: end;",
+    ],
+    [
+      "justify: space-between",
+      { justify: BlockProto.FlexContainer.Justify.SPACE_BETWEEN },
+      "justify-content: space-between;",
+    ],
+  ])("should apply %s", (_desc, flexContainer, expectedStyle) => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer,
+    })
+    renderWithContexts(makeVerticalBlockComponent(block), {})
+    expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+
+  it.each([
+    [
+      "gap: small",
+      { gapConfig: { gapSize: streamlit.GapSize.SMALL } },
+      "gap: 1rem;",
+    ],
+    [
+      "gap: medium",
+      { gapConfig: { gapSize: streamlit.GapSize.MEDIUM } },
+      "gap: 2rem;",
+    ],
+    [
+      "gap: large",
+      { gapConfig: { gapSize: streamlit.GapSize.LARGE } },
+      "gap: 4rem;",
+    ],
+    [
+      "gap: none",
+      { gapConfig: { gapSize: streamlit.GapSize.NONE } },
+      "gap: 0;",
+    ],
+  ])("should apply %s", (_desc, flexContainer, expectedStyle) => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer,
+    })
+    renderWithContexts(makeVerticalBlockComponent(block), {})
+    expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+
+  it.each([
+    ["wrap: true", { wrap: true }, "flex-wrap: wrap;"],
+    ["wrap: false", { wrap: false }, "flex-wrap: nowrap;"],
+  ])("should apply %s", (_desc, flexContainer, expectedStyle) => {
+    const block: BlockNode = makeVerticalBlock([], {
+      flexContainer,
+    })
+    renderWithContexts(makeVerticalBlockComponent(block), {})
+    expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+})

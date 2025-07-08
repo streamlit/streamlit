@@ -24,7 +24,12 @@ import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { FormsContext } from "~lib/components/core/FormsContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import {
+  FlexContext,
+  FlexContextProvider,
+} from "~lib/components/core/Layout/FlexContext"
+import {
   Direction,
+  getAncestorContainerDirection,
   getDirectionOfBlock,
 } from "~lib/components/core/Layout/utils"
 import { LibContext } from "~lib/components/core/LibContext"
@@ -165,6 +170,8 @@ interface FlexBoxContainerProps extends BaseBlockProps {
 export const FlexBoxContainer = (
   props: FlexBoxContainerProps
 ): ReactElement => {
+  const flexContext = useContext(FlexContext)
+  const ancestorContainerDirection = getAncestorContainerDirection(flexContext)
   const direction = getDirectionOfBlock(props.node.deltaBlock)
 
   const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
@@ -180,8 +187,6 @@ export const FlexBoxContainer = (
       undefined,
   })
 
-  // TODO: as advanced layouts is rolled out, more of these styles will
-  // be provided by useLayoutStyles
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
@@ -198,25 +203,29 @@ export const FlexBoxContainer = (
     height: layout_styles.height,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
+    align: props.node.deltaBlock.flexContainer?.align,
+    justify: props.node.deltaBlock.flexContainer?.justify,
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
 
   return (
-    <StyledFlexContainerBlock
-      {...styles}
-      className={classNames(
-        getClassnamePrefix(direction),
-        convertKeyToClassName(userKey)
-      )}
-      data-testid={getClassnamePrefix(direction)}
-      ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
-      data-test-scroll-behavior={
-        activateScrollToBottom ? "scroll-to-bottom" : "normal"
-      }
-    >
-      <ChildRenderer {...props} />
-    </StyledFlexContainerBlock>
+    <FlexContextProvider direction={direction}>
+      <StyledFlexContainerBlock
+        {...styles}
+        className={classNames(
+          getClassnamePrefix(direction),
+          convertKeyToClassName(userKey)
+        )}
+        data-testid={getClassnamePrefix(direction)}
+        ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
+        data-test-scroll-behavior={
+          activateScrollToBottom ? "scroll-to-bottom" : "normal"
+        }
+      >
+        <ChildRenderer {...props} />
+      </StyledFlexContainerBlock>
+    </FlexContextProvider>
   )
 }
 
@@ -235,6 +244,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     subElement:
       (node.deltaBlock.type && node.deltaBlock[node.deltaBlock.type]) ||
       undefined,
+    isFlexContainer: checkFlexContainerBackwardsCompatibile(node.deltaBlock),
   })
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {

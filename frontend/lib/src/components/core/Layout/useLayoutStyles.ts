@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
+import { useContext, useMemo } from "react"
 
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+
+import { FlexContext, IFlexContext } from "./FlexContext"
+import { Direction } from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -141,15 +144,28 @@ const getHeight = (
 }
 
 const getFlex = (
-  height: LayoutDimensionConfig
-): React.CSSProperties["flex"] => {
-  // TODO(lawilby): When direction is implemented for containers,
-  // this will be updated to support horizontal direction as well.
-  // Currently, the assumption is that the container is vertical.
-  if (height.type === DimensionType.PIXEL) {
-    return `0 0 ${height.pixels}px`
+  widthType: DimensionType | undefined,
+  widthPixels: number | undefined,
+  heightType: DimensionType | undefined,
+  heightPixels: number | undefined,
+  direction: Direction | undefined
+) => {
+  if (
+    widthType === DimensionType.PIXEL &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return `0 0 ${widthPixels}px`
+  } else if (
+    heightType === DimensionType.PIXEL &&
+    direction === Direction.VERTICAL
+  ) {
+    return `0 0 ${heightPixels}px`
   }
   return undefined
+}
+
+const getDirection = (flexContext: IFlexContext | null) => {
+  return flexContext?.direction
 }
 
 export type UseLayoutStylesShape = {
@@ -167,8 +183,7 @@ export const useLayoutStyles = ({
   subElement,
   styleOverrides,
 }: UseLayoutStylesArgs): UseLayoutStylesShape => {
-  // Note: Consider rounding the width to the nearest pixel so we don't have
-  // subpixel widths, which leads to blurriness on screen
+  const flexContext = useContext(FlexContext)
   const layoutStyles = useMemo((): UseLayoutStylesShape => {
     if (!element) {
       return {
@@ -207,7 +222,13 @@ export const useLayoutStyles = ({
       overflow = "auto"
     }
 
-    const flex = getFlex({ pixels: commandHeight, type: heightType })
+    const flex = getFlex(
+      widthType,
+      commandWidth,
+      heightType,
+      commandHeight,
+      getDirection(flexContext)
+    )
 
     const calculatedStyles = {
       width,

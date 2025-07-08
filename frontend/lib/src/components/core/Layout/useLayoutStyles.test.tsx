@@ -1,3 +1,4 @@
+import React, { ReactNode } from "react"
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
@@ -20,6 +21,26 @@ import { describe, expect, it } from "vitest"
 import { Element, IAlert, streamlit } from "@streamlit/protobuf"
 
 import { useLayoutStyles, UseLayoutStylesShape } from "./useLayoutStyles"
+import { Direction } from "./utils"
+import { FlexContext } from "./FlexContext"
+
+function withFlexContext(direction: Direction, children: ReactNode) {
+  return (
+    <FlexContext.Provider value={{ direction }}>
+      {children}
+    </FlexContext.Provider>
+  )
+}
+
+function withFlexContextProvider(direction: Direction) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <FlexContext.Provider value={{ direction }}>
+        {children}
+      </FlexContext.Provider>
+    )
+  }
+}
 
 class MockElement implements Element {
   widthConfig?: streamlit.WidthConfig | null
@@ -312,7 +333,9 @@ describe("#useLayoutStyles", () => {
         "and with a heightConfig value of %o, returns %o",
         (heightConfig, expected) => {
           const element = new MockElement({ heightConfig })
-          const { result } = renderHook(() => useLayoutStyles({ element }))
+          const { result } = renderHook(() => useLayoutStyles({ element }), {
+            wrapper: withFlexContextProvider(Direction.VERTICAL),
+          })
           expect(result.current).toEqual(expected)
         }
       )
@@ -382,16 +405,13 @@ describe("#useLayoutStyles", () => {
       ])(
         "and with a height value of %s and heightConfig %s, returns %o",
         (height, heightConfig, expected) => {
-          const element = new MockElement({
-            heightConfig,
-          })
-
-          const subElement = {
-            height,
-          }
-
-          const { result } = renderHook(() =>
-            useLayoutStyles({ element, subElement })
+          const element = new MockElement({ heightConfig })
+          const subElement = { height }
+          const { result } = renderHook(
+            () => useLayoutStyles({ element, subElement }),
+            {
+              wrapper: withFlexContextProvider(Direction.VERTICAL),
+            }
           )
           expect(result.current).toEqual(expected)
         }
@@ -415,8 +435,11 @@ describe("#useLayoutStyles", () => {
       ])("and with a height value of %s, returns %o", (height, expected) => {
         const element = new MockElement()
         const subElement = { height }
-        const { result } = renderHook(() =>
-          useLayoutStyles({ element, subElement })
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, subElement }),
+          {
+            wrapper: withFlexContextProvider(Direction.VERTICAL),
+          }
         )
         expect(result.current).toEqual(expected)
       })
@@ -471,16 +494,13 @@ describe("#useLayoutStyles", () => {
           getDefaultStyles({}),
         ],
       ])("and with element props %o, returns %o", (props, expected) => {
-        const element = new MockElement({
-          heightConfig: props.heightConfig,
-        })
-
-        const subElement = {
-          height: props.height,
-        }
-
-        const { result } = renderHook(() =>
-          useLayoutStyles({ element, subElement })
+        const element = new MockElement({ heightConfig: props.heightConfig })
+        const subElement = { height: props.height }
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, subElement }),
+          {
+            wrapper: withFlexContextProvider(Direction.VERTICAL),
+          }
         )
         expect(result.current).toEqual(expected)
       })
@@ -516,7 +536,9 @@ describe("#useLayoutStyles", () => {
         ],
       ])("and with element props %o, returns %o", (props, expected) => {
         const element = new MockElement(props)
-        const { result } = renderHook(() => useLayoutStyles({ element }))
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
         expect(result.current).toEqual(expected)
       })
     })
@@ -543,17 +565,17 @@ describe("#useLayoutStyles", () => {
         ],
         [
           { width: 100, height: 0 },
-          getDefaultStyles({
-            width: "100px",
-            height: "auto",
-          }),
+          getDefaultStyles({ width: "100px", height: "auto" }),
         ],
       ])(
         "and with subElement props %o, returns %o",
         (subElementProps, expected) => {
           const element = new MockElement()
-          const { result } = renderHook(() =>
-            useLayoutStyles({ element, subElement: subElementProps })
+          const { result } = renderHook(
+            () => useLayoutStyles({ element, subElement: subElementProps }),
+            {
+              wrapper: withFlexContextProvider(Direction.VERTICAL),
+            }
           )
           expect(result.current).toEqual(expected)
         }
@@ -607,46 +629,84 @@ describe("#useLayoutStyles", () => {
       )
     })
 
-    describe("flex property behavior", () => {
-      it("should include flex when height is set via heightConfig pixelHeight", () => {
+    describe("flex property behavior with direction context", () => {
+      it("should include flex for vertical direction with pixel height", () => {
         const element = new MockElement({
           heightConfig: new streamlit.HeightConfig({ pixelHeight: 250 }),
         })
-        const { result } = renderHook(() => useLayoutStyles({ element }))
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
         expect(result.current.flex).toBe("0 0 250px")
       })
 
-      it("should include flex when height is set via subElement height", () => {
-        const element = new MockElement()
-        const subElement = { height: 175 }
-        const { result } = renderHook(() =>
-          useLayoutStyles({ element, subElement })
-        )
-        expect(result.current.flex).toBe("0 0 175px")
+      it("should include flex for horizontal direction with pixel width", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ pixelWidth: 120 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
+        expect(result.current.flex).toBe("0 0 120px")
       })
 
-      it("should not include flex when height is stretch", () => {
+      it("should not include flex for vertical direction with pixel width", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ pixelWidth: 120 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it("should not include flex for vertical direction with stretch height", () => {
         const element = new MockElement({
           heightConfig: new streamlit.HeightConfig({ useStretch: true }),
         })
-        const { result } = renderHook(() => useLayoutStyles({ element }))
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
         expect(result.current.flex).toBeUndefined()
       })
 
-      it("should not include flex when height is content", () => {
+      it("should not include flex for horizontal direction with pixel height", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ pixelHeight: 250 }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it("should not include flex for horizontal direction with stretch width", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useStretch: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it("should not include flex for vertical direction with content height", () => {
         const element = new MockElement({
           heightConfig: new streamlit.HeightConfig({ useContent: true }),
         })
-        const { result } = renderHook(() => useLayoutStyles({ element }))
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
         expect(result.current.flex).toBeUndefined()
       })
 
-      it.each([
-        ["stretch", new streamlit.HeightConfig({ useStretch: true })],
-        ["content", new streamlit.HeightConfig({ useContent: true })],
-      ])("should not include flex when height is %s", (_, heightConfig) => {
-        const element = new MockElement({ heightConfig })
-        const { result } = renderHook(() => useLayoutStyles({ element }))
+      it("should not include flex for horizontal direction with content width", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useContent: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
         expect(result.current.flex).toBeUndefined()
       })
     })
@@ -687,8 +747,11 @@ describe("#useLayoutStyles", () => {
           width: "75%",
         }
 
-        const { result } = renderHook(() =>
-          useLayoutStyles({ element, styleOverrides })
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, styleOverrides }),
+          {
+            wrapper: withFlexContextProvider(Direction.VERTICAL),
+          }
         )
 
         expect(result.current).toEqual({
