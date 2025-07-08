@@ -88,3 +88,27 @@ def test_tooltip_does_not_overflow_on_the_right_side(app: Page):
         lambda: (bbox := tooltip.bounding_box()) is not None
         and bbox["x"] + bbox["width"] <= viewport_width,
     )
+
+
+def test_tooltip_with_code(app: Page):
+    """Test that a help tooltip with code displays correctly."""
+    # Get the number input widget
+    number_input = app.get_by_test_id("stNumberInput")
+    # Hover over the tooltip target (?) to display the tooltip
+    hover_target = number_input.get_by_test_id("stTooltipHoverTarget")
+    hover_target.hover()
+
+    # Wait for tooltip to appear and stabilize
+    app.wait_for_timeout(200)
+
+    # Get the tooltip content
+    tooltip = app.get_by_test_id("stTooltipContent")
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text("Tooltip with some code in it")
+
+    # General tooltip text should have a size of 14px
+    expect(tooltip.get_by_text("Tooltip")).to_have_css("font-size", "14px")
+
+    # Inline code text should be set to 0.75em (which with tooltip font size
+    # of 14px translates to 10.5px)
+    expect(tooltip.get_by_role("code")).to_have_css("font-size", "10.5px")
