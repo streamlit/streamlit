@@ -4,6 +4,6 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "node use-strict-null-equality-checks.test.js && node no-hardcoded-theme-values.test.js"
+    "test": "node use-strict-null-equality-checks.test.js && node no-hardcoded-theme-values.test.js && node enforce-memo.test.js"
   }
 }

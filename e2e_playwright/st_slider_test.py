@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -28,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_sliders).to_have_count(21)
+    expect(st_sliders).to_have_count(24)
 
     assert_snapshot(st_sliders.nth(4), name="st_slider-regular_with_format")
     assert_snapshot(st_sliders.nth(7), name="st_slider-disabled")
@@ -41,6 +42,9 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(st_sliders.nth(18), name="st_slider-overlap_right")
     assert_snapshot(st_sliders.nth(19), name="st_slider-overlap_near_right")
     assert_snapshot(st_sliders.nth(20), name="st_slider-overlap_near_center")
+    assert_snapshot(st_sliders.nth(21), name="st_slider-markdown_label")
+    assert_snapshot(st_sliders.nth(22), name="st_slider-width_300px")
+    assert_snapshot(st_sliders.nth(23), name="st_slider-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):
@@ -189,3 +193,22 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "slider8")).to_be_visible()
+
+
+@pytest.mark.performance
+def test_slider_interaction_performance(app: Page):
+    """
+    Test a simple interaction with a slider to ensure it is performant.
+    As of writing, a simple slider interaction effectively causes a full page
+    re-render.
+    """
+    slider = app.get_by_test_id("stSlider").nth(8)
+    slider.hover()
+    # click in middle
+    app.mouse.down()
+
+    # Move mouse to 0, 0 pixels on the screen to simulate dragging left
+    app.mouse.move(0, 0)
+    app.mouse.up()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Value 5: 0")).to_be_visible()

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -21,7 +23,6 @@ from typing import (
     Final,
     Generic,
     Literal,
-    Sequence,
     TypeVar,
     cast,
     overload,
@@ -30,7 +31,13 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.elements.lib.options_selector_utils import (
+    check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
     get_default_indices,
 )
@@ -46,13 +53,12 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.elements.widgets.multiselect import MultiSelectSerde
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.string_util import validate_material_icon
+from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.type_util import T
 
 if TYPE_CHECKING:
@@ -89,9 +95,35 @@ _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 SelectionMode: TypeAlias = Literal["single", "multi"]
 
 
-class SingleSelectSerde(Generic[T]):
-    """Uses the MultiSelectSerde under-the-hood, but accepts a single index value
-    and deserializes to a single index value.
+@dataclass
+class _MultiSelectSerde(Generic[T]):
+    """Only meant to be used internally for the button_group element.
+
+    This serde is inspired by the MultiSelectSerde from multiselect.py. That serde has
+    been updated since then to support the accept_new_options parameter, which is not
+    required by the button_group element. If this changes again at some point,
+    the two elements can share the same serde again.
+    """
+
+    options: Sequence[T]
+    default_value: list[int] = field(default_factory=list)
+
+    def serialize(self, value: list[T]) -> list[int]:
+        indices = check_and_convert_to_indices(self.options, value)
+        return indices if indices is not None else []
+
+    def deserialize(self, ui_value: list[int] | None) -> list[T]:
+        current_value: list[int] = (
+            ui_value if ui_value is not None else self.default_value
+        )
+        return [self.options[i] for i in current_value]
+
+
+class _SingleSelectSerde(Generic[T]):
+    """Only meant to be used internally for the button_group element.
+
+    Uses the ButtonGroup's _MultiSelectSerde under-the-hood, but accepts a single
+    index value and deserializes to a single index value.
     This is because button_group can be single and multi select, but we use the same
     proto for both and, thus, map single values to a list of values and a receiving
     value wrapped in a list to a single value.
@@ -106,7 +138,7 @@ class SingleSelectSerde(Generic[T]):
         default_value: list[int] | None = None,
     ) -> None:
         # see docstring about why we use MultiSelectSerde here
-        self.multiselect_serde: MultiSelectSerde[T] = MultiSelectSerde(
+        self.multiselect_serde: _MultiSelectSerde[T] = _MultiSelectSerde(
             option_indices, default_value if default_value is not None else []
         )
 
@@ -114,8 +146,8 @@ class SingleSelectSerde(Generic[T]):
         _value = [value] if value is not None else []
         return self.multiselect_serde.serialize(_value)
 
-    def deserialize(self, ui_value: list[int] | None, widget_id: str = "") -> T | None:
-        deserialized = self.multiselect_serde.deserialize(ui_value, widget_id)
+    def deserialize(self, ui_value: list[int] | None) -> T | None:
+        deserialized = self.multiselect_serde.deserialize(ui_value)
 
         if len(deserialized) == 0:
             return None
@@ -123,7 +155,7 @@ class SingleSelectSerde(Generic[T]):
         return deserialized[0]
 
 
-class SingleOrMultiSelectSerde(Generic[T]):
+class ButtonGroupSerde(Generic[T]):
     """A serde that can handle both single and multi select options.
 
     It uses the same proto to wire the data, so that we can send and receive
@@ -138,23 +170,21 @@ class SingleOrMultiSelectSerde(Generic[T]):
         options: Sequence[T],
         default_values: list[int],
         type: Literal["single", "multi"],
-    ):
+    ) -> None:
         self.options = options
         self.default_values = default_values
         self.type = type
-        self.serde: SingleSelectSerde[T] | MultiSelectSerde[T] = (
-            SingleSelectSerde(options, default_value=default_values)
+        self.serde: _SingleSelectSerde[T] | _MultiSelectSerde[T] = (
+            _SingleSelectSerde(options, default_value=default_values)
             if type == "single"
-            else MultiSelectSerde(options, default_values)
+            else _MultiSelectSerde(options, default_values)
         )
 
     def serialize(self, value: T | list[T] | None) -> list[int]:
-        return self.serde.serialize(cast(Any, value))
+        return self.serde.serialize(cast("Any", value))
 
-    def deserialize(
-        self, ui_value: list[int] | None, widget_id: str = ""
-    ) -> list[T] | T | None:
-        return self.serde.deserialize(ui_value, widget_id)
+    def deserialize(self, ui_value: list[int] | None) -> list[T] | T | None:
+        return self.serde.deserialize(ui_value)
 
 
 def get_mapped_options(
@@ -225,7 +255,7 @@ def _build_proto(
     return proto
 
 
-def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode):
+def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
     """Check if the selection_mode value is valid or raise exception otherwise."""
     if selection_mode not in ["single", "multi"]:
         raise StreamlitAPIException(
@@ -251,6 +281,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
     ) -> Literal[0, 1] | None: ...
     @overload
     def feedback(
@@ -262,6 +293,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
     ) -> Literal[0, 1, 2, 3, 4] | None: ...
     @gather_metrics("feedback")
     def feedback(
@@ -273,6 +305,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
     ) -> int | None:
         """Display a feedback widget.
 
@@ -312,6 +345,11 @@ class ButtonGroupMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        width : int or "stretch" or "content"
+            The width of the feedback widget. Can be an integer (pixels),
+            "stretch" to use the full width of the container, or "content"
+            (default) to size based on the content.
 
         Returns
         -------
@@ -362,7 +400,7 @@ class ButtonGroupMixin:
                 f"The argument passed was '{options}'."
             )
         transformed_options, options_indices = get_mapped_options(options)
-        serde = SingleSelectSerde[int](options_indices)
+        serde = _SingleSelectSerde[int](options_indices)
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
@@ -383,6 +421,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             selection_visualization=selection_visualization,
             style="borderless",
+            width=width,
         )
         return sentiment.value
 
@@ -402,6 +441,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> V | None: ...
     @overload
     def pills(
@@ -419,6 +459,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -436,6 +477,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -471,7 +513,9 @@ class ButtonGroupMixin:
             Labels for the select options in an ``Iterable``. This can be a
             ``list``, ``set``, or anything supported by ``st.dataframe``. If
             ``options`` is dataframe-like, the first column will be used. Each
-            label will be cast to ``str`` internally by default.
+            label will be cast to ``str`` internally by default and can
+            optionally contain GitHub-flavored Markdown, including the Markdown
+            directives described in the ``body`` parameter of ``st.markdown``.
 
         selection_mode: "single" or "multi"
             The selection mode for the widget. If this is ``"single"``
@@ -488,7 +532,9 @@ class ButtonGroupMixin:
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the command.
+            the command. The output can optionally contain GitHub-flavored
+            Markdown, including the Markdown directives described in the
+            ``body`` parameter of ``st.markdown``.
 
         key: str or int
             An optional string or integer to use as the unique key for the widget.
@@ -496,10 +542,14 @@ class ButtonGroupMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
 
-        help: str
-            An optional tooltip that gets displayed next to the widget label.
-            Streamlit only displays the tooltip when
-            ``label_visibility="visible"``.
+        help: str or None
+            A tooltip that gets displayed next to the widget label. Streamlit
+            only displays the tooltip when ``label_visibility="visible"``. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         on_change: callable
             An optional callback invoked when this widget's value changes.
@@ -517,8 +567,13 @@ class ButtonGroupMixin:
         label_visibility: "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width: int or "stretch" or "content"
+            The width of the widget. Can be an integer (pixels), "stretch" to use
+            the full width of the container, or "content" (default) to size based
+            on the content.
 
         Returns
         -------
@@ -529,7 +584,6 @@ class ButtonGroupMixin:
 
         Examples
         --------
-
         **Example 1: Multi-select pills**
 
         Display a multi-select pills widget, and show the selection:
@@ -586,6 +640,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
         )
 
     @overload
@@ -604,6 +659,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> V | None: ...
     @overload
     def segmented_control(
@@ -621,6 +677,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -639,6 +696,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -673,7 +731,9 @@ class ButtonGroupMixin:
             Labels for the select options in an ``Iterable``. This can be a
             ``list``, ``set``, or anything supported by ``st.dataframe``. If
             ``options`` is dataframe-like, the first column will be used. Each
-            label will be cast to ``str`` internally by default.
+            label will be cast to ``str`` internally by default and can
+            optionally contain GitHub-flavored Markdown, including the Markdown
+            directives described in the ``body`` parameter of ``st.markdown``.
 
         selection_mode: "single" or "multi"
             The selection mode for the widget. If this is ``"single"``
@@ -690,7 +750,9 @@ class ButtonGroupMixin:
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the command.
+            the command. The output can optionally contain GitHub-flavored
+            Markdown, including the Markdown directives described in the
+            ``body`` parameter of ``st.markdown``.
 
         key: str or int
             An optional string or integer to use as the unique key for the widget.
@@ -698,10 +760,14 @@ class ButtonGroupMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
 
-        help: str
-            An optional tooltip that gets displayed next to the widget label.
-            Streamlit only displays the tooltip when
-            ``label_visibility="visible"``.
+        help: str or None
+            A tooltip that gets displayed next to the widget label. Streamlit
+            only displays the tooltip when ``label_visibility="visible"``. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         on_change: callable
             An optional callback invoked when this widget's value changes.
@@ -719,8 +785,13 @@ class ButtonGroupMixin:
         label_visibility: "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width: int or "stretch" or "content"
+            The width of the widget. Can be an integer (pixels), "stretch" to
+            use the full width of the container, or "content" (default) to size
+            based on the content.
 
         Returns
         -------
@@ -731,7 +802,6 @@ class ButtonGroupMixin:
 
         Examples
         --------
-
         **Example 1: Multi-select segmented control**
 
         Display a multi-select segmented control widget, and show the
@@ -791,6 +861,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
         )
 
     @gather_metrics("_internal_button_group")
@@ -810,22 +881,26 @@ class ButtonGroupMixin:
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
+        width: Width = "content",
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
             """If option starts with a material icon or an emoji, we extract it to send
-            it parsed to the frontend."""
+            it parsed to the frontend.
+            """
             transformed = format_func(option) if format_func else str(option)
             transformed_parts = transformed.split(" ")
             icon: str | None = None
             if len(transformed_parts) > 0:
                 maybe_icon = transformed_parts[0].strip()
                 try:
-                    # we only want to extract material icons because we treat them
-                    # differently than emojis visually
                     if maybe_icon.startswith(":material"):
                         icon = validate_material_icon(maybe_icon)
+                    elif is_emoji(maybe_icon):
+                        icon = maybe_icon
+
+                    if icon:
                         # reassamble the option string without the icon - also
                         # works if len(transformed_parts) == 1
                         transformed = " ".join(transformed_parts[1:])
@@ -840,7 +915,7 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
+        serde: ButtonGroupSerde[V] = ButtonGroupSerde[V](
             indexable_options, default_values, selection_mode
         )
 
@@ -860,6 +935,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             label=label,
             label_visibility=label_visibility,
+            width=width,
         )
 
         if selection_mode == "multi":
@@ -890,6 +966,7 @@ class ButtonGroupMixin:
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
+        width: Width = "content",
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -925,6 +1002,9 @@ class ButtonGroupMixin:
         if default is not None and len(default) == 0:
             _default = None
 
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         check_widget_policies(self.dg, key, on_change, default_value=_default)
 
         widget_name = "button_group"
@@ -942,10 +1022,12 @@ class ButtonGroupMixin:
             widget_name,
             user_key=key,
             form_id=form_id,
+            dg=self.dg,
             options=formatted_options,
             default=default,
             click_mode=parsed_selection_mode,
             style=style,
+            width=width,
         )
 
         proto = _build_proto(
@@ -980,7 +1062,7 @@ class ButtonGroupMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto)
+        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
         return widget_state
 

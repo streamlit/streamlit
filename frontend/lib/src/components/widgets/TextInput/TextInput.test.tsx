@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,17 @@
 
 import React from "react"
 
-import { act, fireEvent, screen, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextInput as TextInputProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import TextInput, { Props } from "./TextInput"
 
@@ -39,7 +41,6 @@ const getProps = (
     type: TextInputProto.Type.DEFAULT,
     ...elementProps,
   }),
-  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -49,6 +50,13 @@ const getProps = (
 })
 
 describe("TextInput widget", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [190],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<TextInput {...props} />)
@@ -161,13 +169,12 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<TextInput {...props} />)
     const textInput = screen.getByTestId("stTextInput")
 
     expect(textInput).toHaveClass("stTextInput")
-    expect(textInput).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("can be disabled", () => {
@@ -177,16 +184,16 @@ describe("TextInput widget", () => {
     expect(textInput).toBeDisabled()
   })
 
-  it("sets widget value on blur", () => {
+  it("sets widget value on blur", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
 
     const textInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(textInput, { target: { value: "testing" } })
-    fireEvent.blur(textInput)
+    await user.type(textInput, "testing")
+    // Blur the input
+    await user.tab()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
@@ -273,39 +280,36 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(3)
   })
 
-  it("doesn't set widget value when not dirty", () => {
+  it("doesn't set widget value when not dirty", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
 
     const textInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyPress(textInput, { key: "Enter" })
+    await user.keyboard("{Enter}")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    fireEvent.blur(textInput)
+    textInput.blur()
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
 
-  it("limits input length if max_chars is passed", () => {
+  it("limits input length if max_chars is passed", async () => {
+    const user = userEvent.setup()
     const props = getProps({ maxChars: 10 })
     render(<TextInput {...props} />)
 
     const textInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(textInput, { target: { value: "0123456789" } })
+    await user.type(textInput, "0123456789")
     expect(textInput).toHaveValue("0123456789")
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(textInput, { target: { value: "0123456789a" } })
+    await user.type(textInput, "a")
     expect(textInput).toHaveValue("0123456789")
   })
 
   it("does update widget value on text changes when inside of a form", async () => {
+    const user = userEvent.setup()
     const props = getProps({ formId: "formId" })
     const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
     vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
@@ -313,12 +317,10 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
 
     const textInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(textInput, { target: { value: "TEST" } })
+    await user.type(textInput, "TEST")
     expect(textInput).toHaveValue("TEST")
 
-    fireEvent.focus(textInput)
+    textInput.focus()
     expect(
       await screen.findByText("Press Enter to submit form")
     ).toBeInTheDocument()
@@ -334,17 +336,16 @@ describe("TextInput widget", () => {
   })
 
   it("does not update widget value on text changes when outside of a form", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
 
     const textInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(textInput, { target: { value: "TEST" } })
+    await user.type(textInput, "TEST")
     expect(textInput).toHaveValue("TEST")
 
-    fireEvent.focus(textInput)
+    textInput.focus()
     expect(await screen.findByText("Press Enter to apply")).toBeInTheDocument()
 
     // Check that the last call was in componentDidMount.
@@ -358,7 +359,8 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
+    const user = userEvent.setup()
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -368,9 +370,7 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByRole("textbox")
     // Change the widget value
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(textInput, { target: { value: "TEST" } })
+    await user.type(textInput, "TEST")
 
     act(() => {
       // "Submit" the form
@@ -426,16 +426,17 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
 
     const textInput = screen.getByRole("textbox")
-    await user.click(textInput)
-    await user.keyboard("TEST")
+    await user.type(textInput, "TEST")
 
     // Remove focus
-    fireEvent.blur(textInput)
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    textInput.blur()
+    await waitFor(() => {
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
 
     // Then focus again
-    fireEvent.focus(textInput)
-    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
+    textInput.focus()
+    expect(await screen.findByText("Press Enter to submit form")).toBeVisible()
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
@@ -447,30 +448,35 @@ describe("TextInput widget", () => {
 
     // Trigger dirty state
     const textInput = screen.getByRole("textbox")
-    await user.click(textInput)
-    await user.keyboard("TEST")
+    await user.type(textInput, "TEST")
 
     expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
-  it("hides Please enter to apply text when width is smaller than 180px", () => {
-    const props = getProps({}, { width: 100 })
+  it("hides Please enter to apply text when width is smaller than 180px", async () => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [100],
+    })
+    const user = userEvent.setup()
+    const props = getProps({}, {})
     render(<TextInput {...props} />)
 
     // Focus on input
     const textInput = screen.getByRole("textbox")
-    fireEvent.focus(textInput)
+    await user.click(textInput)
 
     expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
-  it("shows Please enter to apply text when width is bigger than 180px", () => {
-    const props = getProps({}, { width: 190 })
+  it("shows Please enter to apply text when width is bigger than 180px", async () => {
+    const user = userEvent.setup()
+    const props = getProps({}, {})
     render(<TextInput {...props} />)
 
     // Focus on input
     const textInput = screen.getByRole("textbox")
-    fireEvent.focus(textInput)
+    await user.click(textInput)
 
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
@@ -486,7 +492,8 @@ describe("TextInput widget", () => {
     expect(textInput).toHaveFocus()
   })
 
-  it("ensures id doesn't change on rerender", () => {
+  it("ensures id doesn't change on rerender", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     render(<TextInput {...props} />)
 
@@ -495,14 +502,32 @@ describe("TextInput widget", () => {
 
     // Make some change to cause a rerender
     const textInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(textInput, { target: { value: "0123456789" } })
+    await user.type(textInput, "0123456789")
     expect(textInput).toHaveValue("0123456789")
 
     const textInputLabel2 = screen.getByTestId("stWidgetLabel")
     const forId2 = textInputLabel2.getAttribute("for")
 
     expect(forId2).toBe(forId1)
+  })
+
+  it("handles an emoji icon", () => {
+    const props = getProps({ icon: "🔎" })
+    render(<TextInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stTextInputIcon")).toBeInTheDocument()
+    // Element rendering emoji icon
+    const emojiIcon = screen.getByTestId("stIconEmoji")
+    expect(emojiIcon).toHaveTextContent("🔎")
+  })
+
+  it("handles a material icon", () => {
+    const props = getProps({ icon: ":material/search:" })
+    render(<TextInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stTextInputIcon")).toBeInTheDocument()
+    // Element rendering material icon
+    const materialIcon = screen.getByTestId("stIconMaterial")
+    expect(materialIcon).toHaveTextContent("search")
   })
 })

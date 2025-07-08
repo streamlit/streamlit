@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,3 +23,9 @@ st.progress(
         "Please be patient :clock1:. **bold text**. $$ x = 1 + 2 $$, :blue[Blue text]"
     ),
 )
+
+st.markdown("Progress with stretch width")
+st.progress(75, width="stretch")
+
+st.markdown("Progress with pixel width")
+st.progress(25, width=200)

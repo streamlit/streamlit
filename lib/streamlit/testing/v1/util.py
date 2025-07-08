@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,17 +15,23 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from streamlit import config
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 
 @contextmanager
-def patch_config_options(config_overrides: dict[str, Any]):
+def patch_config_options(
+    config_overrides: dict[str, Any],
+) -> Generator[None, None, None]:
     """A context manager that overrides config options. It can
     also be used as a function decorator.
 
-    Examples:
+    Examples
+    --------
     >>> with patch_config_options({"server.headless": True}):
     ...     assert config.get_option("server.headless") is True
     ...     # Other test code that relies on these options
@@ -42,10 +48,12 @@ def patch_config_options(config_overrides: dict[str, Any]):
         yield
 
 
-def build_mock_config_get_option(overrides_dict):
+def build_mock_config_get_option(
+    overrides_dict: dict[str, Any],
+) -> Callable[[str], Any]:
     orig_get_option = config.get_option
 
-    def mock_config_get_option(name):
+    def mock_config_get_option(name: str) -> Any:
         if name in overrides_dict:
             return overrides_dict[name]
         return orig_get_option(name)

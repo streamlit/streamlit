@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import { render } from "~lib/test_util"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Radio, { Props } from "./Radio"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  width: 0,
   disabled: false,
   horizontal: false,
   value: 0,
@@ -76,13 +76,12 @@ describe("Radio widget", () => {
     expect(widgetLabel).not.toBeVisible()
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<Radio {...props} />)
     const radioElement = screen.getByTestId("stRadio")
 
     expect(radioElement).toHaveClass("stRadio")
-    expect(radioElement).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
@@ -161,16 +160,15 @@ describe("Radio widget", () => {
     expect(noOptionLabel).toBeInTheDocument()
   })
 
-  it("handles value changes", () => {
+  it("handles value changes", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     render(<Radio {...props} />)
     const radioOptions = screen.getAllByRole("radio")
 
     const secondOption = radioOptions[1]
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(secondOption)
+    await user.click(secondOption)
 
     expect(secondOption).toBeChecked()
   })

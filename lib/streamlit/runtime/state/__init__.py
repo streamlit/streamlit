@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,15 +27,15 @@ from streamlit.runtime.state.session_state_proxy import (
 from streamlit.runtime.state.widgets import register_widget
 
 __all__ = [
+    "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
+    "QueryParamsProxy",
+    "SafeSessionState",
+    "SessionState",
+    "SessionStateProxy",
+    "SessionStateStatProvider",
     "WidgetArgs",
     "WidgetCallback",
     "WidgetKwargs",
-    "QueryParamsProxy",
-    "SafeSessionState",
-    "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
-    "SessionState",
-    "SessionStateStatProvider",
-    "SessionStateProxy",
     "get_session_state",
     "register_widget",
 ]

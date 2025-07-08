@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 import React, { ReactElement } from "react"
 
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
 
 import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 
 interface Props {
   children: ReactElement
+  containerWidth: boolean
   help?: string
   placement?: Placement
 }
@@ -31,6 +32,7 @@ export function BaseButtonTooltip({
   children,
   help,
   placement,
+  containerWidth,
 }: Props): ReactElement {
   if (!help) {
     return children
@@ -38,7 +40,11 @@ export function BaseButtonTooltip({
   return (
     <>
       <StyledTooltipNormal>
-        <TooltipIcon content={help} placement={placement || Placement.TOP}>
+        <TooltipIcon
+          content={help}
+          placement={placement || Placement.TOP}
+          containerWidth={containerWidth}
+        >
           {children}
         </TooltipIcon>
       </StyledTooltipNormal>

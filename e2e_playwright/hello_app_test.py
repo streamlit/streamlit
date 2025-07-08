@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,10 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+)
 
 
 def navigate_to_page(app: Page, index: int):
@@ -88,12 +91,12 @@ def test_mapping_demo_page(app: Page) -> None:
     # We add an additional timeout here since sometimes the loading of
     # the map takes a bit longer (probably because of the map token request).
     expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_attribute(
-        "height", "500", timeout=10000
+        "height", "31.25rem", timeout=10000
     )
 
     # The snapshot test here is flaky, the map doesn't seem to always result
     # in the same image.
-    # assert_snapshot(app, name="hello_app-mapping_demo_page")
+    # assert_snapshot(app, name="hello_app-mapping_demo_page")  # noqa: ERA001
 
 
 def _load_dataframe_demo_page(app: Page):
@@ -115,9 +118,11 @@ def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
 
 
 # TEST PRINTING:
-# The print tests are in this suite to avoid having full-app screenshots being spread around in different suites.
-# Even the smallest design change in one part of the app can make these full-screenshots fail and require renewal, which is why we want them to be
-# bundled in one place. The "Dataframe Demo" page was arbitrarily chosen as a good printing candidate.
+# The print tests are in this suite to avoid having full-app screenshots being spread
+# around in different suites. Even the smallest design change in one part of the app can
+# make these full-screenshots fail and require renewal, which is why we want them to be
+# bundled in one place. The "Dataframe Demo" page was arbitrarily chosen as a good
+# printing candidate.
 
 
 def _evaluate_match_media_print(app: Page):
@@ -141,8 +146,11 @@ def _set_landscape_dimensions(app: Page):
 def test_app_print_mode_portrait_with_sidebar_open(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the dataframe demo page looks correctly in print-mode with sidebar open."""
+    """Test that the dataframe demo page looks correctly in print-mode with
+    sidebar open.
+    """
     app = themed_app
+
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
@@ -157,13 +165,17 @@ def test_app_print_mode_portrait_with_sidebar_open(
 def test_app_print_mode_portrait_with_sidebar_closed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the dataframe demo page looks correctly in print-mode with sidebar closed."""
+    """Test that the dataframe demo page looks correctly in print-mode with
+    sidebar closed.
+    """
     app = themed_app
+
     _load_dataframe_demo_page(app)
-    # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    # close sidebar. Must be done before print-mode, because we hide the close button
+    # when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("stBaseButton-headerNoPadding").click()
+    app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
@@ -176,13 +188,15 @@ def test_app_print_mode_portrait_with_sidebar_closed(
 def test_app_print_mode_landscape_with_sidebar_open(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the dataframe demo page looks correctly in print-mode (orientation: landscape) with sidebar open."""
+    """Test that the dataframe demo page looks correctly in print-mode
+    (orientation: landscape) with sidebar open.
+    """
     app = themed_app
+
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_landscape_dimensions(app)
     _evaluate_match_media_print(app)
-
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
 
@@ -192,13 +206,17 @@ def test_app_print_mode_landscape_with_sidebar_open(
 def test_app_print_mode_landscape_with_sidebar_closed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the dataframe demo page looks correctly in print-mode (orientation: landscape) with sidebar closed."""
+    """Test that the dataframe demo page looks correctly in print-mode
+    (orientation: landscape) with sidebar closed.
+    """
     app = themed_app
+
     _load_dataframe_demo_page(app)
-    # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    # close sidebar. Must be done before print-mode, because we hide the close button
+    # when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("stBaseButton-headerNoPadding").click()
+    app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
@@ -206,3 +224,14 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     _evaluate_match_media_print(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
+
+
+def test_max_content_width_uses_px(app: Page):
+    """Test that the max content width uses px and not rem.
+
+    We don't want to adjust the content max width based on the root font size,
+    therefore, we are changing this setting to px instead of rem. This allows
+    us to fill the same screen estate regardless of the root font size
+    -> which allows more compact apps by using a small font size.
+    """
+    expect(app.get_by_test_id("stMainBlockContainer")).to_have_css("max-width", "736px")

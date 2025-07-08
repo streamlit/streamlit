@@ -1,4 +1,4 @@
-rem Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+rem Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 rem
 rem Licensed under the Apache License, Version 2.0 (the "License");
 rem you may not use this file except in compliance with the License.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,17 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { Button as ButtonProto } from "@streamlit/lib/src/proto"
+import { Button as ButtonProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Button, { Props } from "./Button"
 
-vi.mock("@streamlit/lib/src/WidgetStateManager")
+vi.mock("~lib/WidgetStateManager")
 
 const sendBackMsg = vi.fn()
 
@@ -37,7 +39,6 @@ const getProps = (
     label: "Label",
     ...elementProps,
   }),
-  width: 250,
   disabled: false,
   // @ts-expect-error
   widgetMgr: new WidgetStateManager(sendBackMsg),
@@ -60,7 +61,6 @@ describe("Button widget", () => {
     const stButtonDiv = screen.getByTestId("stButton")
 
     expect(stButtonDiv).toHaveClass("stButton")
-    expect(stButtonDiv).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("should render a label within the button", () => {
@@ -75,14 +75,13 @@ describe("Button widget", () => {
   })
 
   describe("BaseButton props should work", () => {
-    it("onClick prop", () => {
+    it("onClick prop", async () => {
+      const user = userEvent.setup()
       const props = getProps()
       render(<Button {...props} />)
 
       const buttonWidget = screen.getByRole("button")
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(buttonWidget)
+      await user.click(buttonWidget)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
@@ -91,16 +90,15 @@ describe("Button widget", () => {
       )
     })
 
-    it("passes fragmentId to onClick prop", () => {
+    it("passes fragmentId to onClick prop", async () => {
+      const user = userEvent.setup()
       const props = getProps(undefined, {
         fragmentId: "myFragmentId",
       })
       render(<Button {...props} />)
 
       const buttonWidget = screen.getByRole("button")
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(buttonWidget)
+      await user.click(buttonWidget)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
@@ -126,6 +124,24 @@ describe("Button widget", () => {
     expect(buttonWidget).toHaveStyle("width: auto")
   })
 
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    // Hover to see tooltip content
+    render(<Button {...getProps({ help: "mockHelpText" })} />)
+
+    // Ensure both the button and the tooltip target have the correct width
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle("width: auto")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: auto")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
   it("passes useContainerWidth property without help correctly", () => {
     render(<Button {...getProps({ useContainerWidth: true })}>Hello</Button>)
 
@@ -141,6 +157,6 @@ describe("Button widget", () => {
     )
 
     const buttonWidget = screen.getByRole("button")
-    expect(buttonWidget).toHaveStyle(`width: ${250}px`)
+    expect(buttonWidget).toHaveStyle(`width: 100%`)
   })
 })

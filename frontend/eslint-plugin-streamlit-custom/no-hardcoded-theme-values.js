@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ module.exports = {
     // The following font-related values are allowed: 'small-caps', 'italic', 'normal', 'liga'.
     // The part '(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+' allows for non-zero digits with a unit or 0, or a combination of both separated by whitespaces.
     const allowedValuesRegex =
-      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|unset|fit-content|collapse|0|(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+|small-caps|italic|normal|liga)( !important)?('|")?$).*$/i
+      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|unset|fit-content|collapse|separate|0|(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+|small-caps|italic|normal|liga)( !important)?('|")?$).*$/i
 
     return {
       ObjectExpression(node) {

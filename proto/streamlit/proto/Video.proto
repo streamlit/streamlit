@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ syntax = "proto3";
 
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "VideoProto";
+
+import "streamlit/proto/WidthConfig.proto";
 
 message SubtitleTrack {
     string label = 1;  // Label for the subtitle e.g. "English" or "Spanish".
@@ -54,6 +56,8 @@ message Video {
   bool muted = 11;
 
   string id = 12;
+
+  optional streamlit.WidthConfig width_config = 13;
 
   reserved 1,2,4;
   reserved "format", "data";

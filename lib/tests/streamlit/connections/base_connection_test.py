@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,9 +64,9 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         with pytest.raises(AttributeError) as e:
             MockConnection("my_mock_connection").some_raw_connection_method()
 
-        assert (
-            str(e.value)
-            == "`some_raw_connection_method` doesn't exist here, but you can call `._instance.some_raw_connection_method` instead"
+        assert str(e.value) == (
+            "`some_raw_connection_method` doesn't exist here, but you can call "
+            "`._instance.some_raw_connection_method` instead"
         )
         assert (
             MockConnection("my_mock_connection")._instance.some_raw_connection_method()
@@ -122,29 +122,26 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
     def test_on_secrets_changed(self):
         conn = MockConnection("my_mock_connection")
 
-        with patch(
-            "streamlit.connections.base_connection.BaseConnection.reset"
-        ) as patched_reset, patch(
-            "streamlit.connections.base_connection.BaseConnection._secrets",
-            PropertyMock(return_value=AttrDict({"mock_connection": {"new": "secret"}})),
+        with (
+            patch(
+                "streamlit.connections.base_connection.BaseConnection.reset"
+            ) as patched_reset,
+            patch(
+                "streamlit.connections.base_connection.BaseConnection._secrets",
+                PropertyMock(
+                    return_value=AttrDict({"mock_connection": {"new": "secret"}})
+                ),
+            ),
         ):
             conn._on_secrets_changed("unused_arg")
             patched_reset.assert_called_once()
 
-    def test_repr_html_(self):
-        repr_ = MockConnection("my_mock_connection")._repr_html_()
+    # Test this here rather than in write_test.py because the MockConnection object
+    # is defined here. Seems cleaner.
+    def test_st_write(self):
+        conn = MockConnection("my_mock_connection")
 
-        assert (
-            "st.connection my_mock_connection built from `tests.streamlit.connections.base_connection_test.MockConnection`"
-            in repr_
-        )
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            st.write(conn)
 
-    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_repr_html_with_secrets(self, _):
-        repr_ = MockConnection("my_mock_connection")._repr_html_()
-
-        assert (
-            "st.connection my_mock_connection built from `tests.streamlit.connections.base_connection_test.MockConnection`"
-            in repr_
-        )
-        assert "Configured from `[connections.my_mock_connection]`" in repr_
+            p.assert_called_once_with(conn)

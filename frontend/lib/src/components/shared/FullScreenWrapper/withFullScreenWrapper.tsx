@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ import React, { ComponentType, ReactElement } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import ElementFullscreenWrapper from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenWrapper"
+import ElementFullscreenWrapper from "~lib/components/shared/ElementFullscreen/ElementFullscreenWrapper"
 
-function withFullScreenWrapper<P extends { width: number }>(
+function withFullScreenWrapper<P extends object>(
   WrappedComponent: ComponentType<React.PropsWithChildren<P>>
 ): ComponentType<React.PropsWithChildren<P>> {
   const ComponentWithFullScreenWrapper = (props: P): ReactElement => {
     return (
-      <ElementFullscreenWrapper width={props.width}>
-        <WrappedComponent {...(props as P)}></WrappedComponent>
+      <ElementFullscreenWrapper>
+        <WrappedComponent {...props}></WrappedComponent>
       </ElementFullscreenWrapper>
     )
   }

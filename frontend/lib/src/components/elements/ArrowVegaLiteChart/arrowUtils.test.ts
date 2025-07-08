@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import {
   RANGE,
   UINT64,
   UNICODE,
-} from "@streamlit/lib/src/mocks/arrow"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+} from "~lib/mocks/arrow"
+import { Quiver } from "~lib/dataframes/Quiver"
 
 import { getDataArray } from "./arrowUtils"
 

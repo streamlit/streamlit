@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +13,19 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit import runtime
+from streamlit import config, runtime
+
+# Set file max upload size to 1MB
+config.set_option("server.maxUploadSize", 1)
 
 v1 = st.container().chat_input("Chat input 1 (inline)")
 st.write("Chat input 1 (inline) - value:", v1)
 
 col1, _ = st.columns(2)
 
-v2 = col1.chat_input("Chat input 2 (in column, disabled)", disabled=True)
+v2 = col1.chat_input(
+    "Chat input 2 (in column, disabled)", accept_file=True, disabled=True
+)
 st.write("Chat input 2 (in column, disabled) - value:", v2)
 
 if runtime.exists():
@@ -33,5 +38,23 @@ if runtime.exists():
     )
     st.write("Chat input 3 (callback) - value:", st.session_state.get("chat_input_3"))
 
-v4 = st.chat_input("Chat input 4 (bottom, max_chars)", max_chars=200)
-st.write("Chat input 4 (bottom, max_chars) - value:", v4)
+v4 = st.container().chat_input(
+    "Chat input 4 (single file)", accept_file=True, file_type="txt"
+)
+st.write("Chat input 4 (single file) - value:", v4)
+
+v5 = st.container().chat_input("Chat input 5 (multiple files)", accept_file="multiple")
+st.write("Chat input 5 (multiple files) - value:", v5)
+
+v6 = st.container().chat_input("Chat input 7 (width=300px)", width=300)
+v7 = st.container().chat_input("Chat input 8 (width='stretch')", width="stretch")
+
+
+v8 = st.chat_input(
+    "Chat input 8 (bottom, max_chars, long placeholder) "
+    "This is a very long placeholder text that should span multiple lines "
+    "and cause the chat input to grow vertically to accommodate all the "
+    "text properly when displayed in the UI",
+    max_chars=200,
+)
+st.write("Chat input 8 (bottom, max_chars) - value:", v8)

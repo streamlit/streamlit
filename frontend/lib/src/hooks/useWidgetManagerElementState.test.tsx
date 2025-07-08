@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 import React, { FC } from "react"
 
-import { act, renderHook } from "@testing-library/react-hooks"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, render, renderHook, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { Form } from "@streamlit/lib/src/components/widgets/Form"
-import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { RootStyleProvider } from "@streamlit/lib/src/RootStyleProvider"
-import { getDefaultTheme } from "@streamlit/lib/src/theme"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import Form from "~lib/components/widgets/Form"
+import { RootStyleProvider } from "~lib/RootStyleProvider"
+import { getDefaultTheme } from "~lib/theme"
 
 import useWidgetManagerElementState from "./useWidgetManagerElementState"
 
@@ -79,6 +78,7 @@ describe("useWidgetManagerElementState hook", () => {
   })
 
   it("should properly clear state on form clear", async () => {
+    const user = userEvent.setup()
     const formId = "formId"
     const stateKey = "stateKey"
     const defaultValue = "initial"
@@ -105,11 +105,10 @@ describe("useWidgetManagerElementState hook", () => {
             formId={formId}
             clearOnSubmit={true}
             enterToSubmit={false}
-            width={0}
             hasSubmitButton={true}
             widgetMgr={widgetMgr}
             border={false}
-            scriptRunState={ScriptRunState.NOT_RUNNING}
+            scriptNotRunning={true}
           >
             <input
               aria-label={testInputAriaLabel}
@@ -125,17 +124,15 @@ describe("useWidgetManagerElementState hook", () => {
     render(<TestComponent />)
 
     // verify default value
-    const inputElement = screen.getByLabelText(
-      testInputAriaLabel
-    ) as HTMLInputElement
+    const inputElement: HTMLInputElement =
+      screen.getByLabelText(testInputAriaLabel)
     expect(inputElement.value).toBe(defaultValue)
 
     expect(widgetMgr.getElementState(elementId, stateKey)).toBe(defaultValue)
 
     // change the input value
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(inputElement, { target: { value: newValue } })
+    await user.clear(inputElement)
+    await user.type(inputElement, newValue)
 
     // verify new value is set
     expect(inputElement.value).toBe(newValue)
@@ -143,6 +140,7 @@ describe("useWidgetManagerElementState hook", () => {
 
     // submit the form
     // note: struggled using default html form submission, so manually triggering our submission logic here
+    // eslint-disable-next-line @typescript-eslint/await-thenable
     await act(() => {
       widgetMgr.submitForm(formId, undefined)
     })

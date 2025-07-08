@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,12 @@
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import { Field, Utf8 } from "apache-arrow"
+
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import TextColumn from "./TextColumn"
-import { isErrorCell } from "./utils"
+import { ErrorCell, isErrorCell } from "./utils"
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "1",
@@ -32,10 +35,15 @@ const MOCK_TEXT_COLUMN_PROPS = {
   isPinned: false,
   isStretched: false,
   arrowType: {
-    // The arrow type of the underlying data is
-    // not used for anything inside the column.
-    pandas_type: "unicode",
-    numpy_type: "object",
+    type: DataFrameCellType.DATA,
+    arrowField: new Field("text_column", new Utf8(), true),
+    pandasType: {
+      field_name: "text_column",
+      name: "text_column",
+      pandas_type: "unicode",
+      numpy_type: "object",
+      metadata: null,
+    },
   },
 }
 
@@ -73,6 +81,7 @@ describe("TextColumn", () => {
     [undefined, null],
   ])(
     "supports string-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: string | null) => {
       const mockColumn = TextColumn(MOCK_TEXT_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
@@ -138,7 +147,11 @@ describe("TextColumn", () => {
 
     const cell = mockColumn.getCell("test", true)
     expect(isErrorCell(cell)).toEqual(true)
-    expect((cell as TextCell).data).toContain("Invalid validate regex")
+    // Data should contain the initial raw data
+    expect((cell as ErrorCell).data).toContain("test")
+    expect((cell as ErrorCell).errorDetails).toContain(
+      "Invalid validate regex"
+    )
   })
 
   it("ignores empty validate", () => {

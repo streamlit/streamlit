@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ np.random.seed(0)
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=("col_%d" % i for i in range(5)),
+    columns=(f"col_{i}" for i in range(5)),
 )
 
 with st.chat_message("user"):
@@ -123,3 +123,19 @@ with st.chat_message("assistant"):
 
 assistant_message = {"role": "assistant", "content": llm_response, "sources": sources}
 st.session_state.messages.append(assistant_message)
+
+with st.chat_message("assistant"):
+    st.write("This message contains another message:")
+    st.chat_message("user", avatar="🧑").write("This is a nested chat message.")
+
+with st.chat_message("user", width=300):
+    st.write("Width = 300px")
+    st.write("This chat message has a fixed width of 300 pixels.")
+
+with st.chat_message("user", width="content"):
+    st.write("Width = content")
+    st.write("This chat message expands to fit its content.")
+
+with st.chat_message("user", width="stretch"):
+    st.write("Width = stretch")
+    st.write("This chat message stretches to fill available space in its container.")

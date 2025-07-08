@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ message Config {
 // Custom theme configuration options. Like other config options, these are set
 // in .streamlit/config.toml.
 //
-// IMPORTANT: This message is passed in JSON format in a host-to-guest postMessage. So DOT NOT
+// IMPORTANT: This message is passed in JSON format in a host-to-guest postMessage. So DO NOT
 // rename its proto fields!
 message CustomThemeConfig {
   enum BaseTheme {
@@ -139,6 +139,7 @@ message CustomThemeConfig {
     DARK = 1;
   }
 
+  // DEPRECATED: Use body_font instead:
   enum FontFamily {
     SANS_SERIF = 0;
     SERIF = 1;
@@ -149,31 +150,67 @@ message CustomThemeConfig {
   string secondary_background_color = 2;
   string background_color = 3;
   string text_color = 4;
+  // DEPRECATED: Use body_font instead:
   FontFamily font = 5;
   BaseTheme base = 6;
+  // DEPRECATED: This color is not applied anymore:
   string widget_background_color = 7;
+  // DEPRECATED: Use the border_color and show_widget_border instead:
   string widget_border_color = 8;
+  // DEPRECATED: Please use the base_radius theme config instead:
   Radii radii = 9;
+  string heading_font = 12;
   string body_font = 13;
   string code_font = 14;
   repeated FontFace font_faces = 15;
+  // DEPRECATED: Please use the base_font_size theme config instead:
   FontSizes font_sizes = 16;
+  // DEPRECATED: This color is not applied anymore:
   string skeleton_background_color = 17;
+  optional string base_radius = 18;
+  optional string button_radius = 26;
+  optional string border_color = 19;
+  optional string dataframe_border_color = 27;
+  optional bool show_widget_border = 20;
+  optional string link_color = 21;
+  optional bool link_underline = 29;
+  optional int32 base_font_size = 22;
+  optional int32 base_font_weight = 30;
+  optional int32 code_font_weight = 32;
+  optional string code_font_size = 28;
+  repeated string heading_font_sizes = 35;
+  repeated int32 heading_font_weights = 34;
+  optional bool show_sidebar_border = 23;
+  optional CustomThemeConfig sidebar = 24;
+  optional string code_background_color = 25;
+  optional string dataframe_header_background_color = 31;
+  repeated string chart_categorical_colors = 33;
+
+  // Next ID: 36
 }
 
 message FontFace {
   string url = 1;
+  // Equivalent to font-family @font-face CSS property.
   string family = 2;
-  int32 weight = 3;
+  // DEPRECATED: Use weight_range instead which supports single weights & weight ranges.
+  int32 weight = 3 [deprecated = true];
+  // Equivalent to font-weight @font-face CSS property.
+  string weight_range = 5;
+  // Equivalent to font-style @font-face CSS property.
   string style = 4;
+  // Equivalent to unicode-range @font-face CSS property.
+  string unicode_range = 6;
 }
 
+// DEPRECATED: Please use the base_radius theme config instead.
 message Radii {
   // In pixels.
   int32 base_widget_radius = 1;
   int32 checkbox_radius = 2;
 }
 
+// DEPRECATED: Please use the base_font_size theme config instead:
 message FontSizes {
   // In pixels.
   int32 tiny_font_size = 1;
@@ -186,10 +223,13 @@ message FontSizes {
 message UserInfo {
   string installation_id = 1;
   string installation_id_v3 = 5;
+  string installation_id_v4 = 6;
 
   // DEPRECATED:
   // string email = 2;
   reserved 2;
+
+  // Next 7
 }
 
 // Data that identifies the Streamlit app's environment.
@@ -203,4 +243,15 @@ message UserInfo {
 message EnvironmentInfo {
   string streamlit_version = 1;
   string python_version = 2;
+
+  // The name of the OS. Typically "windows", "mac", "linux",
+  // but can take other values like "ios", "android", "freebsd8".
+  // See https://docs.python.org/3/library/sys.html#sys.platform
+  string server_os = 3;
+
+  // True if Linux/BSD and DISPLAY or WAYLAND_DISPLAY environment variables are
+  // set. This is used so we can tell when Streamlit is being executed in order
+  // to develop the app (has_display = true) or to serve the app (has_display =
+  // false).
+  bool has_display = 4;
 }

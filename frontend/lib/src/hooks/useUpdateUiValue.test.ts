@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { waitFor } from "@testing-library/react"
-import { renderHook } from "@testing-library/react-hooks"
+import { renderHook, waitFor } from "@testing-library/react"
 
 import useUpdateUiValue from "./useUpdateUiValue"
 
@@ -26,13 +25,13 @@ describe("useUpdateUiValue", () => {
     await waitFor(() => expect(callback).toHaveBeenCalledWith(4))
   })
 
-  it("shoud not update ui value if values are different and ui value is dirty", async () => {
+  it("should not update ui value if values are different and ui value is dirty", async () => {
     const callback = vi.fn()
     renderHook(() => useUpdateUiValue(4, 2, callback, true))
     await waitFor(() => expect(callback).not.toHaveBeenCalled())
   })
 
-  it("shoud not update ui value if values are same", async () => {
+  it("should not update ui value if values are same", async () => {
     const callback = vi.fn()
     renderHook(() => useUpdateUiValue(4, 4, callback, false))
     await waitFor(() => expect(callback).not.toHaveBeenCalled())

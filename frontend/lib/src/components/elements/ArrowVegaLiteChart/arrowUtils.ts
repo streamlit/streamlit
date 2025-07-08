@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,18 @@
  */
 
 import {
-  getTypeName,
-  IndexTypeName,
-} from "@streamlit/lib/src/dataframes/arrowTypeUtils"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+  DataFrameCellType,
+  getTimezone,
+  isDatetimeType,
+  isDateType,
+  isNumericType,
+} from "~lib/dataframes/arrowTypeUtils"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",
 }
-
-/** Types of dataframe-indices that are supported as x axis. */
-const SUPPORTED_INDEX_TYPES = new Set([
-  IndexTypeName.DatetimeIndex,
-  IndexTypeName.Float64Index,
-  IndexTypeName.Int64Index,
-  IndexTypeName.RangeIndex,
-  IndexTypeName.UInt64Index,
-])
 
 /** All of the data that makes up a VegaLite chart. */
 export interface VegaLiteChartElement {
@@ -84,28 +78,29 @@ export interface WrappedNamedDataset {
 }
 
 export function getInlineData(
-  el: VegaLiteChartElement
+  quiverData: Quiver | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): { [field: string]: any }[] | null {
-  const dataProto = el.data
-
-  if (!dataProto || dataProto.data.numRows === 0) {
+  if (!quiverData || quiverData.dimensions.numDataRows === 0) {
     return null
   }
 
-  return getDataArray(dataProto)
+  return getDataArray(quiverData)
 }
 
 export function getDataArrays(
-  el: VegaLiteChartElement
+  datasets: WrappedNamedDataset[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): { [dataset: string]: any[] } | null {
-  const datasets = getDataSets(el)
-  if (isNullOrUndefined(datasets)) {
+  const datasetMapping = getDataSets(datasets)
+  if (isNullOrUndefined(datasetMapping)) {
     return null
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const datasetArrays: { [dataset: string]: any[] } = {}
 
-  for (const [name, dataset] of Object.entries(datasets)) {
+  for (const [name, dataset] of Object.entries(datasetMapping)) {
     datasetArrays[name] = getDataArray(dataset)
   }
 
@@ -113,126 +108,100 @@ export function getDataArrays(
 }
 
 export function getDataSets(
-  el: VegaLiteChartElement
+  datasets: WrappedNamedDataset[]
 ): { [dataset: string]: Quiver } | null {
-  if (el.datasets?.length === 0) {
+  if (datasets?.length === 0) {
     return null
   }
 
-  const datasets: { [dataset: string]: Quiver } = {}
+  const datasetMapping: { [dataset: string]: Quiver } = {}
 
-  el.datasets.forEach((x: WrappedNamedDataset) => {
+  datasets.forEach((x: WrappedNamedDataset) => {
     if (!x) {
       return
     }
     const name = x.hasName ? x.name : null
-    datasets[name as string] = x.data
+    datasetMapping[name as string] = x.data
   })
 
-  return datasets
+  return datasetMapping
 }
 
 /**
  * Retrieves an array of data from Quiver starting from a specified index.
  * Converts data values to a format compatible with VegaLite visualization.
  *
- * @param {Quiver} dataProto - The Quiver data object to extract data from.
+ * @param {Quiver} quiverData - The Quiver data object to extract data from.
  * @param {number} [startIndex=0] - The starting index for data extraction.
  * @returns {Array.<{ [field: string]: any }>} An array of data objects for visualization.
  */
 export function getDataArray(
-  dataProto: Quiver,
+  quiverData: Quiver,
   startIndex = 0
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): { [field: string]: any }[] {
-  if (dataProto.isEmpty()) {
+  if (quiverData.dimensions.numDataRows === 0) {
     return []
   }
 
   const dataArr = []
-  const { dataRows: rows, dataColumns: cols } = dataProto.dimensions
+  const { numDataRows, numDataColumns, numIndexColumns } =
+    quiverData.dimensions
 
-  const indexType = getTypeName(dataProto.types.index[0])
-  const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
-    indexType as IndexTypeName
-  )
+  // This currently only implemented to work with a single index column.
+  // If the dataframe is multi-index, the remaining index columns will be ignored.
+  const firstIndexColumnType = quiverData.columnTypes[0] ?? undefined
+  const hasSupportedIndex =
+    firstIndexColumnType &&
+    firstIndexColumnType.type === DataFrameCellType.INDEX &&
+    (isNumericType(firstIndexColumnType) ||
+      isDatetimeType(firstIndexColumnType) ||
+      isDateType(firstIndexColumnType))
 
-  for (let rowIndex = startIndex; rowIndex < rows; rowIndex++) {
+  for (let rowIndex = startIndex; rowIndex < numDataRows; rowIndex++) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      const indexValue = dataProto.getIndexValue(rowIndex, 0)
+      const { content: indexValue } = quiverData.getCell(rowIndex, 0)
       // VegaLite can't handle BigInts, so they have to be converted to Numbers first
+      // Converting to numbers here might loses accuracy for numbers larger than the max safe integer.
       row[MagicFields.DATAFRAME_INDEX] =
         typeof indexValue === "bigint" ? Number(indexValue) : indexValue
     }
 
-    for (let colIndex = 0; colIndex < cols; colIndex++) {
-      const dataValue = dataProto.getDataValue(rowIndex, colIndex)
-      const dataType = dataProto.types.data[colIndex]
-      const typeName = getTypeName(dataType)
+    for (let colIndex = 0; colIndex < numDataColumns; colIndex++) {
+      // The underlying dataframe expects the column position to start at 0 with
+      // the index columns first. Therefore, we need to adjust the position
+      // to account for the index columns.
+      const colPos = colIndex + numIndexColumns
+      const { content: dataValue, contentType: dataType } = quiverData.getCell(
+        rowIndex,
+        colPos
+      )
 
       if (
-        typeName !== "datetimetz" &&
-        (dataValue instanceof Date || Number.isFinite(dataValue)) &&
-        (typeName.startsWith("datetime") || typeName === "date")
+        (dataValue instanceof Date ||
+          (typeof dataValue === "number" && Number.isFinite(dataValue))) &&
+        (isDatetimeType(dataType) || isDateType(dataType)) &&
+        // Only convert dates without timezone information
+        // to utc timezone
+        !getTimezone(dataType)
       ) {
         // For dates that do not contain timezone information.
         // Vega JS assumes dates in the local timezone, so we need to convert
         // UTC date to be the same date in the local timezone.
         const offset = new Date(dataValue).getTimezoneOffset() * 60 * 1000 // minutes to milliseconds
-        row[dataProto.columns[0][colIndex]] = dataValue.valueOf() + offset
-      } else if (typeof dataValue === "bigint") {
-        row[dataProto.columns[0][colIndex]] = Number(dataValue)
+        row[quiverData.columnNames[0][colPos]] = dataValue.valueOf() + offset
       } else {
-        row[dataProto.columns[0][colIndex]] = dataValue
+        // VegaLite can't handle BigInts, so they have to be converted to Numbers first.
+        // Converting to numbers here might loses accuracy for numbers larger than the max safe integer.
+        row[quiverData.columnNames[0][colPos]] =
+          typeof dataValue === "bigint" ? Number(dataValue) : dataValue
       }
     }
     dataArr.push(row)
   }
 
   return dataArr
-}
-
-/**
- * Checks if data looks like it's just prevData plus some appended rows.
- */
-export function dataIsAnAppendOfPrev(
-  prevData: Quiver,
-  prevNumRows: number,
-  prevNumCols: number,
-  data: Quiver,
-  numRows: number,
-  numCols: number
-): boolean {
-  // Check whether dataframes have the same shape.
-
-  // not an append
-  if (prevNumCols !== numCols) {
-    return false
-  }
-
-  // Data can be updated, but still have the same number of rows.
-  // We consider the case an append only when the number of rows has increased
-  if (prevNumRows >= numRows) {
-    return false
-  }
-
-  // if no previous data, render from scratch
-  if (prevNumRows === 0) {
-    return false
-  }
-
-  const c = numCols - 1
-  const r = prevNumRows - 1
-
-  // Check if the new dataframe looks like it's a superset of the old one.
-  // (this is a very light check, and not guaranteed to be right!)
-  if (
-    prevData.getDataValue(0, c) !== data.getDataValue(0, c) ||
-    prevData.getDataValue(r, c) !== data.getDataValue(r, c)
-  ) {
-    return false
-  }
-
-  return true
 }

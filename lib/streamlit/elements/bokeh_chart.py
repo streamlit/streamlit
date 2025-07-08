@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from bokeh.plotting.figure import Figure
@@ -38,7 +37,7 @@ class BokehMixin:
     def bokeh_chart(
         self,
         figure: Figure,
-        use_container_width: bool = False,
+        use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display an interactive Bokeh chart.
 
@@ -53,6 +52,12 @@ class BokehMixin:
             You must install ``bokeh==2.4.3`` and ``numpy<2`` to use this
             command.
 
+            If you need a newer version of Bokeh, use our |streamlit-bokeh|_
+            custom component instead.
+
+        .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
+        .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh
+
         Parameters
         ----------
         figure : bokeh.plotting.figure.Figure
@@ -60,11 +65,11 @@ class BokehMixin:
 
         use_container_width : bool
             Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``False``
-            (default), Streamlit sets the width of the chart to fit its contents
-            according to the plotting library, up to the width of the parent
-            container. If ``use_container_width`` is ``True``, Streamlit sets
-            the width of the figure to match the width of the parent container.
+            the parent container. If ``use_container_width`` is ``True`` (default),
+            Streamlit sets the width of the figure to match the width of the parent
+            container. If ``use_container_width`` is ``False``, Streamlit sets the
+            width of the chart to fit its contents according to the plotting library,
+            up to the width of the parent container.
 
         Example
         -------
@@ -77,7 +82,7 @@ class BokehMixin:
         >>> p = figure(title="simple line example", x_axis_label="x", y_axis_label="y")
         >>> p.line(x, y, legend_label="Trend", line_width=2)
         >>>
-        >>> st.bokeh_chart(p, use_container_width=True)
+        >>> st.bokeh_chart(p)
 
         .. output::
            https://doc-bokeh-chart.streamlit.app/
@@ -91,13 +96,15 @@ class BokehMixin:
                 f"Streamlit only supports Bokeh version {ST_BOKEH_VERSION}, "
                 f"but you have version {bokeh.__version__} installed. Please "
                 f"run `pip install --force-reinstall --no-deps bokeh=="
-                f"{ST_BOKEH_VERSION}` to install the correct version."
+                f"{ST_BOKEH_VERSION}` to install the correct version.\n\n\n"
+                f"To use the latest version of Bokeh, install our custom component, "
+                f"[streamlit-bokeh](https://github.com/streamlit/streamlit-bokeh)."
             )
 
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
 
-        element_id = hashlib.md5(delta_path.encode(), **HASHLIB_KWARGS).hexdigest()
+        element_id = calc_md5(delta_path.encode())
         bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width, element_id)
         return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)

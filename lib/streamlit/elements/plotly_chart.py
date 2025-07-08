@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +21,7 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
-    Iterable,
-    List,
     Literal,
     TypedDict,
     Union,
@@ -32,11 +29,10 @@ from typing import (
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import Required, TypeAlias
 
 from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
@@ -48,9 +44,12 @@ from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
-    import matplotlib
+    from collections.abc import Iterable
+
+    import matplotlib as mpl
     import plotly.graph_objs as go
     from plotly.basedatatypes import BaseFigure
 
@@ -65,13 +64,13 @@ _AtomicFigureOrData: TypeAlias = Union[
 ]
 FigureOrData: TypeAlias = Union[
     _AtomicFigureOrData,
-    List[_AtomicFigureOrData],
+    list[_AtomicFigureOrData],
     # It is kind of hard to figure out exactly what kind of dict is supported
     # here, as plotly hasn't embraced typing yet. This version is chosen to
     # align with the docstring.
-    Dict[str, _AtomicFigureOrData],
+    dict[str, _AtomicFigureOrData],
     "BaseFigure",
-    "matplotlib.figure.Figure",
+    "mpl.figure.Figure",
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
@@ -160,10 +159,10 @@ class PlotlySelectionState(TypedDict, total=False):
 
     """
 
-    points: list[dict[str, Any]]
-    point_indices: list[int]
-    box: list[dict[str, Any]]
-    lasso: list[dict[str, Any]]
+    points: Required[list[dict[str, Any]]]
+    point_indices: Required[list[int]]
+    box: Required[list[dict[str, Any]]]
+    lasso: Required[list[dict[str, Any]]]
 
 
 class PlotlyState(TypedDict, total=False):
@@ -206,7 +205,7 @@ class PlotlyState(TypedDict, total=False):
 
     """
 
-    selection: PlotlySelectionState
+    selection: Required[PlotlySelectionState]
 
 
 @dataclass
@@ -215,7 +214,7 @@ class PlotlyChartSelectionSerde:
     selection state.
     """
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
+    def deserialize(self, ui_value: str | None) -> PlotlyState:
         empty_selection_state: PlotlyState = {
             "selection": {
                 "points": [],
@@ -228,13 +227,13 @@ class PlotlyChartSelectionSerde:
         selection_state = (
             empty_selection_state
             if ui_value is None
-            else cast(PlotlyState, AttributeDictionary(json.loads(ui_value)))
+            else cast("PlotlyState", AttributeDictionary(json.loads(ui_value)))
         )
 
         if "selection" not in selection_state:
-            selection_state = empty_selection_state
+            selection_state = empty_selection_state  # type: ignore[unreachable]
 
-        return cast(PlotlyState, AttributeDictionary(selection_state))
+        return cast("PlotlyState", AttributeDictionary(selection_state))
 
     def serialize(self, selection_state: PlotlyState) -> str:
         return json.dumps(selection_state, default=str)
@@ -258,12 +257,12 @@ def parse_selection_mode(
         )
 
     parsed_selection_modes = []
-    for selection_mode in selection_mode_set:
-        if selection_mode == "points":
+    for mode in selection_mode_set:
+        if mode == "points":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.POINTS)
-        elif selection_mode == "lasso":
+        elif mode == "lasso":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.LASSO)
-        elif selection_mode == "box":
+        elif mode == "box":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.BOX)
     return set(parsed_selection_modes)
 
@@ -273,7 +272,7 @@ class PlotlyMixin:
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
-        use_container_width: bool = False,
+        use_container_width: bool = True,
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -290,7 +289,7 @@ class PlotlyMixin:
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
-        use_container_width: bool = False,
+        use_container_width: bool = True,
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -307,7 +306,7 @@ class PlotlyMixin:
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
-        use_container_width: bool = False,
+        use_container_width: bool = True,
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -342,11 +341,11 @@ class PlotlyMixin:
 
         use_container_width : bool
             Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``False``
-            (default), Streamlit sets the width of the chart to fit its contents
-            according to the plotting library, up to the width of the parent
-            container. If ``use_container_width`` is ``True``, Streamlit sets
-            the width of the figure to match the width of the parent container.
+            the parent container. If ``use_container_width`` is ``True`` (default),
+            Streamlit sets the width of the figure to match the width of the parent
+            container. If ``use_container_width`` is ``False``, Streamlit sets the
+            width of the chart to fit its contents according to the plotting library,
+            up to the width of the parent container.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -431,7 +430,7 @@ class PlotlyMixin:
         ...         hist_data, group_labels, bin_size=[.1, .25, .5])
         >>>
         >>> # Plot!
-        >>> st.plotly_chart(fig, use_container_width=True)
+        >>> st.plotly_chart(fig)
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
@@ -475,7 +474,7 @@ class PlotlyMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select) if is_callback else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -511,6 +510,7 @@ class PlotlyMixin:
             "plotly_chart",
             user_key=key,
             form_id=plotly_chart_proto.form_id,
+            dg=self.dg,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
             selection_mode=selection_mode,
@@ -537,9 +537,8 @@ class PlotlyMixin:
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
-            return cast(PlotlyState, widget_state.value)
-        else:
-            return self.dg._enqueue("plotly_chart", plotly_chart_proto)
+            return widget_state.value
+        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,13 @@ df = pd.DataFrame(np.random.randn(50, 5), columns=["a", "b", "c", "d", "e"])
 st.popover("popover 1 (empty)")
 
 with st.popover("popover 2 (use_container_width)", use_container_width=True):
+    st.markdown("Hello")
+
+with st.popover(
+    "popover 9 (use_container_width) with help",
+    use_container_width=True,
+    help="help text",
+):
     st.markdown("Hello")
 
 with st.popover(

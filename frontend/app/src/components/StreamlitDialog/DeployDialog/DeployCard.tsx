@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,8 @@
 import React, { ReactElement } from "react"
 
 import { Card } from "baseui/card"
-import { useTheme } from "@emotion/react"
 
-import { EmotionTheme } from "@streamlit/lib"
+import { useEmotionTheme } from "@streamlit/lib"
 
 interface IDeployCardProps {
   children?: React.ReactNode
@@ -28,8 +27,7 @@ interface IDeployCardProps {
 function DeployCard(
   props: React.PropsWithChildren<IDeployCardProps>
 ): ReactElement {
-  const { colors, spacing, radii, breakpoints, sizes }: EmotionTheme =
-    useTheme()
+  const { colors, spacing, radii, breakpoints, sizes } = useEmotionTheme()
   const { children } = props
   return (
     <Card

@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,4 +33,17 @@ message ChatInput {
     BOTTOM = 0;
   }
   Position position = 8;
+
+  enum AcceptFile {
+    NONE = 0;
+    SINGLE = 1;
+    MULTIPLE = 2;
+  }
+  AcceptFile accept_file = 9;
+
+  // Supported file types: For example: ["png","jpg","img"]
+  repeated string file_type = 10;
+
+  // Max file size allowed by server config
+  int32 max_upload_size_mb = 11;
 }

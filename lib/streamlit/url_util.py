@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,9 +91,32 @@ def is_url(
 
         if result.scheme in ["http", "https"]:
             return bool(result.netloc)
-        elif result.scheme in ["mailto", "data"]:
+        if result.scheme in ["mailto", "data"]:
             return bool(result.path)
 
     except ValueError:
         return False
     return False
+
+
+def make_url_path(base_url: str, path: str) -> str:
+    """Make a URL from a base URL and a path.
+
+    Parameters
+    ----------
+    base_url : str
+        The base URL.
+    path : str
+        The path to append to the base URL.
+
+    Returns
+    -------
+    str
+        The resulting URL.
+    """
+    base_url = base_url.strip("/")
+    if base_url:
+        base_url = "/" + base_url
+
+    path = path.lstrip("/")
+    return f"{base_url}/{path}"

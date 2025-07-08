@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,3 +58,9 @@ try:
         raise Exception("Error!")
 except Exception:
     pass
+
+with st.status("Fixed width status", state="complete", width=200):
+    st.write("Hello World")
+
+with st.status("Stretch width status", state="complete", width="stretch"):
+    st.write("Hello World")

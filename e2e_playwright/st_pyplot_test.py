@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ def test_displays_a_pyplot_figures(
 
     # Snapshot testing the global object is flaky. But we anyways want to remove this,
     # functionality so we can just comment it out for now.
-    # assert_snapshot(pyplot_elements.nth(6), name="st_pyplot-global_figure")
+    # assert_snapshot(pyplot_elements.nth(6), name="st_pyplot-global_figure")  # noqa: ERA001
 
 
 def test_shows_deprecation_warning(app: Page):

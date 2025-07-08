@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,3 +72,11 @@ v9 = st.time_input(
     key="time_input_9",
 )
 st.write("Value 9:", v9)
+
+st.time_input(
+    "Time input 10 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
+    time(8, 45),
+)
+
+st.time_input("Time input 11 (width=200px)", time(8, 45), width=200)
+st.time_input("Time input 12 (width='stretch')", time(8, 45), width="stretch")

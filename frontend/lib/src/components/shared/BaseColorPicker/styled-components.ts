@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,15 @@ import styled from "@emotion/styled"
 
 export interface StyledColorPickerProps {
   disabled: boolean
-  width: number | undefined
 }
 
 export const StyledColorPicker = styled.div<StyledColorPickerProps>(
-  ({ disabled, width, theme }) => ({
+  ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
     cursor: disabled ? "not-allowed" : "default",
-    width,
   })
 )
 
@@ -37,6 +35,29 @@ export const StyledColorPicker = styled.div<StyledColorPickerProps>(
 export const StyledChromePicker = styled.div(({ theme }) => ({
   div: {
     fontFamily: `${theme.genericFonts.bodyFont} !important`,
+  },
+  // The overrides below are a bit hacky but unfortunately the ChromePicker component
+  // doesn't offer a way to override labels and inputs, see
+  // https://github.com/casesandberg/react-color/issues/643
+  label: {
+    fontSize: `${theme.fontSizes.sm} !important`,
+    color: `${theme.colors.bodyText} !important`,
+  },
+  input: {
+    fontSize: `${theme.fontSizes.md} !important`,
+    height: `${theme.sizes.minElementHeight} !important`,
+    backgroundColor: `${theme.colors.secondaryBg} !important`,
+    color: `${theme.colors.bodyText} !important`,
+    borderRadius: `${theme.radii.default} !important`,
+    boxShadow: `none !important`,
+    "&:focus-visible": {
+      outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary} !important`,
+    },
+  },
+  svg: {
+    // This is the arrow button on the right. The hover color for the background is
+    // apparently set by JS and not CSS, so we can't override it.
+    fill: `${theme.colors.bodyText} !important`,
   },
 }))
 

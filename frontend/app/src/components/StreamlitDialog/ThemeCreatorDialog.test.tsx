@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,20 @@
 
 import React from "react"
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import {
-  customRenderLibContext,
-  CustomThemeConfig,
   darkTheme,
-  fonts,
   LibContextProps,
   lightTheme,
   mockSessionInfo,
-  toThemeInput,
+  renderWithContexts,
 } from "@streamlit/lib"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
-  toMinimalToml,
 } from "./ThemeCreatorDialog"
 
 const mockSetTheme = vi.fn()
@@ -68,99 +65,10 @@ describe("Renders ThemeCreatorDialog", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
     const context = getContext({ availableThemes })
-    customRenderLibContext(<ThemeCreatorDialog {...props} />, context)
+    renderWithContexts(<ThemeCreatorDialog {...props} />, context)
 
     expect(screen.getByTestId("stThemeCreatorDialog")).toBeInTheDocument()
     expect(screen.getByText("Edit active theme")).toBeInTheDocument()
-  })
-})
-
-describe("toMinimalToml", () => {
-  it("outputs the correct config for the preset lightTheme", () => {
-    const themeInput = toThemeInput(lightTheme.emotion)
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-base="light"
-`)
-  })
-
-  it("is not case sensitive with color hex codes", () => {
-    const themeInput = {
-      ...toThemeInput(lightTheme.emotion),
-      backgroundColor: "#fFfFff",
-    }
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-base="light"
-`)
-  })
-
-  it("sets base = light when closer to lightTheme", () => {
-    const themeInput = {
-      ...toThemeInput(lightTheme.emotion),
-      primaryColor: "blue",
-    }
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-base="light"
-primaryColor="blue"
-`)
-  })
-
-  it("outputs the correct config for the preset darkTheme", () => {
-    const themeInput = toThemeInput(darkTheme.emotion)
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-base="dark"
-`)
-  })
-
-  it("sets base = dark when closer to darkTheme", () => {
-    const themeInput = {
-      ...toThemeInput(darkTheme.emotion),
-      primaryColor: "blue",
-    }
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-base="dark"
-primaryColor="blue"
-`)
-  })
-
-  it("does not set base if all non-primaryColor color options are set", () => {
-    const themeInput = {
-      ...toThemeInput(darkTheme.emotion),
-      backgroundColor: "red",
-      secondaryBackgroundColor: "blue",
-      textColor: "purple",
-    }
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-backgroundColor="red"
-secondaryBackgroundColor="blue"
-textColor="purple"
-`)
-  })
-
-  it("does not set base if all color options are set", () => {
-    const themeInput = {
-      ...toThemeInput(darkTheme.emotion),
-      primaryColor: "pink",
-      backgroundColor: "red",
-      secondaryBackgroundColor: "blue",
-      textColor: "purple",
-    }
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-primaryColor="pink"
-backgroundColor="red"
-secondaryBackgroundColor="blue"
-textColor="purple"
-`)
-  })
-
-  it("sets font if not sans serif", () => {
-    const themeInput = {
-      ...toThemeInput(lightTheme.emotion),
-      font: CustomThemeConfig.FontFamily.MONOSPACE,
-    }
-    expect(toMinimalToml(themeInput)).toBe(`[theme]
-base="light"
-font="monospace"
-`)
   })
 })
 
@@ -169,9 +77,10 @@ describe("Opened ThemeCreatorDialog", () => {
     vi.clearAllMocks()
   })
 
-  it("should update theme on color change", () => {
+  it("should update theme on color change", async () => {
+    const user = userEvent.setup()
     const props = getProps()
-    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+    renderWithContexts(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
       addThemes: mockAddThemes,
     })
@@ -182,20 +91,21 @@ describe("Opened ThemeCreatorDialog", () => {
     const primaryColorPicker = within(themeColorPickers[0]).getByTestId(
       "stColorPickerBlock"
     )
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(primaryColorPicker)
 
+    // Open the color picker
+    await user.click(primaryColorPicker)
+
+    // Change the color
     const newColor = "#e91e63"
     const colorInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(colorInput, { target: { value: newColor } })
-    // Close out of the popover
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(primaryColorPicker)
 
+    await user.clear(colorInput)
+    await user.type(colorInput, newColor)
+
+    // Close out of the popover
+    await user.click(primaryColorPicker)
+
+    // Verify the color has been updated
     expect(mockAddThemes).toHaveBeenCalled()
     expect(mockAddThemes.mock.calls[0][0][0].emotion.colors.primary).toBe(
       newColor
@@ -205,72 +115,25 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe(newColor)
   })
 
-  it("should update theme on font change", () => {
+  it("should call backToSettings if back button has been clicked", async () => {
+    const user = userEvent.setup()
     const props = getProps()
-    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
-      setTheme: mockSetTheme,
-      addThemes: mockAddThemes,
-    })
-
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(screen.getByRole("combobox"))
-    const options = screen.getAllByRole("option")
-
-    expect(options).toHaveLength(
-      Object.keys(CustomThemeConfig.FontFamily).length
-    )
-
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(options[2])
-    expect(mockAddThemes).toHaveBeenCalled()
-    expect(
-      mockAddThemes.mock.calls[0][0][0].emotion.genericFonts.bodyFont
-    ).toBe(fonts.monospace)
-
-    expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[0][0].emotion.genericFonts.bodyFont).toBe(
-      fonts.monospace
-    )
-  })
-
-  it("should have font dropdown populated", () => {
-    const props = getProps()
-    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
-      setTheme: mockSetTheme,
-      addThemes: mockAddThemes,
-    })
-
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(screen.getByRole("combobox"))
-    const options = screen.getAllByRole("option")
-
-    expect(options).toHaveLength(
-      Object.keys(CustomThemeConfig.FontFamily).length
-    )
-    expect(options[0]).toHaveTextContent("Sans serif")
-    expect(options[0]).toHaveAttribute("aria-selected", "true")
-  })
-
-  it("should call backToSettings if back button has been clicked", () => {
-    const props = getProps()
-    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+    renderWithContexts(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
       addThemes: mockAddThemes,
     })
 
     const backButton = screen.getByTestId("stThemeCreatorBack")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(backButton)
+    await user.click(backButton)
     expect(props.backToSettings).toHaveBeenCalled()
   })
 
-  it("should copy to clipboard", () => {
+  it("should copy to clipboard", async () => {
+    const user = userEvent.setup()
+    const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText")
+
     const props = getProps()
-    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+    renderWithContexts(<ThemeCreatorDialog {...props} />, {
       setTheme: mockSetTheme,
       addThemes: mockAddThemes,
     })
@@ -279,13 +142,13 @@ describe("Opened ThemeCreatorDialog", () => {
     const copyBtn = screen.getByRole("button", {
       name: "Copy theme to clipboard",
     })
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(copyBtn)
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
+    await user.click(copyBtn)
+
+    expect(writeTextSpy).toHaveBeenCalledWith(`[theme]
 base="light"
 `)
-    expect(screen.getByText("Copied to clipboard")).toBeInTheDocument()
+
+    expect(await screen.findByText("Copied to clipboard")).toBeInTheDocument()
   })
 })

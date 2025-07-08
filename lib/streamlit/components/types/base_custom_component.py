@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,11 +40,9 @@ class BaseCustomComponent(ABC):
         path: str | None = None,
         url: str | None = None,
         module_name: str | None = None,
-    ):
-        if (path is None and url is None) or (path is not None and url is not None):
-            raise StreamlitAPIException(
-                "Either 'path' or 'url' must be set, but not both."
-            )
+    ) -> None:
+        if path is None and url is None:
+            raise StreamlitAPIException("Either 'path' or 'url' must be set.")
 
         self._name = name
         self._path = path
@@ -56,11 +54,12 @@ class BaseCustomComponent(ABC):
 
     def __call__(
         self,
-        *args,
+        *args: Any,
         default: Any = None,
         key: str | None = None,
         on_change: WidgetCallback | None = None,
-        **kwargs,
+        tab_index: int | None = None,
+        **kwargs: Any,
     ) -> Any:
         """An alias for create_instance."""
         return self.create_instance(
@@ -68,6 +67,7 @@ class BaseCustomComponent(ABC):
             default=default,
             key=key,
             on_change=on_change,
+            tab_index=tab_index,
             **kwargs,
         )
 
@@ -96,24 +96,28 @@ class BaseCustomComponent(ABC):
     def __str__(self) -> str:
         return f"'{self.name}': {self.path if self.path is not None else self.url}"
 
+    def __hash__(self) -> int:
+        return hash((self.name, self.path, self.url, self.module_name))
+
     @abstractmethod
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Equality operator."""
         return NotImplemented
 
     @abstractmethod
-    def __ne__(self, other) -> bool:
+    def __ne__(self, other: object) -> bool:
         """Inequality operator."""
         return NotImplemented
 
     @abstractmethod
     def create_instance(
         self,
-        *args,
+        *args: Any,
         default: Any = None,
         key: str | None = None,
         on_change: WidgetCallback | None = None,
-        **kwargs,
+        tab_index: int | None = None,
+        **kwargs: Any,
     ) -> Any:
         """Create a new instance of the component.
 
@@ -131,6 +135,12 @@ class BaseCustomComponent(ABC):
             component's "widget ID".
         on_change: WidgetCallback or None
             An optional callback invoked when the widget's value changes. No arguments are passed to it.
+        tab_index: int or None
+            Specifies the tab order of the iframe containing the component.
+            Possible values are:
+            - ``None`` (default): Browser default behavior.
+            - ``-1``: Removes the iframe from the natural tab order, but it can still be focused programmatically.
+            - ``0`` or positive integer: Includes the iframe in the natural tab order.
         **kwargs
             Keyword args to pass to the component.
 

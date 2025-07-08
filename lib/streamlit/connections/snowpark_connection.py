@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from __future__ import annotations
 import threading
 from collections import ChainMap
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Iterator, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import (
@@ -35,6 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from datetime import timedelta
 
     from pandas import DataFrame
@@ -60,11 +61,11 @@ class SnowparkConnection(BaseConnection["Session"]):
         over the single underlying Session object under high load.
     """
 
-    def __init__(self, connection_name: str, **kwargs) -> None:
+    def __init__(self, connection_name: str, **kwargs: Any) -> None:
         self._lock = threading.RLock()
         super().__init__(connection_name, **kwargs)
 
-    def _connect(self, **kwargs) -> Session:
+    def _connect(self, **kwargs: Any) -> Session:
         from snowflake.snowpark.context import get_active_session  # type:ignore[import]
         from snowflake.snowpark.session import Session
 
@@ -90,7 +91,7 @@ class SnowparkConnection(BaseConnection["Session"]):
             if p not in conn_params:
                 raise StreamlitAPIException(f"Missing Snowpark connection param: {p}")
 
-        return cast(Session, Session.builder.configs(conn_params).create())
+        return cast("Session", Session.builder.configs(conn_params).create())
 
     def query(
         self,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 
 import React, {
+  memo,
   ReactElement,
   useContext,
   useEffect,
@@ -22,14 +23,15 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 
-import { AppNode, BlockNode } from "@streamlit/lib/src/AppNode"
-import { BlockPropsWithoutWidth } from "@streamlit/lib/src/components/core/Block"
-import { isElementStale } from "@streamlit/lib/src/components/core/Block/utils"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { AppNode, BlockNode } from "~lib/AppNode"
+import { BlockPropsWithoutWidth } from "~lib/components/core/Block"
+import { isElementStale } from "~lib/components/core/Block/utils"
+import { LibContext } from "~lib/components/core/LibContext"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { STALE_STYLES } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledTabContainer } from "./styled-components"
 
@@ -37,12 +39,15 @@ export interface TabProps extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
   node: BlockNode
   isStale: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   renderTabContent: (childProps: any) => ReactElement
+  width: React.CSSProperties["width"]
 }
 
 function Tabs(props: Readonly<TabProps>): ReactElement {
-  const { widgetsDisabled, node, isStale, scriptRunState, scriptRunId } = props
-  const { fragmentIdsThisRun } = useContext(LibContext)
+  const { widgetsDisabled, node, isStale, width } = props
+  const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
+    useContext(LibContext)
 
   let allTabLabels: string[] = []
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
@@ -52,7 +57,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   )
 
   const tabListRef = useRef<HTMLUListElement>(null)
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const [isOverflowing, setIsOverflowing] = useState(false)
 
@@ -64,7 +69,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabName(allTabLabels[0])
     }
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTabLabels])
 
@@ -85,7 +90,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
 
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.children.length])
 
@@ -97,6 +102,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       tabHeight={TAB_HEIGHT}
+      width={width}
     >
       <UITabs
         activateOnFocus
@@ -109,13 +115,10 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
            https://github.com/streamlit/streamlit/issues/5069
          */
         renderAll={true}
-        disabled={widgetsDisabled}
         overrides={{
           TabHighlight: {
             style: () => ({
-              backgroundColor: widgetsDisabled
-                ? theme.colors.fadedText40
-                : theme.colors.primary,
+              backgroundColor: theme.colors.primary,
               height: TAB_BORDER_HEIGHT,
             }),
           },
@@ -132,12 +135,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
               marginBottom: `-${TAB_BORDER_HEIGHT}`,
               paddingBottom: TAB_BORDER_HEIGHT,
               overflowY: "hidden",
-              ...(isStale
-                ? {
-                    opacity: 0.33,
-                    transition: "opacity 1s ease-in 0.5s",
-                  }
-                : {}),
+              ...(isStale && STALE_STYLES),
             }),
           },
           Root: {
@@ -188,8 +186,11 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                   isLabel
                 />
               }
+              // TODO: Update to match React best practices
+              // eslint-disable-next-line @eslint-react/no-array-index-key
               key={index}
-              disabled={widgetsDisabled}
+              // Disable tab if the tab is stale but not the entire tab container:
+              disabled={!isStale && isStaleTab}
               overrides={{
                 TabPanel: {
                   style: () => ({
@@ -209,44 +210,31 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                     paddingBottom: theme.spacing.none,
                     fontSize: theme.fontSizes.sm,
                     background: "transparent",
-                    color: widgetsDisabled
-                      ? theme.colors.fadedText40
-                      : theme.colors.bodyText,
+                    color: theme.colors.bodyText,
                     ":focus": {
                       outline: "none",
-                      color: widgetsDisabled
-                        ? theme.colors.fadedText40
-                        : theme.colors.primary,
+                      color: theme.colors.primary,
                       background: "none",
                     },
                     ":hover": {
-                      color: widgetsDisabled
-                        ? theme.colors.fadedText40
-                        : theme.colors.primary,
+                      color: theme.colors.primary,
                       background: "none",
                     },
                     ...(isSelected
                       ? {
-                          color: widgetsDisabled
-                            ? theme.colors.fadedText40
-                            : theme.colors.primary,
+                          color: theme.colors.primary,
                         }
                       : {}),
+                    // Add minimal required padding to hide the overscroll gradient
+                    // This is calculated based on the width of the gradient (spacing.lg)
                     ...(isOverflowing && isLast
                       ? {
-                          // Add minimal required padding to hide the overscroll gradient
-                          // This is calculated based on the width of the gradient (spacing.lg)
                           paddingRight: `calc(${theme.spacing.lg} * 0.6)`,
                         }
                       : {}),
-                    ...(!isStale && isStaleTab
-                      ? {
-                          // Apply stale effect if only this specific
-                          // tab is stale but not the entire tab container.
-                          opacity: 0.33,
-                          transition: "opacity 1s ease-in 0.5s",
-                        }
-                      : {}),
+                    // Apply stale effect if only this specific
+                    // tab is stale but not the entire tab container.
+                    ...(!isStale && isStaleTab && STALE_STYLES),
                   }),
                 },
               }}
@@ -260,4 +248,4 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   )
 }
 
-export default Tabs
+export default memo(Tabs)

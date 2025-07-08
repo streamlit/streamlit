@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ i2 = st.toggle("toggle 2 (False)", False)
 st.write("toggle 2 - value:", i2)
 
 i3 = st.toggle(
-    "toggle 3: This is a really really really really long label that should wrap eventually if we keep addding more text to it "
+    "toggle 3: This is a really really really really long label that should wrap "
+    "eventually if we keep adding more text to it"
 )
 st.write("toggle 3 - value:", i3)
 
@@ -52,3 +53,11 @@ with st.expander("Grouped toggles", expanded=True):
     st.toggle("toggle group - 2")
     st.toggle("toggle group - 3")
     st.text("A non-toggle element")
+
+st.toggle(
+    "toggle 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+)
+
+st.toggle("toggle with content width", width="content")
+st.toggle("toggle with stretch width", width="stretch")
+st.toggle("toggle with 150px width", width=150)

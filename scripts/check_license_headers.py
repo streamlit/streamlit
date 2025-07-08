@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import re
 import subprocess
@@ -28,7 +29,9 @@ if __name__ not in ("__main__", "__mp_main__"):
 SCRIPT_DIR = Path(__file__).resolve().parent
 # We just check if the first line of the license is in the file. This is
 # enough to check that the file is okay.
-LICENSE_TEXT = (SCRIPT_DIR / "license-template.txt").read_text().splitlines()[0]
+LICENSE_TEXT = (
+    (SCRIPT_DIR / "assets" / "license-template.txt").read_text().splitlines()[0]
+)
 
 IGNORE_PATTERN = re.compile(
     # Exclude CI files.
@@ -39,26 +42,31 @@ IGNORE_PATTERN = re.compile(
     r"|e2e_playwright/test_assets/.*$"
     # Exclude js file we use for testing st.html.
     r"|^lib/tests/streamlit/elements/test_html\.js"
+    # Exclude css file we use for testing st.html.
+    r"|^lib/tests/streamlit/elements/test_html\.css"
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
-    r"|\.(json|prettierrc|nvmrc)$"
+    r"|\.(json|prettierrc|nvmrc|mdc|md)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
     # Exclude pytest config files, because they don't have any degree of creativity.
     r"|pytest\.ini$"
+    r"|\.coveragerc$"
     # Exclude empty files, because they don't have any degree of creativity.
     r"|py\.typed$"
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
-    r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini)$"
-    r"|^lib/.*-requirements\.txt$"
-    r"|^lib/min-constraints-gen\.txt"
+    r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
+    r"|^component-lib/\.yarn"
+    r"|(\.dockerignore|MANIFEST\.in|mypy\.ini)$"
+    r"|^.*-requirements\.txt$"
+    r"|min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
-    r"|\.credentials/\.gitignore$"
-    r"|^frontend/app/performance/lighthouse/\.gitignore$"
+    # Exclude all .gitignore files
+    r"|\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|test_data|data|test)/"
     # Exclude vendored files.
@@ -70,7 +78,7 @@ IGNORE_PATTERN = re.compile(
 )
 
 
-def main():
+def main() -> None:
     git_files = sorted(
         subprocess.check_output(["git", "ls-files", "--no-empty-directory"])
         .decode()
@@ -92,7 +100,7 @@ def main():
             if LICENSE_TEXT not in file_content:
                 print("Found file without license header", fileloc)
                 invalid_files_count += 1
-        except:
+        except Exception:
             print(
                 f"Failed to open the file: {fileloc}. Is it binary file?",
             )

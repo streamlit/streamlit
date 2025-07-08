@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 export interface StyledChatMessageContainerProps {
   background: boolean
@@ -27,6 +27,7 @@ export const StyledChatMessageContainer =
   styled.div<StyledChatMessageContainerProps>(({ theme, background }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
+      width: "100%",
       display: "flex",
       alignItems: "flex-start",
       gap: theme.spacing.sm,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,16 +26,12 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
   // to the entire container and not only the input itself
   borderWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
-  // Mimic the logic from createThemeOverrides.
-  borderColor:
-    theme.colors.widgetBorderColor ||
-    theme.colors.widgetBackgroundColor ||
-    theme.colors.bgColor,
+  borderColor: theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
   transitionDuration: "200ms",
   transitionProperty: "border",
   transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
   borderRadius: theme.radii.default,
-  overflow: "hidden", // Fix rounded corner being overlayed with corner of internal input.
+  overflow: "hidden", // Fix rounded corner being overlaid with corner of internal input.
 
   "&.focused": {
     borderColor: theme.colors.primary,
@@ -66,9 +62,7 @@ export const StyledInputControl = styled.button(({ theme }) => ({
   justifyContent: "center",
   color: theme.colors.bodyText,
   transition: "color 300ms, backgroundColor 300ms",
-  // Mimic the logic from createThemeOverrides.
-  backgroundColor:
-    theme.colors.widgetBackgroundColor || theme.colors.secondaryBg,
+  backgroundColor: theme.colors.secondaryBg,
   "&:hover:enabled, &:focus:enabled": {
     color: theme.colors.white,
     backgroundColor: theme.colors.primary,
@@ -78,10 +72,6 @@ export const StyledInputControl = styled.button(({ theme }) => ({
   "&:active": {
     outline: "none",
     border: "none",
-  },
-  "&:last-of-type": {
-    borderTopRightRadius: theme.radii.default,
-    borderBottomRightRadius: theme.radii.default,
   },
   "&:disabled": {
     cursor: "not-allowed",

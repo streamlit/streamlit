@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,13 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -42,9 +49,8 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.type_util import (
-    SupportsStr,
-)
+from streamlit.string_util import validate_icon_or_emoji
+from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -55,7 +61,7 @@ if TYPE_CHECKING:
 class TextInputSerde:
     value: str | None
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str | None:
+    def deserialize(self, ui_value: str | None) -> str | None:
         return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
@@ -66,7 +72,7 @@ class TextInputSerde:
 class TextAreaSerde:
     value: str | None
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str | None:
+    def deserialize(self, ui_value: str | None) -> str | None:
         return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
@@ -91,6 +97,8 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str:
         pass
 
@@ -111,6 +119,8 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | None:
         pass
 
@@ -131,6 +141,8 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -176,10 +188,14 @@ class TextWidgetsMixin:
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".
 
-        help : str
-            An optional tooltip that gets displayed next to the widget label.
-            Streamlit only displays the tooltip when
-            ``label_visibility="visible"``.
+        help : str or None
+            A tooltip that gets displayed next to the widget label. Streamlit
+            only displays the tooltip when ``label_visibility="visible"``. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         autocomplete : str
             An optional value that will be passed to the <input> element's
@@ -207,8 +223,36 @@ class TextWidgetsMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
-            If this is ``"collapsed"``, Streamlit displays no label or spacer.
+            label, which can help keep the widget aligned with other widgets.
+
+        icon : str, None
+            An optional emoji or icon to display within the input field to the
+            left of the value. If ``icon`` is ``None`` (default), no icon is
+            displayed. If ``icon`` is a string, the following options are
+            valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+        width : "stretch" or int
+            The width of the text input widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -243,6 +287,8 @@ class TextWidgetsMixin:
             placeholder=placeholder,
             disabled=disabled,
             label_visibility=label_visibility,
+            icon=icon,
+            width=width,
             ctx=ctx,
         )
 
@@ -262,6 +308,8 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
+        width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -281,6 +329,7 @@ class TextWidgetsMixin:
             "text_input",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             value=value,
             max_chars=max_chars,
@@ -288,6 +337,8 @@ class TextWidgetsMixin:
             help=help,
             autocomplete=autocomplete,
             placeholder=str(placeholder),
+            icon=icon,
+            width=width,
         )
 
         session_state = get_session_state().filtered_state
@@ -314,14 +365,16 @@ class TextWidgetsMixin:
         if placeholder is not None:
             text_input_proto.placeholder = str(placeholder)
 
+        if icon is not None:
+            text_input_proto.icon = validate_icon_or_emoji(icon)
+
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT
         elif type == "password":
             text_input_proto.type = TextInputProto.PASSWORD
         else:
             raise StreamlitAPIException(
-                "'%s' is not a valid text_input type. Valid types are 'default' and 'password'."
-                % type
+                f"'{type}' is not a valid text_input type. Valid types are 'default' and 'password'."
             )
 
         # Marshall the autocomplete param. If unspecified, this will be
@@ -348,7 +401,10 @@ class TextWidgetsMixin:
                 text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
-        self.dg._enqueue("text_input", text_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue("text_input", text_input_proto, layout_config=layout_config)
         return widget_state.value
 
     @overload
@@ -356,7 +412,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str = "",
-        height: int | None = None,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -367,6 +423,7 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> str:
         pass
 
@@ -375,7 +432,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: SupportsStr | None = None,
-        height: int | None = None,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -386,6 +443,7 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> str | None:
         pass
 
@@ -394,7 +452,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str | SupportsStr | None = "",
-        height: int | None = None,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -405,6 +463,7 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> str | None:
         r"""Display a multi-line text input widget.
 
@@ -440,7 +499,7 @@ class TextWidgetsMixin:
         height : int or None
             Desired height of the UI element expressed in pixels. If this is
             ``None`` (default), the widget's initial height fits three lines.
-            The height must be at least 68 pixels, which fits two lines.
+            The height must be at least 98 pixels, which fits two lines.
 
         max_chars : int or None
             Maximum number of characters allowed in text area.
@@ -450,10 +509,14 @@ class TextWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
 
-        help : str
-            An optional tooltip that gets displayed next to the widget label.
-            Streamlit only displays the tooltip when
-            ``label_visibility="visible"``.
+        help : str or None
+            A tooltip that gets displayed next to the widget label. Streamlit
+            only displays the tooltip when ``label_visibility="visible"``. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         on_change : callable
             An optional callback invoked when this text_area's value changes.
@@ -475,8 +538,20 @@ class TextWidgetsMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "stretch" or int
+            The width of the text area widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
+
         Returns
         -------
         str or None
@@ -503,12 +578,6 @@ class TextWidgetsMixin:
            height: 300px
 
         """
-        # Specified height must be at least 68 pixels (3 lines of text).
-        if height is not None and height < 68:
-            raise StreamlitAPIException(
-                f"Invalid height {height}px for `st.text_area` - must be at least 68 pixels."
-            )
-
         ctx = get_script_run_ctx()
         return self._text_area(
             label=label,
@@ -523,6 +592,7 @@ class TextWidgetsMixin:
             placeholder=placeholder,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
             ctx=ctx,
         )
 
@@ -530,7 +600,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: SupportsStr | None = "",
-        height: int | None = None,
+        height: Height | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -541,6 +611,7 @@ class TextWidgetsMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -559,12 +630,14 @@ class TextWidgetsMixin:
             "text_area",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             value=value,
             height=height,
             max_chars=max_chars,
             help=help,
             placeholder=str(placeholder),
+            width=width,
         )
 
         session_state = get_session_state().filtered_state
@@ -584,9 +657,6 @@ class TextWidgetsMixin:
 
         if help is not None:
             text_area_proto.help = dedent(help)
-
-        if height is not None:
-            text_area_proto.height = height
 
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
@@ -611,7 +681,19 @@ class TextWidgetsMixin:
                 text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
-        self.dg._enqueue("text_area", text_area_proto)
+        validate_width(width)
+        if height is not None:
+            validate_height(height, allow_content=True)
+        else:
+            # We want to maintain the same approximately three lines of text height
+            # for the text input when the label is collapsed.
+            # These numbers are for the entire element including the label and
+            # padding.
+            height = 122 if label_visibility != "collapsed" else 94
+
+        layout_config = LayoutConfig(width=width, height=height)
+
+        self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,15 @@
  */
 
 import { Mock } from "vitest"
-import { enableAllPlugins } from "immer"
+import { enableMapSet, enablePatches } from "immer"
 
 import {
   ArrowTable as ArrowTableProto,
   Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "./proto"
+} from "@streamlit/protobuf"
+
 import {
   createFormsData,
   FormsData,
@@ -44,6 +45,11 @@ const MOCK_JSON = { foo: "bar", baz: "qux" }
 const MOCK_WIDGET = {
   id: "mockWidgetId",
   formId: "",
+}
+
+const MOCK_CHAT_INPUT_VALUE = {
+  data: "mockChatInputValue",
+  fileUploaderState: null,
 }
 
 const MOCK_FORM_WIDGET = {
@@ -69,7 +75,8 @@ const MOCK_FILE_UPLOADER_STATE = new FileUploaderStateProto({
 })
 
 // Required by ImmerJS
-enableAllPlugins()
+enablePatches()
+enableMapSet()
 
 describe("Widget State Manager", () => {
   let sendBackMsg: Mock
@@ -158,26 +165,10 @@ describe("Widget State Manager", () => {
    * Buttons (which set trigger values) can't be used within forms, so this test
    * is not parameterized on insideForm.
    */
-  it("sets trigger value correctly", () => {
+  it("sets trigger value correctly", async () => {
     const widget = getWidget({ insideForm: false })
-    widgetMgr.setTriggerValue(widget, { fromUi: true }, undefined)
-    // @ts-expect-error
-    expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
-    assertCallbacks({ insideForm: false })
-  })
+    await widgetMgr.setTriggerValue(widget, { fromUi: true }, undefined)
 
-  /**
-   * String Triggers can't be used within forms, so this test
-   * is not parameterized on insideForm.
-   */
-  it("sets string trigger value correctly", () => {
-    const widget = getWidget({ insideForm: false })
-    widgetMgr.setStringTriggerValue(
-      widget,
-      "sample string",
-      { fromUi: true },
-      undefined
-    )
     // @ts-expect-error
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
     assertCallbacks({ insideForm: false })
@@ -338,8 +329,8 @@ describe("Widget State Manager", () => {
   describe("can set fragmentId in setter methods", () => {
     it.each([
       {
-        setterMethod: "setStringTriggerValue",
-        value: "Hello world",
+        setterMethod: "setChatInputValue",
+        value: MOCK_CHAT_INPUT_VALUE,
       },
       {
         setterMethod: "setBoolValue",
@@ -385,9 +376,9 @@ describe("Widget State Manager", () => {
         setterMethod: "setFileUploaderStateValue",
         value: MOCK_FILE_UPLOADER_STATE,
       },
-    ])("%p", ({ setterMethod, value }) => {
+    ])("%p", async ({ setterMethod, value }) => {
       // @ts-expect-error
-      widgetMgr[setterMethod](
+      await widgetMgr[setterMethod](
         MOCK_WIDGET,
         value,
         {
@@ -405,8 +396,8 @@ describe("Widget State Manager", () => {
 
     // This test isn't parameterized like the ones above because setTriggerValue
     // has a slightly different signature from the other setter methods.
-    it("can set fragmentId in setTriggerValue", () => {
-      widgetMgr.setTriggerValue(
+    it("can set fragmentId in setTriggerValue", async () => {
+      await widgetMgr.setTriggerValue(
         MOCK_WIDGET,
         {
           fromUi: true,

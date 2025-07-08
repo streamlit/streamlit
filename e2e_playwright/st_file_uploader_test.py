@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import FilePayload, Page, Route, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    rerun_app,
+    wait_for_app_run,
+    wait_until,
+)
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    goto_app,
+)
 
 
 def test_file_uploader_render_correctly(
@@ -23,13 +32,16 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(8)
+    expect(file_uploaders).to_have_count(12)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
     assert_snapshot(file_uploaders.nth(2), name="st_file_uploader-multiple_files")
     assert_snapshot(file_uploaders.nth(4), name="st_file_uploader-hidden_label")
     assert_snapshot(file_uploaders.nth(5), name="st_file_uploader-collapsed_label")
+    # The other file uploaders do not need to be snapshot tested.
+    assert_snapshot(file_uploaders.nth(8), name="st_file_uploader-markdown_label")
+    assert_snapshot(file_uploaders.nth(9), name="st_file_uploader-compact")
 
 
 def test_file_uploader_error_message_disallowed_files(
@@ -47,11 +59,11 @@ def test_file_uploader_error_message_disallowed_files(
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[
-            {
-                "name": file_name1,
-                "mimeType": "application/json",
-                "buffer": file_content1,
-            }
+            FilePayload(
+                name=file_name1,
+                mimeType="application/json",
+                buffer=file_content1,
+            )
         ]
     )
 
@@ -85,7 +97,9 @@ def test_uploads_and_deletes_single_file_only(
 
     file_chooser = fc_info.value
     file_chooser.set_files(
-        files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
     )
     wait_for_app_run(app)
 
@@ -115,7 +129,9 @@ def test_uploads_and_deletes_single_file_only(
 
     file_chooser = fc_info.value
     file_chooser.set_files(
-        files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
+        files=[
+            FilePayload(name=file_name2, mimeType="text/plain", buffer=file_content2)
+        ]
     )
 
     wait_for_app_run(app)
@@ -158,8 +174,8 @@ def test_uploads_and_deletes_multiple_files(
     file_content2 = b"file2content"
 
     files = [
-        {"name": file_name1, "mimeType": "text/plain", "buffer": file_content1},
-        {"name": file_name2, "mimeType": "text/plain", "buffer": file_content2},
+        FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1),
+        FilePayload(name=file_name2, mimeType="text/plain", buffer=file_content2),
     ]
 
     uploader_index = 2
@@ -219,8 +235,8 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
     file_content2 = b"file2content"
 
     files = [
-        {"name": file_name1, "mimeType": "text/plain", "buffer": file_content1},
-        {"name": file_name2, "mimeType": "text/plain", "buffer": file_content2},
+        FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1),
+        FilePayload(name=file_name2, mimeType="text/plain", buffer=file_content2),
     ]
 
     uploader_index = 2
@@ -291,8 +307,8 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
     file_content2 = b"file2content"
 
     files = [
-        {"name": file_name1, "mimeType": "text/plain", "buffer": file_content1},
-        {"name": file_name2, "mimeType": "text/plain", "buffer": file_content2},
+        FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1),
+        FilePayload(name=file_name2, mimeType="text/plain", buffer=file_content2),
     ]
 
     uploader_index = 2
@@ -374,11 +390,11 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[
-            {
-                "name": file_name1,
-                "mimeType": "application/json",
-                "buffer": file_content1,
-            }
+            FilePayload(
+                name=file_name1,
+                mimeType="application/json",
+                buffer=file_content1,
+            )
         ]
     )
 
@@ -408,7 +424,9 @@ def test_works_inside_form(app: Page):
 
     file_chooser = fc_info.value
     file_chooser.set_files(
-        files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
     )
     wait_for_app_run(app)
 
@@ -471,9 +489,125 @@ def test_file_uploader_works_with_fragments(app: Page):
 
     file_chooser = fc_info.value
     file_chooser.set_files(
-        files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
     )
     wait_for_app_run(app)
 
     expect(app.get_by_text("File uploader in Fragment: True")).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_file_uploader_upload_error(app: Page, app_port: int):
+    """Test that the file uploader upload error is correctly logged."""
+    # Ensure file upload source request return a 404 status
+    app.route(
+        f"http://localhost:{app_port}/_stcore/upload_file/**",
+        lambda route: route.fulfill(
+            status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+        ),
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+    uploader_index = 0
+
+    # Upload a file
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
+    )
+    wait_for_app_run(app)
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: File uploader error on file upload" in message
+            for message in messages
+        ),
+    )
+
+
+def test_file_uploader_delete_error(app: Page, app_port: int):
+    """Test that the file uploader delete error is correctly logged."""
+
+    # Allow GET requests to pass through, but block DELETE requests
+    def allow_file_upload_block_delete(route: Route):
+        if route.request.method == "DELETE":
+            route.fulfill(
+                status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+            )
+        else:
+            route.fallback()
+
+    # Ensure file upload source request return a 404 status
+    app.route(
+        f"http://localhost:{app_port}/_stcore/upload_file/**",
+        allow_file_upload_block_delete,
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+    uploader_index = 0
+
+    # Upload a file
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
+    )
+    wait_for_app_run(app)
+
+    # Delete the file
+    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    wait_for_app_run(app)
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: File uploader error on file delete" in message
+            for message in messages
+        ),
+    )
+
+
+def test_file_uploader_widths(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+):
+    """Test that file_uploader renders correctly with different width settings."""
+    file_uploaders = app.get_by_test_id("stFileUploader")
+
+    expect(file_uploaders).to_have_count(12)
+
+    stretch_uploader = file_uploaders.nth(10)
+    pixel_width_uploader = file_uploaders.nth(11)
+
+    assert_snapshot(stretch_uploader, name="st_file_uploader-width_stretch")
+    assert_snapshot(pixel_width_uploader, name="st_file_uploader-width_300px")

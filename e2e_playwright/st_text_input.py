@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,14 +79,25 @@ with st.form("form"):
     st.text_input("text input 13 (value from form)", key="text_input_13")
     st.form_submit_button("submit")
 
-form_value = (
-    st.session_state["text_input_13"] if "text_input_13" in st.session_state else None
-)
+form_value = st.session_state.get("text_input_13", None)
 st.write("text input 13 (value from form) - value: ", form_value)
 
+
+st.text_input(
+    "text input 14 -> :material/check: :rainbow[Fancy] **markdown** `label` _support_"
+)
 
 if "rerun_counter" not in st.session_state:
     st.session_state.rerun_counter = 0
 
 st.session_state.rerun_counter += 1
 st.write("Rerun counter:", st.session_state.rerun_counter)
+
+st.text_input("text input 15 - emoji icon", placeholder="Placeholder", icon="🔎")
+
+st.text_input(
+    "text input 16 - material icon", placeholder="Placeholder", icon=":material/search:"
+)
+
+st.text_input("text input 17 (width=200px)", "width test", width=200)
+st.text_input("text input 18 (width='stretch')", "width test", width="stretch")

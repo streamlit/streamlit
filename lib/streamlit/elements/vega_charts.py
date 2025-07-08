@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from contextlib import nullcontext
@@ -25,18 +24,17 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
-    Iterable,
     Literal,
-    Sequence,
     TypedDict,
+    Union,
     cast,
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import Required, TypeAlias
 
-import streamlit.elements.lib.dicttools as dicttools
 from streamlit import dataframe_util, type_util
+from streamlit.elements.lib import dicttools
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartStackType,
@@ -44,7 +42,6 @@ from streamlit.elements.lib.built_in_chart_utils import (
     generate_chart,
     maybe_raise_stack_warning,
 )
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -55,9 +52,11 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.util import AttributeDictionary, calc_md5
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     import altair as alt
 
     from streamlit.dataframe_util import Data
@@ -95,6 +94,15 @@ _CHANNELS: Final = {
 }
 
 VegaLiteSpec: TypeAlias = "dict[str, Any]"
+AltairChart: TypeAlias = Union[
+    "alt.Chart",
+    "alt.ConcatChart",
+    "alt.FacetChart",
+    "alt.HConcatChart",
+    "alt.LayerChart",
+    "alt.RepeatChart",
+    "alt.VConcatChart",
+]
 
 
 class VegaLiteState(TypedDict, total=False):
@@ -209,7 +217,7 @@ class VegaLiteState(TypedDict, total=False):
 
     """
 
-    selection: AttributeDictionary
+    selection: Required[AttributeDictionary]
 
 
 @dataclass
@@ -218,7 +226,7 @@ class VegaLiteStateSerde:
 
     selection_parameters: Sequence[str]
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> VegaLiteState:
+    def deserialize(self, ui_value: str | None) -> VegaLiteState:
         empty_selection_state: VegaLiteState = {
             "selection": AttributeDictionary(
                 # Initialize the select state with empty dictionaries for each selection parameter.
@@ -229,26 +237,50 @@ class VegaLiteStateSerde:
         selection_state = (
             empty_selection_state
             if ui_value is None
-            else cast(VegaLiteState, AttributeDictionary(json.loads(ui_value)))
+            else cast("VegaLiteState", AttributeDictionary(json.loads(ui_value)))
         )
 
         if "selection" not in selection_state:
-            selection_state = empty_selection_state
+            selection_state = empty_selection_state  # type: ignore[unreachable]
 
-        return cast(VegaLiteState, AttributeDictionary(selection_state))
+        return cast("VegaLiteState", AttributeDictionary(selection_state))
 
     def serialize(self, selection_state: VegaLiteState) -> str:
         return json.dumps(selection_state, default=str)
 
 
+def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
+    """Patches null legend titles in the 'color' channel of the spec.
+    This is a fix for the Vega-Lite bug where null legend titles
+    cause a wrong formatting of the chart as shown on the issue #9339.
+    """
+
+    encoding = spec.get("encoding")
+    if not isinstance(encoding, dict):
+        return
+
+    color_spec = encoding.get("color")
+    if not isinstance(color_spec, dict):
+        return
+
+    if "title" in color_spec and color_spec.get("title") is None:
+        # Patch legend title given null value directly in the encoding
+        color_spec["title"] = " "
+
+    legend = color_spec.get("legend")
+    if isinstance(legend, dict) and "title" in legend and legend.get("title") is None:
+        # Patch legend title given null value in the legend
+        legend["title"] = " "
+
+
 def _prepare_vega_lite_spec(
     spec: VegaLiteSpec,
-    use_container_width: bool = False,
-    **kwargs,
+    use_container_width: bool,
+    **kwargs: Any,
 ) -> VegaLiteSpec:
-    if len(kwargs):
-        # Support passing in kwargs. Example:
-        #   marshall(proto, {foo: 'bar'}, baz='boz')
+    if kwargs:
+        # Support passing in kwargs.
+        # > marshall(proto, {foo: 'bar'}, baz='boz')
         # Merge spec with unflattened kwargs, where kwargs take precedence.
         # This only works for string keys, but kwarg keys are strings anyways.
         spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))
@@ -269,6 +301,8 @@ def _prepare_vega_lite_spec(
         else:
             spec["autosize"] = {"type": "fit", "contains": "padding"}
 
+    _patch_null_legend_titles(spec)
+
     return spec
 
 
@@ -278,7 +312,8 @@ def _marshall_chart_data(
     data: Data = None,
 ) -> None:
     """Adds the data to the proto and removes it from the spec dict.
-    These operations will happen in-place."""
+    These operations will happen in-place.
+    """
 
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   datasets: {foo: df1_bytes, bar: df2_bytes}, ...}
@@ -303,10 +338,10 @@ def _marshall_chart_data(
         del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
-    #   {data: df}
-    #   {data: {values: df, ...}}
-    #   {data: {url: 'url'}}
-    #   {data: {name: 'foo'}}
+    # > {data: df}
+    # > {data: {values: df, ...}}
+    # > {data: {url: 'url'}}
+    # > {data: {name: 'foo'}}
     if "data" in spec:
         data_spec = spec["data"]
 
@@ -323,7 +358,7 @@ def _marshall_chart_data(
 
 
 def _convert_altair_to_vega_lite_spec(
-    altair_chart: alt.Chart | alt.LayerChart,
+    altair_chart: AltairChart,
 ) -> VegaLiteSpec:
     """Convert an Altair chart object to a Vega-Lite chart spec."""
     import altair as alt
@@ -335,7 +370,7 @@ def _convert_altair_to_vega_lite_spec(
 
     datasets = {}
 
-    def id_transform(data) -> dict[str, str]:
+    def id_transform(data: Any) -> dict[str, str]:
         """Altair data transformer that serializes the data,
         creates a stable name based on the hash of the data,
         stores the bytes into the datasets mapping and
@@ -345,14 +380,12 @@ def _convert_altair_to_vega_lite_spec(
         # dataset name:
         data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
         # Use the md5 hash of the data as the name:
-        h = hashlib.new("md5", **HASHLIB_KWARGS)
-        h.update(str(data_bytes).encode("utf-8"))
-        name = h.hexdigest()
+        name = calc_md5(str(data_bytes))
 
         datasets[name] = data_bytes
         return {"name": name}
 
-    alt.data_transformers.register("id", id_transform)  # type: ignore[attr-defined,unused-ignore]
+    alt.data_transformers.register("id", id_transform)  # type: ignore[arg-type,attr-defined,unused-ignore]
 
     # The default altair theme has some width/height defaults defined
     # which are not useful for Streamlit. Therefore, we change the theme to
@@ -434,8 +467,8 @@ def _parse_selection_mode(
         raise StreamlitAPIException(
             "Selections are activated, but the provided chart spec does not "
             "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
-            "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions). "
-            "For adding selections to `st.vega_lite_chart`, take a look "
+            "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions)."
+            " For adding selections to `st.vega_lite_chart`, take a look "
             "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
         )
 
@@ -734,6 +767,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -975,6 +1009,7 @@ class VegaChartsMixin:
             width=width,
             height=height,
             stack=stack,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -1240,7 +1275,9 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            use_container_width=use_container_width,
             stack=stack,
+            horizontal=horizontal,
         )
         return cast(
             "DeltaGenerator",
@@ -1451,6 +1488,7 @@ class VegaChartsMixin:
             size_from_user=size,
             width=width,
             height=height,
+            use_container_width=use_container_width,
         )
         return cast(
             "DeltaGenerator",
@@ -1462,36 +1500,38 @@ class VegaChartsMixin:
             ),
         )
 
+    # When on_select=Ignore, return DeltaGenerator.
     @overload
     def altair_chart(
         self,
-        altair_chart: alt.Chart,
+        altair_chart: AltairChart,
         *,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
     ) -> DeltaGenerator: ...
 
+    # When on_select=rerun, return VegaLiteState.
     @overload
     def altair_chart(
         self,
-        altair_chart: alt.Chart,
+        altair_chart: AltairChart,
         *,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
     ) -> VegaLiteState: ...
 
     @gather_metrics("altair_chart")
     def altair_chart(
         self,
-        altair_chart: alt.Chart,
+        altair_chart: AltairChart,
         *,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -1510,13 +1550,19 @@ class VegaChartsMixin:
             https://altair-viz.github.io/gallery/ for examples of graph
             descriptions.
 
-        use_container_width : bool
-            Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``False``
-            (default), Streamlit sets the width of the chart to fit its contents
-            according to the plotting library, up to the width of the parent
-            container. If ``use_container_width`` is ``True``, Streamlit sets
-            the width of the figure to match the width of the parent container.
+        use_container_width : bool or None
+            Whether to override the chart's native width with the width of
+            the parent container. This can be one of the following:
+
+            - ``None`` (default): Streamlit will use the parent container's
+              width for all charts except those with known incompatibility
+              (``altair.Facet``, ``altair.HConcatChart``, and
+              ``altair.RepeatChart``).
+            - ``True``: Streamlit sets the width of the chart to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the chart to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -1551,7 +1597,7 @@ class VegaChartsMixin:
               as a dictionary.
 
             To use selection events, the object passed to ``altair_chart`` must
-            include selection paramters. To learn about defining interactions
+            include selection parameters. To learn about defining interactions
             in Altair and how to declare selection-type parameters, see
             `Interactive Charts \
             <https://altair-viz.github.io/user_guide/interactions.html>`_
@@ -1596,7 +1642,7 @@ class VegaChartsMixin:
         ...    .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
         ... )
         >>>
-        >>> st.altair_chart(c, use_container_width=True)
+        >>> st.altair_chart(c)
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
@@ -1612,30 +1658,32 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
         )
 
+    # When on_select=Ignore, return DeltaGenerator.
     @overload
     def vega_lite_chart(
         self,
         data: Data = None,
         spec: VegaLiteSpec | None = None,
         *,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator: ...
 
+    # When on_select=rerun, return VegaLiteState.
     @overload
     def vega_lite_chart(
         self,
         data: Data = None,
         spec: VegaLiteSpec | None = None,
         *,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> VegaLiteState: ...
@@ -1646,7 +1694,7 @@ class VegaChartsMixin:
         data: Data = None,
         spec: VegaLiteSpec | None = None,
         *,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -1670,13 +1718,19 @@ class VegaChartsMixin:
             to both ``data`` and ``spec``. See
             https://vega.github.io/vega-lite/docs/ for more info.
 
-        use_container_width : bool
-            Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``False``
-            (default), Streamlit sets the width of the chart to fit its contents
-            according to the plotting library, up to the width of the parent
-            container. If ``use_container_width`` is ``True``, Streamlit sets
-            the width of the figure to match the width of the parent container.
+        use_container_width : bool or None
+            Whether to override the chart's native width with the width of
+            the parent container. This can be one of the following:
+
+            - ``None`` (default): Streamlit will use the parent container's
+              width for all charts except those with known incompatibility
+              (``altair.Facet``, ``altair.HConcatChart``, and
+              ``altair.RepeatChart``).
+            - ``True``: Streamlit sets the width of the chart to match the
+              width of the parent container.
+            - ``False``: Streamlit sets the width of the chart to fit its
+              contents according to the plotting library, up to the width of
+              the parent container.
 
         theme : "streamlit" or None
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
@@ -1711,7 +1765,7 @@ class VegaChartsMixin:
               as a dictionary.
 
             To use selection events, the Vega-Lite spec defined in ``data`` or
-            ``spec`` must include selection parameters from the the charting
+            ``spec`` must include selection parameters from the charting
             library. To learn about defining interactions in Vega-Lite, see
             `Dynamic Behaviors with Parameters \
             <https://vega.github.io/vega-lite/docs/parameter.html>`_
@@ -1787,8 +1841,8 @@ class VegaChartsMixin:
 
     def _altair_chart(
         self,
-        altair_chart: alt.Chart | alt.LayerChart,
-        use_container_width: bool = False,
+        altair_chart: AltairChart,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -1824,7 +1878,7 @@ class VegaChartsMixin:
         self,
         data: Data = None,
         spec: VegaLiteSpec | None = None,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -1860,7 +1914,7 @@ class VegaChartsMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select) if is_callback else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -1874,6 +1928,22 @@ class VegaChartsMixin:
 
         if spec is None:
             spec = {}
+
+        # Set the default value for `use_container_width`.
+        if use_container_width is None:
+            # Some multi-view charts (facet, horizontal concatenation, and repeat;
+            # see https://altair-viz.github.io/user_guide/compound_charts.html)
+            # don't work well with `use_container_width=True`, so we disable it for
+            # those charts (see https://github.com/streamlit/streamlit/issues/9091).
+            # All other charts (including vertical concatenation) default to
+            # `use_container_width=True`.
+            is_facet_chart = "facet" in spec or (
+                "encoding" in spec
+                and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
+            )
+            use_container_width = not (
+                is_facet_chart or "hconcat" in spec or "repeat" in spec
+            )
 
         vega_lite_proto = ArrowVegaLiteChartProto()
 
@@ -1902,6 +1972,7 @@ class VegaChartsMixin:
                 "arrow_vega_lite_chart",
                 user_key=key,
                 form_id=vega_lite_proto.form_id,
+                dg=self.dg,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data
                 # or in a named dataset in vega_lite_proto.datasets
@@ -1930,7 +2001,7 @@ class VegaChartsMixin:
                 vega_lite_proto,
                 add_rows_metadata=add_rows_metadata,
             )
-            return cast(VegaLiteState, widget_state.value)
+            return widget_state.value
         # If its not used with selections activated, just return
         # the delta generator related to this element.
         return self.dg._enqueue(

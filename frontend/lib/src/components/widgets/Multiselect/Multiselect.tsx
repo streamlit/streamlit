@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,46 +14,49 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useMemo } from "react"
+import React, { FC, memo, useCallback, useContext, useMemo } from "react"
 
 import { ChevronDown } from "baseui/icon"
 import {
-  OnChangeParams,
-  Option,
+  type OnChangeParams,
+  type Option,
   TYPE,
   Select as UISelect,
 } from "baseui/select"
 import without from "lodash/without"
-import { isMobile } from "react-device-detect"
-import { useTheme } from "@emotion/react"
 
-import { VirtualDropdown } from "@streamlit/lib/src/components/shared/Dropdown"
-import { fuzzyFilterSelectOptions } from "@streamlit/lib/src/components/shared/Dropdown/Selectbox"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
+
+import { isMobile } from "~lib/util/isMobile"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { VirtualDropdown } from "~lib/components/shared/Dropdown"
+import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { StyledUISelect } from "@streamlit/lib/src/components/widgets/Multiselect/styled-components"
-import { MultiSelect as MultiSelectProto } from "@streamlit/lib/src/proto"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "~lib/components/widgets/BaseWidget"
+import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  getSelectPlaceholder,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
   ValueWithSource,
-} from "@streamlit/lib/src/hooks/useBasicWidgetState"
+} from "~lib/hooks/useBasicWidgetState"
 
 export interface Props {
   disabled: boolean
   element: MultiSelectProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
-type MultiselectValue = number[]
+type MultiselectValue = string[]
 
 interface MultiselectOption {
   label: string
@@ -64,19 +67,19 @@ const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: MultiSelectProto
 ): MultiselectValue | undefined => {
-  return widgetMgr.getIntArrayValue(element)
+  return widgetMgr.getStringArrayValue(element)
 }
 
 const getDefaultStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.default ?? null
+  return element.default.map(i => element.options[i]) ?? null
 }
 
 const getCurrStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.value ?? null
+  return element.rawValues ?? null
 }
 
 const updateWidgetMgrState = (
@@ -85,7 +88,7 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<MultiselectValue>,
   fragmentId?: string
 ): void => {
-  widgetMgr.setIntArrayValue(
+  widgetMgr.setStringArrayValue(
     element,
     valueWithSource.value,
     { fromUi: valueWithSource.fromUi },
@@ -94,9 +97,10 @@ const updateWidgetMgrState = (
 }
 
 const Multiselect: FC<Props> = props => {
-  const { element, widgetMgr, width, fragmentId } = props
+  const { element, widgetMgr, fragmentId } = props
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -124,30 +128,25 @@ const Multiselect: FC<Props> = props => {
   }, [element.maxSelections, value.length])
 
   const valueFromState = useMemo(() => {
-    return value.map(i => {
-      const label = element.options[i]
-      return { value: i.toString(), label }
+    return value.map(option => {
+      return { value: option, label: option }
     })
-  }, [element.options, value])
+  }, [value])
 
   const generateNewState = useCallback(
     (data: OnChangeParams): MultiselectValue => {
-      const getIndex = (): number => {
-        const valueId = data.option?.value
-        return parseInt(valueId, 10)
-      }
-
       switch (data.type) {
         case "remove": {
-          return without(value, getIndex())
+          return without(value, data.option?.value)
         }
         case "clear": {
           return []
         }
         case "select": {
-          return value.concat([getIndex()])
+          return value.concat([data.option?.value])
         }
         default: {
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           throw new Error(`State transition is unknown: ${data.type}`)
         }
       }
@@ -155,6 +154,19 @@ const Multiselect: FC<Props> = props => {
     [value]
   )
 
+  /**
+   * This is the onChange handler for the baseweb Select component.
+   * It is called whenever the user selects an option or removes an option.
+   * When the user starts to modify an option by typing in the input field and
+   * pressing backspace, a single `type="remove"` event is fired with the value set
+   * to the option that is being removed. The same type of event is fired when the
+   * user removes an option by clicking the X icon.
+   *
+   * If we wanted to prevent an immediate rerun when starting to delete characters,
+   * we would need to introduce two new states, e.g. `localValue` and `aboutToDelete`,
+   * and commit that state to the backend upon an onBlur event.
+   * To keep it simple, we just accept the rerun happening for now.
+   */
   const onChange = useCallback(
     (params: OnChangeParams) => {
       if (
@@ -179,7 +191,7 @@ const Multiselect: FC<Props> = props => {
       }
       // We need to manually filter for previously selected options here
       const unselectedOptions = options.filter(
-        option => !value.includes(Number(option.value))
+        option => !value.includes(option.value)
       )
 
       return fuzzyFilterSelectOptions(
@@ -190,16 +202,25 @@ const Multiselect: FC<Props> = props => {
     [overMaxSelections, value]
   )
 
-  const style = { width }
   const { options } = element
-  const disabled = options.length === 0 ? true : props.disabled
-  const placeholder =
-    options.length === 0 ? "No options to select." : element.placeholder
+
+  // Get placeholder and disabled state using utility function
+  const { placeholder, shouldDisable } = getSelectPlaceholder(
+    element.placeholder,
+    options,
+    element.acceptNewOptions ?? false,
+    true // isMultiSelect = true for multi-select
+  )
+
+  const disabled = props.disabled || shouldDisable
   const selectOptions: MultiselectOption[] = options.map(
-    (option: string, idx: number) => {
+    (option: string, index: number) => {
       return {
         label: option,
-        value: idx.toString(),
+        value: option,
+        // We are using an id because if multiple options are equal,
+        // we have observed weird UI glitches
+        id: `${option}_${index}`,
       }
     }
   )
@@ -208,8 +229,20 @@ const Multiselect: FC<Props> = props => {
   // If that's true, we show the keyboard on mobile. If not, we hide it.
   const showKeyboardOnMobile = options.length > 10
 
+  // Calculate the max height of the selectbox based on the baseFontSize
+  // to better support advanced theming
+  const maxHeight = useMemo(() => {
+    // Option height = lineHeight (1.6 * baseFontSize) + margin/padding (14px total)
+    const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
+    // Allow up to 4 options tall before scrolling + show small portion
+    // of the next row so its clear the user can scroll
+    const pxMaxHeight = Math.round(optionHeight * 4.25)
+    // Return value in px
+    return `${pxMaxHeight}px`
+  }, [theme.fontSizes.baseFontSize])
+
   return (
-    <div className="stMultiSelect" data-testid="stMultiSelect" style={style}>
+    <div className="stMultiSelect" data-testid="stMultiSelect">
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -228,6 +261,7 @@ const Multiselect: FC<Props> = props => {
       </WidgetLabel>
       <StyledUISelect>
         <UISelect
+          creatable={element.acceptNewOptions ?? false}
           options={selectOptions}
           labelKey="label"
           valueKey="value"
@@ -242,10 +276,26 @@ const Multiselect: FC<Props> = props => {
           noResultsMsg={getNoResultsMsg}
           filterOptions={filterOptions}
           closeOnSelect={false}
+          ignoreCase={false}
           overrides={{
+            Popover: {
+              props: {
+                ignoreBoundary: isInSidebar,
+                overrides: {
+                  Body: {
+                    style: () => ({
+                      marginTop: theme.spacing.px,
+                    }),
+                  },
+                },
+              },
+            },
             SelectArrow: {
               component: ChevronDown,
               props: {
+                style: {
+                  cursor: "pointer",
+                },
                 overrides: {
                   Svg: {
                     style: () => ({
@@ -264,6 +314,7 @@ const Multiselect: FC<Props> = props => {
             },
             ControlContainer: {
               style: {
+                maxHeight: maxHeight,
                 minHeight: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderLeftWidth: theme.sizes.borderWidth,
@@ -275,11 +326,14 @@ const Multiselect: FC<Props> = props => {
             Placeholder: {
               style: () => ({
                 flex: "inherit",
-                opacity: "0.7",
+                color: disabled
+                  ? theme.colors.fadedText40
+                  : theme.colors.fadedText60,
               }),
             },
             ValueContainer: {
               style: () => ({
+                overflowY: "auto",
                 paddingLeft: theme.spacing.sm,
                 paddingTop: theme.spacing.none,
                 paddingBottom: theme.spacing.none,
@@ -296,6 +350,7 @@ const Multiselect: FC<Props> = props => {
                       padding: theme.spacing.threeXS,
                       height: theme.sizes.clearIconSize,
                       width: theme.sizes.clearIconSize,
+                      cursor: "pointer",
                       ":hover": {
                         fill: theme.colors.bodyText,
                       },
@@ -327,6 +382,11 @@ const Multiselect: FC<Props> = props => {
                       // to nicely fit into the input field.
                       height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
                       maxWidth: `calc(100% - ${theme.spacing.lg})`,
+                      // Using !important because the alternative would be
+                      // uglier: we'd have to put it under a selector like
+                      // "&[role="button"]:not(:disabled)" in order to win in
+                      // the order of the precedence.
+                      cursor: "default !important",
                     },
                   },
                   Action: {
@@ -365,7 +425,7 @@ const Multiselect: FC<Props> = props => {
               props: {
                 // Change the 'readonly' prop to hide the mobile keyboard if options < 10
                 readOnly:
-                  isMobile && showKeyboardOnMobile === false
+                  isMobile() && showKeyboardOnMobile === false
                     ? "readonly"
                     : null,
               },

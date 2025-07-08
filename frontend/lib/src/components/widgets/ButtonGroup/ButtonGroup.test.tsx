@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
 
 import React from "react"
 
-import { act, fireEvent, screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   BaseButtonKind,
   BaseButtonSize,
-} from "@streamlit/lib/src/components/shared/BaseButton"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+  DynamicButtonLabel,
+} from "~lib/components/shared/BaseButton"
 
 import ButtonGroup, { getContentElement, Props } from "./ButtonGroup"
 
@@ -40,7 +41,7 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect
+  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let expectCheck: any = expect(element)
   if (!should_exist) {
     expectCheck = expect.not
@@ -60,7 +61,7 @@ const materialIconOnlyOptions = [
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[1]}:`,
-    selectedContentIcon: ":material/icon2_selected:",
+    selectedContentIcon: ":material/icon_2_selected:",
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[2]}:`,
@@ -102,6 +103,9 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
+  widthConfig: {
+    useContent: true,
+  },
   ...widgetProps,
 })
 const EXPECTED_BUTTONS_LENGTH = materialIconOnlyOptions.length + options.length
@@ -182,7 +186,8 @@ describe("ButtonGroup widget", () => {
       expect(buttons).toHaveLength(0)
     })
 
-    it("onClick prop for single select", () => {
+    it("onClick prop for single select", async () => {
+      const user = userEvent.setup()
       const props = getProps()
       vi.spyOn(props.widgetMgr, "setIntArrayValue")
 
@@ -199,9 +204,7 @@ describe("ButtonGroup widget", () => {
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
 
       // click element at index 1 to select it
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(buttons[1])
+      await user.click(buttons[1])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         [1],
@@ -211,9 +214,7 @@ describe("ButtonGroup widget", () => {
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
 
       // click element at index 0 to select it
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(getButtonGroupButtons()[0])
+      await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         [0],
@@ -223,9 +224,7 @@ describe("ButtonGroup widget", () => {
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
 
       // click on same button does deselect it
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(getButtonGroupButtons()[0])
+      await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         [],
@@ -235,7 +234,8 @@ describe("ButtonGroup widget", () => {
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(4)
     })
 
-    it("onClick prop for multi select", () => {
+    it("onClick prop for multi select", async () => {
+      const user = userEvent.setup()
       const props = getProps({
         clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
       })
@@ -250,9 +250,7 @@ describe("ButtonGroup widget", () => {
         undefined
       )
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(buttons[1])
+      await user.click(buttons[1])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         // the 2 is default value
@@ -261,9 +259,7 @@ describe("ButtonGroup widget", () => {
         undefined
       )
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(getButtonGroupButtons()[0])
+      await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         [2, 1, 0],
@@ -272,9 +268,7 @@ describe("ButtonGroup widget", () => {
       )
 
       // unselect the second button
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(getButtonGroupButtons()[1])
+      await user.click(getButtonGroupButtons()[1])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         [2, 0],
@@ -283,7 +277,8 @@ describe("ButtonGroup widget", () => {
       )
     })
 
-    it("passes fragmentId to onClick prop", () => {
+    it("passes fragmentId to onClick prop", async () => {
+      const user = userEvent.setup()
       const props = getProps(
         {},
         {
@@ -301,9 +296,7 @@ describe("ButtonGroup widget", () => {
       )
 
       const button = getButtonGroupButtons()[0]
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(button)
+      await user.click(button)
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         [0],
@@ -404,6 +397,7 @@ describe("ButtonGroup widget", () => {
     })
 
     it("renders help prop correctly", async () => {
+      const user = userEvent.setup()
       const props = getProps({
         help: "help text",
       })
@@ -411,25 +405,22 @@ describe("ButtonGroup widget", () => {
       const tooltip = screen.getByTestId("stTooltipHoverTarget")
       expect(tooltip).toBeInTheDocument()
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.mouseOver(tooltip)
+      await user.hover(tooltip)
       const helpText = await screen.findByText("help text")
       expect(helpText).toBeInTheDocument()
     })
 
     describe("visualizes selection behavior", () => {
       // eslint-disable-next-line vitest/expect-expect
-      it("visualize only selected option", () => {
+      it("visualize only selected option", async () => {
+        const user = userEvent.setup()
         const props = getProps({
           selectionVisualization:
             ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
         })
         render(<ButtonGroup {...props} />)
 
-        // TODO: Utilize user-event instead of fireEvent
-        // eslint-disable-next-line testing-library/prefer-user-event
-        fireEvent.click(getButtonGroupButtons()[0])
+        await user.click(getButtonGroupButtons()[0])
         const buttons = getButtonGroupButtons()
         expectHighlightStyle(buttons[0])
         expectHighlightStyle(buttons[1], false)
@@ -437,7 +428,8 @@ describe("ButtonGroup widget", () => {
       })
 
       // eslint-disable-next-line vitest/expect-expect
-      it("visualizes all up to the selected option", () => {
+      it("visualizes all up to the selected option", async () => {
+        const user = userEvent.setup()
         const props = getProps({
           selectionVisualization:
             ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED,
@@ -447,9 +439,7 @@ describe("ButtonGroup widget", () => {
         const buttonGroupWidget = screen.getByTestId("stButtonGroup")
         const buttons = within(buttonGroupWidget).getAllByRole("button")
         const buttonToClick = buttons[2]
-        // TODO: Utilize user-event instead of fireEvent
-        // eslint-disable-next-line testing-library/prefer-user-event
-        fireEvent.click(buttonToClick)
+        await user.click(buttonToClick)
         expectHighlightStyle(buttonToClick)
         expectHighlightStyle(buttons[0])
         // the second button has selectedContent set, so it should not be highlighted visually
@@ -458,7 +448,8 @@ describe("ButtonGroup widget", () => {
       })
 
       // eslint-disable-next-line vitest/expect-expect
-      it("has no default visualization when selected content present", () => {
+      it("has no default visualization when selected content present", async () => {
+        const user = userEvent.setup()
         // used for example by feedback stars
         const disabledVisualizationOption = [
           ButtonGroupProto.Option.create({
@@ -480,15 +471,14 @@ describe("ButtonGroup widget", () => {
         const buttonGroupWidget = screen.getByTestId("stButtonGroup")
         const buttons = within(buttonGroupWidget).getAllByRole("button")
         const buttonToClick = buttons[1]
-        // TODO: Utilize user-event instead of fireEvent
-        // eslint-disable-next-line testing-library/prefer-user-event
-        fireEvent.click(buttonToClick)
+        await user.click(buttonToClick)
         expectHighlightStyle(buttonToClick, false)
         expectHighlightStyle(buttons[0], false)
       })
     })
 
-    it("shows selection content when selected and available", () => {
+    it("shows selection content when selected and available", async () => {
+      const user = userEvent.setup()
       const props = getProps({ default: [], options: materialIconOnlyOptions })
       render(<ButtonGroup {...props} />)
 
@@ -499,9 +489,7 @@ describe("ButtonGroup widget", () => {
         expect(icon.textContent).toContain(materialIconNames[index])
       })
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(buttons[1])
+      await user.click(buttons[1])
       expect(getButtonGroupButtons()[1].textContent).toContain(
         "icon_2_selected"
       )
@@ -536,7 +524,8 @@ describe("ButtonGroup widget", () => {
     })
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
+    const user = userEvent.setup()
     // Create a widget in a clearOnSubmit form
     const props = getProps({
       formId: "form",
@@ -550,12 +539,8 @@ describe("ButtonGroup widget", () => {
 
     // Change the widget value
     // de-select default value
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(getButtonGroupButtons()[0])
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(getButtonGroupButtons()[1])
+    await user.click(getButtonGroupButtons()[0])
+    await user.click(getButtonGroupButtons()[1])
     let buttons = getButtonGroupButtons()
     expectHighlightStyle(buttons[0])
     // the second button has selectedContent set, so it should not be highlighted visually
@@ -588,11 +573,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.BORDERLESS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0].type).toBe(DynamicIcon)
-    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: "bar",
+      iconSize: "lg",
+      useSmallerFont: false,
+    })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
   })
@@ -604,11 +591,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.BORDERLESS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0]).toBe(undefined)
-    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: undefined,
+      iconSize: "lg",
+      useSmallerFont: false,
+    })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
   })
@@ -620,11 +609,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.BORDERLESS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0].type).toBe(DynamicIcon)
-    expect(children[1]).toBe("")
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "",
+      icon: "foo",
+      iconSize: "lg",
+      useSmallerFont: false,
+    })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
   })
@@ -636,11 +627,13 @@ describe("ButtonGroup getContentElement", () => {
       ButtonGroupProto.Style.PILLS
     )
 
-    expect(element.type).toBe(React.Fragment)
-    const { children } = element.props
-    expect(children).toHaveLength(2)
-    expect(children[0].type).toBe(DynamicIcon)
-    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: "bar",
+      iconSize: "base",
+      useSmallerFont: true,
+    })
     expect(kind).toBe(BaseButtonKind.PILLS)
     expect(size).toBe(BaseButtonSize.MEDIUM)
   })

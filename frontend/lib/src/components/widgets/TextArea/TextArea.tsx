@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,37 +17,40 @@
 import React, { FC, memo, useCallback, useRef, useState } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import { useTheme } from "@emotion/react"
 import uniqueId from "lodash/uniqueId"
 
-import { TextArea as TextAreaProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import useUpdateUiValue from "@streamlit/lib/src/hooks/useUpdateUiValue"
-import useSubmitFormViaEnterKey from "@streamlit/lib/src/hooks/useSubmitFormViaEnterKey"
-import useOnInputChange from "@streamlit/lib/src/hooks/useOnInputChange"
-import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
+import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
+
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
+import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
+import useOnInputChange from "~lib/hooks/useOnInputChange"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import {
-  isInForm,
-  labelVisibilityProtoValueToEnum,
-} from "@streamlit/lib/src/util/utils"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+} from "~lib/components/widgets/BaseWidget"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,
-} from "@streamlit/lib/src/hooks/useBasicWidgetState"
+} from "~lib/hooks/useBasicWidgetState"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
+
+import { StyledTextAreaContainer } from "./styled-components"
+import { getTextAreaHeight } from "./heightUtils"
 
 export interface Props {
   disabled: boolean
   element: TextAreaProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
+  // needed for height
+  outerElement: Element
 }
 
 type TextAreaValue = string | null
@@ -86,11 +89,11 @@ const TextArea: FC<Props> = ({
   element,
   widgetMgr,
   fragmentId,
-  width,
+  outerElement,
 }) => {
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   const id = useRef(uniqueId("text_area_")).current
+
+  const [width, elementRef] = useCalculatedWidth()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -101,12 +104,24 @@ const TextArea: FC<Props> = ({
    */
   const [focused, setFocused] = useState(false)
 
+  // Determine if we should use auto-expansion.
+  const isAutoHeight = outerElement.heightConfig?.useContent ?? false
+  // Disable resize if stretch height is enabled.
+  const isStretchHeight = outerElement.heightConfig?.useStretch ?? false
+
+  // For text area, we need to set the height on the input element and let
+  // that determine the height of the overall element so that resizing works.
+  const inputHeight = getTextAreaHeight(outerElement, element)
+
+  // Create ref for auto-expansion
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
   const [uiValue, setUiValue] = useState<string | null>(
-    getStateFromWidgetMgr(widgetMgr, element) ?? null
+    () => getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
 
   const onFormCleared = useCallback(() => {
@@ -130,7 +145,16 @@ const TextArea: FC<Props> = ({
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
 
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
+
+  const {
+    height: autoExpandHeight,
+    maxHeight: autoExpandMaxHeight,
+    updateScrollHeight,
+  } = useTextInputAutoExpand({
+    textareaRef,
+    dependencies: [element.placeholder],
+  })
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
@@ -148,12 +172,19 @@ const TextArea: FC<Props> = ({
     setFocused(true)
   }, [])
 
+  const additionalAction = useCallback(() => {
+    if (isAutoHeight) {
+      updateScrollHeight()
+    }
+  }, [isAutoHeight, updateScrollHeight])
+
   const onChange = useOnInputChange({
     formId: element.formId,
     maxChars: element.maxChars,
     setDirty,
     setUiValue,
     setValueWithSource,
+    additionalAction,
   })
 
   const onKeyDown = useSubmitFormViaEnterKey(
@@ -165,8 +196,7 @@ const TextArea: FC<Props> = ({
     true
   )
 
-  const style = { width }
-  const { height, placeholder, formId } = element
+  const { placeholder, formId } = element
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
   const allowEnterToSubmit = isInForm({ formId })
@@ -178,7 +208,11 @@ const TextArea: FC<Props> = ({
     focused && width > theme.breakpoints.hideWidgetDetails
 
   return (
-    <div className="stTextArea" data-testid="stTextArea" style={style}>
+    <StyledTextAreaContainer
+      className="stTextArea"
+      data-testid="stTextArea"
+      ref={elementRef}
+    >
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -196,7 +230,9 @@ const TextArea: FC<Props> = ({
           </StyledWidgetLabelHelp>
         )}
       </WidgetLabel>
+
       <UITextArea
+        inputRef={isAutoHeight ? textareaRef : undefined}
         value={uiValue ?? ""}
         placeholder={placeholder}
         onBlur={onBlur}
@@ -210,19 +246,19 @@ const TextArea: FC<Props> = ({
           Input: {
             style: {
               lineHeight: theme.lineHeights.inputWidget,
-
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
-              height: height ? `${height}px` : "",
+              height: isAutoHeight ? autoExpandHeight : inputHeight,
+              maxHeight: isAutoHeight ? autoExpandMaxHeight : "",
               minHeight: theme.sizes.largestElementHeight,
-              resize: "vertical",
-              "::placeholder": {
-                opacity: "0.7",
-              },
+              resize: isStretchHeight ? "none" : "vertical",
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.lg,
-              paddingLeft: theme.spacing.lg,
-              paddingBottom: theme.spacing.lg,
-              paddingTop: theme.spacing.lg,
+              paddingRight: theme.spacing.md,
+              paddingLeft: theme.spacing.md,
+              paddingBottom: theme.spacing.md,
+              paddingTop: theme.spacing.md,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
             },
           },
           Root: {
@@ -235,10 +271,12 @@ const TextArea: FC<Props> = ({
               borderRightWidth: theme.sizes.borderWidth,
               borderTopWidth: theme.sizes.borderWidth,
               borderBottomWidth: theme.sizes.borderWidth,
+              flexGrow: 1,
             },
           },
         }}
       />
+
       {shouldShowInstructions && (
         <InputInstructions
           dirty={dirty}
@@ -249,7 +287,7 @@ const TextArea: FC<Props> = ({
           allowEnterToSubmit={allowEnterToSubmit}
         />
       )}
-    </div>
+    </StyledTextAreaContainer>
   )
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,46 +13,101 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react-swc"
-import viteTsconfigPaths from "vite-tsconfig-paths"
-import { default as checker } from "vite-plugin-checker"
+import { version } from "./package.json"
 
+import react from "@vitejs/plugin-react-swc"
 import path from "path"
+import viteTsconfigPaths from "vite-tsconfig-paths"
 
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
-const BUILD_AS_FAST_AS_POSSIBLE =
-  process.env.BUILD_AS_FAST_AS_POSSIBLE || false
+// We do not explicitly set the DEV_BUILD in any of our processes
+// This is a convenience for developers for debugging purposes
+const DEV_BUILD = Boolean(process.env.DEV_BUILD)
+const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
+// The URL of the backend server to proxy to:
+// Can be changed to run against a remote server or different port:
+const DEV_SERVER_BACKEND_URL =
+  process.env.DEV_SERVER_BACKEND_URL || `http://localhost:8501`
+
+/**
+ * If this is a profiler build, we need to alias react-dom and scheduler to
+ * their profiling versions so that we can use the React DevTools profiler
+ * programmatically in tests.
+ * @see https://fb.me/react-profiling
+ */
+const profilerAliases = IS_PROFILER_BUILD
+  ? [
+      {
+        find: /^react-dom$/,
+        replacement: "react-dom/profiling",
+      },
+      {
+        find: "scheduler/tracing",
+        replacement: "scheduler/tracing-profiling",
+      },
+    ]
+  : []
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: BASE,
+  define: {
+    PACKAGE_METADATA: {
+      version,
+    },
+  },
   plugins: [
     react({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],
     }),
     viteTsconfigPaths(),
-    // this plugin checks for type errors on a separate process
-    checker({
-      typescript: true,
-    }),
   ],
   resolve: {
-    alias: {
-      "@streamlit/lib/src": path.resolve(__dirname, "../lib/src"),
-      "@streamlit/lib": path.resolve(__dirname, "../lib/src"),
-    },
+    alias: [
+      // Alias react-syntax-highlighter to the cjs version to avoid
+      // issues with the esm version causing a bug in rendering
+      // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565
+      {
+        find: "react-syntax-highlighter",
+        replacement: "react-syntax-highlighter/dist/cjs/index.js",
+      },
+      ...profilerAliases,
+    ],
   },
   server: {
     open: true,
     port: 3000,
+    host: true,
+    proxy: {
+      // These endpoints need to be kept in sync with the endpoints in
+      // lib/streamlit/web/server/server.py
+      "^.*/_stcore/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+        ws: true,
+      },
+      "^.*/media/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/component/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/app/static/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: "build",
     assetsDir: "static",
-    sourcemap: !BUILD_AS_FAST_AS_POSSIBLE,
+    sourcemap: DEV_BUILD,
+    manifest: true,
     rollupOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js
@@ -96,11 +151,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    coverage: {
-      reporter: ["text", "json", "html"],
-      include: ["src/**/*"],
-      exclude: [],
     },
     server: {
       // Want a Non-Dev port for testing

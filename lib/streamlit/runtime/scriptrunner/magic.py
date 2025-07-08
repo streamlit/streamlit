@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,7 @@ from typing import Any, Final
 from streamlit import config
 
 # When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
-# its module's AST:
-# import streamlit.runtime.scriptrunner.magic_funcs as __streamlitmagic__
+# its module's AST: import streamlit.runtime.scriptrunner.magic_funcs as __streamlitmagic__
 MAGIC_MODULE_NAME: Final = "__streamlitmagic__"
 
 
@@ -59,7 +58,7 @@ def _modify_ast_subtree(
     body_attr: str = "body",
     is_root: bool = False,
     file_ends_in_semicolon: bool = False,
-):
+) -> None:
     """Parses magic commands and modifies the given AST (sub)tree."""
 
     body = getattr(tree, body_attr)
@@ -162,7 +161,7 @@ def _insert_import_statement(tree: Any) -> None:
         tree.body.insert(0, st_import)
 
 
-def _build_st_import_statement():
+def _build_st_import_statement() -> ast.Import:
     """Build AST node for `import magic_funcs as __streamlitmagic__`."""
     return ast.Import(
         names=[
@@ -174,7 +173,7 @@ def _build_st_import_statement():
     )
 
 
-def _build_st_write_call(nodes):
+def _build_st_write_call(nodes: list[Any]) -> ast.Call:
     """Build AST node for `__streamlitmagic__.transparent_write(*nodes)`."""
     return ast.Call(
         func=ast.Attribute(
@@ -188,8 +187,13 @@ def _build_st_write_call(nodes):
 
 
 def _get_st_write_from_expr(
-    node, i, parent_type, is_root, is_last_expr, file_ends_in_semicolon
-):
+    node: Any,
+    i: int,
+    parent_type: Any,
+    is_root: bool,
+    is_last_expr: bool,
+    file_ends_in_semicolon: bool,
+) -> ast.Call | None:
     # Don't wrap function calls
     # (Unless the function call happened at the end of the root node, AND
     # magic.displayLastExprIfNoSemicolon is True. This allows us to support notebook-like
@@ -217,17 +221,17 @@ def _get_st_write_from_expr(
         return None
 
     # If tuple, call st.write(*the_tuple). This allows us to add a comma at the end of a
-    # statement to turn it into an expression that should be st-written. Ex:
-    # "np.random.randn(1000, 2),"
+    # statement to turn it into an expression that should be
+    # st-written. Ex: "np.random.randn(1000, 2),"
     args = node.value.elts if type(node.value) is ast.Tuple else [node.value]
     return _build_st_write_call(args)
 
 
-def _is_string_constant_node(node) -> bool:
+def _is_string_constant_node(node: Any) -> bool:
     return isinstance(node, ast.Constant) and isinstance(node.value, str)
 
 
-def _is_docstring_node(node, node_index, parent_type) -> bool:
+def _is_docstring_node(node: Any, node_index: int, parent_type: Any) -> bool:
     return (
         node_index == 0
         and _is_string_constant_node(node)
@@ -235,12 +239,15 @@ def _is_docstring_node(node, node_index, parent_type) -> bool:
     )
 
 
-def _does_file_end_in_semicolon(tree, code: str) -> bool:
+def _does_file_end_in_semicolon(tree: Any, code: str) -> bool:
     file_ends_in_semicolon = False
 
     # Avoid spending time with this operation if magic.displayLastExprIfNoSemicolon is
     # not set.
     if config.get_option("magic.displayLastExprIfNoSemicolon"):
+        if len(tree.body) == 0:
+            return False
+
         last_line_num = getattr(tree.body[-1], "end_lineno", None)
 
         if last_line_num is not None:

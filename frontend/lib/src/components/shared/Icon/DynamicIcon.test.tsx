@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import {
   DynamicIcon,
@@ -43,10 +43,23 @@ describe("Dynamic icon", () => {
     expect(testId).toBeInTheDocument()
     expect(icon).toBeInTheDocument()
     expect(testId.textContent).toEqual(icon.textContent)
+    // Should have translate="no" to prevent the icon text from being translated:
+    expect(testId).toHaveAttribute("translate", "no")
   })
 
   it("renders without crashing with Emoji icon", () => {
     const props = getProps({ iconValue: "⛰️" })
+    render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stIconEmoji")
+    const icon = screen.getByText("⛰️")
+
+    expect(testId).toBeInTheDocument()
+    expect(icon).toBeInTheDocument()
+    expect(testId.textContent).toEqual(icon.textContent)
+  })
+
+  it("renders without crashing with prefixed Emoji icon", () => {
+    const props = getProps({ iconValue: "emoji:⛰️" })
     render(<DynamicIcon {...props} />)
     const testId = screen.getByTestId("stIconEmoji")
     const icon = screen.getByText("⛰️")

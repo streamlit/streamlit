@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,29 +14,36 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Any, Final
 
 import streamlit
-import streamlit.elements.exception as exception
 from streamlit import config
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements import exception
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
 
 def _print_rich_exception(e: BaseException) -> None:
-    from rich import box, panel
+    from rich.box import Box
+    from rich.panel import Panel
 
     # Monkey patch the panel to use our custom box style
-    class ConfigurablePanel(panel.Panel):
+    class ConfigurablePanel(Panel):
         def __init__(
             self,
-            renderable,
-            box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
-            **kwargs,
-        ):
-            super().__init__(renderable, box, **kwargs)
+            renderable: Any,
+            box: Box | None = None,
+            **kwargs: Any,
+        ) -> None:
+            super().__init__(
+                renderable,
+                box
+                if box is not None
+                else Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
+                **kwargs,
+            )
 
     from rich import traceback as rich_traceback
 
@@ -83,17 +90,23 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
     warning in the frontend instead.
     """
 
+    error_logged = False
+
     if config.get_option("logger.enableRich"):
         try:
             # Print exception via rich
             # Rich is only a soft dependency
             # -> if not installed, we will use the default traceback formatting
             _print_rich_exception(ex)
+            error_logged = True
         except Exception:
             # Rich is not installed or not compatible to our config
             # -> Use normal traceback formatting as fallback
             # Catching all exceptions because we don't want to leave any possibility of breaking here.
-            pass
+            error_logged = False
 
-    _LOGGER.warning("Uncaught app execution", exc_info=ex)
+    if not error_logged:
+        # Only log error to console if not already logged by rich
+        _LOGGER.error("Uncaught app execution", exc_info=ex)
+
     _show_exception(ex)

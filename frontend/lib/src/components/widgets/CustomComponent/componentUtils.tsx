@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
-import { logWarning } from "@streamlit/lib/src/util/log"
+import { getLogger } from "loglevel"
+
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
   SpecialArg as SpecialArgProto,
-} from "@streamlit/lib/src/proto"
-import { EmotionTheme, toExportedTheme } from "@streamlit/lib/src/theme"
-import {
-  Source,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
+} from "@streamlit/protobuf"
+
+import { isNullOrUndefined } from "~lib/util/utils"
+import { EmotionTheme, toExportedTheme } from "~lib/theme"
+import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -43,6 +42,7 @@ type ReadyMessage = {
 }
 type ComponentValueMessage = {
   /* the value sent from the custom component can be anything */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any
   dataType: ValueType
 }
@@ -65,10 +65,12 @@ export interface IframeMessageHandlerProps {
 }
 
 export interface Args {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [name: string]: any
 }
 export interface DataframeArg {
   key: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any
 }
 
@@ -78,6 +80,7 @@ export interface DataframeArg {
  * version in the COMPONENT_READY call.
  */
 export const CUSTOM_COMPONENT_API_VERSION = 1
+export const LOG = getLogger("componentUtils")
 
 /**
  * Create a callback to be passed to  {@link ComponentRegistry#registerListener}.
@@ -112,6 +115,7 @@ export function createIframeMessageHandler(
     const isReady = readyCheck()
 
     switch (type) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.COMPONENT_READY: {
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
@@ -132,9 +136,10 @@ export function createIframeMessageHandler(
         break
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_COMPONENT_VALUE:
         if (!isReady) {
-          logWarning(
+          LOG.warn(
             `Got ${type} before ${ComponentMessageType.COMPONENT_READY}!`
           )
         } else {
@@ -149,9 +154,10 @@ export function createIframeMessageHandler(
         }
         break
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_FRAME_HEIGHT:
         if (!isReady) {
-          logWarning(
+          LOG.warn(
             `Got ${type} before ${ComponentMessageType.COMPONENT_READY}!`
           )
         } else {
@@ -162,7 +168,7 @@ export function createIframeMessageHandler(
         break
 
       default:
-        logWarning(`Unrecognized ComponentBackMsgType: ${type}`)
+        LOG.warn(`Unrecognized ComponentBackMsgType: ${type}`)
     }
   }
 }
@@ -243,13 +249,13 @@ export function sendRenderMessage(
 ): void {
   if (!iframe) {
     // This should never happen!
-    logWarning("Can't send ForwardMsg; missing our iframe!")
+    LOG.warn("Can't send ForwardMsg; missing our iframe!")
     return
   }
 
   if (isNullOrUndefined(iframe.contentWindow)) {
     // Nor should this!
-    logWarning("Can't send ForwardMsg; iframe has no contentWindow!")
+    LOG.warn("Can't send ForwardMsg; iframe has no contentWindow!")
     return
   }
 
@@ -262,7 +268,12 @@ export function sendRenderMessage(
       args: currentArgs,
       dfs: currentDataframeArgs,
       disabled: disabled,
-      theme: toExportedTheme(theme),
+      theme: {
+        ...toExportedTheme(theme),
+        // TODO(lukasmasuch): adds backwards compatibility for the deprecated font
+        // property. Should be cleaned-up at some point when we revamp custom components.
+        font: theme.genericFonts.bodyFont,
+      },
     },
     "*"
   )
@@ -278,6 +289,7 @@ export function sendRenderMessage(
  * @returns undefined
  */
 function handleSetComponentValue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any, // we do not know what data the custom component is sending us, so we use 'any' here
   dataType: ValueType,
   source: Source,
@@ -286,7 +298,7 @@ function handleSetComponentValue(
   fragmentId?: string
 ): void {
   if (value === undefined) {
-    logWarning(`handleSetComponentValue: missing 'value' prop`)
+    LOG.warn(`handleSetComponentValue: missing 'value' prop`)
     return
   }
 
@@ -304,9 +316,12 @@ function handleSetComponentValue(
 
 /** Return the property with the given name, if it exists. */
 function tryGetValue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   obj: any,
   name: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   defaultValue: any = undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
-  return obj.hasOwnProperty(name) ? obj[name] : defaultValue
+  return Object.hasOwn(obj, name) ? obj[name] : defaultValue
 }

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
 
 import re
 
@@ -26,11 +28,13 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-def get_button_group(app: Page, index: int) -> Locator:
-    return app.get_by_test_id("stButtonGroup").nth(index)
+def get_button_group(locator: Page | Locator, index: int = 0) -> Locator:
+    button_group = locator.get_by_test_id("stButtonGroup").nth(index)
+    expect(button_group).to_be_visible()
+    return button_group
 
 
-def get_feedback_icon_buttons(locator: Locator, type: str) -> Locator:
+def get_feedback_icon_buttons(locator: Locator, type: str | None = None) -> Locator:
     return locator.get_by_test_id(
         re.compile("stBaseButton-borderlessIcon(Active)?")
     ).filter(has_text=type)
@@ -43,42 +47,63 @@ def get_feedback_icon_button(locator: Locator, type: str, index: int = 0) -> Loc
 def test_click_thumbsup_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    thumbs = get_button_group(themed_app, 0)
+    """Create snapshot of thumbs feedback (enabled & disabled)."""
+
+    container = get_element_by_key(themed_app, "thumbs_container")
+    expect(container).to_be_attached()
+
+    thumbs = get_button_group(container)
+    expect(thumbs).to_be_attached()
     get_feedback_icon_button(thumbs, "thumb_up").click()
     wait_for_app_run(themed_app)
-    assert_snapshot(thumbs, name="st_feedback-thumbs")
+
+    assert_snapshot(container, name="st_feedback-thumbs")
 
 
 def test_clicking_on_faces_shows_sentiment_via_on_change_callback_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    faces = get_button_group(themed_app, 1)
+    """Create snapshot of faces feedback (enabled & disabled)."""
+
+    container = get_element_by_key(themed_app, "faces_container")
+    expect(container).to_be_attached()
+
+    faces = get_button_group(container)
     get_feedback_icon_button(faces, "sentiment_satisfied").click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Faces sentiment: 3")
     expect(text).to_be_attached()
-    assert_snapshot(faces, name="st_feedback-faces")
+
+    assert_snapshot(container, name="st_feedback-faces")
 
 
 def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    stars = get_button_group(themed_app, 2)
+    """Create snapshot of stars feedback (enabled & disabled)."""
+
+    container = get_element_by_key(themed_app, "stars_container")
+    expect(container).to_be_attached()
+
+    stars = get_button_group(container)
     get_feedback_icon_button(stars, "star", 3).click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Star sentiment: 3")
     expect(text).to_be_attached()
-    assert_snapshot(stars, name="st_feedback-stars")
+
+    assert_snapshot(container, name="st_feedback-stars")
 
 
-def test_feedback_buttons_are_disabled(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_feedback_buttons_are_disabled(app: Page):
     """Test that feedback buttons are disabled when `disabled=True` and that
-    they cannot be interacted with."""
+    they cannot be interacted with.
+    """
 
-    stars = get_button_group(app, 3)
-    star_buttons = get_feedback_icon_buttons(stars, "star")
+    container = get_element_by_key(app, "stars_container")
+    expect(container).to_be_attached()
+
+    stars = get_button_group(container, 1)
+    star_buttons = get_feedback_icon_buttons(stars)
     for star_button in star_buttons.all():
         expect(star_button).to_have_js_property("disabled", True)
     selected_button = star_buttons.nth(4)
@@ -86,15 +111,18 @@ def test_feedback_buttons_are_disabled(
     expect(selected_button).not_to_have_css(
         "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
     )
-    text = get_markdown(app, "feedback-disabled: None")
+    # the feedback value was set to 3 via session state
+    text = get_markdown(app, "feedback-disabled: 3")
     expect(text).to_be_attached()
-
-    assert_snapshot(stars, name="st_feedback-disabled")
 
 
 def test_feedback_works_in_forms(app: Page):
     expect(app.get_by_text("feedback-in-form: None")).to_be_visible()
-    thumbs = get_button_group(app, 4)
+
+    container = app.get_by_test_id("stForm")
+    expect(container).to_be_attached()
+
+    thumbs = get_button_group(container)
     get_feedback_icon_button(thumbs, "thumb_up").click()
     expect(app.get_by_text("feedback-in-form: None")).to_be_visible()
     click_form_button(app, "Submit")
@@ -107,18 +135,23 @@ def test_feedback_works_in_forms(app: Page):
 def test_feedback_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("feedback-in-fragment: None")).to_be_visible()
-    thumbs = get_button_group(app, 5)
+
+    fragment_container = get_element_by_key(app, "fragment_feedback")
+    thumbs = get_button_group(fragment_container)
     get_feedback_icon_button(thumbs, "thumb_up").click()
     wait_for_app_run(app)
+
     expect(app.get_by_text("feedback-in-fragment: 1")).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
 def test_feedback_remount_keep_value(app: Page):
     """Test that `st.feedback` remounts correctly without resetting value."""
+
     expect(app.get_by_text("feedback-after-sleep: None")).to_be_visible()
 
-    thumbs = get_button_group(app, 6)
+    sleep_feedback_container = get_element_by_key(app, "after_sleep_feedback")
+    thumbs = get_button_group(sleep_feedback_container)
     selected_button = get_feedback_icon_button(thumbs, "thumb_up")
     selected_button.click()
     wait_for_app_run(app)
@@ -135,9 +168,25 @@ def test_feedback_remount_keep_value(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
+
     check_top_level_class(app, "stButtonGroup")
 
 
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
+
     expect(get_element_by_key(app, "faces_feedback")).to_be_visible()
+
+
+def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test feedback widgets with different width configurations."""
+
+    # Test thumbs width examples
+    thumbs_content = get_element_by_key(app, "thumbs_content_width")
+    assert_snapshot(thumbs_content, name="st_feedback-thumbs_width_content")
+
+    thumbs_stretch = get_element_by_key(app, "thumbs_stretch_width")
+    assert_snapshot(thumbs_stretch, name="st_feedback-thumbs_width_stretch")
+
+    thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
+    assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")

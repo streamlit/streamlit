@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,18 +26,19 @@ export const StyledImageList = styled.div(({ theme }) => ({
   width: "fit-content",
 }))
 
-export const StyledImageContainer = styled.div({
+export const StyledImageContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
   width: "auto",
   flexGrow: 0,
-})
+
+  ">img": {
+    borderRadius: theme.radii.default,
+  },
+}))
 
 export const StyledCaption = styled.div(({ theme }) => ({
-  fontFamily: theme.genericFonts.bodyFont,
-  fontSize: theme.fontSizes.sm,
-  color: theme.colors.fadedText60,
   textAlign: "center",
   marginTop: theme.spacing.xs,
   wordWrap: "break-word",

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ import React from "react"
 
 import { screen, within } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { BlockNode } from "@streamlit/lib/src/AppNode"
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { Block as BlockProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import { BlockNode } from "~lib/AppNode"
 
 import Tabs, { TabProps } from "./Tabs"
 
@@ -75,7 +76,7 @@ describe("st.tabs", () => {
     })
   })
 
-  it("can be disabled", () => {
+  it("doesn't disable tabs when widgets are disabled", () => {
     render(<Tabs {...getProps({ widgetsDisabled: true })} />)
     const tabs = screen.getAllByRole("tab")
 
@@ -84,7 +85,7 @@ describe("st.tabs", () => {
       if (index == 0) {
         return
       }
-      expect(tabs[index]).toBeDisabled()
+      expect(tabs[index]).not.toBeDisabled()
     })
   })
 })

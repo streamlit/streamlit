@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,23 +16,56 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    goto_app,
+    select_radio_option,
 )
 
 VIDEO_ELEMENTS_COUNT = 12
 
 
+def _select_video_to_show(app: Page, label: str) -> Locator:
+    select_radio_option(app, re.compile(f"^{label}$"))
+    video_element = app.get_by_test_id("stVideo").first
+    # Prevent flakiness: we move the mouse before scrolling to prevent the cursor
+    # hovering over a video element and, thereby, changing how the video interface is
+    # rendered (e.g. without the controls in the bottom which are hidden)
+    app.mouse.move(0, 0)
+    video_element.scroll_into_view_if_needed()
+    expect(video_element).to_be_visible()
+    return video_element
+
+
 def _wait_until_video_has_data(app: Page, video_element: Locator):
     # To prevent flakiness, we wait for the video to load and start playing
     # The readyState is defined in https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/readyState
-    # 2 means there is some data to play
+    # 3 means there is some data to play now and few frames for the future. On webkit
+    # this seems to be flaky, so we check also the duration of the video.
     wait_until(
-        app, lambda: video_element.evaluate("el => el.readyState") >= 2, timeout=15000
+        app,
+        lambda: video_element.evaluate("el => el.readyState >= 3 || el.duration > 0")
+        is True,
+        timeout=15000,
     )
+
+
+@pytest.mark.skip_browser("webkit")
+def test_video_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that `st.video` width configurations are applied correctly."""
+    video_element = _select_video_to_show(app, "webm video with pixel width")
+    _wait_until_video_has_data(app, video_element)
+    assert_snapshot(video_element, name="st_video-width_400px", image_threshold=0.1)
+
+    video_element = _select_video_to_show(app, "webm video with stretch width")
+    _wait_until_video_has_data(app, video_element)
+    assert_snapshot(video_element, name="st_video-width_stretch", image_threshold=0.1)
 
 
 # Chromium miss codecs required to play that mp3 videos
@@ -40,95 +73,60 @@ def _wait_until_video_has_data(app: Page, video_element: Locator):
 @pytest.mark.skip_browser("chromium")
 def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly via screenshots matching."""
-    video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    # Wait for the video to load
-    app.wait_for_timeout(2000)
-
-    expect(video_elements.nth(0)).to_be_visible()
-    expect(video_elements.nth(1)).to_be_visible()
-    expect(video_elements.nth(2)).to_be_visible()
-    expect(video_elements.nth(3)).to_be_visible()
-
-    assert_snapshot(video_elements.nth(0), name="video_element_first")
-    assert_snapshot(video_elements.nth(1), name="video_element_second")
+    video_element = _select_video_to_show(app, "mp4 video")
+    _wait_until_video_has_data(app, video_element)
     assert_snapshot(
-        video_elements.nth(2),
-        name="video_element_third",
-        image_threshold=0.09,
+        video_element,
+        name="video_element_first",
+        image_threshold=0.1,
     )
+
+    video_element = _select_video_to_show(app, "mp4 video with subtitles")
+    _wait_until_video_has_data(app, video_element)
     assert_snapshot(
-        video_elements.nth(4),
+        video_element,
         name="video_element_with_subtitles",
-        image_threshold=0.09,
+        image_threshold=0.1,
     )
 
 
 @pytest.mark.skip_browser("webkit")
-def test_video_rendering_webp(app: Page, assert_snapshot: ImageCompareFunction):
+def test_video_rendering_webm(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly webm video via screenshots matching."""
-    video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    # Wait for the video to load
-    app.wait_for_timeout(2000)
+    video_element = _select_video_to_show(app, "webm video with subtitles")
+    _wait_until_video_has_data(app, video_element)
 
-    expect(video_elements.nth(5)).to_be_visible()
     assert_snapshot(
-        video_elements.nth(5),
+        video_element,
         name="video_element_webm_with_subtitles",
-        image_threshold=0.09,
+        image_threshold=0.1,
     )
 
 
 def test_displays_a_video_player(app: Page):
-    video_element = app.get_by_test_id("stVideo").nth(0)
-    expect(video_element).to_be_visible()
+    video_element = _select_video_to_show(app, "mp4 video")
     # src here is a generated by streamlit url since we pass a file content
     expect(video_element).to_have_attribute("src", re.compile(r".*media.*.mp4"))
 
 
-def test_video_handles_start_time(app: Page):
-    video_element = app.get_by_test_id("stVideo").nth(1)
-    expect(video_element).to_be_visible()
-    # src here is an url we pass to st.video
-    expect(video_element).to_have_attribute(
-        "src", "https://www.w3schools.com/html/mov_bbb.mp4"
-    )
-
-
-@pytest.mark.skip_browser("chromium")
-def test_handles_changes_in_start_time(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    app.wait_for_timeout(2000)
-
-    # Change the start time of second video from 6 to 5
-    app.get_by_test_id("stNumberInput").get_by_test_id("stNumberInputStepDown").click()
-    # Wait for the video start time to update
-    app.wait_for_timeout(2000)
-
-    video_elements = app.get_by_test_id("stVideo")
-    assert_snapshot(video_elements.nth(1), name="video-updated-start")
-
-
 @pytest.mark.parametrize(
-    "nth_element",
+    "video_option_label",
     [
-        pytest.param(6, marks=pytest.mark.skip_browser("webkit")),
-        pytest.param(7, marks=pytest.mark.skip_browser("chromium")),
+        pytest.param(
+            "webm video with end time", marks=pytest.mark.skip_browser("webkit")
+        ),
+        pytest.param(
+            "mp4 video with end time", marks=pytest.mark.skip_browser("chromium")
+        ),
     ],
 )
-def test_video_end_time(app: Page, nth_element: int):
+def test_video_end_time(app: Page, video_option_label: str):
     """Test that `st.video` with end_time works correctly."""
-    video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
 
-    expect(video_elements.nth(nth_element)).to_be_visible()
-
-    video_element = video_elements.nth(nth_element)
-    video_element.scroll_into_view_if_needed()
+    video_element = _select_video_to_show(app, video_option_label)
+    _wait_until_video_has_data(app, video_element)
     video_element.evaluate("el => el.play()")
     # Wait until video will reach end_time
     app.wait_for_timeout(3000)
@@ -137,21 +135,23 @@ def test_video_end_time(app: Page, nth_element: int):
 
 
 @pytest.mark.parametrize(
-    "nth_element",
+    "video_option_label",
     [
-        pytest.param(8, marks=pytest.mark.skip_browser("webkit")),
-        pytest.param(9, marks=pytest.mark.skip_browser("chromium")),
+        pytest.param(
+            "webm video with end time and loop",
+            marks=pytest.mark.skip_browser("webkit"),
+        ),
+        pytest.param(
+            "mp4 video with end time and loop",
+            marks=pytest.mark.skip_browser("chromium"),
+        ),
     ],
 )
-def test_video_end_time_loop(app: Page, nth_element: int):
+def test_video_end_time_loop(app: Page, video_option_label: str):
     """Test that `st.video` with end_time and loop works correctly."""
-    video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
+    video_element = _select_video_to_show(app, video_option_label)
+    _wait_until_video_has_data(app, video_element)
 
-    expect(video_elements.nth(nth_element)).to_be_visible()
-
-    video_element = video_elements.nth(nth_element)
-    video_element.scroll_into_view_if_needed()
     video_element.evaluate("el => el.play()")
     # According to the element definition looks like this:
     # start_time=35, end_time=39, loop=True
@@ -165,12 +165,7 @@ def test_video_end_time_loop(app: Page, nth_element: int):
 @pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_autoplay(app: Page):
     """Test that `st.video` autoplay property works correctly."""
-    video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
-
-    video_element = video_elements.nth(10)
-    expect(video_element).to_be_visible()
-    video_element.scroll_into_view_if_needed()
+    video_element = _select_video_to_show(app, "webm video with autoplay")
     expect(video_element).to_have_js_property("paused", True)
     expect(video_element).to_have_js_property("autoplay", False)
 
@@ -181,16 +176,12 @@ def test_video_autoplay(app: Page):
     expect(video_element).to_have_js_property("paused", False)
 
 
+@pytest.mark.skip_browser("webkit")  # Flakiness with this in CI
 def test_video_muted_autoplay(app: Page):
     """Test that `st.video` muted and autoplay properties work correctly."""
-    video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
-
-    video_element = video_elements.nth(11)
-    expect(video_element).to_be_visible()
-    video_element.scroll_into_view_if_needed()
-
+    video_element = _select_video_to_show(app, "webm video muted")
     _wait_until_video_has_data(app, video_element)
+
     expect(video_element).to_have_js_property("muted", True)
     expect(video_element).to_have_js_property("autoplay", True)
     expect(video_element).to_have_js_property("paused", False)
@@ -199,16 +190,11 @@ def test_video_muted_autoplay(app: Page):
 @pytest.mark.flaky(reruns=3)  # Some flakiness with the js properties in webkit
 def test_video_remount_no_autoplay(app: Page):
     """Test that `st.video` remounts correctly without autoplay."""
-    video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
+    video_element = _select_video_to_show(app, "webm video with autoplay")
+    _wait_until_video_has_data(app, video_element)
 
-    video_element = video_elements.nth(10)
-
-    expect(video_element).to_be_visible()
     expect(video_element).to_have_js_property("paused", True)
     expect(video_element).to_have_js_property("autoplay", False)
-
-    _wait_until_video_has_data(app, video_element)
 
     click_checkbox(app, "Autoplay")
 
@@ -224,4 +210,32 @@ def test_video_remount_no_autoplay(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
+    _select_video_to_show(app, "webm video with autoplay")
     check_top_level_class(app, "stVideo")
+
+
+def test_video_source_error(app: Page, app_port: int):
+    """Test `st.video` source error."""
+    # Ensure video source request return a 404 status
+    app.route(
+        f"http://localhost:{app_port}/media/**",
+        lambda route: route.fulfill(
+            status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+        ),
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+    _select_video_to_show(app, "mp4 video")
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: Video source error" in message for message in messages
+        ),
+    )

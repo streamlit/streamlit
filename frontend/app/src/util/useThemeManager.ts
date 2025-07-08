@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,15 +22,14 @@ import {
   createPresetThemes,
   createTheme,
   CUSTOM_THEME_NAME,
-  CustomThemeConfig,
   getDefaultTheme,
   getHostSpecifiedTheme,
-  ICustomThemeConfig,
   isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
 } from "@streamlit/lib"
+import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
 export interface ThemeManager {
   activeTheme: ThemeConfig
@@ -43,8 +42,10 @@ export interface ThemeManager {
 export function useThemeManager(): [ThemeManager, object[]] {
   const defaultTheme = getDefaultTheme()
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme)
-  const [fontFaces, setFontFaces] = useState<object[]>([])
-  const [availableThemes, setAvailableThemes] = useState<ThemeConfig[]>([
+  const [fontFaces, setFontFaces] = useState<object[]>(
+    defaultTheme.themeInput?.fontFaces ?? []
+  )
+  const [availableThemes, setAvailableThemes] = useState<ThemeConfig[]>(() => [
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
   ])
@@ -75,7 +76,7 @@ export function useThemeManager(): [ThemeManager, object[]] {
       updateTheme(getHostSpecifiedTheme())
     }
     const constantThemes = availableThemes.filter(
-      theme => theme.name !== AUTO_THEME_NAME
+      currTheme => currTheme.name !== AUTO_THEME_NAME
     )
     setAvailableThemes([createAutoTheme(), ...constantThemes])
   }, [theme.name, availableThemes, updateTheme])

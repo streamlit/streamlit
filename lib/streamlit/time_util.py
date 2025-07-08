@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,9 +51,7 @@ def time_to_seconds(t: float | timedelta | str | None) -> float: ...
 def time_to_seconds(
     t: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
 ) -> float | None:
-    """
-    Convert a time string value to a float representing "number of seconds".
-    """
+    """Convert a time string value to a float representing "number of seconds"."""
     if coerce_none_to_inf and t is None:
         return math.inf
     if isinstance(t, timedelta):

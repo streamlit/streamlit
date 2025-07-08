@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,25 @@ import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { usePrevious } from "@streamlit/lib/src/util/Hooks"
+import { usePrevious } from "~lib/util/Hooks"
 
 import Pagination from "./Pagination"
 
 export interface Props {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   items: any[]
   pageSize: number
   resetOnAdd: boolean
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 const calculateNumPages = (items: any[], pageSize: number): number =>
   Math.ceil(items.length / pageSize)
 
 const withPagination = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   WrappedComponent: ComponentType<React.PropsWithChildren<any>>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): ComponentType<React.PropsWithChildren<any>> => {
   const WithPagination = ({
     pageSize,
@@ -41,10 +45,11 @@ const withPagination = (
     ...props
   }: Props): ReactElement => {
     const [currentPage, updateCurrentPage] = useState<number>(0)
-    const [totalPages, updateTotalPages] = useState<number>(
+    const [totalPages, updateTotalPages] = useState<number>(() =>
       calculateNumPages(items, pageSize)
     )
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     const prevItems: any[] = usePrevious(items)
 
     useEffect(() => {

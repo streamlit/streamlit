@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ if TYPE_CHECKING:
         HITCHCOCK = 1
         WALLACE = 2
         GREENE = 3
+
+    assert_type(radio("foo", []), None)
 
     assert_type(radio("foo", [1, 2, 3]), int)
     assert_type(radio("foo", [1, 2, 3], index=None), Union[int, None])

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,14 @@ import xxhash from "xxhashjs"
 
 import {
   Alert as AlertProto,
+  ChatInput as ChatInputProto,
   Element,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Skeleton as SkeletonProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
+
+import { assertNever } from "./assertNever"
 
 // This prefix should be in sync with the value on the python side:
 const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
@@ -35,9 +39,12 @@ const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
  * will only be called after the full interval has elapsed since the last
  * call.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function debounce(delay: number, fn: any): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let timerId: any
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   return (...args: any[]) => {
     if (timerId) {
       clearTimeout(timerId)
@@ -208,6 +215,54 @@ export function isInChildFrame(): boolean {
 }
 
 /**
+ * Returns the URL of the app without query parameters, handling both embedded and non-embedded cases.
+ * If the app is embedded in an iframe, it attempts to get the parent frame's URL.
+ */
+export function getUrl(): string {
+  let url: string
+
+  try {
+    // Try to access top location if we're in an iframe
+    if (isInChildFrame() && window.top) {
+      url = window.top.location.href
+    } else {
+      url = document.location.href
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    // CSP error might occur when trying to access parent frame
+    url = document.location.href
+  }
+
+  // Remove query parameters and anchor from the URL
+  const urlObj = new URL(url)
+  urlObj.search = ""
+  urlObj.hash = ""
+  return urlObj.toString()
+}
+
+/**
+ * Returns the timezone from the browser's Intl API.
+ */
+export function getTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
+
+/**
+ * Returns the timezone offset in minutes from the browser's Date API.
+ */
+export function getTimezoneOffset(): number {
+  return new Date().getTimezoneOffset()
+}
+
+/**
+ * Returns the browser's locale language setting.
+ */
+export function getLocaleLanguage(): string {
+  return navigator.language
+}
+
+/**
  * Returns a string with the type of loading screen to use while the app is
  * waiting for the backend to send displayable protos.
  */
@@ -217,8 +272,8 @@ export function getLoadingScreenType(): LoadingScreenType {
   return params.has(EMBED_HIDE_LOADING_SCREEN)
     ? LoadingScreenType.NONE
     : params.has(EMBED_SHOW_LOADING_SCREEN_V1)
-    ? LoadingScreenType.V1
-    : LoadingScreenType.V2
+      ? LoadingScreenType.V1
+      : LoadingScreenType.V2
 }
 
 /** Return an info Element protobuf with the given text. */
@@ -275,33 +330,6 @@ export function notUndefined<T>(value: T | undefined): value is T {
 }
 
 /**
- * A type predicate that is true if the given value is not null.
- */
-export function notNull<T>(value: T | null): value is T {
-  return notNullOrUndefined(value)
-}
-
-/**
- * A type predicate that is true if the given value is neither undefined
- * nor null.
- */
-export function notNullOrUndefined<T>(
-  value: T | null | undefined
-): value is T {
-  return <T>value !== null && <T>value !== undefined
-}
-
-/**
- * A type predicate that is true if the given value is either undefined
- * or null.
- */
-export function isNullOrUndefined<T>(
-  value: T | null | undefined
-): value is null | undefined {
-  return <T>value === null || <T>value === undefined
-}
-
-/**
  * A promise that would be resolved after certain time
  * @param ms number
  */
@@ -321,14 +349,6 @@ export function isFromMac(): boolean {
  */
 export function isFromWindows(): boolean {
   return /^Win/i.test(navigator.platform)
-}
-
-/**
- * Returns cookie value
- */
-export function getCookie(name: string): string | undefined {
-  const r = document.cookie.match(`\\b${name}=([^;]*)\\b`)
-  return r ? r[1] : undefined
 }
 
 /**
@@ -363,6 +383,7 @@ export function isValidElementId(
  * If the element has a valid ID, returns it. Otherwise, returns undefined.
  */
 export function getElementId(element: Element): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const elementId = get(element as any, [requireNonNull(element.type), "id"])
   if (elementId && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
@@ -379,6 +400,52 @@ export function isValidFormId(formId?: string): formId is string {
 /** True if the given widget element is part of a form. */
 export function isInForm(widget: { formId?: string }): boolean {
   return isValidFormId(widget.formId)
+}
+
+/**
+ * Determines the appropriate placeholder text for select-type widgets.
+ * Handles both single-select and multi-select cases with appropriate pluralization.
+ *
+ * @param placeholder - The custom placeholder provided by the user (empty string means use defaults)
+ * @param options - Array of available options
+ * @param acceptNewOptions - Whether the widget accepts new options
+ * @param isMultiSelect - Whether this is for a multi-select widget (affects pluralization)
+ * @returns Object containing the placeholder text and whether the widget should be disabled
+ */
+export function getSelectPlaceholder(
+  placeholder: string,
+  options: readonly string[],
+  acceptNewOptions: boolean,
+  isMultiSelect = false
+): { placeholder: string; shouldDisable: boolean } {
+  let shouldDisable = false
+
+  // If custom placeholder is provided (not empty string), use it as-is
+  if (placeholder !== "") {
+    return { placeholder, shouldDisable }
+  }
+
+  // Determine appropriate default placeholder based on widget state
+  if (options.length === 0) {
+    if (!acceptNewOptions) {
+      placeholder = "No options to select"
+      // When a user cannot add new options and there are no options to select from, we disable the widget
+      shouldDisable = true
+    } else {
+      placeholder = isMultiSelect ? "Add options" : "Add an option"
+    }
+  } else {
+    // For non-empty options, set appropriate default placeholder
+    if (acceptNewOptions) {
+      placeholder = isMultiSelect
+        ? "Choose or add options"
+        : "Choose or add an option"
+    } else {
+      placeholder = isMultiSelect ? "Choose options" : "Choose an option"
+    }
+  }
+
+  return { placeholder, shouldDisable }
 }
 
 export enum LabelVisibilityOptions {
@@ -399,6 +466,28 @@ export function labelVisibilityProtoValueToEnum(
       return LabelVisibilityOptions.Collapsed
     default:
       return LabelVisibilityOptions.Visible
+  }
+}
+
+export enum AcceptFileValue {
+  None,
+  Single,
+  Multiple,
+}
+
+export function chatInputAcceptFileProtoValueToEnum(
+  value: ChatInputProto.AcceptFile
+): AcceptFileValue {
+  switch (value) {
+    case ChatInputProto.AcceptFile.NONE:
+      return AcceptFileValue.None
+    case ChatInputProto.AcceptFile.SINGLE:
+      return AcceptFileValue.Single
+    case ChatInputProto.AcceptFile.MULTIPLE:
+      return AcceptFileValue.Multiple
+    default:
+      assertNever(value)
+      return AcceptFileValue.None
   }
 }
 
@@ -427,6 +516,7 @@ export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
     const doc = iframe.contentDocument || iframe.contentWindow.document
     const html = doc.body.innerHTML
     return html !== null && html !== ""
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {
     return false
   }
@@ -445,9 +535,8 @@ export function getIFrameEnclosingApp(
   }
   const embeddingIdClassName = getEmbeddingIdClassName(embeddingId)
   const qsStreamlitAppStr = 'iframe[title="streamlitApp"]'
-  let qs = window.document.querySelectorAll(
-    qsStreamlitAppStr
-  ) as NodeListOf<HTMLIFrameElement>
+  let qs: NodeListOf<HTMLIFrameElement> =
+    window.document.querySelectorAll(qsStreamlitAppStr)
   let foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -465,9 +554,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  let htmlCollection = window.document.getElementsByTagName(
-    "iframe"
-  ) as HTMLCollectionOf<HTMLIFrameElement>
+  let htmlCollection = window.document.getElementsByTagName("iframe")
   foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -520,8 +607,8 @@ export function extractPageNameFromPathName(
   // regex special-characters. This is why we're stuck with the
   // weird-looking triple `replace()`.
   return decodeURIComponent(
-    document.location.pathname
-      .replace(`/${basePath}`, "")
+    pathname
+      .replace(basePath, "")
       .replace(new RegExp("^/?"), "")
       .replace(new RegExp("/$"), "")
   )
@@ -548,25 +635,34 @@ export function extractPageNameFromPathName(
  * // }
  */
 export function keysToSnakeCase(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   obj: Record<string, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): Record<string, any> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const newKey = decamelize(key, {
-      preserveConsecutiveUppercase: true,
-    }).replace(".", "_")
-    let value = obj[key]
+  return Object.keys(obj).reduce(
+    (acc, key) => {
+      const newKey = decamelize(key, {
+        preserveConsecutiveUppercase: true,
+      }).replace(".", "_")
+      let value = obj[key]
 
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      value = keysToSnakeCase(value)
-    }
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        value = keysToSnakeCase(value)
+      }
 
-    if (Array.isArray(value)) {
-      value = value.map(item =>
-        typeof item === "object" ? keysToSnakeCase(item) : item
-      )
-    }
+      if (Array.isArray(value)) {
+        value = value.map(item =>
+          typeof item === "object" ? keysToSnakeCase(item) : item
+        )
+      }
 
-    acc[newKey] = value
-    return acc
-  }, {} as Record<string, any>)
+      acc[newKey] = value
+      return acc
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    {} as Record<string, any>
+  )
 }
+
+// TODO: Update all imports to use @streamlit/utils and remove this line.
+export { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"

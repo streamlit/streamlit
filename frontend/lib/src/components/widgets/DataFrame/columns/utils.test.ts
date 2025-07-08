@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { Field, Utf8 } from "apache-arrow"
 import moment, { Moment } from "moment-timezone"
 
-import { withTimezones } from "@streamlit/lib/src/util/withTimezones"
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { withTimezones } from "~lib/util/withTimezones"
 
 import {
   BaseColumnProps,
@@ -32,6 +34,7 @@ import {
   mergeColumnParameters,
   removeLineBreaks,
   toGlideColumn,
+  toJsonString,
   toSafeArray,
   toSafeBoolean,
   toSafeDate,
@@ -48,8 +51,15 @@ const MOCK_TEXT_COLUMN_PROPS = {
   title: "column_1",
   indexNumber: 0,
   arrowType: {
-    pandas_type: "unicode",
-    numpy_type: "object",
+    type: DataFrameCellType.DATA,
+    arrowField: new Field("test", new Utf8(), true),
+    pandasType: {
+      field_name: "test",
+      name: "test",
+      pandas_type: "unicode",
+      numpy_type: "object",
+      metadata: null,
+    },
   },
   isEditable: false,
   isHidden: false,
@@ -64,9 +74,11 @@ describe("getErrorCell", () => {
     expect(errorCell.kind).toEqual(GridCellKind.Text)
     expect(errorCell.readonly).toEqual(true)
     expect(errorCell.allowOverlay).toEqual(true)
-    expect(errorCell.displayData).toEqual("⚠️ Foo Error")
-    expect(errorCell.data).toEqual("⚠️ Foo Error\n\nLorem Ipsum Dolor\n")
+    expect(errorCell.displayData).toEqual("Foo Error")
+    expect(errorCell.data).toEqual("Foo Error")
+    expect(errorCell.errorDetails).toEqual("Lorem Ipsum Dolor")
     expect(errorCell.isError).toEqual(true)
+    expect(errorCell.style).toEqual("faded")
   })
 })
 
@@ -137,7 +149,7 @@ describe("toSafeArray", () => {
       [true, false],
       [true, false],
     ],
-  ])("converts %p to a valid array: %p", (input, expected) => {
+  ])("converts %s to a valid array: %s", (input, expected) => {
     expect(toSafeArray(input)).toEqual(expected)
   })
 })
@@ -163,7 +175,7 @@ describe("toSafeString", () => {
       },
       "[object Object]",
     ],
-  ])("converts %p to a valid string: %p", (input, expected) => {
+  ])("converts %s to a valid string: %s", (input, expected) => {
     expect(toSafeString(input)).toEqual(expected)
   })
 })
@@ -194,7 +206,7 @@ describe("toSafeBoolean", () => {
     [12345, undefined],
     [[1, 2], undefined],
     [0.1, undefined],
-  ])("converts %p to a boolean: %p", (input, expected) => {
+  ])("converts %s to a boolean: %s", (input, expected) => {
     expect(toSafeBoolean(input)).toEqual(expected)
   })
 })
@@ -230,7 +242,7 @@ describe("toSafeNumber", () => {
     [".1312314", 0.1312314],
     [true, 1],
     [false, 0],
-  ])("converts %p to a valid number: %p", (input, expected) => {
+  ])("converts %s to a valid number: %s", (input, expected) => {
     expect(toSafeNumber(input)).toEqual(expected)
   })
 })
@@ -243,8 +255,15 @@ describe("formatNumber", () => {
     [10.1234, "10.1234"],
     // Rounds to 4 decimals
     [10.12346, "10.1235"],
+    [0.00016, "0.0002"],
+    // If number is smaller than 0.0001, shows the next decimal number
+    // to avoid showing 0 for small numbers.
+    [0.000051, "0.00005"],
+    [0.00000123, "0.000001"],
+    [0.00000183, "0.000002"],
+    [0.0000000061, "0.000000006"],
   ])(
-    "formats %p to %p with default options (no trailing zeros)",
+    "formats %s to %s with default options (no trailing zeros)",
     (value, expected) => {
       expect(formatNumber(value)).toEqual(expected)
     }
@@ -262,18 +281,18 @@ describe("formatNumber", () => {
     [0.123, 0, "0"],
     [0.123, 1, "0.1"],
   ])(
-    "formats %p to %p with %p decimals (keeps trailing zeros)",
+    "formats %s to %s with %s decimals (keeps trailing zeros)",
     (value, decimals, expected) => {
       expect(formatNumber(value, undefined, decimals)).toEqual(expected)
     }
   )
 
   it.each([
-    [0.5, "percent", "50.00%"],
+    [0.5, "percent", "50%"],
     [0.51236, "percent", "51.24%"],
-    [1.1, "percent", "110.00%"],
-    [0, "percent", "0.00%"],
-    [0.00001, "percent", "0.00%"],
+    [-1.123456, "percent", "-112.35%"],
+    [0, "percent", "0%"],
+    [0.00001, "percent", "0%"],
     [1000, "compact", "1K"],
     [1100, "compact", "1.1K"],
     [10, "compact", "10"],
@@ -283,16 +302,44 @@ describe("formatNumber", () => {
     [123456789, "scientific", "1.235E8"],
     [1000, "engineering", "1E3"],
     [123456789, "engineering", "123.457E6"],
-    [10, "duration[ns]", "a few seconds"],
-    [1234567891234, "duration[ns]", "21 minutes"],
-    [10, "period[ms]", "1970-01-01 00:00:00.010"],
-    [10, "period[s]", "1970-01-01 00:00:10"],
-    [10, "period[min]", "1970-01-01 00:10"],
-    [10, "period[h]", "1970-01-01 10:00"],
-    [10, "period[D]", "1970-01-11"],
-    [10, "period[M]", "1970-11"],
-    [10, "period[Y]", "1980"],
-    [10, "period[Q]", "1972Q3"],
+    [1234.567, "engineering", "1.235E3"],
+    // plain
+    [10.1231234, "plain", "10.1231234"],
+    [-1234.456789, "plain", "-1234.456789"],
+    [0.00000001, "plain", "0.00000001"],
+    // dollar
+    [10, "dollar", "$10.00"],
+    [10.123, "dollar", "$10.12"],
+    [-1234.456789, "dollar", "-$1,234.46"],
+    [0.00000001, "dollar", "$0.00"],
+    // euro
+    [10, "euro", "€10.00"],
+    [10.123, "euro", "€10.12"],
+    [-1234.456789, "euro", "-€1,234.46"],
+    [0.00000001, "euro", "€0.00"],
+    // yen
+    [10.123, "yen", "¥10"],
+    [-1234.456789, "yen", "-¥1,234"],
+    [0.00000001, "yen", "¥0"],
+    // localized
+    [10.123, "localized", "10.123"],
+    [-1234.456789, "localized", "-1,234.457"],
+    [0.001, "localized", "0.001"],
+    // accounting
+    [10.123, "accounting", "10.12"],
+    [-10.126, "accounting", "(10.13)"],
+    [-10.1, "accounting", "(10.10)"],
+    [1000000.123412, "accounting", "1,000,000.12"],
+    [-1000000.123412, "accounting", "(1,000,000.12)"],
+    // bytes
+    [0, "bytes", "0B"],
+    [12, "bytes", "12B"],
+    [123, "bytes", "123B"],
+    [12345, "bytes", "12.3KB"],
+    [123456789, "bytes", "123.5MB"],
+    [1234567890, "bytes", "1.2GB"],
+    [1234567890000, "bytes", "1.2TB"],
+    [1234567890000000, "bytes", "1234.6TB"],
     // sprintf format
     [10.123, "%d", "10"],
     [10.123, "%i", "10"],
@@ -334,7 +381,7 @@ describe("formatNumber", () => {
     // Test prefixing with plus sign:
     [42, "%+d", "+42"],
     [-42, "%+d", "-42"],
-  ])("formats %p with format %p to '%p'", (value, format, expected) => {
+  ])("formats %s with format %s to '%s'", (value, format, expected) => {
     expect(formatNumber(value, format)).toEqual(expected)
   })
 
@@ -351,11 +398,56 @@ describe("formatNumber", () => {
     [25000.25, "$%,.2f"],
     [9876543210, "%,.0f"],
   ])(
-    "cannot format %p using the invalid sprintf format %p",
+    "cannot format %s using the invalid sprintf format %s",
     (input: number, format: string) => {
       expect(() => {
         formatNumber(input, format)
       }).toThrow()
+    }
+  )
+
+  it.each([
+    // No format (default)
+    [10.123, undefined, 2, "10.12"],
+    [10.123, undefined, 5, "10.12300"],
+    // localized
+    [10.12345, "localized", undefined, "10.123"],
+    [10.12345, "localized", 2, "10.12"],
+    [10, "localized", 3, "10.000"],
+    // percent - the max precision is applied to the raw value:
+    [0.12345, "percent", undefined, "12.35%"],
+    [0.12345, "percent", 3, "12.3%"],
+    [0.12345, "percent", 4, "12.35%"],
+    [0.123, "percent", 5, "12.300%"],
+    [0.123, "percent", 0, "12%"],
+    // dollar
+    [10.129, "dollar", undefined, "$10.13"],
+    [10.129, "dollar", 2, "$10.13"],
+    [10.129, "dollar", 0, "$10"],
+    [10, "dollar", 3, "$10.000"],
+    // euro
+    [10.129, "euro", undefined, "€10.13"],
+    [10.129, "euro", 2, "€10.13"],
+    [10.129, "euro", 0, "€10"],
+    [10, "euro", 3, "€10.000"],
+    // yen
+    [10.129, "yen", undefined, "¥10"],
+    [10.129, "yen", 0, "¥10"],
+    [10.129, "yen", 2, "¥10.13"],
+    // bytes - doesn't impact bytes:
+    [10.129, "bytes", undefined, "10.1B"],
+    [10.129, "bytes", 2, "10.1B"],
+    [10.129, "bytes", 0, "10.1B"],
+    // accounting
+    [-10.129, "accounting", undefined, "(10.13)"],
+    [-10.129, "accounting", 2, "(10.13)"],
+    [-10.129, "accounting", 1, "(10.1)"],
+    [1000, "accounting", 0, "1,000"],
+    [-10, "accounting", 3, "(10.000)"],
+  ])(
+    "formats %s with format %s and maxPrecision %d to '%s'",
+    (value, format, maxPrecision, expected) => {
+      expect(formatNumber(value, format, maxPrecision)).toEqual(expected)
     }
   )
 })
@@ -397,6 +489,7 @@ describe("toGlideColumn", () => {
       id: MOCK_TEXT_COLUMN_PROPS.id,
       title: MOCK_TEXT_COLUMN_PROPS.title,
       hasMenu: false,
+      menuIcon: "dots",
       themeOverride: MOCK_TEXT_COLUMN_PROPS.themeOverride,
       grow: undefined,
       width: undefined,
@@ -409,16 +502,16 @@ describe("toGlideColumn", () => {
       isStretched: true,
     })
 
-    expect(toGlideColumn(textColumn).grow).toEqual(3)
+    expect(toGlideColumn(textColumn).grow).toEqual(1)
 
-    // Create index column:
+    // Pinned columns should not use grow:
     const indexColumn = TextColumn({
       ...MOCK_TEXT_COLUMN_PROPS,
       isStretched: true,
-      isIndex: true,
+      isPinned: true,
     })
 
-    expect(toGlideColumn(indexColumn).grow).toEqual(1)
+    expect(toGlideColumn(indexColumn).grow).toEqual(undefined)
   })
 })
 
@@ -482,7 +575,7 @@ describe("toSafeDate", () => {
     ["2023-04-25 10:30 AM", new Date("2023-04-25T10:30:00.000Z")],
     // valid Unix timestamp in seconds as a string
     ["1671951600", new Date("2022-12-25T07:00:00.000Z")],
-  ])("converts input %p to the correct date %p", (input, expectedOutput) => {
+  ])("converts input %s to the correct date %s", (input, expectedOutput) => {
     expect(toSafeDate(input)).toEqual(expectedOutput)
   })
 })
@@ -500,10 +593,10 @@ describe("countDecimals", () => {
     [0.0000000000000000001, 19],
     [-0.12345, 5],
     [123456789432, 0],
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [123456789876543212312313, 0],
     // It is expected that very large and small numbers won't work correctly:
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    // eslint-disable-next-line no-loss-of-precision
     [1234567898765432.1, 0],
     [0.0000000000000000000001, 0],
     [1.234567890123456e-20, 20],
@@ -526,6 +619,8 @@ describe("truncateDecimals", () => {
     [42, 0, 42],
     [-42, 0, -42],
     [0.1 + 0.2, 2, 0.3],
+    [4.52, 2, 4.52],
+    [0.0099999, 2, 0.0],
   ])(
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {
@@ -584,17 +679,23 @@ withTimezones(() => {
       ["distance", moment.utc("2022-04-27T23:59:59Z"), "a few seconds ago"],
       ["distance", moment.utc("2022-04-20T00:00:00Z"), "8 days ago"],
       ["distance", moment.utc("2022-05-27T23:59:59Z"), "in a month"],
-      // Relative:
-      ["relative", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
+      // Calendar:
+      ["calendar", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
       [
-        "relative",
+        "calendar",
         moment.utc("2022-04-24T12:20:30Z"),
         "Last Sunday at 12:20 PM",
       ],
-      ["relative", moment.utc("2022-04-28T12:00:00Z"), "Today at 12:00 PM"],
-      ["relative", moment.utc("2022-04-29T12:00:00Z"), "Tomorrow at 12:00 PM"],
+      ["calendar", moment.utc("2022-04-28T12:00:00Z"), "Today at 12:00 PM"],
+      ["calendar", moment.utc("2022-04-29T12:00:00Z"), "Tomorrow at 12:00 PM"],
+      // ISO8601:
+      [
+        "iso8601",
+        moment.utc("2023-04-27T10:20:30.123Z"),
+        "2023-04-27T10:20:30.123Z",
+      ],
     ])(
-      "uses %s format to format %p to %p",
+      "uses %s format to format %s to %s",
       (format: string, momentDate: Moment, expected: string) => {
         expect(formatMoment(momentDate, format)).toBe(expected)
       }
@@ -683,9 +784,48 @@ describe("getLinkDisplayValueFromRegex", () => {
       "fish & chips: £9",
     ],
   ])(
-    "extracts display value from %p with href %p to be %p",
+    "extracts display value from %s with href %s to be %s",
     (regex: RegExp, href: string | null | undefined, expected: string) => {
       expect(getLinkDisplayValueFromRegex(regex, href)).toBe(expected)
     }
   )
+})
+
+describe("toJsonString", () => {
+  it.each([
+    // Simple values
+    ["hello", "hello"],
+    [123, "123"],
+    [true, "true"],
+    [false, "false"],
+    [null, ""],
+    [undefined, ""],
+    // Arrays
+    [[1, 2, 3], "[1,2,3]"],
+    [["a", "b", "c"], '["a","b","c"]'],
+    [[1, "a", true], '[1,"a",true]'],
+    // Objects
+    [{ a: 1, b: 2 }, '{"a":1,"b":2}'],
+    [{ name: "test", active: true }, '{"name":"test","active":true}'],
+    // Nested structures
+    [{ arr: [1, 2, { x: "y" }] }, '{"arr":[1,2,{"x":"y"}]}'],
+    // BigInt handling
+    [BigInt(123), "123"],
+    [{ big: BigInt(9007199254740991) }, '{"big":9007199254740991}'],
+    // Already stringified JSON
+    ['{"test":123}', '{"test":123}'],
+    // Circular reference (should use toSafeString fallback)
+    [
+      (() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+        const circular: any = { a: 1 }
+        circular.self = circular
+        return circular
+      })(),
+      "[object Object]",
+    ],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  ])("converts %o to JSON string %s", (input: any, expected: string) => {
+    expect(toJsonString(input)).toBe(expected)
+  })
 })

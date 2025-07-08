@@ -47,4 +47,4 @@ jobs:
         run: |
           sudo apt install rsync
           conda config --set conda_build.pkg_format 2
-          SNOWPARK_CONDA_BUILD=1 BUILD_AS_FAST_AS_POSSIBLE=1 make conda-package
+          SNOWPARK_CONDA_BUILD=1 make conda-package

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ def test_data_editor_supports_various_configurations(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Screenshot test that st.data_editor supports various configuration options."""
-    # The dataframe config test is already testing with themed apps, so using the default theme
-    # only is fine here.
+    # The dataframe config test is already testing with themed apps, so using the
+    # default theme only is fine here.
     elements = app.get_by_test_id("stDataFrame")
     expect(elements).to_have_count(22)
 

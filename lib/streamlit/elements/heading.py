@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -26,6 +27,7 @@ from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Width
     from streamlit.type_util import SupportsStr
 
 
@@ -48,6 +50,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display text in header formatting.
 
@@ -68,16 +71,33 @@ class HeadingMixin:
             in the URL. If omitted, it generates an anchor using the body.
             If False, the anchor is not shown in the UI.
 
-        help : str
-            An optional tooltip that gets displayed next to the header.
+        help : str or None
+            A tooltip that gets displayed next to the header. If this is
+            ``None`` (default), no tooltip is displayed.
 
-        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
+
+        divider : bool, “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
             Shows a colored divider below the header. If True, successive
             headers will cycle through divider colors. That is, the first
             header will have a blue line, the second header will have a
             green line, and so on. If a string, the color can be set to one of
             the following: blue, green, orange, red, violet, gray/grey, or
             rainbow.
+
+        width : "stretch", "content", or int
+            The width of the header element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -96,6 +116,9 @@ class HeadingMixin:
            height: 600px
 
         """
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
@@ -105,6 +128,7 @@ class HeadingMixin:
                 help=help,
                 divider=divider,
             ),
+            layout_config=layout_config,
         )
 
     @gather_metrics("subheader")
@@ -115,6 +139,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
@@ -135,8 +160,13 @@ class HeadingMixin:
             in the URL. If omitted, it generates an anchor using the body.
             If False, the anchor is not shown in the UI.
 
-        help : str
-            An optional tooltip that gets displayed next to the subheader.
+        help : str or None
+            A tooltip that gets displayed next to the subheader. If this is
+            ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
 
         divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
             Shows a colored divider below the header. If True, successive
@@ -145,6 +175,18 @@ class HeadingMixin:
             green line, and so on. If a string, the color can be set to one of
             the following: blue, green, orange, red, violet, gray/grey, or
             rainbow.
+
+        width : "stretch", "content", or int
+            The width of the subheader element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -163,6 +205,9 @@ class HeadingMixin:
            height: 500px
 
         """
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
@@ -172,6 +217,7 @@ class HeadingMixin:
                 help=help,
                 divider=divider,
             ),
+            layout_config=layout_config,
         )
 
     @gather_metrics("title")
@@ -181,6 +227,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display text in title formatting.
 
@@ -204,8 +251,25 @@ class HeadingMixin:
             in the URL. If omitted, it generates an anchor using the body.
             If False, the anchor is not shown in the UI.
 
-        help : str
-            An optional tooltip that gets displayed next to the title.
+        help : str or None
+            A tooltip that gets displayed next to the title. If this is
+            ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
+
+        width : "stretch", "content", or int
+            The width of the title element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -219,11 +283,15 @@ class HeadingMixin:
            height: 220px
 
         """
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
                 tag=HeadingProtoTag.TITLE_TAG, body=body, anchor=anchor, help=help
             ),
+            layout_config=layout_config,
         )
 
     @property
@@ -246,11 +314,10 @@ class HeadingMixin:
             "rainbow",
         ]
         if divider in valid_colors:
-            return cast(str, divider)
-        else:
-            raise StreamlitAPIException(
-                f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
-            )
+            return cast("str", divider)
+        raise StreamlitAPIException(
+            f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
+        )
 
     @staticmethod
     def _create_heading_proto(
@@ -272,14 +339,13 @@ class HeadingMixin:
                 proto.anchor = anchor
             elif anchor is True:  # type: ignore
                 raise StreamlitAPIException(
-                    "Anchor parameter has invalid value: %s. "
-                    "Supported values: None, any string or False" % anchor
+                    f"Anchor parameter has invalid value: {anchor}. "
+                    "Supported values: None, any string or False"
                 )
             else:
                 raise StreamlitAPIException(
-                    "Anchor parameter has invalid type: %s. "
+                    f"Anchor parameter has invalid type: {type(anchor).__name__}. "
                     "Supported values: None, any string or False"
-                    % type(anchor).__name__
                 )
 
         if help:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ChangeEvent, PureComponent, ReactNode } from "react"
+import React, { ChangeEvent, useCallback, useState } from "react"
 
 import {
   BaseButtonKind,
@@ -31,84 +31,71 @@ import { StyledInstruction, StyledRecordAudioLabel } from "./styled-components"
 export interface Props {
   /** Callback to close the dialog */
   onClose: () => void
-
   toggleRecordAudio: () => void
-
   recordAudio: boolean
-
   startRecording: () => void
 }
 
-interface State {
-  recordAudio: boolean
-}
+const ScreencastDialog: React.FC<Props> = ({
+  onClose,
+  toggleRecordAudio,
+  recordAudio: initialRecordAudio,
+  startRecording,
+}) => {
+  const [recordAudio, setRecordAudio] = useState(initialRecordAudio)
 
-/**
- * A dialog that allows a screencast to be configured and recorded.
- */
-class ScreencastDialog extends PureComponent<Props, State> {
-  state = {
-    recordAudio: this.props.recordAudio,
-  }
+  const handleRecordAudioCheckbox = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      const { checked } = e.target
+      if (checked !== recordAudio) {
+        setRecordAudio(checked)
+        toggleRecordAudio()
+      }
+    },
+    [recordAudio, toggleRecordAudio]
+  )
 
-  handleRecordAudioCheckbox = (e: ChangeEvent<HTMLInputElement>): void => {
-    const { checked } = e.target
-    const { recordAudio } = this.state
-    const { toggleRecordAudio } = this.props
-
-    if (checked !== recordAudio) {
-      this.setState({ recordAudio: checked }, toggleRecordAudio)
-    }
-  }
-
-  handleStartButton = (): void => {
-    const { startRecording, onClose } = this.props
-
+  const handleStartButton = useCallback((): void => {
     startRecording()
     onClose()
-  }
+  }, [startRecording, onClose])
 
-  public render(): ReactNode {
-    const { recordAudio } = this.state
-    const { onClose } = this.props
-
-    return (
-      <Modal isOpen onClose={onClose}>
-        <ModalHeader>Record a screencast</ModalHeader>
-        <ModalBody>
-          <p>
-            This will record a video with the contents of your screen, so you
-            can easily share what you're seeing with others.
-          </p>
-          <p>
-            <StyledRecordAudioLabel data-testid="stScreencastAudioCheckbox">
-              <input
-                type="checkbox"
-                name="recordAudio"
-                checked={recordAudio}
-                onChange={this.handleRecordAudioCheckbox}
-              />{" "}
-              Also record audio
-            </StyledRecordAudioLabel>
-          </p>
-          <StyledInstruction data-testid="stScreencastInstruction">
-            <StreamlitMarkdown
-              source="Press `Esc` any time to stop recording."
-              allowHTML={false}
-            />
-          </StyledInstruction>
-        </ModalBody>
-        <ModalFooter>
-          <ModalButton
-            kind={BaseButtonKind.SECONDARY}
-            onClick={this.handleStartButton}
-          >
-            Start recording!
-          </ModalButton>
-        </ModalFooter>
-      </Modal>
-    )
-  }
+  return (
+    <Modal isOpen onClose={onClose}>
+      <ModalHeader>Record a screencast</ModalHeader>
+      <ModalBody>
+        <p>
+          This will record a video with the contents of your screen, so you can
+          easily share what you're seeing with others.
+        </p>
+        <p>
+          <StyledRecordAudioLabel data-testid="stScreencastAudioCheckbox">
+            <input
+              type="checkbox"
+              name="recordAudio"
+              checked={recordAudio}
+              onChange={handleRecordAudioCheckbox}
+            />{" "}
+            Also record audio
+          </StyledRecordAudioLabel>
+        </p>
+        <StyledInstruction data-testid="stScreencastInstruction">
+          <StreamlitMarkdown
+            source="Press `Esc` any time to stop recording."
+            allowHTML={false}
+          />
+        </StyledInstruction>
+      </ModalBody>
+      <ModalFooter>
+        <ModalButton
+          kind={BaseButtonKind.SECONDARY}
+          onClick={handleStartButton}
+        >
+          Start recording!
+        </ModalButton>
+      </ModalFooter>
+    </Modal>
+  )
 }
 
 export default ScreencastDialog

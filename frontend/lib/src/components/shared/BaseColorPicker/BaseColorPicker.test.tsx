@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import { render } from "~lib/test_util"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import BaseColorPicker, { BaseColorPickerProps } from "./BaseColorPicker"
 
@@ -38,6 +39,7 @@ describe("ColorPicker widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<BaseColorPicker {...props} />)
+
     const colorPicker = screen.getByTestId("stColorPicker")
     expect(colorPicker).toBeInTheDocument()
     expect(colorPicker).toHaveClass("stColorPicker")
@@ -70,22 +72,13 @@ describe("ColorPicker widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
-  it("should have correct style", () => {
-    const props = getProps()
-    render(<BaseColorPicker {...props} />)
-    const colorPicker = screen.getByTestId("stColorPicker")
-
-    expect(colorPicker).toHaveStyle(`width: ${props.width}px`)
-  })
-
-  it("should render a default color in the preview and the color picker", () => {
+  it("should render a default color in the preview and the color picker", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     render(<BaseColorPicker {...props} />)
 
     const colorBlock = screen.getByTestId("stColorPickerBlock")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(colorBlock)
+    await user.click(colorBlock)
 
     expect(colorBlock).toHaveStyle("background-color: #000000")
 
@@ -93,38 +86,39 @@ describe("ColorPicker widget", () => {
     expect(colorInput).toHaveValue("#000000")
   })
 
-  it("supports hex shorthand", () => {
+  it("supports hex shorthand", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     render(<BaseColorPicker {...props} />)
 
     const colorBlock = screen.getByTestId("stColorPickerBlock")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(colorBlock)
+    await user.click(colorBlock)
 
     const colorInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(colorInput, { target: { value: "#333" } })
+
+    // Change the color to hex shorthand
+    await user.clear(colorInput)
+    await user.type(colorInput, "#333")
+
+    // Remove focus from the color input field
+    await user.click(document.body)
 
     expect(colorInput).toHaveValue("#333333")
     expect(colorBlock).toHaveStyle("background-color: #333333")
   })
 
-  it("should update the widget value when it's changed", () => {
+  it("should update the widget value when it's changed", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     render(<BaseColorPicker {...props} />)
 
     const newColor = "#E91E63"
     const colorBlock = screen.getByTestId("stColorPickerBlock")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(colorBlock)
+    await user.click(colorBlock)
 
     const colorInput = screen.getByRole("textbox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(colorInput, { target: { value: newColor } })
+    await user.clear(colorInput)
+    await user.type(colorInput, newColor)
 
     expect(colorInput).toHaveValue(newColor)
     expect(colorBlock).toHaveStyle(`background-color: ${newColor}`)

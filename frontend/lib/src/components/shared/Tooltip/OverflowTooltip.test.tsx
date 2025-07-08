@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 import React from "react"
 
-import { fireEvent, render, screen } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
+import { TestAppWrapper } from "~lib/test_util"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
@@ -29,7 +29,8 @@ describe("Tooltip component", () => {
     vi.restoreAllMocks()
   })
 
-  it("should render when it fits onscreen", () => {
+  it("should render when it fits onscreen", async () => {
+    const user = userEvent.setup()
     const useRefSpy = vi.spyOn(React, "useRef").mockReturnValue({
       current: {
         // Pretend the body is greater than its onscreen area.
@@ -49,16 +50,12 @@ describe("Tooltip component", () => {
         the child
       </OverflowTooltip>,
       {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
+        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
       }
     )
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(tooltip)
+    await user.hover(tooltip)
 
     expect(screen.queryByText("the content")).not.toBeInTheDocument()
 
@@ -66,6 +63,7 @@ describe("Tooltip component", () => {
   })
 
   it("should render when ellipsized", async () => {
+    const user = userEvent.setup()
     const useRefSpy = vi.spyOn(React, "useRef").mockReturnValue({
       current: {
         // Pretend the body is smaller than its onscreen area.
@@ -85,16 +83,12 @@ describe("Tooltip component", () => {
         the child
       </OverflowTooltip>,
       {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
+        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
       }
     )
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.mouseOver(tooltip)
+    await user.hover(tooltip)
 
     const tooltipContent = await screen.findByText("the content")
     expect(tooltipContent).toBeInTheDocument()

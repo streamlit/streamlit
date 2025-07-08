@@ -1,0 +1,15 @@
+diff --git a/index.js b/index.js
+index 33778b5539b7fcd7a1e99474a4ecb1745fdfe508..eb0d85bc854ffc3e228520d9be85341192f44f82 100644
+--- a/index.js
++++ b/index.js
+@@ -8,6 +8,10 @@ module.exports = inquire;
+  * @returns {?Object} Required module if available and not empty, otherwise `null`
+  */
+ function inquire(moduleName) {
++    // This check ensures that the code below is only run in a non-browser environment.
++    if (typeof process === "undefined" && typeof document !== "undefined") {
++        return null;
++    }
+     try {
+         var mod = eval("quire".replace(/^/,"re"))(moduleName); // eslint-disable-line no-eval
+         if (mod && (mod.length || Object.keys(mod).length))

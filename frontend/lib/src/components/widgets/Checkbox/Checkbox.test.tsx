@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { render } from "@streamlit/lib/src/test_util"
 import {
   Checkbox as CheckboxProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "@streamlit/lib/src/proto"
+} from "@streamlit/protobuf"
+
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { render } from "~lib/test_util"
 
 import Checkbox, { Props } from "./Checkbox"
 
@@ -38,7 +40,6 @@ const getProps = (
     type: CheckboxProto.StyleType.DEFAULT,
     ...elementProps,
   }),
-  width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -69,13 +70,12 @@ describe("Checkbox widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<Checkbox {...props} />)
     const checkboxElement = screen.getByTestId("stCheckbox")
 
     expect(checkboxElement).toHaveClass("stCheckbox")
-    expect(checkboxElement).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
@@ -123,15 +123,14 @@ describe("Checkbox widget", () => {
     expect(screen.getByRole("checkbox")).not.toBeDisabled()
   })
 
-  it("handles the onChange event", () => {
+  it("handles the onChange event", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setBoolValue")
 
     render(<Checkbox {...props} />)
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(screen.getByRole("checkbox"))
+    await user.click(screen.getByRole("checkbox"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element,
@@ -142,15 +141,14 @@ describe("Checkbox widget", () => {
     expect(screen.getByRole("checkbox")).toBeChecked()
   })
 
-  it("can pass fragmentId to setBoolValue", () => {
+  it("can pass fragmentId to setBoolValue", async () => {
+    const user = userEvent.setup()
     const props = getProps(undefined, { fragmentId: "myFragmentId" })
     vi.spyOn(props.widgetMgr, "setBoolValue")
 
     render(<Checkbox {...props} />)
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(screen.getByRole("checkbox"))
+    await user.click(screen.getByRole("checkbox"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element,
@@ -160,7 +158,8 @@ describe("Checkbox widget", () => {
     )
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
+    const user = userEvent.setup()
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -170,9 +169,7 @@ describe("Checkbox widget", () => {
     render(<Checkbox {...props} />)
 
     // Change the widget value
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(screen.getByRole("checkbox"))
+    await user.click(screen.getByRole("checkbox"))
 
     expect(screen.getByRole("checkbox")).toBeChecked()
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(

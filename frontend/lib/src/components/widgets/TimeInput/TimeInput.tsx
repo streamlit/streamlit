@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,31 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import React, { memo, ReactElement, useCallback, useContext } from "react"
 
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { StyledClearIcon } from "baseui/input/styled-components"
 import { ChevronDown } from "baseui/icon"
-import { useTheme } from "@emotion/react"
 
-import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
+
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
   ValueWithSource,
-} from "@streamlit/lib/src/hooks/useBasicWidgetState"
+} from "~lib/hooks/useBasicWidgetState"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+} from "~lib/components/widgets/BaseWidget"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
-} from "@streamlit/lib/src/util/utils"
+} from "~lib/util/utils"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledClearIconContainer } from "./styled-components"
 
@@ -44,7 +46,6 @@ export interface Props {
   disabled: boolean
   element: TimeInputProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -52,7 +53,6 @@ function TimeInput({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }: Props): ReactElement {
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -67,10 +67,10 @@ function TimeInput({
     widgetMgr,
     fragmentId,
   })
+  const isInSidebar = useContext(IsSidebarContext)
 
   const clearable = isNullOrUndefined(element.default) && !disabled
-  const style = { width }
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const selectOverrides = {
     Select: {
@@ -100,7 +100,7 @@ function TimeInput({
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.sm,
+              paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
             }),
@@ -116,6 +116,10 @@ function TimeInput({
             style: () => ({
               paddingTop: theme.spacing.none,
               paddingBottom: theme.spacing.none,
+              // Somehow this adds an additional shadow, even though we already have
+              // one on the popover, so we need to remove it here.
+              boxShadow: "none",
+              maxHeight: theme.sizes.maxDropdownHeight,
             }),
           },
 
@@ -131,6 +135,7 @@ function TimeInput({
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
                   style: () => ({
@@ -140,6 +145,13 @@ function TimeInput({
               },
             },
           },
+
+          Placeholder: {
+            style: () => ({
+              color: theme.colors.fadedText60,
+            }),
+          },
+
           SelectArrow: {
             component: ChevronDown,
 
@@ -174,7 +186,7 @@ function TimeInput({
   }, [handleChange])
 
   return (
-    <div className="stTimeInput" data-testid="stTimeInput" style={style}>
+    <div className="stTimeInput" data-testid="stTimeInput">
       <WidgetLabel
         label={element.label}
         disabled={disabled}

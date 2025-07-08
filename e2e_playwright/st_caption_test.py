@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@ def test_correct_number_of_elements(app: Page):
 
 def test_correct_content_in_caption(app: Page):
     """Check that the captions have the correct content and also use the correct
-    markdown formatting."""
+    markdown formatting.
+    """
     caption_containers = app.get_by_test_id("stCaptionContainer")
     expect(caption_containers.nth(1)).to_have_text("This is a caption!")
     expect(caption_containers.nth(2)).to_have_text(
@@ -62,7 +63,8 @@ def test_match_snapshot_for_caption_with_tooltip(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the caption with matches the snapshot. Also test dark-theme to make
-    sure icon is visible."""
+    sure icon is visible.
+    """
     caption_container = (
         themed_app.get_by_test_id("stElementContainer")
         .filter(has=themed_app.get_by_test_id("stCaptionContainer"))

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,8 @@ i2 = st.checkbox("checkbox 2 (False)", False)
 st.write("checkbox 2 - value:", i2)
 
 i3 = st.checkbox(
-    "checkbox 3: This is a really really really really long label that should wrap eventually if we keep addding more text to it"
+    "checkbox 3: This is a really really really really long label that should wrap "
+    "eventually if we keep adding more text to it"
 )
 st.write("checkbox 3 - value:", i3)
 
@@ -60,3 +61,11 @@ with st.expander("Grouped checkboxes", expanded=True):
     st.checkbox("checkbox group - 2")
     st.checkbox("checkbox group - 3")
     st.text("A non-checkbox element")
+
+st.checkbox(
+    "checkbox 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+)
+
+st.checkbox("checkbox with content width", width="content")
+st.checkbox("checkbox with stretch width", width="stretch")
+st.checkbox("checkbox with 200px width", width=200)

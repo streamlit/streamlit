@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ class SQLConnectionTest(unittest.TestCase):
         patched_create_engine.assert_called_once()
         args, _ = patched_create_engine.call_args_list[0]
         assert (
-            str(args[0])
+            args[0].render_as_string(hide_password=False)
             == "postgres+psycopg2://AzureDiamond:hunter2@localhost:5432/postgres"
         )
 
@@ -85,7 +85,7 @@ class SQLConnectionTest(unittest.TestCase):
         patched_create_engine.assert_called_once()
         args, _ = patched_create_engine.call_args_list[0]
         assert (
-            str(args[0])
+            args[0].render_as_string(hide_password=False)
             == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres?charset=utf8mb4"
         )
 
@@ -180,37 +180,6 @@ class SQLConnectionTest(unittest.TestCase):
         assert patched_read_sql.call_count == 2
 
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    def test_repr_html_(self):
-        conn = SQLConnection("my_sql_connection")
-        with conn.session as s:
-            s.bind.dialect.name = "postgres"
-        repr_ = conn._repr_html_()
-
-        assert (
-            "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQLConnection`"
-            in repr_
-        )
-        assert "Dialect: `postgres`" in repr_
-
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    @patch(
-        "streamlit.connections.sql_connection.SQLConnection._secrets",
-        PropertyMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
-    )
-    def test_repr_html_with_secrets(self):
-        conn = SQLConnection("my_sql_connection")
-        with conn.session as s:
-            s.bind.dialect.name = "postgres"
-        repr_ = conn._repr_html_()
-
-        assert (
-            "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQLConnection`"
-            in repr_
-        )
-        assert "Dialect: `postgres`" in repr_
-        assert "Configured from `[connections.my_sql_connection]`" in repr_
-
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_retry_behavior(self, patched_read_sql):
         from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
@@ -241,7 +210,7 @@ class SQLConnectionTest(unittest.TestCase):
 
         conn = SQLConnection("my_sql_connection")
 
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception, match="kaboom"):
             conn.query("SELECT 1;")
 
         # conn._connect should have just been called once when first creating the

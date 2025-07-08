@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,18 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { Info } from "@emotion-icons/material-outlined"
+import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import Toolbar, {
   ToolbarAction,
   ToolbarActionProps,
   ToolbarProps,
 } from "./Toolbar"
+import { TOP_DISTANCE } from "./styled-components"
 
 const onExpand = vi.fn()
 const onCollapse = vi.fn()
@@ -55,7 +57,7 @@ describe("Toolbar element", () => {
     vi.clearAllMocks()
   })
 
-  it("renders a Toolbar", async () => {
+  it("renders a Toolbar", () => {
     render(
       <Toolbar {...getToolbarProps()}>
         <ToolbarAction {...getToolbarActionsProps()} />
@@ -72,7 +74,22 @@ describe("Toolbar element", () => {
     expect(toolbarButton).toHaveLength(2)
   })
 
-  it("doesn't show toolbar if not locked", async () => {
+  it("styles toolbar & buttons correctly", () => {
+    render(<Toolbar {...getToolbarProps()} />)
+
+    const toolbar = screen.getByTestId("stElementToolbar")
+    // Check positioning of toolbar
+    expect(toolbar).toHaveStyle(`top: ${TOP_DISTANCE}`)
+
+    // Check styling of toolbar
+    const toolbarButtonContainer = screen.getByTestId(
+      "stElementToolbarButtonContainer"
+    )
+    expect(toolbarButtonContainer).toHaveStyle("padding: 0.25rem")
+    expect(toolbarButtonContainer).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+  })
+
+  it("doesn't show toolbar if not locked", () => {
     render(
       <Toolbar {...getToolbarProps({ locked: false })}>
         <ToolbarAction {...getToolbarActionsProps()} />
@@ -86,6 +103,7 @@ describe("Toolbar element", () => {
   })
 
   it("allows expanding into fullscreen mode", async () => {
+    const user = userEvent.setup()
     render(
       <Toolbar {...getToolbarProps()}>
         <ToolbarAction {...getToolbarActionsProps()} />
@@ -100,15 +118,14 @@ describe("Toolbar element", () => {
     const toolbarButton = screen.getAllByRole("button")
     expect(toolbarButton).toHaveLength(2)
     // Clicking the second button should close the fullscreen mode
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(toolbarButton[1])
+    await user.click(toolbarButton[1])
 
     // Check that onCollapse was clicked
     expect(onExpand).toHaveBeenCalled()
   })
 
   it("adapts to fullscreen mode", async () => {
+    const user = userEvent.setup()
     render(
       <Toolbar {...getToolbarProps({ locked: false, isFullScreen: true })}>
         <ToolbarAction {...getToolbarActionsProps()} />
@@ -123,15 +140,13 @@ describe("Toolbar element", () => {
     const toolbarButton = screen.getAllByRole("button")
     expect(toolbarButton).toHaveLength(2)
     // Clicking the second button should close the fullscreen mode
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(toolbarButton[1])
+    await user.click(toolbarButton[1])
 
     // Check that onCollapse was clicked
     expect(onCollapse).toHaveBeenCalled()
   })
 
-  it("deactivates fullscreen mode via props", async () => {
+  it("deactivates fullscreen mode via props", () => {
     render(
       <Toolbar
         {...getToolbarProps({ locked: false, disableFullscreenMode: true })}
@@ -148,7 +163,7 @@ describe("Toolbar element", () => {
 })
 
 describe("ToolbarAction Button element", () => {
-  it("renders correctly", async () => {
+  it("renders correctly", () => {
     render(<ToolbarAction {...getToolbarActionsProps()} />)
     // Check if toolbar button is rendered:
     const toolbarButton = screen.getByTestId("stElementToolbarButton")
@@ -159,14 +174,14 @@ describe("ToolbarAction Button element", () => {
     expect(toolbarButtonIcon).toBeInTheDocument()
   })
 
-  it("shows a label if show_labe=true", async () => {
+  it("shows a label if show_labe=true", () => {
     render(<ToolbarAction {...getToolbarActionsProps({ show_label: true })} />)
     // Check that the info label is visible
     const infoLabel = screen.getByText("info")
     expect(infoLabel).toBeVisible()
   })
 
-  it("doesn't show an icon if icon=undefined", async () => {
+  it("doesn't show an icon if icon=undefined", () => {
     render(
       <ToolbarAction
         {...getToolbarActionsProps({ show_label: true, icon: undefined })}
@@ -184,6 +199,7 @@ describe("ToolbarAction Button element", () => {
   })
 
   it("calls callback on click", async () => {
+    const user = userEvent.setup()
     const onClickMock = vi.fn()
 
     render(
@@ -193,9 +209,7 @@ describe("ToolbarAction Button element", () => {
     const toolbarButton = screen.getByRole("button")
     expect(toolbarButton).toBeInTheDocument()
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(toolbarButton)
+    await user.click(toolbarButton)
 
     // Check that onClick callback was clicked
     expect(onClickMock).toHaveBeenCalled()

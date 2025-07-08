@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,14 +40,10 @@ requirements:
     - python {{ package_data.get('python_requires') }}
   run:
     {% for req in package_data.get('install_requires', []) %}
-      # 2022.07.01 - temporarily set protobuf's lower bound to 3.11 to work
-      # around a conda resolution issue
-      {% if 'protobuf' in req %}
-        - protobuf >=3.11, <4
       # Conda doesn't support the `platform_system` conditional that pip does.
       # We may need to figure out how to avoid installing watchdog on MacOS
       # by default in our conda distribution due to this.
-      {% elif 'watchdog' in req %}
+      {% if 'watchdog' in req %}
         - watchdog
       {% else %}
         - {{ req }}

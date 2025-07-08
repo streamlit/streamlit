@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,36 +15,29 @@
  */
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   NumberInput as NumberInputProto,
-} from "@streamlit/lib/src/proto"
-import { render } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+} from "@streamlit/protobuf"
 
-import {
-  canDecrement,
-  canIncrement,
-  formatValue,
-  NumberInput,
-  Props,
-} from "./NumberInput"
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+
+import NumberInput, { Props } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
     label: "Label",
     default: 0,
-    hasMin: false,
-    hasMax: false,
+    hasMin: true,
+    hasMax: true,
     ...elementProps,
   }),
-  width: 300,
   disabled: false,
-  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
@@ -56,7 +49,7 @@ const getIntProps = (elementProps: Partial<NumberInputProto> = {}): Props => {
     dataType: NumberInputProto.DataType.INT,
     default: 10,
     min: 0,
-    max: 0,
+    max: 100,
     ...elementProps,
   })
 }
@@ -68,12 +61,19 @@ const getFloatProps = (
     dataType: NumberInputProto.DataType.FLOAT,
     default: 10.0,
     min: 0.0,
-    max: 0.0,
+    max: 100.0,
     ...elementProps,
   })
 }
 
 describe("NumberInput widget", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
@@ -82,22 +82,24 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveClass("stNumberInput")
   })
 
-  it("adds a focused class when running onFocus", () => {
+  it("adds a focused class when running onFocus", async () => {
+    const user = userEvent.setup()
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    fireEvent.focus(screen.getByTestId("stNumberInputField"))
+    await user.click(screen.getByTestId("stNumberInputField"))
     expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
   })
 
-  it("removes the focused class when running onBlur", () => {
+  it("removes the focused class when running onBlur", async () => {
+    const user = userEvent.setup()
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    fireEvent.focus(screen.getByTestId("stNumberInputField"))
+    await user.click(screen.getByTestId("stNumberInputField"))
     expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
 
-    fireEvent.blur(screen.getByTestId("stNumberInputField"))
+    await user.tab()
     expect(screen.getByTestId("stNumberInputContainer")).not.toHaveClass(
       "focused"
     )
@@ -145,16 +147,6 @@ describe("NumberInput widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
-  it("sets min/max defaults", () => {
-    const props = getIntProps()
-    render(<NumberInput {...props} />)
-
-    const numberInput = screen.getByTestId("stNumberInputField")
-
-    expect(numberInput).toHaveAttribute("min", "-Infinity")
-    expect(numberInput).toHaveAttribute("max", "Infinity")
-  })
-
   it("sets input mode to empty string", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
@@ -188,7 +180,8 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveAttribute("max", "10")
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
+    const user = userEvent.setup()
     // Create a widget in a clearOnSubmit form
     const props = getIntProps({ formId: "form", default: 10 })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -197,12 +190,8 @@ describe("NumberInput widget", () => {
     render(<NumberInput {...props} />)
 
     const numberInput = screen.getByTestId("stNumberInputField")
-    // Change the widget value
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(numberInput, {
-      target: { value: 15 },
-    })
+    await user.clear(numberInput)
+    await user.type(numberInput, "15")
 
     // "Submit" the form
     act(() => {
@@ -261,10 +250,10 @@ describe("NumberInput widget", () => {
     await user.click(numberInput)
     await user.keyboard("{backspace}5")
 
-    fireEvent.blur(numberInput)
+    await user.tab()
     expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
 
-    fireEvent.focus(numberInput)
+    await user.click(numberInput)
     expect(screen.getByText("Press Enter to submit form")).toBeVisible()
   })
 
@@ -283,8 +272,29 @@ describe("NumberInput widget", () => {
     expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
+  it("renders an emoji icon when provided", () => {
+    const props = getFloatProps({ icon: "💵" })
+    render(<NumberInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stNumberInputIcon")).toBeInTheDocument()
+    // Element rendering emoji icon
+    const emojiIcon = screen.getByTestId("stIconEmoji")
+    expect(emojiIcon).toHaveTextContent("💵")
+  })
+
+  it("renders a material icon when provided", () => {
+    const props = getFloatProps({ icon: ":material/attach_money:" })
+    render(<NumberInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stNumberInputIcon")).toBeInTheDocument()
+    // Element rendering material icon
+    const materialIcon = screen.getByTestId("stIconMaterial")
+    expect(materialIcon).toHaveTextContent("attach_money")
+  })
+
   describe("FloatData", () => {
-    it("changes state on ArrowDown", () => {
+    it("changes state on ArrowDown", async () => {
+      const user = userEvent.setup()
       const props = getFloatProps({
         format: "%0.2f",
         default: 11.0,
@@ -294,11 +304,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
       const numberInput = screen.getByTestId("stNumberInputField")
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.keyDown(numberInput, {
-        key: "ArrowDown",
-      })
+      await user.type(numberInput, "{arrowdown}")
 
       expect(numberInput).toHaveValue(10.9)
     })
@@ -319,17 +325,14 @@ describe("NumberInput widget", () => {
       )
     })
 
-    it("sets value on Enter", () => {
+    it("sets value on Enter", async () => {
+      const user = userEvent.setup()
       const props = getFloatProps({ default: 10 })
       vi.spyOn(props.widgetMgr, "setDoubleValue")
 
       render(<NumberInput {...props} />)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.keyPress(screen.getByTestId("stNumberInputField"), {
-        key: "Enter",
-      })
+      await user.type(screen.getByTestId("stNumberInputField"), "{enter}")
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalled()
     })
@@ -441,7 +444,6 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
       const numberInput = screen.getByTestId("stNumberInputField")
 
-      // userEvent necessary to trigger dirty state
       await user.click(numberInput)
       await user.keyboard("{backspace}{backspace}15")
 
@@ -450,22 +452,20 @@ describe("NumberInput widget", () => {
       expect(screen.getByText("Press Enter to apply")).toBeVisible()
     })
 
-    it("sets value on Enter", () => {
+    it("sets value on Enter", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({ default: 10 })
       vi.spyOn(props.widgetMgr, "setIntValue")
 
       render(<NumberInput {...props} />)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.keyPress(screen.getByTestId("stNumberInputField"), {
-        key: "Enter",
-      })
+      await user.type(screen.getByTestId("stNumberInputField"), "{enter}")
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalled()
     })
 
-    it("can pass fragmentId to setIntValue", () => {
+    it("can pass fragmentId to setIntValue", async () => {
+      const user = userEvent.setup()
       const props = {
         ...getIntProps({ default: 10 }),
         fragmentId: "myFragmentId",
@@ -474,11 +474,7 @@ describe("NumberInput widget", () => {
 
       render(<NumberInput {...props} />)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.keyPress(screen.getByTestId("stNumberInputField"), {
-        key: "Enter",
-      })
+      await user.type(screen.getByTestId("stNumberInputField"), "{enter}")
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
         expect.anything(),
@@ -500,47 +496,45 @@ describe("NumberInput widget", () => {
 
   describe("Step", () => {
     describe("rapid interactions", () => {
-      it("handles stepUp button clicks correctly", () => {
+      it("handles stepUp button clicks correctly", async () => {
+        const user = userEvent.setup()
         const props = getIntProps({ default: 10, step: 1 })
         render(<NumberInput {...props} />)
 
         const stepUpButton = screen.getByTestId("stNumberInputStepUp")
         for (let i = 0; i < 5; i++) {
-          // TODO: Utilize user-event instead of fireEvent
-          // eslint-disable-next-line testing-library/prefer-user-event
-          fireEvent.click(stepUpButton)
+          await user.click(stepUpButton)
         }
         expect(screen.getByTestId("stNumberInputField")).toHaveValue(15)
       })
 
-      it("handles stepDown button clicks correctly", () => {
+      it("handles stepDown button clicks correctly", async () => {
+        const user = userEvent.setup()
         const props = getIntProps({ default: 10, step: 1 })
         render(<NumberInput {...props} />)
 
         const stepDownButton = screen.getByTestId("stNumberInputStepDown")
         for (let i = 0; i < 5; i++) {
-          // TODO: Utilize user-event instead of fireEvent
-          // eslint-disable-next-line testing-library/prefer-user-event
-          fireEvent.click(stepDownButton)
+          await user.click(stepDownButton)
         }
         expect(screen.getByTestId("stNumberInputField")).toHaveValue(5)
       })
     })
 
-    it("passes the step prop", () => {
+    it("passes the step prop", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({ default: 10, step: 1 })
       render(<NumberInput {...props} />)
 
       // Increment
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(screen.getByTestId("stNumberInputStepUp"))
+      await user.click(screen.getByTestId("stNumberInputStepUp"))
 
       // Check step properly enforced
       expect(screen.getByTestId("stNumberInputField")).toHaveValue(11)
     })
 
-    it("changes state on ArrowUp", () => {
+    it("changes state on ArrowUp", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({
         format: "%d",
         default: 10,
@@ -549,15 +543,12 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       const numberInput = screen.getByTestId("stNumberInputField")
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.keyDown(numberInput, {
-        key: "ArrowUp",
-      })
+      await user.type(numberInput, "{arrowup}")
       expect(numberInput).toHaveValue(11)
     })
 
-    it("changes state on ArrowDown", () => {
+    it("changes state on ArrowDown", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({
         format: "%d",
         default: 10,
@@ -566,15 +557,12 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       const numberInput = screen.getByTestId("stNumberInputField")
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.keyDown(numberInput, {
-        key: "ArrowDown",
-      })
+      await user.type(numberInput, "{arrowdown}")
       expect(numberInput).toHaveValue(9)
     })
 
-    it("handles stepDown button clicks", () => {
+    it("handles stepDown button clicks", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({
         format: "%d",
         default: 10,
@@ -583,13 +571,12 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       // Decrement
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(screen.getByTestId("stNumberInputStepDown"))
+      await user.click(screen.getByTestId("stNumberInputStepDown"))
       expect(screen.getByTestId("stNumberInputField")).toHaveValue(9)
     })
 
-    it("handles stepUp button clicks", () => {
+    it("handles stepUp button clicks", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({
         format: "%d",
         default: 10,
@@ -598,45 +585,46 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       // Increment
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(screen.getByTestId("stNumberInputStepUp"))
+      await user.click(screen.getByTestId("stNumberInputStepUp"))
       expect(screen.getByTestId("stNumberInputField")).toHaveValue(11)
     })
 
-    it("disables stepDown button when at min", () => {
+    it("disables stepDown button when at min", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({ default: 1, step: 1, min: 0, hasMin: true })
       render(<NumberInput {...props} />)
 
       const stepDownButton = screen.getByTestId("stNumberInputStepDown")
       expect(stepDownButton).not.toBeDisabled()
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(stepDownButton)
+      await user.click(stepDownButton)
 
       expect(screen.getByTestId("stNumberInputField")).toHaveValue(0)
       expect(stepDownButton).toBeDisabled()
     })
 
-    it("disables stepUp button when at max", () => {
+    it("disables stepUp button when at max", async () => {
+      const user = userEvent.setup()
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
       render(<NumberInput {...props} />)
 
       const stepUpButton = screen.getByTestId("stNumberInputStepUp")
       expect(stepUpButton).not.toBeDisabled()
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(stepUpButton)
+      await user.click(stepUpButton)
 
       expect(screen.getByTestId("stNumberInputField")).toHaveValue(2)
       expect(stepUpButton).toBeDisabled()
     })
 
     it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
+      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+        elementRef: { current: null },
+        values: [100],
+      })
+
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      render(<NumberInput {...props} width={100} />)
+      render(<NumberInput {...props} />)
 
       expect(
         screen.queryByTestId("stNumberInputStepUp")
@@ -648,16 +636,21 @@ describe("NumberInput widget", () => {
 
     it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      render(<NumberInput {...props} width={185} />)
+      render(<NumberInput {...props} />)
 
       expect(screen.getByTestId("stNumberInputStepUp")).toBeInTheDocument()
       expect(screen.getByTestId("stNumberInputStepDown")).toBeInTheDocument()
     })
 
     it("hides Please enter to apply text when width is smaller than 120px", async () => {
+      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+        elementRef: { current: null },
+        values: [100],
+      })
+
       const user = userEvent.setup()
       const props = getIntProps({ default: 1, step: 1, max: 20, hasMax: true })
-      render(<NumberInput {...props} width={100} />)
+      render(<NumberInput {...props} />)
       const numberInput = screen.getByTestId("stNumberInputField")
 
       // userEvent necessary to trigger dirty state
@@ -670,7 +663,7 @@ describe("NumberInput widget", () => {
     it("shows Please enter to apply text when width is bigger than 120px", async () => {
       const user = userEvent.setup()
       const props = getIntProps({ default: 1, step: 1, max: 20, hasMax: true })
-      render(<NumberInput {...props} width={185} />)
+      render(<NumberInput {...props} />)
       const numberInput = screen.getByTestId("stNumberInputField")
 
       // userEvent necessary to trigger dirty state
@@ -682,17 +675,18 @@ describe("NumberInput widget", () => {
   })
 
   it("focuses input when clicking label", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     render(<NumberInput {...props} />)
     const numberInput = screen.getByTestId("stNumberInputField")
     expect(numberInput).not.toHaveFocus()
     const label = screen.getByText(props.element.label)
-    const user = userEvent.setup()
     await user.click(label)
     expect(numberInput).toHaveFocus()
   })
 
-  it("ensures id doesn't change on rerender", () => {
+  it("ensures id doesn't change on rerender", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     render(<NumberInput {...props} />)
 
@@ -702,95 +696,13 @@ describe("NumberInput widget", () => {
     // Make some change to cause a rerender
     const numberInput = screen.getByTestId("stNumberInputField")
     // Change the widget value
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(numberInput, {
-      target: { value: 15 },
-    })
+    await user.clear(numberInput)
+    await user.type(numberInput, "15")
     expect(screen.getByTestId("stNumberInputField")).toHaveValue(15)
 
     const numberInputLabel2 = screen.getByTestId("stWidgetLabel")
     const forId2 = numberInputLabel2.getAttribute("for")
 
     expect(forId2).toBe(forId1)
-  })
-
-  describe("utilities", () => {
-    describe("canDecrement function", () => {
-      it("returns true if decrementing stays above min", () => {
-        expect(canDecrement(5, 1, 0)).toBe(true)
-      })
-
-      it("returns false if decrementing goes below min", () => {
-        expect(canDecrement(0, 1, 0)).toBe(false)
-      })
-    })
-
-    describe("canIncrement function", () => {
-      it("returns true if incrementing stays below max", () => {
-        expect(canIncrement(5, 1, 10)).toBe(true)
-      })
-
-      it("returns false if incrementing goes above max", () => {
-        expect(canIncrement(10, 1, 10)).toBe(false)
-      })
-    })
-
-    describe("formatValue function", () => {
-      it("returns null for null value", () => {
-        expect(
-          formatValue({
-            value: null,
-            format: null,
-            step: 1,
-            dataType: NumberInputProto.DataType.INT,
-          })
-        ).toBeNull()
-      })
-
-      it("formats integer without specified format", () => {
-        expect(
-          formatValue({
-            value: 123,
-            format: null,
-            step: 1,
-            dataType: NumberInputProto.DataType.INT,
-          })
-        ).toBe("123")
-      })
-
-      it("formats float without specified format, considering step for precision", () => {
-        expect(
-          formatValue({
-            value: 123.456,
-            format: null,
-            step: 0.01,
-            dataType: NumberInputProto.DataType.FLOAT,
-          })
-        ).toBe("123.46")
-      })
-
-      it("respects format string for integers", () => {
-        expect(
-          formatValue({
-            value: 123,
-            format: "%04d",
-            step: 1,
-            dataType: NumberInputProto.DataType.INT,
-          })
-        ).toBe("0123")
-      })
-
-      it("respects format string for floats", () => {
-        expect(
-          formatValue({
-            value: 123.456,
-            format: "%.2f",
-            step: 0.01,
-            dataType: NumberInputProto.DataType.FLOAT,
-          })
-        ).toBe("123.46")
-      })
-    })
   })
 })

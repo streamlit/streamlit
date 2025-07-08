@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,39 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef, useState } from "react"
+import React, { memo, ReactElement, useMemo } from "react"
 
-import DOMPurify from "dompurify"
+import dompurify from "dompurify"
 
-import { Html as HtmlProto } from "@streamlit/lib/src/proto"
+import { Html as HtmlProto } from "@streamlit/protobuf"
+
+import { StyledHtml } from "./styled-components"
 
 export interface HtmlProps {
-  width: number
   element: HtmlProto
 }
+
+// preserve target=_blank and set security attributes (see https://github.com/cure53/DOMPurify/issues/317)
+const TEMPORARY_ATTRIBUTE = "data-temp-href-target"
+dompurify.addHook("beforeSanitizeAttributes", function (node) {
+  if (
+    node instanceof HTMLElement &&
+    node.hasAttribute("target") &&
+    node.getAttribute("target") === "_blank"
+  ) {
+    node.setAttribute(TEMPORARY_ATTRIBUTE, "_blank")
+  }
+})
+dompurify.addHook("afterSanitizeAttributes", function (node) {
+  if (node instanceof HTMLElement && node.hasAttribute(TEMPORARY_ATTRIBUTE)) {
+    node.setAttribute("target", "_blank")
+    // according to https://html.spec.whatwg.org/multipage/links.html#link-type-noopener,
+    // noreferrer implies noopener, but we set it just to be sure in case some browsers
+    // do not implement the spec accordingly.
+    node.setAttribute("rel", "noopener noreferrer")
+    node.removeAttribute(TEMPORARY_ATTRIBUTE)
+  }
+})
 
 const sanitizeString = (html: string): string => {
   const sanitizationOptions = {
@@ -32,50 +55,30 @@ const sanitizeString = (html: string): string => {
     // glue elements like style, script or others to document.body and prevent unintuitive browser behavior in several edge-cases
     FORCE_BODY: true,
   }
-  return DOMPurify.sanitize(html, sanitizationOptions)
+  return dompurify.sanitize(html, sanitizationOptions)
 }
 
 /**
  * HTML code to insert into the page.
  */
-export default function Html({
-  element,
-  width,
-}: Readonly<HtmlProps>): ReactElement {
+function Html({ element }: Readonly<HtmlProps>): ReactElement {
   const { body } = element
-  const [sanitizedHtml, setSanitizedHtml] = useState(sanitizeString(body))
-  const htmlRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    if (sanitizeString(body) !== sanitizedHtml) {
-      setSanitizedHtml(sanitizeString(body))
-    }
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body])
-
-  useEffect(() => {
-    if (
-      htmlRef.current?.clientHeight === 0 &&
-      htmlRef.current.parentElement?.childElementCount === 1
-    ) {
-      // div has no rendered content - hide to avoid unnecessary spacing
-      htmlRef.current.parentElement.classList.add("stHtml-empty")
-    }
-  })
+  const sanitizedHtml = useMemo(() => sanitizeString(body), [body])
 
   return (
     <>
       {sanitizedHtml && (
-        <div
+        <StyledHtml
           className="stHtml"
           data-testid="stHtml"
-          ref={htmlRef}
-          style={{ width }}
+          // TODO: Update to match React best practices
+          // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
       )}
     </>
   )
 }
+
+export default memo(Html)

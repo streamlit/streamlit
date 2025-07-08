@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { MouseEvent, ReactElement, ReactNode } from "react"
+import React, { memo, MouseEvent, ReactElement, ReactNode } from "react"
 
 import ProgressBar, {
   Size as ProgressBarSize,
-} from "@streamlit/lib/src/components/shared/ProgressBar"
+} from "~lib/components/shared/ProgressBar"
 
 import {
   StyledCameraInputBaseButton,
@@ -26,6 +26,7 @@ import {
 } from "./styled-components"
 
 export interface CameraInputButtonProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
   progress?: number | null
@@ -46,7 +47,7 @@ function CameraInputButton({
       data-testid="stCameraInputButton"
     >
       {children}
-      {progress && (
+      {progress ? (
         <StyledProgressBar>
           <ProgressBar
             value={progress}
@@ -73,9 +74,9 @@ function CameraInputButton({
             }}
           />
         </StyledProgressBar>
-      )}
+      ) : null}
     </StyledCameraInputBaseButton>
   )
 }
 
-export default CameraInputButton
+export default memo(CameraInputButton)

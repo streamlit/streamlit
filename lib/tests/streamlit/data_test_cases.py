@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,6 +41,9 @@ from tests.streamlit.data_mocks.dask_mocks import Index as DaskIndex
 from tests.streamlit.data_mocks.dask_mocks import Series as DaskSeries
 from tests.streamlit.data_mocks.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.data_mocks.modin_mocks import Series as ModinSeries
+from tests.streamlit.data_mocks.pyspark_connect_mocks import (
+    DataFrame as PySparkConnectDataFrame,
+)
 from tests.streamlit.data_mocks.pyspark_mocks import DataFrame as PySparkDataFrame
 from tests.streamlit.data_mocks.ray_mocks import Dataset as RayDataset
 from tests.streamlit.data_mocks.ray_mocks import (
@@ -948,6 +951,26 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "Pyspark DataFrame",
         PySparkDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.PYSPARK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Pyspark Connect DataFrame",
+        PySparkConnectDataFrame(
             pd.DataFrame(
                 [
                     {"name": "st.text_area", "type": "widget"},

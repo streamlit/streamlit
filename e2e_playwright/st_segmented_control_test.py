@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -24,19 +24,11 @@ from e2e_playwright.shared.app_utils import (
     click_form_button,
     expect_help_tooltip,
     expect_markdown,
+    get_button_group,
     get_element_by_key,
     get_markdown,
+    get_segment_button,
 )
-
-
-def get_button_group(app: Page, key: str) -> Locator:
-    return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
-
-
-def get_segment_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(
-        re.compile("stBaseButton-segmented_control(Active)?")
-    ).filter(has_text=text)
 
 
 def test_click_multiple_segmented_control_button_and_take_snapshot(
@@ -54,17 +46,17 @@ def test_click_multiple_segmented_control_button_and_take_snapshot(
     wait_for_app_run(themed_app)
 
     # click on second element to test multiselect
-    get_segment_button(segmented_control, "📊 Charts").click()
+    get_segment_button(segmented_control, "Charts").click()
     wait_for_app_run(themed_app)
     expect_markdown(themed_app, "Multi selection: ['Foobar', '📊 Charts']")
 
     # click on same element to test unselect
-    get_segment_button(segmented_control, "📊 Charts").click()
+    get_segment_button(segmented_control, "Charts").click()
     wait_for_app_run(themed_app)
     expect_markdown(themed_app, "Multi selection: ['Foobar']")
 
     # click on same element and take screenshot of multiple selected segmented control buttons
-    get_segment_button(segmented_control, "📊 Charts").click()
+    get_segment_button(segmented_control, "Charts").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)
@@ -225,3 +217,22 @@ def test_help_tooltip(app: Page):
         get_button_group(app, "segmented_control_multi_selection"),
         "You can choose multiple options",
     )
+
+
+def test_segmented_control_width_examples(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test segmented control with different width configurations."""
+
+    content_segmented_control = get_button_group(app, "segmented_control_content_width")
+    assert_snapshot(
+        content_segmented_control, name="st_segmented_control-width_content"
+    )
+
+    stretch_segmented_control = get_button_group(app, "segmented_control_stretch_width")
+    assert_snapshot(
+        stretch_segmented_control, name="st_segmented_control-width_stretch"
+    )
+
+    segmented_control_300px = get_button_group(app, "segmented_control_300px_width")
+    assert_snapshot(segmented_control_300px, name="st_segmented_control-width_300px")

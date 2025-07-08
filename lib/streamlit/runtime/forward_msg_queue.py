@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any, Callable
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-
-if TYPE_CHECKING:
-    from streamlit.proto.Delta_pb2 import Delta
 
 
 class ForwardMsgQueue:
@@ -33,7 +30,18 @@ class ForwardMsgQueue:
     a single thread.
     """
 
-    def __init__(self):
+    _before_enqueue_msg: Callable[[ForwardMsg], None] | None = None
+
+    @staticmethod
+    def on_before_enqueue_msg(
+        before_enqueue_msg: Callable[[ForwardMsg], None] | None,
+    ) -> None:
+        """Set a callback to be called before a message is enqueued.
+        Used in static streamlit app generation.
+        """
+        ForwardMsgQueue._before_enqueue_msg = before_enqueue_msg
+
+    def __init__(self) -> None:
         self._queue: list[ForwardMsg] = []
         # A mapping of (delta_path -> _queue.indexof(msg)) for each
         # Delta message in the queue. We use this for coalescing
@@ -55,6 +63,10 @@ class ForwardMsgQueue:
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Add message into queue, possibly composing it with another message."""
+
+        if ForwardMsgQueue._before_enqueue_msg:
+            ForwardMsgQueue._before_enqueue_msg(msg)
+
         if not _is_composable_message(msg):
             self._queue.append(msg)
             return
@@ -64,16 +76,27 @@ class ForwardMsgQueue:
         # the app - we attempt to combine this new Delta into the old
         # one. This is an optimization that prevents redundant Deltas
         # from being sent to the frontend.
+        # One common case where this happens is with `st.write` since
+        # it uses a trick with `st.empty` to handle lists of args.
+        # Note: its not guaranteed that the optimization is always applied
+        # since the queue can be flushed to the browser at any time.
+        # For example:
+        # queue 1:
+        # > empty [0, 0]  <- skipped
+        # > markdown [0, 0]
+        # > empty [1, 0]  <- send to frontend
+        #
+        # queue 2:
+        # > markdown [1, 0]
+        # > ...
+
         delta_key = tuple(msg.metadata.delta_path)
         if delta_key in self._delta_index_map:
             index = self._delta_index_map[delta_key]
             old_msg = self._queue[index]
-            composed_delta = _maybe_compose_deltas(old_msg.delta, msg.delta)
-            if composed_delta is not None:
-                new_msg = ForwardMsg()
-                new_msg.delta.CopyFrom(composed_delta)
-                new_msg.metadata.CopyFrom(msg.metadata)
-                self._queue[index] = new_msg
+            composed_msg = _maybe_compose_delta_msgs(old_msg, msg)
+            if composed_msg is not None:
+                self._queue[index] = composed_msg
                 return
 
         # No composition occurred. Append this message to the queue, and
@@ -103,7 +126,7 @@ class ForwardMsgQueue:
             self._queue = []
         else:
             self._queue = [
-                _update_script_finished_message(msg)
+                _update_script_finished_message(msg, fragment_ids_this_run is not None)
                 for msg in self._queue
                 if msg.WhichOneof("type")
                 in {
@@ -148,6 +171,11 @@ class ForwardMsgQueue:
 
 def _is_composable_message(msg: ForwardMsg) -> bool:
     """True if the ForwardMsg is potentially composable with other ForwardMsgs."""
+    if msg.HasField("ref_hash"):
+        # reference messages (cached in frontend) are always composable.
+        # Only new_element deltas can be reference messages.
+        return True
+
     if not msg.HasField("delta"):
         # Non-delta messages are never composable.
         return False
@@ -156,26 +184,29 @@ def _is_composable_message(msg: ForwardMsg) -> bool:
     # operation can raise errors, and we don't have a good way of handling
     # those errors in the message queue.
     delta_type = msg.delta.WhichOneof("type")
-    return delta_type != "add_rows" and delta_type != "arrow_add_rows"
+    return delta_type not in {"add_rows", "arrow_add_rows"}
 
 
-def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta | None:
-    """Combines new_delta onto old_delta if possible.
+def _maybe_compose_delta_msgs(
+    old_msg: ForwardMsg, new_msg: ForwardMsg
+) -> ForwardMsg | None:
+    """Optimization logic that composes new_msg onto old_msg if possible.
 
-    If the combination takes place, the function returns a new Delta that
-    should replace old_delta in the queue.
+    If the combination takes place, the function returns a new ForwardMsg that
+    should replace old_msg in the queue. This basically means that the old_msg
+    is not send to the browser since its considered unnecessary.
 
-    If the new_delta is incompatible with old_delta, the function returns None.
-    In this case, the new_delta should just be appended to the queue as normal.
+    If the new_msg is incompatible with old_msg, the function returns None.
+    In this case, the new_msg should just be appended to the queue as normal.
     """
-    old_delta_type = old_delta.WhichOneof("type")
-    if old_delta_type == "add_block":
+
+    if old_msg.HasField("delta") and old_msg.delta.WhichOneof("type") == "add_block":
         # We never replace add_block deltas, because blocks can have
         # other dependent deltas later in the queue. For example:
         #
-        #   placeholder = st.empty()
-        #   placeholder.columns(1)
-        #   placeholder.empty()
+        # >  placeholder = st.empty()
+        # >  placeholder.columns(1)
+        # >  placeholder.empty()
         #
         # The call to "placeholder.columns(1)" creates two blocks, a parent
         # container with delta_path (0, 0), and a column child with
@@ -185,17 +216,21 @@ def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta | None:
         # now just an element, and not a block.
         return None
 
-    new_delta_type = new_delta.WhichOneof("type")
-    if new_delta_type == "new_element":
-        return new_delta
+    if new_msg.HasField("ref_hash"):
+        # ref_hash messages are always composable.
+        # Only new_element deltas can be reference messages.
+        return new_msg
 
-    if new_delta_type == "add_block":
-        return new_delta
+    new_delta_type = new_msg.delta.WhichOneof("type")
+    if new_delta_type in {"new_element", "add_block"}:
+        return new_msg
 
     return None
 
 
-def _update_script_finished_message(msg: ForwardMsg) -> ForwardMsg:
+def _update_script_finished_message(
+    msg: ForwardMsg, is_fragment_run: bool
+) -> ForwardMsg:
     """
     When we are here, the message queue is cleared from non-lifecycle messages
     before they were flushed to the browser.
@@ -207,6 +242,18 @@ def _update_script_finished_message(msg: ForwardMsg) -> ForwardMsg:
     Otherwise, a `FINISHED_SUCCESSFULLY` message might trigger a reset of widget
     states on the frontend.
     """
-    if msg.WhichOneof("type") == "script_finished":
+    if msg.WhichOneof("type") == "script_finished" and (
+        # If this is not a fragment run (= full app run), its okay to change the
+        # script_finished type to FINISHED_EARLY_FOR_RERUN because another full app run
+        # is about to start.
+        # If this is a fragment run, it is allowed to change the state of
+        # all script_finished states except for FINISHED_SUCCESSFULLY, which we use to
+        # indicate that a full app run has finished successfully (in other words, a
+        # fragment should not modify the finished status of a full app run, because
+        # the fragment finished state is different and the frontend might not trigger
+        # cleanups etc. correctly).
+        is_fragment_run is False
+        or msg.script_finished != ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+    ):
         msg.script_finished = ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
     return msg

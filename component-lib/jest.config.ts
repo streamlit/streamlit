@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,9 +36,7 @@ export default {
   collectCoverage: true,
 
   // An array of glob patterns indicating a set of files for which coverage information should be collected
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-  ],
+  collectCoverageFrom: ["src/**/*.{ts,tsx}"],
 
   // The directory where Jest should output its coverage files
   coverageDirectory: "coverage",
@@ -155,7 +153,7 @@ export default {
   // A list of paths to modules that run some code to configure or set up the testing framework before each test
   setupFilesAfterEnv: [
     "<rootDir>/src/setupTests.ts",
-    "@testing-library/jest-dom/extend-expect"
+    "@testing-library/jest-dom/extend-expect",
   ],
 
   // The number of seconds after which a test is considered as slow and reported as such in the results.

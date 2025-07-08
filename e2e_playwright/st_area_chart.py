@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,3 +79,24 @@ source = vega_data.unemployment_across_industries()
 st.area_chart(source, x="date", y="count", color="series", stack=True)
 st.area_chart(source, x="date", y="count", color="series", stack="normalize")
 st.area_chart(source, x="date", y="count", color="series", stack="center")
+
+# Test that add_rows maintains original styling params:
+# color, width, height, use_container_width, horizontal, stack
+area_data = pd.DataFrame({"Area 1": [], "Area 2": []})
+
+empty_area = st.area_chart(
+    area_data,
+    y=["Area 1", "Area 2"],
+    color=["#800080", "#0000FF"],  # Purple and Blue
+    width=600,
+    height=300,
+    stack="center",
+    use_container_width=False,
+)
+
+if st.button("Add data to Area Chart"):
+    new_data = pd.DataFrame(
+        {"Area 1": np.abs(np.random.randn(10)), "Area 2": np.abs(np.random.randn(10))}
+    )
+
+    empty_area.add_rows(new_data)

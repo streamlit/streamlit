@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,28 +23,35 @@ import React, {
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { format } from "date-fns"
 import moment from "moment"
-import { useTheme } from "@emotion/react"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
+
+import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
-} from "@streamlit/lib/src/util/utils"
-import { DateInput as DateInputProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+} from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
   ValueWithSource,
-} from "@streamlit/lib/src/hooks/useBasicWidgetState"
+} from "~lib/hooks/useBasicWidgetState"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+} from "~lib/components/widgets/BaseWidget"
+import Icon from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { LibContext } from "~lib/components/core/LibContext"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { useIntlLocale } from "./useIntlLocale"
 
@@ -52,7 +59,6 @@ export interface Props {
   disabled: boolean
   element: DateInputProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -69,16 +75,24 @@ function datesToStrings(dates: Date[]): string[] {
   if (!dates) {
     return []
   }
-  return dates.map((value: Date) => moment(value as Date).format(DATE_FORMAT))
+  return dates.map((value: Date) => moment(value).format(DATE_FORMAT))
+}
+
+// Types for date validation
+type ValidationResult = {
+  errorType: "Start" | "End" | null
+  newDates: Date[]
 }
 
 function DateInput({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }: Props): ReactElement {
+  const theme = useEmotionTheme()
+  const isInSidebar = useContext(IsSidebarContext)
+
   /**
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
@@ -97,21 +111,25 @@ function DateInput({
   })
 
   const [isEmpty, setIsEmpty] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const { colors, fontSizes, lineHeights, spacing, sizes } = useTheme()
+  const { colors, fontSizes, lineHeights, spacing, sizes } = useEmotionTheme()
 
   const { locale } = useContext(LibContext)
   const loadedLocale = useIntlLocale(locale)
 
-  const style = { width }
-  const minDate = moment(element.min, DATE_FORMAT).toDate()
-  const maxDate = getMaxDate(element)
+  const minDate = useMemo(
+    () => moment(element.min, DATE_FORMAT).toDate(),
+    [element.min]
+  )
+
+  const maxDate = useMemo(() => getMaxDate(element), [element])
+
   const clearable = element.default.length === 0 && !disabled
 
   // We need to extract the mask and format (date-fns notation) from the provided format string
   // The user configured date format is based on the momentJS notation and is only allowed to contain
   // one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY" and can also use a period (.) or hyphen (-) as separators.
-
   // We need to convert the provided format into a mask supported by the Baseweb datepicker
   // Thereby, we need to replace all letters with 9s which refers to any number.
   // (Using useMemo to avoid recomputing every time for now reason)
@@ -129,33 +147,61 @@ function DateInput({
     [element.format]
   )
 
+  // Date strings used for error messages
+  const minDateString = useMemo(
+    () => format(minDate, dateFormat, { locale: loadedLocale }),
+    [minDate, dateFormat, loadedLocale]
+  )
+
+  const maxDateString = useMemo(
+    () =>
+      maxDate ? format(maxDate, dateFormat, { locale: loadedLocale }) : "",
+    [maxDate, dateFormat, loadedLocale]
+  )
+
+  // Create tooltip error message based on validation error
+  const createErrorMessage = useCallback(
+    (errorType: string | null): string | null => {
+      if (!errorType) return null
+
+      if (element.isRange) {
+        const messageEnding =
+          errorType === "End"
+            ? `before ${maxDateString}`
+            : `after ${minDateString}`
+
+        return `**Error**: ${errorType} date set outside allowed range. Please select a date ${messageEnding}.`
+      }
+
+      return `**Error**: Date set outside allowed range. Please select a date between ${minDateString} and ${maxDateString}.`
+    },
+    [element.isRange, maxDateString, minDateString]
+  )
+
   const handleChange = useCallback(
     ({
       date,
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
+      // Reset our error state
+      setError(null)
+
       if (isNullOrUndefined(date)) {
         setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
         return
       }
 
-      const newValue: Date[] = []
-      if (Array.isArray(date)) {
-        date.forEach((dt: Date | null | undefined) => {
-          if (dt) {
-            newValue.push(dt)
-          }
-        })
-      } else {
-        newValue.push(date)
+      // Handles FE date validation
+      const { errorType, newDates } = validateDates(date, minDate, maxDate)
+      if (errorType) {
+        setError(createErrorMessage(errorType))
       }
-
-      setValueWithSource({ value: newValue, fromUi: true })
-      setIsEmpty(!newValue)
+      setValueWithSource({ value: newDates, fromUi: true })
+      setIsEmpty(!newDates)
     },
-    [setValueWithSource]
+    [setValueWithSource, createErrorMessage, setError, minDate, maxDate]
   )
 
   const handleClose = useCallback((): void => {
@@ -167,7 +213,7 @@ function DateInput({
   }, [isEmpty, element, setValueWithSource])
 
   return (
-    <div className="stDateInput" data-testid="stDateInput" style={style}>
+    <div className="stDateInput" data-testid="stDateInput">
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -197,14 +243,16 @@ function DateInput({
         disabled={disabled}
         onChange={handleChange}
         onClose={handleClose}
+        quickSelect={element.isRange}
         overrides={{
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               placement: PLACEMENT.bottomLeft,
               overrides: {
                 Body: {
                   style: {
-                    border: `${sizes.borderWidth} solid ${colors.borderColor}`,
+                    marginTop: theme.spacing.px,
                   },
                 },
               },
@@ -245,13 +293,22 @@ function DateInput({
                   $pseudoSelected ||
                   $pseudoHighlighted ||
                   $isHovered
-                    ? `${colors.secondaryBg} !important`
+                    ? `${colors.darkenedBgMix15} !important`
                     : colors.transparent,
               },
 
               "::after": {
                 borderColor: colors.transparent,
               },
+              //Apply background color only when hovering over a date in the range in light theme
+              ...(hasLightBackgroundColor(theme) &&
+              $isHovered &&
+              $pseudoSelected &&
+              !$selected
+                ? {
+                    color: colors.secondaryBg,
+                  }
+                : {}),
             }),
           },
           PrevButton: {
@@ -292,7 +349,30 @@ function DateInput({
               // Clearing the maskChar so empty dates will not display
               maskChar: null,
 
+              // Passes error icon/tooltip to underlying input in error state
+              // otherwise no end enhancer is shown
+              endEnhancer: error && (
+                <Tooltip
+                  content={
+                    <StreamlitMarkdown source={error} allowHTML={false} />
+                  }
+                  placement={Placement.TOP_RIGHT}
+                  error
+                >
+                  <Icon content={ErrorOutline} size="lg" />
+                </Tooltip>
+              ),
+
               overrides: {
+                EndEnhancer: {
+                  style: {
+                    // Match text color with st.error in light and dark mode
+                    color: hasLightBackgroundColor(theme)
+                      ? colors.red100
+                      : colors.red20,
+                    backgroundColor: colors.transparent,
+                  },
+                },
                 Root: {
                   style: {
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
@@ -301,6 +381,12 @@ function DateInput({
                     borderTopWidth: sizes.borderWidth,
                     borderBottomWidth: sizes.borderWidth,
                     paddingRight: spacing.twoXS,
+
+                    // Baseweb has an error prop for the input, but its coloring doesn't reconcile
+                    // with our dark theme - we handle error state coloring manually here
+                    ...(error && {
+                      backgroundColor: colors.dangerBg,
+                    }),
                   },
                 },
                 ClearIcon: {
@@ -321,17 +407,50 @@ function DateInput({
                     },
                   },
                 },
+                InputContainer: {
+                  style: {
+                    // Explicitly specified so error background renders correctly
+                    backgroundColor: "transparent",
+                  },
+                },
                 Input: {
                   style: {
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
-                    paddingLeft: spacing.sm,
+                    paddingLeft: spacing.md,
                     paddingBottom: spacing.sm,
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,
+
+                    "::placeholder": {
+                      color: theme.colors.fadedText60,
+                    },
+
+                    // Change input value text color in error state - matches st.error in light and dark mode
+                    ...(error && {
+                      color: hasLightBackgroundColor(theme)
+                        ? colors.red100
+                        : colors.red20,
+                    }),
                   },
                   props: {
                     "data-testid": "stDateInputField",
+                  },
+                },
+              },
+            },
+          },
+          QuickSelect: {
+            props: {
+              overrides: {
+                ControlContainer: {
+                  style: {
+                    height: theme.sizes.minElementHeight,
+                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                    borderLeftWidth: theme.sizes.borderWidth,
+                    borderRightWidth: theme.sizes.borderWidth,
+                    borderTopWidth: theme.sizes.borderWidth,
+                    borderBottomWidth: theme.sizes.borderWidth,
                   },
                 },
               },
@@ -375,12 +494,63 @@ function updateWidgetMgrState(
   vws: ValueWithSource<Date[]>,
   fragmentId?: string
 ): void {
-  widgetMgr.setStringArrayValue(
-    element,
-    datesToStrings(vws.value),
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  const minDate = moment(element.min, DATE_FORMAT).toDate()
+  const maxDate = getMaxDate(element)
+  let isValid = true
+
+  // Check if date(s) outside of allowed min/max
+  const { errorType } = validateDates(vws.value, minDate, maxDate)
+  if (errorType) {
+    isValid = false
+  }
+
+  // Only update widget state if date(s) valid
+  if (isValid) {
+    widgetMgr.setStringArrayValue(
+      element,
+      datesToStrings(vws.value),
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  }
+}
+
+function validateDates(
+  dates: Date | (Date | null | undefined)[] | null | undefined,
+  minDate: Date,
+  maxDate: Date | undefined
+): ValidationResult {
+  const newDates: Date[] = []
+  let errorType: "Start" | "End" | null = null
+
+  if (isNullOrUndefined(dates)) {
+    return { errorType: null, newDates: [] }
+  }
+
+  if (Array.isArray(dates)) {
+    dates.forEach((dt: Date | null | undefined) => {
+      if (dt) {
+        if (maxDate && dt > maxDate) {
+          errorType = "End"
+        } else if (dt < minDate) {
+          errorType = "Start"
+        }
+        newDates.push(dt)
+      }
+    })
+  } else if (dates) {
+    if (maxDate && dates > maxDate) {
+      errorType = "End"
+    } else if (dates < minDate) {
+      errorType = "Start"
+    }
+    newDates.push(dates)
+  }
+
+  return {
+    errorType,
+    newDates,
+  }
 }
 
 function getMaxDate(element: DateInputProto): Date | undefined {

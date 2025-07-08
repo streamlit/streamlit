@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,6 +53,43 @@ st.json(
         "string": "Hello World",
     },
     expanded=2,
+)
+
+st.subheader("Width tests:")
+st.json(
+    {
+        "width": "stretch",
+        "description": "This JSON element will stretch to fill the container width",
+        "nested": {
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "a": "This is a very long string that should wrap when the width is set to stretch",
+                        "b": "Another long string to demonstrate wrapping behavior",
+                    }
+                }
+            }
+        },
+    },
+    width="stretch",
+)
+
+st.json(
+    {
+        "width": 300,
+        "description": "This JSON element has a fixed width of 300 pixels",
+        "nested": {
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "a": "This is a very long string that should not wrap when the width is fixed",
+                        "b": "Another long string to demonstrate fixed width behavior",
+                    }
+                }
+            }
+        },
+    },
+    width=300,
 )
 
 st.subheader("Keeps container bounds:")

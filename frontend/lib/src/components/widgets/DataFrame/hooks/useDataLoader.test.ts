@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,40 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useRef } from "react"
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { renderHook } from "@testing-library/react-hooks"
+import { renderHook } from "@testing-library/react"
+import { Field, Utf8 } from "apache-arrow"
+
+import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
 import {
   BaseColumn,
   isErrorCell,
   TextColumn,
-} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
-import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { MULTI, UNICODE } from "@streamlit/lib/src/mocks/arrow"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+} from "~lib/components/widgets/DataFrame/columns"
+import EditingState from "~lib/components/widgets/DataFrame/EditingState"
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { MULTI, UNICODE } from "~lib/mocks/arrow"
 
 import useDataLoader from "./useDataLoader"
 
 // These columns are based on the UNICODE mock arrow table:
 const MOCK_COLUMNS: BaseColumn[] = [
   TextColumn({
-    arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
+    arrowType: {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("index-0", new Utf8(), true),
+      pandasType: {
+        field_name: "index-0",
+        name: "index-0",
+        pandas_type: "unicode",
+        numpy_type: "unicode",
+        metadata: null,
+      },
+    },
     id: "index-0",
     name: "",
     indexNumber: 0,
@@ -46,7 +59,17 @@ const MOCK_COLUMNS: BaseColumn[] = [
     title: "",
   }),
   TextColumn({
-    arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
+    arrowType: {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("column-c1-0", new Utf8(), true),
+      pandasType: {
+        field_name: "column-c1-0",
+        name: "column-c1-0",
+        pandas_type: "unicode",
+        numpy_type: "object",
+        metadata: null,
+      },
+    },
     id: "column-c1-0",
     name: "c1",
     indexNumber: 1,
@@ -58,7 +81,17 @@ const MOCK_COLUMNS: BaseColumn[] = [
     title: "c1",
   }),
   TextColumn({
-    arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
+    arrowType: {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("column-c2-1", new Utf8(), true),
+      pandasType: {
+        field_name: "column-c2-1",
+        name: "column-c2-1",
+        pandas_type: "unicode",
+        numpy_type: "object",
+        metadata: null,
+      },
+    },
     columnTypeOptions: undefined,
     id: "column-c2-1",
     name: "c2",
@@ -78,12 +111,10 @@ describe("useDataLoader hook", () => {
       data: UNICODE,
     })
     const data = new Quiver(element)
-    const numRows = data.dimensions.rows
+    const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
 
@@ -121,12 +152,10 @@ describe("useDataLoader hook", () => {
       data: MULTI,
     })
     const data = new Quiver(element)
-    const numRows = data.dimensions.rows
+    const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
 
@@ -143,12 +172,10 @@ describe("useDataLoader hook", () => {
     })
 
     const data = new Quiver(element)
-    const numRows = data.dimensions.rows
+    const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       editingState.current.setCell(1, 0, {
         kind: GridCellKind.Text,
         displayData: "edited",
@@ -171,12 +198,10 @@ describe("useDataLoader hook", () => {
     })
 
     const data = new Quiver(element)
-    const numRows = data.dimensions.rows
+    const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       editingState.current.deleteRow(0)
       return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
@@ -185,5 +210,52 @@ describe("useDataLoader hook", () => {
     expect(
       MOCK_COLUMNS[1].getCellValue(result.current.getCellContent([1, 0]))
     ).toEqual("bar")
+  })
+
+  it("returns an error cell if getCell from Quiver throws an error", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+    })
+    const realData = new Quiver(element)
+    const numRows = realData.dimensions.numRows
+
+    // Create a data object that throws an error when getCell is called
+    const errorData = {
+      getCell: () => {
+        throw new Error("Error getting cell from Quiver")
+      },
+      dimensions: realData.dimensions,
+      styler: realData.styler,
+    } as unknown as Quiver
+
+    const { result } = renderHook(() => {
+      const editingState = useRef<EditingState>(new EditingState(numRows))
+      return useDataLoader(errorData, MOCK_COLUMNS, numRows, editingState)
+    })
+
+    // We should get an error cell since an error is thrown in the try/catch block
+    expect(isErrorCell(result.current.getCellContent([1, 0]))).toBe(true)
+  })
+
+  it("returns an error cell if getCell from editing state throws an error", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+    })
+    const realData = new Quiver(element)
+    const numRows = realData.dimensions.numRows
+
+    const { result } = renderHook(() => {
+      const editingState = useRef<EditingState>(new EditingState(numRows))
+      editingState.current.getCell = () => {
+        throw new Error("Error getting cell from editing state")
+      }
+      editingState.current.isAddedRow = () => {
+        return true
+      }
+      return useDataLoader(realData, MOCK_COLUMNS, numRows, editingState)
+    })
+
+    // We should get an error cell since an error is thrown in the try/catch block
+    expect(isErrorCell(result.current.getCellContent([1, 0]))).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,17 @@
 
 import React, { ReactElement } from "react"
 
-import {
-  fireEvent,
-  RenderResult,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { RenderResult, screen, waitFor, within } from "@testing-library/react"
 import { PLACEMENT, ToasterContainer } from "baseui/toast"
+import { userEvent } from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Toast as ToastProto } from "@streamlit/lib/src/proto"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import { Toast as ToastProto } from "@streamlit/protobuf"
 
-import { shortenMessage, Toast, ToastProps } from "./Toast"
+import { render } from "~lib/test_util"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import ThemeProvider from "~lib/components/core/ThemeProvider"
+
+import Toast, { shortenMessage, ToastProps } from "./Toast"
 
 // A Toaster Container is required to render Toasts
 // Don't import the actual one from EventContainer as that lives on app side
@@ -49,17 +45,9 @@ const createContainer = (): ReactElement => (
   />
 )
 
-const getProps = (
-  elementProps: Partial<ToastProto> = {},
-  themeProps: Partial<EmotionTheme> = {}
-): ToastProps => ({
+const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   body: "This is a toast message",
   icon: "🐶",
-  theme: {
-    ...mockTheme.emotion,
-    ...themeProps,
-  },
-  width: 0,
   ...elementProps,
 })
 
@@ -109,7 +97,8 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(expandButton)
   })
 
-  test("can expand to see the full toast message & collapse to truncate", () => {
+  test("can expand to see the full toast message & collapse to truncate", async () => {
+    const user = userEvent.setup()
     const props = getProps({
       icon: "",
       body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
@@ -127,9 +116,7 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(expandButton)
 
     // Click view more button & expand the message
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(expandButton)
+    await user.click(expandButton)
     expect(toast).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
     )
@@ -137,9 +124,7 @@ describe("Toast Component", () => {
     // Click view less button & collapse the message
     const collapseButton = screen.getByRole("button", { name: "view less" })
     expect(toast).toContainElement(collapseButton)
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(collapseButton)
+    await user.click(collapseButton)
     expect(toastText).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long"
     )
@@ -147,6 +132,7 @@ describe("Toast Component", () => {
   })
 
   test("can close toast", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     renderComponent(props)
 
@@ -155,16 +141,22 @@ describe("Toast Component", () => {
     expect(toast).toBeInTheDocument()
     expect(closeButton).toBeInTheDocument()
     // Click close button
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(closeButton)
+    await user.click(closeButton)
     // Wait for toast to be removed from DOM
     await waitFor(() => expect(toast).not.toBeInTheDocument())
   })
 
-  test("throws an error when called via st.sidebar.toast", async () => {
-    const props = getProps({}, { inSidebar: true })
-    renderComponent(props)
+  test("throws an error when called via st.sidebar.toast", () => {
+    const props = getProps({})
+    render(
+      <ThemeProvider
+        theme={{ ...mockTheme.emotion, inSidebar: true }}
+        baseuiTheme={mockTheme.basewebTheme}
+      >
+        {createContainer()}
+        <Toast {...props} />
+      </ThemeProvider>
+    )
 
     const toastError = screen.getByRole("alert")
     expect(toastError).toBeInTheDocument()
@@ -210,7 +202,8 @@ describe("Toast Component", () => {
     expect(toastText).toHaveLength(expectedTruncatedMessage.length)
   })
 
-  test("expands and collapses long messages with explicit line breaks correctly", () => {
+  test("expands and collapses long messages with explicit line breaks correctly", async () => {
+    const user = userEvent.setup()
     const messageWithBreaks =
       "First line of the message.\nSecond line of the message, which is very long and meant to test the expand and collapse functionality.\nThird line, which should initially be hidden."
     const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
@@ -218,9 +211,7 @@ describe("Toast Component", () => {
     renderComponent(props)
 
     const expandButton = screen.getByRole("button", { name: "view more" })
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(expandButton) // Expand
+    await user.click(expandButton) // Expand
 
     const toastExpanded = screen
       .getByRole("alert")
@@ -228,9 +219,7 @@ describe("Toast Component", () => {
     expect(toastExpanded).toEqual(messageWithBreaks) // Check full message is displayed
 
     const collapseButton = screen.getByRole("button", { name: "view less" })
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.click(collapseButton) // Collapse
+    await user.click(collapseButton) // Collapse
 
     const toastCollapsed = screen
       .getByRole("alert")

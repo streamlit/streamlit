@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,6 @@ from playwright.sync_api import Page, expect
 def test_lazy_loaded_modules_are_not_imported(app: Page):
     """Test that lazy loaded modules are not imported when the page is loaded."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(18)
+    expect(markdown_elements).to_have_count(16)
     for element in markdown_elements.all():
         expect(element).to_have_text(re.compile(r".*not loaded.*"))

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,17 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
-import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
-import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
+import { Heading as HeadingProto } from "@streamlit/protobuf"
+
+import { render } from "~lib/test_util"
+import IsDialogContext from "~lib/components/core/IsDialogContext"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
 import Heading, { HeadingProtoProps } from "./Heading"
 
 const getHeadingProps = (
   elementProps: Partial<HeadingProto> = {}
 ): HeadingProtoProps => ({
-  width: 300,
   element: HeadingProto.create({
     anchor: "some-anchor",
     tag: "h1",
@@ -172,7 +172,7 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "| Syntax | Description || ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+      "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
     )
     expect(screen.getByRole("heading")).toHaveTextContent(
       `| Syntax | Description |`

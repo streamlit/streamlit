@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -135,5 +135,7 @@ def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
     columns = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.columns)
 
     return pd.DataFrame(
-        data.values, index=index.values.T.tolist(), columns=columns.values.T.tolist()
+        data.to_numpy(),
+        index=index.to_numpy().T.tolist(),
+        columns=columns.to_numpy().T.tolist(),
     )

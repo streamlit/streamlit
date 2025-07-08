@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import mimetypes
 import os
 from pathlib import Path
 from typing import Final
@@ -31,13 +30,28 @@ _LOGGER: Final = get_logger(__name__)
 MAX_APP_STATIC_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
 # The list of file extensions that we serve with the corresponding Content-Type header.
 # All files with other extensions will be served with Content-Type: text/plain
-SAFE_APP_STATIC_FILE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".pdf", ".gif", ".webp")
+SAFE_APP_STATIC_FILE_EXTENSIONS = (
+    # Common image types:
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    # Common font types:
+    ".otf",
+    ".ttf",
+    ".woff",
+    ".woff2",
+    # Other types:
+    ".pdf",
+    ".xml",
+    ".json",
+)
 
 
 class AppStaticFileHandler(tornado.web.StaticFileHandler):
     def initialize(self, path: str, default_filename: str | None = None) -> None:
         super().initialize(path, default_filename)
-        mimetypes.add_type("image/webp", ".webp")
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
         full_path = os.path.abspath(absolute_path)
@@ -68,7 +82,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
 
         return ret_val
 
-    def set_default_headers(self):
+    def set_default_headers(self) -> None:
         # CORS protection is disabled because we need access to this endpoint
         # from the inner iframe.
         self.set_header("Access-Control-Allow-Origin", "*")

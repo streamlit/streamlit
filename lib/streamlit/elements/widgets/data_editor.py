@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,14 +20,8 @@ from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
-    Iterable,
-    List,
     Literal,
-    Mapping,
-    Set,
-    Tuple,
     TypedDict,
     TypeVar,
     Union,
@@ -70,6 +64,8 @@ from streamlit.type_util import is_type
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
     import numpy as np
     import pandas as pd
     import pyarrow as pa
@@ -85,10 +81,10 @@ EditableData = TypeVar(
     "EditableData",
     bound=Union[
         dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        Tuple[Any],
-        List[Any],
-        Set[Any],
-        Dict[str, Any],
+        tuple[Any],
+        list[Any],
+        set[Any],
+        dict[str, Any],
         # TODO(lukasmasuch): Add support for np.ndarray
         # but it is not possible with np.ndarray.
         # NDArray[Any] works, but is only available in numpy>1.20.
@@ -106,10 +102,10 @@ DataTypes: TypeAlias = Union[
     "Styler",
     "pa.Table",
     "np.ndarray[Any, np.dtype[np.float64]]",
-    Tuple[Any],
-    List[Any],
-    Set[Any],
-    Dict[str, Any],
+    tuple[Any],
+    list[Any],
+    set[Any],
+    dict[str, Any],
 ]
 
 
@@ -120,13 +116,16 @@ class EditingState(TypedDict, total=False):
     Attributes
     ----------
     edited_rows : Dict[int, Dict[str, str | int | float | bool | None]]
-        An hierarchical mapping of edited cells based on: row position -> column name -> value.
+        An hierarchical mapping of edited cells based on:
+        row position -> column name -> value.
 
     added_rows : List[Dict[str, str | int | float | bool | None]]
-        A list of added rows, where each row is a mapping from column name to the cell value.
+        A list of added rows, where each row is a mapping from column name to
+        the cell value.
 
     deleted_rows : List[int]
-        A list of deleted rows, where each row is the numerical position of the deleted row.
+        A list of deleted rows, where each row is the numerical position of
+        the deleted row.
     """
 
     edited_rows: dict[int, dict[str, str | int | float | bool | None]]
@@ -138,7 +137,7 @@ class EditingState(TypedDict, total=False):
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> EditingState:
+    def deserialize(self, ui_value: str | None) -> EditingState:
         data_editor_state: EditingState = (
             {
                 "edited_rows": {},
@@ -237,7 +236,10 @@ def _parse_value(
 
     except (ValueError, pd.errors.ParserError) as ex:
         _LOGGER.warning(
-            "Failed to parse value %s as %s. Exception: %s", value, column_data_kind, ex
+            "Failed to parse value %s as %s.",
+            value,
+            column_data_kind,
+            exc_info=ex,
         )
         return None
     return value
@@ -268,14 +270,37 @@ def _apply_cell_edits(
                 # The edited cell is part of the index
                 # TODO(lukasmasuch): To support multi-index in the future:
                 # use a tuple of values here instead of a single value
-                df.index.values[row_pos] = _parse_value(
-                    value, dataframe_schema[INDEX_IDENTIFIER]
+                old_idx_value = df.index[row_pos]
+                new_idx_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
+                df.rename(
+                    index={old_idx_value: new_idx_value},
+                    inplace=True,  # noqa: PD002
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(
+                df.iloc[row_pos, col_pos] = _parse_value(
                     value, dataframe_schema[col_name]
                 )
+
+
+def _parse_added_row(
+    df: pd.DataFrame,
+    added_row: dict[str, Any],
+    dataframe_schema: DataframeSchema,
+) -> tuple[Any, list[Any]]:
+    """Parse the added row into an optional index value and a list of row values."""
+    index_value = None
+    new_row: list[Any] = [None for _ in range(df.shape[1])]
+    for col_name, value in added_row.items():
+        if col_name == INDEX_IDENTIFIER:
+            # TODO(lukasmasuch): To support multi-index in the future:
+            # use a tuple of values here instead of a single value
+            index_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
+        else:
+            col_pos = cast("int", df.columns.get_loc(col_name))
+            new_row[col_pos] = _parse_value(value, dataframe_schema[col_name])
+
+    return index_value, new_row
 
 
 def _apply_row_additions(
@@ -303,39 +328,54 @@ def _apply_row_additions(
 
     import pandas as pd
 
-    # This is only used if the dataframe has a range index:
-    # There seems to be a bug in older pandas versions with RangeIndex in
-    # combination with loc. As a workaround, we manually track the values here:
-    range_index_stop = None
-    range_index_step = None
+    index_type: Literal["range", "integer", "other"] = "other"
+    # This is only used if the dataframe has a range or integer index that can be
+    # auto incremented:
+    index_stop: int | None = None
+    index_step: int | None = None
+
     if isinstance(df.index, pd.RangeIndex):
-        range_index_stop = df.index.stop
-        range_index_step = df.index.step
+        # Extract metadata from the range index:
+        index_type = "range"
+        index_stop = cast("int", df.index.stop)
+        index_step = cast("int", df.index.step)
+    elif isinstance(df.index, pd.Index) and pd.api.types.is_integer_dtype(
+        df.index.dtype
+    ):
+        # Get highest integer value and increment it by 1 to get unique index value.
+        index_type = "integer"
+        index_stop = 0 if df.index.empty else df.index.max() + 1
+        index_step = 1
 
     for added_row in added_rows:
-        index_value = None
-        new_row: list[Any] = [None for _ in range(df.shape[1])]
-        for col_name in added_row.keys():
-            value = added_row[col_name]
-            if col_name == INDEX_IDENTIFIER:
-                # TODO(lukasmasuch): To support multi-index in the future:
-                # use a tuple of values here instead of a single value
-                index_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
-            else:
-                col_pos = df.columns.get_loc(col_name)
-                new_row[col_pos] = _parse_value(value, dataframe_schema[col_name])
-        # Append the new row to the dataframe
-        if range_index_stop is not None:
-            df.loc[range_index_stop, :] = new_row
-            # Increment to the next range index value
-            range_index_stop += range_index_step
-        elif index_value is not None:
-            # TODO(lukasmasuch): we are only adding rows that have a non-None index
-            # value to prevent issues in the frontend component. Also, it just overwrites
-            # the row in case the index value already exists in the dataframe.
-            # In the future, it would be better to require users to provide unique
-            # non-None values for the index with some kind of visual indications.
+        index_value, new_row = _parse_added_row(df, added_row, dataframe_schema)
+
+        if index_value is not None and index_type != "range":
+            # Case 1: Non-range index with an explicitly provided index value
+            # Add row using the user-provided index value.
+            # This handles any type of index that cannot be auto incremented.
+
+            # Note: this just overwrites the row in case the index value
+            # already exists. In the future, it would be better to
+            # require users to provide unique non-None values for the index with
+            # some kind of visual indications.
             df.loc[index_value, :] = new_row
+            continue
+
+        if index_stop is not None and index_step is not None:
+            # Case 2: Range or integer index that can be auto incremented.
+            # Add row using the next value in the sequence
+            df.loc[index_stop, :] = new_row
+            # Increment to the next range index value
+            index_stop += index_step
+            continue
+
+        # Row cannot be added -> skip it and log a warning.
+        _LOGGER.warning(
+            "Cannot automatically add row for the index "
+            "of type %s without an explicit index value. Row addition skipped.",
+            type(df.index).__name__,
+        )
 
 
 def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
@@ -350,7 +390,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
         A list of row numbers to delete.
     """
     # Drop rows based in numeric row positions
-    df.drop(df.index[deleted_rows], inplace=True)
+    df.drop(df.index[deleted_rows], inplace=True)  # noqa: PD002
 
 
 def _apply_dataframe_edits(
@@ -390,13 +430,11 @@ def _is_supported_index(df_index: pd.Index) -> bool:
 
     Parameters
     ----------
-
     df_index : pd.Index
         The index to check.
 
     Returns
     -------
-
     bool
         True if the index is supported, False otherwise.
     """
@@ -408,9 +446,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
             pd.RangeIndex,
             pd.Index,
             pd.DatetimeIndex,
-            # Categorical index doesn't work since arrow
-            # does serialize the options:
-            # pd.CategoricalIndex,
+            pd.CategoricalIndex,
             # Interval type isn't editable currently:
             # pd.IntervalIndex,
             # Period type isn't editable currently:
@@ -426,7 +462,8 @@ def _is_supported_index(df_index: pd.Index) -> bool:
 
 def _fix_column_headers(data_df: pd.DataFrame) -> None:
     """Fix the column headers of the provided dataframe inplace to work
-    correctly for data editing."""
+    correctly for data editing.
+    """
     import pandas as pd
 
     if isinstance(data_df.columns, pd.MultiIndex):
@@ -439,11 +476,11 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
         # to avoid issues with editing:
         data_df.rename(
             columns={column: str(column) for column in data_df.columns},
-            inplace=True,
+            inplace=True,  # noqa: PD002
         )
 
 
-def _check_column_names(data_df: pd.DataFrame):
+def _check_column_names(data_df: pd.DataFrame) -> None:
     """Check if the column names in the provided dataframe are valid.
 
     It's not allowed to have duplicate column names or column names that are
@@ -477,7 +514,7 @@ def _check_type_compatibilities(
     data_df: pd.DataFrame,
     columns_config: ColumnConfigMapping,
     dataframe_schema: DataframeSchema,
-):
+) -> None:
     """Check column type to data type compatibility.
 
     Iterates the index and all columns of the dataframe to check if
@@ -543,7 +580,7 @@ class DataEditorMixin:
         *,
         width: int | None = None,
         height: int | None = None,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
@@ -553,6 +590,7 @@ class DataEditorMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
     ) -> EditableData:
         pass
 
@@ -563,7 +601,7 @@ class DataEditorMixin:
         *,
         width: int | None = None,
         height: int | None = None,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
@@ -573,6 +611,7 @@ class DataEditorMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -583,7 +622,7 @@ class DataEditorMixin:
         *,
         width: int | None = None,
         height: int | None = None,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
@@ -593,6 +632,7 @@ class DataEditorMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -629,14 +669,14 @@ class DataEditorMixin:
             Desired height of the data editor expressed in pixels. If ``height``
             is ``None`` (default), Streamlit sets the height to show at most
             ten rows. Vertical scrolling within the data editor element is
-            enabled when the height does not accomodate all rows.
+            enabled when the height does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
-            container. If ``use_container_width`` is ``False`` (default),
-            Streamlit sets the data editor's width according to ``width``. If
-            ``use_container_width`` is ``True``, Streamlit sets the width of
-            the data editor to match the width of the parent container.
+            container. If this is ``True`` (default), Streamlit sets the width
+            of the data editor to match the width of the parent container. If
+            this is ``False``, Streamlit sets the data editor's width according
+            to ``width``.
 
         hide_index : bool or None
             Whether to hide the index column(s). If ``hide_index`` is ``None``
@@ -660,7 +700,7 @@ class DataEditorMixin:
             - A string to set the display label of the column.
 
             - One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
               and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
@@ -691,6 +731,11 @@ class DataEditorMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        row_height : int or None
+            The height of each row in the data editor in pixels. If ``row_height``
+            is ``None`` (default), Streamlit will use a default row height,
+            which fits one line of text.
 
         Returns
         -------
@@ -741,7 +786,8 @@ class DataEditorMixin:
            https://doc-data-editor1.streamlit.app/
            height: 450px
 
-        Or you can customize the data editor via ``column_config``, ``hide_index``, ``column_order``, or ``disabled``:
+        Or you can customize the data editor via ``column_config``, ``hide_index``,
+        ``column_order``, or ``disabled``:
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -802,8 +848,9 @@ class DataEditorMixin:
         data_format = dataframe_util.determine_data_format(data)
         if data_format == dataframe_util.DataFormat.UNKNOWN:
             raise StreamlitAPIException(
-                f"The data type ({type(data).__name__}) or format is not supported by the data editor. "
-                "Please convert your data into a Pandas Dataframe or another supported data format."
+                f"The data type ({type(data).__name__}) or format is not supported by "
+                "the data editor. Please convert your data into a Pandas Dataframe or "
+                "another supported data format."
             )
 
         # The dataframe should always be a copy of the original data
@@ -889,6 +936,7 @@ class DataEditorMixin:
             "data_editor",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             data=arrow_bytes,
             width=width,
             height=height,
@@ -896,10 +944,16 @@ class DataEditorMixin:
             column_order=column_order,
             column_config_mapping=str(column_config_mapping),
             num_rows=num_rows,
+            row_height=row_height,
         )
 
         proto = ArrowProto()
         proto.id = element_id
+
+        if use_container_width is None:
+            # If use_container_width was not explicitly set by the user, we set
+            # it to True if width was not set explicitly, and False otherwise.
+            use_container_width = width is None
 
         proto.use_container_width = use_container_width
 
@@ -907,6 +961,9 @@ class DataEditorMixin:
             proto.width = width
         if height:
             proto.height = height
+
+        if row_height:
+            proto.row_height = row_height
 
         if column_order:
             proto.column_order[:] = column_order

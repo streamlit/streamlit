@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,10 +23,21 @@ from shared.data_mocks import SHARED_TEST_CASES
 np.random.seed(0)
 random.seed(0)
 
+
 st.set_page_config(layout="wide")
 
+selected_test_case = st.number_input(
+    "Select test case", max_value=len(SHARED_TEST_CASES) - 1
+)
+
 # Render all test cases with st.dataframe:
-for test_case in SHARED_TEST_CASES:
-    data = test_case[0]
-    st.subheader(str(test_case[1].expected_data_format))
-    st.dataframe(data)
+test_case = SHARED_TEST_CASES[selected_test_case]
+data = test_case[0]
+st.markdown(str(test_case[1].expected_data_format))
+
+# Little hack to make st.dataframe re-calculate width since
+# it's a new element with a new delta path.
+for _ in range(selected_test_case):
+    st.empty()
+
+st.dataframe(data, use_container_width=False)

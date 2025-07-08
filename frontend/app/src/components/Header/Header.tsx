@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,51 +14,103 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode } from "react"
+import React, { ReactElement, ReactNode, useContext } from "react"
 
-import { AppContext } from "@streamlit/app/src/components/AppContext"
+import {
+  BaseButton,
+  BaseButtonKind,
+  DynamicIcon,
+  LibContext,
+} from "@streamlit/lib"
+import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 
 import {
   StyledHeader,
-  StyledHeaderDecoration,
+  StyledHeaderContent,
+  StyledHeaderLeftSection,
+  StyledHeaderRightSection,
   StyledHeaderToolbar,
+  StyledLogoContainer,
+  StyledOpenSidebarButton,
 } from "./styled-components"
 
 export interface HeaderProps {
-  children: ReactNode
-  isStale?: boolean
+  hasSidebar: boolean
+  isSidebarOpen: boolean
+  onToggleSidebar(): void
+  navigation?: ReactNode
+  rightContent?: ReactNode
+  logoComponent?: ReactNode
 }
 
-function Header({ isStale, children }: Readonly<HeaderProps>): ReactElement {
-  const { wideMode, embedded, showToolbar, showColoredLine } =
-    React.useContext(AppContext)
+const Header = ({
+  hasSidebar,
+  isSidebarOpen,
+  onToggleSidebar,
+  navigation,
+  rightContent,
+  logoComponent,
+}: HeaderProps): ReactElement => {
+  const { showToolbar } = useAppContext()
+  const { activeTheme } = useContext(LibContext)
 
-  let showHeader = true
-  if (embedded) {
-    showHeader = showToolbar || showColoredLine
-  }
+  const shouldShowLogo = logoComponent && !isSidebarOpen
+  const shouldShowExpandButton = hasSidebar && !isSidebarOpen
+
+  // Determine what content should be shown
+  // When showToolbar is false (embed=true without show_toolbar), we still show
+  // logo, sidebar icon, and navigation, but hide rightContent
+  const shouldShowRightContent = showToolbar && rightContent
+
+  // Check if there's any content to display at all
+  const hasAnyContent =
+    shouldShowLogo ||
+    shouldShowExpandButton ||
+    navigation ||
+    shouldShowRightContent
+
   return (
     <StyledHeader
-      showHeader={showHeader}
-      isWideMode={wideMode}
-      // The tabindex below is required for testing.
-      tabIndex={-1}
-      isStale={isStale}
       className="stAppHeader"
       data-testid="stHeader"
+      isTransparentBackground={!hasAnyContent}
     >
-      {showColoredLine && (
-        <StyledHeaderDecoration
-          className="stDecoration"
-          data-testid="stDecoration"
-          id="stDecoration"
-        />
-      )}
-      {showToolbar && (
-        <StyledHeaderToolbar className="stAppToolbar" data-testid="stToolbar">
-          {children}
+      {hasAnyContent ? (
+        <StyledHeaderToolbar
+          className="stAppToolbar"
+          data-testid="stToolbar"
+          theme={activeTheme.emotion}
+        >
+          <StyledHeaderContent>
+            <StyledHeaderLeftSection>
+              {shouldShowLogo ? (
+                <StyledLogoContainer>{logoComponent}</StyledLogoContainer>
+              ) : null}
+              {shouldShowExpandButton && (
+                <StyledOpenSidebarButton>
+                  <BaseButton
+                    kind={BaseButtonKind.HEADER_NO_PADDING}
+                    onClick={onToggleSidebar}
+                    data-testid="stExpandSidebarButton"
+                  >
+                    <DynamicIcon
+                      size="xl"
+                      iconValue={":material/keyboard_double_arrow_right:"}
+                      color={activeTheme.emotion.colors.fadedText60}
+                    />
+                  </BaseButton>
+                </StyledOpenSidebarButton>
+              )}
+            </StyledHeaderLeftSection>
+            {navigation}
+            {shouldShowRightContent ? (
+              <StyledHeaderRightSection>
+                {rightContent}
+              </StyledHeaderRightSection>
+            ) : null}
+          </StyledHeaderContent>
         </StyledHeaderToolbar>
-      )}
+      ) : null}
     </StyledHeader>
   )
 }

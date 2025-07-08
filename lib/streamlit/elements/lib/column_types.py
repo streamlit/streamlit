@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Allow function names with uppercase letters:
+# ruff: noqa: N802
+
 from __future__ import annotations
 
 import datetime
-from typing import Iterable, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_material_icon
 
-ColumnWidth: TypeAlias = Literal["small", "medium", "large"]
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+NumberFormat: TypeAlias = Literal[
+    "plain",
+    "localized",
+    "dollar",
+    "euro",
+    "yen",
+    "percent",
+    "compact",
+    "scientific",
+    "engineering",
+    "accounting",
+    "bytes",
+]
+
+ColumnWidth: TypeAlias = Union[Literal["small", "medium", "large"], int]
 
 # Type alias that represents all available column types
 # which are configurable by the user.
@@ -41,12 +62,13 @@ ColumnType: TypeAlias = Literal[
     "area_chart",
     "image",
     "progress",
+    "json",
 ]
 
 
 class NumberColumnConfig(TypedDict):
     type: Literal["number"]
-    format: NotRequired[str | None]
+    format: NotRequired[str | NumberFormat | None]
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
     step: NotRequired[int | float | None]
@@ -102,7 +124,9 @@ class ListColumnConfig(TypedDict):
 
 class DatetimeColumnConfig(TypedDict):
     type: Literal["datetime"]
-    format: NotRequired[str | None]
+    format: NotRequired[
+        str | Literal["localized", "distance", "calendar", "iso8601"] | None
+    ]
     min_value: NotRequired[str | None]
     max_value: NotRequired[str | None]
     step: NotRequired[int | float | None]
@@ -111,7 +135,7 @@ class DatetimeColumnConfig(TypedDict):
 
 class TimeColumnConfig(TypedDict):
     type: Literal["time"]
-    format: NotRequired[str | None]
+    format: NotRequired[str | Literal["localized", "iso8601"] | None]
     min_value: NotRequired[str | None]
     max_value: NotRequired[str | None]
     step: NotRequired[int | float | None]
@@ -119,7 +143,7 @@ class TimeColumnConfig(TypedDict):
 
 class DateColumnConfig(TypedDict):
     type: Literal["date"]
-    format: NotRequired[str | None]
+    format: NotRequired[str | Literal["localized", "distance", "iso8601"] | None]
     min_value: NotRequired[str | None]
     max_value: NotRequired[str | None]
     step: NotRequired[int | None]
@@ -127,9 +151,14 @@ class DateColumnConfig(TypedDict):
 
 class ProgressColumnConfig(TypedDict):
     type: Literal["progress"]
-    format: NotRequired[str | None]
+    format: NotRequired[str | NumberFormat | None]
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
+    step: NotRequired[int | float | None]
+
+
+class JsonColumnConfig(TypedDict):
+    type: Literal["json"]
 
 
 class ColumnConfig(TypedDict, total=False):
@@ -137,12 +166,11 @@ class ColumnConfig(TypedDict, total=False):
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -150,10 +178,15 @@ class ColumnConfig(TypedDict, total=False):
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -211,6 +244,7 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | JsonColumnConfig
         | None
     )
 
@@ -237,12 +271,11 @@ def Column(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -250,10 +283,15 @@ def Column(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -278,7 +316,6 @@ def Column(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -326,7 +363,7 @@ def NumberColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: int | float | None = None,
-    format: str | None = None,
+    format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
     step: int | float | None = None,
@@ -339,12 +376,11 @@ def NumberColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -352,10 +388,15 @@ def NumberColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -382,15 +423,32 @@ def NumberColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format: str or None
-        A printf-style format string controlling how numbers are displayed.
-        This does not impact the return value. The following formatters are
-        valid: ``%d``, ``%e``, ``%f``, ``%g``, ``%i``, ``%u``. You can also add
-        prefixes and suffixes, e.g. ``"$ %.2f"`` to show a dollar prefix. If
-        this is ``None`` (default), the numbers are not formatted.
+    format:  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
+        A format string controlling how numbers are displayed.
+        This can be one of the following values:
 
-        Number formatting from ``column_config`` always takes precedence over
-        number formatting from ``pandas.Styler``.
+        - ``None`` (default): Streamlit infers the formatting from the data.
+        - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
+        - ``"localized"``: Show the number in the default locale format (e.g. "1,234.567").
+        - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
+        - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
+        - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
+        - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
+        - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
+        - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
+        - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
+        - printf-style format string: Format the number with a printf
+          specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
+          ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
+          can also add prefixes and suffixes. To show British pounds, use
+          ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
+          <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
+
+        Formatting from ``column_config`` always takes precedence over
+        formatting from ``pandas.Styler``. The formatting does not impact the
+        return value when used in ``st.data_editor``.
 
     min_value: int, float, or None
         The minimum value that can be entered. If this is ``None`` (default),
@@ -405,11 +463,10 @@ def NumberColumn(
         (default), integer columns will have a step of 1 and float columns will
         have unrestricted precision. In this case, some floats may display like
         integers. Setting ``step`` for float columns will ensure a consistent
-        number of digits after the decimal even without setting ``format``.
+        number of digits after the decimal are displayed.
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -437,7 +494,7 @@ def NumberColumn(
     .. output::
         https://doc-number-column.streamlit.app/
         height: 300px
-    """
+    """  # noqa: E501
 
     return ColumnConfig(
         label=label,
@@ -478,12 +535,11 @@ def TextColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -491,10 +547,15 @@ def TextColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -532,7 +593,6 @@ def TextColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -589,7 +649,7 @@ def LinkColumn(
     validate: str | None = None,
     display_text: str | None = None,
 ) -> ColumnConfig:
-    """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
+    r"""Configure a link column in ``st.dataframe`` or ``st.data_editor``.
 
     The cell values need to be string and will be shown as clickable links.
     This command needs to be used in the column_config parameter of ``st.dataframe``
@@ -598,12 +658,11 @@ def LinkColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -611,10 +670,15 @@ def LinkColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -656,14 +720,15 @@ def LinkColumn(
 
         - ``None`` (default) to display the URL itself.
         - A string that is displayed in every cell, e.g. ``"Open link"``.
+        - A material icon displayed in every cell, e.g. ``":material/open_in_new:"``
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
-          ``"https://(.*?)\\.example\\.com"`` to extract the display text
-          "foo" from the URL "\\https://foo.example.com".
+          ``"https://(.*?)\.example\.com"`` to extract the display text
+          "foo" from the URL "\https://foo.example.com".
 
         .. Comment: The backslash in front of foo.example.com prevents a hyperlink in docs.
 
-        For more complex cases, you may use `Pandas Styler's format \
+        For more complex cases, you may use `Pandas Styler's format
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
         function on the underlying dataframe. Note that this makes the app slow,
         doesn't work with editable columns, and might be removed in the future.
@@ -672,7 +737,6 @@ def LinkColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -699,9 +763,9 @@ def LinkColumn(
     >>>         "apps": st.column_config.LinkColumn(
     >>>             "Trending apps",
     >>>             help="The top trending Streamlit apps",
-    >>>             validate=r"^https://[a-z]+\\.streamlit\\.app$",
+    >>>             validate=r"^https://[a-z]+\.streamlit\.app$",
     >>>             max_chars=100,
-    >>>             display_text=r"https://(.*?)\\.streamlit\\.app"
+    >>>             display_text=r"https://(.*?)\.streamlit\.app"
     >>>         ),
     >>>         "creator": st.column_config.LinkColumn(
     >>>             "App Creator", display_text="Open profile"
@@ -714,6 +778,8 @@ def LinkColumn(
         https://doc-link-column.streamlit.app/
         height: 300px
     """
+    if display_text and display_text.startswith(":material/"):
+        display_text = validate_material_icon(display_text)
 
     return ColumnConfig(
         label=label,
@@ -751,12 +817,11 @@ def CheckboxColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -764,10 +829,15 @@ def CheckboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -796,7 +866,6 @@ def CheckboxColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -857,12 +926,11 @@ def SelectboxColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -870,10 +938,15 @@ def SelectboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -908,7 +981,6 @@ def SelectboxColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -978,12 +1050,11 @@ def BarChartColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -991,10 +1062,15 @@ def BarChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     pinned: bool or None
         Whether the column is pinned. A pinned column will stay visible on the
@@ -1012,7 +1088,6 @@ def BarChartColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1072,12 +1147,11 @@ def LineChartColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1085,10 +1159,15 @@ def LineChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     pinned: bool or None
         Whether the column is pinned. A pinned column will stay visible on the
@@ -1106,7 +1185,6 @@ def LineChartColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1167,12 +1245,11 @@ def AreaChartColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1180,10 +1257,15 @@ def AreaChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     pinned: bool or None
         Whether the column is pinned. A pinned column will stay visible on the
@@ -1201,7 +1283,6 @@ def AreaChartColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1251,7 +1332,7 @@ def ImageColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-):
+) -> ColumnConfig:
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
     The cell values need to be one of:
@@ -1268,12 +1349,11 @@ def ImageColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1281,10 +1361,15 @@ def ImageColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     pinned: bool or None
         Whether the column is pinned. A pinned column will stay visible on the
@@ -1294,7 +1379,6 @@ def ImageColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1339,7 +1423,7 @@ def ListColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-):
+) -> ColumnConfig:
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
     This is the default column type for list-like values. List columns are not editable
@@ -1348,12 +1432,11 @@ def ListColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1361,10 +1444,15 @@ def ListColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     pinned: bool or None
         Whether the column is pinned. A pinned column will stay visible on the
@@ -1374,7 +1462,6 @@ def ListColumn(
 
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1424,7 +1511,7 @@ def DatetimeColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: datetime.datetime | None = None,
-    format: str | None = None,
+    format: str | Literal["localized", "distance", "calendar", "iso8601"] | None = None,
     min_value: datetime.datetime | None = None,
     max_value: datetime.datetime | None = None,
     step: int | float | datetime.timedelta | None = None,
@@ -1439,12 +1526,11 @@ def DatetimeColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1452,10 +1538,15 @@ def DatetimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -1482,14 +1573,27 @@ def DatetimeColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format: str or None
-        A momentJS format string controlling how datetimes are displayed. See
-        `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for
-        available formats. If this is ``None`` (default), the format is
-        ``YYYY-MM-DD HH:mm:ss``.
+    format: str, "localized", "distance", "calendar", "iso8601", or None
+        A format string controlling how datetimes are displayed.
+        This can be one of the following values:
 
-        Number formatting from ``column_config`` always takes precedence over
-        number formatting from ``pandas.Styler``.
+        - ``None`` (default): Show the datetime in ``"YYYY-MM-DD HH:mm:ss"``
+          format (e.g. "2025-03-04 20:00:00").
+        - ``"localized"``: Show the datetime in the default locale format (e.g.
+          "Mar 4, 2025, 12:00:00 PM" in the America/Los_Angeles timezone).
+        - ``"distance"``: Show the datetime in a relative format (e.g.
+          "a few seconds ago").
+        - ``"calendar"``: Show the datetime in a calendar format (e.g.
+          "Today at 8:00 PM").
+        - ``"iso8601"``: Show the datetime in ISO 8601 format (e.g.
+          "2025-03-04T20:00:00.000Z").
+        - A momentJS format string: Format the datetime with a string, like
+          ``"ddd ha"`` to show "Tue 8pm". For available formats, see
+          `momentJS <https://momentjs.com/docs/#/displaying/format/>`_.
+
+        Formatting from ``column_config`` always takes precedence over
+        formatting from ``pandas.Styler``. The formatting does not impact the
+        return value when used in ``st.data_editor``.
 
     min_value: datetime.datetime or None
         The minimum datetime that can be entered. If this is ``None``
@@ -1509,7 +1613,6 @@ def DatetimeColumn(
 
     Examples
     --------
-
     >>> from datetime import datetime
     >>> import pandas as pd
     >>> import streamlit as st
@@ -1573,7 +1676,7 @@ def TimeColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: datetime.time | None = None,
-    format: str | None = None,
+    format: str | Literal["localized", "iso8601"] | None = None,
     min_value: datetime.time | None = None,
     max_value: datetime.time | None = None,
     step: int | float | datetime.timedelta | None = None,
@@ -1586,12 +1689,11 @@ def TimeColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1599,10 +1701,15 @@ def TimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -1629,14 +1736,23 @@ def TimeColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format: str or None
-        A momentJS format string controlling how times are displayed. See
-        `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for
-        available formats. If this is ``None`` (default), the format is
-        ``HH:mm:ss``.
+    format: str, "localized", "iso8601", or None
+        A format string controlling how times are displayed.
+        This can be one of the following values:
 
-        Number formatting from ``column_config`` always takes precedence over
-        number formatting from ``pandas.Styler``.
+        - ``None`` (default): Show the time in ``"HH:mm:ss"`` format (e.g.
+          "20:00:00").
+        - ``"localized"``: Show the time in the default locale format (e.g.
+          "12:00:00 PM" in the America/Los_Angeles timezone).
+        - ``"iso8601"``: Show the time in ISO 8601 format (e.g.
+          "20:00:00.000Z").
+        - A momentJS format string: Format the time with a string, like
+          ``"ha"`` to show "8pm". For available formats, see
+          `momentJS <https://momentjs.com/docs/#/displaying/format/>`_.
+
+        Formatting from ``column_config`` always takes precedence over
+        formatting from ``pandas.Styler``. The formatting does not impact the
+        return value when used in ``st.data_editor``.
 
     min_value: datetime.time or None
         The minimum time that can be entered. If this is ``None`` (default),
@@ -1652,7 +1768,6 @@ def TimeColumn(
 
     Examples
     --------
-
     >>> from datetime import time
     >>> import pandas as pd
     >>> import streamlit as st
@@ -1715,7 +1830,7 @@ def DateColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: datetime.date | None = None,
-    format: str | None = None,
+    format: str | Literal["localized", "distance", "iso8601"] | None = None,
     min_value: datetime.date | None = None,
     max_value: datetime.date | None = None,
     step: int | None = None,
@@ -1728,12 +1843,11 @@ def DateColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1741,10 +1855,15 @@ def DateColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
 
     disabled: bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -1771,14 +1890,25 @@ def DateColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format: str or None
-        A momentJS format string controlling how times are displayed. See
-        `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for
-        available formats. If this is ``None`` (default), the format is
-        ``YYYY-MM-DD``.
+    format: str, "localized", "distance", "iso8601", or None
+        A format string controlling how dates are displayed.
+        This can be one of the following values:
 
-        Number formatting from ``column_config`` always takes precedence over
-        number formatting from ``pandas.Styler``.
+        - ``None`` (default): Show the date in ``"YYYY-MM-DD"`` format (e.g.
+          "2025-03-04").
+        - ``"localized"``: Show the date in the default locale format (e.g.
+          "Mar 4, 2025" in the America/Los_Angeles timezone).
+        - ``"distance"``: Show the date in a relative format (e.g.
+          "a few seconds ago").
+        - ``"iso8601"``: Show the date in ISO 8601 format (e.g.
+          "2025-03-04").
+        - A momentJS format string: Format the date with a string, like
+          ``"ddd, MMM Do"`` to show "Tue, Mar 4th". For available formats, see
+          `momentJS <https://momentjs.com/docs/#/displaying/format/>`_.
+
+        Formatting from ``column_config`` always takes precedence over
+        formatting from ``pandas.Styler``. The formatting does not impact the
+        return value when used in ``st.data_editor``.
 
     min_value: datetime.date or None
         The minimum date that can be entered. If this is ``None`` (default),
@@ -1794,7 +1924,6 @@ def DateColumn(
 
     Examples
     --------
-
     >>> from datetime import date
     >>> import pandas as pd
     >>> import streamlit as st
@@ -1853,9 +1982,10 @@ def ProgressColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-    format: str | None = None,
+    format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
+    step: int | float | None = None,
 ) -> ColumnConfig:
     """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1865,12 +1995,11 @@ def ProgressColumn(
 
     Parameters
     ----------
-
     label: str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1878,17 +2007,42 @@ def ProgressColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column
-        label. If this is ``None`` (default), no tooltip is displayed.
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
 
-    format: str or None
-        A printf-style format string controlling how numbers are displayed.
-        This does not impact the return value. The following formatters are
-        valid: ``%d``, ``%e``, ``%f``, ``%g``, ``%i``, ``%u``. You can also add
-        prefixes and suffixes, e.g. ``"$ %.2f"`` to show a dollar prefix. If
-        this is ``None`` (default), the numbers are not formatted.
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    format: str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
+        A format string controlling how the numbers are displayed.
+        This can be one of the following values:
+
+        - ``None`` (default): Streamlit infers the formatting from the data.
+        - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
+        - ``"localized"``: Show the number in the default locale format (e.g. "1,234.567").
+        - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
+        - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
+        - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
+        - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
+        - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
+        - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
+        - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
+        - printf-style format string: Format the number with a printf
+          specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
+          ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
+          can also add prefixes and suffixes. To show British pounds, use
+          ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
+          <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
+
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``. The number formatting does
+        not impact the return value when used in ``st.data_editor``.
 
     pinned: bool or None
         Whether the column is pinned. A pinned column will stay visible on the
@@ -1904,9 +2058,14 @@ def ProgressColumn(
         The maximum value of the progress bar. If this is ``None`` (default),
         the maximum will be 100 for integer values and 1.0 for float values.
 
+    step: int, float, or None
+        The precision of numbers. If this is ``None`` (default), integer columns
+        will have a step of 1 and float columns will have a step of 0.01.
+        Setting ``step`` for float columns will ensure a consistent number of
+        digits after the decimal are displayed.
+
     Examples
     --------
-
     >>> import pandas as pd
     >>> import streamlit as st
     >>>
@@ -1933,7 +2092,7 @@ def ProgressColumn(
     .. output::
         https://doc-progress-column.streamlit.app/
         height: 300px
-    """
+    """  # noqa: E501
 
     return ColumnConfig(
         label=label,
@@ -1945,5 +2104,91 @@ def ProgressColumn(
             format=format,
             min_value=min_value,
             max_value=max_value,
+            step=step,
         ),
+    )
+
+
+@gather_metrics("column_config.JsonColumn")
+def JsonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+) -> ColumnConfig:
+    """Configure a JSON column in ``st.dataframe`` or ``st.data_editor``.
+
+    Cells need to contain JSON strings or JSON-compatible objects. JSON columns
+    are not editable at the moment. This command needs to be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+    label: str or None
+        The label shown at the top of the column. If this is ``None``
+        (default), the column name is used.
+
+    width: "small", "medium", "large", int, or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
+
+    help: str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    pinned: bool or None
+        Whether the column is pinned. A pinned column will stay visible on the
+        left side no matter where the user scrolls. If this is ``None``
+        (default), Streamlit will decide: index columns are pinned, and data
+        columns are not pinned.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "json": [
+    >>>             {"foo": "bar", "bar": "baz"},
+    >>>             {"foo": "baz", "bar": "qux"},
+    >>>             {"foo": "qux", "bar": "foo"},
+    >>>             None,
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.dataframe(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "json": st.column_config.JsonColumn(
+    >>>             "JSON Data",
+    >>>             help="JSON strings or objects",
+    >>>             width="large",
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
+    .. output::
+        https://doc-json-column.streamlit.app/
+        height: 300px
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        pinned=pinned,
+        type_config=JsonColumnConfig(type="json"),
     )
