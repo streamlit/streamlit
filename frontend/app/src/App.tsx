@@ -733,6 +733,9 @@ export class App extends PureComponent<Props, State> {
       //   2. our last script run attempt was interrupted by the websocket
       //      connection dropping, or
       //   3. the host explicitly requested a reconnect (we trigger scriptRunState to be RERUN_REQUESTED)
+      //   4. there is an indication that the script is using fragments, which might need a rerun to be reinitialized
+      //      if a new app session got created.
+
       const lastRunWasInterrupted =
         this.state.scriptRunState === ScriptRunState.RUNNING
       const wasRerunRequested =
@@ -740,8 +743,12 @@ export class App extends PureComponent<Props, State> {
 
       if (
         !this.sessionInfo.last ||
+        this.sessionInfo.last.sessionId !==
+          this.sessionInfo.current.sessionId ||
         lastRunWasInterrupted ||
-        wasRerunRequested
+        wasRerunRequested ||
+        this.state.fragmentIdsThisRun.length > 0 ||
+        this.state.autoReruns.length > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1146,6 +1153,7 @@ export class App extends PureComponent<Props, State> {
    * @param newSessionProto a NewSession protobuf
    */
   handleNewSession = (newSessionProto: NewSession): void => {
+    console.log("handleNewSession")
     const initialize = newSessionProto.initialize as Initialize
 
     if (this.hasStreamlitVersionChanged(initialize)) {
