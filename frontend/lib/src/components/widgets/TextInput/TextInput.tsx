@@ -194,6 +194,7 @@ function TextInput({
         overrides={{
           Input: {
             style: {
+              fontWeight: theme.fontWeights.normal,
               // Issue: https://github.com/streamlit/streamlit/issues/2495
               // The input won't shrink in Firefox,
               // unless the line below is provided.

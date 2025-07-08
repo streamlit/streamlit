@@ -415,6 +415,7 @@ function DateInput({
                 },
                 Input: {
                   style: {
+                    fontWeight: theme.fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
                     paddingLeft: spacing.md,

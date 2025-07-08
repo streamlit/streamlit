@@ -369,6 +369,7 @@ const Multiselect: FC<Props> = props => {
                 overrides: {
                   Root: {
                     style: {
+                      fontWeight: theme.fontWeights.normal,
                       borderTopLeftRadius: theme.radii.md,
                       borderTopRightRadius: theme.radii.md,
                       borderBottomRightRadius: theme.radii.md,

@@ -107,6 +107,9 @@ function TimeInput({
           },
 
           SingleValue: {
+            style: {
+              fontWeight: theme.fontWeights.normal,
+            },
             props: {
               "data-testid": "stTimeInputTimeDisplay",
             },
