@@ -25,7 +25,7 @@ data = np.random.randint(low=0, high=20, size=(20, 3))
 
 
 @st.dialog("Test Dialog with Images")
-def dialog_with_images():
+def dialog_with_images() -> None:
     st.write("Hello!")
     st.slider("Slide me!", 0, 10)
 
@@ -49,7 +49,7 @@ if st.button("Open Dialog with Images"):
 
 
 @st.dialog("Simple Dialog")
-def simple_dialog():
+def simple_dialog() -> None:
     st.write("Hello again!")
     st.text_input("Enter something!")
 
@@ -62,7 +62,7 @@ if st.button("Open Dialog without Images"):
 
 
 @st.dialog("Large-width Dialog", width="large")
-def large_width_dialog():
+def large_width_dialog() -> None:
     st.write("This dialog has a large width.")
 
     if st.button("Submit", key="dialog4-btn"):
@@ -74,7 +74,7 @@ if st.button("Open large-width Dialog"):
 
 
 @st.dialog("Dialog with headings")
-def headings_dialog():
+def headings_dialog() -> None:
     st.header("Header", help="Some tooltip!")
 
 
@@ -86,7 +86,7 @@ if st.button("Open headings Dialog"):
 with st.sidebar:
 
     @st.dialog("Simple Dialog in Sidebar")
-    def dialog_in_sidebar():
+    def dialog_in_sidebar() -> None:
         st.write("Hello sidebar dialog!")
 
         if st.button("Submit", key="dialog5-btn"):
@@ -97,9 +97,9 @@ with st.sidebar:
 
 
 @st.dialog("Submit-button Dialog")
-def submit_button_dialog():
+def submit_button_dialog() -> None:
     st.write("This dialog has a submit button.")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
 
     if st.button("Submit", key="dialog6-btn"):
         st.rerun()
@@ -110,14 +110,14 @@ if st.button("Open submit-button Dialog"):
 
 
 @st.dialog("Level2 Dialog")
-def level2_dialog():
+def level2_dialog() -> None:
     st.write("Second level dialog")
 
 
 @st.dialog("Level1 Dialog")
-def level1_dialog():
+def level1_dialog() -> None:
     st.write("First level dialog")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
     level2_dialog()
 
 
@@ -126,10 +126,10 @@ if st.button("Open Nested Dialogs"):
 
 
 @st.dialog("Dialog with error")
-def dialog_with_error():
+def dialog_with_error() -> None:
     with st.form(key="forecast_form"):
         # key is an invalid argument, so this shows an error
-        st.form_submit_button("Submit", key="foo")
+        st.form_submit_button("Submit", key="foo")  # type: ignore[call-arg]
 
 
 if st.button("Open Dialog with Key Error"):
@@ -137,7 +137,7 @@ if st.button("Open Dialog with Key Error"):
 
 
 @st.dialog("Dialog with copy buttons")
-def dialog_with_copy_buttons():
+def dialog_with_copy_buttons() -> None:
     st.json([1, 2, 3])
 
     copied_text = st.text_input("Enter copied text")
@@ -149,7 +149,7 @@ if st.button("Open Dialog with Copy Buttons"):
 
 
 @st.experimental_dialog("Usage of deprecated experimental_dialog")
-def dialog_with_deprecation_warning():
+def dialog_with_deprecation_warning() -> None:
     pass  # No need to write anything in the dialog body.
 
 
@@ -158,7 +158,7 @@ if st.button("Open Dialog with deprecation warning"):
 
 
 @st.fragment()
-def fragment():
+def fragment() -> None:
     if st.button("Fragment Button"):
         st.write("Fragment Button clicked")
 
@@ -167,7 +167,7 @@ fragment()
 
 
 @st.dialog("Dialog with chart")
-def dialog_with_chart():
+def dialog_with_chart() -> None:
     st.write("This dialog has a chart")
     st.bar_chart(pd.DataFrame(data, columns=["a", "b", "c"]))
 
@@ -177,7 +177,7 @@ if st.button("Open Chart Dialog"):
 
 
 @st.dialog("Dialog with dataframe")
-def dialog_with_dataframe():
+def dialog_with_dataframe() -> None:
     st.dataframe(
         pd.DataFrame(data, columns=["a", "b", "c"]),
         column_config={
@@ -194,7 +194,7 @@ if st.button("Open Dialog with dataframe"):
 
 
 @st.dialog("Dialog with rerun")
-def dialog_with_rerun():
+def dialog_with_rerun() -> None:
     if st.button("Close Dialog"):
         time.sleep(0.15)
         st.rerun()
@@ -202,3 +202,14 @@ def dialog_with_rerun():
 
 if st.button("Open Dialog with rerun"):
     dialog_with_rerun()
+
+
+@st.dialog(
+    "This is a very long dialog title that should not overlap with the close button"
+)
+def dialog_with_long_title() -> None:
+    st.write("This dialog has a very long title to test spacing.")
+
+
+if st.button("Open Dialog with long title"):
+    dialog_with_long_title()

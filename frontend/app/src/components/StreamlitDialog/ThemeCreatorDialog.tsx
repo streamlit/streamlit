@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback } from "react"
+import React, { ReactElement, useCallback, useContext, useState } from "react"
 
 import { Check } from "@emotion-icons/material-outlined"
 
@@ -90,8 +90,8 @@ export interface Props {
 }
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
-  const [copied, updateCopied] = React.useState(false)
-  const { activeTheme, addThemes, setTheme } = React.useContext(LibContext)
+  const [copied, updateCopied] = useState(false)
+  const { activeTheme, addThemes, setTheme } = useContext(LibContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
 
@@ -111,12 +111,17 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
 
   const config = toMinimalToml(themeInput)
 
-  const copyConfig = (): void => {
+  const copyConfig = async (): Promise<void> => {
     props.metricsMgr.enqueue("menuClick", {
       label: "copyThemeToClipboard",
     })
-    navigator.clipboard.writeText(config)
-    updateCopied(true)
+    try {
+      await navigator.clipboard.writeText(config)
+      updateCopied(true)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (e) {
+      updateCopied(false)
+    }
   }
 
   const onClickedBack = (): void => {

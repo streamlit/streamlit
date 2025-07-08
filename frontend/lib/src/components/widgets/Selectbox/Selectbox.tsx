@@ -102,8 +102,8 @@ const Selectbox: FC<Props> = ({
   })
 
   const onChange = useCallback(
-    (value: SelectboxValue) => {
-      setValueWithSource({ value, fromUi: true })
+    (valueArg: SelectboxValue) => {
+      setValueWithSource({ value: valueArg, fromUi: true })
     },
     [setValueWithSource]
   )
@@ -121,7 +121,7 @@ const Selectbox: FC<Props> = ({
       help={help}
       placeholder={placeholder}
       clearable={clearable}
-      acceptNewOptions={acceptNewOptions}
+      acceptNewOptions={acceptNewOptions ?? false}
     />
   )
 }

@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
+import { useMemo } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { mix, transparentize } from "color2k"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
@@ -52,9 +52,9 @@ export type CustomGridTheme = {
  * @return a glide-data-grid compatible theme.
  */
 function useCustomTheme(): Readonly<CustomGridTheme> {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
-  const gridTheme: CustomGridTheme = React.useMemo<CustomGridTheme>(() => {
+  const gridTheme: CustomGridTheme = useMemo<CustomGridTheme>(() => {
     const headerIcons = {
       // Material design icon `edit_note`:
       // https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Aedit_note%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048
@@ -68,43 +68,46 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       accentColor: theme.colors.primary,
       accentFg: theme.colors.white,
       accentLight: transparentize(theme.colors.primary, 0.9),
-      borderColor: theme.colors.borderColorLight,
-      horizontalBorderColor: theme.colors.borderColorLight,
+      borderColor: theme.colors.dataframeBorderColor,
+      horizontalBorderColor: theme.colors.dataframeBorderColor,
       fontFamily: theme.genericFonts.bodyFont,
       bgSearchResult: transparentize(theme.colors.primary, 0.9),
       resizeIndicatorColor: theme.colors.primary,
       // Header styling:
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
-      bgHeader: theme.colors.bgMix,
-      bgHeaderHasFocus: theme.colors.darkenedBgMix15,
-      bgHeaderHovered: theme.colors.darkenedBgMix15,
+      bgHeader: theme.colors.dataframeHeaderBackgroundColor,
+      bgHeaderHasFocus: transparentize(theme.colors.darkenedBgMix100, 0.9),
+      bgHeaderHovered: transparentize(theme.colors.darkenedBgMix100, 0.9),
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
-      headerFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
+      headerIconSize: Math.round(convertRemToPx("1.125rem")),
+      headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:
-      baseFontStyle: `${convertRemToPx(theme.fontSizes.sm)}px`,
+      baseFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       editorFontSize: theme.fontSizes.sm,
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),
       textLight: theme.colors.fadedText40,
-      textBubble: theme.colors.fadedText60,
       bgCell: theme.colors.bgColor,
       // uses same as bgCell to always have the same background color:
       bgCellMedium: theme.colors.bgColor,
       cellHorizontalPadding: Math.round(convertRemToPx(theme.spacing.sm)),
       cellVerticalPadding: Math.round(convertRemToPx("0.1875rem")),
       // Special cells:
+      textBubble: theme.colors.fadedText60,
       bgBubble: theme.colors.secondaryBg,
       bgBubbleSelected: theme.colors.secondaryBg,
+      bubbleHeight: Math.round(convertRemToPx("1.25rem")),
+      bubblePadding: Math.round(convertRemToPx(theme.spacing.sm)),
+      bubbleMargin: Math.round(convertRemToPx(theme.spacing.twoXS)),
       linkColor: theme.colors.link,
       drilldownBorder: theme.colors.darkenedBgMix25,
+      checkboxMaxSize: Math.round(convertRemToPx(theme.sizes.checkbox)),
       // Unused settings:
       // lineHeight
-      // headerIconSize: number;
       // markerFontStyle: string;
-      // resizeIndicatorColor?: string;
       // headerBottomBorderColor?: string;
     }
 

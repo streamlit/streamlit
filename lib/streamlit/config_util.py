@@ -54,19 +54,19 @@ def show_config(
         )
     )
 
-    def append_desc(text):
+    def append_desc(text: str) -> None:
         out.append("# " + cli_util.style_for_cli(text, bold=True))
 
-    def append_comment(text):
+    def append_comment(text: str) -> None:
         out.append("# " + cli_util.style_for_cli(text))
 
-    def append_section(text):
+    def append_section(text: str) -> None:
         out.append(cli_util.style_for_cli(text, bold=True, fg="green"))
 
-    def append_setting(text):
+    def append_setting(text: str) -> None:
         out.append(cli_util.style_for_cli(text, fg="green"))
 
-    for section in section_descriptions.keys():
+    for section in section_descriptions:
         # We inject a fake config section used for unit tests that we exclude here as
         # its options are often missing required properties, which confuses the code
         # below.
@@ -84,7 +84,7 @@ def show_config(
             continue
 
         out.append("")
-        append_section("[%s]" % section)
+        append_section(f"[{section}]")
         out.append("")
 
         for option in section_options.values():
@@ -125,8 +125,7 @@ def show_config(
                     append_comment(line)
                 append_comment("")
                 append_comment(
-                    "This option will be removed on or after %s."
-                    % option.expiration_date
+                    f"This option will be removed on or after {option.expiration_date}."
                 )
 
             import toml
@@ -138,7 +137,7 @@ def show_config(
                 # Ensure a line break before appending "Default" comment, if not already there
                 if out[-1] != "#":
                     append_comment("")
-                append_comment("Default: %s" % toml_default)
+                append_comment(f"Default: {toml_default}")
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
@@ -151,7 +150,7 @@ def show_config(
             if option_is_manually_set:
                 if out[-1] != "# ":
                     append_comment("")
-                append_comment("The value below was set in %s" % option.where_defined)
+                append_comment(f"The value below was set in {option.where_defined}")
 
             toml_setting = toml.dumps({key: option.value})
 
@@ -178,8 +177,7 @@ def _clean_paragraphs(txt: str) -> list[str]:
     # Strip both leading and trailing newlines.
     txt = txt.strip("\n")
     paragraphs = txt.split("\n\n")
-    cleaned_paragraphs = [
+    return [
         "\n".join(_clean(line) for line in paragraph.split("\n"))
         for paragraph in paragraphs
     ]
-    return cleaned_paragraphs

@@ -17,9 +17,8 @@
 syntax = "proto3";
 
 option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "LayoutProto";
+option java_outer_classname = "WidthConfigProto";
 
-// Common layout-related enums and messages that can be reused across different elements.
 package streamlit;
 
 message WidthConfig {

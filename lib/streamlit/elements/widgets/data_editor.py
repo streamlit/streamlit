@@ -270,8 +270,11 @@ def _apply_cell_edits(
                 # The edited cell is part of the index
                 # TODO(lukasmasuch): To support multi-index in the future:
                 # use a tuple of values here instead of a single value
-                df.index.to_numpy()[row_pos] = _parse_value(
-                    value, dataframe_schema[INDEX_IDENTIFIER]
+                old_idx_value = df.index[row_pos]
+                new_idx_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
+                df.rename(
+                    index={old_idx_value: new_idx_value},
+                    inplace=True,  # noqa: PD002
                 )
             else:
                 col_pos = df.columns.get_loc(col_name)
@@ -370,8 +373,8 @@ def _apply_row_additions(
         # Row cannot be added -> skip it and log a warning.
         _LOGGER.warning(
             "Cannot automatically add row for the index "
-            f"of type {type(df.index).__name__} without an explicit index value. "
-            "Row addition skipped."
+            "of type %s without an explicit index value. Row addition skipped.",
+            type(df.index).__name__,
         )
 
 
@@ -477,7 +480,7 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
         )
 
 
-def _check_column_names(data_df: pd.DataFrame):
+def _check_column_names(data_df: pd.DataFrame) -> None:
     """Check if the column names in the provided dataframe are valid.
 
     It's not allowed to have duplicate column names or column names that are
@@ -511,7 +514,7 @@ def _check_type_compatibilities(
     data_df: pd.DataFrame,
     columns_config: ColumnConfigMapping,
     dataframe_schema: DataframeSchema,
-):
+) -> None:
     """Check column type to data type compatibility.
 
     Iterates the index and all columns of the dataframe to check if
@@ -666,7 +669,7 @@ class DataEditorMixin:
             Desired height of the data editor expressed in pixels. If ``height``
             is ``None`` (default), Streamlit sets the height to show at most
             ten rows. Vertical scrolling within the data editor element is
-            enabled when the height does not accomodate all rows.
+            enabled when the height does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -697,7 +700,7 @@ class DataEditorMixin:
             - A string to set the display label of the column.
 
             - One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
               and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
@@ -933,6 +936,7 @@ class DataEditorMixin:
             "data_editor",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             data=arrow_bytes,
             width=width,
             height=height,
@@ -949,7 +953,7 @@ class DataEditorMixin:
         if use_container_width is None:
             # If use_container_width was not explicitly set by the user, we set
             # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = True if width is None else False
+            use_container_width = width is None
 
         proto.use_container_width = use_container_width
 

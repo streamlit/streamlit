@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
-import { useTheme } from "@emotion/react"
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
-import {
-  convertRemToPx,
-  EmotionTheme,
-  hasLightBackgroundColor,
-} from "~lib/theme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledColumnHeaderRow,
@@ -83,7 +85,7 @@ function ColumnMenu({
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const [formatMenuOpen, setFormatMenuOpen] = useState(false)
   const { colors, fontSizes, radii, fontWeights } = theme
 
@@ -104,7 +106,7 @@ function ColumnMenu({
     }
   }, [])
 
-  const closeMenu = React.useCallback((): void => {
+  const closeMenu = useCallback((): void => {
     onCloseMenu()
   }, [onCloseMenu])
 

@@ -24,17 +24,44 @@ import {
   ThemeConfig,
   ThemeProvider,
 } from "@streamlit/lib"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { notNullOrUndefined } from "@streamlit/utils"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
+
+const setSidebarHeadingFontSizes = (
+  configHeadingFontSizes: string[] | null | undefined
+): string[] => {
+  // Default sidebar heading font sizes
+  const sidebarHeadingFontSizes = [
+    "1.5rem",
+    "1.25rem",
+    "1.125rem",
+    "1rem",
+    "0.875rem",
+    "0.75rem",
+  ]
+
+  if (configHeadingFontSizes) {
+    // If specifically set in sidebar config, override default
+    configHeadingFontSizes.forEach((size: string, index: number) => {
+      sidebarHeadingFontSizes[index] = size
+    })
+  }
+
+  return sidebarHeadingFontSizes
+}
 
 export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
   let sidebarOverride = {}
   if (notNullOrUndefined(theme.themeInput?.sidebar)) {
     sidebarOverride = theme.themeInput.sidebar
   }
+
+  // Handle configured vs. default header font sizes for sidebar
+  const headingFontSizes = setSidebarHeadingFontSizes(
+    theme.themeInput?.sidebar?.headingFontSizes
+  )
 
   // Either use the configured background color or secondary background from main theme:
   const sidebarBackground =
@@ -51,6 +78,7 @@ export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
     ...sidebarOverride,
     backgroundColor: sidebarBackground,
     secondaryBackgroundColor: secondaryBackgroundColor,
+    headingFontSizes: headingFontSizes,
   }
 
   const baseTheme =
@@ -74,7 +102,6 @@ const ThemedSidebar = ({
   children,
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift">): ReactElement => {
-  const { sidebarChevronDownshift: chevronDownshift } = useAppContext()
   const { activeTheme } = useContext(LibContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
@@ -83,9 +110,7 @@ const ThemedSidebar = ({
       theme={sidebarTheme.emotion}
       baseuiTheme={sidebarTheme.basewebTheme}
     >
-      <Sidebar {...sidebarProps} chevronDownshift={chevronDownshift}>
-        {children}
-      </Sidebar>
+      <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )
 }

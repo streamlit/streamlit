@@ -23,6 +23,7 @@ from datetime import timedelta
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -56,8 +57,10 @@ def get_text_or_block(delta):
         element = delta.new_element
         if element.WhichOneof("type") == "text":
             return element.text.body
-    elif delta.WhichOneof("type") == "add_block":
+        return None
+    if delta.WhichOneof("type") == "add_block":
         return "new_block"
+    return None
 
 
 def as_cached_result(value: Any) -> CachedResult:
@@ -84,12 +87,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     def get_text_delta_contents(self) -> list[str]:
         deltas = self.get_all_deltas_from_queue()
-        text = [
+        return [
             element.text.body
             for element in (delta.new_element for delta in deltas)
             if element.WhichOneof("type") == "text"
         ]
-        return text
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -99,8 +101,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         def foo():
             return 42
 
-        self.assertEqual(foo(), 42)
-        self.assertEqual(foo(), 42)
+        assert foo() == 42
+        assert foo() == 42
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -110,8 +112,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         def foo(x):
             return x
 
-        self.assertEqual(foo(1.0), 1.0)
-        self.assertEqual(foo(3.0), 3.0)
+        assert foo(1.0) == 1.0
+        assert foo(3.0) == 3.0
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -126,18 +128,18 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 called[0] = True
                 return x
 
-            self.assertFalse(called[0])
+            assert not called[0]
             f(0)
 
-            self.assertTrue(called[0])
+            assert called[0]
 
             called = [False]  # Reset called
 
             f(0)
-            self.assertFalse(called[0])
+            assert not called[0]
 
             f(1)
-            self.assertTrue(called[0])
+            assert called[0]
 
             mock_exception.assert_not_called()
 
@@ -156,8 +158,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             d = {"answer": 0}
 
-            self.assertEqual(foo(d), 1)
-            self.assertEqual(foo(d), 2)
+            assert foo(d) == 1
+            assert foo(d) == 2
 
             mock_exception.assert_not_called()
 
@@ -173,32 +175,32 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             call_count[0] += 1
 
         foo(1, 2, 3, kwarg1=4, _kwarg2=5, kwarg3=6, _kwarg4=7)
-        self.assertEqual([1], call_count)
+        assert call_count == [1]
 
         # Call foo again, but change the values for _arg2, _kwarg2, and _kwarg4.
         # The call count shouldn't change, because these args will not be part
         # of the hash.
         foo(1, None, 3, kwarg1=4, _kwarg2=None, kwarg3=6, _kwarg4=None)
-        self.assertEqual([1], call_count)
+        assert call_count == [1]
 
         # Changing the value of any other argument will increase the call
         # count. We test each argument type:
 
         # > arg1 (POSITIONAL_OR_KEYWORD)
         foo(None, 2, 3, kwarg1=4, _kwarg2=5, kwarg3=6, _kwarg4=7)
-        self.assertEqual([2], call_count)
+        assert call_count == [2]
 
         # > *arg (VAR_POSITIONAL)
         foo(1, 2, None, kwarg1=4, _kwarg2=5, kwarg3=6, _kwarg4=7)
-        self.assertEqual([3], call_count)
+        assert call_count == [3]
 
         # > kwarg1 (KEYWORD_ONLY)
         foo(1, 2, 3, kwarg1=None, _kwarg2=5, kwarg3=6, _kwarg4=7)
-        self.assertEqual([4], call_count)
+        assert call_count == [4]
 
         # > **kwarg (VAR_KEYWORD)
         foo(1, 2, 3, kwarg1=4, _kwarg2=5, kwarg3=None, _kwarg4=7)
-        self.assertEqual([5], call_count)
+        assert call_count == [5]
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -223,9 +225,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 return "static method!"
 
         obj = TestClass()
-        self.assertEqual("member func!", obj.member_func())
-        self.assertEqual("class method!", obj.class_method())
-        self.assertEqual("static method!", obj.static_method())
+        assert obj.member_func() == "member func!"
+        assert obj.class_method() == "class method!"
+        assert obj.static_method() == "static method!"
 
     @parameterized.expand(
         [
@@ -286,7 +288,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             warning.reset_mock()
 
             # Test st.cache functions that raise errors
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
 
                 @cache_decorator
                 def cached_raise_error():
@@ -490,7 +492,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             cont.text(i)
             return i
 
-        with self.assertRaises(CacheReplayClosureError):
+        with pytest.raises(CacheReplayClosureError):
             foo(1)
             st.text("---")
             foo(1)
@@ -544,8 +546,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         foo(0), foo(1), foo(2)
         bar(0), bar(1), bar(2)
-        self.assertEqual([0, 1, 2], foo_vals)
-        self.assertEqual([0, 1, 2], bar_vals)
+        assert foo_vals == [0, 1, 2]
+        assert bar_vals == [0, 1, 2]
 
         # Clear the cache and access our original values again. They
         # should be recomputed.
@@ -553,8 +555,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         foo(0), foo(1), foo(2)
         bar(0), bar(1), bar(2)
-        self.assertEqual([0, 1, 2, 0, 1, 2], foo_vals)
-        self.assertEqual([0, 1, 2, 0, 1, 2], bar_vals)
+        assert foo_vals == [0, 1, 2, 0, 1, 2]
+        assert bar_vals == [0, 1, 2, 0, 1, 2]
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -574,8 +576,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         foo(), foo(), foo()
         bar(), bar(), bar()
-        self.assertEqual(1, foo_call_count[0])
-        self.assertEqual(1, bar_call_count[0])
+        assert foo_call_count[0] == 1
+        assert bar_call_count[0] == 1
 
         # Clear just foo's cache, and call the functions again.
         foo.clear()
@@ -585,8 +587,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         # Foo will have been called a second time, and bar will still
         # have been called just once.
-        self.assertEqual(2, foo_call_count[0])
-        self.assertEqual(1, bar_call_count[0])
+        assert foo_call_count[0] == 2
+        assert bar_call_count[0] == 1
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -601,7 +603,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             return x
 
         function_without_spinner(3)
-        self.assertTrue(self.forward_msg_queue.is_empty())
+        assert self.forward_msg_queue.is_empty()
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -616,7 +618,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             return x
 
         function_with_spinner(3)
-        self.assertFalse(self.forward_msg_queue.is_empty())
+        assert not self.forward_msg_queue.is_empty()
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -631,7 +633,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             return x
 
         function_with_spinner_custom_text(3)
-        self.assertFalse(self.forward_msg_queue.is_empty())
+        assert not self.forward_msg_queue.is_empty()
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -646,7 +648,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             return x
 
         function_with_spinner_empty_text(3)
-        self.assertFalse(self.forward_msg_queue.is_empty())
+        assert not self.forward_msg_queue.is_empty()
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -665,7 +667,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             return inner(x)
 
         outer(3)
-        self.assertFalse(self.forward_msg_queue.is_empty())
+        assert not self.forward_msg_queue.is_empty()
 
         # The spinner uses an empty element and shows the spinner only
         # after a timeout. Instead of mocking the time and waiting for the
@@ -681,7 +683,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 empty_elements_count += 1
         # Since we automatically prevent spinners for nested cached functions,
         # there should only be a single empty element.
-        self.assertEqual(empty_elements_count, 1)
+        assert empty_elements_count == 1
 
 
 class CommonCacheTTLTest(unittest.TestCase):
@@ -724,37 +726,37 @@ class CommonCacheTTLTest(unittest.TestCase):
         timer_patch.return_value = 0
         foo(0)
         bar(0)
-        self.assertEqual([0], foo_vals)
-        self.assertEqual([0], bar_vals)
+        assert foo_vals == [0]
+        assert bar_vals == [0]
 
         # Advance our timer, but not enough to expire our value.
         timer_patch.return_value = one_day * 0.5
         foo(0)
         bar(0)
-        self.assertEqual([0], foo_vals)
-        self.assertEqual([0], bar_vals)
+        assert foo_vals == [0]
+        assert bar_vals == [0]
 
         # Advance our timer enough to expire foo, but not bar.
         timer_patch.return_value = one_day * 1.5
         foo(0)
         bar(0)
-        self.assertEqual([0, 0], foo_vals)
-        self.assertEqual([0], bar_vals)
+        assert foo_vals == [0, 0]
+        assert bar_vals == [0]
 
         # Expire bar. Foo's second value was inserted at time=1.5 days,
         # so it won't expire until time=2.5 days
         timer_patch.return_value = (one_day * 2) + 1
         foo(0)
         bar(0)
-        self.assertEqual([0, 0], foo_vals)
-        self.assertEqual([0, 0], bar_vals)
+        assert foo_vals == [0, 0]
+        assert bar_vals == [0, 0]
 
         # Expire foo for a second time.
         timer_patch.return_value = (one_day * 2.5) + 1
         foo(0)
         bar(0)
-        self.assertEqual([0, 0, 0], foo_vals)
-        self.assertEqual([0, 0], bar_vals)
+        assert foo_vals == [0, 0, 0]
+        assert bar_vals == [0, 0]
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -786,37 +788,37 @@ class CommonCacheTTLTest(unittest.TestCase):
         timer_patch.return_value = 0
         foo(0)
         bar(0)
-        self.assertEqual([0], foo_vals)
-        self.assertEqual([0], bar_vals)
+        assert foo_vals == [0]
+        assert bar_vals == [0]
 
         # Advance our timer, but not enough to expire our value.
         timer_patch.return_value = one_day_seconds * 0.5
         foo(0)
         bar(0)
-        self.assertEqual([0], foo_vals)
-        self.assertEqual([0], bar_vals)
+        assert foo_vals == [0]
+        assert bar_vals == [0]
 
         # Advance our timer enough to expire foo, but not bar.
         timer_patch.return_value = one_day_seconds * 1.5
         foo(0)
         bar(0)
-        self.assertEqual([0, 0], foo_vals)
-        self.assertEqual([0], bar_vals)
+        assert foo_vals == [0, 0]
+        assert bar_vals == [0]
 
         # Expire bar. Foo's second value was inserted at time=1.5 days,
         # so it won't expire until time=2.5 days
         timer_patch.return_value = (one_day_seconds * 2) + 1
         foo(0)
         bar(0)
-        self.assertEqual([0, 0], foo_vals)
-        self.assertEqual([0, 0], bar_vals)
+        assert foo_vals == [0, 0]
+        assert bar_vals == [0, 0]
 
         # Expire foo for a second time.
         timer_patch.return_value = (one_day_seconds * 2.5) + 1
         foo(0)
         bar(0)
-        self.assertEqual([0, 0, 0], foo_vals)
-        self.assertEqual([0, 0], bar_vals)
+        assert foo_vals == [0, 0, 0]
+        assert bar_vals == [0, 0]
 
 
 class CommonCacheThreadingTest(unittest.TestCase):
@@ -859,13 +861,13 @@ class CommonCacheThreadingTest(unittest.TestCase):
             return 42
 
         def call_foo(_: int) -> None:
-            self.assertEqual(42, foo())
+            assert foo() == 42
 
         # Call foo from multiple threads and assert no errors.
         call_on_threads(call_foo, self.NUM_THREADS)
 
         # The cached function should only be called once (see `test_compute_value_only_once`).
-        self.assertEqual(1, cached_func_call_count[0])
+        assert cached_func_call_count[0] == 1
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -878,10 +880,8 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
         @cache_decorator
         def foo():
-            self.assertEqual(
-                0,
-                cached_func_call_count[0],
-                "A cached value was computed multiple times!",
+            assert cached_func_call_count[0] == 0, (
+                "A cached value was computed multiple times!"
             )
             cached_func_call_count[0] += 1
 
@@ -893,7 +893,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
             return 42
 
         def call_foo(_: int) -> None:
-            self.assertEqual(42, foo())
+            assert foo() == 42
 
         call_on_threads(call_foo, num_threads=self.NUM_THREADS, timeout=0.5)
 
@@ -920,7 +920,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
         call_on_threads(clear_caches, self.NUM_THREADS)
 
         # Sanity check: ensure we can still call our cached function.
-        self.assertEqual(42, foo())
+        assert foo() == 42
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -942,7 +942,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
         call_on_threads(clear_foo, self.NUM_THREADS)
 
         # Sanity check: ensure we can still call our cached function.
-        self.assertEqual(42, foo())
+        assert foo() == 42
 
 
 def test_arrow_replay():

@@ -76,7 +76,7 @@ if st.toggle("Show dataframes"):
 
     # Create a large dataframe
     @st.cache_data
-    def create_large_dataframe(num_cols, num_rows):
+    def create_large_dataframe(num_cols: int, num_rows: int) -> pd.DataFrame:
         df = pd.DataFrame({f"col {i}": range(num_rows) for i in range(num_cols)})
         # Make 50% of the columns string columns
         for i in range(num_cols):

@@ -30,11 +30,12 @@ import subprocess
 import sys
 from multiprocessing import Lock
 from multiprocessing.pool import ThreadPool
+from typing import Final
 
 import click
 
 # Where we expect to find the example files.
-E2E_DIRS = [
+E2E_DIRS: Final[list[str]] = [
     "e2e_playwright",
     "e2e_playwright/multipage_apps",
     "e2e_playwright/multipage_apps_v2",
@@ -42,7 +43,7 @@ E2E_DIRS = [
 
 # the hostframe_app.py script does not work because without a script_context
 # the navigation function will raise an exception when trying some non-existing page properties.
-EXCLUDED_FILENAMES: set[str] = {
+EXCLUDED_FILENAMES: Final[set[str]] = {
     "compilation_error_dialog.py",
     "hostframe_app.py",
     "conftest.py",
@@ -54,11 +55,11 @@ EXCLUDED_FILENAMES: set[str] = {
 os.environ["MPLBACKEND"] = "Agg"
 
 
-def _command_to_string(command):
+def _command_to_string(command: str | list[str]) -> str:
     return " ".join(command) if isinstance(command, list) else command
 
 
-def _get_filenames(folders):
+def _get_filenames(folders: list[str]) -> list[str]:
     filenames = []
 
     for folder in folders:
@@ -75,14 +76,14 @@ def _get_filenames(folders):
     return filenames
 
 
-def run_commands(section_header, commands):
+def run_commands(section_header: str, commands: list[str]) -> list[str]:
     """Run a list of commands, displaying them within the given section."""
 
     pool = ThreadPool(processes=max(1, multiprocessing.cpu_count() - 1))
     lock = Lock()
     failed_commands = []
 
-    def process_command(arg):
+    def process_command(arg: tuple[int, str]) -> None:
         i, command = arg
 
         # Display the status.
@@ -103,7 +104,7 @@ def run_commands(section_header, commands):
     return failed_commands
 
 
-def main():
+def main() -> None:
     filenames = _get_filenames(E2E_DIRS)
     commands = [f"python {filename}" for filename in filenames]
     failed = run_commands("bare scripts", commands)

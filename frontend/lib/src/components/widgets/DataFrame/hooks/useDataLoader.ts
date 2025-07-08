@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useCallback } from "react"
 
 import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 
@@ -46,7 +46,7 @@ function useDataLoader(
   numRows: number,
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
-  const getCellContent = React.useCallback(
+  const getCellContent = useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       if (col > columns.length - 1) {
         return getErrorCell(
@@ -113,6 +113,7 @@ function useDataLoader(
       } catch (error) {
         return getErrorCell(
           "Error during cell creation",
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `This error should never happen. Please report this bug. \nError: ${error}`
         )
       }

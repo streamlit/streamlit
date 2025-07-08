@@ -57,7 +57,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     it from multiple threads.
     """
 
-    def __init__(self, persist_storage: CacheStorage, context: CacheStorageContext):
+    def __init__(
+        self, persist_storage: CacheStorage, context: CacheStorageContext
+    ) -> None:
         self.function_key = context.function_key
         self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
@@ -129,9 +131,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 _LOGGER.debug("Memory cache HIT: %s", key)
                 return entry
 
-            else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheStorageKeyNotFoundError("Key not found in mem cache")
+            _LOGGER.debug("Memory cache MISS: %s", key)
+            raise CacheStorageKeyNotFoundError("Key not found in mem cache")
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
         with self._mem_cache_lock:

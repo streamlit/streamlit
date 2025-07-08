@@ -65,14 +65,6 @@ def centered_layout():
 st.button("Centered Layout", on_click=centered_layout)
 
 
-def double_set_page_config():
-    st.set_page_config(page_title="Page Config 1")
-    st.set_page_config(page_title="Page Config 2")
-
-
-st.button("Double Set Page Config", on_click=double_set_page_config)
-
-
 def page_config_with_emoji_shortcode():
     st.set_page_config(
         page_title="With Emoji Shortcode",
@@ -124,3 +116,72 @@ st.button("Page Config With Material Icon", on_click=page_config_with_material_i
 
 # The menu_items parameter is covered by the `main_menu.py` script
 # initial_sidebar_state = auto is covered by the `st_sidebar.py` script
+
+
+# Testing removal of set page config restrictions:
+def double_set_page_config():
+    st.set_page_config(page_title="Page Config 1")
+    st.set_page_config(page_title="Page Config 2")
+
+
+st.button("Double Set Page Config", on_click=double_set_page_config)
+
+
+if st.button("Page Config not first command"):
+    st.write("First command - st.write")
+    st.set_page_config(page_icon=":material/pets:")
+    st.write("Page Icon updated")
+
+
+def set_page_config_properties_additive():
+    st.set_page_config(page_title="Page Config Additive")
+    st.set_page_config(page_icon=":material/electric_bolt:")
+    st.set_page_config(layout="wide")
+
+
+st.button(
+    "Set Page Config Properties Additive", on_click=set_page_config_properties_additive
+)
+
+
+def set_page_config_menu_items_additive():
+    st.set_page_config(menu_items={"Get help": "https://www.streamlit.io"})
+    st.set_page_config(menu_items={"Report a bug": "https://www.example.com"})
+
+
+st.button(
+    "Set Page Config Menu Items Additive", on_click=set_page_config_menu_items_additive
+)
+
+
+def set_initial_menu_items():
+    st.set_page_config(
+        menu_items={
+            "About": "### :red[UPDATED]",
+            "Get help": "https://www.streamlit.io",
+        }
+    )
+
+
+def set_page_config_menu_items_overwrite():
+    st.set_page_config(menu_items={"About": None})
+
+
+st.button("Set Initial Menu Items", on_click=set_initial_menu_items)
+st.button("Menu Items Overwrite", on_click=set_page_config_menu_items_overwrite)
+
+
+def set_page_config_layout_additive():
+    st.set_page_config(page_title="Initial", layout="wide")
+    st.set_page_config(page_title="Updated", layout=None)
+
+
+st.button("Layout Additive", on_click=set_page_config_layout_additive)
+
+
+def set_page_config_sidebar_additive():
+    st.set_page_config(page_title="Initial", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title="Updated", initial_sidebar_state=None)
+
+
+st.button("Sidebar Additive", on_click=set_page_config_sidebar_additive)

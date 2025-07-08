@@ -83,7 +83,7 @@ def to_css_color(color: MaybeColor) -> Color:
         ctuple = _normalize_tuple(ctuple, _int_formatter, _float_formatter)
         if len(ctuple) == 3:
             return f"rgb({ctuple[0]}, {ctuple[1]}, {ctuple[2]})"
-        elif len(ctuple) == 4:
+        if len(ctuple) == 4:
             c4tuple = cast("MixedRGBAColorTuple", ctuple)
             return f"rgba({c4tuple[0]}, {c4tuple[1]}, {c4tuple[2]}, {c4tuple[3]})"
 
@@ -155,7 +155,7 @@ def _to_color_tuple(
     color: MaybeColor,
     rgb_formatter: Callable[[float, MaybeColor], float],
     alpha_formatter: Callable[[float, MaybeColor], float],
-):
+) -> ColorTuple:
     """Convert a potential color to a color tuple.
 
     The exact type of color tuple this outputs is dictated by the formatter parameters.
@@ -224,8 +224,8 @@ def _normalize_tuple(
         b = rgb_formatter(color[2], color)
         return r, g, b
 
-    elif len(color) == 4:
-        color_4tuple = cast("Color4Tuple", color)
+    if len(color) == 4:
+        color_4tuple = color
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)

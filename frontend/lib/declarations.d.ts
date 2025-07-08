@@ -25,12 +25,6 @@ declare module "@loaders.gl/gltf"
 
 declare module "native-file-system-adapter"
 
-declare module "fzy.js" {
-  export function score(pattern: string, subject: string): number
-  export function positions(pattern: string, subject: string): number[]
-  export function hasMatch(pattern: string, subject: string): boolean
-}
-
 // Type definition for an internal component in react-color. We need to override
 // some of it to fix a bug in the color picker that triggers a security error when
 // the color picker is closed in a cross-origin iframe, see `BaseColorPicker.tsx`.

@@ -46,7 +46,7 @@ def set_log_level(level: str | int) -> None:
     elif level in {"DEBUG", logging.DEBUG}:
         log_level = logging.DEBUG
     else:
-        msg = 'undefined log level "%s"' % level
+        msg = f'undefined log level "{level}"'
         logger.critical(msg)
         sys.exit(1)
 
@@ -113,13 +113,12 @@ def get_logger(name: str) -> logging.Logger:
     Logger
 
     """
-    if name in _loggers.keys():
+    if name in _loggers:
         return _loggers[name]
 
-    if name == "root":
-        logger = logging.getLogger("streamlit")
-    else:
-        logger = logging.getLogger(name)
+    logger = (
+        logging.getLogger("streamlit") if name == "root" else logging.getLogger(name)
+    )
 
     logger.setLevel(_global_log_level)
     logger.propagate = False

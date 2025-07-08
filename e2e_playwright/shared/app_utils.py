@@ -21,7 +21,7 @@ from typing import Literal, cast
 
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
@@ -369,7 +369,7 @@ def expect_exception(
     expect(exception_el).to_be_visible()
 
 
-def expect_no_exception(locator: Locator | Page):
+def expect_no_exception(locator: Locator | Page) -> None:
     exception_el = locator.get_by_test_id("stException")
     expect(exception_el).not_to_be_attached()
 
@@ -531,7 +531,7 @@ def expect_help_tooltip(
     app: Locator | Page,
     element_with_help_tooltip: Locator,
     tooltip_text: str | Pattern[str],
-):
+) -> None:
     """Expect a tooltip to be displayed when hovering over the help symbol of an element.
 
     This only works for elements that have our shared help tooltip implemented.
@@ -566,7 +566,7 @@ def expect_help_tooltip(
     expect(tooltip_content).not_to_be_attached()
 
 
-def reset_hovering(locator: Locator | Page):
+def reset_hovering(locator: Locator | Page) -> None:
     """Reset the hovering of the app.
 
     This can be used to ensure that there aren't unexpected UI elements visible
@@ -637,7 +637,7 @@ def expand_sidebar(app: Page) -> Locator:
     Locator
         The sidebar element.
     """
-    app.get_by_test_id("stSidebarCollapsedControl").click()
+    app.get_by_test_id("stExpandSidebarButton").click()
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_visible()
     return sidebar
@@ -662,7 +662,7 @@ def check_top_level_class(app: Page, test_id: str) -> None:
 
 def register_connection_status_observer(page_or_frame: Page | Frame | None) -> None:
     if page_or_frame is None:
-        return None
+        return
 
     page_or_frame.evaluate("""async () => {
         window.streamlitPlaywrightDebugConnectionStatuses = [];
@@ -724,7 +724,7 @@ def expect_connection_status(
     """
 
     if page_or_frame is None:
-        return None
+        return
 
     status = page_or_frame.evaluate(
         """async ([expectedStatus]) => {
@@ -788,6 +788,16 @@ def expect_connection_status(
     assert status == expected_status, status
 
 
+def expect_no_skeletons(
+    locator: Locator | Page | FrameLocator, timeout: int = 10000
+) -> None:
+    """Expect no skeletons to be visible on the page.
+
+    This is useful to check that all elements have fully loaded.
+    """
+    expect(locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=timeout)
+
+
 def wait_for_all_images_to_be_loaded(page: Page) -> None:
     # Wait to make sure that the images have been loaded
     page.wait_for_function("""() => {
@@ -797,7 +807,13 @@ def wait_for_all_images_to_be_loaded(page: Page) -> None:
     """)
 
 
-def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
+def expect_font(
+    page: Page,
+    font_family: str,
+    style: str = "normal",
+    weight: str = "normal",
+    timeout: int = 20000,
+) -> None:
     """
     Wait until the given font_family is recognized as available by the browser.
     Uses document.fonts.check within a wait_for_function call.
@@ -811,6 +827,10 @@ def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
             The Playwright Page object.
         font_family: str
             The name of the font family to check.
+        style: str
+            The style of the font to check (default: "normal").
+        weight: str
+            The weight of the font to check (default: "normal").
         timeout: int
             How long to wait in milliseconds (default: 20000).
 
@@ -818,15 +838,18 @@ def expect_font(page: Page, font_family: str, timeout: int = 20000) -> None:
     ------
         TimeoutError: If the font isn't recognized in time
     """
+    font = f"{style} {weight} 16px '{font_family}'"
+    # Remove single quotes if the font name has a space in it
+    if " " in font_family:
+        font = font.replace("'", "")
+
     check_script = """
-    (fontName) => {
-        if (!('fonts' in document)) {
-            return false;
-        }
-        return document.fonts.check('16px ' + fontName);
+    (font) => {
+    if (!('fonts' in document)) return false;
+    return document.fonts.ready.then(() => document.fonts.check(font));
     }
     """
-    page.wait_for_function(check_script, arg=font_family, timeout=timeout)
+    page.wait_for_function(check_script, arg=font, timeout=timeout)
 
 
 def is_child_bounding_box_inside_parent(
@@ -905,3 +928,18 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     return locator.get_by_test_id(
         re.compile("stBaseButton-segmented_control(Active)?")
     ).filter(has_text=text)
+
+
+def goto_app(page: Page, url: str) -> None:
+    """Navigate to an app based on a given URL and wait for the app to be loaded.
+
+    Parameters
+    ----------
+    page : Page
+        The page to navigate to the given URL.
+
+    url : str
+        The URL to navigate to.
+    """
+    page.goto(url)
+    wait_for_app_loaded(page)

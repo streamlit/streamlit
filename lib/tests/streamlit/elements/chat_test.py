@@ -23,6 +23,7 @@ import streamlit as st
 from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidWidthError,
     StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -35,6 +36,7 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.type_util import is_custom_dict
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class ChatTest(DeltaGeneratorTestCase):
@@ -42,14 +44,13 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_label_required(self):
         """Test that label is required"""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.chat_message()
 
     def test_nesting_is_allowed(self):
         """Test that it is allowed to be nested."""
-        with st.chat_message("user"):
-            with st.chat_message("assistant"):
-                st.write("hello")
+        with st.chat_message("user"), st.chat_message("assistant"):
+            st.write("hello")
 
     @parameterized.expand(
         [
@@ -68,13 +69,11 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.name, expected["name"])
-        self.assertEqual(
-            message_block.add_block.chat_message.avatar, expected["avatar"]
-        )
-        self.assertEqual(
-            message_block.add_block.chat_message.avatar_type,
-            BlockProto.ChatMessage.AvatarType.ICON,
+        assert message_block.add_block.chat_message.name == expected["name"]
+        assert message_block.add_block.chat_message.avatar == expected["avatar"]
+        assert (
+            message_block.add_block.chat_message.avatar_type
+            == BlockProto.ChatMessage.AvatarType.ICON
         )
 
     @parameterized.expand(
@@ -98,14 +97,9 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.name, "test")
-        self.assertEqual(
-            message_block.add_block.chat_message.avatar, expected["avatar"]
-        )
-        self.assertEqual(
-            message_block.add_block.chat_message.avatar_type,
-            expected["type"],
-        )
+        assert message_block.add_block.chat_message.name == "test"
+        assert message_block.add_block.chat_message.avatar == expected["avatar"]
+        assert message_block.add_block.chat_message.avatar_type == expected["type"]
 
     def test_throws_invalid_avatar_exception(self):
         """Test that chat_message throws an StreamlitAPIException on invalid avatar input."""
@@ -117,47 +111,47 @@ class ChatTest(DeltaGeneratorTestCase):
         st.chat_input("Placeholder")
 
         c = self.get_delta_from_queue().new_element.chat_input
-        self.assertEqual(c.placeholder, "Placeholder")
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.value, "")
-        self.assertEqual(c.set_value, False)
-        self.assertEqual(c.max_chars, 0)
-        self.assertEqual(c.disabled, False)
+        assert c.placeholder == "Placeholder"
+        assert c.default == ""
+        assert c.value == ""
+        assert not c.set_value
+        assert c.max_chars == 0
+        assert not c.disabled
 
     def test_chat_input_disabled(self):
         """Test that it sets disabled correctly."""
         st.chat_input("Placeholder", disabled=True)
 
         c = self.get_delta_from_queue().new_element.chat_input
-        self.assertEqual(c.placeholder, "Placeholder")
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.value, "")
-        self.assertEqual(c.set_value, False)
-        self.assertEqual(c.max_chars, 0)
-        self.assertEqual(c.disabled, True)
+        assert c.placeholder == "Placeholder"
+        assert c.default == ""
+        assert c.value == ""
+        assert not c.set_value
+        assert c.max_chars == 0
+        assert c.disabled
 
     def test_chat_input_max_chars(self):
         """Test that it sets max chars correctly."""
         st.chat_input("Placeholder", max_chars=100)
 
         c = self.get_delta_from_queue().new_element.chat_input
-        self.assertEqual(c.placeholder, "Placeholder")
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.value, "")
-        self.assertEqual(c.set_value, False)
-        self.assertEqual(c.max_chars, 100)
-        self.assertEqual(c.accept_file, ChatInput.AcceptFile.NONE)
-        self.assertEqual(c.disabled, False)
-        self.assertEqual(c.file_type, [])
+        assert c.placeholder == "Placeholder"
+        assert c.default == ""
+        assert c.value == ""
+        assert not c.set_value
+        assert c.max_chars == 100
+        assert c.accept_file == ChatInput.AcceptFile.NONE
+        assert not c.disabled
+        assert c.file_type == []
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
         with pytest.raises(StreamlitAPIException) as exception_message:
             st.form("Form Key").chat_input()
 
-        self.assertEqual(
-            str(exception_message.value),
-            "`st.chat_input()` can't be used in a `st.form()`.",
+        assert (
+            str(exception_message.value)
+            == "`st.chat_input()` can't be used in a `st.form()`."
         )
 
     @parameterized.expand(
@@ -174,9 +168,9 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects inline position when nested in any of layout containers."""
         container_call().chat_input()
 
-        self.assertNotEqual(
-            self.get_message_from_queue().metadata.delta_path[0],
-            RootContainerProto.BOTTOM,
+        assert (
+            self.get_message_from_queue().metadata.delta_path[0]
+            != RootContainerProto.BOTTOM
         )
 
     @parameterized.expand(
@@ -189,14 +183,14 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects bottom position when called in the main dg."""
         container_call().chat_input()
 
-        self.assertEqual(
-            self.get_message_from_queue().metadata.delta_path[0],
-            RootContainerProto.BOTTOM,
+        assert (
+            self.get_message_from_queue().metadata.delta_path[0]
+            == RootContainerProto.BOTTOM
         )
 
     def test_session_state_rules(self):
         """Test that it disallows being called in containers (using with syntax)."""
-        with self.assertRaises(StreamlitValueAssignmentNotAllowedError):
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError):
             st.session_state.my_key = "Foo"
             st.chat_input(key="my_key")
 
@@ -206,8 +200,8 @@ class ChatTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
     @parameterized.expand(
         [
@@ -219,22 +213,22 @@ class ChatTest(DeltaGeneratorTestCase):
     def test_chat_input_accept_file(self, accept_file, expected):
         st.chat_input(accept_file=accept_file)
         c = self.get_delta_from_queue().new_element.chat_input
-        self.assertEqual(c.accept_file, expected)
+        assert c.accept_file == expected
 
     def test_chat_input_invalid_accept_file(self):
-        with self.assertRaises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitAPIException) as ex:
             st.chat_input(accept_file="invalid")
 
-        self.assertEqual(
-            str(ex.exception),
-            "The `accept_file` parameter must be a boolean or 'multiple'.",
+        assert (
+            str(ex.value)
+            == "The `accept_file` parameter must be a boolean or 'multiple'."
         )
 
     def test_file_type(self):
         """Test that it can be called using string(s) for type parameter."""
         st.chat_input(file_type="png")
         c = self.get_delta_from_queue().new_element.chat_input
-        self.assertEqual(c.file_type, [".png"])
+        assert c.file_type == [".png"]
 
     @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
     def test_multiple_files(self, deserialize_patch):
@@ -256,12 +250,12 @@ class ChatTest(DeltaGeneratorTestCase):
 
         return_val = st.chat_input(accept_file="multiple")
 
-        self.assertEqual(return_val.files, uploaded_files)
+        assert return_val.files == uploaded_files
         for actual, expected in zip(return_val.files, uploaded_files):
-            self.assertEqual(actual.name, expected.name)
-            self.assertEqual(actual.type, expected.type)
-            self.assertEqual(actual.size, expected.size)
-            self.assertEqual(actual.getvalue(), expected.getvalue())
+            assert actual.name == expected.name
+            assert actual.type == expected.type
+            assert actual.size == expected.size
+            assert actual.getvalue() == expected.getvalue()
 
     @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
     def test_unique_uploaded_file_instance(self, deserialize_patch):
@@ -291,12 +285,12 @@ class ChatTest(DeltaGeneratorTestCase):
         file0 = st.chat_input(key="key0", accept_file=True).files[0]
         file1 = st.chat_input(key="key1", accept_file=True).files[0]
 
-        self.assertNotEqual(id(file0), id(file1))
+        assert id(file0) != id(file1)
 
         # Seeking in one instance should not impact the position in the other.
         file0.seek(2)
-        self.assertEqual(b"3", file0.read())
-        self.assertEqual(b"123", file1.read())
+        assert file0.read() == b"3"
+        assert file1.read() == b"123"
 
     @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
     def test_chat_input_value_is_custom_dict(self, deserialize_patch):
@@ -310,7 +304,117 @@ class ChatTest(DeltaGeneratorTestCase):
         deserialize_patch.return_value = ChatInputValue(text="placeholder", files=files)
 
         value = st.chat_input("Placeholder", accept_file=True)
-        self.assertTrue(is_custom_dict(value))
+        assert is_custom_dict(value)
 
         value = st.chat_input("Placeholder", accept_file="multiple")
-        self.assertTrue(is_custom_dict(value))
+        assert is_custom_dict(value)
+
+    def test_chat_message_width_config_default(self):
+        """Test that default width is 'stretch' for chat_message."""
+        with st.chat_message("user"):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        assert (
+            message_block.add_block.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert message_block.add_block.width_config.use_stretch
+
+    def test_chat_message_width_config_pixel(self):
+        """Test that pixel width works properly for chat_message."""
+        with st.chat_message("user", width=300):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        assert (
+            message_block.add_block.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert message_block.add_block.width_config.pixel_width == 300
+
+    def test_chat_message_width_config_content(self):
+        """Test that 'content' width works properly for chat_message."""
+        with st.chat_message("user", width="content"):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        assert (
+            message_block.add_block.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert message_block.add_block.width_config.use_content
+
+    def test_chat_message_width_config_stretch(self):
+        """Test that 'stretch' width works properly for chat_message."""
+        with st.chat_message("user", width="stretch"):
+            pass
+
+        message_block = self.get_delta_from_queue()
+        assert (
+            message_block.add_block.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert message_block.add_block.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_chat_message_invalid_width(self, width):
+        """Test that invalid width values raise exceptions for chat_message."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.chat_message("user", width=width)
+
+    def test_chat_input_width_config_default(self):
+        """Test that default width is 'stretch' for chat_input."""
+        st.chat_input("Placeholder")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    def test_chat_input_width_config_pixel(self):
+        """Test that pixel width works properly for chat_input."""
+        st.chat_input("Placeholder", width=300)
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert c.width_config.pixel_width == 300
+
+    def test_chat_input_width_config_stretch(self):
+        """Test that 'stretch' width works properly for chat_input."""
+        st.chat_input("Placeholder", width="stretch")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            "invalid",
+            "content",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_chat_input_invalid_width(self, width):
+        """Test that invalid width values raise exceptions for chat_input."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.chat_input("Placeholder", width=width)

@@ -14,7 +14,7 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
@@ -24,10 +24,7 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-def _get_basic_column_container(
-    app: Page,
-    index: int = 0,
-):
+def _get_basic_column_container(app: Page, index: int = 0) -> Locator:
     column_container = app.get_by_test_id("stHorizontalBlock").nth(index)
     expect(column_container).to_be_visible()
     return column_container
@@ -106,6 +103,19 @@ def test_column_gap_large_is_correctly_applied(
     expect(column_gap_large).to_have_css("gap", re.compile("64px"))
     column_gap_large.scroll_into_view_if_needed()
     assert_snapshot(column_gap_large, name="st_columns-column_gap_large")
+
+
+def test_column_gap_none_is_correctly_applied(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the none column gap is correctly applied."""
+    column_gap_none = (
+        get_expander(app, "Column gap none").get_by_test_id("stHorizontalBlock").nth(0)
+    )
+    # We use regex here since some browsers may resolve this to two numbers:
+    expect(column_gap_none).to_have_css("gap", re.compile("0px"))
+    column_gap_none.scroll_into_view_if_needed()
+    assert_snapshot(column_gap_none, name="st_columns-column_gap_none")
 
 
 def test_one_level_nesting_works_correctly(

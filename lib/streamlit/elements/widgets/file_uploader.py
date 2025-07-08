@@ -26,7 +26,11 @@ from streamlit.elements.lib.file_uploader_utils import (
     normalize_upload_file_type,
 )
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -41,7 +45,6 @@ from streamlit.elements.lib.utils import (
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -127,7 +130,7 @@ class FileUploaderSerde:
 
         if not files:
             return state_proto
-        elif not isinstance(files, list):
+        if not isinstance(files, list):
             files = [files]
 
         for f in files:
@@ -170,7 +173,7 @@ class FileUploaderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-    ) -> list[UploadedFile] | None: ...
+    ) -> list[UploadedFile]: ...
 
     # 1. type is given as not a keyword-only argument
     # 2. accept_multiple_files = False or omitted
@@ -213,7 +216,7 @@ class FileUploaderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
-    ) -> list[UploadedFile] | None: ...
+    ) -> list[UploadedFile]: ...
 
     # 1. type is skipped or a keyword argument
     # 2. accept_multiple_files = False or omitted
@@ -330,13 +333,19 @@ class FileUploaderMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "stretch" or int
-            The width of the file uploader widget. If "stretch" (default), the widget
-            will take up the full width of its container. If an integer, the width
-            will be set to that number of pixels.
+            The width of the file uploader widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -441,6 +450,7 @@ class FileUploaderMixin:
             "file_uploader",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
@@ -486,18 +496,15 @@ class FileUploaderMixin:
         )
 
         validate_width(width)
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        file_uploader_proto.width_config.CopyFrom(width_config)
+        layout_config = LayoutConfig(width=width)
 
-        self.dg._enqueue("file_uploader", file_uploader_proto)
+        self.dg._enqueue(
+            "file_uploader", file_uploader_proto, layout_config=layout_config
+        )
 
         if isinstance(widget_state.value, DeletedFile):
             return None
-        elif isinstance(widget_state.value, list):
+        if isinstance(widget_state.value, list):
             return [f for f in widget_state.value if not isinstance(f, DeletedFile)]
 
         return widget_state.value

@@ -31,7 +31,7 @@ _LOGGER: Final = getLogger(__name__)
 class MessageSizeError(MarkdownFormattedException):
     """Exception raised when a websocket message is larger than the configured limit."""
 
-    def __init__(self, failed_msg_str: Any):
+    def __init__(self, failed_msg_str: Any) -> None:
         msg = self._get_message(failed_msg_str)
         super().__init__(msg)
 
@@ -55,7 +55,7 @@ of the client's browser and the Streamlit server._
 class BadDurationStringError(StreamlitAPIException):
     """Raised when a bad duration argument string is passed."""
 
-    def __init__(self, duration: str):
+    def __init__(self, duration: str) -> None:
         MarkdownFormattedException.__init__(
             self,
             "TTL string doesn't look right. It should be formatted as"
@@ -79,8 +79,8 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
 
         msg_size_error = MessageSizeError(msg_str)
         _LOGGER.warning(
-            "Websocket message size limit exceeded. "
-            f"Showing error to the user: {msg_size_error}"
+            "Websocket message size limit exceeded. Showing error to the user: %s",
+            msg_size_error,
         )
         exception.marshall(msg.delta.new_element.exception, msg_size_error)
         # Deactivate caching for this error message:

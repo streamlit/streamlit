@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
-
-import { useTheme } from "@emotion/react"
+import React, { memo, ReactElement, useContext } from "react"
 
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
@@ -24,7 +22,7 @@ import { DynamicIcon } from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LibContext } from "~lib/components/core/LibContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
@@ -52,10 +50,10 @@ function shouldUseContainerWidth(
 }
 
 function PageLink(props: Readonly<Props>): ReactElement {
-  const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
-  const isInSidebar = React.useContext(IsSidebarContext)
+  const { onPageChange, currentPageScriptHash } = useContext(LibContext)
+  const isInSidebar = useContext(IsSidebarContext)
 
-  const { colors }: EmotionTheme = useTheme()
+  const { colors } = useEmotionTheme()
 
   const { disabled, element } = props
 

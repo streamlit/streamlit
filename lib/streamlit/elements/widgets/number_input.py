@@ -23,7 +23,11 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
-from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -43,7 +47,6 @@ from streamlit.errors import (
     StreamlitValueBelowMinError,
 )
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -116,7 +119,7 @@ class NumberInputMixin:
     def number_input(
         self,
         label: str,
-        min_value: int | None = None,
+        min_value: None = None,
         *,
         max_value: int,
         value: IntOrNone | Literal["min"] = "min",
@@ -166,8 +169,8 @@ class NumberInputMixin:
     def number_input(
         self,
         label: str,
-        min_value: int | None = None,
-        max_value: int | None = None,
+        min_value: None = None,
+        max_value: None = None,
         value: IntOrNone | Literal["min"] = "min",
         *,
         step: int,
@@ -235,7 +238,7 @@ class NumberInputMixin:
 
         .. note::
             Integer values exceeding +/- ``(1<<53) - 1`` cannot be accurately
-            stored or returned by the widget due to serialization contstraints
+            stored or returned by the widget due to serialization constraints
             between the Python server and JavaScript client. You must handle
             such numbers as floats, leading to a loss in precision.
 
@@ -331,7 +334,7 @@ class NumberInputMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         icon : str, None
@@ -352,8 +355,16 @@ class NumberInputMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
-        width : WidthWithoutContent
-            The width of the number input. Can be an integer or "stretch". Defaults to "stretch".
+        width : "stretch" or int
+            The width of the number input widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -437,12 +448,12 @@ class NumberInputMixin:
             default_value=value if value != "min" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
-        validate_width(width)
 
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             min_value=min_value,
             max_value=max_value,
@@ -605,14 +616,6 @@ class NumberInputMixin:
         if icon is not None:
             number_input_proto.icon = validate_icon_or_emoji(icon)
 
-        # Set up width configuration
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        number_input_proto.width_config.CopyFrom(width_config)
-
         serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
             number_input_proto.id,
@@ -647,7 +650,12 @@ class NumberInputMixin:
                 number_input_proto.value = widget_state.value
             number_input_proto.set_value = True
 
-        self.dg._enqueue("number_input", number_input_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue(
+            "number_input", number_input_proto, layout_config=layout_config
+        )
         return widget_state.value
 
     @property

@@ -17,18 +17,21 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import requests
 
 
 # Assumes there is only one open pull request with a release/ branch
-def check_for_release_pr(pull):
+def check_for_release_pr(pull: dict[str, Any]) -> str | None:
     label = pull["head"]["label"]
 
     if label.find("release/") != -1:
-        return pull["head"]["ref"]
+        return cast("str", pull["head"]["ref"])
+    return None
 
 
-def get_release_branch():
+def get_release_branch() -> str | None:
     """Retrieve the release branch from the release PR."""
 
     url = "https://api.github.com/repos/streamlit/streamlit/pulls"
@@ -39,9 +42,10 @@ def get_release_branch():
         ref = check_for_release_pr(pull)
         if ref is not None:
             return ref
+    return None
 
 
-def main():
+def main() -> None:
     print(get_release_branch())
 
 

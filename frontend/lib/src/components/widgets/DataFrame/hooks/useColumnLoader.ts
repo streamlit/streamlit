@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import isArray from "lodash/isArray"
 import isEmpty from "lodash/isEmpty"
 import merge from "lodash/merge"
@@ -37,7 +36,8 @@ import {
   ObjectColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 // Using this ID for column config will apply the config to all index columns
@@ -104,7 +104,7 @@ const mergeColumnConfig = (
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const customMergeArrays = (objValue: object, srcValue: object): any => {
+  const customMergeArrays = (_objValue: object, srcValue: object): any => {
     // If the new value is an array, just return it as is (overwriting the old)
     if (isArray(srcValue)) {
       return srcValue
@@ -230,9 +230,9 @@ type ColumnLoaderReturn = {
   // All the columns of the dataframe, including hidden ones:
   allColumns: BaseColumn[]
   // Callback to set the column config state:
-  setColumnConfigMapping: React.Dispatch<
+  setColumnConfigMapping: Dispatch<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    React.SetStateAction<Map<string, any>>
+    SetStateAction<Map<string, any>>
   >
 }
 
@@ -281,10 +281,10 @@ function useColumnLoader(
   disabled: boolean,
   columnOrder: string[]
 ): ColumnLoaderReturn {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   // Memoize the column config parsing to avoid unnecessary re-renders & re-parsing:
-  const parsedColumnConfig = React.useMemo(
+  const parsedColumnConfig = useMemo(
     () => getColumnConfig(element.columns),
     [element.columns]
   )
@@ -294,10 +294,10 @@ function useColumnLoader(
   // (e.g. via changes by the user in the UI)
   const [columnConfigMapping, setColumnConfigMapping] =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    React.useState<Map<string, any>>(parsedColumnConfig)
+    useState<Map<string, any>>(parsedColumnConfig)
 
   // Resync state whenever the parsed column config from the proto changes:
-  React.useEffect(() => {
+  useEffect(() => {
     setColumnConfigMapping(parsedColumnConfig)
   }, [parsedColumnConfig])
 
@@ -313,7 +313,7 @@ function useColumnLoader(
     element.rowHeight > convertRemToPx("4rem")
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const allColumns: BaseColumn[] = React.useMemo(() => {
+  const allColumns: BaseColumn[] = useMemo(() => {
     return initAllColumnsFromArrow(data).map(column => {
       // Apply column configurations
       let updatedColumn = {
@@ -369,7 +369,7 @@ function useColumnLoader(
     theme,
   ])
 
-  const columns: BaseColumn[] = React.useMemo(() => {
+  const columns: BaseColumn[] = useMemo(() => {
     const visibleColumns = initAllColumnsFromArrow(data)
       .map(column => {
         // Apply column configurations
@@ -447,7 +447,8 @@ function useColumnLoader(
       // Reorder columns based on the configured column order:
       columnOrder.forEach(columnName => {
         const column = visibleColumns.find(
-          column => column.name === columnName || column.id === columnName
+          columnArg =>
+            columnArg.name === columnName || columnArg.id === columnName
         )
         if (column) {
           if (column.isPinned) {

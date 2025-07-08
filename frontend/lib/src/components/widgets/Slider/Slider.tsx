@@ -15,6 +15,8 @@
  */
 
 import React, {
+  createRef,
+  forwardRef,
   memo,
   ReactElement,
   useCallback,
@@ -24,8 +26,7 @@ import React, {
 } from "react"
 
 import pick from "lodash/pick"
-import { StyleProps, Slider as UISlider } from "baseui/slider"
-import { useTheme } from "@emotion/react"
+import { type StyleProps, Slider as UISlider } from "baseui/slider"
 import { sprintf } from "sprintf-js"
 import moment from "moment"
 
@@ -44,6 +45,7 @@ import {
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledThumb,
@@ -94,7 +96,7 @@ function Slider({
     React.MutableRefObject<HTMLDivElement | null>[]
   >([])
 
-  const { colors, fonts, fontSizes, spacing } = useTheme()
+  const { colors, fonts, fontSizes, spacing } = useEmotionTheme()
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
   const formattedMinValue = formatValue(element.min, element)
@@ -108,19 +110,19 @@ function Slider({
   }, [value])
 
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/react-compiler
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSetValueWithSource = useCallback(
-    debounce(DEBOUNCE_TIME_MS, (value: number[]): void => {
-      setValueWithSource({ value, fromUi: true })
+    debounce(DEBOUNCE_TIME_MS, (valueArg: number[]): void => {
+      setValueWithSource({ value: valueArg, fromUi: true })
     }) as (value: number[]) => void,
     []
   )
 
   const handleChange = useCallback(
-    ({ value }: { value: number[] }): void => {
-      setUiValue(value)
-      debouncedSetValueWithSource(value)
+    ({ value: valueArg }: { value: number[] }): void => {
+      setUiValue(valueArg)
+      debouncedSetValueWithSource(valueArg)
     },
     [debouncedSetValueWithSource]
   )
@@ -145,10 +147,10 @@ function Slider({
   }, [formattedMinValue, formattedMaxValue, disabled])
 
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/react-compiler
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const renderThumb = useCallback(
-    React.forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
+    forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
       props: StyleProps,
       ref
     ): ReactElement {
@@ -156,7 +158,7 @@ function Slider({
       const thumbIndex = $thumbIndex || 0
       thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
       // eslint-disable-next-line @eslint-react/no-create-ref
-      thumbValueRefs[thumbIndex] ||= React.createRef<HTMLDivElement>()
+      thumbValueRefs[thumbIndex] ||= createRef<HTMLDivElement>()
 
       const passThrough = pick(props, [
         "role",
@@ -337,6 +339,7 @@ function formatValue(value: number, element: SliderProto): string {
     // The timestamp is always set to the UTC timezone, even so, the actual timezone
     // for this timestamp in the backend could be different.
     // However, the frontend component does not need to know about the actual timezone.
+
     return moment.utc(value / 1000).format(format)
   }
 
@@ -407,8 +410,11 @@ function fixLabelOverflow(
   thumb: HTMLDivElement,
   thumbValue: HTMLDivElement
 ): void {
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const sliderRect = slider.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumbRect = thumb.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumbValueRect = thumbValue.getBoundingClientRect()
 
   const thumbMidpoint = thumbRect.left + thumbRect.width / 2
@@ -436,10 +442,15 @@ function fixLabelOverlap(
 ): void {
   const labelGap = 24
 
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const sliderRect = sliderDiv.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb1Rect = thumb1Div.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb2Rect = thumb2Div.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb1ValueRect = thumb1ValueDiv.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb2ValueRect = thumb2ValueDiv.getBoundingClientRect()
 
   const sliderMidpoint = sliderRect.left + sliderRect.width / 2

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, Suspense } from "react"
+import React, { lazy, ReactElement, Suspense, useContext } from "react"
 
 import debounceRender from "react-debounce-render"
 import classNames from "classnames"
@@ -67,7 +67,6 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
-import { Quiver } from "~lib/dataframes/Quiver"
 // Load (non-lazy) elements.
 import AlertElement, {
   getAlertElementKind,
@@ -82,7 +81,6 @@ import Metric from "~lib/components/elements/Metric"
 import { Skeleton } from "~lib/components/elements/Skeleton"
 import TextElement from "~lib/components/elements/TextElement"
 import { ComponentInstance } from "~lib/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "~lib/components/elements/ArrowVegaLiteChart"
 import Maybe from "~lib/components/core/Maybe"
 import { FormSubmitContent } from "~lib/components/widgets/Form"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
@@ -100,92 +98,66 @@ import {
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 
 // Lazy-load elements.
-const Audio = React.lazy(() => import("~lib/components/elements/Audio"))
-const Balloons = React.lazy(() => import("~lib/components/elements/Balloons"))
-const Snow = React.lazy(() => import("~lib/components/elements/Snow"))
-const ArrowDataFrame = React.lazy(
-  () => import("~lib/components/widgets/DataFrame")
-)
-const ArrowVegaLiteChart = React.lazy(
+const Audio = lazy(() => import("~lib/components/elements/Audio"))
+const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
+const Snow = lazy(() => import("~lib/components/elements/Snow"))
+const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
+const ArrowVegaLiteChart = lazy(
   () => import("~lib/components/elements/ArrowVegaLiteChart")
 )
-const Toast = React.lazy(() => import("~lib/components/elements/Toast"))
+const Toast = lazy(() => import("~lib/components/elements/Toast"))
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
 // when the sidebar is toggled, which significantly slows down the app.
-const BokehChart = React.lazy(
-  () => import("~lib/components/elements/BokehChart")
-)
+const BokehChart = lazy(() => import("~lib/components/elements/BokehChart"))
 
-// RTL ESLint triggers a false positive on this render function
-// eslint-disable-next-line testing-library/render-result-naming-convention
 const DebouncedBokehChart = withCalculatedWidth(
   debounceRender(BokehChart, 100)
 )
 
-const DeckGlJsonChart = React.lazy(
+const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart")
 )
-const GraphVizChart = React.lazy(
+const GraphVizChart = lazy(
   () => import("~lib/components/elements/GraphVizChart")
 )
-const IFrame = React.lazy(() => import("~lib/components/elements/IFrame"))
-const ImageList = React.lazy(
-  () => import("~lib/components/elements/ImageList")
-)
+const IFrame = lazy(() => import("~lib/components/elements/IFrame"))
+const ImageList = lazy(() => import("~lib/components/elements/ImageList"))
 
-const LinkButton = React.lazy(
-  () => import("~lib/components/elements/LinkButton")
-)
+const LinkButton = lazy(() => import("~lib/components/elements/LinkButton"))
 
-const PageLink = React.lazy(() => import("~lib/components/elements/PageLink"))
+const PageLink = lazy(() => import("~lib/components/elements/PageLink"))
 
-const PlotlyChart = React.lazy(
-  () => import("~lib/components/elements/PlotlyChart")
-)
-const Video = React.lazy(() => import("~lib/components/elements/Video"))
+const PlotlyChart = lazy(() => import("~lib/components/elements/PlotlyChart"))
+const Video = lazy(() => import("~lib/components/elements/Video"))
 
 // Lazy-load widgets.
-const AudioInput = React.lazy(
-  () => import("~lib/components/widgets/AudioInput")
-)
+const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
 
-const Button = React.lazy(() => import("~lib/components/widgets/Button"))
-const ButtonGroup = React.lazy(
-  () => import("~lib/components/widgets/ButtonGroup")
-)
-const DownloadButton = React.lazy(
+const Button = lazy(() => import("~lib/components/widgets/Button"))
+const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
+const DownloadButton = lazy(
   () => import("~lib/components/widgets/DownloadButton")
 )
-const CameraInput = React.lazy(
-  () => import("~lib/components/widgets/CameraInput")
-)
-const ChatInput = React.lazy(() => import("~lib/components/widgets/ChatInput"))
-const Checkbox = React.lazy(() => import("~lib/components/widgets/Checkbox"))
-const ColorPicker = React.lazy(
-  () => import("~lib/components/widgets/ColorPicker")
-)
-const DateInput = React.lazy(() => import("~lib/components/widgets/DateInput"))
-const Html = React.lazy(() => import("~lib/components/elements/Html"))
-const Multiselect = React.lazy(
-  () => import("~lib/components/widgets/Multiselect")
-)
-const Progress = React.lazy(() => import("~lib/components/elements/Progress"))
-const Spinner = React.lazy(() => import("~lib/components/elements/Spinner"))
-const Radio = React.lazy(() => import("~lib/components/widgets/Radio"))
-const Selectbox = React.lazy(() => import("~lib/components/widgets/Selectbox"))
-const Slider = React.lazy(() => import("~lib/components/widgets/Slider"))
-const FileUploader = React.lazy(
-  () => import("~lib/components/widgets/FileUploader")
-)
-const TextArea = React.lazy(() => import("~lib/components/widgets/TextArea"))
-const TextInput = React.lazy(() => import("~lib/components/widgets/TextInput"))
-const TimeInput = React.lazy(() => import("~lib/components/widgets/TimeInput"))
-const NumberInput = React.lazy(
-  () => import("~lib/components/widgets/NumberInput")
-)
-const StreamlitSyntaxHighlighter = React.lazy(
+const CameraInput = lazy(() => import("~lib/components/widgets/CameraInput"))
+const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
+const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
+const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
+const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
+const Html = lazy(() => import("~lib/components/elements/Html"))
+const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
+const Progress = lazy(() => import("~lib/components/elements/Progress"))
+const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const Radio = lazy(() => import("~lib/components/widgets/Radio"))
+const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
+const Slider = lazy(() => import("~lib/components/widgets/Slider"))
+const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
+const TextArea = lazy(() => import("~lib/components/widgets/TextArea"))
+const TextInput = lazy(() => import("~lib/components/widgets/TextInput"))
+const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
+const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
+const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
 
@@ -213,6 +185,7 @@ const RawElementNodeRenderer = (
 
   const elementProps = {
     disableFullscreenMode: props.disableFullscreenMode,
+    widthConfig: node.element.widthConfig,
   }
 
   const widgetProps = {
@@ -236,9 +209,7 @@ const RawElementNodeRenderer = (
     }
 
     case "arrowTable":
-      return (
-        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
-      )
+      return <ArrowTable element={node.quiverElement} {...elementProps} />
 
     case "audio":
       return (
@@ -273,7 +244,6 @@ const RawElementNodeRenderer = (
           language={codeProto.language}
           showLineNumbers={codeProto.showLineNumbers}
           wrapLines={codeProto.wrapLines}
-          height={codeProto.height}
         >
           {codeProto.codeText}
         </StreamlitSyntaxHighlighter>
@@ -445,14 +415,14 @@ const RawElementNodeRenderer = (
           // be undefined.
           key={arrowProto.id || undefined}
           element={arrowProto}
-          data={node.quiverElement as Quiver}
+          data={node.quiverElement}
           {...widgetProps}
         />
       )
     }
 
     case "arrowVegaLiteChart": {
-      const vegaLiteElement = node.vegaLiteChartElement as VegaLiteChartElement
+      const vegaLiteElement = node.vegaLiteChartElement
       return (
         <ArrowVegaLiteChart
           element={vegaLiteElement}
@@ -674,6 +644,7 @@ const RawElementNodeRenderer = (
         <TextArea
           key={textAreaProto.id}
           element={textAreaProto}
+          outerElement={node.element}
           {...widgetProps}
         />
       )
@@ -714,7 +685,7 @@ const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
   const { isFullScreen, fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    React.useContext(LibContext)
+    useContext(LibContext)
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -732,7 +703,7 @@ const ElementNodeRenderer = (
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
 
-  // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
+  // TODO: It would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
 

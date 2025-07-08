@@ -109,9 +109,9 @@ class LocalDiskCacheStorageManager(CacheStorageManager):
             and not math.isinf(context.ttl_seconds)
         ):
             _LOGGER.warning(
-                f"The cached function '{context.function_display_name}' has a TTL "
-                "that will be ignored. Persistent cached functions currently don't "
-                "support TTL."
+                "The cached function '%s' has a TTL that will be ignored. "
+                "Persistent cached functions currently don't support TTL.",
+                context.function_display_name,
             )
 
 
@@ -120,7 +120,7 @@ class LocalDiskCacheStorage(CacheStorage):
     This is the default cache persistence layer for `@st.cache_data`.
     """
 
-    def __init__(self, context: CacheStorageContext):
+    def __init__(self, context: CacheStorageContext) -> None:
         self.function_key = context.function_key
         self.persist = context.persist
         self._ttl_seconds = context.ttl_seconds

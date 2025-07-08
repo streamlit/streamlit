@@ -48,9 +48,9 @@ class AudioTest(DeltaGeneratorTestCase):
         # locate resultant file in InMemoryFileManager and test its properties.
         file_id = _calculate_file_id(fake_audio_data, "audio/wav")
         media_file = self.media_file_storage.get_file(file_id)
-        self.assertIsNotNone(media_file)
-        self.assertEqual(media_file.mimetype, "audio/wav")
-        self.assertEqual(self.media_file_storage.get_url(file_id), el.audio.url)
+        assert media_file is not None
+        assert media_file.mimetype == "audio/wav"
+        assert self.media_file_storage.get_url(file_id) == el.audio.url
 
     @parameterized.expand(
         [
@@ -77,10 +77,10 @@ class AudioTest(DeltaGeneratorTestCase):
         # locate resultant file in InMemoryFileManager and test its properties.
         file_id = _calculate_file_id(computed_bytes, "audio/wav")
         media_file = self.media_file_storage.get_file(file_id)
-        self.assertIsNotNone(media_file)
-        self.assertEqual(media_file.mimetype, "audio/wav")
-        self.assertEqual(self.media_file_storage.get_url(file_id), el.audio.url)
-        self.assertEqual(media_file.content, computed_bytes)
+        assert media_file is not None
+        assert media_file.mimetype == "audio/wav"
+        assert self.media_file_storage.get_url(file_id) == el.audio.url
+        assert media_file.content == computed_bytes
 
     @parameterized.expand(
         [
@@ -105,12 +105,12 @@ class AudioTest(DeltaGeneratorTestCase):
         """Test st.audio using invalid numpy array."""
 
         sample_rate = 44100
-        self.assertEqual(len(np_arr.shape), expected_shape)
+        assert len(np_arr.shape) == expected_shape
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.audio(np_arr, sample_rate=sample_rate)
 
-        self.assertEqual(str(e.exception), exception_text)
+        assert str(e.value) == exception_text
 
     def test_st_audio_missing_sample_rate_numpy_arr(self):
         """Test st.audio raises exception when sample_rate missing in case of valid
@@ -118,12 +118,12 @@ class AudioTest(DeltaGeneratorTestCase):
 
         valid_np_array = np.array([1, 2, 3, 4, 5])
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.audio(valid_np_array)
 
-        self.assertEqual(
-            str(e.exception),
-            "`sample_rate` must be specified when `data` is a numpy array.",
+        assert (
+            str(e.value)
+            == "`sample_rate` must be specified when `data` is a numpy array."
         )
 
     def test_st_audio_sample_rate_raises_warning(self):
@@ -136,10 +136,10 @@ class AudioTest(DeltaGeneratorTestCase):
         st.audio(fake_audio_data, sample_rate=sample_rate)
 
         c = self.get_delta_from_queue(-2).new_element.alert
-        self.assertEqual(c.format, AlertProto.WARNING)
-        self.assertEqual(
-            c.body,
-            "Warning: `sample_rate` will be ignored since data is not a numpy array.",
+        assert c.format == AlertProto.WARNING
+        assert (
+            c.body
+            == "Warning: `sample_rate` will be ignored since data is not a numpy array."
         )
 
     def test_maybe_convert_to_wave_numpy_arr_empty(self):
@@ -151,10 +151,9 @@ class AudioTest(DeltaGeneratorTestCase):
             fake_audio_np_array, sample_rate=sample_rate
         )
 
-        self.assertEqual(
-            computed_bytes,
-            b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00"
-            b"\x88X\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00",
+        assert computed_bytes == (
+            b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00\x88X\x01\x00\x02\x00\x10\x00data"
+            b"\x00\x00\x00\x00"
         )
 
     def test_maybe_convert_to_wave_numpy_arr_mono(self):
@@ -166,10 +165,9 @@ class AudioTest(DeltaGeneratorTestCase):
             fake_audio_np_array, sample_rate=sample_rate
         )
 
-        self.assertEqual(
-            computed_bytes,
-            b"RIFF(\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x07\x00\x00"
-            b"\x00\x0e\x00\x00\x00\x02\x00\x10\x00data\x04\x00\x00\x008\x0e\xff\x7f",
+        assert computed_bytes == (
+            b"RIFF(\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x07\x00\x00\x00\x0e\x00\x00\x00"
+            b"\x02\x00\x10\x00data\x04\x00\x00\x008\x0e\xff\x7f"
         )
 
     def test_maybe_convert_to_wave_numpy_arr_stereo(self):
@@ -184,10 +182,9 @@ class AudioTest(DeltaGeneratorTestCase):
             fake_audio_np_array, sample_rate=sample_rate
         )
 
-        self.assertEqual(
-            computed_bytes,
-            b"RIFF,\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00D\xac\x00\x00"
-            b"\x10\xb1\x02\x00\x04\x00\x10\x00data\x08\x00\x00\x008\x0eTU\xff\x7f8\x0e",
+        assert computed_bytes == (
+            b"RIFF,\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00D\xac\x00\x00\x10\xb1\x02\x00"
+            b"\x04\x00\x10\x00data\x08\x00\x00\x008\x0eTU\xff\x7f8\x0e"
         )
 
     def test_maybe_convert_to_wave_bytes_with_sample_rate(self):
@@ -200,7 +197,7 @@ class AudioTest(DeltaGeneratorTestCase):
             fake_audio_data_bytes, sample_rate=sample_rate
         )
 
-        self.assertEqual(computed_bytes, fake_audio_data_bytes)
+        assert computed_bytes == fake_audio_data_bytes
 
     def test_maybe_convert_to_wave_bytes_without_sample_rate(self):
         """Test _maybe_convert_to_wave_bytes works correctly when sample_rate
@@ -208,7 +205,7 @@ class AudioTest(DeltaGeneratorTestCase):
 
         np_arr = np.array([0, 1, 2, 3])
         computed_bytes = _maybe_convert_to_wav_bytes(np_arr, sample_rate=None)
-        self.assertTrue(computed_bytes is np_arr)
+        assert computed_bytes is np_arr
 
     @pytest.mark.require_integration
     def test_st_audio_from_file(self):
@@ -230,7 +227,7 @@ class AudioTest(DeltaGeneratorTestCase):
             st.audio(f)
 
         el = self.get_delta_from_queue().new_element
-        self.assertTrue(".wav" in el.audio.url)
+        assert ".wav" in el.audio.url
 
         os.remove("test.wav")
 
@@ -241,20 +238,20 @@ class AudioTest(DeltaGeneratorTestCase):
         st.audio(some_url)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.audio.url, some_url)
+        assert el.audio.url == some_url
 
     def test_st_audio_raises_on_bad_filename(self):
         """A non-URL string is assumed to be a filename. A file we can't
         open will result in an error.
         """
-        with self.assertRaises(MediaFileStorageError):
+        with pytest.raises(MediaFileStorageError):
             st.audio("not/a/real/file")
 
     def test_st_audio_from_none(self):
         """st.audio(None) is not an error."""
         st.audio(None)
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.audio.url, "")
+        assert el.audio.url == ""
 
     def test_st_audio_other_inputs(self):
         """Test that our other data types don't result in an error."""
@@ -276,12 +273,12 @@ class AudioTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.audio.start_time, 10)
-        self.assertEqual(el.audio.end_time, 21)
-        self.assertTrue(el.audio.loop)
-        self.assertTrue(el.audio.autoplay)
-        self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
+        assert el.audio.start_time == 10
+        assert el.audio.end_time == 21
+        assert el.audio.loop
+        assert el.audio.autoplay
+        assert el.audio.url.startswith(MEDIA_ENDPOINT)
+        assert _calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url
 
     def test_st_audio_just_data(self):
         """Test st.audio with just data specified."""
@@ -289,12 +286,12 @@ class AudioTest(DeltaGeneratorTestCase):
         st.audio(fake_audio_data)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.audio.start_time, 0)
-        self.assertEqual(el.audio.end_time, 0)
-        self.assertFalse(el.audio.loop)
-        self.assertFalse(el.audio.autoplay)
-        self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(_calculate_file_id(fake_audio_data, "audio/wav"), el.audio.url)
+        assert el.audio.start_time == 0
+        assert el.audio.end_time == 0
+        assert not el.audio.loop
+        assert not el.audio.autoplay
+        assert el.audio.url.startswith(MEDIA_ENDPOINT)
+        assert _calculate_file_id(fake_audio_data, "audio/wav"), el.audio.url
 
     @parameterized.expand(
         [
@@ -312,9 +309,9 @@ class AudioTest(DeltaGeneratorTestCase):
         self, input_start_time, input_end_time, expected_value
     ):
         """Test that _parse_start_time_end_time works correctly."""
-        self.assertEqual(
-            _parse_start_time_end_time(input_start_time, input_end_time),
-            expected_value,
+        assert (
+            _parse_start_time_end_time(input_start_time, input_end_time)
+            == expected_value
         )
 
     @parameterized.expand(
@@ -326,8 +323,8 @@ class AudioTest(DeltaGeneratorTestCase):
     def test_parse_start_time_end_time_fail(self, start_time, end_time, exception_text):
         """Test that _parse_start_time_end_time works with correct exception text."""
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             _parse_start_time_end_time(start_time, end_time)
 
-        self.assertIn(exception_text, str(e.exception))
-        self.assertIn("INVALID_VALUE", str(e.exception))
+        assert exception_text in str(e.value)
+        assert "INVALID_VALUE" in str(e.value)

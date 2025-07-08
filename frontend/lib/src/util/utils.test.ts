@@ -29,6 +29,7 @@ import {
   EMBED_QUERY_PARAM_VALUES,
   getEmbedUrlParams,
   getLoadingScreenType,
+  getSelectPlaceholder,
   getUrl,
   isColoredLineDisplayed,
   isDarkThemeInQueryParams,
@@ -375,7 +376,7 @@ describe("getLoadingScreenType", () => {
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
   })
 
-  it("should give precendence to 'hide'", () => {
+  it("should give precedence to 'hide'", () => {
     vi.stubGlobal("window", {
       location: {
         search:
@@ -424,40 +425,47 @@ describe("getLoadingScreenType", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it("should return an empty string if not in embed mode", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("")
     })
 
     it("should preserve embed query string even with no embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search: "embed=true&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search: "embed=true&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe("embed=true")
     })
 
     it("should preserve embed query string with embed options and remove foo=bar", () => {
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = {
-        assign: vi.fn(),
-        search:
-          "embed=true&embed_options=option1&embed_options=option2&foo=bar",
-      }
+      Object.defineProperty(window, "location", {
+        value: {
+          assign: vi.fn(),
+          search:
+            "embed=true&embed_options=option1&embed_options=option2&foo=bar",
+        },
+        writable: true,
+        configurable: true,
+      })
       expect(preserveEmbedQueryParams()).toBe(
         "embed=true&embed_options=option1&embed_options=option2"
       )
@@ -635,5 +643,89 @@ describe("getUrl", () => {
     }))
 
     expect(getUrl()).toBe("http://localhost:3000/main")
+  })
+})
+
+describe("getSelectPlaceholder", () => {
+  describe("single-select mode", () => {
+    it("returns custom placeholder when provided", () => {
+      const result = getSelectPlaceholder(
+        "Custom placeholder",
+        ["option1", "option2"],
+        true,
+        false
+      )
+      expect(result.placeholder).toBe("Custom placeholder")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'No options to select' and disables when no options and no new options allowed", () => {
+      const result = getSelectPlaceholder("", [], false, false)
+      expect(result.placeholder).toBe("No options to select")
+      expect(result.shouldDisable).toBe(true)
+    })
+
+    it("returns 'Add an option' when no options but new options allowed", () => {
+      const result = getSelectPlaceholder("", [], true, false)
+      expect(result.placeholder).toBe("Add an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose an option' when options exist and no new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], false, false)
+      expect(result.placeholder).toBe("Choose an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose or add an option' when options exist and new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], true, false)
+      expect(result.placeholder).toBe("Choose or add an option")
+      expect(result.shouldDisable).toBe(false)
+    })
+  })
+
+  describe("multi-select mode", () => {
+    it("returns custom placeholder when provided", () => {
+      const result = getSelectPlaceholder(
+        "Custom placeholder",
+        ["option1", "option2"],
+        true,
+        true
+      )
+      expect(result.placeholder).toBe("Custom placeholder")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'No options to select' and disables when no options and no new options allowed", () => {
+      const result = getSelectPlaceholder("", [], false, true)
+      expect(result.placeholder).toBe("No options to select")
+      expect(result.shouldDisable).toBe(true)
+    })
+
+    it("returns 'Add options' when no options but new options allowed", () => {
+      const result = getSelectPlaceholder("", [], true, true)
+      expect(result.placeholder).toBe("Add options")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose options' when options exist and no new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], false, true)
+      expect(result.placeholder).toBe("Choose options")
+      expect(result.shouldDisable).toBe(false)
+    })
+
+    it("returns 'Choose or add options' when options exist and new options allowed", () => {
+      const result = getSelectPlaceholder("", ["option1"], true, true)
+      expect(result.placeholder).toBe("Choose or add options")
+      expect(result.shouldDisable).toBe(false)
+    })
+  })
+
+  describe("edge cases", () => {
+    it("handles single space placeholder as custom placeholder", () => {
+      const result = getSelectPlaceholder(" ", ["option1"], true, false)
+      expect(result.placeholder).toBe(" ")
+      expect(result.shouldDisable).toBe(false)
+    })
   })
 })

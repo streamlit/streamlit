@@ -23,7 +23,7 @@ from __future__ import annotations
 import threading
 from collections import ChainMap
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import (
@@ -61,11 +61,11 @@ class SnowparkConnection(BaseConnection["Session"]):
         over the single underlying Session object under high load.
     """
 
-    def __init__(self, connection_name: str, **kwargs) -> None:
+    def __init__(self, connection_name: str, **kwargs: Any) -> None:
         self._lock = threading.RLock()
         super().__init__(connection_name, **kwargs)
 
-    def _connect(self, **kwargs) -> Session:
+    def _connect(self, **kwargs: Any) -> Session:
         from snowflake.snowpark.context import get_active_session  # type:ignore[import]
         from snowflake.snowpark.session import Session
 

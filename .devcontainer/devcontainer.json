@@ -75,6 +75,7 @@
         },
         "files.trimTrailingWhitespace": true,
         "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
         "search.exclude": {
           "lib/build/**": true
         },
@@ -88,6 +89,8 @@
         "editor.codeActionsOnSave": { "source.fixAll": "always" },
         "vitest.maximumConfigs": 5,
         "mypy-type-checker.importStrategy": "fromEnvironment",
+        "mypy-type-checker.preferDaemon": false,
+        "mypy-type-checker.args": ["--config-file=mypy.ini"],
         "ruff.nativeServer": true,
         "ruff.organizeImports": true,
         "ruff.fixAll": true,
@@ -98,6 +101,7 @@
           "e2e_playwright/**/*"
         ],
         "python.analysis.extraPaths": ["./lib"],
+        "python.analysis.typeCheckingMode": "off",
         "python.terminal.activateEnvInCurrentTerminal": true,
         "python.testing.pytestEnabled": true,
         "terminal.integrated.profiles.linux": {
@@ -105,10 +109,13 @@
             "path": "bash",
             "args": ["-c", "make frontend-dev"]
           }
-        }
+        },
+        "typescript.tsdk": "frontend/node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "git.branchProtection": ["develop"]
       }
     }
   },
-  "updateContentCommand": "make all-devel",
+  "updateContentCommand": "make all-dev",
   "postStartCommand": "make frontend-dev"
 }

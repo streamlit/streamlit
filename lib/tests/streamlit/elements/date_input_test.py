@@ -16,8 +16,8 @@
 
 from datetime import date, datetime, timedelta
 
+import pytest
 from parameterized import parameterized
-from pytest import raises
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
@@ -37,32 +37,32 @@ class DateInputTest(DeltaGeneratorTestCase):
         st.date_input("the label")
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertLessEqual(
-            datetime.strptime(c.default[0], "%Y/%m/%d").date(), datetime.now().date()
+        assert (
+            datetime.strptime(c.default[0], "%Y/%m/%d").date() <= datetime.now().date()
         )
-        self.assertEqual(c.disabled, False)
+        assert not c.disabled
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.date_input("the label", disabled=True)
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     def test_none_value(self):
         """Test that it can be called with None as value."""
         st.date_input("the label", value=None)
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label, "the label")
+        assert c.label == "the label"
         # If a proto property is null is not determined by this value,
         # but by the check via the HasField method:
-        self.assertEqual(c.default, [])
+        assert c.default == []
 
     @parameterized.expand(
         [
@@ -100,8 +100,8 @@ class DateInputTest(DeltaGeneratorTestCase):
         st.date_input("the label", arg_value)
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, proto_value)
+        assert c.label == "the label"
+        assert c.default == proto_value
 
     @parameterized.expand(
         [
@@ -116,9 +116,9 @@ class DateInputTest(DeltaGeneratorTestCase):
         st.date_input("the label", arg_value, min_date_value, max_date_value)
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.min, "1999/10/11")
-        self.assertEqual(c.max, "2001/02/03")
+        assert c.label == "the label"
+        assert c.min == "1999/10/11"
+        assert c.max == "2001/02/03"
 
     @parameterized.expand(
         [
@@ -135,9 +135,9 @@ class DateInputTest(DeltaGeneratorTestCase):
         st.date_input("the label", arg_value)
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.min, min_date_value)
-        self.assertEqual(c.max, max_date_value)
+        assert c.label == "the label"
+        assert c.min == min_date_value
+        assert c.max == max_date_value
 
     @parameterized.expand(
         [
@@ -169,7 +169,7 @@ class DateInputTest(DeltaGeneratorTestCase):
         ]
     )
     def test_value_out_of_range(self, value, min_date, max_date):
-        with raises(StreamlitAPIException) as exc_message:
+        with pytest.raises(StreamlitAPIException) as exc_message:
             st.date_input(
                 "the label", value=value, min_value=min_date, max_value=max_date
             )
@@ -240,8 +240,8 @@ class DateInputTest(DeltaGeneratorTestCase):
 
         assert date_range == date_range_input
 
-        self.assertEqual(c.value, ["2024/01/15", "2024/01/17"])
-        self.assertEqual(c.is_range, True)
+        assert c.value == ["2024/01/15", "2024/01/17"]
+        assert c.is_range
 
     def test_inside_column(self):
         """Test that it works correctly inside a column."""
@@ -253,10 +253,10 @@ class DateInputTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
-        self.assertEqual(len(all_deltas), 4)
+        assert len(all_deltas) == 4
         date_input_proto = self.get_delta_from_queue().new_element.date_input
 
-        self.assertEqual(date_input_proto.label, "foo")
+        assert date_input_proto.label == "foo"
 
     @parameterized.expand(
         [
@@ -270,15 +270,14 @@ class DateInputTest(DeltaGeneratorTestCase):
         st.date_input("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.date_input("the label", label_visibility="wrong_value")
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     @parameterized.expand(
@@ -298,8 +297,8 @@ class DateInputTest(DeltaGeneratorTestCase):
         """Test that it can be called with supported date formats."""
         st.date_input("the label", format=format)
         msg = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(msg.label, "the label")
-        self.assertEqual(msg.format, format)
+        assert msg.label == "the label"
+        assert msg.format == format
 
     @parameterized.expand(
         [
@@ -321,9 +320,9 @@ class DateInputTest(DeltaGeneratorTestCase):
     )
     def test_invalid_date_format_values(self, format: str):
         """Test that it raises an exception for invalid date formats."""
-        with self.assertRaises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitAPIException) as ex:
             st.date_input("the label", format=format)
-        self.assertTrue(str(ex.exception).startswith("The provided format"))
+        assert str(ex.value).startswith("The provided format")
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -331,38 +330,41 @@ class DateInputTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
     def test_width_config_default(self):
         """Test that default width is 'stretch'."""
         st.date_input("the label")
 
-        c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     def test_width_config_pixel(self):
         """Test that pixel width works properly."""
         st.date_input("the label", width=200)
 
-        c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.PIXEL_WIDTH.value
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
         )
-        self.assertEqual(c.width_config.pixel_width, 200)
+        assert c.width_config.pixel_width == 200
 
     def test_width_config_stretch(self):
         """Test that 'stretch' width works properly."""
         st.date_input("the label", width="stretch")
 
-        c = self.get_delta_from_queue().new_element.date_input
-        self.assertEqual(
-            c.width_config.WhichOneof("width_spec"), WidthConfigFields.USE_STRETCH.value
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     @parameterized.expand(
         [
@@ -375,7 +377,7 @@ class DateInputTest(DeltaGeneratorTestCase):
     )
     def test_invalid_width(self, width):
         """Test that invalid width values raise exceptions."""
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.date_input("the label", width=width)
 
 

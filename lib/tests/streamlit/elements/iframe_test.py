@@ -14,6 +14,8 @@
 
 import unittest
 
+import pytest
+
 from streamlit.elements.iframe import marshall
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
@@ -29,7 +31,7 @@ class IFrameTest(unittest.TestCase):
             marshall(proto, src="https://example.com", tab_index=tab_index)
 
             if tab_index is not None:
-                self.assertEqual(proto.tab_index, tab_index)
+                assert proto.tab_index == tab_index
 
     def test_marshall_with_invalid_tab_index_type(self):
         """Test that invalid tab_index types raise StreamlitAPIException."""
@@ -37,7 +39,7 @@ class IFrameTest(unittest.TestCase):
 
         for invalid_value in invalid_values:
             proto = IFrameProto()
-            with self.assertRaises(StreamlitAPIException):
+            with pytest.raises(StreamlitAPIException):
                 marshall(proto, src="https://example.com", tab_index=invalid_value)
 
     def test_marshall_with_invalid_tab_index_value(self):
@@ -46,5 +48,5 @@ class IFrameTest(unittest.TestCase):
 
         for invalid_value in invalid_values:
             proto = IFrameProto()
-            with self.assertRaises(StreamlitAPIException):
+            with pytest.raises(StreamlitAPIException):
                 marshall(proto, src="https://example.com", tab_index=invalid_value)

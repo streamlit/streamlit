@@ -84,7 +84,7 @@ class WStates(MutableMapping[str, Any]):
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return util.repr_(self)
 
     def __getitem__(self, k: str) -> Any:
@@ -123,7 +123,7 @@ class WStates(MutableMapping[str, Any]):
             # Array types are messages with data in a `data` field
             value = value.data
         elif value_field_name == "json_value":
-            value = json.loads(value)
+            value = json.loads(cast("str", value))
 
         deserialized = metadata.deserializer(value)
 
@@ -147,7 +147,7 @@ class WStates(MutableMapping[str, Any]):
     def __len__(self) -> int:
         return len(self.states)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         # For this and many other methods, we can't simply delegate to the
         # states field, because we need to invoke `__getitem__` for any
         # values, to handle deserialization and unwrapping of values.
@@ -249,11 +249,10 @@ class WStates(MutableMapping[str, Any]):
         """Return a list of serialized widget values for each widget with a value."""
         states = [
             self.get_serialized(widget_id)
-            for widget_id in self.states.keys()
+            for widget_id in self.states
             if self.get_serialized(widget_id)
         ]
-        states = cast("list[WidgetStateProto]", states)
-        return states
+        return cast("list[WidgetStateProto]", states)
 
     def call_callback(self, widget_id: str) -> None:
         """Call the given widget's callback and return the callback's
@@ -262,7 +261,10 @@ class WStates(MutableMapping[str, Any]):
         If the widget doesn't exist, raise an Exception.
         """
         metadata = self.widget_metadata.get(widget_id)
-        assert metadata is not None
+
+        if metadata is None:
+            raise RuntimeError(f"Widget {widget_id} not found.")
+
         callback = metadata.callback
         if callback is None:
             return
@@ -316,7 +318,7 @@ class KeyIdMapper:
         self._key_id_mapping = key_id_mapping
         self._id_key_mapping = {v: k for k, v in key_id_mapping.items()}
 
-    def get_id_from_key(self, key: str, default: Any = None) -> str:
+    def get_id_from_key(self, key: str, default: str | None = None) -> str | None:
         return self._key_id_mapping.get(key, default)
 
     def get_key_from_id(self, widget_id: str) -> str:
@@ -326,11 +328,11 @@ class KeyIdMapper:
         self._key_id_mapping.update(other._key_id_mapping)
         self._id_key_mapping.update(other._id_key_mapping)
 
-    def clear(self):
+    def clear(self) -> None:
         self._key_id_mapping.clear()
         self._id_key_mapping.clear()
 
-    def delete(self, key: str):
+    def delete(self, key: str) -> None:
         widget_id = self._key_id_mapping[key]
         del self._key_id_mapping[key]
         del self._id_key_mapping[widget_id]
@@ -371,7 +373,7 @@ class SessionState:
     # widget state at one point.
     query_params: QueryParams = field(default_factory=QueryParams)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return util.repr_(self)
 
     # is it possible for a value to get through this without being deserialized?
@@ -429,10 +431,10 @@ class SessionState:
         for widgets that don't have user_keys defined, and which aren't
         exposed to user code).
         """
-        old_keys = {self._get_widget_id(k) for k in self._old_state.keys()}
+        old_keys = {self._get_widget_id(k) for k in self._old_state}
         new_widget_keys = set(self._new_widget_state.keys())
         new_session_state_keys = {
-            self._get_widget_id(k) for k in self._new_session_state.keys()
+            self._get_widget_id(k) for k in self._new_session_state
         }
         return old_keys | new_widget_keys | new_session_state_keys
 
@@ -469,7 +471,10 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        assert user_key is not None or widget_id is not None
+        if user_key is None and widget_id is None:
+            raise ValueError(
+                "user_key and widget_id cannot both be None. This should never happen."
+            )
 
         if user_key is not None:
             try:
@@ -609,9 +614,10 @@ class SessionState:
             if metadata is not None:
                 if metadata.value_type == "trigger_value":
                     self._new_widget_state[state_id] = Value(False)
-                elif metadata.value_type == "string_trigger_value":
-                    self._new_widget_state[state_id] = Value(None)
-                elif metadata.value_type == "chat_input_value":
+                elif metadata.value_type in {
+                    "string_trigger_value",
+                    "chat_input_value",
+                }:
                     self._new_widget_state[state_id] = Value(None)
 
         for state_id in self._old_state:
@@ -619,9 +625,10 @@ class SessionState:
             if metadata is not None:
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
-                elif metadata.value_type == "string_trigger_value":
-                    self._old_state[state_id] = None
-                elif metadata.value_type == "chat_input_value":
+                elif metadata.value_type in {
+                    "string_trigger_value",
+                    "chat_input_value",
+                }:
                     self._old_state[state_id] = None
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
@@ -663,7 +670,9 @@ class SessionState:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
         """
-        return self._key_id_mapper.get_id_from_key(k, k)
+        # It's guaranteed that the key is a string since the default is string,
+        # so we can cast it to str here:
+        return cast("str", self._key_id_mapper.get_id_from_key(k, k))
 
     def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapper[user_key] = widget_id
@@ -727,19 +736,19 @@ class SessionState:
         We use pickleability as the metric for serializability, and test for
         pickleability by just trying it.
         """
-        try:
-            for k in self:
+        for k in self:
+            try:
                 pickle.dumps(self[k])
-        except Exception as e:
-            err_msg = (
-                f"Cannot serialize the value (of type `{type(self[k])}`) of '{k}' in "
-                "st.session_state. Streamlit has been configured to use "
-                "[pickle](https://docs.python.org/3/library/pickle.html) to "
-                "serialize session_state values. Please convert the value to a "
-                "pickle-serializable type. To learn more about this behavior, "
-                "see [our docs](https://docs.streamlit.io/knowledge-base/using-streamlit/serializable-session-state)."
-            )
-            raise UnserializableSessionStateError(err_msg) from e
+            except Exception as e:  # noqa: PERF203
+                err_msg = (
+                    f"Cannot serialize the value (of type `{type(self[k])}`) of '{k}' in "
+                    "st.session_state. Streamlit has been configured to use "
+                    "[pickle](https://docs.python.org/3/library/pickle.html) to "
+                    "serialize session_state values. Please convert the value to a "
+                    "pickle-serializable type. To learn more about this behavior, "
+                    "see [our docs](https://docs.streamlit.io/knowledge-base/using-streamlit/serializable-session-state)."
+                )
+                raise UnserializableSessionStateError(err_msg) from e
 
     def maybe_check_serializable(self) -> None:
         """Verify that session state can be serialized, if the relevant config
@@ -762,14 +771,14 @@ def _is_stale_widget(
 ) -> bool:
     if not metadata:
         return True
-    elif metadata.id in active_widget_ids:
-        return False
+
     # If we're running 1 or more fragments, but this widget is unrelated to any of the
     # fragments that we're running, then it should not be marked as stale as its value
     # may still be needed for a future fragment run or full script run.
-    elif fragment_ids_this_run and metadata.fragment_id not in fragment_ids_this_run:
-        return False
-    return True
+    return not (
+        metadata.id in active_widget_ids
+        or (fragment_ids_this_run and metadata.fragment_id not in fragment_ids_this_run)
+    )
 
 
 @dataclass

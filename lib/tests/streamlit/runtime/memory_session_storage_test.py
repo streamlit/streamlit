@@ -39,14 +39,14 @@ class MemorySessionStorageTest(unittest.TestCase):
         responsible for adding our own tests.
         """
         store = MemorySessionStorage()
-        self.assertIsInstance(store._cache, TTLCache)
+        assert isinstance(store._cache, TTLCache)
 
     def test_get(self):
         store = MemorySessionStorage()
         store._cache["foo"] = "bar"
 
-        self.assertEqual(store.get("foo"), "bar")
-        self.assertEqual(store.get("baz"), None)
+        assert store.get("foo") == "bar"
+        assert store.get("baz") is None
 
     def test_save(self):
         store = MemorySessionStorage()
@@ -54,18 +54,18 @@ class MemorySessionStorageTest(unittest.TestCase):
         session_info.session.id = "foo"
 
         store.save(session_info)
-        self.assertEqual(store.get("foo"), session_info)
+        assert store.get("foo") == session_info
 
     def test_delete(self):
         store = MemorySessionStorage()
         store._cache["foo"] = "bar"
 
         store.delete("foo")
-        self.assertEqual(store.get("foo"), None)
+        assert store.get("foo") is None
 
     def test_list(self):
         store = MemorySessionStorage()
         store._cache["foo"] = "bar"
         store._cache["baz"] = "qux"
 
-        self.assertEqual(store.list(), ["bar", "qux"])
+        assert store.list() == ["bar", "qux"]

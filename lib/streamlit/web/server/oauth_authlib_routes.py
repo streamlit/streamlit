@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Final
+from typing import Any, Final, cast
 from urllib.parse import urlparse
 
 import tornado.web
@@ -60,7 +60,7 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
 
     oauth = TornadoOAuth(config, cache=auth_cache)
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri
+    return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
 
 
 class AuthHandlerMixin(tornado.web.RequestHandler):
@@ -102,7 +102,7 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
 
 
 class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
-    async def get(self):
+    async def get(self) -> None:
         """Redirect to the OAuth provider login page."""
         provider = self._parse_provider_token()
         if provider is None:
@@ -128,13 +128,13 @@ class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
 
 
 class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
-    def get(self):
+    def get(self) -> None:
         self.clear_auth_cookie()
         self.redirect_to_base()
 
 
 class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
-    async def get(self):
+    async def get(self) -> None:
         provider = self._get_provider_by_state()
         origin = self._get_origin_from_secrets()
         if origin is None:
@@ -154,7 +154,9 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
                 else None
             )
             _LOGGER.error(
-                f"""Error during authentication: {sanitized_error}. Error description: {sanitized_error_description}""",
+                "Error during authentication: %s. Error description: %s",
+                sanitized_error,
+                sanitized_error_description,
             )
             self.redirect_to_base()
             return
@@ -168,7 +170,7 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
 
         client, _ = create_oauth_client(provider)
         token = client.authorize_access_token(self)
-        user = token.get("userinfo")
+        user = cast("dict[str, Any]", token.get("userinfo"))
 
         cookie_value = dict(user, origin=origin, is_logged_in=True)
         if user:

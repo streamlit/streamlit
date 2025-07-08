@@ -22,7 +22,7 @@ import os
 import requests
 
 
-def create_release():
+def create_release() -> None:
     """Create a release from the Git Tag."""
 
     tag = os.getenv("GIT_TAG")
@@ -61,7 +61,7 @@ def create_release():
         raise Exception(f"Unable to create release, HTTP response: {response.text}")
 
 
-def main():
+def main() -> None:
     create_release()
 
 

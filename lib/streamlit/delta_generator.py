@@ -63,6 +63,10 @@ from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.lib.form_utils import FormData, current_form_id
+from streamlit.elements.lib.layout_utils import (
+    get_height_config,
+    get_width_config,
+)
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
@@ -100,10 +104,13 @@ from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from google.protobuf.message import Message
 
     from streamlit.cursor import Cursor
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
+    from streamlit.elements.lib.layout_utils import LayoutConfig
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
@@ -301,9 +308,9 @@ class DeltaGenerator(
 
     def __exit__(
         self,
-        type: Any,
-        value: Any,
-        traceback: Any,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> Literal[False]:
         # with block ended
 
@@ -365,7 +372,7 @@ class DeltaGenerator(
 
         return wrapper
 
-    def __deepcopy__(self, _memo):
+    def __deepcopy__(self, _memo: Any) -> DeltaGenerator:
         dg = DeltaGenerator(
             root_container=self._root_container,
             cursor=deepcopy(self._cursor),
@@ -406,8 +413,7 @@ class DeltaGenerator(
         """
         if self._provided_cursor is None:
             return cursor.get_container_cursor(self._root_container)
-        else:
-            return self._provided_cursor
+        return self._provided_cursor
 
     @property
     def _is_top_level(self) -> bool:
@@ -436,6 +442,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         add_rows_metadata: AddRowsMetadata | None = None,
+        layout_config: LayoutConfig | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -474,6 +481,17 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
+
+        if layout_config:
+            if layout_config.height:
+                msg.delta.new_element.height_config.CopyFrom(
+                    get_height_config(layout_config.height)
+                )
+
+            if layout_config.width:
+                msg.delta.new_element.width_config.CopyFrom(
+                    get_width_config(layout_config.width)
+                )
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
@@ -521,9 +539,12 @@ class DeltaGenerator(
 
     def _block(
         self,
-        block_proto: Block_pb2.Block = Block_pb2.Block(),
+        block_proto: Block_pb2.Block | None = None,
         dg_type: type | None = None,
     ) -> DeltaGenerator:
+        if block_proto is None:
+            block_proto = Block_pb2.Block()
+
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
 

@@ -38,8 +38,8 @@ class PagesManager:
         self,
         main_script_path: ScriptPath,
         script_cache: ScriptCache | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         self._main_script_path = main_script_path
         self._main_script_hash: PageHash = calc_md5(main_script_path)
         self._script_cache = script_cache
@@ -135,7 +135,7 @@ class PagesManager:
                 self.intended_page_script_hash,
                 self._pages.get(fallback_page_hash, None),
             )
-        elif self.intended_page_name:
+        if self.intended_page_name:
             # If a user navigates directly to a non-main page of an app, the
             # the page name can identify the page script to run
             return next(

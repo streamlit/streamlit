@@ -53,8 +53,8 @@ from streamlit.web.server.routes import (
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import (
-    DEVELOPMENT_PORT,
     get_cookie_secret,
+    is_tornado_version_less_than,
     is_xsrf_enabled,
     make_url_path_regex,
 )
@@ -70,12 +70,12 @@ _LOGGER: Final = get_logger(__name__)
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
     "compress_response": True,
-    # Ping every 1s to keep WS alive.
-    # 2021.06.22: this value was previously 20s, and was causing
-    # connection instability for a small number of users. This smaller
-    # ping_interval fixes that instability.
-    # https://github.com/streamlit/streamlit/issues/3196
-    "websocket_ping_interval": 1,
+    # Ping every 30s to keep WS alive.
+    # With recent versions of Tornado, this value must be greater than or
+    # equal to websocket_ping_timeout.
+    # For details, see https://github.com/tornadoweb/tornado/pull/3376
+    # For compatibility with older versions of Tornado, we set the value to 1.
+    "websocket_ping_interval": 1 if is_tornado_version_less_than("6.5.0") else 30,
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
@@ -203,14 +203,6 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
-        if int(port) == DEVELOPMENT_PORT:
-            _LOGGER.warning(
-                "Port %s is reserved for internal development. "
-                "It is strongly recommended to select an alternative port "
-                "for `server.port`.",
-                DEVELOPMENT_PORT,
-            )
-
         try:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
@@ -225,9 +217,6 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
                         "Port %s already in use, trying to use the next one.", port
                     )
                     port += 1
-                    # Don't use the development port here:
-                    if port == DEVELOPMENT_PORT:
-                        port += 1
 
                     config.set_option(
                         "server.port", port, ConfigOption.STREAMLIT_DEFINITION
@@ -244,7 +233,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 
 class Server:
-    def __init__(self, main_script_path: str, is_hello: bool):
+    def __init__(self, main_script_path: str, is_hello: bool) -> None:
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
         self.initialize_mimetypes()
@@ -428,7 +417,7 @@ class Server:
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {
-                            "path": "%s/" % static_path,
+                            "path": f"{static_path}/",
                             "default_filename": "index.html",
                             "reserved_paths": [
                                 # These paths are required for identifying

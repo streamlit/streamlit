@@ -167,7 +167,7 @@ class Runtime:
         """
         return cls._instance is not None
 
-    def __init__(self, config: RuntimeConfig):
+    def __init__(self, config: RuntimeConfig) -> None:
         """Create a Runtime instance. It won't be started yet.
 
         Runtime is *not* thread-safe. Its public methods are generally
@@ -313,7 +313,7 @@ class Runtime:
 
         async_objs = self._get_async_objs()
 
-        def stop_on_eventloop():
+        def stop_on_eventloop() -> None:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
@@ -374,9 +374,11 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        assert not (existing_session_id and session_id_override), (
-            "Only one of existing_session_id and session_id_override should be set!"
-        )
+        if existing_session_id and session_id_override:
+            raise RuntimeError(
+                "Only one of existing_session_id and session_id_override should be set. "
+                "This should never happen."
+            )
 
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { createContext } from "react"
 
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { baseTheme, ThemeConfig } from "~lib/theme"
-import { createFormsData, FormsData } from "~lib/WidgetStateManager"
 
 /**
  * The lib config contains various configurations that the host platform can
@@ -107,17 +106,6 @@ export interface LibContextProps {
   locale: typeof window.navigator.language
 
   /**
-   * Data about all forms in the app. The WidgetStateManager creates its own
-   * internal FormsData instance, and calls a callback (`formsDataChanged`)
-   * when forms are updated. This FormsData instance should be updated
-   * from that callback.
-   * Pulled from context in BlockNodeRenderer/FormSubmitButton
-   * @see BlockNodeRenderer
-   * @see FormSubmitButton
-   */
-  formsData: FormsData
-
-  /**
    * The app's current ScriptRunState. This is used in combination with
    * scriptRunId to prune stale elements. It's also used by the app to
    * display the "running man" indicator when the app's script is being re-run.
@@ -163,7 +151,7 @@ const noOpEndpoints: StreamlitEndpoints = {
   deleteFileAtURL: () => Promise.reject(new Error("unimplemented endpoint")),
 }
 
-export const LibContext = React.createContext<LibContextProps>({
+export const LibContext = createContext<LibContextProps>({
   isFullScreen: false,
   setFullScreen: () => {},
   addScriptFinishedHandler: () => {},
@@ -177,9 +165,9 @@ export const LibContext = React.createContext<LibContextProps>({
   libConfig: {},
   fragmentIdsThisRun: [],
   locale: window.navigator.language,
-  formsData: createFormsData(),
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: "",
   // This should be overwritten
   componentRegistry: new ComponentRegistry(noOpEndpoints),
 })
+LibContext.displayName = "LibContext"

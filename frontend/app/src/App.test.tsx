@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
@@ -14,10 +15,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { act } from "react"
 
 import {
-  act,
   fireEvent,
   render,
   RenderResult,
@@ -45,6 +45,7 @@ import {
   SessionInfo,
   toExportedTheme,
   WidgetStateManager,
+  WindowDimensionsProvider,
 } from "@streamlit/lib"
 import {
   Config,
@@ -234,6 +235,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     setImportedTheme: vi.fn(),
   },
   streamlitExecutionStartedAt: 100,
+  isMobileViewport: false,
   ...extend,
 })
 
@@ -317,7 +319,9 @@ window.ResizeObserver = ResizeObserver
 function renderApp(props: Props): RenderResult {
   return render(
     <RootStyleProvider theme={getDefaultTheme()}>
-      <App {...props} />
+      <WindowDimensionsProvider>
+        <App {...props} />
+      </WindowDimensionsProvider>
     </RootStyleProvider>
   )
 }
@@ -470,9 +474,12 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
     })
-
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it("triggers page reload", () => {
@@ -547,14 +554,17 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
 
-      // @ts-expect-error
       window.__streamlit = {
         ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION: true,
       }
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
 
       window.__streamlit = undefined
 
@@ -1283,8 +1293,7 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      // Header/main menu should not render
-      expect(screen.queryByTestId("stHeader")).toBeNull()
+      // main menu should not render
       expect(screen.queryByTestId("stMainMenu")).toBeNull()
     })
 
@@ -1371,10 +1380,66 @@ describe("App", () => {
 
       expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
+
+    it("button should be hidden when script changes on disk", async () => {
+      renderApp(getProps())
+
+      // First make the button visible by setting developer mode
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+
+      // Send scriptChangedOnDisk event
+      sendForwardMessage("sessionEvent", {
+        type: "scriptChangedOnDisk",
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stAppDeployButton")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("button should reappear when script starts running after file change", () => {
+      renderApp(getProps())
+
+      // First make the button visible by setting developer mode
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+
+      // Send scriptChangedOnDisk event
+      sendForwardMessage("sessionEvent", {
+        type: "scriptChangedOnDisk",
+      })
+
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+
+      // Send session status changed with script running
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+    })
   })
 
   describe("App.onHistoryChange", () => {
-    const NEW_SESSION_JSON = {
+    const CURRENT_NEW_SESSION_JSON = {
       config: {
         gatherUsageStats: false,
         maxCachedMessageAge: 0,
@@ -1407,7 +1472,7 @@ describe("App", () => {
       pageScriptHash: "top_hash",
       fragmentIdsThisRun: [],
     }
-    const NAVIGATION_JSON = {
+    const THIS_NAVIGATION_JSON = {
       appPages: [
         {
           pageScriptHash: "top_hash",
@@ -1435,29 +1500,29 @@ describe("App", () => {
       renderApp(getProps())
 
       sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
+        ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "sub_hash",
       })
       sendForwardMessage("navigation", {
-        ...NAVIGATION_JSON,
+        ...THIS_NAVIGATION_JSON,
         pageScriptHash: "sub_hash",
       })
 
       sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
+        ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "top_hash",
       })
       sendForwardMessage("navigation", {
-        ...NAVIGATION_JSON,
+        ...THIS_NAVIGATION_JSON,
         pageScriptHash: "top_hash",
       })
 
       sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
+        ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "sub_hash",
       })
       sendForwardMessage("navigation", {
-        ...NAVIGATION_JSON,
+        ...THIS_NAVIGATION_JSON,
         pageScriptHash: "sub_hash",
       })
 
@@ -1509,11 +1574,11 @@ describe("App", () => {
       expect(connectionManager.sendMessage).not.toBeCalled()
 
       sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
+        ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "sub_hash",
       })
       sendForwardMessage("navigation", {
-        ...NAVIGATION_JSON,
+        ...THIS_NAVIGATION_JSON,
         pageScriptHash: "sub_hash",
       })
       window.history.back()
@@ -1627,8 +1692,15 @@ describe("App", () => {
   })
 
   describe("App.sendRerunBackMsg", () => {
+    let originalStreamlitWindowObj: typeof window.__streamlit
+
+    beforeEach(() => {
+      originalStreamlitWindowObj = window.__streamlit
+    })
+
     afterEach(() => {
       window.history.pushState({}, "", "/")
+      window.__streamlit = originalStreamlitWindowObj
     })
 
     it("sends the currentPageScriptHash if no pageScriptHash is given", () => {
@@ -1759,6 +1831,38 @@ describe("App", () => {
         port: "8501",
       } as URL)
 
+      window.history.pushState({}, "", "/foo/bar/baz")
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
+      ).toBe("baz")
+    })
+
+    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (main page)", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
+      window.history.pushState({}, "", "/foo/bar/")
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
+      ).toBe("")
+    })
+
+    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (non-main page)", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
       window.history.pushState({}, "", "/foo/bar/baz")
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
@@ -2072,7 +2176,11 @@ describe("App", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
       window.parent = prevWindowParent
     })
 
@@ -2128,7 +2236,7 @@ describe("App", () => {
         }
       )
 
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
     })
 
     it("MPA V2 - will remove logo if activeScriptHash does not match", async () => {
@@ -2159,7 +2267,7 @@ describe("App", () => {
           activeScriptHash: "other_page_script_hash",
         }
       )
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
 
       // Trigger a new session with a different pageScriptHash
       sendForwardMessage("newSession", {
@@ -2170,7 +2278,7 @@ describe("App", () => {
       // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
       // Cleanup for MPA V2 in filterMainScriptElements
       await waitFor(() => {
-        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
       })
     })
 
@@ -2188,7 +2296,7 @@ describe("App", () => {
         }
       )
 
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
 
       // Trigger a new scriptRunId via new session
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -2202,7 +2310,7 @@ describe("App", () => {
       // Since no logo is sent in this script run, logo must not be present in the script anymore
       // Stale logo should be removed
       await waitFor(() => {
-        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
       })
     })
 
@@ -2239,7 +2347,7 @@ describe("App", () => {
         ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
       )
       await waitFor(() => {
-        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+        expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
       })
 
       // Fragment run - logo is not sent, but should persist (triggers scriptRunId to be updated)
@@ -2252,7 +2360,7 @@ describe("App", () => {
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
       )
       await waitFor(() => {
-        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+        expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
       })
 
       // Full re-run - logo is not sent, should be removed as stale (scriptRunId is different)
@@ -2265,7 +2373,7 @@ describe("App", () => {
         ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
       )
       await waitFor(() => {
-        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
       })
     })
   })
@@ -2443,6 +2551,7 @@ describe("App", () => {
             timezone: "UTC",
             timezoneOffset: 0,
             url: "http://localhost:3000/",
+            colorScheme: "light",
           },
         },
       })
@@ -2549,7 +2658,11 @@ describe("App", () => {
     })
 
     afterEach(() => {
-      window.location = prevWindowLocation
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it.each([
@@ -2580,7 +2693,7 @@ describe("App", () => {
       ["remoteHost", true, Config.ToolbarMode.VIEWER, false],
     ])(
       "should render or not render dev menu depending on hostname, host ownership, toolbarMode[%s, %s, %s]",
-      async (hostname, hostIsOwnr, toolbarMode, expectedResult) => {
+      (hostname, hostIsOwnr, toolbarMode, expectedResult) => {
         mockWindowLocation(hostname)
 
         const result = showDevelopmentOptions(hostIsOwnr, toolbarMode)
@@ -3016,6 +3129,7 @@ describe("App", () => {
             timezone: "UTC",
             timezoneOffset: 0,
             url: "http://localhost:3000/",
+            colorScheme: "light",
           },
         },
       })
@@ -3232,12 +3346,13 @@ describe("App", () => {
             timezone: "UTC",
             timezoneOffset: 0,
             url: "http://localhost:3000/",
+            colorScheme: "light",
           },
         },
       })
     })
 
-    it("clears fragment auto rerun intervals when page changes", async () => {
+    it("clears fragment auto rerun intervals when page changes", () => {
       prepareHostCommunicationManager()
 
       // autoRerun uses setInterval under-the-hood, so use fake timers
@@ -3283,7 +3398,7 @@ describe("App", () => {
       // make sure that no new messages were sent after switching the page
       // despite advancing the timer. We could check whether clearInterval
       // was called, but this check is more observing the behavior than checking
-      // the exact interals.
+      // the exact internals.
       const oldCallCountPlusPageChangeRequest = times + 1
       expect(connectionManager.sendMessage).toBeCalledTimes(
         oldCallCountPlusPageChangeRequest
@@ -3298,13 +3413,16 @@ describe("App", () => {
       })
 
       afterEach(() => {
-        window.location = prevWindowLocation
+        Object.defineProperty(window, "location", {
+          value: prevWindowLocation,
+          writable: true,
+          configurable: true,
+        })
       })
 
       it("shows hostMenuItems", () => {
         mockWindowLocation("https://devel.streamlit.test")
         // We need this to use the Main Menu Button
-        // eslint-disable-next-line testing-library/render-result-naming-convention
         const app = renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -3334,13 +3452,6 @@ describe("App", () => {
             },
             {
               label: "Print",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "About",
               type: "option",
             },
           ],
@@ -3375,10 +3486,6 @@ describe("App", () => {
             },
             {
               label: "Fork this App",
-              type: "option",
-            },
-            {
-              label: "About",
               type: "option",
             },
           ],
@@ -3618,16 +3725,19 @@ describe("App", () => {
   describe("page change URL handling", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     let pushStateSpy: any
+    let originalStreamlitWindowObj: typeof window.__streamlit
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
       pushStateSpy = vi.spyOn(window.history, "pushState")
+      originalStreamlitWindowObj = window.__streamlit
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
       window.localStorage.clear()
+      window.__streamlit = originalStreamlitWindowObj
     })
 
     it("can switch to the main page from a different page", () => {
@@ -3814,6 +3924,43 @@ describe("App", () => {
       )
     })
 
+    it("works with window.__streamlit.MAIN_PAGE_BASE_URL", () => {
+      renderApp(getProps())
+
+      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://example.com/foo" }
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        appPages: [],
+        pageScriptHash: "hash2",
+      })
+
+      sendForwardMessage("navigation", {
+        appPages: [
+          {
+            pageScriptHash: "page_script_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+            isDefault: true,
+          },
+          {
+            pageScriptHash: "hash2",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
+        ],
+        pageScriptHash: "hash2",
+        position: Navigation.Position.SIDEBAR,
+        sections: [],
+      })
+
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/foo/page2"
+      )
+    })
+
     it("doesn't push a new history when the same page URL is already set", () => {
       renderApp(getProps())
       history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
@@ -3943,5 +4090,102 @@ describe("App", () => {
       // @ts-expect-error
       window.history.pushState.mockClear()
     })
+  })
+})
+
+describe("App.hasReceivedNewSession flag behavior", () => {
+  beforeEach(() => {
+    // Ensure a clean state for sessionInfo and connectionManager mocks
+    vi.clearAllMocks()
+  })
+
+  it("ensures incrementMessageCacheRunCount is called when hasReceivedNewSession is true", () => {
+    renderApp(getProps())
+    const connectionManager = getMockConnectionManager(true) // isConnected = true
+    const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+
+    // 1. Initialize SessionInfo (so this.sessionInfo.isSet is true)
+    act(() => {
+      const props = mockSessionInfoProps({
+        streamlitVersion: "streamlitVersion",
+      })
+      sessionInfo.setCurrent(props)
+    })
+    expect(sessionInfo.isSet).toBe(true)
+
+    // 2. Send newSession (sets hasReceivedNewSession = true internally in App.tsx)
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    // 3. Send scriptFinished
+    sendForwardMessage(
+      "scriptFinished",
+      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+    )
+
+    // 4. Assert incrementMessageCacheRunCount was called
+    // It's called once because hasReceivedNewSession was true.
+    expect(
+      connectionManager.incrementMessageCacheRunCount
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it("ensures incrementMessageCacheRunCount is NOT called when hasReceivedNewSession is false", async () => {
+    renderApp(getProps())
+    const connectionManager = getMockConnectionManager(true) // isConnected = true
+    const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+
+    // 1. Initialize SessionInfo
+    act(() => {
+      const props = mockSessionInfoProps({
+        streamlitVersion: "streamlitVersion",
+      })
+      sessionInfo.setCurrent(props)
+    })
+    expect(sessionInfo.isSet).toBe(true)
+
+    // 2. Send newSession (sets hasReceivedNewSession = true)
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    // Verify that if script finished now, incrementMessageCacheRunCount would be called
+    sendForwardMessage(
+      "scriptFinished",
+      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+    )
+    expect(
+      connectionManager.incrementMessageCacheRunCount
+    ).toHaveBeenCalledTimes(1)
+    vi.mocked(connectionManager.incrementMessageCacheRunCount).mockClear()
+
+    // 3. Trigger rerunScript (which calls sendRerunBackMsg, setting hasReceivedNewSession = false)
+    // Set scriptRunState to NOT_RUNNING so rerunScript proceeds
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: false,
+    })
+
+    // eslint-disable-next-line testing-library/prefer-user-event
+    fireEvent.keyDown(document.body, {
+      key: "r",
+      which: 82, // Key code for 'r'
+    })
+
+    // Wait for state updates from rerunScript to propagate if any were async.
+    // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
+    await act(async () => {
+      // Wrapping in act to ensure all microtasks related to fireEvent are flushed.
+      // Even if it appears as a no-op, it can be important for timing in RTL tests.
+      return Promise.resolve()
+    })
+
+    // 4. Send scriptFinished again
+    sendForwardMessage(
+      "scriptFinished",
+      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+    )
+
+    // 5. Assert incrementMessageCacheRunCount was NOT called this time
+    expect(
+      connectionManager.incrementMessageCacheRunCount
+    ).not.toHaveBeenCalled()
   })
 })

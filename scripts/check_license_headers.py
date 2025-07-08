@@ -47,7 +47,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
-    r"|\.(json|prettierrc|nvmrc|mdc)$"
+    r"|\.(json|prettierrc|nvmrc|mdc|md)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
     # Exclude pytest config files, because they don't have any degree of creativity.
@@ -61,7 +61,7 @@ IGNORE_PATTERN = re.compile(
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
     r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
     r"|^component-lib/\.yarn"
-    r"|^lib/(\.dockerignore|MANIFEST\.in|mypy\.ini)$"
+    r"|(\.dockerignore|MANIFEST\.in|mypy\.ini)$"
     r"|^.*-requirements\.txt$"
     r"|min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
@@ -78,7 +78,7 @@ IGNORE_PATTERN = re.compile(
 )
 
 
-def main():
+def main() -> None:
     git_files = sorted(
         subprocess.check_output(["git", "ls-files", "--no-empty-directory"])
         .decode()

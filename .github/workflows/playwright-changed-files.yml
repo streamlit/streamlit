@@ -12,6 +12,7 @@ concurrency:
 jobs:
   playwright-e2e-tests-changed-files:
     runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -95,8 +96,8 @@ jobs:
         name: Install playwright
         run: python -m playwright install --with-deps
       - if: steps.check_changed_files.outputs.run_tests == 'true'
-        name: Run make frontend-build-with-profiler
-        run: make frontend-build-with-profiler
+        name: Run make frontend-with-profiler
+        run: make frontend-with-profiler
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Run changed playwright tests
         run: |

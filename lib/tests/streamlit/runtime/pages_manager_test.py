@@ -88,7 +88,7 @@ class PagesManagerTest(unittest.TestCase):
         main script path provided."""
         page_info = self.pages_manager.get_initial_active_script("page_hash")
 
-        self.assertDictEqual(
-            page_info,
-            {"script_path": "main_script_path", "page_script_hash": "page_hash"},
-        )
+        assert page_info == {
+            "script_path": "main_script_path",
+            "page_script_hash": "page_hash",
+        }

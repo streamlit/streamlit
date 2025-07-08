@@ -82,7 +82,7 @@ class FooWithMixedDocs:
     def __init__(self):
         self.my_var_1 = 123
 
-    def my_func_1(self, a, b=False):
+    def my_func_1(self, a: int, b: bool = False) -> None:
         """Func with doc."""
 
     def my_func_2(self):

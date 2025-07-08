@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import React, { memo, ReactElement, useContext, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { StyledIcon } from "~lib/components/shared/Icon"
 import BaseButton, {
   BaseButtonKind,
@@ -46,10 +46,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   empty,
   children,
 }): ReactElement => {
-  const [open, setOpen] = React.useState(false)
-  const isInSidebar = React.useContext(IsSidebarContext)
+  const [open, setOpen] = useState(false)
+  const isInSidebar = useContext(IsSidebarContext)
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const lightBackground = hasLightBackgroundColor(theme)
 
   const [width, elementRef] = useCalculatedWidth()

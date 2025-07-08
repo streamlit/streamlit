@@ -78,8 +78,11 @@ class WebsocketSessionManagerTests(unittest.TestCase):
 
         assert session_info.session.id == session_id
 
-    def test_connect_session_assert(self):
-        with pytest.raises(AssertionError):
+    def test_connect_session_check(self):
+        with pytest.raises(
+            RuntimeError,
+            match="Only one of existing_session_id and session_id_override should be truthy. This should never happen.",
+        ):
             self.connect_session(
                 existing_session_id="existing_session_id",
                 session_id_override="session_id_override",
@@ -114,11 +117,11 @@ class WebsocketSessionManagerTests(unittest.TestCase):
 
     def test_connect_session_explodes_if_ID_collission(self):
         session_id = self.connect_session()
-        with pytest.raises(AssertionError):
-            with patch(
-                "streamlit.runtime.app_session.uuid.uuid4", return_value=session_id
-            ):
-                self.connect_session()
+        with (
+            pytest.raises(RuntimeError),
+            patch("streamlit.runtime.app_session.uuid.uuid4", return_value=session_id),
+        ):
+            self.connect_session()
 
     @patch(
         "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
@@ -237,6 +240,29 @@ class WebsocketSessionManagerTests(unittest.TestCase):
 
     def test_close_session_on_invalid_session_id(self):
         self.session_mgr.close_session("nonexistent_session")
+
+    def test_clear_cache_on_last_session_disconnect(self):
+        """Test that script cache is cleared on last session disconnect."""
+        session_id_1 = self.connect_session()
+        session_id_2 = self.connect_session()
+
+        self.session_mgr.disconnect_session(session_id_1)
+        self.session_mgr._script_cache.clear.assert_not_called()
+
+        self.session_mgr.disconnect_session(session_id_2)
+        self.session_mgr._script_cache.clear.assert_called_once()
+
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
+    def test_clear_cache_on_last_session_close(self):
+        """Test that script cache is cleared on last session close."""
+        session_id_1 = self.connect_session()
+        session_id_2 = self.connect_session()
+
+        self.session_mgr.close_session(session_id_1)
+        self.session_mgr._script_cache.clear.assert_not_called()
+
+        self.session_mgr.close_session(session_id_2)
+        self.session_mgr._script_cache.clear.assert_called_once()
 
     def test_get_session_info_on_active_session(self):
         session_id = self.connect_session()

@@ -16,11 +16,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    goto_app,
 )
 
 AUDIO_ELEMENTS_WITH_PATH = 3
@@ -46,7 +50,7 @@ def check_audio_source_error_count(messages: list[str], expected_count: int):
 def test_audio_has_correct_properties(app: Page):
     """Test that `st.audio` renders correct properties."""
     audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements).to_have_count(6)
+    expect(audio_elements).to_have_count(8)
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
     expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))
@@ -92,6 +96,35 @@ def test_audio_autoplay(app: Page):
 
     expect(audio_element).to_have_js_property("autoplay", True)
     expect(audio_element).to_have_js_property("paused", False)
+
+
+@pytest.mark.skip_browser("firefox")
+def test_audio_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that `st.audio` width configurations are applied correctly."""
+    audio_pixel_width = app.get_by_test_id("stAudio").nth(6)
+    wait_until(
+        app,
+        lambda: audio_pixel_width.evaluate("el => el.readyState") == 4,
+        timeout=15000,
+    )
+    # Hide the timeline to prevent flakiness in screenshots
+    hide_timeline_style = """
+    audio::-webkit-media-controls-timeline { display: none; }
+    """
+    assert_snapshot(
+        audio_pixel_width, name="st_audio-width_300px", style=hide_timeline_style
+    )
+
+    audio_stretch_width = app.get_by_test_id("stAudio").nth(7)
+    wait_until(
+        app,
+        lambda: audio_stretch_width.evaluate("el => el.readyState") == 4,
+        timeout=15000,
+    )
+
+    assert_snapshot(
+        audio_stretch_width, name="st_audio-width_stretch", style=hide_timeline_style
+    )
 
 
 def test_audio_remount_no_autoplay(app: Page):
@@ -161,7 +194,7 @@ def test_audio_source_error_with_url(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with url
@@ -187,7 +220,7 @@ def test_audio_source_error_with_path(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
 
     # Wait until the expected errors are logged, indicating CLIENT_ERROR was sent
     # Should be 3 instances of the error, one for each audio element with path

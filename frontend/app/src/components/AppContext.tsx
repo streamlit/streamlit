@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { createContext } from "react"
 
 import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
 
@@ -110,9 +110,26 @@ export interface AppContextProps {
    * @see DeployDialog
    */
   gitInfo: IGitInfo | null
+
+  /**
+   * Whether to show the toolbar in the app header.
+   * Can be configured via host message.
+   * Pulled from appContext in Header
+   * @see Header
+   */
+  showToolbar: boolean
+
+  /**
+   * Whether to show the colored line at the top of the app.
+   * Can be configured via host message.
+   * Pulled from appContext in Header and HeaderColoredLine
+   * @see Header
+   * @see HeaderColoredLine
+   */
+  showColoredLine: boolean
 }
 
-export const AppContext = React.createContext<AppContextProps | null>({
+export const AppContext = createContext<AppContextProps | null>({
   initialSidebarState: PageConfig.SidebarState.AUTO,
   pageLinkBaseUrl: "",
   currentPageScriptHash: "",
@@ -125,5 +142,7 @@ export const AppContext = React.createContext<AppContextProps | null>({
   hideSidebarNav: false,
   widgetsDisabled: false,
   gitInfo: null,
+  showToolbar: true,
+  showColoredLine: true,
 })
 AppContext.displayName = "AppContext"

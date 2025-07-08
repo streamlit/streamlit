@@ -158,3 +158,103 @@ with st.form("form_11"):
     )
     if submitted_11:
         st.write("Form submitted")
+
+with st.form("form_12", width=300):
+    st.write("Inside form 12")
+    st.write("Form width: 300px")
+    text_input = st.text_input("Form 12 - Text Input")
+    submitted_12 = st.form_submit_button(
+        "Form 12 - Submit",
+        help="Submit by clicking",
+    )
+    if submitted_12:
+        st.write("Form submitted")
+
+with st.form("form_13", width="content"):
+    st.write("Inside form 13")
+    st.write("Form width: content")
+    text_input = st.text_input("Form 13 - Text Input")
+    submitted_13 = st.form_submit_button(
+        "Form 13 - Submit",
+        help="Submit by clicking",
+    )
+    if submitted_13:
+        st.write("Form submitted")
+
+with st.form("form_14", width="stretch"):
+    st.write("Inside form 14")
+    st.write("Form width: stretch")
+    text_input = st.text_input("Form 14 - Text Input")
+    submitted_14 = st.form_submit_button(
+        "Form 14 - Submit",
+        help="Submit by clicking",
+    )
+    if submitted_14:
+        st.write("Form submitted")
+
+with st.form("form_15", height=100):
+    st.write("Inside form 15")
+    st.write("Form height: 100px")
+    text_input = st.text_input("Form 15 - Text Input")
+    submitted_15 = st.form_submit_button(
+        "Form 15 - Submit",
+        help="Submit by clicking",
+    )
+    if submitted_15:
+        st.write("Form submitted")
+
+with st.form("form_16", height="content"):
+    st.write("Inside form 16")
+    st.write("Form height: content")
+    text_input = st.text_input("Form 16 - Text Input")
+    submitted_16 = st.form_submit_button(
+        "Form 16 - Submit",
+        help="Submit by clicking",
+    )
+    if submitted_16:
+        st.write("Form submitted")
+
+
+col1, col2 = st.columns(2)
+with col1:
+    with st.form("form_17", height=400):
+        st.write("Form height: 400px")
+        text_input = st.text_input("Form 17 - Text Input")
+        st.form_submit_button(
+            help="Submit by clicking",
+        )
+
+    with st.form("form_18", height="stretch"):
+        st.write("Form height: stretch")
+        text_input = st.text_input("Form 18 - Text Input")
+        st.form_submit_button(
+            help="Submit by clicking",
+        )
+
+with col2:
+    with st.form("form_19", height="stretch"):
+        st.write("Form height: stretch")
+        text_input = st.text_input("Form 19 - Text Input")
+        st.form_submit_button(
+            help="Submit by clicking",
+        )
+
+with st.container(height=600, border=True):
+    with st.form("form_20", height="stretch"):
+        st.write("Form height: stretch")
+        text_input = st.text_input("Form 20 - Text Input")
+        st.form_submit_button(
+            help="Submit by clicking",
+        )
+
+    with st.form("form_21", height="content"):
+        st.write("Form height: content")
+        text_input = st.text_input("Form 21 - Text Input")
+        st.form_submit_button(
+            help="Submit by clicking",
+        )
+with st.container(border=True):
+    st.write("")
+    with st.form("form_22"):
+        st.dataframe([1, 2, 3])
+        st.form_submit_button("Submit")

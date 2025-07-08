@@ -18,11 +18,13 @@ const { RuleTester } = require("eslint")
 const enforceMemo = require("./enforce-memo")
 
 const ruleTester = new RuleTester({
-  parserOptions: {
+  languageOptions: {
     ecmaVersion: 2018,
     sourceType: "module",
-    ecmaFeatures: {
-      jsx: true,
+    parserOptions: {
+      ecmaFeatures: {
+        jsx: true,
+      },
     },
   },
 })
@@ -293,4 +295,4 @@ function MyComponent() {
   ],
 })
 
-console.log("All enforce-memo tests passed!")
+console.log("All 'enforce-memo' tests passed!")

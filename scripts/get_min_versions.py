@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script should be invoked using `make gen-min-dep-constraints`.
+# This script should be invoked using `make update-min-deps`.
 # It has the precondition that you must have installed streamlit locally since
 # you last updated its dependencies, which the make command takes care of.
 from __future__ import annotations
@@ -46,9 +46,7 @@ def get_min_version(specifier_set: SpecifierSet) -> str | None:
     for spec in specifier_set:
         if spec.operator in (">=", ">", "=="):
             version = str(spec.version)
-            if min_version is None:
-                min_version = version
-            elif version < min_version:
+            if min_version is None or version < min_version:
                 min_version = version
     return min_version
 
@@ -61,10 +59,7 @@ def is_required_dependency(requirement_str: str) -> bool:
         return False
 
     # Skip if it's a development dependency
-    if requirement_str.startswith("dev-"):
-        return False
-
-    return True
+    return not requirement_str.startswith("dev-")
 
 
 # Try to find streamlit or streamlit-nightly package

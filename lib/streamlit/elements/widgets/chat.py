@@ -33,6 +33,12 @@ from streamlit.elements.lib.file_uploader_utils import (
 )
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.image_utils import AtomicImage, WidthBehavior, image_to_url
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
@@ -47,6 +53,7 @@ from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -117,11 +124,11 @@ def _process_avatar_input(
     Tuple[AvatarType, str]
         The detected avatar type and the prepared avatar data.
     """
-    AvatarType = BlockProto.ChatMessage.AvatarType
+    AvatarType = BlockProto.ChatMessage.AvatarType  # noqa: N806
 
     if avatar is None:
         return AvatarType.ICON, ""
-    elif isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
+    if isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
         # On the frontend, we only support "assistant" and "user" for the avatar.
         return (
             AvatarType.ICON,
@@ -131,25 +138,24 @@ def _process_avatar_input(
                 else "user"
             ),
         )
-    elif isinstance(avatar, str) and is_emoji(avatar):
+    if isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
 
-    elif isinstance(avatar, str) and avatar.startswith(":material"):
+    if isinstance(avatar, str) and avatar.startswith(":material"):
         return AvatarType.ICON, validate_material_icon(avatar)
-    else:
-        try:
-            return AvatarType.IMAGE, image_to_url(
-                avatar,
-                width=WidthBehavior.ORIGINAL,
-                clamp=False,
-                channels="RGB",
-                output_format="auto",
-                image_id=delta_path,
-            )
-        except Exception as ex:
-            raise StreamlitAPIException(
-                "Failed to load the provided avatar value as an image."
-            ) from ex
+    try:
+        return AvatarType.IMAGE, image_to_url(
+            avatar,
+            width=WidthBehavior.ORIGINAL,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id=delta_path,
+        )
+    except Exception as ex:
+        raise StreamlitAPIException(
+            "Failed to load the provided avatar value as an image."
+        ) from ex
 
 
 def _pop_upload_files(
@@ -202,16 +208,15 @@ class ChatInputSerde:
             return None
         if not self.accept_files:
             return ui_value.data
-        else:
-            uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
-            for file in uploaded_files:
-                if self.allowed_types and not isinstance(file, DeletedFile):
-                    enforce_filename_restriction(file.name, self.allowed_types)
+        uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
+        for file in uploaded_files:
+            if self.allowed_types and not isinstance(file, DeletedFile):
+                enforce_filename_restriction(file.name, self.allowed_types)
 
-            return ChatInputValue(
-                text=ui_value.data,
-                files=uploaded_files,
-            )
+        return ChatInputValue(
+            text=ui_value.data,
+            files=uploaded_files,
+        )
 
     def serialize(self, v: str | None) -> ChatInputValueProto:
         return ChatInputValueProto(data=v)
@@ -224,12 +229,17 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Insert a chat message container.
 
         To add elements to the returned container, you can use ``with`` notation
         (preferred) or just call methods directly on the returned object. See the
         examples below.
+
+        .. note::
+            To follow best design practices and maintain a good appearance on
+            all screen sizes, don't nest chat message containers.
 
         Parameters
         ----------
@@ -273,6 +283,18 @@ class ChatMixin:
 
             .. |st.image| replace:: ``st.image``
             .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
+
+        width : "stretch", "content", or int
+            The width of the chat message container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - ``"content"``: The width of the container matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
 
         Returns
         -------
@@ -322,13 +344,26 @@ class ChatMixin:
             avatar, self.dg._get_delta_path_str()
         )
 
+        validate_width(width, allow_content=True)
+
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.name = name
         message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
+
+        # Set up width configuration
+        width_config = WidthConfig()
+        if isinstance(width, int):
+            width_config.pixel_width = width
+        elif width == "content":
+            width_config.use_content = True
+        else:
+            width_config.use_stretch = True
+
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
+        block_proto.width_config.CopyFrom(width_config)
 
         return self.dg._block(block_proto=block_proto)
 
@@ -345,6 +380,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | None: ...
 
     @overload
@@ -360,6 +396,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> ChatInputValue | None: ...
 
     @gather_metrics("chat_input")
@@ -375,6 +412,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> str | ChatInputValue | None:
         """Display a chat input widget.
 
@@ -438,6 +476,17 @@ class ChatMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        width : "stretch" or int
+            The width of the chat input widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -558,10 +607,12 @@ class ChatMixin:
             user_key=key,
             # chat_input is not allowed to be used in a form.
             form_id=None,
+            dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
             accept_file=accept_file,
             file_type=file_type,
+            width=width,
         )
 
         if file_type:
@@ -571,11 +622,10 @@ class ChatMixin:
         # We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
-        if runtime.exists():
-            if is_in_form(self.dg):
-                raise StreamlitAPIException(
-                    "`st.chat_input()` can't be used in a `st.form()`."
-                )
+        if runtime.exists() and is_in_form(self.dg):
+            raise StreamlitAPIException(
+                "`st.chat_input()` can't be used in a `st.form()`."
+            )
 
         # Determine the position of the chat input:
         # Use bottom position if chat input is within the main container
@@ -621,6 +671,9 @@ class ChatMixin:
             value_type="chat_input_value",
         )
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:
             chat_input_proto.value = widget_state.value
@@ -632,10 +685,12 @@ class ChatMixin:
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input", chat_input_proto
+                "chat_input", chat_input_proto, layout_config=layout_config
             )
         else:
-            self.dg._enqueue("chat_input", chat_input_proto)
+            self.dg._enqueue(
+                "chat_input", chat_input_proto, layout_config=layout_config
+            )
 
         return widget_state.value if not widget_state.value_changed else None
 

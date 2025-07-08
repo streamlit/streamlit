@@ -29,18 +29,18 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 import { LayersList, PickingInfo } from "@deck.gl/core"
-import { useTheme } from "@emotion/react"
 import { Close } from "@emotion-icons/material-outlined"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import { LibContext } from "~lib/components/core/LibContext"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledDeckGlChart,
@@ -60,7 +60,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const { disabled, disableFullscreenMode, element, fragmentId, widgetMgr } =
     props
   const { libConfig } = useContext(LibContext)
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
     expand,
@@ -137,8 +137,8 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
               ((): [number, unknown][] => {
                 const indices = currState?.selection?.indices?.[layerId] || []
 
-                return indices.map((index, i) => [
-                  index,
+                return indices.map((currIndex, i) => [
+                  currIndex,
                   currState.selection?.objects?.[layerId]?.[i],
                 ])
               })()
@@ -154,10 +154,10 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
             if (selectionMap.size === 0) {
               // If the layer has nothing selected, remove the layer from the returned value
-              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: _, ...restIndices } =
                 currState.selection.indices
-              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: __, ...restObjects } =
                 currState.selection.objects
 

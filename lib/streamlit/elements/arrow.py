@@ -37,7 +37,6 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
@@ -51,6 +50,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Iterable
@@ -93,7 +93,7 @@ class DataframeSelectionState(TypedDict, total=False):
         The selected rows, identified by their integer position. The integer
         positions match the original dataframe, even if the user sorts the
         dataframe in their browser. For a ``pandas.DataFrame``, you can
-        retrieve data from its interger position using methods like ``.iloc[]``
+        retrieve data from its integer position using methods like ``.iloc[]``
         or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
@@ -305,11 +305,11 @@ class ArrowMixin:
 
             If ``data`` is a ``pandas.Styler``, it will be used to style its
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
-            values and colors. It does not support some of the more exotic
-            styling options, like bar charts, hovering, and captions. For
-            these styling options, use column configuration instead. Text and
-            number formatting from ``column_config`` always takes precedence
-            over text and number formatting from ``pandas.Styler``.
+            values, colors, and font weights. It does not support some of the
+            more exotic styling options, like bar charts, hovering, and
+            captions. For these styling options, use column configuration
+            instead. Text and number formatting from ``column_config`` always
+            takes precedence over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -327,7 +327,7 @@ class ArrowMixin:
             Desired height of the dataframe expressed in pixels. If ``height``
             is ``None`` (default), Streamlit sets the height to show at most
             ten rows. Vertical scrolling within the dataframe element is
-            enabled when the height does not accomodate all rows.
+            enabled when the height does not accommodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
@@ -563,7 +563,7 @@ class ArrowMixin:
         if use_container_width is None:
             # If use_container_width was not explicitly set by the user, we set
             # it to True if width was not set explicitly, and False otherwise.
-            use_container_width = True if width is None else False
+            use_container_width = width is None
 
         proto.use_container_width = use_container_width
 
@@ -623,6 +623,7 @@ class ArrowMixin:
                 "dataframe",
                 user_key=key,
                 form_id=proto.form_id,
+                dg=self.dg,
                 data=proto.data,
                 width=width,
                 height=height,
@@ -644,9 +645,8 @@ class ArrowMixin:
                 value_type="string_value",
             )
             self.dg._enqueue("arrow_data_frame", proto)
-            return cast("DataframeState", widget_state.value)
-        else:
-            return self.dg._enqueue("arrow_data_frame", proto)
+            return widget_state.value
+        return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
     def table(self, data: Data = None) -> DeltaGenerator:
@@ -733,7 +733,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_table", proto)
 
     @gather_metrics("add_rows")
-    def add_rows(self, data: Data = None, **kwargs) -> DeltaGenerator | None:
+    def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -823,9 +823,7 @@ def _prep_data_for_add_rows(
 def _arrow_add_rows(
     dg: DeltaGenerator,
     data: Data = None,
-    **kwargs: (
-        DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
-    ),
+    **kwargs: DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None,
 ) -> DeltaGenerator | None:
     """Concatenate a dataframe to the bottom of the current one.
 
@@ -909,6 +907,25 @@ def _arrow_add_rows(
         and dg._cursor.props["add_rows_metadata"].last_index is None
     ):
         st_method = getattr(dg, dg._cursor.props["add_rows_metadata"].chart_command)
+        metadata = dg._cursor.props["add_rows_metadata"]
+
+        # Pass the styling properties stored in add_rows_metadata
+        # to the new element call.
+        kwargs = {}
+        if metadata.color is not None:
+            kwargs["color"] = metadata.color
+        if metadata.width is not None:
+            kwargs["width"] = metadata.width
+        if metadata.height is not None:
+            kwargs["height"] = metadata.height
+        if metadata.stack is not None:
+            kwargs["stack"] = metadata.stack
+
+        if metadata.chart_command == "bar_chart":
+            kwargs["horizontal"] = metadata.horizontal
+
+        kwargs["use_container_width"] = metadata.use_container_width
+
         st_method(data, **kwargs)
         return None
 
@@ -953,9 +970,10 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
     if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,
         # and `None` otherwise.
-        assert isinstance(default_uuid, str), (
-            "Default UUID must be a string for Styler data."
-        )
+        if not isinstance(default_uuid, str):
+            raise StreamlitAPIException(
+                "Default UUID must be a string for Styler data."
+            )
         marshall_styler(proto, data, default_uuid)
 
     proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)

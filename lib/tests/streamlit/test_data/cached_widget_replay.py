@@ -22,8 +22,7 @@ st.button("click to rerun")
 @st.cache_data(experimental_allow_widgets=True, show_spinner=False)
 def foo(i):
     options = ["foo", "bar", "baz", "qux"]
-    r = st.radio("radio", options, index=i)
-    return r
+    return st.radio("radio", options, index=i)
 
 
 r = foo(1)

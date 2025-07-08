@@ -172,7 +172,7 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "| Syntax | Description || ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+      "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
     )
     expect(screen.getByRole("heading")).toHaveTextContent(
       `| Syntax | Description |`

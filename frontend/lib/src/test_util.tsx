@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable import/no-extraneous-dependencies */
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
 import { Vector } from "apache-arrow"
@@ -24,10 +23,13 @@ import {
   RenderResult,
 } from "@testing-library/react"
 
-/* eslint-enable */
 import ThemeProvider from "./components/core/ThemeProvider"
 import { baseTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
+import {
+  FormsContext,
+  FormsContextProps,
+} from "./components/core/FormsContext"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
 import { ScriptRunState } from "./ScriptRunState"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
@@ -72,11 +74,12 @@ export function mockWindowLocation(hostname: string): void {
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in our LibContext.Provider.
+ * wrapped in our LibContext.Provider and FormsContext.Provider.
  */
-export const customRenderLibContext = (
+export const renderWithContexts = (
   component: ReactElement,
-  overrideLibContextProps: Partial<LibContextProps>
+  overrideLibContextProps: Partial<LibContextProps>,
+  overrideFormsContextProps?: Partial<FormsContextProps>
 ): RenderResult => {
   const defaultLibContextProps = {
     isFullScreen: false,
@@ -92,10 +95,13 @@ export const customRenderLibContext = (
     libConfig: {},
     fragmentIdsThisRun: [],
     locale: "en-US",
-    formsData: createFormsData(),
     scriptRunState: ScriptRunState.NOT_RUNNING,
     scriptRunId: "script run 123",
     componentRegistry: new ComponentRegistry(mockEndpoints()),
+  }
+
+  const defaultFormsContextProps = {
+    formsData: createFormsData(),
   }
 
   return reactTestingLibraryRender(component, {
@@ -105,7 +111,14 @@ export const customRenderLibContext = (
           <LibContext.Provider
             value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
           >
-            {children}
+            <FormsContext.Provider
+              value={{
+                ...defaultFormsContextProps,
+                ...overrideFormsContextProps,
+              }}
+            >
+              {children}
+            </FormsContext.Provider>
           </LibContext.Provider>
         </WindowDimensionsProvider>
       </ThemeProvider>

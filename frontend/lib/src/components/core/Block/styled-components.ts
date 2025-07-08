@@ -16,57 +16,49 @@
 
 import React from "react"
 
+import { isInteger } from "lodash"
 import styled from "@emotion/styled"
 
-import { Block as BlockProto } from "@streamlit/protobuf"
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
 
-function translateGapWidth(gap: string, theme: EmotionTheme): string {
+function translateGapWidth(
+  gap: streamlit.GapSize | undefined,
+  theme: EmotionTheme
+): string {
   let gapWidth = theme.spacing.lg
-  if (gap === "medium") {
+  if (gap === streamlit.GapSize.MEDIUM) {
     gapWidth = theme.spacing.threeXL
-  } else if (gap === "large") {
+  } else if (gap === streamlit.GapSize.LARGE) {
     gapWidth = theme.spacing.fourXL
+  } else if (gap === streamlit.GapSize.NONE) {
+    gapWidth = theme.spacing.none
   }
   return gapWidth
 }
-export interface StyledHorizontalBlockProps {
-  gap: string
-}
-
-export const StyledHorizontalBlock = styled.div<StyledHorizontalBlockProps>(
-  ({ theme, gap }) => {
-    const gapWidth = translateGapWidth(gap, theme)
-
-    return {
-      // While using flex for columns, padding is used for large screens and gap
-      // for small ones. This can be adjusted once more information is passed.
-      // More information and discussions can be found: Issue #2716, PR #2811
-      display: "flex",
-      flexWrap: "wrap",
-      flexGrow: 1,
-      alignItems: "stretch",
-      gap: gapWidth,
-    }
-  }
-)
 
 export interface StyledElementContainerProps {
   isStale: boolean
   width: React.CSSProperties["width"]
+  height: React.CSSProperties["height"]
   elementType: string
+  overflow: React.CSSProperties["overflow"]
+  flex?: React.CSSProperties["flex"]
 }
 
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, width, elementType }) => ({
+  ({ theme, isStale, width, height, elementType, overflow, flex }) => ({
     width,
+    height,
     maxWidth: "100%",
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
+    overflow,
+    flex,
 
     "@media print": {
       overflow: "visible",
@@ -106,7 +98,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
-  gap: string
+  gap: streamlit.GapSize | undefined
   showBorder: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
@@ -116,7 +108,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
-    const width = `calc(${percentage}% - ${gapWidth})`
+    const width =
+      gapWidth === theme.spacing.none
+        ? `${percentage}%`
+        : `calc(${percentage}% - ${gapWidth})`
 
     return {
       // Calculate width based on percentage, but fill all available space,
@@ -155,42 +150,57 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   }
 )
 
-export interface StyledVerticalBlockProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ref?: React.RefObject<any>
-  width?: React.CSSProperties["width"]
-  maxWidth?: React.CSSProperties["maxWidth"]
+export interface StyledFlexContainerBlockProps {
+  direction: React.CSSProperties["flexDirection"]
+  gap?: streamlit.GapSize | undefined
+  flex?: React.CSSProperties["flex"]
+  // This marks the prop as a transient property so it is
+  // not passed to the DOM. It overlaps with a valid attribute
+  // so passing it to the DOM will cause an error in the console.
+  $wrap?: boolean
+  height?: React.CSSProperties["height"]
+  border: boolean
 }
 
-export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
-  ({ theme }) => ({
-    width: "100%",
-    maxWidth: "100%",
-    position: "relative", // Required for the automatic width computation.
+export const StyledFlexContainerBlock =
+  styled.div<StyledFlexContainerBlockProps>(
+    ({ theme, direction, gap, flex, $wrap, height, border }) => {
+      let gapWidth
+      if (gap !== undefined) {
+        gapWidth = translateGapWidth(gap, theme)
+      }
+
+      return {
+        display: "flex",
+        gap: gapWidth,
+        width: "100%",
+        maxWidth: "100%",
+        height: height ?? "auto",
+        overflow: isInteger(height) ? "auto" : "visible",
+        flexDirection: direction,
+        flex,
+        flexWrap: $wrap ? "wrap" : "nowrap",
+        ...(border && {
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderRadius: theme.radii.default,
+          padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+        }),
+      }
+    }
+  )
+
+export interface StyledLayoutWrapperProps {
+  width?: React.CSSProperties["width"]
+  height?: React.CSSProperties["height"]
+  flex?: React.CSSProperties["flex"]
+}
+
+export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
+  ({ width, height, flex }) => ({
     display: "flex",
-    flex: 1,
-    flexDirection: "column",
-    gap: theme.spacing.lg,
+    width,
+    maxWidth: "100%",
+    height,
+    flex,
   })
 )
-
-export interface StyledVerticalBlockBorderWrapperProps {
-  border: boolean
-  height?: number
-}
-
-export const StyledVerticalBlockBorderWrapper =
-  styled.div<StyledVerticalBlockBorderWrapperProps>(
-    ({ theme, border, height }) => ({
-      display: "block",
-      ...(border && {
-        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-        borderRadius: theme.radii.default,
-        padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
-      }),
-      ...(height && {
-        height: `${height}px`,
-        overflow: "auto",
-      }),
-    })
-  )

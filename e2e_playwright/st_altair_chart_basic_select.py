@@ -27,7 +27,7 @@ st.header("Altair Chart with point and interval selection")
 
 # taken from vega_datasets cars example
 @st.cache_data  # use caching to avoid a potential issue with flakiness
-def get_cars_data():
+def get_cars_data() -> pd.DataFrame:
     return data.cars()
 
 
@@ -185,8 +185,8 @@ st.subheader("Area chart with selection_point")
 selection = st.altair_chart(
     area_chart_point, on_select="rerun", key="area_point", use_container_width=True
 )
-if len(selection.selection) > 0:
-    st.write("Area chart with selection_point:", str(selection.selection))
+if len(selection["selection"]) > 0:
+    st.write("Area chart with selection_point:", str(selection["selection"]))
 
 
 base = (
@@ -207,9 +207,10 @@ area_interval_selection = st.altair_chart(
     key="area_interval",
     use_container_width=True,
 )
-if len(area_interval_selection.selection) > 0:
+if len(area_interval_selection["selection"]) > 0:
     st.write(
-        "Area chart with selection_interval:", str(area_interval_selection.selection)
+        "Area chart with selection_interval:",
+        str(area_interval_selection.selection),  # type: ignore
     )
 
 # HISTOGRAM CHART

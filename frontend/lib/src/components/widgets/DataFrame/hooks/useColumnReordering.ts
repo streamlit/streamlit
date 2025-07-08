@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useCallback } from "react"
 
 import { DataEditorProps } from "@glideapps/glide-data-grid"
 
@@ -41,7 +41,7 @@ function useColumnReordering(
   unpinColumn: (columnId: string) => void,
   setColumnOrder: React.Dispatch<React.SetStateAction<string[]>>
 ): ColumnReorderingReturn {
-  const onColumnMoved = React.useCallback(
+  const onColumnMoved = useCallback(
     (startIndex: number, endIndex: number): void => {
       // Create a shallow copy of the original columns
       const newColumns = [...columns]

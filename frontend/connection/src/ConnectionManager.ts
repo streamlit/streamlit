@@ -23,15 +23,8 @@ import { establishStaticConnection } from "./StaticConnection"
 import { IHostConfigResponse, StreamlitEndpoints } from "./types"
 import { getPossibleBaseUris } from "./utils"
 import { WebsocketConnection } from "./WebsocketConnection"
+import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 
-/**
- * When the websocket connection retries this many times, we show a dialog
- * letting the user know we're having problems connecting. This happens
- * after about 15 seconds as, before the 6th retry, we've set timeouts for
- * a total of approximately 0.5 + 1 + 2 + 4 + 8 = 15.5 seconds (+/- some
- * due to jitter).
- */
-const RETRY_COUNT_FOR_WARNING = 6
 const LOG = getLogger("ConnectionManager")
 
 interface Props {
@@ -100,7 +93,7 @@ export class ConnectionManager {
     this.props = props
 
     // This method returns a promise, but we don't care about its result.
-    this.connect()
+    void this.connect()
   }
 
   /**
@@ -129,6 +122,7 @@ export class ConnectionManager {
       this.websocketConnection.sendMessage(obj)
     } else {
       // Don't need to make a big deal out of this. Just print to console.
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Cannot send message when server is disconnected: ${obj}`)
     }
   }
@@ -176,6 +170,7 @@ export class ConnectionManager {
 
     if (staticAppId) {
       // Establish a static connection
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       establishStaticConnection(
         staticAppId,
         this.setConnectionState,
@@ -189,8 +184,10 @@ export class ConnectionManager {
     } else {
       // Establish a websocket connection
       try {
+        // eslint-disable-next-line @typescript-eslint/await-thenable -- TODO: Fix this
         this.websocketConnection = await this.connectToRunningServer()
       } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
         const err = e instanceof Error ? e : new Error(`${e}`)
         LOG.error(`Client Error: Websocket connection - ${err.message}`)
         this.props.sendClientError(
@@ -232,7 +229,7 @@ export class ConnectionManager {
     // used in tests.
     _retryTimeout: number
   ): void => {
-    if (totalRetries === RETRY_COUNT_FOR_WARNING) {
+    if (totalRetries >= MAX_RETRIES_BEFORE_CLIENT_ERROR) {
       this.props.onConnectionError(latestError)
     }
   }

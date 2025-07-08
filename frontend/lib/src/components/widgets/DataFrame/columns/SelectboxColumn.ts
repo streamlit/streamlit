@@ -31,7 +31,8 @@ import {
 } from "./utils"
 
 export interface SelectboxColumnParams {
-  /** A list of options available in the selectbox.
+  /**
+   * A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
   readonly options: (string | number | boolean)[]
@@ -52,7 +53,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     {
       options: isBooleanType(props.arrowType)
         ? [true, false]
-        : props.arrowType.categoricalOptions ?? [],
+        : (props.arrowType.categoricalOptions ?? []),
     },
     // User parameters:
     props.columnTypeOptions

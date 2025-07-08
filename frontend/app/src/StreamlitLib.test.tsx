@@ -27,6 +27,7 @@ import {
 } from "@streamlit/connection"
 import {
   AppRoot,
+  ContainerContentsWrapper,
   createFormsData,
   FileUploadClient,
   FormsData,
@@ -35,7 +36,6 @@ import {
   render,
   ScriptRunState,
   SessionInfo,
-  VerticalBlock,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -95,6 +95,7 @@ class Endpoints implements StreamlitEndpoints {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface Props {}
 
 interface State {
@@ -223,12 +224,13 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     const blockNode = this.state.elements.main
 
     return (
-      <VerticalBlock
+      <ContainerContentsWrapper
         node={blockNode}
         endpoints={this.endpoints}
         widgetMgr={this.widgetMgr}
         uploadClient={this.uploadClient}
         widgetsDisabled={false}
+        height="auto"
       />
     )
   }

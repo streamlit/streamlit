@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import math
+from typing import cast
 
 from playwright.sync_api import Page, expect
 
@@ -36,11 +37,11 @@ def test_sidebar_date_input_popover(
     """Handles z-index of date input popover correctly."""
     date_inputs = themed_app.get_by_test_id("stSidebar").get_by_test_id("stDateInput")
     expect(date_inputs).to_have_count(2)
-
+    expect(date_inputs.first).to_be_visible()
     date_inputs.first.click()
-    assert_snapshot(
-        themed_app.get_by_test_id("stSidebar"), name="st_sidebar-date_popover"
-    )
+    calendar_popover = themed_app.locator("[data-baseweb='calendar']")
+    expect(calendar_popover).to_be_visible()
+    assert_snapshot(calendar_popover, name="st_sidebar-date_popover")
 
 
 def test_sidebar_overwriting_elements(app: Page):
@@ -61,7 +62,7 @@ def test_sidebar_no_collapse_on_text_input_mobile(app: Page):
     app.set_viewport_size({"width": 400, "height": 800})
 
     # Expand the sidebar on mobile
-    app.get_by_test_id("stSidebarCollapsedControl").locator("button").click()
+    app.get_by_test_id("stExpandSidebarButton").click()
 
     app.get_by_test_id("stSidebar").get_by_test_id("stTextInput").locator(
         "input"
@@ -93,7 +94,7 @@ def test_sidebar_resize_functionality(app: Page):
     expect(sidebar).to_be_visible()
 
     # Get the initial width of the sidebar
-    initial_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    initial_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
 
     # Find the resize handle (the element with cursor: col-resize)
     resize_handle = app.locator("div[style*='cursor: col-resize']")
@@ -103,6 +104,8 @@ def test_sidebar_resize_functionality(app: Page):
     handle_box = resize_handle.bounding_box()
 
     # Get the handle's starting position
+    assert handle_box is not None
+
     handle_x = handle_box["x"] + handle_box["width"] / 2
     handle_y = handle_box["y"] + handle_box["height"] / 2
 
@@ -114,8 +117,8 @@ def test_sidebar_resize_functionality(app: Page):
     app.mouse.up()
 
     # Wait for the resize to take effect
-    def check_width_changed():
-        current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    def check_width_changed() -> bool:
+        current_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
         return current_width > initial_width
 
     wait_until(app, check_width_changed)
@@ -125,7 +128,7 @@ def test_sidebar_resize_functionality(app: Page):
 
     # Verify the width increased by approximately drag_distance
     # We use a tolerance of +/- 3px to account for rounding and rendering differences
-    def check_approximate_width_change():
+    def check_approximate_width_change() -> bool:
         current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
         width_change = current_width - initial_width
         return math.isclose(width_change, drag_distance, abs_tol=3)
@@ -139,7 +142,7 @@ def test_sidebar_resize_functionality(app: Page):
     last_seen_width = after_drag_width
     stable_count = 0
 
-    def check_width_stabilized():
+    def check_width_stabilized() -> bool:
         nonlocal last_seen_width, stable_count
         current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
 
@@ -156,14 +159,18 @@ def test_sidebar_resize_functionality(app: Page):
     wait_until(app, check_width_stabilized)
 
     # Now get the stable width after clicking
-    click_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    click_width = cast(
+        "int", sidebar.evaluate("el => el.getBoundingClientRect().width")
+    )
 
     # Finally, test double-click to reset width
     resize_handle.dblclick()
 
     # Wait for the reset to take effect
-    def check_width_reset():
-        reset_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    def check_width_reset() -> bool:
+        reset_width = cast(
+            "int", sidebar.evaluate("el => el.getBoundingClientRect().width")
+        )
         return reset_width != click_width
 
     wait_until(app, check_width_reset)

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext, useEffect } from "react"
+import React, { ReactElement, useEffect } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
-import { LibContext } from "~lib/components/core/LibContext"
+import { FormsContext } from "~lib/components/core/FormsContext"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -27,6 +27,8 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+
 export interface Props {
   disabled: boolean
   element: ButtonProto
@@ -38,7 +40,7 @@ export function FormSubmitButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
 
-  const { formsData } = useContext(LibContext)
+  const { formsData } = useRequiredContext(FormsContext)
   const hasInProgressUpload = formsData.formsWithUploads.has(formId)
 
   let kind = BaseButtonKind.SECONDARY_FORM_SUBMIT

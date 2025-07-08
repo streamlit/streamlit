@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # isort: skip_file
+# ruff: noqa: E402, A001
 
 """Streamlit.
 

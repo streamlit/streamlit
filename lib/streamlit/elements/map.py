@@ -230,23 +230,8 @@ class MapMixin:
            height: 600px
 
         """
-        # This feature was turned off while we investigate why different
-        # map styles cause DeckGL to crash.
-        #
-        # For reference, this was the docstring for map_style:
-        #
-        #   map_style : str, None
-        #       One of Mapbox's map style URLs. A full list can be found here:
-        #       https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-        #
-        #       This feature requires a Mapbox token. See the top of these docs
-        #       for information on how to get one and set it up in Streamlit.
-        #
-        map_style = None
         map_proto = DeckGlJsonChartProto()
-        deck_gl_json = to_deckgl_json(
-            data, latitude, longitude, size, color, map_style, zoom
-        )
+        deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
         marshall(
             map_proto, deck_gl_json, use_container_width, width=width, height=height
         )
@@ -264,7 +249,6 @@ def to_deckgl_json(
     lon: str | None,
     size: None | str | float,
     color: None | str | Collection[float],
-    map_style: str | None,
     zoom: int | None,
 ) -> str:
     if data is None:
@@ -296,7 +280,7 @@ def to_deckgl_json(
     )
     df = df[used_columns]
 
-    color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
+    converted_color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
 
     zoom, center_lat, center_lon = _get_viewport_details(
         df, lat_col_name, lon_col_name, zoom
@@ -313,18 +297,10 @@ def to_deckgl_json(
             "getRadius": size_arg,
             "radiusMinPixels": 3,
             "radiusUnits": "meters",
-            "getFillColor": color_arg,
+            "getFillColor": converted_color_arg,
             "data": df.to_dict("records"),
         }
     ]
-
-    if map_style:
-        if not config.get_option("mapbox.token"):
-            raise StreamlitAPIException(
-                "You need a Mapbox token in order to select a map type. "
-                "Refer to the docs for st.map for more information."
-            )
-        default["mapStyle"] = map_style
 
     return json.dumps(default)
 
@@ -357,8 +333,7 @@ def _get_lat_or_lon_col_name(
                 f"Map data must contain a {human_readable_name} column named: "
                 f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}"
             )
-        else:
-            col_name = candidate_col_name
+        col_name = candidate_col_name
 
     # Check that the column is well-formed.
     # IMPLEMENTATION NOTE: We can't use isnull().values.any() because .values can return
@@ -379,7 +354,7 @@ def _get_value_and_col_name(
     data: DataFrame,
     value_or_name: Any,
     default_value: Any,
-) -> tuple[Any, str | None]:
+) -> tuple[str, str | None]:
     """Take a value_or_name passed in by the Streamlit developer and return a PyDeck
     argument and column name for that property.
 
@@ -391,7 +366,7 @@ def _get_value_and_col_name(
     - If the user passes size="my_col_123", this returns "@@=my_col_123" and "my_col_123".
     """
 
-    pydeck_arg: str | float
+    pydeck_arg: str
 
     if isinstance(value_or_name, str) and value_or_name in data.columns:
         col_name = value_or_name
@@ -399,17 +374,14 @@ def _get_value_and_col_name(
     else:
         col_name = None
 
-        if value_or_name is None:
-            pydeck_arg = default_value
-        else:
-            pydeck_arg = value_or_name
+        pydeck_arg = default_value if value_or_name is None else value_or_name
 
     return pydeck_arg, col_name
 
 
 def _convert_color_arg_or_column(
     data: DataFrame,
-    color_arg: str | Color,
+    color_arg: str,
     color_col_name: str | None,
 ) -> None | str | IntColorTuple:
     """Converts color to a format accepted by PyDeck.
@@ -438,8 +410,6 @@ def _convert_color_arg_or_column(
                 f'Column "{color_col_name}" does not appear to contain valid colors.'
             )
 
-        # This is guaranteed to be a str because of _get_value_and_col_name
-        assert isinstance(color_arg, str)
         color_arg_out = color_arg
 
     elif color_arg is not None:
@@ -462,10 +432,7 @@ def _get_viewport_details(
     range_lat = abs(max_lat - min_lat)
 
     if zoom is None:
-        if range_lon > range_lat:
-            longitude_distance = range_lon
-        else:
-            longitude_distance = range_lat
+        longitude_distance = max(range_lat, range_lon)
         zoom = _get_zoom_level(longitude_distance)
 
     return zoom, center_lat, center_lon
@@ -511,3 +478,7 @@ def marshall(
         pydeck_proto.height = height
 
     pydeck_proto.id = ""
+
+    mapbox_token = config.get_option("mapbox.token")
+    if mapbox_token:
+        pydeck_proto.mapbox_token = mapbox_token

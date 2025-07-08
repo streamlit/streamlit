@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -32,13 +33,13 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         """Test valid st.set_query_params sends protobuf message."""
         st.experimental_set_query_params(x="a")
         message = self.get_message_from_queue(0)
-        self.assertEqual(message.page_info_changed.query_string, "x=a")
+        assert message.page_info_changed.query_string == "x=a"
 
     def test_set_query_params_exceptions(self):
         """Test invalid st.set_query_params raises exceptions."""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.experimental_set_query_params(embed="True")
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.experimental_set_query_params(embed_options="show_colored_line")
 
     def test_get_query_params_after_set_query_params(self):
@@ -46,13 +47,13 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         p_set = dict(x=["a"])
         st.experimental_set_query_params(**p_set)
         p_get = st.experimental_get_query_params()
-        self.assertEqual(p_get, p_set)
+        assert p_get == p_set
 
     def test_set_query_params_empty_str(self):
         empty_str_params = dict(x=[""])
         st.experimental_set_query_params(**empty_str_params)
         params_get = st.experimental_get_query_params()
-        self.assertEqual(params_get, empty_str_params)
+        assert params_get == empty_str_params
 
     @parameterized.expand(
         [

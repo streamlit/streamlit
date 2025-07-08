@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useCallback } from "react"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
 
@@ -37,7 +37,7 @@ function useColumnFormatting(
     React.SetStateAction<Map<string, any>>
   >
 ): ColumnFormattingReturn {
-  const changeColumnFormat = React.useCallback(
+  const changeColumnFormat = useCallback(
     (columnId: string, format: string) => {
       // Update the format parameter in the column config mapping:
       setColumnConfigMapping(prevColumnConfigMapping => {

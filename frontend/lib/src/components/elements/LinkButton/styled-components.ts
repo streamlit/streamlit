@@ -77,7 +77,7 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
       justifyContent: "center",
       fontWeight: theme.fontWeights.normal,
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-      borderRadius: theme.radii.default,
+      borderRadius: theme.radii.button,
       minHeight: theme.sizes.minElementHeight,
       margin: 0,
       lineHeight: theme.lineHeights.base,

@@ -105,18 +105,21 @@ class Dialog(DeltaGenerator):
         cursor: Cursor | None,
         parent: DeltaGenerator | None,
         block_type: str | None,
-    ):
+    ) -> None:
         super().__init__(root_container, cursor, parent, block_type)
 
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._delta_path: list[int] | None = None
 
-    def _update(self, should_open: bool):
+    def _update(self, should_open: bool) -> None:
         """Send an updated proto message to indicate the open-status for the dialog."""
 
-        assert self._current_proto is not None, "Dialog not correctly initialized!"
-        assert self._delta_path is not None, "Dialog not correctly initialized!"
+        if self._current_proto is None or self._delta_path is None:
+            raise RuntimeError(
+                "Dialog not correctly initialized. This should never happen."
+            )
+
         _assert_first_dialog_to_be_opened(should_open)
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path

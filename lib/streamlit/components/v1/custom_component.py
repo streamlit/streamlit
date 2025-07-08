@@ -48,12 +48,12 @@ class CustomComponent(BaseCustomComponent):
 
     def __call__(
         self,
-        *args,
+        *args: Any,
         default: Any = None,
         key: str | None = None,
         on_change: WidgetCallback | None = None,
         tab_index: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         """An alias for create_instance."""
         return self.create_instance(
@@ -68,12 +68,12 @@ class CustomComponent(BaseCustomComponent):
     @gather_metrics("create_instance")
     def create_instance(
         self,
-        *args,
+        *args: Any,
         default: Any = None,
         key: str | None = None,
         on_change: WidgetCallback | None = None,
         tab_index: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         """Create a new instance of the component.
 
@@ -183,7 +183,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             # other arguments change, and the component's iframe won't be
             # remounted on the frontend.
 
-            def marshall_element_args():
+            def marshall_element_args() -> None:
                 element.component_instance.json_args = serialized_json_args
                 element.component_instance.special_args.extend(special_args)
 
@@ -210,7 +210,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 )
             element.component_instance.id = computed_id
 
-            def deserialize_component(ui_value):
+            def deserialize_component(ui_value: Any) -> Any:
                 # ui_value is an object from json, an ArrowTable proto, or a bytearray
                 return ui_value
 
@@ -243,7 +243,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         dg._enqueue("component_instance", element.component_instance)
         return return_value
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Equality operator."""
         return (
             isinstance(other, CustomComponent)
@@ -253,7 +253,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             and self.module_name == other.module_name
         )
 
-    def __ne__(self, other) -> bool:
+    __hash__ = BaseCustomComponent.__hash__
+
+    def __ne__(self, other: object) -> bool:
         """Inequality operator."""
 
         # we have to use "not X == Y"" here because if we use "X != Y"

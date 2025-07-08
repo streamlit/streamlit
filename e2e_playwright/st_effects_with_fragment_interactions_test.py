@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_until
@@ -44,7 +46,7 @@ def test_balloons_visibility_with_fragment_interactions(app: Page):
     animation_images = app.get_by_test_id("stBalloons").nth(0).locator("img")
     wait_until(
         app,
-        lambda current_img=animation_images.first: check_if_onscreen(app, current_img),
+        partial(check_if_onscreen, app, animation_images.first),
         timeout=5000,
     )
 
@@ -70,7 +72,7 @@ def test_balloons_visibility_with_fragment_interactions(app: Page):
     animation_images = app.get_by_test_id("stBalloons").nth(0).locator("img")
     wait_until(
         app,
-        lambda current_img=animation_images.first: check_if_onscreen(app, current_img),
+        partial(check_if_onscreen, app, animation_images.first),
         timeout=5000,
     )
 
@@ -97,7 +99,7 @@ def test_snow_visibility_with_fragment_interactions(app: Page):
     animation_images = app.get_by_test_id("stSnow").nth(0).locator("img")
     wait_until(
         app,
-        lambda current_img=animation_images.first: check_if_onscreen(app, current_img),
+        partial(check_if_onscreen, app, animation_images.first),
         timeout=5000,
     )
 
@@ -123,6 +125,6 @@ def test_snow_visibility_with_fragment_interactions(app: Page):
     animation_images = app.get_by_test_id("stSnow").nth(0).locator("img")
     wait_until(
         app,
-        lambda current_img=animation_images.first: check_if_onscreen(app, current_img),
+        partial(check_if_onscreen, app, animation_images.first),
         timeout=5000,
     )

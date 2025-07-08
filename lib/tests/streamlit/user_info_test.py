@@ -19,6 +19,7 @@ import json
 import threading
 from unittest.mock import MagicMock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -60,59 +61,59 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
 
     def test_user_email_attr(self):
         """Test that `st.user.email` returns user info from ScriptRunContext"""
-        self.assertEqual(st.user.email, "test@example.com")
+        assert st.user.email == "test@example.com"
 
     def test_user_email_key(self):
-        self.assertEqual(st.user["email"], "test@example.com")
+        assert st.user["email"] == "test@example.com"
 
     def test_user_non_existing_attr(self):
         """Test that an error is raised when called non existed attr."""
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             st.write(st.user.attribute)
 
     def test_user_non_existing_key(self):
         """Test that an error is raised when called non existed key."""
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             st.write(st.user["key"])
 
     def test_user_cannot_be_modified_existing_key(self):
         """
         Test that an error is raised when try to assign new value to existing key.
         """
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.user["email"] = "NEW_VALUE"
 
-        self.assertEqual(str(e.exception), "st.user cannot be modified")
+        assert str(e.value) == "st.user cannot be modified"
 
     def test_user_cannot_be_modified_new_key(self):
         """
         Test that an error is raised when try to assign new value to new key.
         """
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.user["foo"] = "bar"
 
-        self.assertEqual(str(e.exception), "st.user cannot be modified")
+        assert str(e.value) == "st.user cannot be modified"
 
     def test_user_cannot_be_modified_existing_attr(self):
         """
         Test that an error is raised when try to assign new value to existing attr.
         """
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.user.email = "bar"
 
-        self.assertEqual(str(e.exception), "st.user cannot be modified")
+        assert str(e.value) == "st.user cannot be modified"
 
     def test_user_cannot_be_modified_new_attr(self):
         """
         Test that an error is raised when try to assign new value to new attr.
         """
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.user.foo = "bar"
 
-        self.assertEqual(str(e.exception), "st.user cannot be modified")
+        assert str(e.value) == "st.user cannot be modified"
 
     def test_user_len(self):
-        self.assertEqual(len(st.user), 1)
+        assert len(st.user) == 1
 
     def test_st_user_reads_from_context_(self):
         """Test that st.user reads information from current ScriptRunContext
@@ -138,7 +139,7 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                 ),
             )
 
-            self.assertEqual(st.user.email, "something@else.com")
+            assert st.user.email == "something@else.com"
         except Exception as e:
             raise e
         finally:
@@ -190,23 +191,23 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
 
     def test_user_login_with_invalid_provider(self):
         """Test that st.login raise exception for invalid provider."""
-        with self.assertRaises(StreamlitAuthError) as ex:
+        with pytest.raises(StreamlitAuthError) as ex:
             st.login("invalid-provider")
 
-        assert (
+        assert str(ex.value) == (
             "Authentication credentials in `.streamlit/secrets.toml` are missing for the "
             'authentication provider "invalid-provider". Please check your configuration.'
-        ) == str(ex.exception)
+        )
 
     def test_user_login_with_provider_with_underscore(self):
         """Test that st.login raise exception for provider containing underscore."""
-        with self.assertRaises(StreamlitAuthError) as ex:
+        with pytest.raises(StreamlitAuthError) as ex:
             st.login("invalid_provider")
 
-        assert (
+        assert str(ex.value) == (
             """Auth provider name "invalid_provider" contains an underscore. """
             """Please use a provider name without underscores."""
-        ) == str(ex.exception)
+        )
 
     def test_user_login_redirect_uri_missing(self):
         """Tests that an error is raised if the redirect uri is missing"""
@@ -217,11 +218,14 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
                 get=MagicMock(return_value={"google": {}}),
             ),
         ):
-            with self.assertRaises(StreamlitAuthError) as ex:
+            with pytest.raises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "redirect_uri" key. Please check your configuration.""" == str(ex.exception)
+            assert (
+                str(ex.value)
+                == """Authentication credentials in `.streamlit/secrets.toml` are missing the
+            "redirect_uri" key. Please check your configuration."""
+            )
 
     def test_user_login_cookie_secret_missing(self):
         """Tests that an error is raised if the cookie secret is missing in secrets.toml"""
@@ -237,12 +241,13 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
                 ),
             ),
         ):
-            with self.assertRaises(StreamlitAuthError) as ex:
+            with pytest.raises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert """Authentication credentials in `.streamlit/secrets.toml` are missing the
-            "cookie_secret" key. Please check your configuration.""" == str(
-                ex.exception
+            assert (
+                str(ex.value)
+                == """Authentication credentials in `.streamlit/secrets.toml` are missing the
+            "cookie_secret" key. Please check your configuration."""
             )
 
     def test_user_login_required_fields_missing(self):
@@ -260,15 +265,15 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
                 ),
             ),
         ):
-            with self.assertRaises(StreamlitAuthError) as ex:
+            with pytest.raises(StreamlitAuthError) as ex:
                 st.login("google")
 
-            assert (
+            assert str(ex.value) == (
                 "Authentication credentials in `.streamlit/secrets.toml` for the "
                 'authentication provider "google" are missing the following keys: '
                 "['client_id', 'client_secret', 'server_metadata_url']. Please check your "
                 "configuration."
-            ) == str(ex.exception)
+            )
 
     def test_user_logout(self):
         """Test that st.logout sends correct proto message."""

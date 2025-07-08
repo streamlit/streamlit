@@ -60,7 +60,7 @@ def test_help_tooltip_works(app: Page):
 def test_date_input_has_correct_initial_values(app: Page):
     """Test that st.date_input has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(15)
+    expect(markdown_elements).to_have_count(16)
 
     expected = [
         "Value 1: 1970-01-01",
@@ -261,7 +261,7 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     ).first.click()
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
-        "Value 1: 1970-01-02", use_inner_text=True
+        "Value 1: 1970-01-02", use_inner_text=True, timeout=7000
     )
 
     # Close calendar without selecting a date
@@ -269,8 +269,10 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     date_input_field.focus()
     date_input_field.clear()
 
-    # Click outside of the calendar to submit value
-    app.get_by_test_id("stMarkdown").first.click(delay=100)
+    # Click on the large markdown element at the end to submit the cleared value
+    app.get_by_text(
+        "This is a block of text. We can click on it to trigger a click outside of the element to submit the value."
+    ).click()
 
     # Value should be reset to default
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
@@ -307,8 +309,10 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
     date_input_field.focus()
     date_input_field.clear()
 
-    # Click outside of the calendar to submit value
-    app.get_by_test_id("stMarkdown").nth(4).click()
+    # Click on the large markdown element at the end to submit the cleared value
+    app.get_by_text(
+        "This is a block of text. We can click on it to trigger a click outside of the element to submit the value."
+    ).click()
 
     # Range should be empty
     expect(app.get_by_test_id("stMarkdown").nth(4)).to_have_text(
@@ -434,3 +438,24 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "date_input_12")).to_be_visible()
+
+
+def test_quick_select_feature_visibility(app: Page):
+    """Test that quick select is visible for range inputs and hidden for single inputs."""
+    # Test range input (index 2 is "Range, no date")
+    range_date_input = app.get_by_test_id("stDateInput").nth(2)
+    range_date_input.click()
+
+    # Quick select should be visible for range inputs
+    quick_select = app.locator('[data-baseweb="select"]')
+    expect(quick_select).to_be_visible()
+
+    # Close the calendar
+    app.keyboard.press("Escape")
+
+    # Test single date input (index 0 is "Single date")
+    single_date_input = app.get_by_test_id("stDateInput").first
+    single_date_input.click()
+
+    # Quick select should not be visible for single date inputs
+    expect(quick_select).not_to_be_visible()

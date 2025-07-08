@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import React, { memo, PureComponent } from "react"
 
 import axios from "axios"
 import isEqual from "lodash/isEqual"
@@ -78,7 +78,7 @@ export interface State {
   files: UploadFileInfo[]
 }
 
-class FileUploader extends React.PureComponent<InnerProps, State> {
+class FileUploader extends PureComponent<InnerProps, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   /**
@@ -390,6 +390,7 @@ class FileUploader extends React.PureComponent<InnerProps, State> {
     }
 
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
 

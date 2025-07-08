@@ -29,7 +29,7 @@ from typing_extensions import TypeGuard
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
@@ -49,7 +49,6 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -102,13 +101,12 @@ class SelectSliderSerde(Generic[T]):
             if start > end:
                 slider_value = [end, start]
             return slider_value
-        else:
-            return [index_(self.options, v)]
+        return [index_(self.options, v)]
 
 
 class SelectSliderMixin:
     @overload
-    def select_slider(  # type: ignore[overload-overlap]
+    def select_slider(
         self,
         label: str,
         options: OptionSequence[T],
@@ -124,18 +122,6 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
     ) -> tuple[T, T]: ...
-
-    # The overload-overlap error given by mypy here stems from
-    # the fact that
-    #
-    # > opt:List[object] = [1, 2, "3"]
-    # > select_slider("foo", options=opt, value=[1, 2])
-    #
-    # matches both overloads; "opt" matches
-    # OptionsSequence[T] in each case, binding T to object.
-    # However, the list[int] type of "value" can be interpreted
-    # as subtype of object, or as a subtype of List[object],
-    # meaning it matches both signatures.
 
     @overload
     def select_slider(
@@ -255,13 +241,19 @@ class SelectSliderMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "stretch" or int
-            The width of the slider. If "stretch", the slider will stretch to
-            fill the available space. If an integer, the slider will have a fixed
-            width in pixels.
+            The width of the slider widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -367,15 +359,14 @@ class SelectSliderMixin:
                 if start > end:
                     slider_value = [end, start]
                 return slider_value
-            else:
-                # Simplify future logic by always making value a list
-                try:
-                    return [index_(opt, v)]
-                except ValueError:
-                    if value is not None:
-                        raise
+            # Simplify future logic by always making value a list
+            try:
+                return [index_(opt, v)]
+            except ValueError:
+                if value is not None:
+                    raise
 
-                    return [0]
+                return [0]
 
         # Convert element to index of the elements
         slider_value = as_index_list(value)
@@ -384,6 +375,7 @@ class SelectSliderMixin:
             "select_slider",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],
             value=slider_value,
@@ -410,14 +402,8 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        # Set width config
         validate_width(width)
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        slider_proto.width_config.CopyFrom(width_config)
+        layout_config = LayoutConfig(width=width)
 
         serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
@@ -445,7 +431,7 @@ class SelectSliderMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue("slider", slider_proto)
+        self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

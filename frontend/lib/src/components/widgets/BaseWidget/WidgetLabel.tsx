@@ -34,7 +34,7 @@ export interface LabelProps {
   // Used to specify whether widget is visible or not.
   labelVisibility?: LabelVisibilityOptions
 
-  // Associates the label with the input field programatically. Makes it possible to focus input by clicking on label.
+  // Associates the label with the input field programmatically. Makes it possible to focus input by clicking on label.
   htmlFor?: string
 }
 

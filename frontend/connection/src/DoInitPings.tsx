@@ -24,18 +24,30 @@ import axios from "axios"
 import { getLogger } from "loglevel"
 
 // Note we expect the polyfill to load from this import
-import { buildHttpUri } from "@streamlit/utils"
+import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
 
+import { parseUriIntoBaseParts } from "./utils"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   HOST_CONFIG_PATH,
+  MAX_RETRIES_BEFORE_CLIENT_ERROR,
   PING_TIMEOUT_MS,
   SERVER_PING_PATH,
 } from "./constants"
 import { IHostConfigResponse, OnRetry } from "./types"
 
 const LOG = getLogger("DoInitPings")
-export const THRESHOLD_FOR_CONNECTION_ERROR_DIALOG = 6
+
+export class PingCancelledError extends Error {
+  constructor() {
+    super("Ping cancelled")
+  }
+}
+
+export interface AsyncPingRequest {
+  promise: Promise<number>
+  cancel: () => void
+}
 
 export function doInitPings(
   uriPartsList: URL[],
@@ -48,10 +60,11 @@ export function doInitPings(
     source: string
   ) => void,
   onHostConfigResp: (resp: IHostConfigResponse) => void
-): Promise<number> {
-  const { promise, resolve } = Promise.withResolvers<number>()
+): AsyncPingRequest {
+  const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
   let uriNumber = 0
+  let timeoutId: number | undefined
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
@@ -78,7 +91,7 @@ export function doInitPings(
 
     retryCallback(totalTries, errorMarkdown, retryTimeout)
 
-    window.setTimeout(retryImmediately, retryTimeout)
+    timeoutId = window.setTimeout(retryImmediately, retryTimeout)
   }
 
   const retryWhenTheresNoResponse = (): void => {
@@ -95,7 +108,10 @@ streamlit run yourscript.py
       `
       retry(markdownMessage)
     } else {
-      retry("Connection failed with status 0.")
+      retry(
+        "Streamlit server is not responding. " +
+          "Are you connected to the internet?"
+      )
     }
   }
 
@@ -114,6 +130,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     if (url) {
       try {
         source = new URL(url).pathname
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         LOG.error(`unrecognized url: ${url}`)
       }
@@ -125,7 +142,16 @@ If you are trying to access a Streamlit app running on another server, this coul
   connect = () => {
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
-    const hostConfigUri = buildHttpUri(uriParts, HOST_CONFIG_PATH)
+
+    const hostConfigBaseUrl = window.__streamlit?.HOST_CONFIG_BASE_URL
+    const hostConfigServerUriParts = hostConfigBaseUrl
+      ? parseUriIntoBaseParts(hostConfigBaseUrl)
+      : uriParts
+
+    const hostConfigUri = buildHttpUri(
+      hostConfigServerUriParts,
+      HOST_CONFIG_PATH
+    )
 
     LOG.info(`Attempting to connect to ${healthzUri}.`)
 
@@ -151,11 +177,10 @@ If you are trying to access a Streamlit app running on another server, this coul
       .catch(error => {
         // If its our 6th try (retry count at which we show connection error dialog), send a client error
         // to inform the host of connection error
-        const shouldSendClientError =
-          totalTries === THRESHOLD_FOR_CONNECTION_ERROR_DIALOG
+        const tooManyRetries = totalTries >= MAX_RETRIES_BEFORE_CLIENT_ERROR
 
         if (error.code === "ECONNABORTED") {
-          if (shouldSendClientError) {
+          if (tooManyRetries) {
             // Handle retrieving the source URL from the error (health or host-config endpoint)
             const source = determineUrlSource(error.config?.url)
             LOG.error("Client error: DoInitPings timed out")
@@ -177,7 +202,7 @@ If you are trying to access a Streamlit app running on another server, this coul
           const source = determineUrlSource(error.response.config?.url)
 
           if (status === /* NO RESPONSE */ 0) {
-            if (shouldSendClientError) {
+            if (tooManyRetries) {
               LOG.error(
                 `Client Error: response received with status ${status} when attempting to reach ${source}`
               )
@@ -191,7 +216,7 @@ If you are trying to access a Streamlit app running on another server, this coul
           }
 
           if (status === 403) {
-            if (shouldSendClientError) {
+            if (tooManyRetries) {
               LOG.error(
                 `Client Error: response received with status ${status} when attempting to reach ${source}`
               )
@@ -200,7 +225,7 @@ If you are trying to access a Streamlit app running on another server, this coul
             return retryWhenIsForbidden()
           }
 
-          if (shouldSendClientError) {
+          if (tooManyRetries) {
             LOG.error(
               `Client Error: response received with status ${status} when attempting to reach ${source}`
             )
@@ -211,12 +236,13 @@ If you are trying to access a Streamlit app running on another server, this coul
               `and response "${data}".`
           )
         }
+
         if (error.request) {
           // The request was made but no response was received
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
 
-          if (shouldSendClientError) {
+          if (tooManyRetries) {
             // Handle retrieving the source URL from the error (health or host-config endpoint)
             const source = determineUrlSource(error.request.path)
             LOG.error(
@@ -230,8 +256,9 @@ If you are trying to access a Streamlit app running on another server, this coul
           }
           return retryWhenTheresNoResponse()
         }
+
         // Something happened in setting up the request that triggered an Error
-        if (shouldSendClientError) {
+        if (tooManyRetries) {
           // Handle retrieving the source URL from the error (health or host-config endpoint)
           const source = determineUrlSource(error.config?.url)
           LOG.error(
@@ -249,5 +276,15 @@ If you are trying to access a Streamlit app running on another server, this coul
 
   connect()
 
-  return promise
+  const cancel = (): void => {
+    if (notNullOrUndefined(timeoutId)) {
+      window.clearTimeout(timeoutId)
+    }
+    reject(new PingCancelledError())
+  }
+
+  return {
+    promise,
+    cancel,
+  }
 }

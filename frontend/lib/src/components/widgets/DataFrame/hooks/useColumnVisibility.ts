@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useCallback } from "react"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
 
@@ -42,7 +42,7 @@ function useColumnVisibility(
     React.SetStateAction<Map<string, any>>
   >
 ): ColumnVisibilityReturn {
-  const hideColumn = React.useCallback(
+  const hideColumn = useCallback(
     (columnId: string) => {
       setColumnConfigMapping(prevColumnConfigMapping => {
         return updateColumnConfigTypeProps({
@@ -58,7 +58,7 @@ function useColumnVisibility(
     [clearSelection, setColumnConfigMapping]
   )
 
-  const showColumn = React.useCallback(
+  const showColumn = useCallback(
     (columnId: string) => {
       setColumnConfigMapping(prevColumnConfigMapping => {
         return updateColumnConfigTypeProps({

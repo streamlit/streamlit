@@ -31,8 +31,7 @@ def validate_text(toast_text: SupportsStr) -> SupportsStr:
         raise StreamlitAPIException(
             "Toast body cannot be blank - please provide a message."
         )
-    else:
-        return toast_text
+    return toast_text
 
 
 class ToastMixin:

@@ -17,11 +17,11 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { enableAllPlugins } from "immer"
+import { enableMapSet, enablePatches } from "immer"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
-import { customRenderLibContext, render } from "~lib/test_util"
+import { renderWithContexts } from "~lib/test_util"
 import {
   createFormsData,
   FormsData,
@@ -31,7 +31,8 @@ import {
 import { FormSubmitButton, Props } from "./FormSubmitButton"
 
 // Required by ImmerJS
-enableAllPlugins()
+enablePatches()
+enableMapSet()
 
 describe("FormSubmitButton", () => {
   let formsData: FormsData
@@ -67,13 +68,15 @@ describe("FormSubmitButton", () => {
   }
 
   it("renders without crashing", () => {
-    render(<FormSubmitButton {...getProps()} />)
+    // render with renderWithContexts necessary as FormsContext required
+    // second arg is empty object as overrides for LibContextProps are not needed
+    renderWithContexts(<FormSubmitButton {...getProps()} />, {})
     expect(screen.getByRole("button")).toBeInTheDocument()
   })
 
   it("has correct className", () => {
     const props = getProps()
-    render(<FormSubmitButton {...props} />)
+    renderWithContexts(<FormSubmitButton {...props} />, {})
 
     const formSubmitButton = screen.getByTestId("stFormSubmitButton")
 
@@ -82,7 +85,7 @@ describe("FormSubmitButton", () => {
 
   it("renders a label within the button", () => {
     const props = getProps()
-    render(<FormSubmitButton {...props} />)
+    renderWithContexts(<FormSubmitButton {...props} />, {})
 
     const formSubmitButton = screen.getByRole("button", {
       name: `${props.element.label}`,
@@ -93,7 +96,10 @@ describe("FormSubmitButton", () => {
 
   it("renders with help properly", async () => {
     const user = userEvent.setup()
-    render(<FormSubmitButton {...getProps({}, { help: "mockHelpText" })} />)
+    renderWithContexts(
+      <FormSubmitButton {...getProps({}, { help: "mockHelpText" })} />,
+      {}
+    )
 
     const formSubmitButton = screen.getByRole("button")
     expect(formSubmitButton).toHaveStyle("width: auto")
@@ -110,7 +116,7 @@ describe("FormSubmitButton", () => {
     const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "submitForm")
-    render(<FormSubmitButton {...props} />)
+    renderWithContexts(<FormSubmitButton {...props} />, {})
 
     const formSubmitButton = screen.getByRole("button")
 
@@ -126,7 +132,7 @@ describe("FormSubmitButton", () => {
     const user = userEvent.setup()
     const props = getProps({ fragmentId: "myFragmentId" })
     vi.spyOn(props.widgetMgr, "submitForm")
-    render(<FormSubmitButton {...props} />)
+    renderWithContexts(<FormSubmitButton {...props} />, {})
 
     const formSubmitButton = screen.getByRole("button")
 
@@ -145,9 +151,13 @@ describe("FormSubmitButton", () => {
       formsWithUploads: new Set(["mockFormId"]),
     }
 
-    customRenderLibContext(<FormSubmitButton {...getProps()} />, {
-      formsData: formsDataOverride,
-    })
+    renderWithContexts(
+      <FormSubmitButton {...getProps()} />,
+      {},
+      {
+        formsData: formsDataOverride,
+      }
+    )
 
     const formSubmitButton = screen.getByRole("button")
     expect(formSubmitButton).toBeDisabled()
@@ -166,13 +176,19 @@ describe("FormSubmitButton", () => {
       }),
     })
 
-    const { unmount: unmountView1 } = render(<FormSubmitButton {...props} />)
+    const { unmount: unmountView1 } = renderWithContexts(
+      <FormSubmitButton {...props} />,
+      {}
+    )
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
-    const { unmount: unmountView2 } = render(<FormSubmitButton {...props2} />)
+    const { unmount: unmountView2 } = renderWithContexts(
+      <FormSubmitButton {...props2} />,
+      {}
+    )
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)
     // @ts-expect-error

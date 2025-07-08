@@ -19,10 +19,9 @@ from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
@@ -61,26 +60,23 @@ def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> b
     )
 
 
-def _get_value(value):
+def _get_value(value: FloatOrInt) -> int:
     if isinstance(value, int):
         if 0 <= value <= 100:
             return value
-        else:
-            raise StreamlitAPIException(
-                "Progress Value has invalid value [0, 100]: %d" % value
-            )
+        raise StreamlitAPIException(
+            f"Progress Value has invalid value [0, 100]: {value}"
+        )
 
-    elif isinstance(value, float):
+    if isinstance(value, float):
         if _check_float_between(value, low=0.0, high=1.0):
             return int(value * 100)
-        else:
-            raise StreamlitAPIException(
-                "Progress Value has invalid value [0.0, 1.0]: %f" % value
-            )
-    else:
         raise StreamlitAPIException(
-            "Progress Value has invalid type: %s" % type(value).__name__
+            f"Progress Value has invalid value [0.0, 1.0]: {value}"
         )
+    raise StreamlitAPIException(
+        f"Progress Value has invalid type: {type(value).__name__}"
+    )
 
 
 def _get_text(text: str | None) -> str | None:
@@ -127,9 +123,15 @@ class ProgressMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        width : int or str
-            The width of the progress bar. Can be either "stretch" to use the full
-            container width, or an integer for a fixed width in pixels.
+        width : "stretch" or int
+            The width of the progress element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -161,18 +163,10 @@ class ProgressMixin:
         if text is not None:
             progress_proto.text = text
 
-        width_config = WidthConfig()
-
         validate_width(width)
+        layout_config = LayoutConfig(width=width)
 
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-
-        progress_proto.width_config.CopyFrom(width_config)
-
-        return self.dg._enqueue("progress", progress_proto)
+        return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

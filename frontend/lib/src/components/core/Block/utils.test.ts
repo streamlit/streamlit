@@ -14,10 +14,21 @@
  * limitations under the License.
  */
 
-import { ElementNode } from "~lib/AppNode"
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+
+import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 
-import { convertKeyToClassName, getKeyFromId, isElementStale } from "./utils"
+import {
+  backwardsCompatibleColumnGapSize,
+  checkFlexContainerBackwardsCompatibile,
+  convertKeyToClassName,
+  getActivateScrollToBottomBackwardsCompatible,
+  getBorderBackwardsCompatible,
+  getHeightBackwardsCompatible,
+  getKeyFromId,
+  isElementStale,
+} from "./utils"
 
 describe("isElementStale", () => {
   const node = new ElementNode(
@@ -155,4 +166,274 @@ describe("getKeyFromId", () => {
       expect(getKeyFromId(input)).toBe(expected)
     }
   )
+})
+
+describe("backwardsCompatibleColumnGapSize", () => {
+  it("returns gapSize when it exists", () => {
+    const columnProto = {
+      gapConfig: {
+        gapSize: streamlit.GapSize.MEDIUM,
+      },
+    }
+    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
+      streamlit.GapSize.MEDIUM
+    )
+  })
+
+  it("returns default gapSize when gapSize is undefined", () => {
+    const columnProto = {
+      gapConfig: {
+        gapSize: streamlit.GapSize.GAP_UNDEFINED,
+      },
+    }
+    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
+      streamlit.GapSize.SMALL
+    )
+  })
+
+  const gapStringCases = [
+    { gap: "small", expected: streamlit.GapSize.SMALL },
+    { gap: "medium", expected: streamlit.GapSize.MEDIUM },
+    { gap: "large", expected: streamlit.GapSize.LARGE },
+  ]
+
+  test.each(gapStringCases)(
+    "converts '$gap' gap to corresponding GapSize",
+    ({ gap, expected }) => {
+      const columnProto = { gap }
+      expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(expected)
+    }
+  )
+
+  const fallbackCases = [
+    {
+      description: "when neither gapSize nor gap exists",
+      proto: {},
+      expected: streamlit.GapSize.SMALL,
+    },
+    {
+      description: "with unrecognized gap string",
+      proto: { gap: "unrecognized" },
+      expected: streamlit.GapSize.SMALL,
+    },
+  ]
+
+  test.each(fallbackCases)(
+    "returns GapSize.SMALL $description",
+    ({ proto, expected }) => {
+      expect(backwardsCompatibleColumnGapSize(proto)).toBe(expected)
+    }
+  )
+
+  it("prioritizes gapSize when both gapSize and gap exist", () => {
+    const columnProto = {
+      gapConfig: {
+        gapSize: streamlit.GapSize.LARGE,
+      },
+      gap: "small",
+    }
+    expect(backwardsCompatibleColumnGapSize(columnProto)).toBe(
+      streamlit.GapSize.LARGE
+    )
+  })
+})
+
+describe("checkFlexContainerBackwardsCompatibile", () => {
+  const testCases = [
+    {
+      description: "returns true when flexContainer exists",
+      blockProto: { flexContainer: {} },
+      expected: true,
+    },
+    {
+      description: "returns true when vertical exists",
+      blockProto: { vertical: {} },
+      expected: true,
+    },
+    {
+      description: "returns true when horizontal exists",
+      blockProto: { horizontal: {} },
+      expected: true,
+    },
+    {
+      description: "returns false when none of the container types exist",
+      blockProto: {},
+      expected: false,
+    },
+  ]
+
+  test.each(testCases)("$description", ({ blockProto, expected }) => {
+    expect(
+      checkFlexContainerBackwardsCompatibile(blockProto as BlockProto)
+    ).toBe(expected)
+  })
+})
+
+describe("getBorderBackwardsCompatible", () => {
+  const testCases = [
+    {
+      description: "returns true when flexContainer.border is true",
+      blockProto: { flexContainer: { border: true } },
+      expected: true,
+    },
+    {
+      description: "returns true when vertical.border is true",
+      blockProto: { vertical: { border: true } },
+      expected: true,
+    },
+    {
+      description: "returns false when both are false",
+      blockProto: {
+        flexContainer: { border: false },
+        vertical: { border: false },
+      },
+      expected: false,
+    },
+    {
+      description: "returns false when none exist",
+      blockProto: {},
+      expected: false,
+    },
+    {
+      description: "prioritizes flexContainer.border when both exist",
+      blockProto: {
+        flexContainer: { border: true },
+        vertical: { border: false },
+      },
+      expected: true,
+    },
+  ]
+
+  test.each(testCases)("$description", ({ blockProto, expected }) => {
+    expect(getBorderBackwardsCompatible(blockProto as BlockProto)).toBe(
+      expected
+    )
+  })
+})
+
+describe("getHeightBackwardsCompatible", () => {
+  const testCases = [
+    {
+      description:
+        "returns pixelHeight when flexContainer.heightConfig.pixelHeight exists",
+      blockProto: { heightConfig: { pixelHeight: 100 } },
+      expected: 100,
+    },
+    {
+      description: "returns height when vertical.height exists",
+      blockProto: { vertical: { height: 200 } },
+      expected: 200,
+    },
+    {
+      description: "returns undefined when none exist",
+      blockProto: {},
+      expected: undefined,
+    },
+    {
+      description:
+        "prioritizes flexContainer.heightConfig.pixelHeight when both exist",
+      blockProto: {
+        heightConfig: { pixelHeight: 300 },
+        vertical: { height: 400 },
+      },
+      expected: 300,
+    },
+  ]
+
+  test.each(testCases)("$description", ({ blockProto, expected }) => {
+    expect(getHeightBackwardsCompatible(blockProto as BlockProto)).toBe(
+      expected
+    )
+  })
+})
+
+describe("getActivateScrollToBottomBackwardsCompatible", () => {
+  // Helper function to create a proper BlockNode instance for testing
+  const createBlockNode = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    parentDeltaBlock: any,
+    hasChatMessageChild: boolean = false
+  ): BlockNode => {
+    const children = []
+
+    // Add either a chat message child or a form child
+    if (hasChatMessageChild) {
+      children.push(
+        new BlockNode(
+          "test-script-hash",
+          [],
+          new BlockProto({ chatMessage: {} }),
+          "test-script-run-id" // scriptRunId
+        )
+      )
+    }
+    children.push(
+      new BlockNode(
+        "test-script-hash",
+        [],
+        new BlockProto({ form: {} }),
+        "test-script-run-id"
+      )
+    )
+
+    // Create the parent BlockNode with the given parameters
+    const parentBlock = new BlockProto(parentDeltaBlock)
+
+    return new BlockNode(
+      "test-script-hash", // activeScriptHash
+      children, // children with proper types
+      parentBlock, // parent's deltaBlock as BlockProto
+      "test-script-run-id" // scriptRunId
+    )
+  }
+
+  it("returns true when flexContainer has heightConfig and has chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { heightConfig: { pixelHeight: 100 } },
+      true // Has chatMessage child
+    )
+
+    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(true)
+  })
+
+  it("returns true when vertical has height and has chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { vertical: { height: 100 } },
+      true // Has chatMessage child
+    )
+
+    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(true)
+  })
+
+  it("returns false when has height but no chatMessage child", () => {
+    const mockNode = createBlockNode(
+      { heightConfig: { pixelHeight: 100 } },
+      false // No chatMessage child
+    )
+
+    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+  })
+
+  it("returns false when has chatMessage child but no height", () => {
+    const mockNode = createBlockNode(
+      {}, // No height config
+      true // Has chatMessage child
+    )
+
+    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+  })
+
+  it("returns false when vertical has height but no children", () => {
+    // Create parent node directly without children for this test
+    const parentBlock = new BlockProto({ vertical: { height: 100 } })
+
+    const mockNode = new BlockNode(
+      "test-script-hash",
+      [], // No children
+      parentBlock,
+      "test-script-run-id"
+    )
+
+    expect(getActivateScrollToBottomBackwardsCompatible(mockNode)).toBe(false)
+  })
 })

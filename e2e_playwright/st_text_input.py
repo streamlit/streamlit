@@ -79,9 +79,7 @@ with st.form("form"):
     st.text_input("text input 13 (value from form)", key="text_input_13")
     st.form_submit_button("submit")
 
-form_value = (
-    st.session_state["text_input_13"] if "text_input_13" in st.session_state else None
-)
+form_value = st.session_state.get("text_input_13", None)
 st.write("text input 13 (value from form) - value: ", form_value)
 
 

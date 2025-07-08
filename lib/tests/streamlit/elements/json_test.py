@@ -34,10 +34,10 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         assert el.json.expanded is True
         assert el.json.HasField("max_expand_depth") is False
         assert (
-            el.json.width_config.WhichOneof("width_spec")
+            el.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert el.json.width_config.use_stretch is True
+        assert el.width_config.use_stretch is True
 
         # Test that an object containing non-json-friendly keys can still
         # be displayed.  Resultant json body will be missing those keys.
@@ -49,13 +49,13 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.json.body == '{"array": "array([1, 2, 3, 4, 5])"}'
         assert (
-            el.json.width_config.WhichOneof("width_spec")
+            el.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert el.json.width_config.use_stretch is True
+        assert el.width_config.use_stretch is True
 
     def test_expanded_param(self):
-        """Test expanded paramter for `st.json`"""
+        """Test expanded parameter for `st.json`"""
         st.json(
             {
                 "level1": {"level2": {"level3": {"a": "b"}}, "c": "d"},
@@ -67,12 +67,12 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         assert el.json.expanded is True
         assert el.json.max_expand_depth == 2
         assert (
-            el.json.width_config.WhichOneof("width_spec")
+            el.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert el.json.width_config.use_stretch is True
+        assert el.width_config.use_stretch is True
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             st.json(
                 {
                     "level1": {"level2": {"level3": {"a": "b"}}, "c": "d"},
@@ -86,10 +86,10 @@ class StJsonAPITest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert (
-            el.json.width_config.WhichOneof("width_spec")
+            el.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        assert el.json.width_config.pixel_width == 500
+        assert el.width_config.pixel_width == 500
 
     def test_st_json_with_width_stretch(self):
         """Test st.json with stretch width."""
@@ -97,10 +97,10 @@ class StJsonAPITest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert (
-            el.json.width_config.WhichOneof("width_spec")
+            el.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert el.json.width_config.use_stretch is True
+        assert el.width_config.use_stretch is True
 
     @parameterized.expand(
         [

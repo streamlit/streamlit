@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Any, Final
 
 import streamlit
 from streamlit import config
@@ -26,17 +26,24 @@ _LOGGER: Final = get_logger(__name__)
 
 
 def _print_rich_exception(e: BaseException) -> None:
-    from rich import box, panel
+    from rich.box import Box
+    from rich.panel import Panel
 
     # Monkey patch the panel to use our custom box style
-    class ConfigurablePanel(panel.Panel):
+    class ConfigurablePanel(Panel):
         def __init__(
             self,
-            renderable,
-            box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
-            **kwargs,
-        ):
-            super().__init__(renderable, box, **kwargs)
+            renderable: Any,
+            box: Box | None = None,
+            **kwargs: Any,
+        ) -> None:
+            super().__init__(
+                renderable,
+                box
+                if box is not None
+                else Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
+                **kwargs,
+            )
 
     from rich import traceback as rich_traceback
 

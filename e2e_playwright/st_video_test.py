@@ -16,11 +16,15 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    goto_app,
     select_radio_option,
 )
 
@@ -52,6 +56,18 @@ def _wait_until_video_has_data(app: Page, video_element: Locator):
     )
 
 
+@pytest.mark.skip_browser("webkit")
+def test_video_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that `st.video` width configurations are applied correctly."""
+    video_element = _select_video_to_show(app, "webm video with pixel width")
+    _wait_until_video_has_data(app, video_element)
+    assert_snapshot(video_element, name="st_video-width_400px", image_threshold=0.1)
+
+    video_element = _select_video_to_show(app, "webm video with stretch width")
+    _wait_until_video_has_data(app, video_element)
+    assert_snapshot(video_element, name="st_video-width_stretch", image_threshold=0.1)
+
+
 # Chromium miss codecs required to play that mp3 videos
 # https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/
 @pytest.mark.skip_browser("chromium")
@@ -68,7 +84,6 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
 
     video_element = _select_video_to_show(app, "mp4 video with subtitles")
     _wait_until_video_has_data(app, video_element)
-
     assert_snapshot(
         video_element,
         name="video_element_with_subtitles",
@@ -214,7 +229,7 @@ def test_video_source_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
     _select_video_to_show(app, "mp4 video")
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent

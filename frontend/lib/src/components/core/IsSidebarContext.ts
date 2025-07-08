@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { createContext } from "react"
 
-export default React.createContext(false)
+const IsSidebarContext = createContext(false)
+IsSidebarContext.displayName = "IsSidebarContext"
+
+export default IsSidebarContext

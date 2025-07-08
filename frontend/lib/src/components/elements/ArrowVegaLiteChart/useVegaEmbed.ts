@@ -148,13 +148,13 @@ export function useVegaEmbed(
         defaultDataName.current = DEFAULT_DATA_NAME
       }
 
-      const dataObj = getInlineData(dataRef.current as Quiver | null)
+      const dataObj = getInlineData(dataRef.current)
       if (dataObj) {
         vegaView.current.insert(defaultDataName.current, dataObj)
       }
       if (dataArrays) {
-        for (const [name, data] of Object.entries(dataArrays)) {
-          vegaView.current.insert(name, data)
+        for (const [name, dataArg] of Object.entries(dataArrays)) {
+          vegaView.current.insert(name, dataArg)
         }
       }
 
@@ -174,9 +174,9 @@ export function useVegaEmbed(
       view: VegaView,
       name: string,
       prevData: Quiver | null,
-      data: Quiver | null
+      dataArg: Quiver | null
     ): void => {
-      if (!data || data.dimensions.numDataRows === 0) {
+      if (!dataArg || dataArg.dimensions.numDataRows === 0) {
         // The new data is empty, so we remove the dataset from the
         // chart view if the named dataset exists.
         try {
@@ -190,14 +190,14 @@ export function useVegaEmbed(
 
       if (!prevData || prevData.dimensions.numDataRows === 0) {
         // The previous data was empty, so we just insert the new data.
-        view.insert(name, getDataArray(data))
+        view.insert(name, getDataArray(dataArg))
         return
       }
 
       // Check if dataframes have same "shape" but the new one has more rows.
-      if (data.hash !== prevData.hash) {
+      if (dataArg.hash !== prevData.hash) {
         // Clean the dataset and insert from scratch.
-        view.data(name, getDataArray(data))
+        view.data(name, getDataArray(dataArg))
         LOG.info(
           `Had to clear the ${name} dataset before inserting data through Vega view.`
         )
@@ -241,7 +241,7 @@ export function useVegaEmbed(
       // Remove all datasets that are in the previous but not the current datasets.
       for (const name of Object.keys(prevDataSets)) {
         if (
-          !dataSets.hasOwnProperty(name) &&
+          !Object.hasOwn(dataSets, name) &&
           name !== defaultDataName.current
         ) {
           updateData(vegaView.current, name, null, null)

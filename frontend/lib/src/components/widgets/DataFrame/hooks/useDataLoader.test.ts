@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useRef } from "react"
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import { renderHook } from "@testing-library/react"
@@ -114,9 +114,7 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
 
@@ -157,9 +155,7 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
 
@@ -179,9 +175,7 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       editingState.current.setCell(1, 0, {
         kind: GridCellKind.Text,
         displayData: "edited",
@@ -207,9 +201,7 @@ describe("useDataLoader hook", () => {
     const numRows = data.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       editingState.current.deleteRow(0)
       return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
@@ -237,9 +229,7 @@ describe("useDataLoader hook", () => {
     } as unknown as Quiver
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       return useDataLoader(errorData, MOCK_COLUMNS, numRows, editingState)
     })
 
@@ -255,9 +245,7 @@ describe("useDataLoader hook", () => {
     const numRows = realData.dimensions.numRows
 
     const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
+      const editingState = useRef<EditingState>(new EditingState(numRows))
       editingState.current.getCell = () => {
         throw new Error("Error getting cell from editing state")
       }

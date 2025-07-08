@@ -91,7 +91,7 @@ class Cursor:
     def is_locked(self) -> bool:
         raise NotImplementedError()
 
-    def get_locked_cursor(self, **props) -> LockedCursor:
+    def get_locked_cursor(self, **props: Any) -> LockedCursor:
         raise NotImplementedError()
 
     @property
@@ -105,7 +105,7 @@ class Cursor:
 
 
 class RunningCursor(Cursor):
-    def __init__(self, root_container: int, parent_path: tuple[int, ...] = ()):
+    def __init__(self, root_container: int, parent_path: tuple[int, ...] = ()) -> None:
         """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -140,7 +140,7 @@ class RunningCursor(Cursor):
     def is_locked(self) -> bool:
         return False
 
-    def get_locked_cursor(self, **props) -> LockedCursor:
+    def get_locked_cursor(self, **props: Any) -> LockedCursor:
         locked_cursor = LockedCursor(
             root_container=self._root_container,
             parent_path=self._parent_path,
@@ -159,8 +159,8 @@ class LockedCursor(Cursor):
         root_container: int,
         parent_path: tuple[int, ...] = (),
         index: int = 0,
-        **props,
-    ):
+        **props: Any,
+    ) -> None:
         """A locked pointer to a location in the app.
 
         LockedCursors always point to the same location, even when you call
@@ -201,7 +201,7 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
-    def get_locked_cursor(self, **props) -> LockedCursor:
+    def get_locked_cursor(self, **props: Any) -> LockedCursor:
         self._props = props
         return self
 

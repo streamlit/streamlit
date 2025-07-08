@@ -52,7 +52,7 @@ with st.form(key="my_form", clear_on_submit=True):
 st.write("feedback-in-form:", str(sentiment))
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     sentiment = st.feedback(key="fragment_feedback")
     st.write("feedback-in-fragment:", str(sentiment))
@@ -71,6 +71,10 @@ if st.button("Create some elements to unmount component"):
 sentiment = st.feedback(key="after_sleep_feedback")
 st.write("feedback-after-sleep:", str(sentiment))
 
+st.subheader("Thumbs with different widths")
+st.feedback("thumbs", width="content", key="thumbs_content_width")
+st.feedback("thumbs", width="stretch", key="thumbs_stretch_width")
+st.feedback("thumbs", width=300, key="thumbs_300px_width")
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0

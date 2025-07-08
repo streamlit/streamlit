@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterator, Mapping
 from typing import (
     TYPE_CHECKING,
+    Any,
     Final,
     NoReturn,
     Union,
@@ -548,10 +549,10 @@ class DeprecatedUserInfoProxy(UserInfoProxy):
     Streamlit.
     """
 
-    def __getattribute__(self, name: str):
+    def __getattribute__(self, name: str) -> Any:
         maybe_show_deprecated_user_warning()
         return super().__getattribute__(name)
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> Any:
         maybe_show_deprecated_user_warning()
         return super().__getitem__(key)

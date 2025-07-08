@@ -20,7 +20,7 @@ import os
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from google.protobuf.json_format import ParseDict
 
@@ -151,7 +151,7 @@ class AppSession:
         self._client_state = ClientState()
 
         self._local_sources_watcher: LocalSourcesWatcher | None = None
-        self._stop_config_listener: Callable[[], bool] | None = None
+        self._stop_config_listener: Callable[[], None] | None = None
         self._stop_pages_listener: Callable[[], None] | None = None
 
         if config.get_option("server.fileWatcherType") != "none":
@@ -375,8 +375,9 @@ class AppSession:
             # sometimes stays open.
             if fragment_id and not self._fragment_storage.contains(fragment_id):
                 _LOGGER.info(
-                    f"The fragment with id {fragment_id} does not exist anymore - "
-                    "it might have been removed during a preceding full-app rerun."
+                    "The fragment with id %s does not exist anymore - "
+                    "it might have been removed during a preceding full-app rerun.",
+                    fragment_id,
                 )
                 return
 
@@ -480,7 +481,7 @@ class AppSession:
         else:
             self._enqueue_forward_msg(self._create_file_change_message())
 
-    def _on_secrets_file_changed(self, _) -> None:
+    def _on_secrets_file_changed(self, _: Any) -> None:
         """Called when `secrets.file_change_listener` emits a Signal."""
 
         # NOTE: At the time of writing, this function only calls
@@ -578,9 +579,11 @@ class AppSession:
             browser. Set only for the SCRIPT_STARTED event.
         """
 
-        assert self._event_loop == asyncio.get_running_loop(), (
-            "This function must only be called on the eventloop thread the AppSession was created on."
-        )
+        if self._event_loop != asyncio.get_running_loop():
+            raise RuntimeError(
+                "This function must only be called on the eventloop thread the AppSession was created on. "
+                "This should never happen."
+            )
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
@@ -596,9 +599,10 @@ class AppSession:
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
-            assert page_script_hash is not None, (
-                "page_script_hash must be set for the SCRIPT_STARTED event"
-            )
+            if page_script_hash is None:
+                raise RuntimeError(
+                    "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
+                )
 
             # Update the client state with the new page_script_hash if
             # necessary. This handles an edge case where a script is never
@@ -646,9 +650,11 @@ class AppSession:
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
-                assert exception is not None, (
-                    "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event"
-                )
+                if exception is None:
+                    raise RuntimeError(
+                        "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. "
+                        "This should never happen."
+                    )
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
@@ -666,9 +672,10 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            assert client_state is not None, (
-                "client_state must be set for the SHUTDOWN event"
-            )
+            if client_state is None:
+                raise RuntimeError(
+                    "client_state must be set for the SHUTDOWN event. This should never happen."
+                )
 
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
@@ -679,9 +686,10 @@ class AppSession:
             self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
-            assert forward_msg is not None, (
-                "null forward_msg in ENQUEUE_FORWARD_MSG event"
-            )
+            if forward_msg is None:
+                raise RuntimeError(
+                    "null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen."
+                )
             self._enqueue_forward_msg(forward_msg)
 
         # Send a message if our run state changed
@@ -792,12 +800,12 @@ class AppSession:
             msg.git_info_changed.branch = branch
             msg.git_info_changed.module = module
 
-            msg.git_info_changed.untracked_files[:] = repo.untracked_files
-            msg.git_info_changed.uncommitted_files[:] = repo.uncommitted_files
+            msg.git_info_changed.untracked_files[:] = repo.untracked_files or []
+            msg.git_info_changed.uncommitted_files[:] = repo.uncommitted_files or []
 
             if repo.is_head_detached:
                 msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
-            elif len(repo.ahead_commits) > 0:
+            elif repo.ahead_commits and len(repo.ahead_commits) > 0:
                 msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
@@ -905,7 +913,7 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
         Config.ToolbarMode, config_value.upper()
     )
     if enum_value is None:
-        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())
+        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())  # noqa: SIM118
         raise ValueError(
             f"Config {config_key!r} expects to have one of "
             f"the following values: {allowed_values}. "
@@ -932,7 +940,19 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     for option_name, option_val in theme_opts.items():
         # We need to ignore some config options here that need special handling
         # and cannot directly be set on the protobuf.
-        if option_name not in {"base", "font", "fontFaces"} and option_val is not None:
+        if (
+            option_name
+            not in {
+                "base",
+                "font",
+                "fontFaces",
+                "headingFontSizes",
+                "headingFontWeights",
+                "chartCategoricalColors",
+                "chartSequentialColors",
+            }
+            and option_val is not None
+        ):
             setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base and font will default to the protobuf enum zero
@@ -947,9 +967,10 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if base is not None:
         if base not in base_map:
             _LOGGER.warning(
-                f'"{base}" is an invalid value for theme.base.'
-                f" Allowed values include {list(base_map.keys())}."
-                ' Setting theme.base to "light".'
+                '"%s" is an invalid value for theme.base. Allowed values include %s. '
+                'Setting theme.base to "light".',
+                base,
+                list(base_map.keys()),
             )
         else:
             msg.base = base_map[base]
@@ -969,8 +990,8 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
             font_faces = json.loads(font_faces)
         except Exception as e:
             _LOGGER.warning(
-                "Failed to parse the theme.fontFaces config option with json.loads: "
-                f"{font_faces}.",
+                "Failed to parse the theme.fontFaces config option with json.loads: %s.",
+                font_faces,
                 exc_info=e,
             )
             font_faces = None
@@ -978,10 +999,153 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if font_faces is not None:
         for font_face in font_faces:
             try:
+                if "weight" in font_face:
+                    font_face["weight_range"] = str(font_face["weight"])
+                    del font_face["weight"]
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
             except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(
-                    f"Failed to parse the theme.fontFaces config option: {font_face}.",
+                    "Failed to parse the theme.fontFaces config option: %s.",
+                    font_face,
+                    exc_info=e,
+                )
+
+    heading_font_sizes = theme_opts.get("headingFontSizes", None)
+    # headingFontSizes is either an single string value (set for all headings) or
+    # a list of strings (set specific headings). However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+
+    if isinstance(heading_font_sizes, str):
+        heading_font_sizes = heading_font_sizes.strip().lower()
+        if heading_font_sizes.endswith(("px", "rem")):
+            # Handle the case where headingFontSizes is a single string value to be applied to all headings
+            heading_font_sizes = [heading_font_sizes] * 6
+        else:
+            # Handle the case where headingFontSizes is a json string (coming from CLI or env variable)
+            try:
+                heading_font_sizes = json.loads(heading_font_sizes)
+            except Exception as e:
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option with json.loads: %s.",
+                    heading_font_sizes,
+                    exc_info=e,
+                )
+                heading_font_sizes = None
+
+    if heading_font_sizes is not None:
+        # Check that the list has between 1 and 6 values
+        if not heading_font_sizes or len(heading_font_sizes) > 6:
+            raise ValueError(
+                f"Config theme.headingFontSizes should have 1-6 values corresponding to h1-h6, "
+                f"but got {len(heading_font_sizes)}"
+            )
+        for size in heading_font_sizes:
+            try:
+                msg.heading_font_sizes.append(size)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option: %s.",
+                    size,
+                    exc_info=e,
+                )
+
+    heading_font_weights = theme_opts.get("headingFontWeights", None)
+    # headingFontWeights is either an integer (set for all headings) or
+    # a list of integers (set specific headings). However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(heading_font_weights, str):
+        try:
+            heading_font_weights = json.loads(heading_font_weights)
+        except Exception as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.headingFontWeights config option with json.loads: %s.",
+                heading_font_weights,
+                exc_info=e,
+            )
+            heading_font_weights = None
+
+    if isinstance(heading_font_weights, int):
+        # Set all heading font weights to the same value
+        for _ in range(1, 7):
+            msg.heading_font_weights.append(heading_font_weights)
+    elif isinstance(heading_font_weights, list):
+        # Check that the list has between 1 and 6 values
+        if not heading_font_weights or len(heading_font_weights) > 6:
+            raise ValueError(
+                f"Config theme.headingFontWeights should have 1-6 values corresponding to h1-h6, "
+                f"but got {len(heading_font_weights)}"
+            )
+        # Ensure we have exactly 6 heading font weights (h1-h6), padding with 600 as default
+        heading_weights = heading_font_weights[:6] + [600] * (
+            6 - len(heading_font_weights)
+        )
+
+        for weight in heading_weights:
+            try:
+                msg.heading_font_weights.append(weight)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontWeights config option: %s.",
+                    weight,
+                    exc_info=e,
+                )
+
+    chart_categorical_colors = theme_opts.get("chartCategoricalColors", None)
+    # If chartCategoricalColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_categorical_colors, str):
+        try:
+            chart_categorical_colors = json.loads(chart_categorical_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                chart_categorical_colors,
+                exc_info=e,
+            )
+            chart_categorical_colors = None
+
+    if chart_categorical_colors is not None:
+        for color in chart_categorical_colors:
+            try:
+                msg.chart_categorical_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartCategoricalColors config option: %s.",
+                    color,
+                    exc_info=e,
+                )
+
+    chart_sequential_colors = theme_opts.get("chartSequentialColors", None)
+    # If chartSequentialColors was configured via config.toml, it's already a list of
+    # strings. However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+    if isinstance(chart_sequential_colors, str):
+        try:
+            chart_sequential_colors = json.loads(chart_sequential_colors)
+        except json.JSONDecodeError as e:
+            _LOGGER.warning(
+                "Failed to parse the theme.chartSequentialColors config option: %s.",
+                chart_sequential_colors,
+                exc_info=e,
+            )
+            chart_sequential_colors = None
+
+    if chart_sequential_colors is not None:
+        # Check that the list has 10 color values
+        if len(chart_sequential_colors) != 10:
+            _LOGGER.error(
+                "Config theme.chartSequentialColors should have 10 color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                len(chart_sequential_colors),
+            )
+        for color in chart_sequential_colors:
+            try:
+                msg.chart_sequential_colors.append(color)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.chartSequentialColors config option: %s.",
+                    color,
                     exc_info=e,
                 )
 

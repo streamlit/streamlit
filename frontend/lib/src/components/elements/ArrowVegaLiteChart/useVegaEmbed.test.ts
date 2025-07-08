@@ -64,7 +64,7 @@ const createMockWidgetMgr = (): Mocked<WidgetStateManager> =>
     setElementState: vi.fn(),
     getStringValue: vi.fn(),
     setStringValue: vi.fn(),
-  } as unknown as Mocked<WidgetStateManager>)
+  }) as unknown as Mocked<WidgetStateManager>
 
 // ------------------------------------------
 // 2. The Tests
@@ -263,6 +263,7 @@ describe("useVegaEmbed hook", () => {
     })
 
     // The finalize function is provided by vega-embed
+    // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
       result.current.finalizeView()
     })
@@ -270,6 +271,7 @@ describe("useVegaEmbed hook", () => {
 
     // The stored references are cleared (not easily tested directly,
     // but if we tried to re-finalize, finalize shouldn't be called again):
+    // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
       result.current.finalizeView()
     })

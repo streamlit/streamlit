@@ -12,10 +12,6 @@ on:
       ref:
         required: true
         type: string
-      constraints-branch:
-        description: "The name of the branch from which the constraints files will be downloaded or compared with."
-        default: "constraints-develop"
-        type: string
     secrets:
       SNOWFLAKE_ACCOUNT:
         description: "Snowflake account passed from caller workflows for snowflake integration tests"
@@ -78,7 +74,6 @@ jobs:
             (matrix.python_version == 'max' && needs.build_info.outputs.PYTHON_MAX_VERSION || matrix.python_version)
           )
         }}
-      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
       COVERAGE_FILE: .coverage.${{ matrix.python_version }}
 
     steps:
@@ -95,40 +90,16 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
       - name: Run Linters
-        run: make pylint
+        run: make python-lint
         env:
           RUFF_OUTPUT_FORMAT: github
       - name: Run Type Checkers
-        run: make mypy
+        run: make python-types
       - name: Run Python Tests
-        run: make pytest
+        run: make python-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
-      - name: Set CONSTRAINTS_FILE env variable
-        if: ${{ always() }}
-        run: |
-          mkdir -p /tmp/constraints
-          echo "CONSTRAINTS_FILE=/tmp/constraints/constraints-${PYTHON_VERSION}.txt" >> $GITHUB_ENV
-      - name: Generate constraint file for Python ${{ env.PYTHON_VERSION }}
-        if: ${{ always() }}
-        run: |
-          pip freeze | grep -v "\-e git" | tee "${CONSTRAINTS_FILE}"
-      - name: Diff constraint file
-        if: ${{ always() }}
-        run: |
-          CONSTRAINT_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt"
-          diff -y <(echo "Old"; curl -s "${CONSTRAINT_URL}") <(echo "New"; cat "${CONSTRAINTS_FILE}") || true
-      - name: Upload constraints file
-        uses: actions/upload-artifact@v4
-        with:
-          name: constraints-${{ matrix.python_version }}
-          path: ${{ env.CONSTRAINTS_FILE }}
-          if-no-files-found: error
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
@@ -137,61 +108,6 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
-  py-updated-constraints:
-    needs:
-      - py-unit-tests
-    permissions:
-      # Additional permission needed to upload constraints
-      contents: write
-
-    runs-on: ubuntu-latest
-    if: |
-      github.repository == 'streamlit/streamlit' && (
-      (github.event_name == 'push' && github.ref_name == 'develop') ||
-      (github.event_name == 'schedule')
-      )
-
-    name: Upload constraints
-
-    env:
-      TARGET_BRANCH: constraints-${{ github.ref_name }}
-
-    steps:
-      - name: Checkout branch "${{ env.TARGET_BRANCH }}"
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_BRANCH }}
-          # Save the access token to the local git config, so
-          # later git commands can work.
-          persist-credentials: true
-
-      - uses: actions/download-artifact@v4
-        with:
-          path: .
-          pattern: constraints-*
-          merge-multiple: true
-
-      - name: Commit and push constraint files
-        run: |
-          git add .
-          git config --local user.email "core+streamlitbot-github@streamlit.io"
-          git config --local user.name "Automated GitHub Actions commit"
-          if ! git diff --cached --color --exit-code --ignore-matching-lines="^#.*"
-          then
-            git commit --all --message "Updating constraints. Github run id:${GITHUB_RUN_ID}
-
-            This update in constraints is automatically committed by the CI based on
-            '${GITHUB_REF}' in the '${GITHUB_REPOSITORY}' repository with commit sha ${GITHUB_SHA}.
-
-            The action that build those constraints can be found at https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/
-            "
-            git push "origin" "HEAD:${TARGET_BRANCH}";
-          else
-            echo "No changes"
-          fi
-        env:
-          TARGET_BRANCH: constraints-${{ github.ref_name }}
-
   py-integration-tests:
     needs:
       - build_info
@@ -199,7 +115,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
       COVERAGE_FILE: .coverage.integration
 
     steps:
@@ -220,16 +135,12 @@ jobs:
           # unit test job. The key generation for the cache resolves to the same key,
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
       - name: Install integration dependencies
         run: |
           source venv/bin/activate
           uv pip install -r lib/integration-requirements.txt --force-reinstall
       - name: Run Python integration tests
-        run: make pytest-integration
+        run: make python-integration-tests
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
@@ -275,23 +186,21 @@ jobs:
         run: |
           source venv/bin/activate
           uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
-      - name: Generate Protobufs
-        run: make protobuf
       - name: Make local modules visible
         run: |
           source venv/bin/activate
           uv pip install --editable ./lib --no-deps
       - name: Run Python Tests
-        run: make pytest
+        run: make python-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Validate min-constraints-gen
         run: |
-          make gen-min-dep-constraints
+          make update-min-deps
 
           git_status=$(git status --porcelain -- scripts/assets/min-constraints-gen.txt)
           if [[ -n $git_status ]]; then
-            echo "::error::The min constraints file is out of date! Please run \`make gen-min-dep-constraints\` and commit the result."
+            echo "::error::The min constraints file is out of date! Please run \`make update-min-deps\` and commit the result."
             echo "::group::git diff scripts/assets/min-constraints-gen.txt"
             git diff scripts/assets/min-constraints-gen.txt
             echo "::endgroup::"

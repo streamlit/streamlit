@@ -89,9 +89,9 @@ export function DeployDialog(
 ): ReactElement {
   // Get latest git info from AppContext:
   const { gitInfo } = useAppContext()
-  const { onClose, metricsMgr } = props
+  const { onClose, metricsMgr, showDeployError, isDeployErrorModalOpen } =
+    props
   const onClickDeployApp = useCallback((): void => {
-    const { showDeployError, isDeployErrorModalOpen, metricsMgr } = props
     metricsMgr.enqueue("menuClick", {
       label: "deployButtonInDialog",
     })
@@ -143,7 +143,7 @@ export function DeployDialog(
     }
 
     openUrl(getDeployAppUrl(gitInfo))
-  }, [props, onClose, gitInfo])
+  }, [metricsMgr, gitInfo, isDeployErrorModalOpen, showDeployError, onClose])
 
   return (
     <Modal onClose={onClose}>

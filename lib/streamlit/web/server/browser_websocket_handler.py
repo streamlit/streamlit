@@ -154,7 +154,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         return None
 
-    def open(self, *args, **kwargs) -> Awaitable[None] | None:
+    def open(self, *args: Any, **kwargs: Any) -> Awaitable[None] | None:
         user_info: dict[str, str | bool | None] = {}
 
         existing_session_id = None

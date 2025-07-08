@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect } from "react"
+import React, { memo, ReactElement, useContext, useEffect } from "react"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
@@ -54,7 +54,7 @@ function DownloadButton(props: Props): ReactElement {
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
-  } = React.useContext(LibContext)
+  } = useContext(LibContext)
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -66,11 +66,12 @@ function DownloadButton(props: Props): ReactElement {
   useEffect(() => {
     // Since we use a hidden link to download, we can't use the onerror event
     // to catch src url load errors. Catch with direct check instead.
-    endpoints.checkSourceUrlResponse(element.url, "Download Button")
+    void endpoints.checkSourceUrlResponse(element.url, "Download Button")
   }, [element.url, endpoints])
 
   const handleDownloadClick: () => void = () => {
     if (!element.ignoreRerun) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
     }
     // Downloads are only done on links, so create a hidden one and click it

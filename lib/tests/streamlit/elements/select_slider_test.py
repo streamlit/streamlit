@@ -14,6 +14,7 @@
 
 """slider unit test."""
 
+import re
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -43,15 +44,15 @@ class SliderTest(DeltaGeneratorTestCase):
         st.select_slider("the label", options=["red", "orange", "yellow"])
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value,
-            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        assert c.label == "the label"
+        assert (
+            c.label_visibility.value
+            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
         )
-        self.assertEqual(c.default, [0])
-        self.assertEqual(c.min, 0)
-        self.assertEqual(c.max, 2)
-        self.assertEqual(c.step, 1)
+        assert c.default == [0]
+        assert c.min == 0
+        assert c.max == 2
+        assert c.step == 1
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -60,7 +61,7 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.disabled, True)
+        assert c.disabled
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -85,7 +86,7 @@ class SliderTest(DeltaGeneratorTestCase):
     @parameterized.expand([("red", [1, 2, 3]), (("red", "green"), ["red", 2, 3])])
     def test_invalid_values(self, value, options):
         """Test that it raises an error on invalid value"""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=re.compile(r"is not in iterable")):
             st.select_slider("the label", value=value, options=options)
 
     def test_invalid_options(self):
@@ -97,7 +98,7 @@ class SliderTest(DeltaGeneratorTestCase):
         """Test that it allows None as a valid option"""
         st.select_slider("the label", options=[1, None, 3])
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [1])
+        assert c.default == [1]
 
     def test_range(self):
         """Test that a range is specified correctly."""
@@ -106,7 +107,7 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [0, 2])
+        assert c.default == [0, 2]
 
     def test_range_out_of_order(self):
         """Test a range that is out of order."""
@@ -115,7 +116,7 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [0, 2])
+        assert c.default == [0, 2]
 
     def test_range_session_state(self):
         """Test a range set by session state."""
@@ -149,22 +150,22 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [1])
-        self.assertEqual(c.options, DAYS_OF_WEEK)
+        assert c.default == [1]
+        assert c.options == DAYS_OF_WEEK
 
     def test_numpy_array_no_value(self):
         """Test that it can be called with options=numpy array, no value"""
         st.select_slider("the label", options=np.array([1, 2, 3, 4]))
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [0])
+        assert c.default == [0]
 
     def test_numpy_array_with_value(self):
         """Test that it can be called with options=numpy array"""
         st.select_slider("the label", value=3, options=np.array([1, 2, 3, 4]))
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [2])
+        assert c.default == [2]
 
     def test_numpy_array_with_range(self):
         """Test that it can be called with options=numpy array, value=range"""
@@ -173,11 +174,11 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [1, 4])
+        assert c.default == [1, 4]
 
     def test_numpy_array_with_invalid_value(self):
         """Test that it raises an error on invalid value"""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="10 is not in iterable"):
             st.select_slider(
                 "the label", value=10, options=np.array([1, 2, 3, 4, 5, 6])
             )
@@ -187,14 +188,14 @@ class SliderTest(DeltaGeneratorTestCase):
         st.select_slider("the label", options=pd.Series([1, 2, 3, 4, 5]))
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [0])
+        assert c.default == [0]
 
     def test_pandas_series_with_value(self):
         """Test that it can be called with options=pandas series"""
         st.select_slider("the label", value=3, options=pd.Series([1, 2, 3, 4, 5]))
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [2])
+        assert c.default == [2]
 
     def test_pandas_series_with_range(self):
         """Test that it can be called with options=pandas series, value=range"""
@@ -203,11 +204,11 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.default, [1, 4])
+        assert c.default == [1, 4]
 
     def test_pandas_series_with_invalid_value(self):
         """Test that it raises an error on invalid value"""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="10 is not in iterable"):
             st.select_slider(
                 "the label", value=10, options=pd.Series([1, 2, 3, 4, 5, 6])
             )
@@ -218,7 +219,7 @@ class SliderTest(DeltaGeneratorTestCase):
         st.select_slider("foo", ["bar", "baz"])
 
         proto = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(proto.form_id, "")
+        assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -228,11 +229,11 @@ class SliderTest(DeltaGeneratorTestCase):
             st.select_slider("foo", ["bar", "baz"])
 
         # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+        assert len(self.get_all_deltas_from_queue()) == 2
 
         form_proto = self.get_delta_from_queue(0).add_block
         select_slider_proto = self.get_delta_from_queue(1).new_element.slider
-        self.assertEqual(select_slider_proto.form_id, form_proto.form.form_id)
+        assert select_slider_proto.form_id == form_proto.form.form_id
 
     @parameterized.expand(
         [
@@ -250,17 +251,16 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.label_visibility.value, proto_value)
+        assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.select_slider(
                 "the label", options=["red", "orange"], label_visibility="wrong_value"
             )
-        self.assertEqual(
-            str(e.exception),
-            "Unsupported label_visibility option 'wrong_value'. Valid values are "
-            "'visible', 'hidden' or 'collapsed'.",
+        assert (
+            str(e.value)
+            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):
@@ -269,8 +269,8 @@ class SliderTest(DeltaGeneratorTestCase):
 
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning
 
 
 def test_select_slider_enum_coercion():
@@ -302,9 +302,11 @@ def test_select_slider_enum_coercion():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        with pytest.raises(AssertionError):
-            test_enum()  # expect a failure with the config value off.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()  # expect a failure with the config value off.
 
 
 def test_select_slider_enum_coercion_multivalue():
@@ -336,41 +338,43 @@ def test_select_slider_enum_coercion_multivalue():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        with pytest.raises(AssertionError):
-            test_enum()  # expect a failure with the config value off.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()  # expect a failure with the config value off.
 
 
 class SelectSliderWidthTest(DeltaGeneratorTestCase):
     def test_select_slider_with_width_pixels(self):
         """Test that select_slider can be displayed with a specific width in pixels."""
         st.select_slider("Label", options=["a", "b", "c"], width=500)
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        assert c.width_config.pixel_width == 500
+        assert element.width_config.pixel_width == 500
 
     def test_select_slider_with_width_stretch(self):
         """Test that select_slider can be displayed with a width of 'stretch'."""
         st.select_slider("Label", options=["a", "b", "c"], width="stretch")
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     def test_select_slider_with_default_width(self):
         """Test that the default width is used when not specified."""
         st.select_slider("Label", options=["a", "b", "c"])
-        c = self.get_delta_from_queue().new_element.slider
+        element = self.get_delta_from_queue().new_element
         assert (
-            c.width_config.WhichOneof("width_spec")
+            element.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        assert c.width_config.use_stretch is True
+        assert element.width_config.use_stretch is True
 
     @parameterized.expand(
         [
@@ -382,5 +386,5 @@ class SelectSliderWidthTest(DeltaGeneratorTestCase):
     )
     def test_width_config_invalid(self, name, invalid_width):
         """Test width config with various invalid values."""
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.select_slider("the label", options=["a", "b", "c"], width=invalid_width)

@@ -115,6 +115,7 @@ export function createIframeMessageHandler(
     const isReady = readyCheck()
 
     switch (type) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.COMPONENT_READY: {
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
@@ -135,6 +136,7 @@ export function createIframeMessageHandler(
         break
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_COMPONENT_VALUE:
         if (!isReady) {
           LOG.warn(
@@ -152,6 +154,7 @@ export function createIframeMessageHandler(
         }
         break
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_FRAME_HEIGHT:
         if (!isReady) {
           LOG.warn(
@@ -320,5 +323,5 @@ function tryGetValue(
   defaultValue: any = undefined
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
-  return obj.hasOwnProperty(name) ? obj[name] : defaultValue
+  return Object.hasOwn(obj, name) ? obj[name] : defaultValue
 }

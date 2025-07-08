@@ -23,7 +23,10 @@ st.markdown(
 
 st.markdown("This <b>HTML tag</b> is escaped!")
 
-st.markdown("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
+st.markdown(
+    ":streamlit: :material/info: This <b>HTML tag</b> `is` :red[not] escaped!",
+    unsafe_allow_html=True,
+)
 
 st.markdown("[text]")
 
@@ -60,7 +63,7 @@ with st.container():
     )
 
 
-def draw_header_test(join_output):
+def draw_header_test(join_output: bool) -> None:
     strings = [
         "# Header header1",
         "## Header header2",
@@ -166,7 +169,7 @@ with st.container(key="latex_elements"):
         \sum_{k=0}^{n-1} ar^k =
         a \left(\frac{1-r^{n}}{1-r}\right)
         """,
-        help="This is example tooltip displayed on latex.",
+        help="foo",
     )
 
     try:
@@ -178,6 +181,28 @@ with st.container(key="latex_elements"):
         out = "a + b"
 
     st.latex(out)
+
+    st.latex(
+        "this is a very long formula this is a very long formula this is a very long "
+        "formula this is a very long formula this is a very long formula"
+    )
+
+    st.latex(
+        "this is a very long formula this is a very long formula this is a very long "
+        "formula this is a very long formula this is a very long formula",
+        help="foo",
+    )
+
+    st.latex(
+        r"""
+    \text{This is a longer LaTeX equation demonstrating fixed width: }
+    \int_{a}^{b} f(x) \, dx = F(b) - F(a) \text{ where } F'(x) = f(x)
+    \text{ and } a \leq x \leq b
+""",
+        width=300,
+    )
+    st.latex("ax^2 + bx + c = 0", width="stretch")
+    st.latex("ax^2 + bx + c = 0", width="content")
 
 "---"
 
@@ -210,7 +235,12 @@ $$
 ax^2 + bx + c = 0
 $$
 
-> This is a blockquote
+$$
+this is a very long formula this is a very long formula this is a very long formula
+this is a very long formula this is a very long formula
+$$
+
+> This is a **blockquote**
 
 ### :material/home: :streamlit: Some header
 
@@ -223,9 +253,9 @@ $$
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet],
   :orange-background[orange], :gray-background[gray], :grey-background[grey], :primary-background[primary],
   :rainbow-background[rainbow]
-- :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange],
+- [x] :blue-badge[blue], :green-badge[green], :red-badge[red], :orange-badge[orange],
   :violet-badge[violet], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
-- Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
+- [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
   and Streamlit logo :streamlit: :red-background[:streamlit:]
 - <- -> <-> -- >= <= ~= https://example.com-> `code <- -> <-> -- >= <= ~=` $a <- -> <-> -- >= <= ~= b$
 
@@ -237,3 +267,65 @@ $$
 This is a repeating multiline string that wraps within purple background.]
 """
 )
+
+"---"
+
+# Performance test comparison between st.markdown and st.text
+
+element = st.radio("Element to use", ["st.markdown", "st.text"])
+text = "ABCabc" * 10000
+if st.button("Run element"):
+    if element == "st.text":
+        st.text(text)
+    else:
+        st.markdown(text)
+    st.write("DONE")
+
+
+# Width Examples
+with st.expander("Markdown Width Examples", expanded=True):
+    with st.container(border=True):
+        st.markdown(
+            "**Content width:** This is regular markdown text with "
+            "content-based sizing that adapts to its content width.",
+            width="content",
+        )
+
+        st.markdown(
+            "**Fixed width (200px):** This is markdown text with a fixed width of "
+            "200 pixels. The text will wrap to fit within this constrained width.",
+            width=200,
+        )
+
+        st.markdown(
+            "**Stretch width:** This is markdown text that stretches to fill the "
+            "full width of the container, regardless of content length.",
+            width="stretch",
+        )
+
+with st.expander("Caption Width Examples", expanded=True):
+    with st.container(border=True):
+        st.caption(
+            "This is a caption with content-based width sizing that adapts "
+            "to the caption text length.",
+            width="content",
+        )
+
+        st.caption(
+            "This is a caption with a fixed width of 300 pixels. Caption text will "
+            "wrap within this constraint.",
+            width=300,
+        )
+
+        st.caption(
+            "This is a caption that stretches to fill the full container width.",
+            width="stretch",
+        )
+
+with st.expander("Badge Width Examples", expanded=True):
+    with st.container(border=True):
+        st.badge("Default badge", width="content")
+
+        st.badge("Fixed 100px badge", width=100)
+
+        st.badge("Stretch badge", width="stretch")

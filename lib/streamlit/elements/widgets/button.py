@@ -420,7 +420,7 @@ class ButtonMixin:
         data with a cached function. When working with a download button, it's
         similarly recommended to convert your data into a downloadable format
         with a cached function. Caching ensures that the app reruns
-        effeciently.
+        efficiently.
 
         >>> import streamlit as st
         >>> import pandas as pd
@@ -682,10 +682,10 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str, Path, or st.Page
-            The file path (relative to the main script) or an st.Page indicating
-            the page to switch to. Alternatively, this can be the URL to an
-            external page (must start with "http://" or "https://").
+        page : str, Path, or StreamlitPage
+            The file path (relative to the main script) or a ``StreamlitPage``
+            indicating the page to switch to. Alternatively, this can be the
+            URL to an external page (must start with "http://" or "https://").
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -706,8 +706,9 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         icon : str or None
-            An optional emoji or icon to display next to the button label. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            An optional emoji or icon to display next to the button label. If
+            ``icon`` is ``None`` (default), the icon is inferred from the
+            ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -818,6 +819,7 @@ class ButtonMixin:
             user_key=key,
             # download_button is not allowed to be used in a form.
             form_id=None,
+            dg=self.dg,
             label=label,
             icon=icon,
             file_name=file_name,
@@ -931,6 +933,10 @@ class ButtonMixin:
             page_link_proto.page = page.url_path
             if label is None:
                 page_link_proto.label = page.title
+            if icon is None:
+                page_link_proto.icon = page.icon
+                # Here the StreamlitPage's icon is already validated
+                # (using validate_icon_or_emoji) during its initialization
         else:
             # Convert Path to string if necessary
             if isinstance(page, Path):
@@ -1009,6 +1015,7 @@ class ButtonMixin:
             user_key=key,
             # Only the
             form_id=form_id,
+            dg=self.dg,
             label=label,
             icon=icon,
             help=help,
@@ -1105,7 +1112,7 @@ def marshall_file(
         data_as_bytes = data.read() or b""
         mimetype = mimetype or "application/octet-stream"
     else:
-        raise StreamlitAPIException("Invalid binary data format: %s" % type(data))
+        raise StreamlitAPIException(f"Invalid binary data format: {type(data)}")
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(

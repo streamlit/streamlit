@@ -88,7 +88,7 @@ from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
@@ -157,9 +157,9 @@ class AppTest:
         script_path: str | Path,
         *,
         default_timeout: float,
-        args=None,
-        kwargs=None,
-    ):
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> None:
         self._script_path = str(script_path)
         self.default_timeout = default_timeout
         session_state = SessionState()
@@ -206,7 +206,12 @@ class AppTest:
 
     @classmethod
     def _from_string(
-        cls, script: str, *, default_timeout: float = 3, args=None, kwargs=None
+        cls,
+        script: str,
+        *,
+        default_timeout: float = 3,
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
         script_name = calc_md5(bytes(script, "utf-8"))
 
@@ -223,8 +228,8 @@ class AppTest:
         script: Callable[..., Any],
         *,
         default_timeout: float = 3,
-        args=None,
-        kwargs=None,
+        args: tuple[Any, ...] | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
@@ -1015,7 +1020,7 @@ class AppTest:
     def __len__(self) -> int:
         return len(self._tree)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Node]:
         yield from self._tree
 
     def __getitem__(self, idx: int) -> Node:

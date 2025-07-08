@@ -40,7 +40,7 @@ def cache(
     hash_funcs: HashFuncsDict | None = None,
     max_entries: int | None = None,
     ttl: float | None = None,
-):
+) -> F:
     """Legacy caching decorator (deprecated).
 
     Legacy caching with ``st.cache`` has been removed from Streamlit. This is

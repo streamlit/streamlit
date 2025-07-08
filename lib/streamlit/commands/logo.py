@@ -26,7 +26,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 
-def _invalid_logo_text(field_name: str):
+def _invalid_logo_text(field_name: str) -> str:
     return (
         f"The {field_name} passed to st.logo is invalid - See "
         "[documentation](https://docs.streamlit.io/develop/api-reference/media/st.logo) "
@@ -176,7 +176,7 @@ def logo(
         except Exception as ex:
             raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
 
-    def validate_size(size):
+    def validate_size(size: str) -> str:
         if isinstance(size, str):
             image_size = size.lower()
             valid_sizes = ["small", "medium", "large"]

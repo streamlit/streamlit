@@ -39,10 +39,6 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
 
       - name: Create tag
         id: create_tag
@@ -72,8 +68,6 @@ jobs:
   run-python-tests:
     needs: create-nightly-tag
     permissions:
-      # Pass additional permission needed to upload constraints
-      contents: write
       # Additional permissions for py-coverage-report
       actions: read
       pull-requests: write
@@ -168,10 +162,6 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
       - name: Verify git tag vs. version
         env:
           TAG: ${{ needs.create-nightly-tag.outputs.tag }}

@@ -51,7 +51,7 @@ def oidc_server_port() -> int:
 
 @pytest.fixture(scope="module")
 def fake_oidc_server(
-    request, oidc_server_port: int
+    request: pytest.FixtureRequest, oidc_server_port: int
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the OIDC app server."""
 
@@ -76,7 +76,7 @@ def fake_oidc_server(
 
 
 @pytest.fixture(scope="module")
-def prepare_secrets_file(app_port: int, oidc_server_port: int) -> None:
+def prepare_secrets_file(app_port: int, oidc_server_port: int):
     """Fixture that inject the correct port to auth_secrets.toml file redirect_uri."""
     # Read in the file
     rendered_secrets = AUTH_SECRETS_TEMPLATE.format(
@@ -89,7 +89,7 @@ def prepare_secrets_file(app_port: int, oidc_server_port: int) -> None:
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args(prepare_secrets_file) -> list[str]:
+def app_server_extra_args(prepare_secrets_file: str) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
     return [
         "--secrets.files",

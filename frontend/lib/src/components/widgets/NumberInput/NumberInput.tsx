@@ -24,7 +24,6 @@ import React, {
 } from "react"
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
 
@@ -46,7 +45,8 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import {
@@ -76,7 +76,7 @@ const NumberInput: React.FC<Props> = ({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const {
     dataType: elementDataType,
@@ -120,11 +120,17 @@ const NumberInput: React.FC<Props> = ({
   }, [element.dataType, element.step])
 
   const commitValue = useCallback(
-    ({ value, source }: { value: number | null; source: Source }) => {
-      if (notNullOrUndefined(value) && (min > value || value > max)) {
+    ({
+      value: valueArg,
+      source,
+    }: {
+      value: number | null
+      source: Source
+    }) => {
+      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
         inputRef.current?.reportValidity()
       } else {
-        const newValue = value ?? elementDefault ?? null
+        const newValue = valueArg ?? elementDefault ?? null
 
         switch (elementDataType) {
           case NumberInputProto.DataType.INT:
@@ -186,11 +192,13 @@ const NumberInput: React.FC<Props> = ({
   }, [])
 
   const updateFromProtobuf = useCallback((): void => {
-    const { value } = element
+    const { value: elementValue } = element
     element.setValue = false
-    setValue(value ?? null)
-    setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
-    commitValue({ value: value ?? null, source: { fromUi: false } })
+    setValue(elementValue ?? null)
+    setFormattedValue(
+      formatValue({ value: elementValue ?? null, ...element, step })
+    )
+    commitValue({ value: elementValue ?? null, source: { fromUi: false } })
   }, [element, step, commitValue])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
@@ -220,7 +228,7 @@ const NumberInput: React.FC<Props> = ({
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [])
 
@@ -246,9 +254,9 @@ const NumberInput: React.FC<Props> = ({
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    const { value } = e.target
+    const { value: targetValue } = e.target
 
-    if (value === "") {
+    if (targetValue === "") {
       setDirty(true)
       setValue(null)
       setFormattedValue(null)
@@ -256,14 +264,14 @@ const NumberInput: React.FC<Props> = ({
       let numValue: number
 
       if (element.dataType === NumberInputProto.DataType.INT) {
-        numValue = parseInt(value, 10)
+        numValue = parseInt(targetValue, 10)
       } else {
-        numValue = parseFloat(value)
+        numValue = parseFloat(targetValue)
       }
 
       setDirty(true)
       setValue(numValue)
-      setFormattedValue(value)
+      setFormattedValue(targetValue)
     }
   }
 
@@ -417,12 +425,16 @@ const NumberInput: React.FC<Props> = ({
                 inputMode: "",
               },
               style: {
+                fontWeight: theme.fontWeights.normal,
                 lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: theme.spacing.sm,
                 paddingLeft: theme.spacing.md,
                 paddingBottom: theme.spacing.sm,
                 paddingTop: theme.spacing.sm,
+                "::placeholder": {
+                  color: theme.colors.fadedText60,
+                },
               },
             },
             InputContainer: {

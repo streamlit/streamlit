@@ -78,12 +78,11 @@ export const useVegaLiteSelections = (
             const viewState = vegaView.getState({
               // There are also `signals` data, but I believe its
               // not relevant for restoring the selection state.
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-              data: (name?: string, _operator?: any) => {
+              data: (nameArg?: string, _operator?: unknown) => {
                 // Vega lite stores the selection state in a <param name>_store parameter
                 // under `data` that can be retrieved via the getState method.
                 // https://vega.github.io/vega/docs/api/view/#view_getState
-                return selectionMode.some(mode => `${mode}_store` === name)
+                return selectionMode.some(mode => `${mode}_store` === nameArg)
               },
               // Don't include subcontext data since it will lead to exceptions
               // when loading the state.

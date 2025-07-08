@@ -47,9 +47,7 @@ class QueryParams(MutableMapping[str, str]):
         self._ensure_single_query_api_used()
 
         return iter(
-            key
-            for key in self._query_params.keys()
-            if key not in EMBED_QUERY_PARAMS_KEYS
+            key for key in self._query_params if key not in EMBED_QUERY_PARAMS_KEYS
         )
 
     def __getitem__(self, key: str) -> str:
@@ -111,12 +109,12 @@ class QueryParams(MutableMapping[str, str]):
         | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
         /,
         **kwds: str,
-    ):
+    ) -> None:
         # This overrides the `update` provided by MutableMapping
         # to ensure only one one ForwardMsg is sent.
         self._ensure_single_query_api_used()
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
-            for key in other.keys():
+            for key in other.keys():  # noqa: SIM118
                 self.__set_item_internal(key, other[key])
         else:
             for key, value in other:
@@ -173,7 +171,7 @@ class QueryParams(MutableMapping[str, str]):
         self,
         _dict: Iterable[tuple[str, str | Iterable[str]]]
         | SupportsKeysAndGetItem[str, str | Iterable[str]],
-    ):
+    ) -> None:
         self._ensure_single_query_api_used()
         old_value = self._query_params.copy()
         self.clear_with_no_forward_msg(preserve_embed=True)
@@ -194,7 +192,7 @@ class QueryParams(MutableMapping[str, str]):
             if key in EMBED_QUERY_PARAMS_KEYS and preserve_embed
         }
 
-    def _ensure_single_query_api_used(self):
+    def _ensure_single_query_api_used(self) -> None:
         ctx = get_script_run_ctx()
         if ctx is None:
             return

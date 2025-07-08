@@ -71,6 +71,15 @@ class AddRowsMetadata:
     chart_command: str
     last_index: Hashable | None
     columns: PrepDataColumns
+    # Chart styling properties
+    color: str | Color | list[Color] | None = None
+    width: int | None = None
+    height: int | None = None
+    use_container_width: bool = True
+    # Only applicable for bar & area charts
+    stack: bool | ChartStackType | None = None
+    # Only applicable for bar charts
+    horizontal: bool = False
 
 
 class ChartType(Enum):
@@ -126,7 +135,7 @@ _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
 
 def maybe_raise_stack_warning(
     stack: bool | ChartStackType | None, command: str | None, docs_link: str
-):
+) -> None:
     # Check that the stack parameter is valid, raise more informative error if not
     if stack not in (None, True, False, "normalize", "center", "layered"):
         raise StreamlitAPIException(
@@ -147,8 +156,11 @@ def generate_chart(
     size_from_user: str | float | None = None,
     width: int | None = None,
     height: int | None = None,
+    use_container_width: bool = True,
     # Bar & Area charts only:
     stack: bool | ChartStackType | None = None,
+    # Bar charts only:
+    horizontal: bool = False,
 ) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
@@ -186,6 +198,13 @@ def generate_chart(
             "color_column": color_column,
             "size_column": size_column,
         },
+        # Chart styling properties
+        color=color_from_user,
+        width=width,
+        height=height,
+        use_container_width=use_container_width,
+        stack=stack,
+        horizontal=horizontal,
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
@@ -373,7 +392,7 @@ def _infer_vegalite_type(
     ]:
         return "quantitative"
 
-    elif typ == "categorical" and data.cat.ordered:
+    if typ == "categorical" and data.cat.ordered:
         # The original code returns a tuple here:
         # return ("ordinal", data.cat.categories.tolist())  # noqa: ERA001
         # But returning the tuple here isn't compatible with our
@@ -381,9 +400,9 @@ def _infer_vegalite_type(
         # Altair already extracts the correct sort order somewhere else.
         # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
         return "ordinal"
-    elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
+    if typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
-    elif typ in [
+    if typ in [
         "datetime",
         "datetime64",
         "timedelta",
@@ -393,14 +412,13 @@ def _infer_vegalite_type(
         "period",
     ]:
         return "temporal"
-    else:
-        # STREAMLIT MOD: I commented this out since Streamlit doesn't use warnings.warn.
-        # > warnings.warn(
-        # >     "I don't know how to infer vegalite type from '{}'.  "
-        # >     "Defaulting to nominal.".format(typ),
-        # >     stacklevel=1,
-        # > )
-        return "nominal"
+    # STREAMLIT MOD: I commented this out since Streamlit doesn't use warnings.warn.
+    # > warnings.warn(
+    # >     "I don't know how to infer vegalite type from '{}'.  "
+    # >     "Defaulting to nominal.".format(typ),
+    # >     stacklevel=1,
+    # > )
+    return "nominal"
 
 
 def _get_pandas_index_attr(
@@ -560,7 +578,7 @@ def _melt_data(
 
     # Arrow has problems with object types after melting two different dtypes
     # > pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
+    return dataframe_util.fix_arrow_incompatible_column_types(
         melted_df,
         selected_columns=[
             *columns_to_leave_alone,
@@ -568,8 +586,6 @@ def _melt_data(
             new_y_column_name,
         ],
     )
-
-    return fixed_df
 
 
 def _maybe_reset_index_in_place(
@@ -610,7 +626,9 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
     return df[keep]
 
 
-def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: str | None):
+def _maybe_convert_color_column_in_place(
+    df: pd.DataFrame, color_column: str | None
+) -> None:
     """If needed, convert color column to a format Vega understands."""
     if color_column is None or len(df[color_column]) == 0:
         return
@@ -669,18 +687,17 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: str | None) -> str | None:
     if x_from_user is None:
         return None
 
-    elif isinstance(x_from_user, str):
+    if isinstance(x_from_user, str):
         if x_from_user not in df.columns:
             raise StreamlitColumnNotFoundError(df, x_from_user)
 
         return x_from_user
 
-    else:
-        raise StreamlitAPIException(
-            "x parameter should be a column name (str) or None to use the "
-            f" dataframe's index. Value given: {x_from_user} "
-            f"(type {type(x_from_user)})"
-        )
+    raise StreamlitAPIException(
+        "x parameter should be a column name (str) or None to use the "
+        f" dataframe's index. Value given: {x_from_user} "
+        f"(type {type(x_from_user)})"
+    )
 
 
 def _parse_y_columns(
@@ -861,17 +878,14 @@ def _get_x_encoding(
         # Only show a label in the x axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
-        if x_from_user is None:
-            x_title = ""
-        else:
-            x_title = x_column
+        x_title = "" if x_from_user is None else x_column
 
     # User specified x-axis label takes precedence
     if x_axis_label is not None:
         x_title = x_axis_label
 
     # grid lines on x axis for horizontal bar charts only
-    grid = True if chart_type == ChartType.HORIZONTAL_BAR else False
+    grid = chart_type == ChartType.HORIZONTAL_BAR
 
     return alt.X(
         x_field,
@@ -909,17 +923,14 @@ def _get_y_encoding(
         # Only show a label in the y axis if the user passed a column explicitly. We
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
-        if y_from_user is None:
-            y_title = ""
-        else:
-            y_title = y_column
+        y_title = "" if y_from_user is None else y_column
 
     # User specified y-axis label takes precedence
     if y_axis_label is not None:
         y_title = y_axis_label
 
     # grid lines on y axis for all charts except horizontal bar charts
-    grid = False if chart_type == ChartType.HORIZONTAL_BAR else True
+    grid = chart_type != ChartType.HORIZONTAL_BAR
 
     return alt.Y(
         field=y_field,
@@ -935,9 +946,9 @@ def _update_encoding_with_stack(
     encoding: alt.X | alt.Y,
 ) -> None:
     if stack is None:
-        return None
+        return
     # Our layered option maps to vega's stack=False option
-    elif stack == "layered":
+    if stack == "layered":
         stack = False
 
     encoding["stack"] = stack
@@ -960,12 +971,14 @@ def _get_color_encoding(
         # If the color value is color-like, return that.
         if is_color_like(cast("Any", color_value)):
             if len(y_column_list) != 1:
-                raise StreamlitColorLengthError([color_value], y_column_list)
+                raise StreamlitColorLengthError(
+                    [color_value] if color_value else [], y_column_list
+                )
 
             return alt.ColorValue(to_css_color(cast("Any", color_value)))
 
-        # If the color value is a list of colors of approriate length, return that.
-        elif isinstance(color_value, (list, tuple)):
+        # If the color value is a list of colors of appropriate length, return that.
+        if isinstance(color_value, (list, tuple)):
             color_values = cast("Collection[Color]", color_value)
 
             if len(color_values) != len(y_column_list):
@@ -973,24 +986,24 @@ def _get_color_encoding(
 
             if len(color_values) == 1:
                 return alt.ColorValue(to_css_color(cast("Any", color_value[0])))
-            else:
-                return alt.Color(
-                    field=color_column if color_column is not None else alt.Undefined,
-                    scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
-                    legend=_COLOR_LEGEND_SETTINGS,
-                    type="nominal",
-                    title=" ",
-                )
+            return alt.Color(
+                field=color_column if color_column is not None else alt.Undefined,
+                scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
+                legend=_COLOR_LEGEND_SETTINGS,
+                type="nominal",
+                title=" ",
+            )
 
-        raise StreamlitInvalidColorError(df, color_from_user)
+        raise StreamlitInvalidColorError(color_from_user)
 
-    elif color_column is not None:
+    if color_column is not None:
         column_type: VegaLiteType
 
-        if color_column == _MELTED_COLOR_COLUMN_NAME:
-            column_type = "nominal"
-        else:
-            column_type = _infer_vegalite_type(df[color_column])
+        column_type = (
+            "nominal"
+            if color_column == _MELTED_COLOR_COLUMN_NAME
+            else _infer_vegalite_type(df[color_column])
+        )
 
         color_enc = alt.Color(
             field=color_column, legend=_COLOR_LEGEND_SETTINGS, type=column_type
@@ -1037,16 +1050,15 @@ def _get_size_encoding(
                 legend=_SIZE_LEGEND_SETTINGS,
             )
 
-        elif isinstance(size_value, (float, int)):
+        if isinstance(size_value, (float, int)):
             return alt.SizeValue(size_value)
-        elif size_value is None:
+        if size_value is None:
             return alt.SizeValue(100)
-        else:
-            raise StreamlitAPIException(
-                f"This does not look like a valid size: {size_value!r}"
-            )
+        raise StreamlitAPIException(
+            f"This does not look like a valid size: {size_value!r}"
+        )
 
-    elif size_column is not None or size_value is not None:
+    if size_column is not None or size_value is not None:
         raise Error(
             f"Chart type {chart_type.name} does not support size argument. "
             "This should never happen!"
@@ -1139,7 +1151,7 @@ def _get_y_encoding_type(
 
 
 class StreamlitColumnNotFoundError(StreamlitAPIException):
-    def __init__(self, df, col_name, *args):
+    def __init__(self, df: pd.DataFrame, col_name: str, *args: Any) -> None:
         available_columns = ", ".join(str(c) for c in list(df.columns))
         message = (
             f'Data does not have a column named `"{col_name}"`. '
@@ -1149,8 +1161,7 @@ class StreamlitColumnNotFoundError(StreamlitAPIException):
 
 
 class StreamlitInvalidColorError(StreamlitAPIException):
-    def __init__(self, df, color_from_user, *args):
-        ", ".join(str(c) for c in list(df.columns))
+    def __init__(self, color_from_user: str | Color | list[Color] | None) -> None:
         message = f"""
 This does not look like a valid color argument: `{color_from_user}`.
 
@@ -1163,14 +1174,18 @@ The color argument can be:
 * The name of a column.
 * Or a list of colors, matching the number of y columns to draw.
         """
-        super().__init__(message, *args)
+        super().__init__(message)
 
 
 class StreamlitColorLengthError(StreamlitAPIException):
-    def __init__(self, color_values, y_column_list, *args):
+    def __init__(
+        self,
+        color_values: str | Color | Collection[Color] | None,
+        y_column_list: list[str],
+    ) -> None:
         message = (
             f"The list of colors `{color_values}` must have the same "
             "length as the list of columns to be colored "
             f"`{y_column_list}`."
         )
-        super().__init__(message, *args)
+        super().__init__(message)

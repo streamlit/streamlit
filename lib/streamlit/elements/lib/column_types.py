@@ -18,11 +18,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -32,14 +33,16 @@ NumberFormat: TypeAlias = Literal[
     "localized",
     "dollar",
     "euro",
+    "yen",
     "percent",
     "compact",
     "scientific",
     "engineering",
     "accounting",
+    "bytes",
 ]
 
-ColumnWidth: TypeAlias = Literal["small", "medium", "large"]
+ColumnWidth: TypeAlias = Union[Literal["small", "medium", "large"], int]
 
 # Type alias that represents all available column types
 # which are configurable by the user.
@@ -151,6 +154,7 @@ class ProgressColumnConfig(TypedDict):
     format: NotRequired[str | NumberFormat | None]
     min_value: NotRequired[int | float | None]
     max_value: NotRequired[int | float | None]
+    step: NotRequired[int | float | None]
 
 
 class JsonColumnConfig(TypedDict):
@@ -166,7 +170,7 @@ class ColumnConfig(TypedDict, total=False):
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -174,6 +178,7 @@ class ColumnConfig(TypedDict, total=False):
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -270,7 +275,7 @@ def Column(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -278,6 +283,7 @@ def Column(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -374,7 +380,7 @@ def NumberColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -382,6 +388,7 @@ def NumberColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -416,7 +423,7 @@ def NumberColumn(
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format:  str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format:  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 
@@ -426,13 +433,15 @@ def NumberColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
         - printf-style format string: Format the number with a printf
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
-          ``"%X"`` to show an unsigned hexidecimal integer (e.g. "4D2"). You
+          ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
           ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
@@ -454,7 +463,7 @@ def NumberColumn(
         (default), integer columns will have a step of 1 and float columns will
         have unrestricted precision. In this case, some floats may display like
         integers. Setting ``step`` for float columns will ensure a consistent
-        number of digits after the decimal even without setting ``format``.
+        number of digits after the decimal are displayed.
 
     Examples
     --------
@@ -530,7 +539,7 @@ def TextColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -538,6 +547,7 @@ def TextColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -652,7 +662,7 @@ def LinkColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -660,6 +670,7 @@ def LinkColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -709,6 +720,7 @@ def LinkColumn(
 
         - ``None`` (default) to display the URL itself.
         - A string that is displayed in every cell, e.g. ``"Open link"``.
+        - A material icon displayed in every cell, e.g. ``":material/open_in_new:"``
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
           ``"https://(.*?)\.example\.com"`` to extract the display text
@@ -766,6 +778,8 @@ def LinkColumn(
         https://doc-link-column.streamlit.app/
         height: 300px
     """
+    if display_text and display_text.startswith(":material/"):
+        display_text = validate_material_icon(display_text)
 
     return ColumnConfig(
         label=label,
@@ -807,7 +821,7 @@ def CheckboxColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -815,6 +829,7 @@ def CheckboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -915,7 +930,7 @@ def SelectboxColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -923,6 +938,7 @@ def SelectboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1038,7 +1054,7 @@ def BarChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1046,6 +1062,7 @@ def BarChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1134,7 +1151,7 @@ def LineChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1142,6 +1159,7 @@ def LineChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1231,7 +1249,7 @@ def AreaChartColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1239,6 +1257,7 @@ def AreaChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1313,7 +1332,7 @@ def ImageColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-):
+) -> ColumnConfig:
     """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
     The cell values need to be one of:
@@ -1334,7 +1353,7 @@ def ImageColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1342,6 +1361,7 @@ def ImageColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1403,7 +1423,7 @@ def ListColumn(
     width: ColumnWidth | None = None,
     help: str | None = None,
     pinned: bool | None = None,
-):
+) -> ColumnConfig:
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
     This is the default column type for list-like values. List columns are not editable
@@ -1416,7 +1436,7 @@ def ListColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1424,6 +1444,7 @@ def ListColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1509,7 +1530,7 @@ def DatetimeColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1517,6 +1538,7 @@ def DatetimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1671,7 +1693,7 @@ def TimeColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1679,6 +1701,7 @@ def TimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1824,7 +1847,7 @@ def DateColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1832,6 +1855,7 @@ def DateColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1961,6 +1985,7 @@ def ProgressColumn(
     format: str | NumberFormat | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
+    step: int | float | None = None,
 ) -> ColumnConfig:
     """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1974,7 +1999,7 @@ def ProgressColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1982,6 +2007,7 @@ def ProgressColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1991,7 +2017,7 @@ def ProgressColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    format: str, "plain", "localized", "percent", "dollar", "euro", "accounting", "compact", "scientific", "engineering", or None
+    format: str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how the numbers are displayed.
         This can be one of the following values:
 
@@ -2001,13 +2027,15 @@ def ProgressColumn(
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
+        - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
         - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
         - printf-style format string: Format the number with a printf
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
-          ``"%X"`` to show an unsigned hexidecimal integer (e.g. "4D2"). You
+          ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
           can also add prefixes and suffixes. To show British pounds, use
           ``"£ %.2f"`` (e.g. "£ 1234.57"). For more information, see `sprint-js
           <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
@@ -2029,6 +2057,12 @@ def ProgressColumn(
     max_value: int, float, or None
         The maximum value of the progress bar. If this is ``None`` (default),
         the maximum will be 100 for integer values and 1.0 for float values.
+
+    step: int, float, or None
+        The precision of numbers. If this is ``None`` (default), integer columns
+        will have a step of 1 and float columns will have a step of 0.01.
+        Setting ``step`` for float columns will ensure a consistent number of
+        digits after the decimal are displayed.
 
     Examples
     --------
@@ -2070,6 +2104,7 @@ def ProgressColumn(
             format=format,
             min_value=min_value,
             max_value=max_value,
+            step=step,
         ),
     )
 
@@ -2094,7 +2129,7 @@ def JsonColumn(
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", or None
+    width: "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -2102,6 +2137,7 @@ def JsonColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
+        - An integer specifying the width in pixels.
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If

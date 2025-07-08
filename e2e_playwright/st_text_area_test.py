@@ -18,7 +18,6 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
-    expect_exception,
     expect_help_tooltip,
     get_element_by_key,
 )
@@ -29,7 +28,7 @@ def test_text_area_widget_rendering(
 ):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = themed_app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(17)
+    expect(text_area_widgets).to_have_count(22)
 
     assert_snapshot(text_area_widgets.nth(0), name="st_text_area-default")
     assert_snapshot(text_area_widgets.nth(1), name="st_text_area-value_some_text")
@@ -41,11 +40,30 @@ def test_text_area_widget_rendering(
     assert_snapshot(text_area_widgets.nth(7), name="st_text_area-collapsed_label")
     assert_snapshot(text_area_widgets.nth(8), name="st_text_area-callback_help")
     assert_snapshot(text_area_widgets.nth(9), name="st_text_area-max_chars_5")
+    assert_snapshot(text_area_widgets.nth(15), name="st_text_area-markdown_label")
+
+
+def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
+    text_area_widgets = app.get_by_test_id("stTextArea")
+    expect(text_area_widgets).to_have_count(22)
+
     assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
     assert_snapshot(text_area_widgets.nth(11), name="st_text_area-height_75")
-    assert_snapshot(text_area_widgets.nth(14), name="st_text_area-markdown_label")
-    assert_snapshot(text_area_widgets.nth(15), name="st_text_area-width_200px")
-    assert_snapshot(text_area_widgets.nth(16), name="st_text_area-width_stretch")
+    # Expect this to default to the minimum height of 68px
+    assert_snapshot(text_area_widgets.nth(12), name="st_text_area-height_60")
+    assert_snapshot(text_area_widgets.nth(16), name="st_text_area-width_200px")
+    assert_snapshot(text_area_widgets.nth(17), name="st_text_area-width_stretch")
+
+    # Snapshot the form containing the stretch height text area
+    form_container = app.get_by_test_id("stForm").nth(2)  # Third form (form3)
+    assert_snapshot(form_container, name="st_text_area-height_stretch")
+
+    # Snapshot the column area containing both text areas
+    column_container = app.get_by_test_id("stHorizontalBlock")
+    assert_snapshot(column_container, name="st_text_area-columns_layout")
+
+    # content height is tested in test_text_area_content_height_expansion
 
 
 def test_help_tooltip_works(app: Page):
@@ -56,7 +74,7 @@ def test_help_tooltip_works(app: Page):
 def test_text_area_has_correct_initial_values(app: Page):
     """Test that st.text_area has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(15)
+    expect(markdown_elements).to_have_count(16)
 
     expected = [
         "value 1: ",
@@ -72,8 +90,9 @@ def test_text_area_has_correct_initial_values(app: Page):
         "value 10: 1234",
         "value 11: default text",
         "value 12: default text",
-        "text area 13 (value from state) - value: xyz",
-        "text area 14 (value from form) - value: ",
+        "value 13: default text",
+        "text area 14 (value from state) - value: xyz",
+        "text area 15 (value from form) - value: ",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -82,7 +101,7 @@ def test_text_area_has_correct_initial_values(app: Page):
 
 def test_text_area_shows_state_value(app: Page):
     expect(
-        app.get_by_test_id("stTextArea").nth(12).locator("textarea").first
+        app.get_by_test_id("stTextArea").nth(13).locator("textarea").first
     ).to_have_text("xyz")
 
 
@@ -246,20 +265,12 @@ def test_calls_callback_on_change(app: Page):
 
 def test_text_area_in_form_with_submit_by_enter(app: Page):
     """Test that text area in form can be submitted by pressing Command+Enter."""
-    text_area_field = app.get_by_test_id("stTextArea").nth(13).locator("textarea").first
+    text_area_field = app.get_by_test_id("stTextArea").nth(14).locator("textarea").first
     text_area_field.fill("hello world")
     text_area_field.press("Control+Enter")
-    expect(app.get_by_test_id("stMarkdown").nth(14)).to_have_text(
-        "text area 14 (value from form) - value: hello world",
+    expect(app.get_by_test_id("stMarkdown").nth(15)).to_have_text(
+        "text area 15 (value from form) - value: hello world",
         use_inner_text=True,
-    )
-
-
-def test_invalid_height(app: Page):
-    """Test that it raises an error when passed an invalid height."""
-    expect_exception(
-        app,
-        "StreamlitAPIException: Invalid height 65px for st.text_area - must be at least 68 pixels.",
     )
 
 
@@ -271,3 +282,25 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "text_area9")).to_be_visible()
+
+
+def test_text_area_content_height_expansion(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.text_area with height='content' expands correctly when content is added."""
+    content_height_form = app.get_by_test_id("stForm").nth(1)
+
+    # Take initial snapshot
+    assert_snapshot(content_height_form, name="st_text_area-content_height_initial")
+
+    # Add content that should trigger expansion
+    content_height_form.locator("textarea").first.fill(
+        "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8"
+    )
+
+    # Take snapshot after expansion
+    assert_snapshot(content_height_form, name="st_text_area-content_height_expanded")
+
+    # Test reducing content and verify it shrinks back
+    content_height_form.locator("textarea").first.fill("Line 1\nLine 2")
+    assert_snapshot(content_height_form, name="st_text_area-content_height_reduced")

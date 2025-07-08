@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { CSSProperties, ReactElement, ReactNode } from "react"
+import React, { ReactElement, ReactNode } from "react"
 
 import {
   BaseButtonKind,
@@ -28,7 +28,6 @@ import {
   StreamlitSyntaxHighlighter,
 } from "@streamlit/lib"
 import { IException } from "@streamlit/protobuf"
-import { STREAMLIT_HOME_URL } from "@streamlit/app/src/urls"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 
 import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
@@ -36,16 +35,13 @@ import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
-import {
-  StyledAboutInfo,
-  StyledAboutLink,
-  StyledDeployErrorContent,
-} from "./styled-components"
+import { StyledDeployErrorContent } from "./styled-components"
 
 export type PlainEventHandler = () => void
 
 interface SettingsProps extends SettingsDialogProps {
   type: DialogType.SETTINGS
+  sessionInfo: SessionInfo
 }
 
 interface ThemeCreatorProps extends ThemeCreatorDialogProps {
@@ -61,25 +57,27 @@ export type DialogProps =
   | WarningProps
   | DeployErrorProps
   | DeployDialogProps
+  | ConnectionErrorProps
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
     case DialogType.ABOUT:
-      return aboutDialog(dialogProps)
+      return <AboutDialog {...dialogProps} />
     case DialogType.CLEAR_CACHE:
-      return clearCacheDialog(dialogProps)
+      return <ClearCacheDialog {...dialogProps} />
     case DialogType.SETTINGS:
-      return settingsDialog(dialogProps)
+      return <SettingsDialog {...dialogProps} />
     case DialogType.SCRIPT_COMPILE_ERROR:
-      return scriptCompileErrorDialog(dialogProps)
+      return <ScriptCompileErrorDialog {...dialogProps} />
     case DialogType.THEME_CREATOR:
       return <ThemeCreatorDialog {...dialogProps} />
     case DialogType.WARNING:
-      return warningDialog(dialogProps)
+    case DialogType.CONNECTION_ERROR:
+      return <WarningDialog {...dialogProps} />
     case DialogType.DEPLOY_DIALOG:
       return <DeployDialog {...dialogProps} />
     case DialogType.DEPLOY_ERROR:
-      return deployErrorDialog(dialogProps)
+      return <DeployErrorDialog {...dialogProps} />
     case undefined:
       return noDialog(dialogProps)
     default:
@@ -90,8 +88,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
 interface AboutProps {
   type: DialogType.ABOUT
 
-  sessionInfo: SessionInfo
-
   /** Callback to close the dialog */
   onClose: PlainEventHandler
 
@@ -99,59 +95,14 @@ interface AboutProps {
 }
 
 /** About Dialog */
-function aboutDialog(props: AboutProps): ReactElement {
-  if (props.aboutSectionMd) {
-    const markdownStyle: CSSProperties = {
-      overflowY: "auto",
-      overflowX: "hidden",
-      maxHeight: "35vh",
-    }
-
-    // Markdown New line is 2 spaces + \n
-    const newLineMarkdown = "  \n"
-    const StreamlitInfo = [
-      `Made with Streamlit v${props.sessionInfo.current.streamlitVersion}`,
-      STREAMLIT_HOME_URL,
-      `Copyright ${new Date().getFullYear()} Snowflake Inc. All rights reserved.`,
-    ].join(newLineMarkdown)
-
-    const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
-
-    return (
-      <Modal isOpen onClose={props.onClose}>
-        <ModalHeader>About</ModalHeader>
-        <ModalBody>
-          <StyledAboutInfo>
-            <StreamlitMarkdown
-              source={source}
-              allowHTML={false}
-              style={markdownStyle}
-            />
-          </StyledAboutInfo>
-        </ModalBody>
-      </Modal>
-    )
-  }
+function AboutDialog(props: AboutProps): ReactElement {
   return (
     <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>Made with</ModalHeader>
+      <ModalHeader>About</ModalHeader>
       <ModalBody>
-        <div>
-          {/* Show our version string only if SessionInfo has been created. If Streamlit
-          hasn't yet connected to the server, the SessionInfo singleton will be null. */}
-          {props.sessionInfo.isSet && (
-            <>
-              Streamlit v{props.sessionInfo.current.streamlitVersion}
-              <br />
-            </>
-          )}
-          <StyledAboutLink href={STREAMLIT_HOME_URL}>
-            {STREAMLIT_HOME_URL}
-          </StyledAboutLink>
-          <br />
-          Copyright {new Date().getFullYear()} Snowflake Inc. All rights
-          reserved.
-        </div>
+        {props.aboutSectionMd && (
+          <StreamlitMarkdown source={props.aboutSectionMd} allowHTML={false} />
+        )}
       </ModalBody>
     </Modal>
   )
@@ -175,7 +126,7 @@ interface ClearCacheProps {
  * confirmCallback - callback to send the clear_cache request to the Proxy
  * onClose         - callback to close the dialog
  */
-function clearCacheDialog(props: ClearCacheProps): ReactElement {
+function ClearCacheDialog(props: ClearCacheProps): ReactElement {
   // Markdown New line is 2 spaces + \n
   const newLineMarkdown = "  \n"
   const clearCacheInfo = [
@@ -214,7 +165,7 @@ export interface ScriptCompileErrorProps {
   onClose: PlainEventHandler
 }
 
-function scriptCompileErrorDialog(
+function ScriptCompileErrorDialog(
   props: ScriptCompileErrorProps
 ): ReactElement {
   return (
@@ -234,24 +185,26 @@ function scriptCompileErrorDialog(
   )
 }
 
-/**
- * Shows the settings dialog.
- */
-function settingsDialog(props: SettingsProps): ReactElement {
-  return <SettingsDialog {...props} />
-}
-
-export interface WarningProps {
-  type: DialogType.WARNING
+interface CommonWarningProps {
   title: string
   msg: ReactNode
   onClose: PlainEventHandler
 }
 
+export interface WarningProps extends CommonWarningProps {
+  type: DialogType.WARNING
+}
+
+export interface ConnectionErrorProps extends CommonWarningProps {
+  type: DialogType.CONNECTION_ERROR
+}
+
 /**
  * Prints out a warning
  */
-function warningDialog(props: WarningProps): ReactElement {
+function WarningDialog(
+  props: WarningProps | ConnectionErrorProps
+): ReactElement {
   return (
     <Modal isOpen onClose={props.onClose}>
       <ModalHeader>{props.title}</ModalHeader>
@@ -272,7 +225,7 @@ interface DeployErrorProps {
 /**
  * Modal used to show deployment errors
  */
-function deployErrorDialog({
+function DeployErrorDialog({
   title,
   msg,
   onClose,

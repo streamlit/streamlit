@@ -27,7 +27,7 @@ class BalloonsTest(DeltaGeneratorTestCase):
         """Test st.balloons."""
         st.balloons()
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.balloons.show, True)
+        assert el.balloons.show
 
     @pytest.mark.usefixtures("benchmark")
     def test_st_balloons_perf(self):

@@ -23,7 +23,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
@@ -32,6 +31,7 @@ import { isElementStale } from "~lib/components/core/Block/utils"
 import { LibContext } from "~lib/components/core/LibContext"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { STALE_STYLES } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledTabContainer } from "./styled-components"
 
@@ -41,10 +41,11 @@ export interface TabProps extends BlockPropsWithoutWidth {
   isStale: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   renderTabContent: (childProps: any) => ReactElement
+  width: React.CSSProperties["width"]
 }
 
 function Tabs(props: Readonly<TabProps>): ReactElement {
-  const { widgetsDisabled, node, isStale } = props
+  const { widgetsDisabled, node, isStale, width } = props
   const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
     useContext(LibContext)
 
@@ -56,7 +57,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   )
 
   const tabListRef = useRef<HTMLUListElement>(null)
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const [isOverflowing, setIsOverflowing] = useState(false)
 
@@ -68,7 +69,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabName(allTabLabels[0])
     }
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTabLabels])
 
@@ -89,7 +90,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
 
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.children.length])
 
@@ -101,6 +102,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       tabHeight={TAB_HEIGHT}
+      width={width}
     >
       <UITabs
         activateOnFocus

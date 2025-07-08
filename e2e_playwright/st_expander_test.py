@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 11
+NUMBER_OF_EXPANDERS: Final = 14
 
 
 def test_expander_displays_correctly(
@@ -44,6 +44,8 @@ def test_expander_displays_correctly(
     assert_snapshot(expander_elements.nth(7), name="st_expander-with_emoji_icon")
     assert_snapshot(expander_elements.nth(8), name="st_expander-markdown_label")
     assert_snapshot(expander_elements.nth(9), name="st_expander-nested")
+    assert_snapshot(expander_elements.nth(11), name="st_expander-fixed_width")
+    assert_snapshot(expander_elements.nth(12), name="st_expander-stretch_width")
 
 
 def test_expander_collapses_and_expands(app: Page):
@@ -52,7 +54,7 @@ def test_expander_collapses_and_expands(app: Page):
     main_expanders = main_container.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(
         NUMBER_OF_EXPANDERS - 1
-    )  # -1 to substract sidebar
+    )  # -1 to subtract sidebar
 
     expanders = main_expanders.all()
     # Starts expanded
@@ -74,9 +76,12 @@ def test_expander_collapses_and_expands(app: Page):
     expect(toggle).to_be_visible()
 
 
-def test_empty_expander_not_rendered(app: Page):
-    """Test that an empty expander is not rendered."""
-    expect(app.get_by_text("Empty expander")).not_to_be_attached()
+def test_empty_expander_rendered(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that an empty expander is rendered."""
+    empty_expander = app.get_by_test_id("stExpander").nth(13)
+    expect(empty_expander).to_be_visible()
+
+    assert_snapshot(empty_expander, name="st_expander-empty")
 
 
 def test_expander_session_state_set(app: Page):

@@ -160,8 +160,7 @@ def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
     if len(shape) == 3 and shape[-1] not in (1, 3, 4):
         raise StreamlitAPIException(
-            "Channel can only be 1, 3, or 4 got %d. Shape is %s"
-            % (shape[-1], str(shape))
+            f"Channel can only be 1, 3, or 4 got {shape[-1]}. Shape is {shape}"
         )
 
     # If there's only one channel, convert is to x, y
@@ -312,7 +311,7 @@ def image_to_url(
         image = _clip_image(_verify_np_shape(image), clamp)
 
         if channels == "BGR":
-            if len(cast("NumpyShape", image.shape)) == 3:
+            if len(image.shape) == 3:
                 image = image[:, :, [2, 1, 0]]
             else:
                 raise StreamlitAPIException(
@@ -335,9 +334,8 @@ def image_to_url(
         url = runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
         caching.save_media_data(image_data, mimetype, image_id)
         return url
-    else:
-        # When running in "raw mode", we can't access the MediaFileManager.
-        return ""
+    # When running in "raw mode", we can't access the MediaFileManager.
+    return ""
 
 
 def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:
@@ -360,7 +358,7 @@ def marshall_images(
     Parameters
     ----------
     coordinates
-        A string indentifying the images' location in the frontend.
+        A string identifying the images' location in the frontend.
     image
         The image or images to include in the ImageListProto.
     caption
@@ -399,7 +397,7 @@ def marshall_images(
     images: Sequence[AtomicImage]
     if isinstance(image, (list, set, tuple)):
         images = list(image)
-    elif isinstance(image, np.ndarray) and len(cast("NumpyShape", image.shape)) == 4:
+    elif isinstance(image, np.ndarray) and len(image.shape) == 4:
         images = _4d_to_list_3d(image)
     else:
         images = cast("Sequence[AtomicImage]", [image])
@@ -408,22 +406,22 @@ def marshall_images(
         captions: Sequence[str | None] = caption
     elif isinstance(caption, str):
         captions = [caption]
-    elif (
-        isinstance(caption, np.ndarray) and len(cast("NumpyShape", caption.shape)) == 1
-    ):
+    elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
         captions = caption.tolist()
     elif caption is None:
         captions = [None] * len(images)
     else:
         captions = [str(caption)]
 
-    assert isinstance(captions, list), (
-        "If image is a list then caption should be as well"
-    )
-    assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
-        len(captions),
-        len(images),
-    )
+    if not isinstance(captions, list):
+        raise StreamlitAPIException(
+            "If image is a list then caption should be a list as well."
+        )
+
+    if len(captions) != len(images):
+        raise StreamlitAPIException(
+            f"Cannot pair {len(captions)} captions with {len(images)} images."
+        )
 
     proto_imgs.width = int(width)
     # Each image in an image list needs to be kept track of at its own coordinates.
@@ -436,7 +434,7 @@ def marshall_images(
 
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
-        image_id = "%s-%i" % (coordinates, coord_suffix)
+        image_id = f"{coordinates}-{coord_suffix}"
 
         proto_img.url = image_to_url(
             single_image, width, clamp, channels, output_format, image_id

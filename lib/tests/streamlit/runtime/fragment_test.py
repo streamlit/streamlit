@@ -159,10 +159,8 @@ class FragmentTest(unittest.TestCase):
             raise Exception(exception_message)
 
         ctx.current_fragment_id = "my_fragment_id"
-        with pytest.raises(Exception) as ex:
+        with pytest.raises(Exception, match=exception_message):
             my_exploding_fragment()
-
-        assert str(ex.value) == exception_message
 
         assert ctx.current_fragment_id == "my_fragment_id"
 
@@ -311,10 +309,8 @@ class FragmentTest(unittest.TestCase):
             [(args, _)] = ctx.enqueue.call_args_list
             msg = args[0]
             assert msg.auto_rerun.interval == expected_interval
-            assert (
-                isinstance(msg.auto_rerun.fragment_id, str)
-                and msg.auto_rerun.fragment_id != ""
-            )
+            assert isinstance(msg.auto_rerun.fragment_id, str)
+            assert msg.auto_rerun.fragment_id != ""
         else:
             ctx.enqueue.assert_not_called()
 
@@ -499,9 +495,8 @@ def _run_fragment_writes_to_nested_outside_container_app2(
     def _some_method():
         st.write("Hello")
         # this is forbidden
-        with outside_container:
-            with st.container():
-                element_producer()
+        with outside_container, st.container():
+            element_producer()
 
     _some_method()
 
@@ -550,9 +545,8 @@ def _run_fragment_writes_to_nested_inside_container_app(
         inside_container = st.container()
 
         st.write("Hello")
-        with st.container():
-            with inside_container:
-                element_producer()
+        with st.container(), inside_container:
+            element_producer()
 
     _some_method()
 
@@ -583,7 +577,8 @@ def get_test_tuples(
     app_functions : list[APP_FUNCTION]
         Functions that run Streamlit elements like they are an app.
     elements : list[tuple[str, Callable[[], DeltaGenerator]]]
-        Tuples of (name, element-producer) where name describes the produced element and element_producer is a function that executes a Streamlit element.
+        Tuples of (name, element-producer) where name describes the produced element and element_producer
+        is a function that executes a Streamlit element.
     """
     return [
         (_element_producer[0], _app, _element_producer[1])

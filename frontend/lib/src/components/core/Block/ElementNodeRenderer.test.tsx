@@ -24,7 +24,7 @@ import {
   Snow as SnowProto,
 } from "@streamlit/protobuf"
 
-import { customRenderLibContext } from "~lib/test_util"
+import { renderWithContexts } from "~lib/test_util"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { ElementNode } from "~lib/AppNode"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -93,7 +93,7 @@ describe("ElementNodeRenderer Block Component", () => {
       const props = getProps({
         node: createBalloonNode(scriptRunId),
       })
-      customRenderLibContext(<ElementNodeRenderer {...props} />, {
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
         scriptRunState: ScriptRunState.RUNNING,
         scriptRunId: "NEW_SCRIPT_ID",
       })
@@ -104,7 +104,6 @@ describe("ElementNodeRenderer Block Component", () => {
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       expect(elementNodeRenderer).toHaveClass("stElementContainer")
-      // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
@@ -113,7 +112,7 @@ describe("ElementNodeRenderer Block Component", () => {
       const props = getProps({
         node: createBalloonNode(scriptRunId),
       })
-      customRenderLibContext(<ElementNodeRenderer {...props} />, {
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
         scriptRunId,
       })
 
@@ -122,7 +121,6 @@ describe("ElementNodeRenderer Block Component", () => {
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
       expect(elementRendererChildren[0]).toHaveClass("stBalloons")
@@ -135,7 +133,7 @@ describe("ElementNodeRenderer Block Component", () => {
       const props = getProps({
         node: createSnowNode(scriptRunId),
       })
-      customRenderLibContext(<ElementNodeRenderer {...props} />, {
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
         scriptRunState: ScriptRunState.RUNNING,
         scriptRunId: "NEW_SCRIPT_ID",
       })
@@ -145,7 +143,6 @@ describe("ElementNodeRenderer Block Component", () => {
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
@@ -154,7 +151,7 @@ describe("ElementNodeRenderer Block Component", () => {
       const props = getProps({
         node: createSnowNode(scriptRunId),
       })
-      customRenderLibContext(<ElementNodeRenderer {...props} />, {
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
         scriptRunId,
       })
 
@@ -163,7 +160,6 @@ describe("ElementNodeRenderer Block Component", () => {
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
       expect(elementRendererChildren[0]).toHaveClass("stSnow")

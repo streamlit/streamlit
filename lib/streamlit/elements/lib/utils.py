@@ -31,6 +31,7 @@ from streamlit import config
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
@@ -44,6 +45,8 @@ from streamlit.runtime.state.common import (
 if TYPE_CHECKING:
     from builtins import ellipsis
     from collections.abc import Iterable
+
+    from streamlit.delta_generator import DeltaGenerator
 
 
 Key: TypeAlias = Union[str, int]
@@ -70,9 +73,9 @@ def get_label_visibility_proto_value(
 
     if label_visibility_string == "visible":
         return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
-    elif label_visibility_string == "hidden":
+    if label_visibility_string == "hidden":
         return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
-    elif label_visibility_string == "collapsed":
+    if label_visibility_string == "collapsed":
         return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
 
     raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
@@ -85,9 +88,9 @@ def get_chat_input_accept_file_proto_value(
 
     if accept_file_value is False:
         return ChatInput.AcceptFile.NONE
-    elif accept_file_value is True:
+    if accept_file_value is True:
         return ChatInput.AcceptFile.SINGLE
-    elif accept_file_value == "multiple":
+    if accept_file_value == "multiple":
         return ChatInput.AcceptFile.MULTIPLE
 
     raise ValueError(f"Unknown accept file value: {accept_file_value}")
@@ -182,6 +185,7 @@ def compute_and_register_element_id(
     *,
     user_key: str | None,
     form_id: str | None,
+    dg: DeltaGenerator | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -212,6 +216,9 @@ def compute_and_register_element_id(
         The ID of the form that the element belongs to. `None` or empty string
         if the element doesn't belong to a form or doesn't support forms.
 
+    dg : DeltaGenerator | None
+        The DeltaGenerator of each element. `None` if the element is not a widget.
+
     kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
         The arguments to use to compute the element ID.
         The arguments must be stable, deterministic values.
@@ -229,6 +236,14 @@ def compute_and_register_element_id(
         # pages unique IDs.
         kwargs_to_use["active_script_hash"] = ctx.active_script_hash
 
+    if dg:
+        # If no key is provided and the widget element is inside the sidebar area
+        # add it to the kwargs
+        # allowing the same widget to be both in main area and sidebar.
+        active_dg_root_container = dg._active_dg._root_container
+        if active_dg_root_container == RootContainer.SIDEBAR and user_key is None:
+            kwargs_to_use["active_dg_root_container"] = str(active_dg_root_container)
+
     element_id = _compute_element_id(
         element_type,
         user_key,
@@ -240,7 +255,7 @@ def compute_and_register_element_id(
     return element_id
 
 
-def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
+def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any) -> None:
     if config.get_option("global.appTest"):
         try:
             ctx.session_state[TESTING_KEY][k] = v

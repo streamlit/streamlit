@@ -41,7 +41,7 @@ class ForwardMsgQueue:
         """
         ForwardMsgQueue._before_enqueue_msg = before_enqueue_msg
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._queue: list[ForwardMsg] = []
         # A mapping of (delta_path -> _queue.indexof(msg)) for each
         # Delta message in the queue. We use this for coalescing

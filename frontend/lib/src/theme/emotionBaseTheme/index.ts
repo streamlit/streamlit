@@ -34,6 +34,7 @@ import genericColors from "./themeColors"
 export default {
   inSidebar: false,
   showSidebarBorder: false,
+  linkUnderline: true,
   breakpoints,
   colors: createEmotionColors(genericColors),
   fonts,
