@@ -137,10 +137,8 @@ def test_slider_calls_callback(app: Page):
     expect(app.get_by_text("Value 8: 25")).to_be_visible()
     expect(app.get_by_text("Slider changed: False")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(11)
-    slider.hover()
     # click in middle
-    app.mouse.down()
-    app.mouse.up()
+    slider.click()
 
     wait_for_app_run(app)
     expect(app.get_by_text("Value 8: 50")).to_be_visible()
@@ -150,10 +148,8 @@ def test_slider_calls_callback(app: Page):
 def test_slider_works_in_forms(app: Page):
     expect(app.get_by_text("slider-in-form selection: 25")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(12)
-    slider.hover()
     # click in middle
-    app.mouse.down()
-    app.mouse.up()
+    slider.click()
 
     # The value is not submitted so the value should not have changed yet
     expect(app.get_by_text("slider-in-form selection: 25")).to_be_visible()
@@ -169,10 +165,8 @@ def test_slider_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("slider-in-fragment selection: 25")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(13)
-    slider.hover()
     # click in middle
-    app.mouse.down()
-    app.mouse.up()
+    slider.click()
 
     wait_for_app_run(app)
     expect(app.get_by_text("slider-in-fragment selection: 50")).to_be_visible()
@@ -202,12 +196,11 @@ def test_no_rerun_on_drag(app: Page):
     runs_text = app.get_by_text("Runs: 1")
     expect(runs_text).to_be_visible()
 
-    slider = app.get_by_test_id("stSlider").nth(13)
+    slider = app.get_by_test_id("stSlider").nth(11)
     slider.hover()
     # click in middle and drag
     app.mouse.down()
     app.mouse.move(0, 0)
-
     wait_for_app_run(app)
 
     # The number of runs should not have changed
