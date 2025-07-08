@@ -1,0 +1,48 @@
+---
+description: List of all available make commands
+globs:
+alwaysApply: false
+---
+
+# Available `make` commands
+
+List of all `make` commands that are available for execution from the repository root folder:
+
+help                       Show all available make commands.
+all                        Install all dependencies, build frontend, and install editable Streamlit.
+all-dev                    Install all dependencies and editable Streamlit, but do not build the frontend.
+init                       Install all dependencies and build protobufs.
+clean                      Remove all generated files.
+protobuf                   Recompile Protobufs for Python and the frontend.
+python-init                Install Python dependencies and Streamlit in editable mode.
+python-lint                Lint and check formatting of Python files.
+python-format              Format Python files.
+python-tests               Run Python unit tests.
+python-performance-tests   Run Python performance tests.
+python-integration-tests   Run Python integration tests. Requires `integration-requirements.txt` to be installed.
+python-types               Run the Python type checker.
+frontend-init              Install all frontend dependencies.
+frontend                   Build the frontend.
+frontend-with-profiler     Build the frontend with the profiler enabled.
+frontend-fast              Build the frontend (as fast as possible).
+frontend-dev               Start the frontend development server.
+frontend-lint              Lint and check formatting of frontend files.
+frontend-types             Run the frontend type checker.
+frontend-format            Format frontend files.
+frontend-tests             Run frontend unit tests and generate coverage report.
+frontend-typesync          Check for unsynced frontend types.
+update-frontend-typesync   Installs missing typescript typings for dependencies.
+update-snapshots           Update e2e playwright snapshots based on the latest completed CI run.
+update-snapshots-changed   Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
+update-material-icons      Update material icons based on latest Google material symbol version.
+update-notices             Update the notices file (licenses of frontend assets and dependencies).
+update-headers             Update all license headers.
+update-min-deps            Update minimum dependency constraints file.
+debug-e2e-test             Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
+run-e2e-test               Run a playwright e2e test. Use it via `make run-e2e-test st_command_test.py`.
+lighthouse-tests           Run Lighthouse performance tests.
+bare-execution-tests       Run all e2e tests in bare mode.
+cli-smoke-tests            Run CLI smoke tests.
+autofix                    Autofix linting and formatting errors.
+package                    Create Python wheel files in `dist/`.
+conda-package              Create conda distribution files.
