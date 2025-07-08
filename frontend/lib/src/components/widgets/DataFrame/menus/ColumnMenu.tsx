@@ -122,7 +122,7 @@ function ColumnMenu({
   }, [columnName])
 
   const columnTypeIcon = useMemo(
-    () => COLUMN_TYPE_ICONS[columnKind] || ":material/notes:",
+    () => COLUMN_TYPE_ICONS[columnKind] || COLUMN_TYPE_ICONS["text"],
     [columnKind]
   )
 
