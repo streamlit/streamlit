@@ -55,6 +55,13 @@ describe("DataFrame ColumnMenu", () => {
     expect(menuTarget).toHaveStyle("left: 100px")
   })
 
+  test("renders the column menu with the correct column name", () => {
+    render(<ColumnMenu {...defaultProps} />)
+
+    const columnName = screen.getByText("testColumn")
+    expect(columnName).toBeInTheDocument()
+  })
+
   test("renders sort options", () => {
     render(<ColumnMenu {...defaultProps} />)
 
