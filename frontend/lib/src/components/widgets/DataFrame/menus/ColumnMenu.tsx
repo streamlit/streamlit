@@ -29,6 +29,7 @@ import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
+import { COLUMN_TYPE_ICONS } from "../columns"
 import {
   StyledColumnHeaderRow,
   StyledColumnNameText,
@@ -43,28 +44,6 @@ import FormattingMenu from "./FormattingMenu"
 import { getLogger } from "loglevel"
 
 const LOG = getLogger("ColumnMenu")
-
-/**
- * Mapping of column types to icons.
- */
-const COLUMN_TYPE_ICONS: Record<string, string> = {
-  object: ":material/data_object:",
-  text: ":material/notes:",
-  checkbox: ":material/check_box:",
-  selectbox: ":material/arrow_drop_down_circle:",
-  list: ":material/list:",
-  number: ":material/tag:",
-  link: ":material/link:",
-  datetime: ":material/calendar_today:",
-  date: ":material/calendar_month:",
-  time: ":material/access_time:",
-  line_chart: ":material/show_chart:",
-  bar_chart: ":material/bar_chart:",
-  area_chart: ":material/area_chart:",
-  image: ":material/image:",
-  progress: ":material/commit:",
-  json: ":material/code_blocks:",
-}
 
 export interface ColumnMenuProps {
   // The top position of the menu
@@ -154,7 +133,7 @@ function ColumnMenu({
       content={
         <StyledMenuList>
           <StyledColumnHeaderRow>
-            <StyledTypeIconContainer>
+            <StyledTypeIconContainer title={columnKind}>
               <DynamicIcon
                 iconValue={columnTypeIcon}
                 size={"base"}
