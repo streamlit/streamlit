@@ -689,6 +689,102 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  it.each([
+    // Test valid headingFontSize values
+    [
+      ["3rem", "2.875rem"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["3REM", "2.875REM"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50px", "45px"],
+      ["3.125rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50PX", "45PX"],
+      ["3.125rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["50", "45"],
+      ["3.125rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+  ])(
+    "correctly applies headingFontSizes '%s'",
+    (headingFontSizes, expectedHeadingFontSizes) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        headingFontSizes,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
+      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
+      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
+      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
+      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
+      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
+    }
+  )
+
+  it.each([
+    // Test invalid headingFontSize values
+    [
+      "h1FontSize",
+      ["Invalid"],
+      ["2.75rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h2FontSize",
+      ["3REM", "Invalid"],
+      ["3rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h3FontSize",
+      ["3rem", "2.875rem", "Invalid"],
+      ["3rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h4FontSize",
+      ["3rem", "2.875rem", "2.75rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h5FontSize",
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "1.25rem", "1rem"],
+    ],
+    [
+      "h6FontSize",
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "Invalid"],
+      ["3rem", "2.875rem", "2.75rem", "2.25rem", "2rem", "1rem"],
+    ],
+  ])(
+    "logs a warning and falls back to default for any invalid headingFontSizes '%s'",
+    (invalidHeadingConfig, headingFontSizes, expectedHeadingFontSizes) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        headingFontSizes,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      // Should log an error with the actual codeFontSize value
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for ${invalidHeadingConfig} in headingFontSizes in theme: Invalid. Falling back to default ${invalidHeadingConfig} in headingFontSizes.`
+      )
+
+      expect(theme.fontSizes.h1FontSize).toBe(expectedHeadingFontSizes[0])
+      expect(theme.fontSizes.h2FontSize).toBe(expectedHeadingFontSizes[1])
+      expect(theme.fontSizes.h3FontSize).toBe(expectedHeadingFontSizes[2])
+      expect(theme.fontSizes.h4FontSize).toBe(expectedHeadingFontSizes[3])
+      expect(theme.fontSizes.h5FontSize).toBe(expectedHeadingFontSizes[4])
+      expect(theme.fontSizes.h6FontSize).toBe(expectedHeadingFontSizes[5])
+    }
+  )
+
   it("adapts the radii theme props if baseRadius is provided", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       baseRadius: "1.2rem",
