@@ -1134,9 +1134,10 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if chart_sequential_colors is not None:
         # Check that the list has 10 color values
         if len(chart_sequential_colors) != 10:
-            raise ValueError(
-                f"Config theme.chartSequentialColors should have 10 color values, "
-                f"but got {len(chart_sequential_colors)}. Defaulting to Streamlit's default colors."
+            _LOGGER.error(
+                "Config theme.chartSequentialColors should have 10 color values, "
+                "but got %s. Defaulting to Streamlit's default colors.",
+                len(chart_sequential_colors),
             )
         for color in chart_sequential_colors:
             try:
