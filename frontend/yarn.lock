@@ -3541,7 +3541,7 @@ __metadata:
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^10.0.2"
+    "@swc/plugin-emotion": "npm:^10.0.3"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.6.3"
     "@testing-library/react": "npm:^16.3.0"
@@ -3615,7 +3615,7 @@ __metadata:
     ua-parser-js: "npm:^1.0.40"
     util: "npm:^0.12.5"
     uuid: "npm:^11.1.0"
-    vite: "npm:^7.0.2"
+    vite: "npm:^7.0.3"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.2.4"
@@ -3639,7 +3639,7 @@ __metadata:
     loglevel: "npm:^1.9.2"
     prettier: "npm:^3.6.2"
     typesync: "npm:^0.14.3"
-    vite: "npm:^7.0.2"
+    vite: "npm:^7.0.3"
     vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
@@ -3677,7 +3677,7 @@ __metadata:
     "@sindresorhus/slugify": "npm:^2.2.1"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^10.0.2"
+    "@swc/plugin-emotion": "npm:^10.0.3"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.6.3"
     "@testing-library/react": "npm:^16.3.0"
@@ -3772,7 +3772,7 @@ __metadata:
     vega-embed: "npm:^6.29.0"
     vega-interpreter: "npm:^2.0.0"
     vega-lite: "npm:5.23.0"
-    vite: "npm:^7.0.2"
+    vite: "npm:^7.0.3"
     vite-plugin-dts: "npm:^4.5.4"
     vite-plugin-svgr: "npm:^4.3.0"
     vite-tsconfig-paths: "npm:^5.1.4"
@@ -3812,7 +3812,7 @@ __metadata:
     eslint: "npm:^9.30.1"
     prettier: "npm:^3.6.2"
     typesync: "npm:^0.14.3"
-    vite: "npm:^7.0.2"
+    vite: "npm:^7.0.3"
     vite-plugin-dts: "npm:^4.5.4"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^3.2.4"
@@ -4078,12 +4078,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/plugin-emotion@npm:^10.0.2":
-  version: 10.0.2
-  resolution: "@swc/plugin-emotion@npm:10.0.2"
+"@swc/plugin-emotion@npm:^10.0.3":
+  version: 10.0.3
+  resolution: "@swc/plugin-emotion@npm:10.0.3"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/3a97951c4f9457182902f0ac3b25d1b54d62b2e0e694185e536bef8f3a8dbf5b1dec968451ab8c9ecda0ee40b8a7d004d7eb53024e4d5c6adf739c148688043a
+  checksum: 10c0/e7624072e0a99eba92aeb3dd5f82dffe1bf366dcf3a0ee5cc654d061f68364c4224f9739b5e48585eba7707707de3ee244e8b9c605d3b33998eb11183cd41299
   languageName: node
   linkType: hard
 
@@ -20760,7 +20760,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^5.0.0 || ^6.0.0 || ^7.0.0-0, vite@npm:^7.0.2":
+"vite@npm:^5.0.0 || ^6.0.0 || ^7.0.0-0":
   version: 7.0.2
   resolution: "vite@npm:7.0.2"
   dependencies:
@@ -20812,6 +20812,61 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 10c0/a68c0302c820b39fe1119c2bc9dda865f48f6abd1629346c189e4983aef7d30e698c55ffff879d4ca6858cb3650c94b085a822215af9bd74d1eb8ceb2ce3e8c6
+  languageName: node
+  linkType: hard
+
+"vite@npm:^7.0.3":
+  version: 7.0.3
+  resolution: "vite@npm:7.0.3"
+  dependencies:
+    esbuild: "npm:^0.25.0"
+    fdir: "npm:^6.4.6"
+    fsevents: "npm:~2.3.3"
+    picomatch: "npm:^4.0.2"
+    postcss: "npm:^8.5.6"
+    rollup: "npm:^4.40.0"
+    tinyglobby: "npm:^0.2.14"
+  peerDependencies:
+    "@types/node": ^20.19.0 || >=22.12.0
+    jiti: ">=1.21.0"
+    less: ^4.0.0
+    lightningcss: ^1.21.0
+    sass: ^1.70.0
+    sass-embedded: ^1.70.0
+    stylus: ">=0.54.8"
+    sugarss: ^5.0.0
+    terser: ^5.16.0
+    tsx: ^4.8.1
+    yaml: ^2.4.2
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  peerDependenciesMeta:
+    "@types/node":
+      optional: true
+    jiti:
+      optional: true
+    less:
+      optional: true
+    lightningcss:
+      optional: true
+    sass:
+      optional: true
+    sass-embedded:
+      optional: true
+    stylus:
+      optional: true
+    sugarss:
+      optional: true
+    terser:
+      optional: true
+    tsx:
+      optional: true
+    yaml:
+      optional: true
+  bin:
+    vite: bin/vite.js
+  checksum: 10c0/9173a1bf9fee82606f39c7b3e785638c1ac7f3473879fc88593f3a2093ed766140a08b845050fd790adb8a36e2cbc81b71401407da05d5dd747ae4f3adb89794
   languageName: node
   linkType: hard
 
