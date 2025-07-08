@@ -705,7 +705,6 @@ export class App extends PureComponent<Props, State> {
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
-    const currentColorSchema = this.getThemeColorScheme()
 
     if (themeName === lightTheme.name && isUsingPresetTheme) {
       this.props.theme.setTheme(lightTheme)
@@ -713,11 +712,6 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.setTheme(darkTheme)
     } else if (theme) {
       this.props.theme.setImportedTheme(theme)
-    }
-
-    // Rerun script if the color scheme changed:
-    if (currentColorSchema !== this.getThemeColorScheme()) {
-      this.sendRerunBackMsg()
     }
   }
   /**
