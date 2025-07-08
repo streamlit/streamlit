@@ -17,16 +17,12 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-export interface StyledSliderProps {
-  disabled: boolean
-}
-
-export interface StyledThumbPropps {
+export interface StyledThumbProps {
   disabled: boolean
   isDragged: boolean
 }
 
-export const StyledThumb = styled.div<StyledThumbPropps>(
+export const StyledThumb = styled.div<StyledThumbProps>(
   ({ disabled, theme, isDragged }) => ({
     alignItems: "center",
     backgroundColor: disabled ? theme.colors.gray : theme.colors.primary,
@@ -53,6 +49,10 @@ export const StyledThumb = styled.div<StyledThumbPropps>(
     },
   })
 )
+
+export interface StyledSliderProps {
+  disabled: boolean
+}
 
 export const StyledThumbValue = styled.div<StyledSliderProps>(
   ({ disabled, theme }) => ({
