@@ -37,7 +37,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { debounce, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
@@ -53,8 +53,6 @@ import {
   StyledTickBar,
   StyledTickBarItem,
 } from "./styled-components"
-
-const DEBOUNCE_TIME_MS = 200
 
 export interface Props {
   disabled: boolean
@@ -83,9 +81,10 @@ function Slider({
     fragmentId,
   })
 
-  // We tie the UI to `uiValue` rather than `value` because `value` only updates
-  // every DEBOUNCE_TIME_MS. If we tied the UI to `value` then the UI would only
-  // update every DEBOUNCE_TIME_MS as well. So this keeps the UI smooth.
+  // We tie the UI to `uiValue` rather than `value` because `value` only
+  // updates when the user is done interacting with the slider. If we tied
+  // the UI to `value` then the UI would only update when the user is done
+  // interacting. So this keeps the UI smooth.
   const [uiValue, setUiValue] = useState(value)
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
@@ -109,22 +108,18 @@ function Slider({
     setUiValue(value)
   }, [value])
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-hooks/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSetValueWithSource = useCallback(
-    debounce(DEBOUNCE_TIME_MS, (valueArg: number[]): void => {
+  const handleFinalChange = useCallback(
+    ({ value: valueArg }: { value: number[] }): void => {
       setValueWithSource({ value: valueArg, fromUi: true })
-    }) as (value: number[]) => void,
-    []
+    },
+    [setValueWithSource]
   )
 
   const handleChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
       setUiValue(valueArg)
-      debouncedSetValueWithSource(valueArg)
     },
-    [debouncedSetValueWithSource]
+    []
   )
 
   const renderTickBar = useCallback((): ReactElement => {
@@ -265,6 +260,7 @@ function Slider({
         step={element.step}
         value={getValueAsArray(uiValue, element)}
         onChange={handleChange}
+        onFinalChange={handleFinalChange}
         disabled={disabled}
         overrides={{
           Thumb: renderThumb,

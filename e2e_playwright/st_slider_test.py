@@ -85,6 +85,7 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
     slider.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
 
     # Move mouse to 0, 0 pixels on the screen to simulate dragging left
     app.mouse.move(0, 0)
@@ -136,6 +137,7 @@ def test_slider_calls_callback(app: Page):
     slider.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
 
     wait_for_app_run(app)
     expect(app.get_by_text("Value 8: 50")).to_be_visible()
@@ -148,6 +150,7 @@ def test_slider_works_in_forms(app: Page):
     slider.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
 
     # The value is not submitted so the value should not have changed yet
     expect(app.get_by_text("slider-in-form selection: 25")).to_be_visible()
@@ -166,6 +169,7 @@ def test_slider_works_with_fragments(app: Page):
     slider.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
 
     wait_for_app_run(app)
     expect(app.get_by_text("slider-in-fragment selection: 50")).to_be_visible()
@@ -177,6 +181,7 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     slider.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
 
     # Move slider once to right
     app.keyboard.press("ArrowRight")
@@ -188,6 +193,21 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stSlider")
+
+
+def test_no_rerun_on_drag(app: Page):
+    """Test that moving the slider does not trigger a rerun."""
+    runs_text = app.get_by_text("Runs: 1")
+    expect(runs_text).to_be_visible()
+
+    slider = app.get_by_test_id("stSlider").nth(13)
+    slider.hover()
+    # click in middle and drag
+    app.mouse.down()
+    app.mouse.move(0, 0)
+
+    # The number of runs should not have changed
+    expect(runs_text).to_be_visible()
 
 
 def test_custom_css_class_via_key(app: Page):
@@ -206,6 +226,7 @@ def test_slider_interaction_performance(app: Page):
     slider.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
 
     # Move mouse to 0, 0 pixels on the screen to simulate dragging left
     app.mouse.move(0, 0)

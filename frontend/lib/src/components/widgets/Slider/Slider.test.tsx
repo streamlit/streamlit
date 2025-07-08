@@ -116,9 +116,6 @@ describe("Slider widget", () => {
 
     render(<Slider {...props} />)
 
-    // We need to do this as we are using a debounce when the widget value is set
-    vi.runAllTimers()
-
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
       props.element,
       [5],
@@ -132,9 +129,6 @@ describe("Slider widget", () => {
     vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
     render(<Slider {...props} />)
-
-    // We need to do this as we are using a debounce when the widget value is set
-    vi.runAllTimers()
 
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
       props.element,
@@ -195,9 +189,6 @@ describe("Slider widget", () => {
 
       act(() => {
         triggerChangeEvent(slider, "ArrowRight")
-
-        // We need to do this as we are using a debounce when the widget value is set
-        vi.runAllTimers()
       })
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
@@ -222,10 +213,6 @@ describe("Slider widget", () => {
       const slider = screen.getByRole("slider")
 
       triggerChangeEvent(slider, "ArrowRight")
-
-      act(() => {
-        vi.runAllTimers()
-      })
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
         props.element,
@@ -370,11 +357,6 @@ describe("Slider widget", () => {
 
       triggerChangeEvent(sliders[1], "ArrowRight")
 
-      act(() => {
-        // We need to do this as we are using a debounce when the widget value is set
-        vi.runAllTimers()
-      })
-
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
         [1, 10],
@@ -479,11 +461,6 @@ describe("Slider widget", () => {
 
       const slider = screen.getByRole("slider")
       triggerChangeEvent(slider, "ArrowRight")
-
-      act(() => {
-        // We need to do this as we are using a debounce when the widget value is set
-        vi.runAllTimers()
-      })
 
       expect(slider).toHaveAttribute("aria-valuetext", "yellow")
     })
