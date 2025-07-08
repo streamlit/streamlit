@@ -105,9 +105,8 @@ def test_select_slider_label_realigns_when_expander_opens(app: Page):
 def test_select_slider_works_in_forms(app: Page):
     expect(app.get_by_text("select_slider-in-form selection: 1")).to_be_visible()
     slider = app.get_by_test_id("stSlider").nth(9)
-    slider.hover()
     # click in middle
-    app.mouse.down()
+    slider.click()
 
     # The value is not submitted so the value should not have changed yet
     expect(app.get_by_text("select_slider-in-form selection: 1")).to_be_visible()
