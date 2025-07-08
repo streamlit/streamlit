@@ -164,6 +164,7 @@ function ColumnMenu({
               <StyledIconButton
                 onClick={handleCopyNameToClipboard}
                 title="Copy column name"
+                aria-label="Copy column name"
               >
                 <DynamicIcon
                   iconValue=":material/content_copy:"
