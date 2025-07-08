@@ -60,6 +60,7 @@ export const useResizeObserver = <T extends HTMLDivElement>(
       return []
     }
 
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const rect = elementRef.current.getBoundingClientRect()
 
     return properties.map(property => {

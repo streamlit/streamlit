@@ -48,6 +48,7 @@ const getScrollHeight = (
   const { current: textarea } = textareaRef
   if (textarea) {
     textarea.style.height = "auto"
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     newScrollHeight = textarea.scrollHeight
     textarea.style.height = ""
   }

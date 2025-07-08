@@ -51,6 +51,8 @@ jobs:
         run: make frontend-types
       - name: Run linters
         run: make frontend-lint
+      - name: Run eslint plugin tests
+        run: cd frontend/eslint-plugin-streamlit-custom && yarn test
       - name: Validate NOTICES
         run: |
           # Run `make update-notices`. If it results in changes, warn the user and fail.

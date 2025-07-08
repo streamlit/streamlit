@@ -672,6 +672,7 @@ function DataFrame({
     setTimeout(() => {
       if (resizableContainerRef.current && dataEditorRef.current) {
         // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         const scrollAreaBounds = resizableContainerRef.current
           ?.querySelector(".dvn-stack")
           ?.getBoundingClientRect()
@@ -684,9 +685,11 @@ function DataFrame({
         if (scrollAreaBounds) {
           setHasVerticalScroll(
             scrollAreaBounds.height >
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
               resizableContainerRef.current.clientHeight
           )
           setHasHorizontalScroll(
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             scrollAreaBounds.width > resizableContainerRef.current.clientWidth
           )
         }
@@ -711,6 +714,7 @@ function DataFrame({
         if (resizableContainerRef.current && hasCustomizedScrollbars) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
 
           if (
