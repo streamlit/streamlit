@@ -175,6 +175,7 @@ function Slider({
         <StyledThumb
           {...passThrough}
           disabled={props.$disabled === true}
+          isDragged={props.$isDragged === true}
           ref={thumbRefs[thumbIndex]}
           aria-valuetext={formattedValue}
           aria-label={thumbAriaLabel}
