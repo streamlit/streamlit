@@ -86,9 +86,11 @@ EXTRA_REQUIRES = {
     ],
     # Optional charting dependencies:
     "charts": [
-        "plotly>=4.0.0, <7",
         "matplotlib>=3.0.0, <4",
         "graphviz>=0.19.0, <1",
+        "plotly>=4.0.0, <7",
+        # orjson speeds up large plotly figure processing by 5-10x:
+        "orjson>=3.5.0, <4",
     ],
     # Install all optional dependencies:
     "all": ["streamlit[auth,charts,snowflake]"],
