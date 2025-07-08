@@ -29,6 +29,7 @@ describe("DataFrame ColumnMenu", () => {
     left: 100,
     isColumnPinned: false,
     columnKind: "number",
+    columnName: "testColumn",
     onPinColumn: vi.fn(),
     onUnpinColumn: vi.fn(),
     onCloseMenu: vi.fn(),
