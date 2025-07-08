@@ -135,6 +135,15 @@ export const isColor = (strColor: string): boolean => {
   return s.color !== ""
 }
 
+/**
+ * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
+ * This is generally used to keep configured font sizes to round values.
+ * (ex: 0.78 -> 0.75)
+ */
+export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
+  return Math.round(remFontSize * 8) / 8
+}
+
 export const parseFont = (font: string): string => {
   // Try to map a short font family to our default
   // font families
@@ -315,8 +324,8 @@ const convertHeadingFontSizeToRem = (
     return validatedSize
   } else if (validatedSize && validatedSize.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
-    const remValue = parseInt(validatedSize) / baseFontSize
-    const roundedRemValue = Math.round(remValue * 8) / 8
+    const remValue = parseFloat(validatedSize) / baseFontSize
+    const roundedRemValue = roundFontSizeToNearestEighth(remValue)
     return `${roundedRemValue}rem`
   }
 

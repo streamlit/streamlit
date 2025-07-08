@@ -17,6 +17,8 @@
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
+import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
@@ -55,10 +57,14 @@ function convertFontSizes(
   // become a bit smaller by adapting to the font size of the caption.
 
   if (isInDialog) {
-    // Dialogs also reduce the font size of the headings
-    const roundedFontSize = Math.round(parseFloat(fontSize) * 0.65 * 8) / 8
-    // Ensure the font size is in rem and at least 0.75rem
-    const dialogFontSize = Math.max(roundedFontSize, 0.75).toString() + "rem"
+    // Dialogs also reduce the font size of the headings to 65% of the base font size
+    // Round the font size to the nearest eighth of a rem to try to keep to round px values
+    const roundedFontSize = roundFontSizeToNearestEighth(
+      parseFloat(fontSize) * 0.65
+    )
+
+    // Ensure the font size is at least 0.75rem
+    const dialogFontSize = `${Math.max(roundedFontSize, 0.75)}rem`
     return isCaption ? convertRemToEm(dialogFontSize) : dialogFontSize
   }
 
