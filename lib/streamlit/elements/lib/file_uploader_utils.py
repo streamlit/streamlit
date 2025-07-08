@@ -71,6 +71,12 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
     enforce file type check by extension on the frontend, but we check it on backend
     before returning file to the user to protect ourselves.
     """
+
+    # Ensure that there isn't a null byte in a filename
+    # since this could be a workaround to bypass the file type check.
+    if "\0" in filename:
+        raise StreamlitAPIException("Filename cannot contain null bytes.")
+
     main_filename, extension = _get_main_filename_and_extension(filename)
     normalized_filename = main_filename.lower()
 

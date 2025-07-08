@@ -85,6 +85,8 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
             ("no_extension", "file_without_extension", [".pdf", ".png"], False),
             ("empty_filename", "", [".pdf", ".tar.gz"], False),
             ("filename_is_period", ".", [".pdf", ".tar.gz"], False),
+            # Null byte injection
+            ("null_byte_injection", "file.txt\0.pdf", [".pdf"], False),
         ]
     )
     def test_filename_valid(self, _, filename, allowed_types, expected_valid):
