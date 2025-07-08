@@ -187,9 +187,7 @@ describe("Slider widget", () => {
 
       const slider = screen.getByRole("slider")
 
-      act(() => {
-        triggerChangeEvent(slider, "ArrowRight")
-      })
+      triggerChangeEvent(slider, "ArrowRight")
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
