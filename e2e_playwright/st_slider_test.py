@@ -61,10 +61,14 @@ def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
     first_slider_in_expander.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
+    wait_for_app_run(app)
 
     second_slider_in_expander.hover()
     # click in middle
     app.mouse.down()
+    app.mouse.up()
+    wait_for_app_run(app)
 
     expect(app.get_by_text("Value B: 17500")).to_have_count(1)
     expect(app.get_by_text("Range Value B: (17500, 25000)")).to_have_count(1)
@@ -85,7 +89,6 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
     slider.hover()
     # click in middle
     app.mouse.down()
-    app.mouse.up()
 
     # Move mouse to 0, 0 pixels on the screen to simulate dragging left
     app.mouse.move(0, 0)
@@ -181,7 +184,6 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     slider.hover()
     # click in middle
     app.mouse.down()
-    app.mouse.up()
 
     # Move slider once to right
     app.keyboard.press("ArrowRight")
@@ -226,7 +228,6 @@ def test_slider_interaction_performance(app: Page):
     slider.hover()
     # click in middle
     app.mouse.down()
-    app.mouse.up()
 
     # Move mouse to 0, 0 pixels on the screen to simulate dragging left
     app.mouse.move(0, 0)
