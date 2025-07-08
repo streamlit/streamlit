@@ -82,18 +82,22 @@ EXTRA_REQUIRES = {
     ],
     # Optional dependency required for auth:
     "auth": [
-        "Authlib>=1.3.2, <2",
+        "Authlib>=1.3.2",
     ],
     # Optional charting dependencies:
     "charts": [
-        "matplotlib>=3.0.0, <4",
-        "graphviz>=0.19.0, <1",
-        "plotly>=4.0.0, <7",
+        "matplotlib>=3.0.0",
+        "graphviz>=0.19.0",
+        "plotly>=4.0.0",
         # orjson speeds up large plotly figure processing by 5-10x:
-        "orjson>=3.5.0, <4",
+        "orjson>=3.5.0",
     ],
     # Install all optional dependencies:
-    "all": ["streamlit[auth,charts,snowflake]"],
+    "all": [
+        "streamlit[auth,charts,snowflake]",
+        # Improved exception traceback formatting:
+        "rich>=11.0.0",
+    ],
 }
 
 
