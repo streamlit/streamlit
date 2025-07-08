@@ -743,8 +743,6 @@ export class App extends PureComponent<Props, State> {
 
       if (
         !this.sessionInfo.last ||
-        this.sessionInfo.last.sessionId !==
-          this.sessionInfo.current.sessionId ||
         lastRunWasInterrupted ||
         wasRerunRequested ||
         this.state.fragmentIdsThisRun.length > 0 ||
