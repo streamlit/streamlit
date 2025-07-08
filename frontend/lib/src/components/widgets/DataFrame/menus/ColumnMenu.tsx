@@ -122,43 +122,27 @@ function ColumnMenu({
       })
   }, [columnName])
 
+  const COLUMN_TYPE_ICONS: Record<string, string> = {
+    object: ":material/data_object:",
+    text: ":material/notes:",
+    checkbox: ":material/check_box:",
+    selectbox: ":material/arrow_drop_down_circle:",
+    list: ":material/list:",
+    number: ":material/tag:",
+    link: ":material/link:",
+    datetime: ":material/calendar_today:",
+    date: ":material/calendar_month:",
+    time: ":material/access_time:",
+    line_chart: ":material/show_chart:",
+    bar_chart: ":material/bar_chart:",
+    area_chart: ":material/area_chart:",
+    image: ":material/image:",
+    progress: ":material/commit:", // Represents progression/steps
+    json: ":material/code_blocks:",
+  }
+
   const getColumnTypeIcon = React.useCallback((kind: string): string => {
-    switch (kind) {
-      case "object":
-        return ":material/data_object:"
-      case "text":
-        return ":material/notes:"
-      case "checkbox":
-        return ":material/check_box:"
-      case "selectbox":
-        return ":material/arrow_drop_down_circle:"
-      case "list":
-        return ":material/list:"
-      case "number":
-        return ":material/tag:"
-      case "link":
-        return ":material/link:"
-      case "datetime":
-        return ":material/calendar_today:"
-      case "date":
-        return ":material/calendar_month:"
-      case "time":
-        return ":material/access_time:"
-      case "line_chart":
-        return ":material/show_chart:"
-      case "bar_chart":
-        return ":material/bar_chart:"
-      case "area_chart":
-        return ":material/area_chart:"
-      case "image":
-        return ":material/image:"
-      case "progress":
-        return ":material/commit:" // Represents progression/steps
-      case "json":
-        return ":material/code_blocks:"
-      default:
-        return ":material/info:" // Default as per your previous change
-    }
+    return COLUMN_TYPE_ICONS[kind] || ":material/info:" // Default as per your previous change
   }, [])
 
   return (
