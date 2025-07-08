@@ -33,8 +33,8 @@ TYPE_PAIRS = [
 
 def _get_main_filename_and_extension(filename: str) -> tuple[str, str]:
     """Returns the main part of a filename and its extension."""
-    # Handle NTFS Alternate Data Streams (ADS), e.g: "file.txt:ads" -> ("file.txt", ".txt")
-    if ":" in filename:
+    # Handle NTFS Alternate Data Streams (ADS) on Windows, e.g: "file.txt:ads" -> ("file.txt", ".txt")
+    if os.name == "nt" and ":" in filename:
         main_filename, ads_part = filename.split(":", 1)
         # We only treat it as an ADS if the part after the colon has an extension.
         if os.path.splitext(ads_part)[1]:

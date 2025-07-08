@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import unittest
 from typing import TYPE_CHECKING
+from unittest import mock
 
 from parameterized import parameterized
 
@@ -70,6 +71,9 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
                 True,
             ),
             ("extension_is_uppercase", "document.CSV", [".csv"], True),
+            # On non-Windows, a colon is a valid filename character.
+            ("colon_in_filename_valid", "my:file.txt", [".txt"], True),
+            ("colon_in_filename_invalid", "my:file.txt", [".log"], False),
             # Invalid cases
             ("invalid_single_extension", "document.docx", [".pdf", ".png"], False),
             (
@@ -81,6 +85,18 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
             ("no_extension", "file_without_extension", [".pdf", ".png"], False),
             ("empty_filename", "", [".pdf", ".tar.gz"], False),
             ("filename_is_period", ".", [".pdf", ".tar.gz"], False),
+        ]
+    )
+    def test_filename_valid(self, _, filename, allowed_types, expected_valid):
+        """Test whether filenames are valid against allowed extensions."""
+        actual_valid = is_filename_valid(filename, allowed_types)
+        assert actual_valid == expected_valid
+
+
+@mock.patch("streamlit.elements.lib.file_uploader_utils.os.name", "nt")
+class EnforceFilenameRestrictionWindowsTest(unittest.TestCase):
+    @parameterized.expand(
+        [
             (
                 "ads_bypass_attempt",
                 "file.txt:$fakeStream.pdf",
@@ -114,7 +130,9 @@ class EnforceFilenameRestrictionTest(unittest.TestCase):
             ),
         ]
     )
-    def test_filename_valid(self, _, filename, allowed_types, expected_valid):
-        """Test whether filenames are valid against allowed extensions."""
+    def test_filename_valid_on_windows(
+        self, _, filename, allowed_types, expected_valid
+    ):
+        """Test NTFS alternate data stream cases on Windows."""
         actual_valid = is_filename_valid(filename, allowed_types)
         assert actual_valid == expected_valid
