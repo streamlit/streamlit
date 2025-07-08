@@ -29,13 +29,15 @@ import {
   ContainerContentsWrapper,
   FileUploadClient,
   IGuestToHostMessage,
-  isToolbarDisplayed,
   LibContext,
   Profiler,
+  useExecuteWhenChanged,
+  useWindowDimensionsContext,
   WidgetStateManager,
 } from "@streamlit/lib"
-import { IAppPage, Logo, Navigation, PageConfig } from "@streamlit/protobuf"
+import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
+import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
 import { TopNav } from "@streamlit/app/src/components/Navigation"
@@ -143,19 +145,22 @@ function AppView(props: AppViewProps): ReactElement {
     activeTheme,
   } = useContext(LibContext)
 
+  const { innerWidth } = useWindowDimensionsContext()
+
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
   const hasEventElements = !elements.event.isEmpty
   const hasBottomElements = !elements.bottom.isEmpty
 
-  const [showSidebarOverride, setShowSidebarOverride] = useState(() => false)
+  const [showSidebarOverride, setShowSidebarOverride] = useState(false)
 
   const showSidebar =
-    hasSidebarElements ||
-    (navigationPosition === Navigation.Position.SIDEBAR &&
-      !hideSidebarNav &&
-      appPages.length > 1) ||
-    showSidebarOverride
+    innerWidth > 0 &&
+    (hasSidebarElements ||
+      (navigationPosition === Navigation.Position.SIDEBAR &&
+        !hideSidebarNav &&
+        appPages.length > 1) ||
+      showSidebarOverride)
 
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
@@ -198,22 +203,25 @@ function AppView(props: AppViewProps): ReactElement {
     />
   )
 
-  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(
-    () =>
-      initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-      (initialSidebarState === PageConfig.SidebarState.AUTO &&
-        window.innerWidth <= parseInt(activeTheme.emotion.breakpoints.md, 10))
-  )
+  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(true)
 
-  // sometimes the initialSidebarState is not updated until after the script runs with a set_page_config
-  useEffect(() => {
-    setSidebarIsCollapsed(
-      initialSidebarState === PageConfig.SidebarState.COLLAPSED ||
-        (initialSidebarState === PageConfig.SidebarState.AUTO &&
-          window.innerWidth <=
-            parseInt(activeTheme.emotion.breakpoints.md, 10))
-    )
-  }, [initialSidebarState, activeTheme.emotion.breakpoints.md])
+  // Update sidebar state when innerWidth changes and is > 0
+  useExecuteWhenChanged(() => {
+    if (innerWidth > 0 && showSidebar) {
+      setSidebarIsCollapsed(
+        shouldCollapse(
+          initialSidebarState,
+          parseInt(activeTheme.emotion.breakpoints.md, 10),
+          innerWidth
+        )
+      )
+    }
+  }, [
+    innerWidth,
+    showSidebar,
+    initialSidebarState,
+    activeTheme.emotion.breakpoints.md,
+  ])
 
   const toggleSidebar = useCallback(() => {
     setSidebarIsCollapsed(prev => !prev)
@@ -241,9 +249,7 @@ function AppView(props: AppViewProps): ReactElement {
     shouldShowLogo ||
     shouldShowExpandButton ||
     shouldShowNavigation ||
-    isToolbarDisplayed()
-
-  const isHeaderTransparent = !hasHeaderUserContent
+    showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -294,7 +300,6 @@ function AppView(props: AppViewProps): ReactElement {
             }
             rightContent={topRightContent}
             logoComponent={logoElement}
-            isTransparentBackground={isHeaderTransparent}
           />
           <Component
             tabIndex={0}
@@ -312,6 +317,8 @@ function AppView(props: AppViewProps): ReactElement {
                 hasBottom={hasBottomElements}
                 hasHeader={hasHeaderUserContent}
                 showToolbar={showToolbar}
+                hasTopNav={shouldShowNavigation}
+                embedded={embedded}
               >
                 {renderBlock(elements.main)}
               </StyledAppViewBlockContainer>

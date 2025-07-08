@@ -17,8 +17,8 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 import { getSidebarHorizontalSpacing } from "@streamlit/app/src/components/Sidebar/styled-components"
+import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
 /**
  * Returns the color of the text in the sidebar nav.
@@ -183,9 +183,31 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   }
 )
 
-export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
+export const StyledChevronContainer = styled.div<{ isExpanded: boolean }>(
+  ({ isExpanded }) => ({
+    visibility: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+    transition: "transform 200ms ease",
+    flexShrink: 0,
+  })
+)
+
+export const StyledNavSectionHeaderText = styled.span(() => ({
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  minWidth: 0,
+}))
+
+export const StyledSidebarNavSectionHeader = styled.header<{
+  isExpanded: boolean
+}>(({ theme }) => {
   return {
     fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.semiBold,
     color: getNavTextColor(theme, false),
     lineHeight: theme.lineHeights.small,
     paddingRight: theme.spacing.sm,
@@ -193,6 +215,17 @@ export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
     marginRight: getSidebarHorizontalSpacing(theme),
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.twoXS,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    cursor: "pointer",
+    userSelect: "none",
+    "&:hover": {
+      [`& > ${StyledChevronContainer}`]: {
+        visibility: "visible",
+      },
+    },
   }
 })
 
@@ -226,6 +259,12 @@ export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   marginRight: getSidebarHorizontalSpacing(theme),
   marginLeft: getSidebarHorizontalSpacing(theme),
+}))
+
+export const StyledNavSectionContainer = styled.div(({ theme }) => ({
+  "&:not(:first-child)": {
+    marginTop: theme.spacing.lg,
+  },
 }))
 
 // TopNav styled components

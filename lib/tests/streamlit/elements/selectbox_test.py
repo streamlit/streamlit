@@ -53,7 +53,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.default == 0
         assert c.HasField("default")
         assert not c.disabled
-        assert c.placeholder == "Choose an option"
+        # Default placeholders are now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
         assert not c.accept_new_options
 
     def test_just_disabled(self):
@@ -142,7 +143,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.selectbox
         assert c.accept_new_options
-        assert c.placeholder == "Choose or add an option"
+        # Placeholder logic is now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
 
     def test_invalid_value(self):
         """Test that value must be an int."""

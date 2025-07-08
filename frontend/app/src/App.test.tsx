@@ -45,6 +45,7 @@ import {
   SessionInfo,
   toExportedTheme,
   WidgetStateManager,
+  WindowDimensionsProvider,
 } from "@streamlit/lib"
 import {
   Config,
@@ -318,7 +319,9 @@ window.ResizeObserver = ResizeObserver
 function renderApp(props: Props): RenderResult {
   return render(
     <RootStyleProvider theme={getDefaultTheme()}>
-      <App {...props} />
+      <WindowDimensionsProvider>
+        <App {...props} />
+      </WindowDimensionsProvider>
     </RootStyleProvider>
   )
 }
@@ -1376,6 +1379,62 @@ describe("App", () => {
       })
 
       expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+    })
+
+    it("button should be hidden when script changes on disk", async () => {
+      renderApp(getProps())
+
+      // First make the button visible by setting developer mode
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+
+      // Send scriptChangedOnDisk event
+      sendForwardMessage("sessionEvent", {
+        type: "scriptChangedOnDisk",
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stAppDeployButton")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("button should reappear when script starts running after file change", () => {
+      renderApp(getProps())
+
+      // First make the button visible by setting developer mode
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+
+      // Send scriptChangedOnDisk event
+      sendForwardMessage("sessionEvent", {
+        type: "scriptChangedOnDisk",
+      })
+
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+
+      // Send session status changed with script running
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
     })
   })
 
@@ -3395,13 +3454,6 @@ describe("App", () => {
               label: "Print",
               type: "option",
             },
-            {
-              type: "separator",
-            },
-            {
-              label: "About",
-              type: "option",
-            },
           ],
         ])
 
@@ -3434,10 +3486,6 @@ describe("App", () => {
             },
             {
               label: "Fork this App",
-              type: "option",
-            },
-            {
-              label: "About",
               type: "option",
             },
           ],

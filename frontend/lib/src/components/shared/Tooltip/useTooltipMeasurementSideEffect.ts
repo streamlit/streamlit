@@ -16,6 +16,8 @@
 
 import { useEffect } from "react"
 
+import { useWindowDimensionsContext } from "@streamlit/lib"
+
 /**
  * A hook that handles tooltip positioning and measurement with retry logic to
  * ensure proper positioning even when initial measurements are invalid.
@@ -37,6 +39,8 @@ export function useTooltipMeasurementSideEffect(
   tooltipElement: HTMLDivElement | null,
   isOpen: boolean
 ): void {
+  const { innerWidth } = useWindowDimensionsContext()
+
   useEffect(() => {
     const parentElement = tooltipElement?.parentElement
     if (!parentElement) {
@@ -46,6 +50,7 @@ export function useTooltipMeasurementSideEffect(
     const handleMeasurement = async (): Promise<void> => {
       // Implement a retry mechanism to ensure we get valid coordinates
       const getMeasurements = (): DOMRect | null => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         const rect = parentElement.getBoundingClientRect()
         // Check if we have valid non-zero coordinates
         if (rect.x !== 0 || rect.y !== 0) {
@@ -70,13 +75,13 @@ export function useTooltipMeasurementSideEffect(
 
       // If we still don't have valid measurements after all attempts, use what we have
       if (!boundingClientRect) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         boundingClientRect = parentElement.getBoundingClientRect()
       }
 
       const xCoordinate = boundingClientRect.x
 
-      const overflowRight =
-        xCoordinate + boundingClientRect.width - window.innerWidth
+      const overflowRight = xCoordinate + boundingClientRect.width - innerWidth
 
       // this is the out-of-tree Basweb DOM structure. For the right overflow,
       // this is the element that has the transform-style property set that needs
@@ -87,6 +92,7 @@ export function useTooltipMeasurementSideEffect(
         // Baseweb uses a transform to position the tooltip, so we need to adjust the transform instead
         // of the left / right property, otherwise it looks weird when the tooltip overflows the right side
         const transformStyleMatrix = new DOMMatrix(
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
           window.getComputedStyle(parentsParentElement)?.transform
         )
         parentsParentElement.style.transform = `translate3d(${
@@ -100,5 +106,5 @@ export function useTooltipMeasurementSideEffect(
     }
 
     void handleMeasurement()
-  }, [tooltipElement, isOpen])
+  }, [tooltipElement, isOpen, innerWidth])
 }

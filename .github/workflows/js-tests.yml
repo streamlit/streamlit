@@ -41,30 +41,26 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          source venv/bin/activate
-          make develop
-      - name: Run make protobuf
-        run: make protobuf
-      - name: Run make frontend-lib
-        run: make frontend-lib
+      - name: Build @streamlit/lib
+        run: cd frontend/ ; yarn workspaces foreach --recursive --topological --from @streamlit/lib run build;
       - name: Audit frontend licenses
         run: ./scripts/audit_frontend_licenses.py
       - name: Run frontend-typesync
         run: make frontend-typesync
       - name: Run type checks
-        run: make tstypecheck
+        run: make frontend-types
       - name: Run linters
-        run: make jslint
+        run: make frontend-lint
+      - name: Run eslint plugin tests
+        run: cd frontend/eslint-plugin-streamlit-custom && yarn test
       - name: Validate NOTICES
         run: |
-          # Run `make notices`. If it results in changes, warn the user and fail.
-          make notices
+          # Run `make update-notices`. If it results in changes, warn the user and fail.
+          make update-notices
 
           git_status=$(git status --porcelain -- NOTICES)
           if [[ -n $git_status ]]; then
-            echo "::error::The NOTICES file is out of date! Please run \`make notices\` and commit the result."
+            echo "::error::The NOTICES file is out of date! Please run \`make update-notices\` and commit the result."
             echo "::group::git diff NOTICES"
             git diff NOTICES
             echo "::endgroup::"
@@ -73,7 +69,7 @@ jobs:
             echo "NOTICES is up to date."
           fi
       - name: Run frontend tests
-        run: make jstestcoverage
+        run: make frontend-tests
       - name: Upload coverage json-summary
         uses: actions/upload-artifact@v4
         with:
@@ -106,7 +102,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version-file: ".nvmrc"
           cache: "yarn"
           cache-dependency-path: "component-lib/yarn.lock"
       - name: Install node dependencies

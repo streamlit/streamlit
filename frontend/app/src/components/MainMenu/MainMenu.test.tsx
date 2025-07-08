@@ -89,7 +89,6 @@ describe("MainMenu", () => {
       "Print",
       "View app source",
       "Report bug with app",
-      "About",
       "Developer options",
       "Clear cache",
     ]
@@ -110,7 +109,6 @@ describe("MainMenu", () => {
       "Rerun",
       "Settings",
       "Print",
-      "About",
       "Developer options",
       "Clear cache",
     ]
@@ -134,9 +132,9 @@ describe("MainMenu", () => {
     const coreMenu = screen.getAllByTestId("stMainMenuList")[0]
 
     const coreMenuOptions = within(coreMenu).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(4)
+    expect(coreMenuOptions).toHaveLength(3)
 
-    const expectedLabels = ["Rerun", "Settings", "Print", "About"]
+    const expectedLabels = ["Rerun", "Settings", "Print"]
     coreMenuOptions.forEach((option, index) => {
       expect(option).toHaveTextContent(expectedLabels[index])
     })
@@ -154,6 +152,7 @@ describe("MainMenu", () => {
     openMenu(screen)
 
     expect(screen.queryByRole("option", { name: "Report a bug" })).toBeNull()
+    expect(screen.queryByRole("option", { name: "About" })).toBeNull()
   })
 
   it("should render report a bug in core menu", () => {
@@ -171,6 +170,7 @@ describe("MainMenu", () => {
       name: "Report a bug",
     })
     expect(reportOption).toBeDefined()
+    expect(screen.queryByRole("option", { name: "About" })).toBeNull()
   })
 
   it("should not render dev menu when developmentMode is false", () => {
@@ -183,9 +183,9 @@ describe("MainMenu", () => {
     expect(subMenus).toHaveLength(1)
 
     const coreMenuOptions = within(subMenus[0]).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(4)
+    expect(coreMenuOptions).toHaveLength(3)
 
-    const expectedLabels = ["Rerun", "Settings", "Print", "About"]
+    const expectedLabels = ["Rerun", "Settings", "Print"]
     coreMenuOptions.forEach((option, index) => {
       expect(option).toHaveTextContent(expectedLabels[index])
     })

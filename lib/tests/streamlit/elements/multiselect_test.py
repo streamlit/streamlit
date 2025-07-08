@@ -30,6 +30,7 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -40,6 +41,7 @@ from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
 )
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class Multiselectbox(DeltaGeneratorTestCase):
@@ -144,7 +146,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.default[:] == expected
         assert c.options == ["Coffee", "Tea", "Water"]
-        assert c.placeholder == "Choose an option"
+        # Default placeholders are now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
 
     @parameterized.expand(
         [
@@ -214,7 +217,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.accept_new_options
-        assert c.placeholder == "Choose or add an option"
+        # Placeholder logic is now handled on the frontend side
+        # Backend only passes through custom user-provided placeholders
 
     @parameterized.expand(
         [
@@ -317,6 +321,32 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.placeholder == "Select your beverage"
 
+    def test_empty_string_placeholder(self):
+        """Test that empty string placeholder is converted to single space to allow explicit empty placeholder."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder="")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == " "
+
+    def test_none_placeholder_uses_default(self):
+        """Test that None placeholder gets converted to empty string for frontend to handle."""
+        st.multiselect("the label", ["Coffee", "Tea", "Water"], placeholder=None)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == ""
+
+    def test_none_placeholder_with_accept_new_options(self):
+        """Test that None placeholder gets converted to empty string with accept_new_options."""
+        st.multiselect(
+            "the label",
+            ["Coffee", "Tea", "Water"],
+            placeholder=None,
+            accept_new_options=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.placeholder == ""
+
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.multiselect("the label", ["Coffee", "Tea", "Water"]))()
@@ -389,6 +419,53 @@ class Multiselectbox(DeltaGeneratorTestCase):
             max_selections_count=max_selections,
         )
         assert str(error) == expected_msg
+
+    def test_width_config_default(self):
+        """Test that default width is 'stretch'."""
+        st.multiselect("the label", ("m", "f"))
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    def test_width_config_pixel(self):
+        """Test that pixel width works properly."""
+        st.multiselect("the label", ("m", "f"), width=200)
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert c.width_config.pixel_width == 200
+
+    def test_width_config_stretch(self):
+        """Test that 'stretch' width works properly."""
+        st.multiselect("the label", ("m", "f"), width="stretch")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert c.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            "invalid",
+            -100,
+            0,
+            100.5,
+            None,
+        ]
+    )
+    def test_invalid_width(self, width):
+        """Test that invalid width values raise exceptions."""
+        with pytest.raises(StreamlitInvalidWidthError):
+            st.multiselect("the label", ("m", "f"), width=width)
 
 
 def test_multiselect_enum_coercion():

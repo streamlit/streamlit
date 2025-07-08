@@ -21,11 +21,18 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidHeightError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.elements.layout_test_utils import WidthConfigFields
+from tests.streamlit.elements.layout_test_utils import (
+    HeightConfigFields,
+    WidthConfigFields,
+)
 
 
 class TextAreaTest(DeltaGeneratorTestCase):
@@ -74,25 +81,6 @@ class TextAreaTest(DeltaGeneratorTestCase):
         # this value, but by the check via the HasField method:
         assert c.default == ""
         assert not c.HasField("default")
-
-    def test_height(self):
-        """Test that it can be called with height"""
-        st.text_area("the label", "", 300)
-
-        c = self.get_delta_from_queue().new_element.text_area
-        assert c.label == "the label"
-        assert c.default == ""
-        assert c.height == 300
-
-    def test_invalid_height(self):
-        """Test that it raises an error when passed an invalid height"""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.text_area("the label", "", height=50)
-
-        assert (
-            str(e.value)
-            == "Invalid height 50px for `st.text_area` - must be at least 68 pixels."
-        )
 
     def test_placeholder(self):
         """Test that it can be called with placeholder"""
@@ -207,6 +195,60 @@ class TextAreaTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.text_area("the label", width=width)
+
+    def test_height_config_default(self):
+        """Test that default height is 122 pixels."""
+        st.text_area("the label")
+
+        c = self.get_delta_from_queue().new_element
+        # Default height should be set to 122 pixels.
+        assert c.height_config.pixel_height == 122
+
+    def test_height_config_pixel(self):
+        """Test that pixel height works properly."""
+        st.text_area("the label", height=150)
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.PIXEL_HEIGHT.value
+        )
+        assert c.height_config.pixel_height == 150
+
+    def test_height_config_content(self):
+        """Test that 'content' height works properly."""
+        st.text_area("the label", height="content")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_CONTENT.value
+        )
+        assert c.height_config.use_content
+
+    def test_height_config_stretch(self):
+        """Test that 'stretch' height works properly."""
+        st.text_area("the label", height="stretch")
+
+        c = self.get_delta_from_queue().new_element
+        assert (
+            c.height_config.WhichOneof("height_spec")
+            == HeightConfigFields.USE_STRETCH.value
+        )
+        assert c.height_config.use_stretch
+
+    @parameterized.expand(
+        [
+            100.5,
+            "invalid",
+            0,
+            -100,
+        ]
+    )
+    def test_invalid_height(self, height):
+        """Test that invalid height values raise exceptions."""
+        with pytest.raises(StreamlitInvalidHeightError):
+            st.text_area("the label", height=height)
 
     def test_help_dedents(self):
         """Test that help properly dedents"""

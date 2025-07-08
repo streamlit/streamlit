@@ -20,6 +20,11 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overloa
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     create_mappings,
@@ -170,6 +175,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T]: ...
 
     @overload
@@ -190,6 +196,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T | str]: ...
 
     @overload
@@ -210,6 +217,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -230,6 +238,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False, True] | bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -301,13 +310,18 @@ class MultiSelectMixin:
 
         placeholder: str or  None
             A string to display when no options are selected.
-            If this is ``None`` (default), the widget displays one of the two
-            following placeholder strings:
+            If this is ``None`` (default), the widget displays appropriate
+            default placeholder text based on the widget's configuration:
 
-            - "Choose an option" is displayed if you set
+            - "Choose options" is displayed when options are available and
               ``accept_new_options=False``.
-            - "Choose or add an option" is displayed if you set
+            - "Choose or add options" is displayed when options are available
+              and ``accept_new_options=True``.
+            - "Add options" is displayed when no options are available and
               ``accept_new_options=True``.
+            - "No options to select" is displayed when no options are available
+              and ``accept_new_options=False`` (the widget is also disabled in
+              this case).
 
         disabled: bool
             An optional boolean that disables the multiselect widget if set
@@ -331,6 +345,17 @@ class MultiSelectMixin:
             match from ``options`` before adding a new item, and a new item
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
+
+        width : "stretch" or int
+            The width of the multiselect widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -381,6 +406,13 @@ class MultiSelectMixin:
            height: 350px
 
         """
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
+        if placeholder == "":
+            placeholder = " "
+
         ctx = get_script_run_ctx()
         return self._multiselect(
             label=label,
@@ -397,6 +429,7 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            width=width,
             ctx=ctx,
         )
 
@@ -404,8 +437,8 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        default: Sequence[Any] | Any | None = None,
-        format_func: Callable[[Any], Any] = str,
+        default: Any | None = None,
+        format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -417,6 +450,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -437,12 +471,12 @@ class MultiSelectMixin:
 
         default_values = get_default_indices(indexable_options, default)
 
-        if placeholder is None:
-            placeholder = (
-                "Choose an option"
-                if not accept_new_options
-                else "Choose or add an option"
-            )
+        # Convert empty string to single space to distinguish from None:
+        # - None (default) → "" → Frontend shows contextual placeholders
+        # - "" (explicit empty) → " " → Frontend shows empty placeholder
+        # - "Custom" → "Custom" → Frontend shows custom placeholder
+        if placeholder == "":
+            placeholder = " "
 
         form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(
@@ -457,6 +491,7 @@ class MultiSelectMixin:
             max_selections=max_selections,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            width=width,
         )
 
         proto = MultiSelectProto()
@@ -466,7 +501,7 @@ class MultiSelectMixin:
         proto.disabled = disabled
         proto.label = label
         proto.max_selections = max_selections or 0
-        proto.placeholder = placeholder
+        proto.placeholder = placeholder or ""
         proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -503,10 +538,13 @@ class MultiSelectMixin:
             proto.raw_values[:] = serde.serialize(widget_state.value)
             proto.set_value = True
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto)
+        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
         return widget_state.value
 
