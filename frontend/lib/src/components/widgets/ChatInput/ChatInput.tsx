@@ -20,7 +20,6 @@ import React, {
   memo,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -57,6 +56,7 @@ import { getAccept } from "~lib/components/widgets/FileUploader/utils"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 
 import {
   StyledChatInput,
@@ -78,13 +78,6 @@ export interface Props {
   uploadClient: FileUploadClient
   fragmentId?: string
 }
-
-// We want to show easily that there's scrolling so we deliberately choose
-// a half size.
-const MAX_VISIBLE_NUM_LINES = 6.5
-// Rounding errors can arbitrarily create scrollbars. We add a rounding offset
-// to manage it better.
-const ROUNDING_OFFSET = 1
 
 const updateFile = (
   id: number,
@@ -108,21 +101,21 @@ function ChatInput({
 
   const { placeholder, maxChars } = element
 
-  const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const counterRef = useRef(0)
-  const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
+  const chatInputRef = useRef<HTMLTextAreaElement>(null)
 
   const [width, elementRef] = useCalculatedWidth()
   const { innerWidth, innerHeight } = useWindowDimensionsContext()
 
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
   const [value, setValue] = useState(element.default)
-  // The value of the height of the textarea. It depends on a variety of factors including the default height, and autogrowing
-  const [scrollHeight, setScrollHeight] = useState(0)
-  const [isInputExtended, setIsInputExtended] = useState(false)
   const [files, setFiles] = useState<UploadFileInfo[]>([])
-
   const [fileDragged, setFileDragged] = useState(false)
+
+  const autoExpand = useTextInputAutoExpand({
+    textareaRef: chatInputRef,
+    dependencies: [placeholder],
+  })
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to
@@ -275,18 +268,6 @@ function ChatInput({
     maxSize: maxFileSize,
   })
 
-  const getScrollHeight = (): number => {
-    let newScrollHeight = 0
-    const { current: textarea } = chatInputRef
-    if (textarea) {
-      textarea.style.height = "auto"
-      newScrollHeight = textarea.scrollHeight
-      textarea.style.height = ""
-    }
-
-    return newScrollHeight
-  }
-
   const handleSubmit = (): void => {
     // We want the chat input to always be in focus
     // even if the user clicks the submit button
@@ -311,7 +292,6 @@ function ChatInput({
     )
     setFiles([])
     setValue("")
-    setScrollHeight(0)
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -334,7 +314,7 @@ function ChatInput({
     }
 
     setValue(targetValue)
-    setScrollHeight(getScrollHeight())
+    autoExpand.updateScrollHeight()
   }
 
   useEffect(() => {
@@ -347,17 +327,6 @@ function ChatInput({
       setValue(val)
     }
   }, [element])
-
-  // Use a Layout Effect since we are dealing with measurements and we want to
-  // avoid flickering.
-  // @see https://react.dev/reference/react/useLayoutEffect#usage
-  useLayoutEffect(() => {
-    if (chatInputRef.current) {
-      const { offsetHeight } = chatInputRef.current
-      heightGuidance.current.minHeight = offsetHeight
-      heightGuidance.current.maxHeight = offsetHeight * MAX_VISIBLE_NUM_LINES
-    }
-  }, [chatInputRef])
 
   useEffect(() => {
     const handleDragEnter = (event: DragEvent): void => {
@@ -402,24 +371,6 @@ function ChatInput({
     }
   }, [fileDragged, innerWidth, innerHeight])
 
-  // Use a Layout Effect since we are dealing with measurements and we want to
-  // avoid flickering.
-  // @see https://react.dev/reference/react/useLayoutEffect#usage
-  useLayoutEffect(() => {
-    const { minHeight } = heightGuidance.current
-    setIsInputExtended(
-      scrollHeight > 0 && chatInputRef.current
-        ? Math.abs(scrollHeight - minHeight) > ROUNDING_OFFSET
-        : false
-    )
-  }, [scrollHeight])
-
-  useLayoutEffect(() => {
-    setScrollHeight(getScrollHeight())
-  }, [placeholder])
-
-  const { maxHeight } = heightGuidance.current
-
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
 
   return (
@@ -437,14 +388,10 @@ function ChatInput({
             getRootProps={getRootProps}
             getInputProps={getInputProps}
             acceptFile={acceptFile}
-            inputHeight={
-              isInputExtended
-                ? `${scrollHeight + ROUNDING_OFFSET}px`
-                : theme.sizes.minElementHeight
-            }
+            inputHeight={autoExpand.height}
           />
         ) : (
-          <StyledChatInput extended={isInputExtended}>
+          <StyledChatInput extended={autoExpand.isExtended}>
             {acceptFile === AcceptFileValue.None ? null : (
               <ChatFileUploadButton
                 getRootProps={getRootProps}
@@ -487,10 +434,8 @@ function ChatInput({
                     "::placeholder": {
                       color: theme.colors.fadedText60,
                     },
-                    height: isInputExtended
-                      ? `${scrollHeight + ROUNDING_OFFSET}px`
-                      : "auto",
-                    maxHeight: maxHeight ? `${maxHeight}px` : "none",
+                    height: autoExpand.height,
+                    maxHeight: autoExpand.maxHeight,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingLeft: theme.spacing.none,
                     paddingBottom: theme.spacing.sm,
@@ -519,7 +464,7 @@ function ChatInput({
               <StyledSendIconButton
                 onClick={handleSubmit}
                 disabled={!dirty || disabled}
-                extended={isInputExtended}
+                extended={autoExpand.isExtended}
                 data-testid="stChatInputSubmitButton"
               >
                 <Icon content={Send} size="xl" color="inherit" />

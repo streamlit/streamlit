@@ -24,7 +24,6 @@ import React, {
 
 import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
-import { SignalConnection } from "typed-signals"
 
 import {
   BaseButton,
@@ -37,10 +36,8 @@ import {
   Tooltip,
   useEmotionTheme,
 } from "@streamlit/lib"
-import { SessionEvent } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 import { ConnectionState } from "@streamlit/connection"
-import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 
 import IconRunning from "./IconRunning"
 import {
@@ -59,9 +56,6 @@ export interface StatusWidgetProps {
   /** State of our connection to the server. */
   connectionState: ConnectionState
 
-  /** Dispatches transient SessionEvents received from the server. */
-  sessionEventDispatcher: SessionEventDispatcher
-
   /** Script's current run state */
   scriptRunState: ScriptRunState
 
@@ -79,6 +73,9 @@ export interface StatusWidgetProps {
 
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
+
+  /** Whether to show script changed actions (rerun/always rerun buttons) */
+  showScriptChangedActions: boolean
 }
 
 // Delay time for displaying running man animation.
@@ -111,19 +108,17 @@ const PromptButton = (props: PromptButtonProps): ReactElement => {
  */
 const StatusWidget: React.FC<StatusWidgetProps> = ({
   connectionState,
-  sessionEventDispatcher,
   scriptRunState,
   rerunScript,
   stopScript,
   allowRunOnSave,
+  showScriptChangedActions,
 }) => {
-  const [scriptChangedOnDisk, setScriptChangedOnDisk] = useState(false)
   const [showRunningMan, setShowRunningMan] = useState(false)
   const minimizePromptTimer: React.MutableRefObject<Timer | null> =
     useRef(null)
   const delayShowRunningManTimer: React.MutableRefObject<Timer | null> =
     useRef(null)
-  const sessionEventConn = useRef<SignalConnection>()
   const theme = useEmotionTheme()
 
   const handleAlwaysRerunClick = (): void => {
@@ -140,12 +135,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }
 
   const isConnected = connectionState === ConnectionState.CONNECTED
-
-  const handleSessionEvent = useCallback((event: SessionEvent): void => {
-    if (event.type === "scriptChangedOnDisk") {
-      setScriptChangedOnDisk(true)
-    }
-  }, [])
 
   const showRunningManAfterInitialDelay = useCallback(
     (delay: number): void => {
@@ -167,17 +156,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }
 
   useEffect(() => {
-    sessionEventConn.current =
-      sessionEventDispatcher.onSessionEvent.connect(handleSessionEvent)
-    return () => {
-      if (sessionEventConn.current !== undefined) {
-        sessionEventConn.current.disconnect()
-        sessionEventConn.current = undefined
-      }
-    }
-  }, [handleSessionEvent, sessionEventDispatcher.onSessionEvent])
-
-  useEffect(() => {
     if (minimizePromptTimer.current === null) {
       minimizePromptTimer.current = new Timer()
     }
@@ -193,12 +171,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
       delayShowRunningManTimerCurr.cancel()
     }
   }, [])
-
-  useEffect(() => {
-    if (scriptRunState === ScriptRunState.RUNNING) {
-      setScriptChangedOnDisk(false)
-    }
-  }, [scriptRunState])
 
   useEffect(() => {
     if (isConnected) {
@@ -290,7 +262,7 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
         // more responsive by claiming it's started immediately.
         return renderScriptIsRunning()
       }
-      if (scriptChangedOnDisk) {
+      if (showScriptChangedActions) {
         return renderRerunScriptPrompt()
       }
     }
