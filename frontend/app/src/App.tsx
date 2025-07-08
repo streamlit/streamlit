@@ -1151,7 +1151,6 @@ export class App extends PureComponent<Props, State> {
    * @param newSessionProto a NewSession protobuf
    */
   handleNewSession = (newSessionProto: NewSession): void => {
-    console.log("handleNewSession")
     const initialize = newSessionProto.initialize as Initialize
 
     if (this.hasStreamlitVersionChanged(initialize)) {
