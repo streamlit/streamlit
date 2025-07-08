@@ -946,6 +946,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "base",
                 "font",
                 "fontFaces",
+                "headingFontSizes",
                 "headingFontWeights",
                 "chartCategoricalColors",
             }
@@ -1005,6 +1006,45 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
+                    exc_info=e,
+                )
+
+    heading_font_sizes = theme_opts.get("headingFontSizes", None)
+    # headingFontSizes is either an single string value (set for all headings) or
+    # a list of strings (set specific headings). However, if it was provided via env variable or via CLI arg,
+    # it's a json string that needs to be parsed.
+
+    if isinstance(heading_font_sizes, str):
+        heading_font_sizes = heading_font_sizes.strip().lower()
+        if heading_font_sizes.endswith(("px", "rem")):
+            # Handle the case where headingFontSizes is a single string value to be applied to all headings
+            heading_font_sizes = [heading_font_sizes] * 6
+        else:
+            # Handle the case where headingFontSizes is a json string (coming from CLI or env variable)
+            try:
+                heading_font_sizes = json.loads(heading_font_sizes)
+            except Exception as e:
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option with json.loads: %s.",
+                    heading_font_sizes,
+                    exc_info=e,
+                )
+                heading_font_sizes = None
+
+    if heading_font_sizes is not None:
+        # Check that the list has between 1 and 6 values
+        if not heading_font_sizes or len(heading_font_sizes) > 6:
+            raise ValueError(
+                f"Config theme.headingFontSizes should have 1-6 values corresponding to h1-h6, "
+                f"but got {len(heading_font_sizes)}"
+            )
+        for size in heading_font_sizes:
+            try:
+                msg.heading_font_sizes.append(size)
+            except Exception as e:  # noqa: PERF203
+                _LOGGER.warning(
+                    "Failed to parse the theme.headingFontSizes config option: %s.",
+                    size,
                     exc_info=e,
                 )
 

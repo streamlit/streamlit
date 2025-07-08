@@ -178,6 +178,7 @@ message CustomThemeConfig {
   optional int32 base_font_weight = 30;
   optional int32 code_font_weight = 32;
   optional string code_font_size = 28;
+  repeated string heading_font_sizes = 35;
   repeated int32 heading_font_weights = 34;
   optional bool show_sidebar_border = 23;
   optional CustomThemeConfig sidebar = 24;
@@ -185,7 +186,7 @@ message CustomThemeConfig {
   optional string dataframe_header_background_color = 31;
   repeated string chart_categorical_colors = 33;
 
-  // Next ID: 35
+  // Next ID: 36
 }
 
 message FontFace {
