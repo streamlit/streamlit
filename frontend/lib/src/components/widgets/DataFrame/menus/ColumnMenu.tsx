@@ -19,6 +19,7 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
@@ -39,6 +40,31 @@ import {
   StyledTypeIconContainer,
 } from "./styled-components"
 import FormattingMenu from "./FormattingMenu"
+import { getLogger } from "loglevel"
+
+const LOG = getLogger("ColumnMenu")
+
+/**
+ * Mapping of column types to icons.
+ */
+const COLUMN_TYPE_ICONS: Record<string, string> = {
+  object: ":material/data_object:",
+  text: ":material/notes:",
+  checkbox: ":material/check_box:",
+  selectbox: ":material/arrow_drop_down_circle:",
+  list: ":material/list:",
+  number: ":material/tag:",
+  link: ":material/link:",
+  datetime: ":material/calendar_today:",
+  date: ":material/calendar_month:",
+  time: ":material/access_time:",
+  line_chart: ":material/show_chart:",
+  bar_chart: ":material/bar_chart:",
+  area_chart: ":material/area_chart:",
+  image: ":material/image:",
+  progress: ":material/commit:",
+  json: ":material/code_blocks:",
+}
 
 export interface ColumnMenuProps {
   // The top position of the menu
@@ -111,39 +137,15 @@ function ColumnMenu({
   }, [onCloseMenu])
 
   const handleCopyNameToClipboard = React.useCallback((): void => {
-    navigator.clipboard
-      .writeText(columnName)
-      .then(() => {
-        // Maybe show a small "Copied!" confirmation if desired in the future
-      })
-      .catch(err => {
-        // eslint-disable-next-line no-console
-        console.error("Failed to copy column name: ", err)
-      })
+    navigator.clipboard.writeText(columnName).catch(error => {
+      LOG.error("Failed to copy column name to clipboard:", error)
+    })
   }, [columnName])
 
-  const COLUMN_TYPE_ICONS: Record<string, string> = {
-    object: ":material/data_object:",
-    text: ":material/notes:",
-    checkbox: ":material/check_box:",
-    selectbox: ":material/arrow_drop_down_circle:",
-    list: ":material/list:",
-    number: ":material/tag:",
-    link: ":material/link:",
-    datetime: ":material/calendar_today:",
-    date: ":material/calendar_month:",
-    time: ":material/access_time:",
-    line_chart: ":material/show_chart:",
-    bar_chart: ":material/bar_chart:",
-    area_chart: ":material/area_chart:",
-    image: ":material/image:",
-    progress: ":material/commit:", // Represents progression/steps
-    json: ":material/code_blocks:",
-  }
-
-  const getColumnTypeIcon = React.useCallback((kind: string): string => {
-    return COLUMN_TYPE_ICONS[kind] || ":material/info:" // Default as per your previous change
-  }, [])
+  const columnTypeIcon = useMemo(
+    () => COLUMN_TYPE_ICONS[columnKind] || ":material/notes:",
+    [columnKind]
+  )
 
   return (
     <Popover
@@ -154,7 +156,7 @@ function ColumnMenu({
           <StyledColumnHeaderRow>
             <StyledTypeIconContainer>
               <DynamicIcon
-                iconValue={getColumnTypeIcon(columnKind)}
+                iconValue={columnTypeIcon}
                 size={"base"}
                 color="inherit"
               />
