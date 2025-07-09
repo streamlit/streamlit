@@ -329,8 +329,3 @@ with st.expander("Badge Width Examples", expanded=True):
         st.badge("Fixed 100px badge", width=100)
 
         st.badge("Stretch badge", width="stretch")
-
-with st.container(
-    width="content", border=True, key="container_width_content_with_markdown_divider"
-):
-    st.markdown("---")

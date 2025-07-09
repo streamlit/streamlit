@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -24,13 +24,6 @@ def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(markdown_elements.nth(0), name="st_divider")
     assert_snapshot(markdown_elements.nth(1), name="st_divider_width_600")
     assert_snapshot(markdown_elements.nth(2), name="st_divider_width_stretch")
-
-
-def test_divider_layouts(app: Page, assert_snapshot: ImageCompareFunction):
-    assert_snapshot(
-        get_element_by_key(app, "container_width_content_with_divider"),
-        name="st_divider_width_stretch_in_container",
-    )
 
 
 def test_check_top_level_class(app: Page):

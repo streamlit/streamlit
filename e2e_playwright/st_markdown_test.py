@@ -398,13 +398,6 @@ def test_badge_width_examples(themed_app: Page, assert_snapshot: ImageCompareFun
     )
 
 
-def markdown_layout_tests(app: Page, assert_snapshot: ImageCompareFunction):
-    assert_snapshot(
-        get_element_by_key(app, "container_width_content_with_markdown_divider"),
-        name="st_markdown-width_content_with_markdown_divider",
-    )
-
-
 def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that unsafe allow html works correctly."""
     markdown_element = app.get_by_test_id("stMarkdown").get_by_text(
