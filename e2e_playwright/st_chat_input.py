@@ -28,15 +28,23 @@ v2 = col1.chat_input(
 )
 st.write("Chat input 2 (in column, disabled) - value:", v2)
 
+if st.button("Set Value"):
+    st.session_state["chat_input_3"] = "Hello, world!"
+
 if runtime.exists():
 
     def on_submit():
-        st.text("chat input submitted")
+        st.markdown("chat input submitted")
 
-    st.container().chat_input(
+    v3 = st.container().chat_input(
         "Chat input 3 (callback)", key="chat_input_3", on_submit=on_submit
     )
-    st.write("Chat input 3 (callback) - value:", st.session_state.get("chat_input_3"))
+    st.write(
+        "Chat input 3 (callback) - session state value:",
+        st.session_state["chat_input_3"],
+    )
+    st.write("Chat input 3 (callback) - return value:", v3)
+
 
 v4 = st.container().chat_input(
     "Chat input 4 (single file)", accept_file=True, file_type="txt"
