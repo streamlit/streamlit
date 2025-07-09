@@ -137,7 +137,7 @@ def test_dimensions_are_correctly_applied(
     )
     content_height_container.scroll_into_view_if_needed()
     assert_snapshot(
-        stretch_height_container, name="st_container-content_and_fixed_height"
+        content_height_container, name="st_container-content_and_fixed_height"
     )
 
 
