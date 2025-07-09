@@ -3703,7 +3703,7 @@ __metadata:
     "@types/wavesurfer.js": "npm:^6.0.12"
     "@types/xxhashjs": "npm:^0.2.2"
     "@vitejs/plugin-react-swc": "npm:^3.10.2"
-    apache-arrow: "npm:^20.0.0"
+    apache-arrow: "npm:^21.0.0"
     axios: "npm:^1.10.0"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
@@ -5082,7 +5082,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:>=13.7.0, @types/node@npm:^20.13.0":
+"@types/node@npm:*, @types/node@npm:>=13.7.0":
   version: 20.17.8
   resolution: "@types/node@npm:20.17.8"
   dependencies:
@@ -5097,6 +5097,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~7.8.0"
   checksum: 10c0/11dbd869d3e12ee7b7818113588950e538783e45d227122174c763cb05977defbd1e01b44b5ccd4b8997e42c3df7f7b83c6ee05cfa43d924c8882886bc5f6582
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^24.0.3":
+  version: 24.0.12
+  resolution: "@types/node@npm:24.0.12"
+  dependencies:
+    undici-types: "npm:~7.8.0"
+  checksum: 10c0/333777c3416b758bbdb72a09e9db5599ff7789dca519d3fcf8150a1c56c79d808e0009e92d52016e80033b3c52724def08aad2c5b396e28f00dbdfe40a1756a4
   languageName: node
   linkType: hard
 
@@ -6532,14 +6541,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"apache-arrow@npm:^20.0.0":
-  version: 20.0.0
-  resolution: "apache-arrow@npm:20.0.0"
+"apache-arrow@npm:^21.0.0":
+  version: 21.0.0
+  resolution: "apache-arrow@npm:21.0.0"
   dependencies:
     "@swc/helpers": "npm:^0.5.11"
     "@types/command-line-args": "npm:^5.2.3"
     "@types/command-line-usage": "npm:^5.0.4"
-    "@types/node": "npm:^20.13.0"
+    "@types/node": "npm:^24.0.3"
     command-line-args: "npm:^6.0.1"
     command-line-usage: "npm:^7.0.1"
     flatbuffers: "npm:^25.1.24"
@@ -6547,7 +6556,7 @@ __metadata:
     tslib: "npm:^2.6.2"
   bin:
     arrow2csv: bin/arrow2csv.js
-  checksum: 10c0/ce6ca6ed3d853c32b7dc1d82a324de117f4a5fd4c1c06090473e1a54aee60ab032fbdda6bba6cc104449208c2b8a446514992c2d0383d51ed5ed7ea12b27be96
+  checksum: 10c0/a0a47574240b0680beed3a7bb631e8c45e08ee68b73ef4a807767f629d2368aa61c6d94dea444f68f59d519cd1962d1a158e32961d3ff02b176b921f66d855a3
   languageName: node
   linkType: hard
 
