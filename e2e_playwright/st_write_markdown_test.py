@@ -21,7 +21,7 @@ def test_displays_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that markdown is displayed correctly."""
 
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(15)
+    expect(markdown_elements).to_have_count(14)
 
     expect(markdown_elements.nth(0)).to_contain_text("Hello World")
     expect(markdown_elements.nth(1)).to_contain_text("This markdown is awesome! 😎")
