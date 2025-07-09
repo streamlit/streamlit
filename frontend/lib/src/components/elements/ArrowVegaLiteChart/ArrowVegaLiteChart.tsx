@@ -41,6 +41,9 @@ function isFacetChart(spec: string | object): boolean {
 
     return !!(
       parsedSpec.facet ||
+      // TODO (lawilby): do some tests for row/column
+      // shorthand facet charts to confirm they work with
+      // sizing in the same way.
       parsedSpec.encoding?.row ||
       parsedSpec.encoding?.column ||
       parsedSpec.encoding?.facet

@@ -304,11 +304,7 @@ def _prepare_vega_lite_spec(
             spec["autosize"] = {"type": "fit-x", "contains": "padding"}
 
         elif is_facet_chart:
-            spec["autosize"] = {
-                "type": "pad",
-                "contains": "padding",
-                "resize": False,
-            }
+            spec["autosize"] = {"type": "pad", "contains": "padding"}
 
         else:
             spec["autosize"] = {"type": "fit", "contains": "padding"}
