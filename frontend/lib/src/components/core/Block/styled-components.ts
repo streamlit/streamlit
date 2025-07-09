@@ -211,7 +211,6 @@ export interface StyledFlexContainerBlockProps {
   overflow?: React.CSSProperties["overflow"]
   align?: BlockProto.FlexContainer.Align | null
   justify?: BlockProto.FlexContainer.Justify | null
-  width?: React.CSSProperties["width"]
 }
 
 export const StyledFlexContainerBlock =
@@ -226,8 +225,6 @@ export const StyledFlexContainerBlock =
       border,
       align,
       justify,
-      width,
-      overflow,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -237,7 +234,7 @@ export const StyledFlexContainerBlock =
       return {
         display: "flex",
         gap: gapWidth,
-        width: width ?? "100%",
+        width: "100%",
         maxWidth: "100%",
         height: height ?? "auto",
         minWidth: "5%",

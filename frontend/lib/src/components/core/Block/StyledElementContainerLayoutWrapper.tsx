@@ -64,6 +64,12 @@ export const StyledElementContainerLayoutWrapper: FC<
       return {
         overflow: "visible",
       }
+    } else if (node.element.type === "componentInstance") {
+      // Because of how width is handled for custom components, we need the
+      // element wrapper to be full width.
+      return {
+        width: "100%",
+      }
     }
 
     return {}
