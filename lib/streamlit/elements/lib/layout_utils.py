@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -179,21 +179,30 @@ map_to_flex_terminology = {
 
 def get_justify(
     alignment: HorizontalAlignment | VerticalAlignment,
-) -> Block.FlexContainer.Justify:
+) -> Block.FlexContainer.Justify.ValueType:
     valid_justify = ["start", "center", "end", "space_between"]
     justify = map_to_flex_terminology[alignment]
     if justify not in valid_justify:
         return Block.FlexContainer.Justify.JUSTIFY_UNDEFINED
     if justify in ["start", "end", "center"]:
-        return getattr(Block.FlexContainer.Justify, f"JUSTIFY_{justify.upper()}")
-    return getattr(Block.FlexContainer.Justify, f"{justify.upper()}")
+        return cast(
+            "Block.FlexContainer.Justify.ValueType",
+            getattr(Block.FlexContainer.Justify, f"JUSTIFY_{justify.upper()}"),
+        )
+    return cast(
+        "Block.FlexContainer.Justify.ValueType",
+        getattr(Block.FlexContainer.Justify, f"{justify.upper()}"),
+    )
 
 
 def get_align(
     alignment: HorizontalAlignment | VerticalAlignment,
-) -> Block.FlexContainer.Align:
+) -> Block.FlexContainer.Align.ValueType:
     valid_align = ["start", "end", "center"]
     align = map_to_flex_terminology[alignment]
     if align not in valid_align:
         return Block.FlexContainer.Align.ALIGN_UNDEFINED
-    return getattr(Block.FlexContainer.Align, f"ALIGN_{align.upper()}")
+    return cast(
+        "Block.FlexContainer.Align.ValueType",
+        getattr(Block.FlexContainer.Align, f"ALIGN_{align.upper()}"),
+    )
