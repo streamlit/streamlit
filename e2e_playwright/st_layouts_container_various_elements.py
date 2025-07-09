@@ -74,7 +74,7 @@ with st.container(
             "y": [i * i for i in range(5)],
         }
     )
-    with st.expander("Expand me", key="container-various-expander"):
+    with st.expander("Expand me"):
         st.title("Hidden Chart")
         st.bar_chart(df.set_index("x"))
 
