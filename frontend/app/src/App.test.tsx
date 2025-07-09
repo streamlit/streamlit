@@ -2959,6 +2959,105 @@ describe("App", () => {
       })
       expect(sendUpdateWidgetsMessageSpy).not.toHaveBeenCalled()
     })
+
+    it("requests script rerun if fragmentIdsThisRun is not empty", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        fragmentIdsThisRun: ["myFragmentId"],
+      })
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      })
+
+      // Ensure sessionInfo.last exists so check based on lastRunWasInterrupted
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      expect(sessionInfo.last).toBeTruthy()
+
+      // Initialize spy here to verify triggered from handleConnectionStateChanged
+      const sendUpdateWidgetsMessageSpy = vi.spyOn(
+        widgetStateManager,
+        "sendUpdateWidgetsMessage"
+      )
+      sendUpdateWidgetsMessageSpy.mockClear()
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
+    })
+
+    it("requests script rerun if autoReruns is not empty", () => {
+      vi.useFakeTimers()
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("autoRerun", {
+        interval: 1,
+        fragmentId: "myFragmentId",
+      })
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      })
+
+      // Ensure sessionInfo.last exists so check based on lastRunWasInterrupted
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      sessionInfo.setCurrent(mockSessionInfoProps())
+      expect(sessionInfo.last).toBeTruthy()
+
+      // Initialize spy here to verify triggered from handleConnectionStateChanged
+      const sendUpdateWidgetsMessageSpy = vi.spyOn(
+        widgetStateManager,
+        "sendUpdateWidgetsMessage"
+      )
+      sendUpdateWidgetsMessageSpy.mockClear()
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
+      vi.useRealTimers()
+    })
   })
 
   describe("handles HostCommunication messaging", () => {

@@ -730,6 +730,9 @@ export class App extends PureComponent<Props, State> {
       //   2. our last script run attempt was interrupted by the websocket
       //      connection dropping, or
       //   3. the host explicitly requested a reconnect (we trigger scriptRunState to be RERUN_REQUESTED)
+      //   4. there is an indication that the script is using fragments (fragments in last run or auto-rerun),
+      //      which might need a rerun to be reinitialized if a new app session got created.
+
       const lastRunWasInterrupted =
         this.state.scriptRunState === ScriptRunState.RUNNING
       const wasRerunRequested =
@@ -738,7 +741,11 @@ export class App extends PureComponent<Props, State> {
       if (
         !this.sessionInfo.last ||
         lastRunWasInterrupted ||
-        wasRerunRequested
+        wasRerunRequested ||
+        // Script is using fragments (fragments in last run or
+        // fragment auto-reruns configured):
+        this.state.fragmentIdsThisRun.length > 0 ||
+        this.state.autoReruns.length > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
