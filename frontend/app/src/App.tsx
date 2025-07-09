@@ -584,12 +584,6 @@ export class App extends PureComponent<Props, State> {
         scriptRunState: this.state.scriptRunState,
       })
     }
-    // Rerun script if the theme changed
-    if (
-      _prevProps.theme.activeTheme.name !== this.props.theme.activeTheme.name
-    ) {
-      this.sendRerunBackMsg()
-    }
   }
 
   override componentWillUnmount(): void {
@@ -702,12 +696,16 @@ export class App extends PureComponent<Props, State> {
     return false
   }
 
+  /**
+   * Handles theme changes from host communication.
+   */
   handleThemeMessage = (
     themeName?: PresetThemeName,
     theme?: ICustomThemeConfig
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+
     if (themeName === lightTheme.name && isUsingPresetTheme) {
       this.props.theme.setTheme(lightTheme)
     } else if (themeName === darkTheme.name && isUsingPresetTheme) {
@@ -716,7 +714,6 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.setImportedTheme(theme)
     }
   }
-
   /**
    * Called by ConnectionManager when our connection state changes
    */
