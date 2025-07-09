@@ -116,9 +116,13 @@ function ColumnMenu({
   }, [onCloseMenu])
 
   const handleCopyNameToClipboard = useCallback((): void => {
-    navigator.clipboard.writeText(columnName).catch(error => {
-      LOG.error("Failed to copy column name to clipboard:", error)
-    })
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(columnName).catch(error => {
+        LOG.error("Failed to copy column name to clipboard:", error)
+      })
+    } else {
+      LOG.error("Clipboard API not supported.")
+    }
   }, [columnName])
 
   const columnTypeIcon = useMemo(
