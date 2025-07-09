@@ -124,15 +124,18 @@ def test_dimensions_are_correctly_applied(
     stretch_width_container.scroll_into_view_if_needed()
     assert_snapshot(stretch_width_container, name="st_container-stretch_width")
 
-    fixed_height_container = container_elements.nth(29)
-    fixed_height_container.scroll_into_view_if_needed()
+    stretch_height_container = get_element_by_key(
+        app, "container_with_stretch_height_container_inside"
+    )
+    stretch_height_container.scroll_into_view_if_needed()
     assert_snapshot(
-        fixed_height_container, name="st_container-stretch_and_fixed_height"
+        stretch_height_container, name="st_container-stretch_and_fixed_height"
     )
 
-    # number 30 is nested in 29 so skip to 31 for the next snapshot.
-    stretch_height_container = container_elements.nth(31)
-    stretch_height_container.scroll_into_view_if_needed()
+    content_height_container = get_element_by_key(
+        app, "container_with_content_height_container_inside"
+    )
+    content_height_container.scroll_into_view_if_needed()
     assert_snapshot(
         stretch_height_container, name="st_container-content_and_fixed_height"
     )

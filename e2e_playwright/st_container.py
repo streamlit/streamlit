@@ -87,11 +87,15 @@ with st.container(width="stretch", border=True):
     st.write("stretch width container")
     st.code(code)
 
-with st.container(border=True, height=300):
+with st.container(
+    border=True, height=300, key="container_with_stretch_height_container_inside"
+):
     with st.container(height="stretch", border=True):
         st.write("stretch height container")
 
-with st.container(border=True, height=300):
+with st.container(
+    border=True, height=300, key="container_with_content_height_container_inside"
+):
     with st.container(height="content", border=True):
         st.write("content height container")
 
