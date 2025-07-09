@@ -27,7 +27,6 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
     position: "relative",
     height,
     width: "100%",
-    minWidth: "11rem",
   })
 )
 

@@ -124,10 +124,6 @@ def test_dimensions_are_correctly_applied(
     stretch_width_container.scroll_into_view_if_needed()
     assert_snapshot(stretch_width_container, name="st_container-stretch_width")
 
-    content_width_container = container_elements.nth(28)
-    content_width_container.scroll_into_view_if_needed()
-    assert_snapshot(content_width_container, name="st_container-content_width")
-
     fixed_height_container = container_elements.nth(29)
     fixed_height_container.scroll_into_view_if_needed()
     assert_snapshot(

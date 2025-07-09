@@ -22,7 +22,6 @@ from typing_extensions import TypeAlias
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
     Height,
-    Width,
     WidthWithoutContent,
     get_height_config,
     get_width_config,
@@ -56,7 +55,7 @@ class LayoutsMixin:
         *,
         border: bool | None = None,
         key: Key | None = None,
-        width: Width = "stretch",
+        width: WidthWithoutContent = "stretch",
         height: Height = "content",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
@@ -76,7 +75,7 @@ class LayoutsMixin:
             the container grows to fit its content. If a fixed height, scrolling is
             enabled for large content and a grey border is shown around the container
             to visually separate its scroll surface from the rest of the app. If ``stretch``,
-            Streamlit sets the width of the container to match the width of the parent container
+            Streamlit sets the height of the container to match the height of the parent container
 
             .. note::
                 Use scrolling containers sparingly. If you use scrolling
@@ -173,7 +172,7 @@ class LayoutsMixin:
         block_proto.flex_container.border = border or False
         block_proto.flex_container.wrap = False
 
-        validate_width(width, allow_content=True)
+        validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
         if isinstance(height, int) or border:
