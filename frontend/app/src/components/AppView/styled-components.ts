@@ -49,7 +49,7 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
     width: theme.sizes.full,
     overflow: disableScrolling ? "hidden" : "auto",
     alignItems: "center",
-    height: `100vh`,
+    height: `100dvh`,
 
     "&:focus": {
       outline: "none",
@@ -64,7 +64,7 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
         left: 0,
         right: 0,
         bottom: 0,
-        height: "100vh",
+        height: `100dvh`,
       },
     },
 
@@ -225,7 +225,7 @@ export const StyledIFrameResizerAnchor = styled.div(({ theme }) => ({
 export const StyledMainContent = styled.div(({ theme }) => ({
   width: theme.sizes.full,
   minWidth: 0,
-  height: "100vh",
+  height: `100dvh`,
 
   // Apply relative positioning only on desktop to fix header positioning when sidebar opens.
   // On mobile, relative positioning is omitted to allow the sidebar to properly overlay
