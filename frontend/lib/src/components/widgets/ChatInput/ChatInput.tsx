@@ -430,6 +430,7 @@ function ChatInput({
                     "data-testid": "stChatInputTextArea",
                   },
                   style: {
+                    fontWeight: theme.fontWeights.normal,
                     lineHeight: theme.lineHeights.inputWidget,
                     "::placeholder": {
                       color: theme.colors.fadedText60,

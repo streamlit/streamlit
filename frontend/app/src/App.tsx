@@ -530,6 +530,7 @@ export class App extends PureComponent<Props, State> {
           const taggedEls = document.querySelectorAll("[data-iframe-height]")
           // Use ceil to avoid fractional pixels creating scrollbars.
           const lowestBounds = Array.from(taggedEls).map(el =>
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             Math.ceil(el.getBoundingClientRect().bottom)
           )
 

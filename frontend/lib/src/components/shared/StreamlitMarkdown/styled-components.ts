@@ -310,6 +310,10 @@ export const StyledStreamlitMarkdown =
           overflowX: "auto",
           overflowY: "hidden",
         },
+
+        ".katex": {
+          fontWeight: theme.fontWeights.normal,
+        },
       }
     }
   )

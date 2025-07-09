@@ -1486,6 +1486,43 @@ _create_theme_options(
     """,
 )
 
+_create_theme_options(
+    "chartSequentialColors",
+    categories=["theme"],
+    description="""
+        An array of 10 colors to use for sequential charts.
+
+        If no chart sequential colors are set (or less than 10 colors provided),
+        Streamlit uses a default set of colors.
+        For light themes the default colors are:
+        [
+            "#e4f5ff", #blue10
+            "#c7ebff", #blue20
+            "#a6dcff", #blue30
+            "#83c9ff", #blue40
+            "#60b4ff", #blue50
+            "#3d9df3", #blue60
+            "#1c83e1", #blue70
+            "#0068c9", #blue80
+            "#0054a3", #blue90
+            "#004280", #blue100
+        ]
+        For dark themes the default colors are:
+        [
+            "#004280", #blue100
+            "#0054a3", #blue90
+            "#0068c9", #blue80
+            "#1c83e1", #blue70
+            "#3d9df3", #blue60
+            "#60b4ff", #blue50
+            "#83c9ff", #blue40
+            "#a6dcff", #blue30
+            "#c7ebff", #blue20
+            "#e4f5ff", #blue10
+        ]
+    """,
+)
+
 # Config Section: Secrets #
 
 _create_section("secrets", "Secrets configuration.")

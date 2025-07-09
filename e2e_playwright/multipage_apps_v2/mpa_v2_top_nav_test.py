@@ -56,17 +56,21 @@ def test_mobile_fallback_to_sidebar(app: Page):
 
     wait_for_app_run(app)
 
-    # On mobile, should show sidebar, not top nav
+    # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
-    # Wait for sidebar to expand by checking if links are visible
+    # Expand the sidebar to access navigation
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expand_button.click()
+
+    # Wait for sidebar to expand and nav links to be visible
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links.first).to_be_visible()
 
-    # The sidebar might have overflow or positioning issues on mobile
-    # Try clicking the link directly without worrying about viewport
-    nav_links.nth(2).click(force=True)
+    # Test navigation functionality
+    nav_links.nth(2).click()
     wait_for_app_run(app)
 
     # Verify content updated - be specific
@@ -221,11 +225,19 @@ def test_mobile_sidebar_overlay_visual(
 
     wait_for_app_run(app)
 
-    # Verify sidebar is visible on mobile
+    # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
-    # Verify navigation has moved into the sidebar
+    # Take screenshot of initial collapsed state
+    assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_collapsed")
+
+    # Expand the sidebar to test overlay behavior
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expand_button.click()
+
+    # Wait for sidebar to expand and verify navigation is visible
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links).to_have_count(3)
     expect(nav_links.first).to_be_visible()
@@ -242,9 +254,6 @@ def test_mobile_sidebar_overlay_visual(
     # Wait for sidebar to collapse
     # The sidebar aria-expanded attribute should be false
     expect(sidebar).to_have_attribute("aria-expanded", "false")
-
-    # Take screenshot of collapsed state showing more content visible
-    assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_collapsed")
 
     # Test navigation interaction
     # Expand sidebar again using the expand button in the header

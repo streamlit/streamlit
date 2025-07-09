@@ -275,6 +275,7 @@ export default tseslint.config([
       "streamlit-custom/use-strict-null-equality-checks": "error",
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
+      "streamlit-custom/no-force-reflow-access": "error",
       "no-restricted-imports": [
         "error",
         {
@@ -329,6 +330,8 @@ export default tseslint.config([
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
+      // Allow force reflow access in test files
+      "streamlit-custom/no-force-reflow-access": "off",
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",

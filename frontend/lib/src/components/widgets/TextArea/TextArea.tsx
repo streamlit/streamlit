@@ -245,6 +245,7 @@ const TextArea: FC<Props> = ({
         overrides={{
           Input: {
             style: {
+              fontWeight: theme.fontWeights.normal,
               lineHeight: theme.lineHeights.inputWidget,
               // The default height of the text area is calculated to perfectly fit 3 lines of text.
               height: isAutoHeight ? autoExpandHeight : inputHeight,
