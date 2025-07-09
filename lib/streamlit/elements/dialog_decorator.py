@@ -152,12 +152,10 @@ def dialog_decorator(
     "**X**" in its upper-right corner, or pressing ``ESC`` on their keyboard.
     Dismissing a modal dialog does not trigger an app rerun. To close the modal
     dialog programmatically, call ``st.rerun()`` explicitly inside of the
-    dialog function.
-
-    To enforce that dialogs are always closed programmatically, you can set the
-    ``dismissible`` parameter to ``False``. This will hide the "**X**" button in the
-    upper-right corner of the dialog and prevent the user from dismissing the dialog
-    by clicking outside of it or pressing ``ESC``.
+    dialog function. To enforce that dialogs are always closed programmatically,
+    you can set the ``dismissible`` parameter to ``False``. This will hide the "**X**"
+    button in the upper-right corner of the dialog and prevent the user from dismissing
+    the dialog by clicking outside of it or pressing ``ESC``.
 
     ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
@@ -202,9 +200,13 @@ def dialog_decorator(
         The width of the modal dialog. If ``width`` is ``"small`` (default), the
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
         modal dialog will be about 750 pixels wide.
+
     dismissible : bool
         Whether the modal dialog can be dismissed by clicking outside of it or by pressing ``ESC``.
         Setting it to False also hides the ``X`` button in the upper-right corner of the dialog.
+
+        .. note::
+            dismissible = False does not
 
     Examples
     --------
