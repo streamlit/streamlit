@@ -24,8 +24,6 @@ import { useLayoutStyles, UseLayoutStylesShape } from "./useLayoutStyles"
 import { Direction } from "./utils"
 import { FlexContext } from "./FlexContext"
 
-
-
 function withFlexContextProvider(direction: Direction) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
