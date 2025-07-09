@@ -412,6 +412,33 @@ describe("NumberInput widget", () => {
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
       expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue("1")
     })
+
+    it("resets its formatted value when form is cleared", async () => {
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        formId: "form",
+        default: 5.5,
+        format: "%0.3f",
+      })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      render(<NumberInput {...props} />)
+      const numberInput = screen.getByTestId("stNumberInputField")
+
+      // Modify the value so that the widget becomes dirty.
+      await user.clear(numberInput)
+      await user.type(numberInput, "8.123")
+
+      expect(numberInput).toHaveDisplayValue("8.123")
+
+      // "Submit" the form – this should trigger the widget reset.
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // The displayed value should reset to the default value.
+      expect(numberInput).toHaveDisplayValue("5.5")
+    })
   })
 
   describe("IntData", () => {
