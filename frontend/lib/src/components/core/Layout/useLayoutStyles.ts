@@ -42,8 +42,9 @@ export type UseLayoutStylesArgs = {
   styleOverrides?: StyleOverrides
 }
 
-const isNonZeroPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value > 0 && !isNaN(value)
+const isNonZeroPositiveNumber = (value: unknown): value is number => {
+  return typeof value === "number" && value > 0 && !isNaN(value)
+}
 
 enum DimensionType {
   PIXEL = "pixel",
@@ -149,7 +150,7 @@ const getFlex = (
   heightType: DimensionType | undefined,
   heightPixels: number | undefined,
   direction: Direction | undefined
-) => {
+): string | undefined => {
   if (
     widthType === DimensionType.PIXEL &&
     direction === Direction.HORIZONTAL
@@ -164,7 +165,9 @@ const getFlex = (
   return undefined
 }
 
-const getDirection = (flexContext: IFlexContext | null) => {
+const getDirection = (
+  flexContext: IFlexContext | null
+): Direction | undefined => {
   return flexContext?.direction
 }
 
@@ -241,7 +244,7 @@ export const useLayoutStyles = ({
       ...calculatedStyles,
       ...styleOverrides,
     }
-  }, [element, subElement, styleOverrides])
+  }, [element, subElement, styleOverrides, flexContext])
 
   return layoutStyles
 }

@@ -26,10 +26,9 @@ import { FlexContext } from "./FlexContext"
 
 function withFlexContextProvider(direction: Direction) {
   return function Wrapper({ children }: { children: ReactNode }) {
+    const value = React.useMemo(() => ({ direction }), [])
     return (
-      <FlexContext.Provider value={{ direction }}>
-        {children}
-      </FlexContext.Provider>
+      <FlexContext.Provider value={value}>{children}</FlexContext.Provider>
     )
   }
 }
