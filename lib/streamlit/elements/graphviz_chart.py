@@ -50,7 +50,7 @@ class GraphvizMixin:
             install all charting dependencies (except Bokeh) as an extra with
             Streamlit:
 
-            >>> pip install streamlit[charting]
+            >>> pip install streamlit[charts]
 
         Parameters
         ----------
