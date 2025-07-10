@@ -98,7 +98,7 @@ class LayoutsMixin:
         width : int or "stretch"
             The desired width of the container expressed in pixels. If this is
             ``"stretch"`` (default), Streamlit sets the width of the container to
-            match the width of the parent container. If ``content`` (default),
+            match the width of the parent container. If ``content``,
             the container grows to fit its content. Otherwise, this must be an
             integer. If the specified width is greater than the width of the
             parent container, Streamlit sets the width of the container to match
