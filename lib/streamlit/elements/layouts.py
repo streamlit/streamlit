@@ -178,12 +178,12 @@ class LayoutsMixin:
         if isinstance(height, int) or border:
             block_proto.allow_empty = True
 
-        if isinstance(height, int):
-            block_proto.flex_container.border = True
-        elif border is None:
-            block_proto.flex_container.border = False
-        else:
+        if border is not None:
             block_proto.flex_container.border = border
+        elif isinstance(height, int):
+            block_proto.flex_container.border = True
+        else:
+            block_proto.flex_container.border = False
 
         validate_height(height, allow_content=True)
         block_proto.height_config.CopyFrom(get_height_config(height))
