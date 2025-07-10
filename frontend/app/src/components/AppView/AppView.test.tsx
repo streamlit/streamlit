@@ -386,6 +386,42 @@ describe("AppView element", () => {
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("6rem")
       })
+
+      it("uses 6rem top padding regardless of sidebar content (hasSidebar does not affect non-embedded)", () => {
+        const sidebarElement = new ElementNode(
+          makeElementWithInfoText("sidebar!"),
+          ForwardMsgMetadata.create({}),
+          "no script run id",
+          FAKE_SCRIPT_HASH
+        )
+
+        const sidebar = new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [sidebarElement],
+          new BlockProto({ allowEmpty: true })
+        )
+
+        const empty = new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        )
+
+        render(
+          <AppView
+            {...getProps({
+              elements: new AppRoot(
+                FAKE_SCRIPT_HASH,
+                new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
+              ),
+              embedded: false, // Non-embedded
+              appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
+            })}
+          />
+        )
+        const style = getMainBlockContainerStyle()
+        expect(style.paddingTop).toEqual("6rem") // Should be 6rem, not affected by sidebar
+      })
     })
 
     describe("embedded apps", () => {
