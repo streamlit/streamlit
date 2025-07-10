@@ -613,6 +613,47 @@ describe("AppView element", () => {
           expect(style.paddingTop).toEqual("4.5rem")
           expect(style.paddingBottom).toEqual("1rem")
         })
+
+        it("uses 4.5rem top padding when sidebar content exists (hasSidebar=true)", () => {
+          const sidebarElement = new ElementNode(
+            makeElementWithInfoText("sidebar!"),
+            ForwardMsgMetadata.create({}),
+            "no script run id",
+            FAKE_SCRIPT_HASH
+          )
+
+          const sidebar = new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [sidebarElement],
+            new BlockProto({ allowEmpty: true })
+          )
+
+          const empty = new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [],
+            new BlockProto({ allowEmpty: true })
+          )
+
+          vi.spyOn(
+            StreamlitContextProviderModule,
+            "useAppContext"
+          ).mockReturnValue(getContextOutput({ showToolbar: false }))
+
+          const props = getProps({
+            elements: new AppRoot(
+              FAKE_SCRIPT_HASH,
+              new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
+            ),
+            embedded: true,
+            showPadding: false,
+            appLogo: null, // No header content, only sidebar
+          })
+
+          render(<AppView {...props} />)
+          const style = getMainBlockContainerStyle()
+          expect(style.paddingTop).toEqual("4.5rem")
+          expect(style.paddingBottom).toEqual("1rem")
+        })
       })
     })
 
