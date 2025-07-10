@@ -146,8 +146,8 @@ class PdfMixin:
     def _show_pdf_warning(self) -> DeltaGenerator:
         """Raise an exception that the PDF component is not available."""
         raise StreamlitAPIException(
-            "The PDF viewer requires the `streamlit-pdf` component to be installed. "
-            "Please run `pip install streamlit-pdf` to install it.\n\n\n"
+            "The PDF viewer requires the `streamlit-pdf` component to be installed.\n\n"
+            "Please run `pip install streamlit-pdf` to install it.\n\n"
             "For more information, see the Streamlit PDF documentation at "
             "https://docs.streamlit.io."
         )
