@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { RefObject, useCallback, useEffect, useRef } from "react"
+import { RefObject, useCallback, useEffect, useRef, useState } from "react"
 
 import { getLogger } from "loglevel"
 import { truthy, View as VegaView } from "vega"
@@ -69,6 +69,8 @@ export function useVegaEmbed(
   const defaultDataName = useRef<string>(DEFAULT_DATA_NAME)
   const dataRef = useRef<Quiver | null>(null)
   const datasetsRef = useRef<WrappedNamedDataset[]>([])
+  // This is used to prevent the view from being updated while it is being created
+  const [isCreatingView, setIsCreatingView] = useState(false)
 
   // Setup interactivity for the chart if it supports selections
   const { maybeConfigureSelections, onFormCleared } = useVegaLiteSelections(
@@ -109,6 +111,7 @@ export function useVegaEmbed(
       if (containerRef.current === null) {
         throw new Error("Element missing.")
       }
+      setIsCreatingView(true)
 
       // Finalize the previous view so it can be garbage collected.
       finalizeView()
@@ -164,6 +167,7 @@ export function useVegaEmbed(
       // set to -1 on first load.
       await vegaView.current.resize().runAsync()
 
+      setIsCreatingView(false)
       return vegaView.current
     },
     [finalizeView, maybeConfigureSelections]
@@ -197,7 +201,9 @@ export function useVegaEmbed(
       // Check if dataframes have same "shape" but the new one has more rows.
       if (dataArg.hash !== prevData.hash) {
         // Clean the dataset and insert from scratch.
-        view.data(name, getDataArray(dataArg))
+        view.remove(name, truthy)
+        view.insert(name, getDataArray(dataArg))
+
         LOG.info(
           `Had to clear the ${name} dataset before inserting data through Vega view.`
         )
@@ -211,7 +217,7 @@ export function useVegaEmbed(
       inputData: Quiver | null,
       inputDatasets: WrappedNamedDataset[]
     ): Promise<VegaView | null> => {
-      if (vegaView.current === null) {
+      if (vegaView.current === null || isCreatingView) {
         return null
       }
 
@@ -255,7 +261,7 @@ export function useVegaEmbed(
 
       return vegaView.current
     },
-    [updateData]
+    [updateData, isCreatingView]
   )
 
   return { createView, updateView, finalizeView }
