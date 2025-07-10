@@ -188,8 +188,6 @@ class LayoutsMixin:
         validate_height(height, allow_content=True)
         block_proto.height_config.CopyFrom(get_height_config(height))
 
-        block_proto.height_config.CopyFrom(get_height_config(height))
-
         if key:
             # At the moment, the ID is only used for extracting the
             # key on the frontend and setting it as CSS class.
