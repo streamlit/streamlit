@@ -168,13 +168,6 @@ def test_empty_containers(app: Page):
         height_outer_container.get_by_test_id("stVerticalBlock").first
     ).to_be_visible()
 
-    width_outer_container = get_element_by_key(
-        app, "container_with_border_and_empty_container_with_width"
-    )
-    expect(
-        width_outer_container.get_by_test_id("stVerticalBlock").first
-    ).to_be_visible()
-
     # Test that an empty container without height or border is not rendered.
     empty_outer_container = get_element_by_key(
         app, "container_with_border_and_empty_container_without_height_or_border"

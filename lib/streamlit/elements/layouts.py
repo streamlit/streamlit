@@ -171,7 +171,7 @@ class LayoutsMixin:
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        if isinstance(height, int) or isinstance(width, int) or border:
+        if isinstance(height, int) or border:
             block_proto.allow_empty = True
 
         if border is not None:

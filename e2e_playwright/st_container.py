@@ -62,12 +62,6 @@ with st.container(
 ):
     st.container(height=200)
 
-# Test that an empty container with width is rendered.
-with st.container(
-    border=True, key="container_with_border_and_empty_container_with_width"
-):
-    st.container(width=200)
-
 # Test that an empty container without height or border is not rendered.
 with st.container(
     border=True,
