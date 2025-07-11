@@ -140,6 +140,18 @@ const getHeight = (
   return { pixels, type }
 }
 
+const getFlex = (
+  height: LayoutDimensionConfig
+): React.CSSProperties["flex"] => {
+  // TODO(lawilby): When direction is implemented for containers,
+  // this will be updated to support horizontal direction as well.
+  // Currently, the assumption is that the container is vertical.
+  if (height.type === DimensionType.PIXEL) {
+    return `0 0 ${height.pixels}px`
+  }
+  return undefined
+}
+
 export type UseLayoutStylesShape = {
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
@@ -165,7 +177,6 @@ export const useLayoutStyles = ({
         overflow: "visible",
       }
     }
-    let flex: React.CSSProperties["flex"] = undefined
 
     const { pixels: commandWidth, type: widthType } = getWidth(
       element,
@@ -194,10 +205,9 @@ export const useLayoutStyles = ({
     } else if (heightType === DimensionType.PIXEL) {
       height = `${commandHeight}px`
       overflow = "auto"
-      // TODO (lawilby): We only have vertical containers currently, but this will be
-      // modified to handle horizontal containers when direction on containers is implemented.
-      flex = `0 0 ${commandHeight}px`
     }
+
+    const flex = getFlex({ pixels: commandHeight, type: heightType })
 
     const calculatedStyles = {
       width,
