@@ -185,11 +185,6 @@ export const StyledFlexContainerBlock =
           padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
         }),
         overflow,
-        ...(border && {
-          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-          borderRadius: theme.radii.default,
-          padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
-        }),
       }
     }
   )
