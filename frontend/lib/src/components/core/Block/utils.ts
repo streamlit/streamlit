@@ -210,6 +210,9 @@ export function getActivateScrollToBottomBackwardsCompatible(
 ): boolean {
   const hasHeight =
     blockNode.deltaBlock.heightConfig?.pixelHeight ||
+    // This is deprecated, but we have some integrations that
+    // cache messages so we are keeping this here to make sure the
+    // frontend is backwards compatible with the old messages.
     blockNode.deltaBlock.vertical?.height
   if (
     hasHeight &&
