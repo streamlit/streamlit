@@ -431,6 +431,9 @@ def test_programmatically_set_value_in_session_state(app: Page):
     expect(chat_input.locator("textarea")).to_have_value("Hello, world!")
 
     # And the session state value should be reset to None after widget execution:
+    expect_markdown(
+        app, "Chat input 3 - session state value before execution: Hello, world!"
+    )
     expect_markdown(app, "Chat input 3 (callback) - session state value: None")
     # Also expect the return value to be None
     expect_markdown(app, "Chat input 3 (callback) - return value: None")
@@ -444,5 +447,8 @@ def test_programmatically_set_value_in_session_state(app: Page):
 
     expect_markdown(app, "chat input submitted")
 
+    expect_markdown(
+        app, "Chat input 3 - session state value before execution: Hello, world!"
+    )
     expect_markdown(app, "Chat input 3 (callback) - session state value: Hello, world!")
     expect_markdown(app, "Chat input 3 (callback) - return value: Hello, world!")
