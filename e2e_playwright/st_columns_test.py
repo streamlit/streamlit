@@ -19,6 +19,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     click_button,
+    expect_markdown,
     expect_no_exception,
     get_expander,
 )
@@ -241,9 +242,11 @@ def test_width_is_correctly_applied(app: Page, assert_snapshot: ImageCompareFunc
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )
-    expect(
-        column_fixed_width_container.get_by_test_id("stMarkdownContainer").last
-    ).to_be_visible()
+
+    expect_markdown(
+        app,
+        "column three",
+    )
     assert_snapshot(
         column_fixed_width_container, name="st_columns-width_configuration_fixed"
     )
