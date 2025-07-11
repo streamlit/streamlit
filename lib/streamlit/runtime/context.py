@@ -246,6 +246,11 @@ class ContextProxy:
 
         .. note::
             Changes made to the background color through CSS are not included.
+            Additionally, the theme type may be incorrect during a change in
+            theme, like in the following situations:
+
+            - When the app is first loaded within a session
+            - When the user changes the theme in the settings menu
 
         Attributes
         ----------
