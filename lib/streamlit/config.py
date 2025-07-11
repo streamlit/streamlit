@@ -1453,11 +1453,17 @@ _create_theme_options(
     "chartCategoricalColors",
     categories=["theme"],
     description="""
-        An array of colors to use for categorical charts.
+        An array of colors to use for categorical chart data.
 
-        If no chart categorical colors are set, Streamlit uses a default set of
-        colors.
-        For light themes the default colors are:
+        This is a list of one or more color strings which are applied in order
+        to categorical data. These colors apply to Plotly, Altair, and
+        Vega-Lite charts.
+
+        Invalid colors are skipped, and colors repeat cyclically if there are
+        more categories than colors. If no chart categorical colors are set,
+        Streamlit uses a default set of colors.
+
+        For light themes, the following colors are the default:
         [
             "#0068c9", # blue80
             "#83c9ff", # blue40
@@ -1470,7 +1476,7 @@ _create_theme_options(
             "#6d3fc0", # purple80
             "#d5dae5", # gray40
         ]
-        For dark themes the default colors are:
+        For dark themes, the following colors are the default:
         [
             "#83c9ff", # blue40
             "#0068c9", # blue80
@@ -1490,11 +1496,15 @@ _create_theme_options(
     "chartSequentialColors",
     categories=["theme"],
     description="""
-        An array of 10 colors to use for sequential charts.
+        An array of ten colors to use for sequential or continuous chart data.
 
-        If no chart sequential colors are set (or less than 10 colors provided),
-        Streamlit uses a default set of colors.
-        For light themes the default colors are:
+        The ten colors create a gradient color scale. These colors apply to
+        Plotly, Altair, and Vega-Lite charts.
+
+        Invalid color strings are skipped. If there are not exactly ten
+        valid colors specified, Streamlit uses a default set of colors.
+
+         For light themes, the following colors are the default:
         [
             "#e4f5ff", #blue10
             "#c7ebff", #blue20
@@ -1507,7 +1517,7 @@ _create_theme_options(
             "#0054a3", #blue90
             "#004280", #blue100
         ]
-        For dark themes the default colors are:
+        For dark themes, the following colors are the default:
         [
             "#004280", #blue100
             "#0054a3", #blue90
