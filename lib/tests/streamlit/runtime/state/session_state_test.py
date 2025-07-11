@@ -773,7 +773,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_reset_state_value(self):
         """Test that reset_state_value correctly sets a new state value.
-        
+
         This test verifies that:
         1. A non-existent key can be set using reset_state_value
         2. The value is correctly stored in the session state
@@ -783,7 +783,6 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state.reset_state_value("corge", "grault2")
         assert self.session_state["corge"] == "grault2"
         assert self.session_state.is_new_state_value("corge")
-
 
     def test_reset_state_value_allows_setting_created_widget(self):
         mock_ctx = MagicMock()
