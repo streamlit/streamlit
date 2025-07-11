@@ -56,6 +56,9 @@ def run_chart_tester_app():
         st.line_chart(
             data, x_label="x label", y_label="y label", use_container_width=True
         )
+        st.sidebar.line_chart(
+            data, x_label="x label", y_label="y label", use_container_width=True
+        )
 
         st.write("**st.plotly_chart**")
         categorical_data = pd.DataFrame(
