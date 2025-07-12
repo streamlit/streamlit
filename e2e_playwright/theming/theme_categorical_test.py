@@ -17,10 +17,14 @@ import json
 import os
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_no_skeletons, reset_hovering
+from e2e_playwright.shared.app_utils import (
+    expand_sidebar,
+    expect_no_skeletons,
+    reset_hovering,
+)
 
 
 @pytest.fixture(scope="module")
@@ -58,3 +62,11 @@ def test_custom_categorical_colors(app: Page, assert_snapshot: ImageCompareFunct
     app.wait_for_timeout(10000)
 
     assert_snapshot(app, name="custom_categorical_colors", image_threshold=0.0003)
+
+    # Check chart in sidebar:
+    expand_sidebar(app)
+    sidebar_chart = app.get_by_test_id("stSidebarContent").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    expect(sidebar_chart).to_be_visible()
+    assert_snapshot(sidebar_chart, name="custom_categorical_colors-sidebar")

@@ -316,6 +316,7 @@ function AppView(props: AppViewProps): ReactElement {
                 showPadding={showPadding}
                 hasBottom={hasBottomElements}
                 hasHeader={hasHeaderUserContent}
+                hasSidebar={showSidebar}
                 showToolbar={showToolbar}
                 hasTopNav={shouldShowNavigation}
                 embedded={embedded}

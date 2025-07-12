@@ -21,8 +21,11 @@ from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    Height,
     WidthWithoutContent,
+    get_height_config,
     get_width_config,
+    validate_height,
     validate_width,
 )
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -34,7 +37,6 @@ from streamlit.errors import (
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
-from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
 
@@ -51,9 +53,10 @@ class LayoutsMixin:
     def container(
         self,
         *,
-        height: int | None = None,
         border: bool | None = None,
         key: Key | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -67,11 +70,12 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        height : int or None
-            Desired height of the container expressed in pixels. If ``None`` (default)
+        height : int, "content", or "stretch"
+            Desired height of the container expressed in pixels. If ``content`` (default),
             the container grows to fit its content. If a fixed height, scrolling is
             enabled for large content and a grey border is shown around the container
-            to visually separate its scroll surface from the rest of the app.
+            to visually separate its scroll surface from the rest of the app. If ``stretch``,
+            Streamlit sets the height of the container to match the height of the parent container
 
             .. note::
                 Use scrolling containers sparingly. If you use scrolling
@@ -91,6 +95,11 @@ class LayoutsMixin:
             Additionally, if ``key`` is provided, it will be used as CSS
             class name prefixed with ``st-key-``.
 
+        width : int or "stretch"
+            The desired width of the container expressed in pixels. If this is
+            ``"stretch"`` (default), Streamlit sets the width of the container to
+            match the width of the parent container. If an integer is provided,
+            the container will be set to the specified width.
 
         Examples
         --------
@@ -157,24 +166,23 @@ class LayoutsMixin:
         key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
-        block_proto.flex_container.border = border or False
         block_proto.flex_container.wrap = False
+
+        validate_width(width)
+        block_proto.width_config.CopyFrom(get_width_config(width))
 
         if isinstance(height, int) or border:
             block_proto.allow_empty = True
 
-        if height:
-            # Activate scrolling container behavior:
-            height_config = HeightConfig()
-            height_config.pixel_height = height
-            # Use block-level height_config instead of flex_container
-            block_proto.height_config.CopyFrom(height_config)
+        if border is not None:
+            block_proto.flex_container.border = border
+        elif isinstance(height, int):
+            block_proto.flex_container.border = True
+        else:
+            block_proto.flex_container.border = False
 
-            if border is None:
-                # If border is None, we activated the
-                # border as default setting for scrolling
-                # containers.
-                block_proto.flex_container.border = True
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
 
         if key:
             # At the moment, the ID is only used for extracting the
@@ -196,6 +204,7 @@ class LayoutsMixin:
         gap: Literal["small", "medium", "large"] | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -243,6 +252,14 @@ class LayoutsMixin:
             Whether to show a border around the column containers. If this is
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown around each column.
+
+        width : int or "stretch"
+            The desired width of the columns expressed in pixels. If this is
+            ``"stretch"`` (default), Streamlit sets the width of the columns to
+            match the width of the parent container. Otherwise, this must be an
+            integer. If the specified width is greater than the width of the
+            parent container, Streamlit sets the width of the columns to match
+            the width of the parent container.
 
         Returns
         -------
@@ -413,6 +430,10 @@ class LayoutsMixin:
         block_proto.flex_container.wrap = True
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
+
+        validate_width(width=width)
+        block_proto.width_config.CopyFrom(get_width_config(width=width))
+
         row = self.dg._block(block_proto)
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
