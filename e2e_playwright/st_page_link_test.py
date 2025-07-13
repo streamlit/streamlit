@@ -30,7 +30,7 @@ def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
     # (one for normal, one for mobile tooltip) so indices are off
     page_link_links = page_link_elements.get_by_test_id("stPageLink-NavLink")
 
-    assert_snapshot(page_link_links.nth(8), name="st_page_link-default")
+    assert_snapshot(page_link_links.nth(6), name="st_page_link-default")
     assert_snapshot(page_link_links.nth(9), name="st_page_link-icon")
     # help button before this means three in between these.
     assert_snapshot(page_link_links.nth(12), name="st_page_link-disabled")
