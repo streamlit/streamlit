@@ -19,13 +19,14 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 from e2e_playwright.shared.vega_utils import (
     assert_vega_chart_height,
     assert_vega_chart_width,
 )
 
-TOTAL_LINE_CHARTS = 13
+TOTAL_LINE_CHARTS = 15
 
 
 def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -58,7 +59,30 @@ def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
         line_chart_elements.nth(10), name="st_line_chart-custom_axis_labels"
     )
     # The column_order chart (index 11) is tested separately in test_column_order_with_colors
-    # The add_rows chart (index 12) is tested separately in test_add_rows_preserves_styling
+    # The width=content chart (index 12) is tested separately in test_line_chart_width_height
+    # The height=stretch chart (index 13) is tested separately in test_line_chart_width_height
+    # The add_rows chart (index 14) is tested separately in test_add_rows_preserves_styling
+
+
+def test_line_chart_width_height(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.line_chart renders correctly with different width and height."""
+    content_width_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
+
+    # make sure the canvas is rendered.
+    expect(content_width_chart.locator("canvas")).to_have_count(1)
+    assert_snapshot(
+        content_width_chart,
+        name="st_line_chart-width_content",
+    )
+
+    stretch_height_chart_container = get_element_by_key(app, "test_height_stretch")
+
+    # make sure the canvas is rendered.
+    expect(stretch_height_chart_container.locator("canvas")).to_have_count(1)
+    assert_snapshot(
+        stretch_height_chart_container,
+        name="st_line_chart-height_stretch",
+    )
 
 
 def test_themed_line_chart_rendering(
@@ -115,7 +139,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     """Test that add_rows preserves the original styling params (color, width, height,
     use_container_width).
     """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
+    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(14)
     expect(add_rows_chart).to_be_visible()
 
     # Click the button to add data to the chart

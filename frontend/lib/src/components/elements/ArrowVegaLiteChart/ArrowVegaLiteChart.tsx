@@ -123,7 +123,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
   const element = useVegaElementPreprocessor(
     inputElement,
-    // Facet charts enter a loop when using the width from the StyledVegaLiteChartContainer.
+    // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
     isFacet ? (fullScreenWidth ?? 0) : containerWidth,
     isFacet ? (fullScreenHeight ?? 0) : containerHeight,
     useContainerWidth,
