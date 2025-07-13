@@ -57,7 +57,7 @@ def test_page_link_help_tooltip(app: Page):
     expect(page_links).to_have_count(PAGE_LINK_COUNT)
 
     # Get the tooltip hover target and ensure it's visible before hovering
-    hover_target = page_links.nth(9).get_by_test_id("stTooltipHoverTarget")
+    hover_target = page_links.nth(8).get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
     # Hover over the tooltip target
