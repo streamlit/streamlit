@@ -938,3 +938,15 @@ class DataEditorTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
+
+    def test_preserves_int_column_labels_when_no_edit(self):
+        """Test that integer column labels are preserved in the round-trip through the editor."""
+        # Create a DataFrame with integer column names
+        df = pd.DataFrame([[1, 2]], columns=[0, 1])
+
+        # Round-trip through the editor without renaming any columns
+        edited = st.data_editor(df, key="no_edit_int_cols")
+
+        # Expect the same integer column names back
+        assert list(edited.columns) == [0, 1]
+        assert all(isinstance(col, int) for col in edited.columns)
