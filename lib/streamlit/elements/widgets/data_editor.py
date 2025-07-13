@@ -881,6 +881,9 @@ class DataEditorMixin:
 
         apply_data_specific_configs(column_config_mapping, data_format)
 
+        # Remember original column labels so we can restore them later
+        original_columns = data_df.columns.copy()
+        
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
 
@@ -1012,6 +1015,11 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
+        # Put the original labels back if they were coerced to strings
+        # (skip MultiIndex because we already flatten those)
+        if list(original_columns) != list(data_df.columns) and not isinstance(original_columns, pd.MultiIndex):
+            data_df.columns = original_columns
+
         self.dg._enqueue("arrow_data_frame", proto)
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
