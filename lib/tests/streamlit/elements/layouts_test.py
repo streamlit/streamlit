@@ -525,7 +525,7 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
     @patch("streamlit.elements.layouts.show_deprecation_warning")
     def test_use_container_width_true(self, mock_show_deprecation_warning):
         """Test use_container_width=True is mapped to width='stretch' and shows deprecation warning."""
-        test_widths = [200, "content", "stretch"]
+        test_widths = [200, "content", "stretch", None]
 
         for width in test_widths:
             with self.subTest(width=width):
@@ -550,13 +550,14 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
                 "For `use_container_width=True`, use `width='stretch'`. "
                 "For `use_container_width=False`, use `width='content'`.",
                 include_st_prefix=False,
-            )
+            ),
+            show_in_browser=False,
         )
 
     @patch("streamlit.elements.layouts.show_deprecation_warning")
     def test_use_container_width_false(self, mock_show_deprecation_warning):
         """Test use_container_width=False is mapped to width='content' and shows deprecation warning."""
-        test_widths = [200, "stretch", "content"]
+        test_widths = [200, "stretch", "content", None]
 
         for width in test_widths:
             with self.subTest(width=width):
@@ -581,7 +582,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
                 "For `use_container_width=True`, use `width='stretch'`. "
                 "For `use_container_width=False`, use `width='content'`.",
                 include_st_prefix=False,
-            )
+            ),
+            show_in_browser=False,
         )
 
     def test_disabled(self):
