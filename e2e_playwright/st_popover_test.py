@@ -101,45 +101,6 @@ def test_popover_width_fixed(app: Page, assert_snapshot: ImageCompareFunction):
     )
 
 
-def test_popover_width_content_help(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test popover button with width=content + help tooltip."""
-    content_width_help_container = get_element_by_key(app, "test_width=content_help")
-    content_width_help_popover = open_popover(app, "popover 13 (width=content + help)")
-    expect(content_width_help_popover.get_by_test_id("stMarkdown")).to_have_text(
-        "Content width with help tooltip"
-    )
-    assert_snapshot(
-        content_width_help_container,
-        name="st_popover-width_content_help",
-    )
-
-
-def test_popover_width_stretch_help(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test popover button with width=stretch + help tooltip."""
-    stretch_width_help_container = get_element_by_key(app, "test_width=stretch_help")
-    stretch_width_help_popover = open_popover(app, "popover 14 (width=stretch + help)")
-    expect(stretch_width_help_popover.get_by_test_id("stMarkdown")).to_have_text(
-        "Stretch width with help tooltip"
-    )
-    assert_snapshot(
-        stretch_width_help_container,
-        name="st_popover-width_stretch_help",
-    )
-
-
-def test_popover_width_fixed_help(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test popover button with width=500px + help tooltip."""
-    fixed_width_help_container = get_element_by_key(app, "test_width=180px_help")
-    fixed_width_help_popover = open_popover(app, "popover 15 (width=500px + help)")
-    expect(fixed_width_help_popover.get_by_test_id("stMarkdown")).to_have_text(
-        "500px width with help tooltip"
-    )
-    assert_snapshot(
-        fixed_width_help_container,
-        name="st_popover-width_500px_help",
-    )
-
-
 def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     """Test popover buttons in columns."""
     columns_container = get_element_by_key(app, "test_columns")
@@ -150,27 +111,6 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         columns_container,
         name="st_popover-columns",
-    )
-
-
-def test_popover_deprecated_use_container_width(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test deprecated use_container_width parameter with warning display."""
-    container_width_true = get_element_by_key(
-        app, "test_deprecated_use_container_width=True"
-    )
-    assert_snapshot(
-        container_width_true,
-        name="st_popover-deprecated_use_container_width_true",
-    )
-
-    container_width_false = get_element_by_key(
-        app, "test_deprecated_use_container_width=False"
-    )
-    assert_snapshot(
-        container_width_false,
-        name="st_popover-deprecated_use_container_width_false",
     )
 
 

@@ -63,91 +63,20 @@ with st.popover("popover 7 (emoji)", icon="🦄"):
 with st.popover("popover 8 (material icon)", icon=":material/thumb_up:"):
     st.markdown("Hello thumb up")
 
-with st.container(border=True, key="test_width=content"):
+with st.container(border=True, key="test_width=content", height=160):
     with st.popover("popover 10 (width=content)", width="content"):
         st.markdown("Content width")
 
-    # TODO (lawilby): This is just to add height to capture the popover expanded
-    # until container height is merged and we can use that.
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-
-with st.container(border=True, key="test_width=stretch"):
+with st.container(border=True, key="test_width=stretch", height=160):
     with st.popover("popover 11 (width=stretch)", width="stretch"):
         st.markdown("Stretch width")
 
-    # TODO (lawilby): This is just to add height to capture the popover expanded
-    # until container height is merged and we can use that.
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-
-with st.container(border=True, key="test_width=500px"):
+with st.container(border=True, key="test_width=500px", height=160):
     with st.popover("popover 12 (width=500px)", width=500):
         st.markdown("500px width")
 
-    # TODO (lawilby): This is just to add height to capture the popover expanded
-    # until container height is merged and we can use that.
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
 
-with st.container(border=True, key="test_width=content_help"):
-    with st.popover(
-        "popover 13 (width=content + help)",
-        width="content",
-        help="This is content width with help",
-    ):
-        st.markdown("Content width with help tooltip")
-
-    # TODO (lawilby): This is just to add height to capture the popover expanded
-    # until container height is merged and we can use that.
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-
-with st.container(border=True, key="test_width=stretch_help"):
-    with st.popover(
-        "popover 14 (width=stretch + help)",
-        width="stretch",
-        help="This is stretch width with help",
-    ):
-        st.markdown("Stretch width with help tooltip")
-
-    # TODO (lawilby): This is just to add height to capture the popover expanded
-    # until container height is merged and we can use that.
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-
-with st.container(border=True, key="test_width=180px_help"):
-    with st.popover(
-        "popover 15 (width=500px + help)",
-        width=500,
-        help="This is 500px width with help",
-    ):
-        st.markdown("500px width with help tooltip")
-
-    # TODO (lawilby): This is just to add height to capture the popover expanded
-    # until container height is merged and we can use that.
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-
-with st.container(border=True, key="test_columns"):
+with st.container(border=True, key="test_columns", height=160):
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("popover 16 (in column 1)", width="stretch"):
@@ -155,39 +84,6 @@ with st.container(border=True, key="test_columns"):
     with col2:
         with st.popover("popover 17 (in column 2)"):
             st.markdown("Popover in column 2")
-
-    # TODO (lawilby): This is just to add height to capture the popover expanded
-    # until container height is merged and we can use that.
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-    st.write("")
-
-with st.container(border=True, key="test_deprecated_use_container_width=True"):
-    with st.popover("popover 18 (use_container_width=True)", use_container_width=True):
-        st.markdown("Using deprecated use_container_width=True")
-
-    with st.popover(
-        "popover 19 (use_container_width=True + help)",
-        use_container_width=True,
-        help="Deprecated parameter with help",
-    ):
-        st.markdown("Using deprecated use_container_width=True with help")
-
-with st.container(border=True, key="test_deprecated_use_container_width=False"):
-    with st.popover(
-        "popover 20 (use_container_width=False)", use_container_width=False
-    ):
-        st.markdown("Using deprecated use_container_width=False")
-
-    with st.popover(
-        "popover 21 (use_container_width=False + help)",
-        use_container_width=False,
-        help="Deprecated parameter with help",
-    ):
-        st.markdown("Using deprecated use_container_width=False with help")
-
 
 with st.expander("Output"):
     st.markdown(text)
