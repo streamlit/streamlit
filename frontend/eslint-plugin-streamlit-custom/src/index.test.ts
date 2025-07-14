@@ -24,11 +24,12 @@ describe("eslint-plugin-streamlit-custom", () => {
     expect(plugin.rules).toHaveProperty("use-strict-null-equality-checks")
     expect(plugin.rules).toHaveProperty("no-hardcoded-theme-values")
     expect(plugin.rules).toHaveProperty("enforce-memo")
+    expect(plugin.rules).toHaveProperty("no-force-reflow-access")
   })
 
   it("should have correct rule structure", () => {
     const ruleNames = Object.keys(plugin.rules)
-    expect(ruleNames).toHaveLength(3)
+    expect(ruleNames).toHaveLength(4)
 
     ruleNames.forEach(ruleName => {
       const rule = plugin.rules[ruleName as keyof typeof plugin.rules]
