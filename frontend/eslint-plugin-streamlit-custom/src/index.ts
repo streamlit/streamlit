@@ -17,11 +17,13 @@
 import useStrictNullEqualityChecks from "./use-strict-null-equality-checks"
 import noHardcodedThemeValues from "./no-hardcoded-theme-values"
 import enforceMemo from "./enforce-memo"
+import noForceReflowAccess from "./no-force-reflow-access"
 
 export default {
   rules: {
     "use-strict-null-equality-checks": useStrictNullEqualityChecks,
     "no-hardcoded-theme-values": noHardcodedThemeValues,
     "enforce-memo": enforceMemo,
+    "no-force-reflow-access": noForceReflowAccess,
   },
 }
