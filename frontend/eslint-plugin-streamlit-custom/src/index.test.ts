@@ -21,15 +21,23 @@ import plugin from "./index"
 describe("eslint-plugin-streamlit-custom", () => {
   it("should export rules", () => {
     expect(plugin).toHaveProperty("rules")
-    expect(plugin.rules).toHaveProperty("use-strict-null-equality-checks")
-    expect(plugin.rules).toHaveProperty("no-hardcoded-theme-values")
-    expect(plugin.rules).toHaveProperty("enforce-memo")
-    expect(plugin.rules).toHaveProperty("no-force-reflow-access")
+
+    const EXPECTED_RULES = [
+      "use-strict-null-equality-checks",
+      "no-hardcoded-theme-values",
+      "enforce-memo",
+      "no-force-reflow-access",
+    ]
+
+    expect(Object.keys(plugin.rules)).toHaveLength(EXPECTED_RULES.length)
+
+    EXPECTED_RULES.forEach(ruleName => {
+      expect(plugin.rules).toHaveProperty(ruleName)
+    })
   })
 
   it("should have correct rule structure", () => {
     const ruleNames = Object.keys(plugin.rules)
-    expect(ruleNames).toHaveLength(4)
 
     ruleNames.forEach(ruleName => {
       const rule = plugin.rules[ruleName as keyof typeof plugin.rules]
