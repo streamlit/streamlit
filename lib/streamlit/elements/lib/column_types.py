@@ -724,7 +724,7 @@ def LinkColumn(
 
         - ``None`` (default) to display the URL itself.
         - A string that is displayed in every cell, e.g. ``"Open link"``.
-        - A material icon displayed in every cell, e.g. ``":material/open_in_new:"``
+        - A Material icon displayed in every cell, e.g. ``":material/open_in_new:"``.
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
           ``"https://(.*?)\.example\.com"`` to extract the display text
