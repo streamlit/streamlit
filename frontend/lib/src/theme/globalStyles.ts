@@ -192,8 +192,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   }
 
   // Safari doesn't support scrollbar colors so we style the scrollbar
-  // using the old webkit-only properties and hide it manually through
-  // the clip-path property when not hovered.
+  // using the old webkit-only properties.
   @supports not (scrollbar-color: transparent transparent) {
     .hideScrollbar {
       clip-path: inset(0px var(--scrollbar-width) 0px 0px);
@@ -214,18 +213,17 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
     ::-webkit-scrollbar {
       background: transparent;
-    }
-
-    ::-webkit-scrollbar:vertical {
+      border-radius: ${theme.radii.full};
+      height: 6px;
       width: 6px;
     }
 
-    ::-webkit-scrollbar:horizontal {
-      height: 6px;
+    ::-webkit-scrollbar:active {
+      background: ${theme.colors.fadedText10};
     }
 
-    ::-webkit-scrollbar-thumb:vertical,
-    ::-webkit-scrollbar-thumb:horizontal {
+    :hover::-webkit-scrollbar-thumb:vertical,
+    :hover::-webkit-scrollbar-thumb:horizontal {
       background: ${theme.colors.fadedText40};
       border-radius: ${theme.radii.full};
     }
