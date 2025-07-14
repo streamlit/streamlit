@@ -22,21 +22,21 @@ np.random.seed(0)
 data = np.random.randn(100, 100)
 
 df = pd.DataFrame(data)
-st.dataframe(df, use_container_width=False)
+st.dataframe(df, width="content")
 st.dataframe(df, 250, 150)
 st.dataframe(df, width=250)
-st.dataframe(df, height=150, use_container_width=False)
+st.dataframe(df, height=150, width="content")
 st.dataframe(df, 5000, 5000)
-st.dataframe(df, use_container_width=True)
+st.dataframe(df, width="stretch")
 
 small_df = pd.DataFrame(np.random.randn(100, 3))
 st.dataframe(small_df, width=500)
-st.dataframe(small_df, use_container_width=True)
+st.dataframe(small_df)
 st.dataframe(small_df, width=200, use_container_width=True)
 st.dataframe(small_df, width=200, use_container_width=False)
 
 one_col_df = pd.DataFrame(np.random.randn(100, 1))
-st.dataframe(one_col_df, use_container_width=True)
+st.dataframe(one_col_df, width="stretch")
 
 if st.button("Resize dataframe"):
     st.dataframe(small_df, width=400, height=200)

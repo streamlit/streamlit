@@ -35,6 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 def mock_data_frame():
@@ -53,13 +54,18 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"a": [1, 2, 3]})
         st.dataframe(df)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        el = self.get_delta_from_queue().new_element
+        proto = el.arrow_data_frame
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
+
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
 
         # Since dataframe and data editor share the same proto, we also test for
         # properties only relevant for an editable dataframe.
-        assert proto.use_container_width
-        assert proto.width == 0
         assert proto.height == 0
         assert proto.editing_mode == ArrowProto.EditingMode.READ_ONLY
         assert proto.selection_mode == []
@@ -81,13 +87,79 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
 
     def test_dataframe_width_parameter(self):
-        """Test that it can be called with width and uses use_container_width=False
-        as default."""
         st.dataframe(pd.DataFrame(), width=100)
 
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        assert proto.width == 100
-        assert not proto.use_container_width
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 100
+
+    def test_dataframe_width_content(self):
+        """Test that width='content' sets widthConfig correctly."""
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), width="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_dataframe_width_stretch_explicit(self):
+        """Test that width='stretch' sets widthConfig correctly."""
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), width="stretch")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_dataframe_use_container_width_deprecated(self):
+        """Test that use_container_width parameter shows deprecation warning."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning") as mock_warning:
+            st.dataframe(pd.DataFrame(), use_container_width=True)
+
+            # Check deprecation warning is shown
+            mock_warning.assert_called_once()
+            assert "use_container_width" in mock_warning.call_args[0][0]
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=True, it should set width='stretch'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_dataframe_use_container_width_false(self):
+        """Test use_container_width=False sets width='content'."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning"):
+            st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), use_container_width=False)
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False, it should set width='content'
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
+    def test_dataframe_use_container_width_false_with_integer_width(self):
+        """Test use_container_width=False with integer width preserves the integer."""
+        with patch("streamlit.elements.arrow.show_deprecation_warning"):
+            st.dataframe(pd.DataFrame(), width=400, use_container_width=False)
+
+        el = self.get_delta_from_queue().new_element
+        # When use_container_width=False with integer width, keep the integer width
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert el.width_config.pixel_width == 400
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
