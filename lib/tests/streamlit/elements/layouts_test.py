@@ -286,6 +286,32 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[1].add_block.column.show_border
         assert columns_blocks[2].add_block.column.show_border
 
+    def test_width_config_pixel_width(self):
+        """Test that width configuration works correctly"""
+        st.columns(3, width=200)
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.width_config.pixel_width == 200
+
+    def test_width_config_stretch(self):
+        """Test that width configuration works correctly"""
+        st.columns(3, width="stretch")
+        columns_block = self.get_delta_from_queue(0)
+        assert columns_block.add_block.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+            ("content",),
+        ]
+    )
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.columns(3, width=invalid_width)
+
 
 class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):
@@ -420,6 +446,56 @@ class ContainerTest(DeltaGeneratorTestCase):
         # Should allow empty and have a border as default:
         assert container_block.add_block.flex_container.border
         assert container_block.add_block.allow_empty
+
+    def test_width_config(self):
+        """Test that width configuration works correctly"""
+        st.container(width=200)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.width_config.pixel_width == 200
+
+        st.container(width="stretch")
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+        ]
+    )
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.container(width=invalid_width)
+
+    def test_height_config(self):
+        """Test that height configuration works correctly"""
+        st.container(height=200)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.height_config.pixel_height == 200
+
+        st.container(height="stretch")
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.height_config.use_stretch
+
+        st.container(height="content")
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.height_config.use_content
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+        ]
+    )
+    def test_invalid_height(self, invalid_height):
+        """Test that invalid height values raise an error"""
+        with pytest.raises(StreamlitAPIException):
+            st.container(height=invalid_height)
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):

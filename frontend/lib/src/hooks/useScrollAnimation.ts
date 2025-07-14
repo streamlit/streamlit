@@ -91,6 +91,7 @@ export default function useScrollAnimation(
 
       animator.current = requestAnimationFrame(() => {
         if (target) {
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
           const toNumber = target.scrollHeight - target.offsetHeight
           let nextValue = step(
             from,
@@ -127,6 +128,7 @@ export default function useScrollAnimation(
     if (!target || !isAnimating || !active) {
       return
     }
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     animate(target.scrollTop, 1)
 
     if (target) {

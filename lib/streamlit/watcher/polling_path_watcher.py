@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Final
 
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -116,7 +117,7 @@ class PollingPathWatcher:
             if md5 == self._md5:
                 self._schedule()
                 return
-        except Exception as ex:
+        except StreamlitMaxRetriesError as ex:
             _LOGGER.debug(
                 "Ignoring file change. Failed to calculate MD5 for path %s",
                 self._path,

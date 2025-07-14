@@ -494,6 +494,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.codeFont",
                 "theme.codeFontSize",
                 "theme.codeFontWeight",
+                "theme.headingFontSizes",
                 "theme.headingFontWeights",
                 "theme.fontFaces",
                 "theme.borderColor",
@@ -505,6 +506,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.dataframeHeaderBackgroundColor",
                 "theme.showSidebarBorder",
                 "theme.chartCategoricalColors",
+                "theme.chartSequentialColors",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
                 "theme.sidebar.secondaryBackgroundColor",
@@ -515,6 +517,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
                 "theme.sidebar.codeFontSize",
+                "theme.sidebar.headingFontSizes",
                 "theme.sidebar.headingFontWeights",
                 "theme.sidebar.borderColor",
                 "theme.sidebar.dataframeBorderColor",
@@ -696,8 +699,10 @@ class ConfigTest(unittest.TestCase):
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
+            "headingFontSizes": None,
             "headingFontWeights": None,
             "chartCategoricalColors": None,
+            "chartSequentialColors": None,
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -738,9 +743,17 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.baseFontWeight", 300, "test")
         config._set_option("theme.headingFontWeights", [700, 600, 500], "test")
+        config._set_option(
+            "theme.headingFontSizes",
+            ["2.875rem", "2.75rem", "2rem", "1.75rem", "1.5rem", "1.25rem"],
+            "test",
+        )
         config._set_option("theme.showSidebarBorder", True, "test")
         config._set_option(
             "theme.chartCategoricalColors", ["#000000", "#111111", "#222222"], "test"
+        )
+        config._set_option(
+            "theme.chartSequentialColors", ["#000000", "#111111", "#222222"], "test"
         )
 
         expected = {
@@ -761,6 +774,14 @@ class ConfigTest(unittest.TestCase):
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
             "codeFontWeight": 300,
+            "headingFontSizes": [
+                "2.875rem",
+                "2.75rem",
+                "2rem",
+                "1.75rem",
+                "1.5rem",
+                "1.25rem",
+            ],
             "headingFontWeights": [700, 600, 500],
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
@@ -775,6 +796,7 @@ class ConfigTest(unittest.TestCase):
             "baseFontWeight": 300,
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
+            "chartSequentialColors": ["#000000", "#111111", "#222222"],
         }
         assert config.get_options_for_section("theme") == expected
 
@@ -797,6 +819,9 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.sidebar.codeFontSize", "12px", "test")
+        config._set_option(
+            "theme.sidebar.headingFontSizes", ["2.875rem", "2.75rem"], "test"
+        )
         config._set_option("theme.sidebar.headingFontWeights", [600, 500, 500], "test")
         config._set_option("theme.sidebar.codeBackgroundColor", "#29361e", "test")
         config._set_option(
@@ -819,6 +844,7 @@ class ConfigTest(unittest.TestCase):
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
+            "headingFontSizes": ["2.875rem", "2.75rem"],
             "headingFontWeights": [600, 500, 500],
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",

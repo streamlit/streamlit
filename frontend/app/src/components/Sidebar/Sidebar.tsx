@@ -139,6 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     ) => {
       // Use the actual ref width, not the delta, to avoid stale delta values
       if (ref) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         const newWidth = ref.clientWidth || ref.offsetWidth
         initializeSidebarWidth(newWidth)
       }

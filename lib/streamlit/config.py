@@ -1195,6 +1195,128 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "fontFaces",
+    categories=["theme"],
+    description="""
+        An array of fonts to use in your app.
+
+        Each font in the array is a table (dictionary) that can have the
+        following attributes, closely resembling CSS font-face definitions:
+        - family
+        - url
+        - weight (optional)
+        - style (optional)
+        - unicodeRange (optional)
+
+        To host a font with your app, enable static file serving with
+        `server.enableStaticServing=true`.
+
+        You can define multiple [[theme.fontFaces]] tables, including multiple
+        tables with the same family if your font is defined by multiple files.
+
+        For example, a font hosted with your app may have a [[theme.fontFaces]]
+        table as follows:
+
+            [[theme.fontFaces]]
+            family = "font_name"
+            url = "app/static/font_file.woff"
+            weight = "400"
+            style = "normal"
+    """,
+)
+
+_create_theme_options(
+    "baseFontSize",
+    categories=["theme"],
+    description="""
+        Sets the root font size (in pixels) for the app.
+
+        This determines the overall scale of text and UI elements.
+
+        When unset, the font size will be 16px.
+    """,
+    type_=int,
+)
+
+_create_theme_options(
+    "baseFontWeight",
+    categories=["theme"],
+    description="""
+        Sets the root font weight for the app.
+
+        This determines the overall weight of text and UI elements.
+        Valid values are 100-600, in increments of 100.
+
+        When unset, the font weight will be set to normal 400.
+    """,
+    type_=int,
+)
+
+_create_theme_options(
+    "headingFont",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        The font family to use for headings.
+
+        This can be one of the following:
+        - "sans-serif"
+        - "serif"
+        - "monospace"
+        - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A comma-separated list of these (as a single string) to specify
+          fallbacks
+
+        If no heading font is set, Streamlit uses `theme.font` for headings.
+    """,
+)
+
+_create_theme_options(
+    "headingFontSizes",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Sets the font weight for h1-h6 headings. Valid values are in pixels or rem.
+
+        When unset, the font weights will be set to defaults:
+        - h1: 2.75rem (1.5rem for sidebar)
+        - h2: 2.25rem (1.25rem for sidebar)
+        - h3: 1.75rem (1.125rem for sidebar)
+        - h4: 1.5rem (1rem for sidebar)
+        - h5: 1.25rem (0.875rem for sidebar)
+        - h6: 1rem (0.75rem for sidebar)
+
+        For example, you can use the following to set the font sizes for h1-h6:
+            headingFontSizes = ["3rem", "2.875rem", "2.75rem", "2.5rem", "2.25rem", "2rem"]
+
+        If you only want to set h1-h3:
+            headingFontSizes = ["3rem", "2.875rem", "2.75rem"]
+
+        Setting a single value will set the font size for all h1-h6 headings to that value:
+            headingFontSizes = "2.75rem"
+    """,
+)
+
+_create_theme_options(
+    "headingFontWeights",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Sets the font weight for h1-h6 headings. Valid values are 100-900, in increments of 100.
+
+        When unset, the font weights will be set to defaults:
+        - h1: bold 700
+        - h2-h6: semi-bold 600
+
+        For example, you can use the following to set the font weight for h1 to 700 and h2-h6 to 600:
+            headingFontWeights = [700, 600, 600, 600, 600, 600]
+
+        If you only want to set h1-h3:
+            headingFontWeights = [700, 600, 500]
+
+        Setting a single value will set the font weight for all h1-h6 headings to that value:
+            headingFontWeights = 700
+    """,
+)
+
+_create_theme_options(
     "codeFont",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
@@ -1235,55 +1357,6 @@ _create_theme_options(
         When unset, the default code font weight will be 400.
     """,
     type_=int,
-)
-
-_create_theme_options(
-    "headingFont",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
-    description="""
-        The font family to use for headings.
-
-        This can be one of the following:
-        - "sans-serif"
-        - "serif"
-        - "monospace"
-        - The `family` value for a custom font table under [[theme.fontFaces]]
-        - A comma-separated list of these (as a single string) to specify
-          fallbacks
-
-        If no heading font is set, Streamlit uses `theme.font` for headings.
-    """,
-)
-
-_create_theme_options(
-    "fontFaces",
-    categories=["theme"],
-    description="""
-        An array of fonts to use in your app.
-
-        Each font in the array is a table (dictionary) that can have the
-        following attributes, closely resembling CSS font-face definitions:
-        - family
-        - url
-        - weight (optional)
-        - style (optional)
-        - unicodeRange (optional)
-
-        To host a font with your app, enable static file serving with
-        `server.enableStaticServing=true`.
-
-        You can define multiple [[theme.fontFaces]] tables, including multiple
-        tables with the same family if your font is defined by multiple files.
-
-        For example, a font hosted with your app may have a [[theme.fontFaces]]
-        table as follows:
-
-            [[theme.fontFaces]]
-            family = "font_name"
-            url = "app/static/font_file.woff"
-            weight = "400"
-            style = "normal"
-    """,
 )
 
 _create_theme_options(
@@ -1375,53 +1448,6 @@ _create_theme_options(
     type_=bool,
 )
 
-_create_theme_options(
-    "baseFontSize",
-    categories=["theme"],
-    description="""
-        Sets the root font size (in pixels) for the app.
-
-        This determines the overall scale of text and UI elements.
-
-        When unset, the font size will be 16px.
-    """,
-    type_=int,
-)
-
-_create_theme_options(
-    "baseFontWeight",
-    categories=["theme"],
-    description="""
-        Sets the root font weight for the app.
-
-        This determines the overall weight of text and UI elements.
-        Valid values are 100-600, in increments of 100.
-
-        When unset, the font weight will be set to normal 400.
-    """,
-    type_=int,
-)
-
-_create_theme_options(
-    "headingFontWeights",
-    categories=["theme", CustomThemeCategories.SIDEBAR],
-    description="""
-        Sets the font weight for h1-h6 headings. Valid values are 100-900, in increments of 100.
-
-        When unset, the font weights will be set to defaults:
-        - h1: bold 700
-        - h2-h6: semi-bold 600
-
-        For example, you can use the following to set the font weight for h1 to 700 and h2-h6 to 600:
-            headingFontWeights = [700, 600, 600, 600, 600, 600]
-
-        If you only want to set h1-h3:
-            headingFontWeights = [700, 600, 500]
-
-        If you want to set the font weight for all headings to 700, you can do the following:
-            headingFontWeights = 700
-    """,
-)
 
 _create_theme_options(
     "chartCategoricalColors",
@@ -1456,6 +1482,43 @@ _create_theme_options(
             "#ff8700", # orange80
             "#6d3fc0", # purple80
             "#d5dae5", # gray40
+        ]
+    """,
+)
+
+_create_theme_options(
+    "chartSequentialColors",
+    categories=["theme"],
+    description="""
+        An array of 10 colors to use for sequential charts.
+
+        If no chart sequential colors are set (or less than 10 colors provided),
+        Streamlit uses a default set of colors.
+        For light themes the default colors are:
+        [
+            "#e4f5ff", #blue10
+            "#c7ebff", #blue20
+            "#a6dcff", #blue30
+            "#83c9ff", #blue40
+            "#60b4ff", #blue50
+            "#3d9df3", #blue60
+            "#1c83e1", #blue70
+            "#0068c9", #blue80
+            "#0054a3", #blue90
+            "#004280", #blue100
+        ]
+        For dark themes the default colors are:
+        [
+            "#004280", #blue100
+            "#0054a3", #blue90
+            "#0068c9", #blue80
+            "#1c83e1", #blue70
+            "#3d9df3", #blue60
+            "#60b4ff", #blue50
+            "#83c9ff", #blue40
+            "#a6dcff", #blue30
+            "#c7ebff", #blue20
+            "#e4f5ff", #blue10
         ]
     """,
 )
