@@ -56,6 +56,7 @@ import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 import { isNullOrUndefined } from "~lib/util/utils"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { LibContext } from "~lib/components/core/LibContext"
+import { ScrollbarWidthContext } from "~lib/components/core/ScrollbarWidthContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -95,8 +96,6 @@ const DEBOUNCE_TIME_MS = 150
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
-// The size in px of the customized webkit scrollbar (defined in globalStyles)
-const WEBKIT_SCROLLBAR_SIZE = 6
 
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
@@ -149,6 +148,7 @@ function DataFrame({
   const dataEditorRef = useRef<DataEditorRef>(null)
   const resizableContainerRef = useRef<HTMLDivElement>(null)
 
+  const scrollbarWidth = useContext(ScrollbarWidthContext)
   const gridTheme = useCustomTheme()
 
   const { getRowThemeOverride, onItemHovered: handleRowHover } =
@@ -722,14 +722,14 @@ function DataFrame({
             // if the mouse is one pixel outside of the scrollbar. Therefore, we add
             // an additional pixel.
             hasHorizontalScroll &&
-            boundingClient.height - (WEBKIT_SCROLLBAR_SIZE + 1) <
+            boundingClient.height - (scrollbarWidth + 1) <
               e.clientY - boundingClient.top
           ) {
             e.stopPropagation()
           }
           if (
             hasVerticalScroll &&
-            boundingClient.width - (WEBKIT_SCROLLBAR_SIZE + 1) <
+            boundingClient.width - (scrollbarWidth + 1) <
               e.clientX - boundingClient.left
           ) {
             e.stopPropagation()
@@ -1017,12 +1017,8 @@ function DataFrame({
             ...(hasCustomizedScrollbars && {
               // Add negative padding to the right and bottom to allow the scrollbars in
               // webkit to overlay the table:
-              paddingBottom: hasHorizontalScroll
-                ? -WEBKIT_SCROLLBAR_SIZE
-                : undefined,
-              paddingRight: hasVerticalScroll
-                ? -WEBKIT_SCROLLBAR_SIZE
-                : undefined,
+              paddingBottom: hasHorizontalScroll ? -scrollbarWidth : undefined,
+              paddingRight: hasVerticalScroll ? -scrollbarWidth : undefined,
             }),
           }}
           provideEditor={provideEditor}

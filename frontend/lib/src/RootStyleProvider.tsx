@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 
 import { BaseProvider } from "baseui"
 import createCache from "@emotion/cache"
@@ -25,6 +25,7 @@ import {
 } from "@emotion/react"
 
 import { globalStyles, ThemeConfig } from "./theme"
+import { ScrollbarWidthContext } from "./components/core/ScrollbarWidthContext"
 
 export interface RootStyleProviderProps {
   theme: ThemeConfig
@@ -43,7 +44,8 @@ const cache = createCache({
 /**
  * React hook to detect the scrollbar width and set it as a CSS custom property (--scrollbar-width).
  */
-const useScrollbarWidth = (): void => {
+const useScrollbarWidth = (): number => {
+  const [scrollbarWidth, setScrollbarWidth] = useState(0)
   useEffect(() => {
     // Create a temporary div to measure scrollbar width
     const outer = document.createElement("div")
@@ -71,7 +73,10 @@ const useScrollbarWidth = (): void => {
       "--scrollbar-width",
       `${calculatedWidth}px`
     )
+    setScrollbarWidth(calculatedWidth)
   }, []) // Run this only once.
+
+  return scrollbarWidth
 }
 
 export function RootStyleProvider(
@@ -80,23 +85,25 @@ export function RootStyleProvider(
   const { children, theme } = props
 
   // Inject the --scrollbar-width variable into :root
-  useScrollbarWidth()
+  const scrollbarWidth = useScrollbarWidth()
 
   return (
-    <BaseProvider
-      theme={theme.basewebTheme}
-      // This zIndex is required for modals/dialog. However,
-      // it would be good to do some investigation
-      // and find a better way to configure the zIndex
-      // for the modals/dialogs.
-      zIndex={theme.emotion.zIndices.popup}
-    >
-      <CacheProvider value={cache}>
-        <EmotionThemeProvider theme={theme.emotion}>
-          <Global styles={globalStyles} />
-          {children}
-        </EmotionThemeProvider>
-      </CacheProvider>
-    </BaseProvider>
+    <ScrollbarWidthContext.Provider value={scrollbarWidth}>
+      <BaseProvider
+        theme={theme.basewebTheme}
+        // This zIndex is required for modals/dialog. However,
+        // it would be good to do some investigation
+        // and find a better way to configure the zIndex
+        // for the modals/dialogs.
+        zIndex={theme.emotion.zIndices.popup}
+      >
+        <CacheProvider value={cache}>
+          <EmotionThemeProvider theme={theme.emotion}>
+            <Global styles={globalStyles} />
+            {children}
+          </EmotionThemeProvider>
+        </CacheProvider>
+      </BaseProvider>
+    </ScrollbarWidthContext.Provider>
   )
 }
