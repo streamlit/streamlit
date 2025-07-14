@@ -39,7 +39,7 @@ export const useWindowDimensions = (): WindowDimensions => {
     const padding = convertRemToPx(theme.spacing.md)
     const paddingTop = convertRemToPx(theme.sizes.fullScreenHeaderHeight)
 
-    // eslint-disable-next-line no-restricted-properties -- The only expected usage of window.{innerWidth,innerHeight}
+    // eslint-disable-next-line no-restricted-properties, streamlit-custom/no-force-reflow-access -- The only expected usage of window.{innerWidth,innerHeight}
     const { innerWidth, innerHeight } = window
 
     return {

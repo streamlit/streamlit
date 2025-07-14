@@ -41,6 +41,7 @@ export const useIsOverflowing = (
   const [isOverflowing, setIsOverflowing] = useState(false)
   const checkOverflowing = useCallback(() => {
     if (current) {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
       const { scrollHeight, clientHeight } = current
 
       setIsOverflowing(scrollHeight > clientHeight)
