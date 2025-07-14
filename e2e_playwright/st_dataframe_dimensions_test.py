@@ -33,10 +33,11 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "200px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
+        {"width": "704px", "height": "3537px"},
     ]
 
     dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(12)
+    expect(dataframe_elements).to_have_count(13)
 
     for i, element in enumerate(dataframe_elements.all()):
         expect(element).to_have_css("width", expected[i]["width"])

@@ -42,3 +42,5 @@ if st.button("Resize dataframe"):
     st.dataframe(small_df, width=400, height=200)
 else:
     st.dataframe(small_df, width=200, height=100)
+
+st.dataframe(df, height="content", width="content")

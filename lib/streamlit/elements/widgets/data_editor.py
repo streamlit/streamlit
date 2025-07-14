@@ -54,6 +54,7 @@ from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
+    validate_height,
     validate_width,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
@@ -588,7 +589,7 @@ class DataEditorMixin:
         data: EditableData,
         *,
         width: Width = "stretch",
-        height: int | None = None,
+        height: int | Literal["auto", "content"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -609,7 +610,7 @@ class DataEditorMixin:
         data: Any,
         *,
         width: Width = "stretch",
-        height: int | None = None,
+        height: int | Literal["auto", "content"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -630,7 +631,7 @@ class DataEditorMixin:
         data: DataTypes,
         *,
         width: Width = "stretch",
-        height: int | None = None,
+        height: int | Literal["auto", "content"] = "auto",
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -677,11 +678,14 @@ class DataEditorMixin:
             than the width of the parent container, Streamlit sets the data editor
             width to match the width of the parent container.
 
-        height : int or None
-            Desired height of the data editor expressed in pixels. If ``height``
-            is ``None`` (default), Streamlit sets the height to show at most
-            ten rows. Vertical scrolling within the data editor element is
-            enabled when the height does not accommodate all rows.
+        height : int, "auto", or "content"
+            Desired height of the data editor. If ``"auto"`` (default),
+            Streamlit sets the height to show at most ten rows. Vertical
+            scrolling within the data editor is enabled when the height
+            does not accommodate all rows. If ``"content"``, Streamlit sets
+            the height to show all rows without vertical scrolling. If an
+            integer, Streamlit sets the height of the data editor to the
+            specified number of pixels.
 
         use_container_width : bool
             .. deprecated::
@@ -856,6 +860,11 @@ class DataEditorMixin:
 
         key = to_key(key)
 
+        validate_width(width, allow_content=True)
+        validate_height(
+            height, allow_content=True, allow_stretch=False, additional_allowed=["auto"]
+        )
+
         check_widget_policies(
             self.dg,
             key,
@@ -880,8 +889,6 @@ class DataEditorMixin:
                 width = "stretch"
             elif not isinstance(width, int):
                 width = "content"
-
-        validate_width(width, allow_content=True)
 
         if column_order is not None:
             column_order = list(column_order)
@@ -993,9 +1000,6 @@ class DataEditorMixin:
         proto = ArrowProto()
         proto.id = element_id
 
-        if height:
-            proto.height = height
-
         if row_height:
             proto.row_height = row_height
 
@@ -1033,7 +1037,11 @@ class DataEditorMixin:
         marshall_column_config(proto, column_config_mapping)
 
         # Create layout configuration
-        layout_config = LayoutConfig(width=width)
+        # For height, only include it in LayoutConfig if it's not "auto"
+        # "auto" is the default behavior and doesn't need to be sent
+        layout_config = LayoutConfig(
+            width=width, height=height if height != "auto" else None
+        )
 
         serde = DataEditorSerde()
 

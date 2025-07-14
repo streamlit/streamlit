@@ -45,6 +45,7 @@ from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
+    validate_height,
     validate_width,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
@@ -234,7 +235,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | None = None,
+        height: int | Literal["auto", "content"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -251,7 +252,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | None = None,
+        height: int | Literal["auto", "content"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -268,7 +269,7 @@ class ArrowMixin:
         self,
         data: Data = None,
         width: Width = "stretch",
-        height: int | None = None,
+        height: int | Literal["auto", "content"] = "auto",
         *,
         use_container_width: bool | None = None,
         hide_index: bool | None = None,
@@ -334,11 +335,14 @@ class ArrowMixin:
             than the width of the parent container, Streamlit sets the dataframe
             width to match the width of the parent container.
 
-        height : int or None
-            Desired height of the dataframe expressed in pixels. If ``height``
-            is ``None`` (default), Streamlit sets the height to show at most
-            ten rows. Vertical scrolling within the dataframe element is
-            enabled when the height does not accommodate all rows.
+        height : int, "auto", or "content"
+            Desired height of the dataframe. If ``"auto"`` (default),
+            Streamlit sets the height to show at most ten rows. Vertical
+            scrolling within the dataframe element is enabled when the height
+            does not accommodate all rows. If ``"content"``, Streamlit sets
+            the height to show all rows without vertical scrolling. If an
+            integer, Streamlit sets the height of the dataframe to the
+            specified number of pixels.
 
         use_container_width : bool
             .. deprecated::
@@ -604,14 +608,14 @@ class ArrowMixin:
                 width = "content"
 
         validate_width(width, allow_content=True)
+        validate_height(
+            height, allow_content=True, allow_stretch=False, additional_allowed=["auto"]
+        )
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
         proto = ArrowProto()
-
-        if height:
-            proto.height = height
 
         if row_height:
             proto.row_height = row_height
@@ -653,7 +657,12 @@ class ArrowMixin:
             )
         marshall_column_config(proto, column_config_mapping)
 
-        layout_config = LayoutConfig(width=width)
+        # Create layout configuration
+        # For height, only include it in LayoutConfig if it's not "auto"
+        # "auto" is the default behavior and doesn't need to be sent
+        layout_config = LayoutConfig(
+            width=width, height=height if height != "auto" else None
+        )
 
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe

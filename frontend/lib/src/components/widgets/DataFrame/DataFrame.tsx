@@ -127,6 +127,7 @@ export interface DataFrameProps {
   fragmentId?: string
   height?: number
   widthConfig?: streamlit.IWidthConfig | null
+  heightConfig?: streamlit.IHeightConfig | null
 }
 
 /**
@@ -145,6 +146,7 @@ function DataFrame({
   disableFullscreenMode,
   fragmentId,
   widthConfig,
+  heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
   const {
     expanded: isFullScreen,
@@ -616,7 +618,8 @@ function DataFrame({
     containerWidth || 0,
     containerHeight,
     isFullScreen,
-    widthConfig
+    widthConfig,
+    heightConfig
   )
 
   // This is used as fallback in case the table is empty to

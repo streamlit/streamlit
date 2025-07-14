@@ -161,6 +161,30 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         )
         assert el.width_config.pixel_width == 400
 
+    def test_dataframe_height_auto_default(self):
+        """Test that default height='auto' doesn't set heightConfig."""
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3]}))
+
+        el = self.get_delta_from_queue().new_element
+        # height="auto" is the default and shouldn't set heightConfig
+        assert el.height_config.WhichOneof("height_spec") is None
+
+    def test_dataframe_height_content(self):
+        """Test that height='content' sets heightConfig correctly."""
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), height="content")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.height_config.WhichOneof("height_spec") == "use_content"
+        assert el.height_config.use_content is True
+
+    def test_dataframe_height_integer(self):
+        """Test that integer height sets heightConfig correctly."""
+        st.dataframe(pd.DataFrame({"a": [1, 2, 3]}), height=500)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.height_config.WhichOneof("height_spec") == "pixel_height"
+        assert el.height_config.pixel_height == 500
+
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
         st.dataframe(pd.DataFrame(), column_order=["a", "b"])

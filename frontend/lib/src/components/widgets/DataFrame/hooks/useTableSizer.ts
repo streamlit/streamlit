@@ -84,6 +84,23 @@ function shouldUseContentWidth(
 }
 
 /**
+ * Helper function to get the configured height from the heightConfig and element.
+ * This handles both the new heightConfig and legacy height fields.
+ */
+function getConfiguredHeight(
+  element: ArrowProto,
+  heightConfig?: streamlit.IHeightConfig | null
+): number | undefined {
+  if (heightConfig) {
+    if (heightConfig.pixelHeight) {
+      return heightConfig.pixelHeight
+    }
+    return undefined
+  }
+  return element.height || undefined
+}
+
+/**
  * A custom React hook that manages all aspects related to the size of the table.
  *
  * @param element - The ArrowProto element
@@ -103,7 +120,8 @@ function useTableSizer(
   containerWidth: number,
   containerHeight?: number,
   isFullScreen?: boolean,
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.IWidthConfig | null,
+  heightConfig?: streamlit.IHeightConfig | null
 ): AutoSizerReturn {
   const rowHeight = element.rowHeight ?? gridTheme.defaultRowHeight
   // Min height for the resizable table container:
@@ -131,19 +149,29 @@ function useTableSizer(
   // resized between min and max height.
   let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
-  if (element.height) {
-    // User has explicitly configured a height
-    initialHeight = Math.max(element.height, minHeight)
-    maxHeight = Math.max(element.height, maxHeight)
+  const configuredHeight = getConfiguredHeight(element, heightConfig)
+  const useContentHeight = heightConfig?.useContent || false
+
+  if (configuredHeight) {
+    // User has explicitly configured a height (integer value)
+    initialHeight = Math.max(configuredHeight, minHeight)
+    maxHeight = Math.max(configuredHeight, maxHeight)
+  } else if (useContentHeight) {
+    // height="content" - show all rows without max height restriction
+    initialHeight = maxHeight
   }
+  // else: height="auto" (default) - use the default behavior (show at most 10 rows)
 
   if (containerHeight) {
     // If container height is set (e.g. when used in fullscreen)
     // The maxHeight and height should not be larger than container height
-    initialHeight = Math.min(initialHeight, containerHeight)
-    maxHeight = Math.min(maxHeight, containerHeight)
+    // UNLESS we're using height="content" which should show all rows
+    if (!useContentHeight) {
+      initialHeight = Math.min(initialHeight, containerHeight)
+      maxHeight = Math.min(maxHeight, containerHeight)
+    }
 
-    if (!element.height) {
+    if (!configuredHeight && !useContentHeight) {
       // If no explicit height is set, set height to max height (fullscreen mode)
       initialHeight = maxHeight
     }
