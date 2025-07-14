@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast
 
@@ -115,7 +116,6 @@ class PdfMixin:
         """Call the custom PDF component with the provided data."""
         # Convert data to the format expected by pdf_viewer component
         file_param: str | bytes
-
 
         if isinstance(data, (str, Path)):
             data_str = str(data)
