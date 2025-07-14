@@ -58,6 +58,7 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
             time.sleep(0.5)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is True
+            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_time()
@@ -70,6 +71,7 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
             time.sleep(0.5)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is False
+            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_no_time()
@@ -82,6 +84,7 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
             time.sleep(0.5)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is True
+            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_time()
@@ -94,6 +97,7 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
             time.sleep(0.5)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is False
+            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_no_time()
