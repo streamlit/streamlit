@@ -465,6 +465,10 @@ def NumberColumn(
         integers. Setting ``step`` for float columns will ensure a consistent
         number of digits after the decimal are displayed.
 
+        If ``format`` is a predefined format like ``"dollar"``, ``step``
+        overrides the display precision. If ``format`` is a printf-style format
+        string, ``step`` will not change the display precision.
+
     Examples
     --------
     >>> import pandas as pd
