@@ -190,13 +190,7 @@ function DataFrame({
 
   // Determine if it uses customized scrollbars (webkit browsers):
   // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
-  const hasCustomizedScrollbars = useMemo<boolean>(
-    () =>
-      (window.navigator.userAgent.includes("Mac OS") &&
-        window.navigator.userAgent.includes("Safari")) ||
-      window.navigator.userAgent.includes("Chrome"),
-    []
-  )
+  const hasCustomizedScrollbars = useMemo<boolean>(() => true, [])
 
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
@@ -710,13 +704,12 @@ function DataFrame({
       data-testid="stDataFrame"
       hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
-      onMouseDown={e => {
+      onPointerDown={e => {
         if (resizableContainerRef.current && hasCustomizedScrollbars) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
             // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
-
           if (
             // For whatever reason, we are still able to use the scrollbars even
             // if the mouse is one pixel outside of the scrollbar. Therefore, we add
@@ -1014,6 +1007,8 @@ function DataFrame({
             // We use overflow scrollbars, so we need to deactivate the native
             // scrollbar override:
             scrollbarWidthOverride: 0,
+            paddingBottom: hasHorizontalScroll ? -scrollbarWidth : undefined,
+            paddingRight: hasVerticalScroll ? -scrollbarWidth : undefined,
             ...(hasCustomizedScrollbars && {
               // Add negative padding to the right and bottom to allow the scrollbars in
               // webkit to overlay the table:
