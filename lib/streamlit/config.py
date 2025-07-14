@@ -1289,7 +1289,7 @@ _create_theme_options(
             "1rem",    # h6 (0.75rem for sidebar)
         ]
 
-        If you specifiy an array with fewer than six sizes, the unspecified
+        If you specify an array with fewer than six sizes, the unspecified
         heading sizes will be the default values. For example, you can use the
         following array to set the font sizes for h1-h3 headings while keeping
         h4-h6 headings at their default sizes:
