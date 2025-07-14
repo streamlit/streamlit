@@ -2942,13 +2942,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@paulirish/trace_engine@npm:0.0.56":
-  version: 0.0.56
-  resolution: "@paulirish/trace_engine@npm:0.0.56"
+"@paulirish/trace_engine@npm:0.0.57":
+  version: 0.0.57
+  resolution: "@paulirish/trace_engine@npm:0.0.57"
   dependencies:
     legacy-javascript: "npm:latest"
     third-party-web: "npm:latest"
-  checksum: 10c0/69e2888158a9de7f2313a48ae38cb59b2efec6eb52051d5753249baf976a1bf53d108a61d8bd6f905561d14a5d5101831537eb96e64cd64600c0c89d063edc68
+  checksum: 10c0/bdac08dd0aca2ddd8a227bed156a9de7246616bc029894c96b226fdbfb35f75558ee9f1219c49bbfb2aa139842ae3f861693ec07763544f226a7c9ab49c10752
   languageName: node
   linkType: hard
 
@@ -3598,7 +3598,7 @@ __metadata:
     iframe-resizer: "npm:4.3.11"
     immer: "npm:^10.1.1"
     jsdom: "npm:24.1.3"
-    lighthouse: "npm:^12.7.0"
+    lighthouse: "npm:^12.8.0"
     lodash: "npm:^4.17.21"
     loglevel: "npm:^1.9.2"
     moment: "npm:^2.29.4"
@@ -13839,11 +13839,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lighthouse@npm:^12.7.0":
-  version: 12.7.0
-  resolution: "lighthouse@npm:12.7.0"
+"lighthouse@npm:^12.8.0":
+  version: 12.8.0
+  resolution: "lighthouse@npm:12.8.0"
   dependencies:
-    "@paulirish/trace_engine": "npm:0.0.56"
+    "@paulirish/trace_engine": "npm:0.0.57"
     "@sentry/node": "npm:^9.28.1"
     axe-core: "npm:^4.10.3"
     chrome-launcher: "npm:^1.2.0"
@@ -13875,7 +13875,7 @@ __metadata:
     chrome-debug: core/scripts/manual-chrome-launcher.js
     lighthouse: cli/index.js
     smokehouse: cli/test/smokehouse/frontends/smokehouse-bin.js
-  checksum: 10c0/94e6cb6d88a369f353773f99dece78ce23d23193b00cca409f6080b9a24ecb40346e557ff5def267518c935f81d536117cb3a74c1cdcec829f33869b82767458
+  checksum: 10c0/5f46f9de1d6a2d0189ce46087040ef7ef99bd988215e013b0c4dd74e2367af12526e35fded6ab44ecbf8124725f5b394baa8520fe81ec85c4b91df2c01f403de
   languageName: node
   linkType: hard
 
