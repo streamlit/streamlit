@@ -52,6 +52,33 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
     "element.scrollIntoViewIfNeeded()",
     "element.focus()",
     "input.select()",
+    // Safe destructuring from config objects
+    "const { offsetWidth, scrollTop } = config",
+    "const { clientHeight } = options",
+    "const { scrollWidth } = settings",
+    "const { innerHeight } = props",
+    "const { offsetLeft } = state",
+    // Destructuring without init
+    "const { scrollWidth } = undefined",
+    // Destructuring with computed property names
+    "const { [key]: value } = element",
+    // Destructuring from null
+    "const { offsetWidth } = null",
+    // Destructuring from literals
+    "const { scrollTop } = 123",
+    "const { clientHeight } = 'string'",
+    "const { offsetLeft } = true",
+    // Destructuring from function calls (abstracts performance concerns)
+    "const { innerWidth } = useWindowDimensionsContext()",
+    "const { scrollWidth } = getDimensions()",
+    "const { offsetHeight } = calculateLayout()",
+    "const { clientWidth } = getElementSize(element)",
+    // Destructuring from hook calls
+    "const { scrollY } = useScrollPosition()",
+    "const { innerHeight } = useViewportSize()",
+    // Destructuring from constructor calls
+    "const { offsetWidth } = new DOMRect()",
+    "const { scrollLeft } = new Object()",
   ],
   invalid: [
     // Element box metrics
@@ -265,7 +292,51 @@ ruleTester.run("no-force-reflow-access", noForceReflowAccess, {
       code: "if (element.clientWidth > 100) { /* ... */ }",
       errors: [{ messageId: "noForceReflowProperty" }],
     },
+    // Destructuring patterns that force reflow (direct element references)
+    {
+      code: "const { scrollWidth, clientWidth } = element",
+      errors: [
+        { messageId: "noForceReflowProperty" },
+        { messageId: "noForceReflowProperty" },
+      ],
+    },
+    {
+      code: "const { offsetWidth } = domElement",
+      errors: [{ messageId: "noForceReflowProperty" }],
+    },
+    {
+      code: "const { scrollTop } = tabListRef.current",
+      errors: [{ messageId: "noForceReflowProperty" }],
+    },
+    {
+      code: "const { clientHeight, offsetLeft } = node",
+      errors: [
+        { messageId: "noForceReflowProperty" },
+        { messageId: "noForceReflowProperty" },
+      ],
+    },
+    {
+      code: "const { innerText } = textElement",
+      errors: [{ messageId: "noForceReflowProperty" }],
+    },
+    {
+      code: "const { scrollX, scrollY } = window",
+      errors: [
+        { messageId: "noForceReflowProperty" },
+        { messageId: "noForceReflowProperty" },
+      ],
+    },
+    {
+      code: "const { offsetX, offsetY } = event",
+      errors: [
+        { messageId: "noForceReflowProperty" },
+        { messageId: "noForceReflowProperty" },
+      ],
+    },
+    // Mixed destructuring with safe and unsafe properties
+    {
+      code: "const { className, scrollWidth } = element",
+      errors: [{ messageId: "noForceReflowProperty" }],
+    },
   ],
 })
-
-console.log("All 'no-force-reflow-access' tests passed!")

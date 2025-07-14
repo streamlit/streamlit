@@ -307,9 +307,83 @@ const noForceReflowAccess = createRule<[], MessageIds>({
       }
     }
 
+    function checkVariableDeclarator(node: TSESTree.VariableDeclarator): void {
+      // Check for destructuring patterns like: const { scrollWidth, clientWidth } = element
+      if (
+        node.id.type === AST_NODE_TYPES.ObjectPattern &&
+        node.init // Make sure there's an initializer
+      ) {
+        // Skip if the init looks like a configuration object
+        if (
+          node.init.type === AST_NODE_TYPES.Identifier &&
+          (node.init.name === "config" ||
+            node.init.name === "options" ||
+            node.init.name === "settings" ||
+            node.init.name === "props" ||
+            node.init.name === "state")
+        ) {
+          return
+        }
+
+        // Skip if the init is undefined or null (these are not DOM elements)
+        if (
+          node.init.type === AST_NODE_TYPES.Identifier &&
+          (node.init.name === "undefined" || node.init.name === "null")
+        ) {
+          return
+        }
+
+        // Skip if the init is a literal (like number, string, boolean)
+        if (node.init.type === AST_NODE_TYPES.Literal) {
+          return
+        }
+
+        // Skip if the init is a function call or hook call (these abstract performance concerns)
+        if (node.init.type === AST_NODE_TYPES.CallExpression) {
+          return
+        }
+
+        // Skip if the init is a new expression (constructor call)
+        if (node.init.type === AST_NODE_TYPES.NewExpression) {
+          return
+        }
+
+        // Only flag destructuring from direct object/element references
+        // This includes:
+        // - Direct identifiers: const { scrollWidth } = element
+        // - Member expressions: const { scrollWidth } = ref.current
+        // - But NOT function calls: const { scrollWidth } = getElement()
+
+        // Check each property in the destructuring pattern
+        for (const property of node.id.properties) {
+          if (
+            property.type === AST_NODE_TYPES.Property &&
+            property.key.type === AST_NODE_TYPES.Identifier &&
+            !property.computed
+          ) {
+            const propertyName = property.key.name
+
+            // Check if this property forces reflow
+            if (forceReflowProperties.has(propertyName)) {
+              const alternative = getPropertyAlternative(propertyName)
+              context.report({
+                node: property.key,
+                messageId: "noForceReflowProperty",
+                data: {
+                  property: propertyName,
+                  alternative,
+                },
+              })
+            }
+          }
+        }
+      }
+    }
+
     return {
       MemberExpression: checkMemberExpression,
       CallExpression: checkCallExpression,
+      VariableDeclarator: checkVariableDeclarator,
     }
   },
 })
