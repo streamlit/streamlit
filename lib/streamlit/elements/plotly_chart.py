@@ -339,6 +339,17 @@ class PlotlyMixin:
             The Plotly ``Figure`` or ``Data`` object to render. See
             https://plot.ly/python/ for examples of graph descriptions.
 
+            .. note::
+                If your chart contains more than 1000 data points, Plotly will
+                use a WebGL renderer to display the chart. Different browsers
+                have different limits on the number of WebGL contexts per page.
+                If you have multiple WebGL contexts on a page, you may need to
+                switch to SVG rendering mode. You can do this by setting
+                ``render_mode="svg"`` within the figure. For example, the
+                following code defines a Plotly Express line chart that will
+                render in SVG mode when passed to ``st.plotly_chart``:
+                ``px.line(df, x="x", y="y", render_mode="svg")``.
+
         use_container_width : bool
             Whether to override the figure's native width with the width of
             the parent container. If ``use_container_width`` is ``True`` (default),
@@ -351,6 +362,11 @@ class PlotlyMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to the default behavior of the library.
+
+            The ``"streamlit"`` theme can be partially customized through the
+            configuration options ``theme.chartCategoricalColors`` and
+            ``theme.chartSequentialColors``. Font configuration options are
+            also applied.
 
         key : str
             An optional string to use for giving this element a stable
@@ -394,7 +410,12 @@ class PlotlyMixin:
             All selections modes are activated by default.
 
         **kwargs
-            Any argument accepted by Plotly's ``plot()`` function.
+            Additional arguments accepted by Plotly's ``plot()`` function.
+
+            This supports ``config``, a dictionary of Plotly configuration
+            options. For more information about Plotly configuration options,
+            see Plotly's documentation on `Configuration in Python
+            <https://plotly.com/python/configuration-options/>`_.
 
         Returns
         -------
@@ -405,11 +426,12 @@ class PlotlyMixin:
             attribute notation. The attributes are described by the
             ``PlotlyState`` dictionary schema.
 
-        Example
-        -------
-        The example below comes straight from the examples at
-        https://plot.ly/python. Note that ``plotly.figure_factory`` requires
-        ``scipy`` to run.
+        Examples
+        --------
+        **Example 1: Basic Plotly Chart**
+
+        The example below comes from the examples at https://plot.ly/python.
+        Note that ``plotly.figure_factory`` requires ``scipy`` to run.
 
         >>> import streamlit as st
         >>> import numpy as np
@@ -434,6 +456,31 @@ class PlotlyMixin:
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
+           height: 550px
+
+        **Example 2: Plotly Chart with configuration**
+
+        By default, Plotly charts have scroll zoom enabled. If you have a
+        longer page and want to avoid conflicts between page scrolling and
+        zooming, you can use Plotly's configuration options to disable scroll
+        zoom. In the following example, scroll zoom is disabled, but the zoom
+        buttons are still enabled in the modebar.
+
+        >>> import streamlit as st
+        >>> import plotly.graph_objects as go
+        >>>
+        >>> fig = go.Figure()
+        >>> fig.add_trace(
+        ...     go.Scatter(
+        ...         x=[1, 2, 3, 4, 5],
+        ...         y=[1, 3, 2, 5, 4]
+        ...     )
+        ... )
+        >>>
+        >>> st.plotly_chart(fig, config = {'scrollZoom': False})
+
+        .. output::
+           https://doc-plotly-chart-config.streamlit.app/
            height: 550px
 
         """
