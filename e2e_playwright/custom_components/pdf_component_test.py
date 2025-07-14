@@ -60,7 +60,6 @@ def test_st_pdf_basic_functionality(app: Page):
     success_message = app.get_by_test_id("stAlert").filter(
         has_text="st.pdf component loaded successfully!"
     )
-    error_message = app.get_by_test_id("stAlert").filter(has_text="Error with st.pdf")
 
     if success_message.is_visible():
         # st.pdf component is working
@@ -82,9 +81,6 @@ def test_st_pdf_file_upload(app: Page):
 
     # Check if sample PDF is shown when no file is uploaded
     info_message = app.get_by_test_id("stAlert").filter(has_text="Showing sample PDF")
-    error_message = app.get_by_test_id("stAlert").filter(
-        has_text="Error with st.pdf file upload"
-    )
 
     if info_message.is_visible():
         # st.pdf component is working
@@ -106,9 +102,6 @@ def test_st_pdf_custom_size(app: Page):
     # Check if PDF is displayed or error is shown
     success_message = app.get_by_test_id("stAlert").filter(
         has_text="PDF displayed with custom height"
-    )
-    error_message = app.get_by_test_id("stAlert").filter(
-        has_text="Error with st.pdf custom size"
     )
 
     if success_message.is_visible():
@@ -136,9 +129,6 @@ def test_st_pdf_base64_encoding(app: Page):
     success_message = app.get_by_test_id("stAlert").filter(
         has_text="Base64 PDF displayed successfully!"
     )
-    error_message = app.get_by_test_id("stAlert").filter(
-        has_text="Error with st.pdf base64"
-    )
 
     if success_message.is_visible():
         # st.pdf component is working
@@ -156,9 +146,6 @@ def test_st_pdf_bytes_io(app: Page):
     # Check if success or error message is shown
     success_message = app.get_by_test_id("stAlert").filter(
         has_text="BytesIO PDF displayed successfully!"
-    )
-    error_message = app.get_by_test_id("stAlert").filter(
-        has_text="Error with st.pdf BytesIO"
     )
 
     if success_message.is_visible():
@@ -210,9 +197,6 @@ def test_st_pdf_multiple_files(app: Page):
     # Check if success or error message is shown
     success_message = app.get_by_test_id("stAlert").filter(
         has_text="Multiple PDFs displayed successfully!"
-    )
-    error_message = app.get_by_test_id("stAlert").filter(
-        has_text="Error with multiple st.pdf"
     )
 
     if success_message.is_visible():
@@ -347,9 +331,6 @@ def test_st_pdf_accessibility(app: Page):
     success_message = app.get_by_test_id("stAlert").filter(
         has_text="PDF accessibility features tested!"
     )
-    error_message = app.get_by_test_id("stAlert").filter(
-        has_text="Error with st.pdf accessibility"
-    )
 
     if success_message.is_visible():
         # st.pdf component is working
@@ -446,8 +427,8 @@ def test_st_pdf_component_iframe_behavior(app: Page):
         expect(iframe).to_be_attached()
 
         # Check if iframe has proper attributes
-        expect(iframe).to_have_attribute("src")
-        expect(iframe).to_have_attribute("height")
+        expect(iframe).to_have_attribute("src", re.compile(r".*"))
+        expect(iframe).to_have_attribute("height", re.compile(r".*"))
 
 
 def test_st_pdf_widget_interactions(app: Page):
@@ -464,4 +445,4 @@ def test_st_pdf_widget_interactions(app: Page):
     expect(slider_thumb).to_be_visible()
 
     # The slider should be functional
-    expect(slider_thumb).to_have_attribute("aria-valuenow")
+    expect(slider_thumb).to_have_attribute("aria-valuenow", re.compile(r".*"))
