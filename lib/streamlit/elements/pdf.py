@@ -116,14 +116,18 @@ class PdfMixin:
         # Convert data to the format expected by pdf_viewer component
         file_param: str | bytes
 
+
         if isinstance(data, (str, Path)):
             data_str = str(data)
             if url_util.is_url(data_str, allowed_schemas=("http", "https")):
                 # It's a URL - pass directly
                 file_param = data_str
             else:
-                # It's a local file path - pass as string, component will handle reading
+                # It's a local file path - validate existence before passing
+                if not os.path.exists(data_str):
+                    raise FileNotFoundError(f"File '{data_str}' does not exist")
                 file_param = data_str
+
         elif isinstance(data, bytes):
             # Pass bytes directly
             file_param = data
