@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@types/eslint": "^9.6.1",
-    "@types/lodash": "~4.17.17",
+    "@types/lodash": "~4.17.20",
     "axios-mock-adapter": "^2.1.0",
     "eslint": "^9.31.0",
     "prettier": "^3.6.2",

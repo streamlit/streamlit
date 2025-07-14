@@ -3561,7 +3561,7 @@ __metadata:
     "@types/hoist-non-react-statics": "npm:^3.3.6"
     "@types/iframe-resizer": "npm:~4.0.0"
     "@types/jsdom": "npm:~21.1.7"
-    "@types/lodash": "npm:^4.17.17"
+    "@types/lodash": "npm:^4.17.20"
     "@types/node": "npm:^24.0.12"
     "@types/prop-types": "npm:~15.7.15"
     "@types/react": "npm:^18.2.0"
@@ -3640,7 +3640,7 @@ __metadata:
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@types/eslint": "npm:^9.6.1"
-    "@types/lodash": "npm:~4.17.17"
+    "@types/lodash": "npm:~4.17.20"
     axios: "npm:^1.10.0"
     axios-mock-adapter: "npm:^2.1.0"
     eslint: "npm:^9.31.0"
@@ -3696,7 +3696,7 @@ __metadata:
     "@types/eslint": "npm:^9.6.1"
     "@types/hoist-non-react-statics": "npm:~3.3.6"
     "@types/katex": "npm:~0.16.7"
-    "@types/lodash": "npm:~4.17.17"
+    "@types/lodash": "npm:~4.17.20"
     "@types/mapbox-gl": "npm:~1.13.10"
     "@types/moment-duration-format": "npm:~2.2.6"
     "@types/plotly.js": "npm:^3.0.2"
@@ -4997,10 +4997,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/lodash@npm:^4.17.17, @types/lodash@npm:~4.17.17":
-  version: 4.17.17
-  resolution: "@types/lodash@npm:4.17.17"
-  checksum: 10c0/8e75df02a15f04d4322c5a503e4efd0e7a92470570ce80f17e9f11ce2b1f1a7c994009c9bcff39f07e0f9ffd8ccaff09b3598997c404b801abd5a7eee5a639dc
+"@types/lodash@npm:^4.17.20, @types/lodash@npm:~4.17.20":
+  version: 4.17.20
+  resolution: "@types/lodash@npm:4.17.20"
+  checksum: 10c0/98cdd0faae22cbb8079a01a3bb65aa8f8c41143367486c1cbf5adc83f16c9272a2a5d2c1f541f61d0d73da543c16ee1d21cf2ef86cb93cd0cc0ac3bced6dd88f
   languageName: node
   linkType: hard
 
