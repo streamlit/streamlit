@@ -17,6 +17,7 @@
 import time
 
 import streamlit as st
+from streamlit.elements.spinner import DELAY_SECS
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -55,10 +56,9 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
 
         @st.cache_data(show_spinner=True, show_time=True)
         def function_with_spinner_and_time():
-            time.sleep(0.5)
+            time.sleep(DELAY_SECS + 0.2)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is True
-            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_time()
@@ -68,10 +68,9 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
 
         @st.cache_data(show_spinner=True, show_time=False)
         def function_with_spinner_and_no_time():
-            time.sleep(0.5)
+            time.sleep(DELAY_SECS + 0.2)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is False
-            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_no_time()
@@ -81,10 +80,9 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
 
         @st.cache_resource(show_spinner=True, show_time=True)
         def function_with_spinner_and_time():
-            time.sleep(0.5)
+            time.sleep(DELAY_SECS + 0.2)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is True
-            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_time()
@@ -94,10 +92,9 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
 
         @st.cache_resource(show_spinner=True, show_time=False)
         def function_with_spinner_and_no_time():
-            time.sleep(0.5)
+            time.sleep(DELAY_SECS + 0.2)
             el = self.get_delta_from_queue().new_element
             assert el.spinner.show_time is False
-            time.sleep(0.5)
             return 3
 
         function_with_spinner_and_no_time()
