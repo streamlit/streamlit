@@ -28,11 +28,33 @@ def test_area_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     # Also make sure that all canvas objects are rendered:
     expect(area_chart_elements.locator("canvas")).to_have_count(TOTAL_AREA_CHARTS)
 
-    # TODO: separate into semantically named snapshots
-    for i, element in enumerate(area_chart_elements.all()):
-        # Skip the add_rows_chart test
-        if i != 15:
-            assert_snapshot(element, name=f"st_area_chart-{i}")
+    # Take individual snapshots for each chart with meaningful names
+    assert_snapshot(area_chart_elements.nth(0), name="st_area_chart-empty_chart")
+    assert_snapshot(area_chart_elements.nth(1), name="st_area_chart-basic_df")
+    assert_snapshot(area_chart_elements.nth(2), name="st_area_chart-single_x_axis")
+    assert_snapshot(area_chart_elements.nth(3), name="st_area_chart-single_y_axis")
+    assert_snapshot(area_chart_elements.nth(4), name="st_area_chart-multiple_y_axis")
+    assert_snapshot(area_chart_elements.nth(5), name="st_area_chart-fixed_dimensions")
+    assert_snapshot(
+        area_chart_elements.nth(6), name="st_area_chart-single_x_axis_single_y_axis"
+    )
+    assert_snapshot(
+        area_chart_elements.nth(7), name="st_area_chart-single_x_axis_multiple_y_axis"
+    )
+    assert_snapshot(area_chart_elements.nth(8), name="st_area_chart-utc_df")
+    assert_snapshot(
+        area_chart_elements.nth(9), name="st_area_chart-custom_color_labels"
+    )
+    assert_snapshot(
+        area_chart_elements.nth(10), name="st_area_chart-custom_axis_labels"
+    )
+    assert_snapshot(
+        area_chart_elements.nth(11), name="st_area_chart-custom_colors_stack_false"
+    )
+    assert_snapshot(area_chart_elements.nth(12), name="st_area_chart-stacked_true")
+    assert_snapshot(area_chart_elements.nth(13), name="st_area_chart-stacked_normalize")
+    assert_snapshot(area_chart_elements.nth(14), name="st_area_chart-stacked_center")
+    # The add_rows chart (index 15) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_area_chart_rendering(

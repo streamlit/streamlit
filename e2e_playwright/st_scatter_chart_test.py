@@ -28,11 +28,44 @@ def test_scatter_chart_rendering(app: Page, assert_snapshot: ImageCompareFunctio
     # Also make sure that all canvas objects are rendered:
     expect(scatter_chart_elements.locator("canvas")).to_have_count(TOTAL_SCATTER_CHARTS)
 
-    # TODO: separate into semantically named snapshots
-    for i, element in enumerate(scatter_chart_elements.all()):
-        # Skip the add_rows_chart test
-        if i != 13:
-            assert_snapshot(element, name=f"st_scatter_chart-{i}")
+    # Take individual snapshots for each chart with meaningful names
+    assert_snapshot(scatter_chart_elements.nth(0), name="st_scatter_chart-empty_chart")
+    assert_snapshot(scatter_chart_elements.nth(1), name="st_scatter_chart-basic_df")
+    assert_snapshot(
+        scatter_chart_elements.nth(2), name="st_scatter_chart-single_x_axis"
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(3), name="st_scatter_chart-single_y_axis"
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(4), name="st_scatter_chart-multiple_y_axis"
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(5), name="st_scatter_chart-fixed_dimensions"
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(6),
+        name="st_scatter_chart-single_x_axis_single_y_axis",
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(7),
+        name="st_scatter_chart-single_x_axis_multiple_y_axis",
+    )
+    assert_snapshot(scatter_chart_elements.nth(8), name="st_scatter_chart-utc_df")
+    assert_snapshot(
+        scatter_chart_elements.nth(9), name="st_scatter_chart-custom_color_labels"
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(10),
+        name="st_scatter_chart-custom_color_labels_size_word_labels_with_size",
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(11), name="st_scatter_chart-number_labels_with_size"
+    )
+    assert_snapshot(
+        scatter_chart_elements.nth(12), name="st_scatter_chart-custom_axis_labels"
+    )
+    # The add_rows chart (index 13) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_scatter_chart_rendering(
