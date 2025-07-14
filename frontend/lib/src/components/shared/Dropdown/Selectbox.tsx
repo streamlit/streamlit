@@ -217,6 +217,7 @@ const Selectbox: React.FC<Props> = ({
           Root: {
             style: () => ({
               lineHeight: theme.lineHeights.inputWidget,
+              fontWeight: theme.fontWeights.normal,
             }),
           },
           Dropdown: { component: VirtualDropdown },

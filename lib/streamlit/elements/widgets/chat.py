@@ -62,6 +62,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.string_util import is_emoji, validate_material_icon
 
@@ -582,17 +583,29 @@ class ChatMixin:
             https://doc-chat-input-file-uploader.streamlit.app/
             height: 350px
 
+        **Example 4: Programmatically set the text via session state**
+
+        You can use ``st.session_state`` to set the text of the chat input widget.
+
+        >>> import streamlit as st
+        >>>
+        >>> if st.button("Set Value"):
+        >>>     st.session_state.chat_input = "Hello, world!"
+        >>> st.chat_input(key="chat_input")
+        >>> st.write("Chat input value:", st.session_state.chat_input)
+
+        .. output ::
+            https://doc-chat-input-session-state.streamlit.app/
+            height: 350px
         """
-        # We default to an empty string here and disallow user choice intentionally
-        default = ""
         key = to_key(key)
 
         check_widget_policies(
             self.dg,
             key,
             on_submit,
-            default_value=default,
-            writes_allowed=False,
+            default_value=None,
+            writes_allowed=True,
         )
 
         if accept_file not in {True, False, "multiple"}:
@@ -647,7 +660,8 @@ class ChatMixin:
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
 
-        chat_input_proto.default = default
+        # Setting a default value is currently not supported for chat input.
+        chat_input_proto.default = ""
 
         chat_input_proto.accept_file = get_chat_input_accept_file_proto_value(
             accept_file
@@ -676,8 +690,20 @@ class ChatMixin:
 
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:
+            # Support for programmatically setting the text in the chat input
+            # via session state. Since chat input has a trigger state,
+            # it works a bit differently to other widgets. We are not changing
+            # the actual widget state here, but only inserting the provided value
+            # into the chat input field. The user needs to submit the value in
+            # order for the chat input to reflect the value in the backend state.
             chat_input_proto.value = widget_state.value
             chat_input_proto.set_value = True
+
+            session_state = get_session_state()
+            if key is not None and key in session_state:
+                # Reset the session state value to None to reflect the actual state
+                # of the widget. Which is None since the value hasn't been submitted yet.
+                session_state.reset_state_value(key, None)
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)

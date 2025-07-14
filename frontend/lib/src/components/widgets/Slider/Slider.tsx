@@ -410,8 +410,11 @@ function fixLabelOverflow(
   thumb: HTMLDivElement,
   thumbValue: HTMLDivElement
 ): void {
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const sliderRect = slider.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumbRect = thumb.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumbValueRect = thumbValue.getBoundingClientRect()
 
   const thumbMidpoint = thumbRect.left + thumbRect.width / 2
@@ -439,10 +442,15 @@ function fixLabelOverlap(
 ): void {
   const labelGap = 24
 
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const sliderRect = sliderDiv.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb1Rect = thumb1Div.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb2Rect = thumb2Div.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb1ValueRect = thumb1ValueDiv.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb2ValueRect = thumb2ValueDiv.getBoundingClientRect()
 
   const sliderMidpoint = sliderRect.left + sliderRect.width / 2

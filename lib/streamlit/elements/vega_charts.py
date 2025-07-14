@@ -296,8 +296,16 @@ def _prepare_vega_lite_spec(
         # on vconcat with use_container_width=True as there are unintended
         # consequences of changing the default autosize for all charts.
         # fit-x fits the width and height can be adjusted.
+        is_facet_chart = "facet" in spec or (
+            "encoding" in spec
+            and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
+        )
         if "vconcat" in spec and use_container_width:
             spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+
+        elif is_facet_chart:
+            spec["autosize"] = {"type": "pad", "contains": "padding"}
+
         else:
             spec["autosize"] = {"type": "fit", "contains": "padding"}
 

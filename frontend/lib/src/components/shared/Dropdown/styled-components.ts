@@ -29,6 +29,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     paddingLeft: theme.spacing.lg,
     paddingRight: theme.spacing.lg,
     background: $isHighlighted ? theme.colors.darkenedBgMix15 : undefined,
+    fontWeight: theme.fontWeights.normal,
 
     // Override the default itemSize set on the component's JSX
     // on mobile, so we can make list items taller and scrollable

@@ -137,6 +137,10 @@ class WebsocketSessionManager(SessionManager):
             )
             del self._active_session_info_by_id[session_id]
 
+        if not self._active_session_info_by_id:
+            # Avoid stale cached scripts when all file watchers and sessions are disconnected
+            self._script_cache.clear()
+
     def get_active_session_info(self, session_id: str) -> ActiveSessionInfo | None:
         return self._active_session_info_by_id.get(session_id)
 
@@ -151,6 +155,10 @@ class WebsocketSessionManager(SessionManager):
             active_session_info = self._active_session_info_by_id[session_id]
             del self._active_session_info_by_id[session_id]
             active_session_info.session.shutdown()
+
+            if not self._active_session_info_by_id:
+                # Avoid stale cached scripts when all file watchers and sessions are disconnected
+                self._script_cache.clear()
             return
 
         session_info = self._session_storage.get(session_id)
