@@ -316,7 +316,7 @@ function ChatInput({
     const { value: targetValue } = e.target
 
     if (maxChars !== 0 && targetValue.length > maxChars) {
-      return2
+      return
     }
 
     setValue(targetValue)
