@@ -46,7 +46,7 @@ def _is_pdf_component_available() -> bool:
 def _get_pdf_component() -> Any:
     """Get the PDF custom component if available."""
     try:
-        import streamlit_pdf  # type: ignore
+        import streamlit_pdf
 
         # Return the pdf_viewer function directly
         return streamlit_pdf.pdf_viewer
@@ -55,7 +55,7 @@ def _get_pdf_component() -> Any:
 
 
 class PdfMixin:
-    @gather_metrics("pdf")  # type: ignore
+    @gather_metrics("pdf")
     def pdf(
         self,
         data: PdfData,
@@ -86,6 +86,13 @@ class PdfMixin:
         >>> st.pdf("https://example.com/sample.pdf")
         >>> st.pdf("https://example.com/sample.pdf", height=600)
         """
+        # Validate data parameter early
+        if data is None:
+            raise StreamlitAPIException(
+                "The PDF data cannot be None. Please provide a valid PDF file path, URL, "
+                "bytes data, or file-like object."
+            )
+
         # Validate height parameter
         validate_height(height, allow_content=False)
 
@@ -127,7 +134,12 @@ class PdfMixin:
             # Handle other file-like objects
             file_param = data.read()
         else:
-            raise ValueError(f"Unsupported data type for PDF: {type(data)}")
+            # Provide a more helpful error message
+            raise StreamlitAPIException(
+                f"Unsupported data type for PDF: {type(data).__name__}. "
+                f"Please provide a file path (str or Path), URL (str), bytes data, "
+                f"or file-like object (such as BytesIO or UploadedFile)."
+            )
 
         # Convert height to appropriate format
         if height == "stretch":
