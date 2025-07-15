@@ -27,11 +27,26 @@ def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     # Also make sure that all canvas objects are rendered:
     expect(line_chart_elements.locator("canvas")).to_have_count(TOTAL_LINE_CHARTS)
 
-    # TODO: separate into semantically named snapshots
-    for i, element in enumerate(line_chart_elements.all()):
-        # Skip the add_rows_chart test
-        if i != 11:
-            assert_snapshot(element, name=f"st_line_chart-{i}")
+    assert_snapshot(line_chart_elements.nth(0), name="st_line_chart-empty_chart")
+    assert_snapshot(line_chart_elements.nth(1), name="st_line_chart-basic_df")
+    assert_snapshot(line_chart_elements.nth(2), name="st_line_chart-single_x_axis")
+    assert_snapshot(line_chart_elements.nth(3), name="st_line_chart-single_y_axis")
+    assert_snapshot(line_chart_elements.nth(4), name="st_line_chart-multiple_y_axis")
+    assert_snapshot(line_chart_elements.nth(5), name="st_line_chart-fixed_dimensions")
+    assert_snapshot(
+        line_chart_elements.nth(6), name="st_line_chart-single_x_axis_single_y_axis"
+    )
+    assert_snapshot(
+        line_chart_elements.nth(7), name="st_line_chart-single_x_axis_multiple_y_axis"
+    )
+    assert_snapshot(line_chart_elements.nth(8), name="st_line_chart-utc_df")
+    assert_snapshot(
+        line_chart_elements.nth(9), name="st_line_chart-custom_color_labels"
+    )
+    assert_snapshot(
+        line_chart_elements.nth(10), name="st_line_chart-custom_axis_labels"
+    )
+    # The add_rows chart (index 11) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_line_chart_rendering(

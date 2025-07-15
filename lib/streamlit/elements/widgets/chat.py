@@ -703,11 +703,7 @@ class ChatMixin:
             if key is not None and key in session_state:
                 # Reset the session state value to None to reflect the actual state
                 # of the widget. Which is None since the value hasn't been submitted yet.
-
-                # We need to first delete the value and then set it to `None`
-                # to not trigger the "state value cannot be modified" error.
-                del session_state[key]
-                session_state[key] = None
+                session_state.reset_state_value(key, None)
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)

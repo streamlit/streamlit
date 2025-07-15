@@ -386,6 +386,42 @@ describe("AppView element", () => {
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("6rem")
       })
+
+      it("uses 6rem top padding regardless of sidebar content (hasSidebar does not affect non-embedded)", () => {
+        const sidebarElement = new ElementNode(
+          makeElementWithInfoText("sidebar!"),
+          ForwardMsgMetadata.create({}),
+          "no script run id",
+          FAKE_SCRIPT_HASH
+        )
+
+        const sidebar = new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [sidebarElement],
+          new BlockProto({ allowEmpty: true })
+        )
+
+        const empty = new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        )
+
+        render(
+          <AppView
+            {...getProps({
+              elements: new AppRoot(
+                FAKE_SCRIPT_HASH,
+                new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
+              ),
+              embedded: false, // Non-embedded
+              appPages: [{ pageName: "page1", pageScriptHash: "hash1" }], // Single page, no top nav
+            })}
+          />
+        )
+        const style = getMainBlockContainerStyle()
+        expect(style.paddingTop).toEqual("6rem") // Should be 6rem, not affected by sidebar
+      })
     })
 
     describe("embedded apps", () => {
@@ -606,6 +642,47 @@ describe("AppView element", () => {
             ),
             embedded: true,
             showPadding: false,
+          })
+
+          render(<AppView {...props} />)
+          const style = getMainBlockContainerStyle()
+          expect(style.paddingTop).toEqual("4.5rem")
+          expect(style.paddingBottom).toEqual("1rem")
+        })
+
+        it("uses 4.5rem top padding when sidebar content exists (hasSidebar=true)", () => {
+          const sidebarElement = new ElementNode(
+            makeElementWithInfoText("sidebar!"),
+            ForwardMsgMetadata.create({}),
+            "no script run id",
+            FAKE_SCRIPT_HASH
+          )
+
+          const sidebar = new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [sidebarElement],
+            new BlockProto({ allowEmpty: true })
+          )
+
+          const empty = new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [],
+            new BlockProto({ allowEmpty: true })
+          )
+
+          vi.spyOn(
+            StreamlitContextProviderModule,
+            "useAppContext"
+          ).mockReturnValue(getContextOutput({ showToolbar: false }))
+
+          const props = getProps({
+            elements: new AppRoot(
+              FAKE_SCRIPT_HASH,
+              new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
+            ),
+            embedded: true,
+            showPadding: false,
+            appLogo: null, // No header content, only sidebar
           })
 
           render(<AppView {...props} />)

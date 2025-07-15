@@ -135,3 +135,10 @@ frontend/cypress/snapshots/linux/1x
 
 # Performance suite output
 **/.benchmarks/
+
+
+########################################################################
+# Files during CI runs
+########################################################################
+./protoc-*-linux-x86_64.zip
+./python_cache_key.md5

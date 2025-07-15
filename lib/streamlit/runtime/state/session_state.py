@@ -442,6 +442,12 @@ class SessionState:
         """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
 
+    def reset_state_value(self, user_key: str, value: Any | None) -> None:
+        """Reset a new session state value to a given value
+        without triggering the "state value cannot be modified" error.
+        """
+        self._new_session_state[user_key] = value
+
     def __iter__(self) -> Iterator[Any]:
         """Return an iterator over the keys of the SessionState.
         This is a shortcut for `iter(self.keys())`.
