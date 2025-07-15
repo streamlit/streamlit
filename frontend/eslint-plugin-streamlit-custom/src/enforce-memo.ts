@@ -237,6 +237,10 @@ const enforceMemo = createRule<[], MessageIds>({
           return fixer.insertTextAfter(defaultImport, ", { memo }")
         }
         // If no default import, add at the end of specifiers
+        if (reactImport.specifiers.length === 0) {
+          // Handle the case where there are no specifiers
+          return fixer.insertTextAfter(reactImport.source, " { memo }")
+        }
         const lastSpecifier =
           reactImport.specifiers[reactImport.specifiers.length - 1]
         return fixer.insertTextAfter(lastSpecifier, ", memo")
