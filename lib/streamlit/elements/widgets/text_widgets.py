@@ -496,10 +496,24 @@ class TextWidgetsMixin:
             cast to str internally. If ``None``, will initialize empty and
             return ``None`` until the user provides input. Defaults to empty string.
 
-        height : int or None
-            Desired height of the UI element expressed in pixels. If this is
-            ``None`` (default), the widget's initial height fits three lines.
-            The height must be at least 98 pixels, which fits two lines.
+        height : "content", "stretch", int, or None
+            The height of the text area widget. This can be one of the
+            following:
+
+            - ``None`` (default): The height of the widget fits three lines.
+            - ``"content"``: The height of the widget matches the
+              height of its content.
+            - ``"stretch"``: The height of the widget matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the widget is not in a parent container, the height
+              of the widget matches the height of its content.
+            - An integer specifying the height in pixels: The widget has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+            The widget's height can't be smaller than the height of two lines.
+            When ``label_visibility="collapsed"``, the minimum height is 68
+            pixels. Otherwise, the minimum height is 98 pixels.
 
         max_chars : int or None
             Maximum number of characters allowed in text area.

@@ -1577,6 +1577,11 @@ class VegaChartsMixin:
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to the default behavior of the library.
 
+            The ``"streamlit"`` theme can be partially customized through the
+            configuration options ``theme.chartCategoricalColors`` and
+            ``theme.chartSequentialColors``. Font configuration options are
+            also applied.
+
         key : str
             An optional string to use for giving this element a stable
             identity. If ``key`` is ``None`` (default), this element's identity
@@ -1744,6 +1749,11 @@ class VegaChartsMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to the default behavior of the library.
+
+            The ``"streamlit"`` theme can be partially customized through the
+            configuration options ``theme.chartCategoricalColors`` and
+            ``theme.chartSequentialColors``. Font configuration options are
+            also applied.
 
         key : str
             An optional string to use for giving this element a stable
