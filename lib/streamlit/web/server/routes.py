@@ -243,6 +243,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 "enforceDownloadInNewTab": False,
                 "metricsUrl": "",
                 "blockErrorDialogs": False,
+                "setAnonymousCrossOriginPropertyOnMediaElements": False,
             }
         )
         self.set_status(200)

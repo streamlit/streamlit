@@ -291,6 +291,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "enforceDownloadInNewTab": False,
             "metricsUrl": "",
             "blockErrorDialogs": False,
+            "setAnonymousCrossOriginPropertyOnMediaElements": False,
         }
         # Check that localhost NOT appended/allowed outside dev mode
         assert "http://localhost" not in response_body["allowedOrigins"]

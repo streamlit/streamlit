@@ -183,6 +183,13 @@ export type LibConfig = {
   disableFullscreenMode?: boolean
 
   enforceDownloadInNewTab?: boolean
+
+  /**
+   * Whether to set the `crossOrigin` property to `anonymous` on media elements (img, video, audio).
+   * If it is set to false, the `crossOrigin` property will not be set on media elements at all.
+   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
+   */
+  setAnonymousCrossOriginPropertyOnMediaElements?: boolean
 }
 
 /**

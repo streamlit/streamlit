@@ -20,7 +20,7 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
@@ -144,5 +144,34 @@ describe("Audio Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("crossOrigin attribute", () => {
+    it("sets crossOrigin to 'anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
+      const props = getProps()
+      renderWithContexts(<Audio {...props} />, {
+        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: true },
+      })
+      const audioElement = screen.getByTestId("stAudio")
+      expect(audioElement).toHaveAttribute("crossOrigin", "anonymous")
+    })
+
+    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
+      const props = getProps()
+      renderWithContexts(<Audio {...props} />, {
+        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: false },
+      })
+      const audioElement = screen.getByTestId("stAudio")
+      expect(audioElement).not.toHaveAttribute("crossOrigin")
+    })
+
+    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is undefined", () => {
+      const props = getProps()
+      renderWithContexts(<Audio {...props} />, {
+        libConfig: {},
+      })
+      const audioElement = screen.getByTestId("stAudio")
+      expect(audioElement).not.toHaveAttribute("crossOrigin")
+    })
   })
 })

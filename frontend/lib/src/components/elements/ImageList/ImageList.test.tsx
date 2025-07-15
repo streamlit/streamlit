@@ -20,7 +20,7 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
@@ -122,5 +122,43 @@ describe("ImageList Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("crossOrigin attribute", () => {
+    it("sets crossOrigin to 'anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: true },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).toHaveAttribute("crossOrigin", "anonymous")
+      })
+    })
+
+    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: false },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).not.toHaveAttribute("crossOrigin")
+      })
+    })
+
+    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is undefined", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: {},
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).not.toHaveAttribute("crossOrigin")
+      })
+    })
   })
 })

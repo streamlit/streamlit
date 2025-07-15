@@ -478,6 +478,7 @@ export class App extends PureComponent<Props, State> {
           enforceDownloadInNewTab,
           metricsUrl,
           blockErrorDialogs,
+          setAnonymousCrossOriginPropertyOnMediaElements,
         } = response
 
         const appConfig: AppConfig = {
@@ -490,6 +491,7 @@ export class App extends PureComponent<Props, State> {
           mapboxToken,
           disableFullscreenMode,
           enforceDownloadInNewTab,
+          setAnonymousCrossOriginPropertyOnMediaElements,
         }
 
         // Set the metrics configuration:
