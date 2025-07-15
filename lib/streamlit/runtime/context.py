@@ -252,6 +252,9 @@ class ContextProxy:
             - When the app is first loaded within a session
             - When the user changes the theme in the settings menu
 
+            For more information and to upvote an improvement, see GitHub issue
+            `#11920 <https://github.com/streamlit/streamlit/issues/11920>`_.
+
         Attributes
         ----------
         type : "light", "dark"
