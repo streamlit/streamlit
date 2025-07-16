@@ -140,7 +140,7 @@ function ColumnMenu({
             <StyledTypeIconContainer title={columnKind}>
               <DynamicIcon
                 iconValue={columnTypeIcon}
-                size={"base"}
+                size="base"
                 color="inherit"
               />
             </StyledTypeIconContainer>
@@ -153,7 +153,7 @@ function ColumnMenu({
               >
                 <DynamicIcon
                   iconValue=":material/content_copy:"
-                  size={"sm"}
+                  size="sm"
                   margin="0"
                   color="inherit"
                 />
@@ -171,7 +171,7 @@ function ColumnMenu({
                 role="menuitem"
               >
                 <DynamicIcon
-                  size={"base"}
+                  size="base"
                   margin="0"
                   color="inherit"
                   iconValue=":material/arrow_upward:"
@@ -186,7 +186,7 @@ function ColumnMenu({
                 role="menuitem"
               >
                 <DynamicIcon
-                  size={"base"}
+                  size="base"
                   margin="0"
                   color="inherit"
                   iconValue=":material/arrow_downward:"
@@ -213,7 +213,7 @@ function ColumnMenu({
               >
                 <div>
                   <DynamicIcon
-                    size={"base"}
+                    size="base"
                     margin="0"
                     color="inherit"
                     iconValue=":material/format_list_numbered:"
@@ -222,7 +222,7 @@ function ColumnMenu({
                 </div>
 
                 <DynamicIcon
-                  size={"base"}
+                  size="base"
                   margin="0"
                   color="inherit"
                   iconValue=":material/chevron_right:"
@@ -238,7 +238,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/arrows_outward:"
@@ -254,7 +254,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/keep_off:"
@@ -270,7 +270,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/keep:"
@@ -286,7 +286,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/visibility_off:"
