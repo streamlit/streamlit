@@ -30,12 +30,14 @@ import {
   toSafeString,
 } from "./utils"
 
+type SelectOption = { value: string; label?: string }
+
 export interface SelectboxColumnParams {
   /**
    * A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
-  readonly options: (string | number | boolean)[]
+  readonly options: (string | number | boolean | SelectOption)[]
 }
 
 /**

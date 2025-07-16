@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
@@ -86,9 +86,14 @@ class CheckboxColumnConfig(TypedDict):
     type: Literal["checkbox"]
 
 
+class SelectboxOption(TypedDict):
+    value: str | int | float
+    label: NotRequired[str | None]
+
+
 class SelectboxColumnConfig(TypedDict):
     type: Literal["selectbox"]
-    options: NotRequired[list[str | int | float] | None]
+    options: NotRequired[list[str | int | float | SelectboxOption] | None]
 
 
 class LinkColumnConfig(TypedDict):
@@ -935,7 +940,8 @@ def SelectboxColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: str | int | float | None = None,
-    options: Iterable[str | int | float] | None = None,
+    options: Iterable[str | int | float | SelectboxOption] | None = None,
+    format_func: Callable[[Any], str] | None = None,
 ) -> ColumnConfig:
     """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -998,6 +1004,12 @@ def SelectboxColumn(
         column if its dtype is "category". For more information, see `Pandas docs
         <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
 
+    format_func: function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. If this is ``None`` (default),
+        the raw option is used as the label.
+
     Examples
     --------
     >>> import pandas as pd
@@ -1037,6 +1049,32 @@ def SelectboxColumn(
         height: 300px
     """
 
+    # Process options with format_func
+    processed_options: list[str | int | float | SelectboxOption] | None = None
+    if options is not None:
+        processed_options = []
+
+        for option in options:
+            # Handle different option types
+            if isinstance(option, dict):
+                # Already a SelectboxOption dict
+                option_dict = option.copy()
+
+                # Apply format_func to generate label if not already present
+                if "label" not in option_dict and format_func is not None:
+                    option_dict["label"] = format_func(option_dict["value"])
+
+                processed_options.append(option_dict)
+            # Simple value (str, int, or float)
+            elif format_func is not None:
+                # Create a SelectboxOption with formatted label
+                processed_options.append(
+                    SelectboxOption(value=option, label=format_func(option))
+                )
+            else:
+                # Keep as simple value
+                processed_options.append(option)
+
     return ColumnConfig(
         label=label,
         width=width,
@@ -1045,9 +1083,7 @@ def SelectboxColumn(
         required=required,
         pinned=pinned,
         default=default,
-        type_config=SelectboxColumnConfig(
-            type="selectbox", options=list(options) if options is not None else None
-        ),
+        type_config=SelectboxColumnConfig(type="selectbox", options=processed_options),
     )
 
 
@@ -1607,7 +1643,7 @@ def MultiselectColumn(
         - An iterable of color values that are used for the options in order
           looped through.
 
-    format_func: function
+    format_func: function or None
         Function to modify the display of the options. It receives
         the raw option defined in ``options`` as an argument and should output
         the label to be shown for that option. If this is ``None`` (default),
