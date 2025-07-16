@@ -465,6 +465,12 @@ class ChatMixin:
               example, to only accept JPG/JPEG and PNG files, use
               ``["jpg", "jpeg", "png"]``.
 
+            .. note::
+                This is a best-effort check, but doesn't provide a
+                security guarantee against users uploading files of other types
+                or type extensions. The correct handling of uploaded files is
+                part of the app developer's responsibility.
+
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
