@@ -48,4 +48,14 @@ describe("Testing Camera Input Button", () => {
     const progress = screen.getByRole("progressbar")
     expect(progress).toHaveAttribute("aria-valuenow", "50")
   })
+
+  it("renders disabled button properly", () => {
+    const props = getProps({ disabled: true })
+
+    render(<CameraInputButton {...props} />)
+
+    const button = screen.getByTestId("stCameraInputButton")
+    expect(button).toBeDisabled()
+    expect(button).toHaveStyle("cursor: not-allowed")
+  })
 })

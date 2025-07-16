@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo } from "react"
 
 import { CloudUpload } from "@emotion-icons/material-outlined"
 
@@ -60,4 +60,4 @@ const FileDropzoneInstructions = ({
   </StyledFileDropzoneInstructions>
 )
 
-export default FileDropzoneInstructions
+export default memo(FileDropzoneInstructions)

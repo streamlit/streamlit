@@ -16,6 +16,7 @@
 
 import asyncio
 import contextlib
+from typing import Any
 
 async_loop = asyncio.new_event_loop()
 
@@ -76,14 +77,14 @@ finally:
     "FINALLY"
 
 
-def func(value):
+def func(value: Any) -> None:
     value
 
 
 func("FUNCTION")
 
 
-async def async_func(value):
+async def async_func(value: Any) -> None:
     value
 
 
@@ -123,7 +124,8 @@ def docstrings():
 
     def nested():
         """Multiline docstring.
-        Should not be printed."""
+        Should not be printed.
+        """
         pass
 
     class Foo:
@@ -149,7 +151,7 @@ class MyClass:
     """MyClass: this help block should be printed."""
 
     def __init__(self):
-        """This should not be printed."""
+        """Should not be printed."""
 
 
 MyClass

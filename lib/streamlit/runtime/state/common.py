@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Functions and data structures shared by session_state.py and widgets.py"""
+"""Functions and data structures shared by session_state.py and widgets.py."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ WidgetCallback: TypeAlias = Callable[..., None]
 # WidgetState proto, and returns a regular python value. A serializer
 # receives a regular python value, and returns something suitable for
 # a value field on WidgetState proto. They should be inverses.
-WidgetDeserializer: TypeAlias = Callable[[Any, str], T]
+WidgetDeserializer: TypeAlias = Callable[[Any], T]
 WidgetSerializer: TypeAlias = Callable[[T], Any]
 
 # The array value field names are part of the larger set of possible value
@@ -156,7 +156,7 @@ class RegisterWidgetResult(Generic[T_co]):
         """The canonical way to construct a RegisterWidgetResult in cases
         where the true widget value could not be determined.
         """
-        return cls(value=deserializer(None, ""), value_changed=False)
+        return cls(value=deserializer(None), value_changed=False)
 
 
 def user_key_from_element_id(element_id: str) -> str | None:

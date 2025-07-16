@@ -46,12 +46,15 @@ function Button(props: Props): ReactElement {
 
   return (
     <Box className="stButton" data-testid="stButton">
-      <BaseButtonTooltip help={element.help}>
+      <BaseButtonTooltip
+        help={element.help}
+        containerWidth={element.useContainerWidth}
+      >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
-          fluidWidth={element.useContainerWidth || !!element.help}
+          containerWidth={element.useContainerWidth}
           onClick={() =>
             widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
           }

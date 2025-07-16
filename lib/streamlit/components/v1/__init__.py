@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-This directory contains the files and modules for the exposed API.
-"""
+"""Contains the files and modules for the exposed API."""
 
 import streamlit
 from streamlit.components.v1.component_registry import declare_component

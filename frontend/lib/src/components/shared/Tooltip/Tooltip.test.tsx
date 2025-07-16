@@ -34,6 +34,7 @@ const getProps = (
 })
 
 // Wrap in BaseProvider to avoid warnings
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 const renderTooltip = (props: Partial<TooltipProps> = {}): any => {
   return render(
     <BaseProvider theme={LightTheme}>
@@ -77,5 +78,20 @@ describe("Tooltip element", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("Help Text")
+  })
+
+  it("uses error testids/classes when error prop is true", async () => {
+    const user = userEvent.setup()
+    const content = <span>Error Text</span>
+    renderTooltip({ content, error: true })
+
+    const tooltipTarget = screen.getByTestId("stTooltipErrorHoverTarget")
+    expect(tooltipTarget).toBeVisible()
+
+    // Hover to see tooltip content
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipErrorContent")
+    expect(tooltipContent).toHaveTextContent("Error Text")
   })
 })

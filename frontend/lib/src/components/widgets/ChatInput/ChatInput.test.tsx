@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -86,8 +86,7 @@ describe("ChatInput widget", () => {
 
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [250],
     })
   })
@@ -116,7 +115,7 @@ describe("ChatInput widget", () => {
     expect(chatInput).toHaveAttribute("aria-label", props.element.placeholder)
   })
 
-  it("sets the value intially to the element default", () => {
+  it("sets the value initially to the element default", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
@@ -255,12 +254,12 @@ describe("ChatInput widget", () => {
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "1234567890")
     expect(chatInput).toHaveTextContent("1234567890")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(chatInput, { key: "Enter", ctrlKey: true })
+
+    await user.keyboard("{Control>}{Enter}{/Control}")
+
     // We cannot test the value to be changed cause that is essentially a
     // change event.
-    expect(chatInput).not.toHaveTextContent("")
+    expect(screen.getByTestId("stChatInputTextArea")).not.toHaveTextContent("")
     expect(spy).not.toHaveBeenCalled()
   })
 
@@ -341,5 +340,92 @@ describe("ChatInput widget", () => {
 
     await user.clear(chatInput)
     expect(button).toBeDisabled()
+  })
+
+  describe("dirty state behavior", () => {
+    it("disables submit button when there are no files and no text", () => {
+      const props = getProps()
+      render(<ChatInput {...props} />)
+
+      const button = screen.getByTestId("stChatInputSubmitButton")
+      expect(button).toBeDisabled()
+    })
+
+    it("enables submit button when there is text", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<ChatInput {...props} />)
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Hello")
+
+      const button = screen.getByTestId("stChatInputSubmitButton")
+      expect(button).not.toBeDisabled()
+    })
+
+    it("disables submit button when files are uploading", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptFile: ChatInputProto.AcceptFile.SINGLE,
+        maxUploadSizeMb: 1,
+      })
+
+      // Mock the uploadClient to simulate an uploading file
+      props.uploadClient.uploadFile = vi.fn().mockImplementation(() => {
+        return new Promise(() => {}) // Never resolves to simulate ongoing upload
+      })
+
+      render(<ChatInput {...props} />)
+
+      // Add text to make the button enabled
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "Text with uploading file")
+
+      // Verify button is enabled before file upload
+      const submitButton = screen.getByTestId("stChatInputSubmitButton")
+      expect(submitButton).not.toBeDisabled()
+
+      // Simulate file upload
+      const file = new File(["file content"], "test.txt", {
+        type: "text/plain",
+      })
+      const fileUploadButton = screen.getByTestId(
+        "stChatInputFileUploadButton"
+      )
+      // The `input` element isn't accessible, so we need to access it directly via the DOM
+      const fileUploadInput = fileUploadButton.querySelector("input")
+      if (!fileUploadInput) {
+        throw new Error("File upload input not found")
+      }
+      await user.upload(fileUploadInput, file)
+
+      // Button should be disabled during upload - no need to wait for upload to finish
+      // since we're specifically testing the in-between state
+      expect(submitButton).toBeDisabled()
+
+      // Verify the upload was attempted
+      expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    })
+
+    it("does not submit when dirty is false", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      const spy = vi.spyOn(props.widgetMgr, "setChatInputValue")
+      render(<ChatInput {...props} />)
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      const button = screen.getByTestId("stChatInputSubmitButton")
+
+      // Button should be disabled initially
+      expect(button).toBeDisabled()
+
+      // Try to submit by clicking the button
+      await user.click(button)
+      expect(spy).not.toHaveBeenCalled()
+
+      // Try to submit by pressing Enter
+      await user.type(chatInput, "{enter}")
+      expect(spy).not.toHaveBeenCalled()
+    })
   })
 })

@@ -24,13 +24,15 @@ export function mockEndpoints(
 ): StreamlitEndpoints {
   return {
     setStaticConfigUrl: vi.fn(),
+    sendClientErrorToHost: vi.fn(),
+    checkSourceUrlResponse: vi.fn(),
     buildComponentURL: vi.fn(),
     buildMediaURL: vi.fn(),
     buildFileUploadURL: vi.fn(),
     buildAppPageURL: vi
       .fn()
       .mockImplementation(
-        (pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
+        (_pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
           return `http://mock/app/page/${page.pageName}.${pageIndex}`
         }
       ),
@@ -38,9 +40,6 @@ export function mockEndpoints(
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
     deleteFileAtURL: vi
-      .fn()
-      .mockRejectedValue(new Error("unimplemented mock endpoint")),
-    fetchCachedForwardMsg: vi
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
     ...overrides,

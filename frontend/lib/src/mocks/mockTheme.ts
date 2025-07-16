@@ -60,8 +60,8 @@ const requiredThemeColors = {
   darkGray: colors.gray70,
   red: colors.red80,
   blue: colors.blue80,
-  green: colors.green80,
-  yellow: colors.yellow80,
+  green: colors.green90,
+  yellow: colors.yellow100,
 }
 
 interface OptionalThemeColors {
@@ -78,6 +78,8 @@ const genericColors = {
 
 const emotionMockTheme = {
   inSidebar: false,
+  showSidebarBorder: false,
+  linkUnderline: true,
   breakpoints,
   colors: createEmotionColors(genericColors),
   fonts,

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement, useCallback, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "~lib/components/shared/Tooltip/styled-components"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 export interface TooltipProps {
   // The top position of the tooltip.
@@ -55,11 +55,11 @@ function Tooltip({
   content,
   clearTooltip,
 }: TooltipProps): ReactElement {
-  const [open, setOpen] = React.useState(true)
-  const theme: EmotionTheme = useTheme()
+  const [open, setOpen] = useState(true)
+  const theme = useEmotionTheme()
   const { colors, fontSizes, radii, fontWeights } = theme
 
-  const closeTooltip = React.useCallback((): void => {
+  const closeTooltip = useCallback((): void => {
     setOpen(false)
     clearTooltip()
   }, [clearTooltip, setOpen])
@@ -137,4 +137,4 @@ function Tooltip({
   )
 }
 
-export default Tooltip
+export default memo(Tooltip)

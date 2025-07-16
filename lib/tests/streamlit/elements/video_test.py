@@ -19,6 +19,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import numpy as np
+import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -43,16 +44,16 @@ class VideoTest(DeltaGeneratorTestCase):
         # locate resultant file in InMemoryFileManager and test its properties.
         file_id = _calculate_file_id(fake_video_data, "video/mp4")
         media_file = self.media_file_storage.get_file(file_id)
-        self.assertIsNotNone(media_file)
-        self.assertEqual(media_file.mimetype, "video/mp4")
-        self.assertEqual(self.media_file_storage.get_url(file_id), el.video.url)
+        assert media_file is not None
+        assert media_file.mimetype == "video/mp4"
+        assert self.media_file_storage.get_url(file_id) == el.video.url
 
     def test_st_video_from_url(self):
         """We can pass a URL directly to st.video"""
         some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
         st.video(some_url)
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.url, some_url)
+        assert el.video.url == some_url
 
     def test_youtube_urls_transformed_to_embed_links(self):
         """Youtube URLs should be transformed into embed links."""
@@ -76,23 +77,23 @@ class VideoTest(DeltaGeneratorTestCase):
             "https://www.youtube.com/embed/92jUAXBmZyU",
         )
         # url should be transformed into an embed link (or left alone).
-        for x in range(0, len(yt_urls)):
+        for x in range(len(yt_urls)):
             st.video(yt_urls[x])
             el = self.get_delta_from_queue().new_element
-            self.assertEqual(el.video.url, yt_embeds[x])
+            assert el.video.url == yt_embeds[x]
 
     def test_st_video_raises_on_bad_filename(self):
         """A non-URL string is assumed to be a filename. A file we can't
         open will result in an error.
         """
-        with self.assertRaises(MediaFileStorageError):
+        with pytest.raises(MediaFileStorageError):
             st.video("not/a/real/file")
 
     def test_st_video_from_none(self):
         """st.video(None) is not an error."""
         st.video(None)
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.url, "")
+        assert el.video.url == ""
 
     def test_st_video_other_inputs(self):
         """Test that our other data types don't result in an error."""
@@ -115,13 +116,13 @@ class VideoTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.start_time, 10)
-        self.assertEqual(el.video.end_time, 18)
-        self.assertTrue(el.video.loop)
-        self.assertTrue(el.video.autoplay)
-        self.assertTrue(el.video.muted)
-        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
-        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+        assert el.video.start_time == 10
+        assert el.video.end_time == 18
+        assert el.video.loop
+        assert el.video.autoplay
+        assert el.video.muted
+        assert el.video.url.startswith(MEDIA_ENDPOINT)
+        assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
 
     def test_st_video_just_data(self):
         """Test st.video with just data specified."""
@@ -129,13 +130,13 @@ class VideoTest(DeltaGeneratorTestCase):
         st.video(fake_video_data)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.start_time, 0)
-        self.assertEqual(el.video.end_time, 0)
-        self.assertFalse(el.video.loop)
-        self.assertFalse(el.video.autoplay)
-        self.assertFalse(el.video.muted)
-        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
-        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+        assert el.video.start_time == 0
+        assert el.video.end_time == 0
+        assert not el.video.loop
+        assert not el.video.autoplay
+        assert not el.video.muted
+        assert el.video.url.startswith(MEDIA_ENDPOINT)
+        assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
 
     def test_st_video_subtitles(self):
         """Test st.video with subtitles."""
@@ -144,15 +145,15 @@ class VideoTest(DeltaGeneratorTestCase):
         st.video(fake_video_data, subtitles=fake_subtitle_data)
 
         el = self.get_delta_from_queue().new_element
-        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
-        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+        assert el.video.url.startswith(MEDIA_ENDPOINT)
+        assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
 
         expected_subtitle_url = _calculate_file_id(
             fake_subtitle_data,
             "text/vtt",
             filename=f"{calc_md5(b'default')}.vtt",
         )
-        self.assertIn(expected_subtitle_url, el.video.subtitles[0].url)
+        assert expected_subtitle_url in el.video.subtitles[0].url
 
     def test_st_video_empty_subtitles(self):
         """Test st.video with subtitles, empty subtitle label, content allowed."""
@@ -167,8 +168,8 @@ class VideoTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
-        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+        assert el.video.url.startswith(MEDIA_ENDPOINT)
+        assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
 
         expected_empty_subtitle_url = _calculate_file_id(
             b"",
@@ -180,8 +181,8 @@ class VideoTest(DeltaGeneratorTestCase):
             "text/vtt",
             filename=f"{calc_md5(b'English')}.vtt",
         )
-        self.assertIn(expected_empty_subtitle_url, el.video.subtitles[0].url)
-        self.assertIn(expected_english_subtitle_url, el.video.subtitles[1].url)
+        assert expected_empty_subtitle_url in el.video.subtitles[0].url
+        assert expected_english_subtitle_url in el.video.subtitles[1].url
 
     def test_st_video_subtitles_path(self):
         fake_video_data = b"\x11\x22\x33\x44\x55\x66"
@@ -201,25 +202,22 @@ class VideoTest(DeltaGeneratorTestCase):
         )
 
         el = self.get_delta_from_queue().new_element
-        self.assertIn(expected_english_subtitle_url, el.video.subtitles[0].url)
+        assert expected_english_subtitle_url in el.video.subtitles[0].url
 
     def test_singe_subtitle_exception(self):
         """Test that an error is raised if invalid subtitles is provided."""
         fake_video_data = b"\x11\x22\x33\x44\x55\x66"
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.video(fake_video_data, subtitles="invalid_subtitles")
-        self.assertEqual(
-            str(e.exception),
-            "Failed to process the provided subtitle: default",
-        )
+        assert str(e.value) == "Failed to process the provided subtitle: default"
 
     def test_dict_subtitle_video_exception(self):
         """Test that an error is raised if invalid subtitles in dict is provided."""
         fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
             st.video(
                 fake_video_data,
                 subtitles={
@@ -228,7 +226,4 @@ class VideoTest(DeltaGeneratorTestCase):
                     "Martian": "invalid_subtitles",
                 },
             )
-        self.assertEqual(
-            str(e.exception),
-            "Failed to process the provided subtitle: Martian",
-        )
+        assert str(e.value) == "Failed to process the provided subtitle: Martian"

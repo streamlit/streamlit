@@ -19,10 +19,13 @@
 This script requires the emoji package to be installed: pip install emoji.
 """
 
+from __future__ import annotations
+
 import os
 import re
 
 from emoji.unicode_codes import EMOJI_DATA
+
 from streamlit.emojis import ALL_EMOJIS
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -38,7 +41,7 @@ generated_code = f"""### EMOJIS START ###
 ALL_EMOJIS = {{{", ".join([f'"{emoji}"' for emoji in sorted(emoji_unicodes)])}}}
 ### EMOJIS END ###"""
 
-with open(EMOJIS_SCRIPT_PATH, "r") as file:
+with open(EMOJIS_SCRIPT_PATH) as file:
     script_content = file.read()
 
 updated_script_content = re.sub(EMOJI_SET_REGEX, generated_code, script_content)

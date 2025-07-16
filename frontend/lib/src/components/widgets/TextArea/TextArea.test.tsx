@@ -16,10 +16,11 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
+  Element,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
 } from "@streamlit/protobuf"
@@ -29,6 +30,15 @@ import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
+
+// Mock Element for tests
+class MockElement implements Element {
+  constructor() {}
+
+  toJSON(): MockElement {
+    return this
+  }
+}
 
 const getProps = (
   elementProps: Partial<TextAreaProto> = {},
@@ -46,7 +56,7 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-
+  outerElement: new MockElement(),
   ...widgetProps,
 })
 
@@ -228,8 +238,7 @@ describe("TextArea widget", () => {
     const user = userEvent.setup()
     const props = getProps({}, {})
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [100],
     })
 
@@ -243,8 +252,7 @@ describe("TextArea widget", () => {
 
   it("shows Please enter to apply text when width is bigger than 180px", async () => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [190],
     })
 
@@ -277,7 +285,7 @@ describe("TextArea widget", () => {
     props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(textArea).toHaveValue(props.element.default)
+    await waitFor(() => expect(textArea).toHaveValue(props.element.default))
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
@@ -330,11 +338,15 @@ describe("TextArea widget", () => {
 
     // Remove focus
     textArea.blur()
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
 
     // Then focus again
     textArea.focus()
-    expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
+    await waitFor(() => {
+      expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
+    })
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {

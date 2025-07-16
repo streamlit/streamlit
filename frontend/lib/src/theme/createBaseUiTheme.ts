@@ -84,6 +84,7 @@ const createBaseUiThemePrimitives = (
  */
 const createBaseUiThemeOverrides = (
   theme: EmotionTheme
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): Record<string, any> => {
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
@@ -246,6 +247,7 @@ const createBaseUiThemeOverrides = (
 export const createBaseUiTheme = (
   theme: EmotionTheme,
   primitives = lightBaseThemePrimitives
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): BaseTheme & Record<string, any> =>
   createBaseTheme(
     createBaseUiThemePrimitives(primitives, theme),

@@ -19,8 +19,11 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    expect_markdown,
     get_element_by_key,
 )
+
+TEXT_INPUT_ELEMENTS = 18
 
 
 def test_text_input_widget_rendering(
@@ -28,7 +31,7 @@ def test_text_input_widget_rendering(
 ):
     """Test that the st.text_input widgets are correctly rendered via screenshot matching."""
     text_input_widgets = themed_app.get_by_test_id("stTextInput")
-    expect(text_input_widgets).to_have_count(14)
+    expect(text_input_widgets).to_have_count(TEXT_INPUT_ELEMENTS)
 
     assert_snapshot(text_input_widgets.nth(0), name="st_text_input-default")
     assert_snapshot(text_input_widgets.nth(1), name="st_text_input-value_some_text")
@@ -42,12 +45,19 @@ def test_text_input_widget_rendering(
     assert_snapshot(text_input_widgets.nth(9), name="st_text_input-max_chars_5")
     assert_snapshot(text_input_widgets.nth(10), name="st_text_input-type_password")
     assert_snapshot(text_input_widgets.nth(13), name="st_text_input-markdown_label")
+    assert_snapshot(text_input_widgets.nth(14), name="st_text_input-emoji_icon")
+    assert_snapshot(text_input_widgets.nth(15), name="st_text_input-material_icon")
+    assert_snapshot(text_input_widgets.nth(16), name="st_text_input-width_200px")
+    assert_snapshot(text_input_widgets.nth(17), name="st_text_input-width_stretch")
 
 
 def test_text_input_has_correct_initial_values(app: Page):
     """Test that st.text_input has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(15)
+    # 1 st.write for each text input value (1-13)
+    # + 1 extra st.write for input 9 ("text input changed")
+    # + 1 st.write for "Rerun counter"
+    expect(markdown_elements).to_have_count(TEXT_INPUT_ELEMENTS - 3)
 
     expected = [
         "value 1: ",
@@ -62,6 +72,9 @@ def test_text_input_has_correct_initial_values(app: Page):
         "text input changed: False",
         "value 10: 1234",
         "value 11: my password",
+        "text input 12 (value from state) - value: xyz",
+        "text input 13 (value from form) - value:",
+        "Rerun counter: 1",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -75,7 +88,11 @@ def test_text_input_shows_instructions_when_dirty(
     text_input = app.get_by_test_id("stTextInput").nth(9)
 
     text_input_field = text_input.locator("input").first
+    expect(text_input_field).to_be_visible()
     text_input_field.fill("123")
+    expect(text_input.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to apply3/5"
+    )
 
     assert_snapshot(text_input, name="st_text_input-input_instructions")
 
@@ -83,8 +100,9 @@ def test_text_input_shows_instructions_when_dirty(
 def test_text_input_limits_input_via_max_chars(app: Page):
     """Test that st.text_input correctly limits the number of characters via max_chars."""
     text_input_field = app.get_by_test_id("stTextInput").nth(9).locator("input").first
-    # Try typing in char by char:
+    expect(text_input_field).to_be_visible()
     text_input_field.clear()
+    expect(text_input_field).to_have_value("")
     text_input_field.type("12345678")
     text_input_field.press("Enter")
 
@@ -97,9 +115,7 @@ def test_text_input_limits_input_via_max_chars(app: Page):
     text_input_field.fill("12345678")
     text_input_field.press("Enter")
 
-    expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
-        "value 10: 12345", use_inner_text=True
-    )
+    expect_markdown(app, "value 10: 12345")
 
 
 def test_text_input_has_correct_value_on_blur(app: Page):
@@ -250,7 +266,7 @@ def test_calls_callback_on_change(app: Page):
 
 
 def test_text_input_in_form_with_submit_by_enter(app: Page):
-    """Test that text area in form can be submitted by pressing Command+Enter"""
+    """Test that text area in form can be submitted by pressing Command+Enter."""
     text_area_field = app.get_by_test_id("stTextInput").nth(12).locator("input").first
     text_area_field.fill("hello world")
     text_area_field.press("Enter")

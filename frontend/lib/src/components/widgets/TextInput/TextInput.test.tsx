@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { act, screen, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -52,8 +52,7 @@ const getProps = (
 describe("TextInput widget", () => {
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [190],
     })
   })
@@ -431,11 +430,13 @@ describe("TextInput widget", () => {
 
     // Remove focus
     textInput.blur()
-    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
 
     // Then focus again
     textInput.focus()
-    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
+    expect(await screen.findByText("Press Enter to submit form")).toBeVisible()
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
@@ -454,8 +455,7 @@ describe("TextInput widget", () => {
 
   it("hides Please enter to apply text when width is smaller than 180px", async () => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [100],
     })
     const user = userEvent.setup()
@@ -509,5 +509,25 @@ describe("TextInput widget", () => {
     const forId2 = textInputLabel2.getAttribute("for")
 
     expect(forId2).toBe(forId1)
+  })
+
+  it("handles an emoji icon", () => {
+    const props = getProps({ icon: "🔎" })
+    render(<TextInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stTextInputIcon")).toBeInTheDocument()
+    // Element rendering emoji icon
+    const emojiIcon = screen.getByTestId("stIconEmoji")
+    expect(emojiIcon).toHaveTextContent("🔎")
+  })
+
+  it("handles a material icon", () => {
+    const props = getProps({ icon: ":material/search:" })
+    render(<TextInput {...props} />)
+    // Dynamic Icon parent element
+    expect(screen.getByTestId("stTextInputIcon")).toBeInTheDocument()
+    // Element rendering material icon
+    const materialIcon = screen.getByTestId("stIconMaterial")
+    expect(materialIcon).toHaveTextContent("search")
   })
 })

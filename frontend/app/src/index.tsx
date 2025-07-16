@@ -17,10 +17,10 @@
 // Timestamp when the Streamlit execution started for GUEST_READY message
 const streamlitExecutionStartedAt = Date.now()
 
-import React from "react"
+import React, { StrictMode } from "react"
 
 import log from "loglevel"
-import ReactDOM from "react-dom"
+import { createRoot } from "react-dom/client"
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
 
@@ -32,12 +32,18 @@ if (process.env.NODE_ENV === "development") {
   log.setLevel(log.levels.DEBUG)
 }
 
-// TODO: Deprecated in React 18 - Need to revise to new API
-// react-18-upgrade
-// eslint-disable-next-line react/no-deprecated
-ReactDOM.render(
-  <StyletronProvider value={engine}>
-    <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
-  </StyletronProvider>,
-  document.getElementById("root")
+const rootDomNode = document.getElementById("root")
+
+if (!rootDomNode) {
+  throw new Error("#root DOM element not found")
+}
+
+const reactRoot = createRoot(rootDomNode)
+
+reactRoot.render(
+  <StrictMode>
+    <StyletronProvider value={engine}>
+      <ThemedApp streamlitExecutionStartedAt={streamlitExecutionStartedAt} />
+    </StyletronProvider>
+  </StrictMode>
 )

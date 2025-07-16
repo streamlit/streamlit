@@ -29,11 +29,10 @@ from typing import (
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import Required, TypeAlias
 
 from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
@@ -45,11 +44,12 @@ from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    import matplotlib
+    import matplotlib as mpl
     import plotly.graph_objs as go
     from plotly.basedatatypes import BaseFigure
 
@@ -70,7 +70,7 @@ FigureOrData: TypeAlias = Union[
     # align with the docstring.
     dict[str, _AtomicFigureOrData],
     "BaseFigure",
-    "matplotlib.figure.Figure",
+    "mpl.figure.Figure",
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
@@ -159,10 +159,10 @@ class PlotlySelectionState(TypedDict, total=False):
 
     """
 
-    points: list[dict[str, Any]]
-    point_indices: list[int]
-    box: list[dict[str, Any]]
-    lasso: list[dict[str, Any]]
+    points: Required[list[dict[str, Any]]]
+    point_indices: Required[list[int]]
+    box: Required[list[dict[str, Any]]]
+    lasso: Required[list[dict[str, Any]]]
 
 
 class PlotlyState(TypedDict, total=False):
@@ -205,7 +205,7 @@ class PlotlyState(TypedDict, total=False):
 
     """
 
-    selection: PlotlySelectionState
+    selection: Required[PlotlySelectionState]
 
 
 @dataclass
@@ -214,7 +214,7 @@ class PlotlyChartSelectionSerde:
     selection state.
     """
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
+    def deserialize(self, ui_value: str | None) -> PlotlyState:
         empty_selection_state: PlotlyState = {
             "selection": {
                 "points": [],
@@ -227,13 +227,13 @@ class PlotlyChartSelectionSerde:
         selection_state = (
             empty_selection_state
             if ui_value is None
-            else cast(PlotlyState, AttributeDictionary(json.loads(ui_value)))
+            else cast("PlotlyState", AttributeDictionary(json.loads(ui_value)))
         )
 
         if "selection" not in selection_state:
-            selection_state = empty_selection_state
+            selection_state = empty_selection_state  # type: ignore[unreachable]
 
-        return cast(PlotlyState, AttributeDictionary(selection_state))
+        return cast("PlotlyState", AttributeDictionary(selection_state))
 
     def serialize(self, selection_state: PlotlyState) -> str:
         return json.dumps(selection_state, default=str)
@@ -257,12 +257,12 @@ def parse_selection_mode(
         )
 
     parsed_selection_modes = []
-    for selection_mode in selection_mode_set:
-        if selection_mode == "points":
+    for mode in selection_mode_set:
+        if mode == "points":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.POINTS)
-        elif selection_mode == "lasso":
+        elif mode == "lasso":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.LASSO)
-        elif selection_mode == "box":
+        elif mode == "box":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.BOX)
     return set(parsed_selection_modes)
 
@@ -339,6 +339,17 @@ class PlotlyMixin:
             The Plotly ``Figure`` or ``Data`` object to render. See
             https://plot.ly/python/ for examples of graph descriptions.
 
+            .. note::
+                If your chart contains more than 1000 data points, Plotly will
+                use a WebGL renderer to display the chart. Different browsers
+                have different limits on the number of WebGL contexts per page.
+                If you have multiple WebGL contexts on a page, you may need to
+                switch to SVG rendering mode. You can do this by setting
+                ``render_mode="svg"`` within the figure. For example, the
+                following code defines a Plotly Express line chart that will
+                render in SVG mode when passed to ``st.plotly_chart``:
+                ``px.line(df, x="x", y="y", render_mode="svg")``.
+
         use_container_width : bool
             Whether to override the figure's native width with the width of
             the parent container. If ``use_container_width`` is ``True`` (default),
@@ -351,6 +362,11 @@ class PlotlyMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit uses its own design default. If ``theme`` is ``None``,
             Streamlit falls back to the default behavior of the library.
+
+            The ``"streamlit"`` theme can be partially customized through the
+            configuration options ``theme.chartCategoricalColors`` and
+            ``theme.chartSequentialColors``. Font configuration options are
+            also applied.
 
         key : str
             An optional string to use for giving this element a stable
@@ -394,7 +410,12 @@ class PlotlyMixin:
             All selections modes are activated by default.
 
         **kwargs
-            Any argument accepted by Plotly's ``plot()`` function.
+            Additional arguments accepted by Plotly's ``plot()`` function.
+
+            This supports ``config``, a dictionary of Plotly configuration
+            options. For more information about Plotly configuration options,
+            see Plotly's documentation on `Configuration in Python
+            <https://plotly.com/python/configuration-options/>`_.
 
         Returns
         -------
@@ -405,11 +426,12 @@ class PlotlyMixin:
             attribute notation. The attributes are described by the
             ``PlotlyState`` dictionary schema.
 
-        Example
-        -------
-        The example below comes straight from the examples at
-        https://plot.ly/python. Note that ``plotly.figure_factory`` requires
-        ``scipy`` to run.
+        Examples
+        --------
+        **Example 1: Basic Plotly Chart**
+
+        The example below comes from the examples at https://plot.ly/python.
+        Note that ``plotly.figure_factory`` requires ``scipy`` to run.
 
         >>> import streamlit as st
         >>> import numpy as np
@@ -434,6 +456,31 @@ class PlotlyMixin:
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
+           height: 550px
+
+        **Example 2: Plotly Chart with configuration**
+
+        By default, Plotly charts have scroll zoom enabled. If you have a
+        longer page and want to avoid conflicts between page scrolling and
+        zooming, you can use Plotly's configuration options to disable scroll
+        zoom. In the following example, scroll zoom is disabled, but the zoom
+        buttons are still enabled in the modebar.
+
+        >>> import streamlit as st
+        >>> import plotly.graph_objects as go
+        >>>
+        >>> fig = go.Figure()
+        >>> fig.add_trace(
+        ...     go.Scatter(
+        ...         x=[1, 2, 3, 4, 5],
+        ...         y=[1, 3, 2, 5, 4]
+        ...     )
+        ... )
+        >>>
+        >>> st.plotly_chart(fig, config = {'scrollZoom': False})
+
+        .. output::
+           https://doc-plotly-chart-config.streamlit.app/
            height: 550px
 
         """
@@ -474,7 +521,7 @@ class PlotlyMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select) if is_callback else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -510,6 +557,7 @@ class PlotlyMixin:
             "plotly_chart",
             user_key=key,
             form_id=plotly_chart_proto.form_id,
+            dg=self.dg,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
             selection_mode=selection_mode,
@@ -536,9 +584,8 @@ class PlotlyMixin:
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
-            return cast(PlotlyState, widget_state.value)
-        else:
-            return self.dg._enqueue("plotly_chart", plotly_chart_proto)
+            return widget_state.value
+        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
     def dg(self) -> DeltaGenerator:

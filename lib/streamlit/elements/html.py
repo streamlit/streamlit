@@ -15,9 +15,17 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Html_pb2 import Html as HtmlProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -32,6 +40,8 @@ class HtmlMixin:
     def html(
         self,
         body: str | Path | SupportsStr | SupportsReprHtml,
+        *,  # keyword-only arguments:
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Insert HTML into your app.
 
@@ -58,6 +68,27 @@ class HtmlMixin:
               convert the object to a string. ``body._repr_html_()`` takes
               precedence over ``str(body)`` when available.
 
+            If the resulting HTML content is empty, Streamlit will raise an
+            error.
+
+            If ``body`` is a path to a CSS file, Streamlit will wrap the CSS
+            content in ``<style>`` tags automatically. When the resulting HTML
+            content only contains style tags, Streamlit will send the content
+            to the event container instead of the main container to avoid
+            taking up space in the app.
+
+        width : "stretch", "content", or int
+            The width of the HTML element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
         Example
         -------
         >>> import streamlit as st
@@ -75,23 +106,65 @@ class HtmlMixin:
 
         # If body supports _repr_html_, use that.
         if has_callable_attr(body, "_repr_html_"):
-            html_proto.body = cast(SupportsReprHtml, body)._repr_html_()
+            html_content = cast("SupportsReprHtml", body)._repr_html_()
 
         # Check if the body is a file path. May include filesystem lookup.
         elif isinstance(body, Path) or _is_file(body):
-            with open(cast(str, body), encoding="utf-8") as f:
-                html_proto.body = f.read()
+            file_path = str(body)
+            with open(file_path, encoding="utf-8") as f:
+                html_content = f.read()
+
+            # If it's a CSS file, wrap the content in style tags
+            if Path(file_path).suffix.lower() == ".css":
+                html_content = f"<style>{html_content}</style>"
 
         # OK, let's just try converting to string and hope for the best.
         else:
-            html_proto.body = clean_text(cast(SupportsStr, body))
+            html_content = clean_text(cast("SupportsStr", body))
 
-        return self.dg._enqueue("html", html_proto)
+        # Raise an error if the body is empty
+        if html_content == "":
+            raise StreamlitAPIException("`st.html` body cannot be empty")
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        # Handle the case where there are only style tags - issue #9388
+        # Use event container for style tags so they don't take up space in the app content
+        if _html_only_style_tags(html_content):
+            # If true, there are only style tags - send html to the event container
+            html_proto.body = html_content
+            return self._event_dg._enqueue("html", html_proto)
+        # Otherwise, send the html to the main container as normal
+        html_proto.body = html_content
+        return self.dg._enqueue("html", html_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+    @property
+    def _event_dg(self) -> DeltaGenerator:
+        """Get the event delta generator."""
+        return get_dg_singleton_instance().event_dg
+
+
+def _html_only_style_tags(html_content: str) -> bool:
+    """Check if the HTML content is only style tags."""
+    # Pattern to match HTML comments
+    comment_pattern = r"<!--.*?-->"
+    # Pattern to match style tags and their contents (case-insensitive)
+    style_pattern = r"<style[^>]*>.*?</style>"
+
+    # Remove style tags and comments
+    html_without_comments = re.sub(comment_pattern, "", html_content, flags=re.DOTALL)
+    html_without_styles_and_comments = re.sub(
+        style_pattern, "", html_without_comments, flags=re.DOTALL | re.IGNORECASE
+    )
+
+    # Return whether html content is empty after removing style tags and comments
+    return html_without_styles_and_comments.strip() == ""
 
 
 def _is_file(obj: Any) -> bool:

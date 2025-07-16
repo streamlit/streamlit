@@ -39,7 +39,7 @@ interface Props {
   requestFileURLs?: (requestId: string, files: File[]) => void
 }
 
-const log = getLogger("FileUploadClient")
+const LOG = getLogger("FileUploadClient")
 
 /**
  * Handles operations related to the widgets that require file uploading.
@@ -103,6 +103,7 @@ export class FileUploadClient {
     widget: WidgetInfo,
     fileUploadUrl: string,
     file: File,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<void> {
@@ -173,7 +174,7 @@ export class FileUploadClient {
       }
       this.pendingFileURLsRequests.delete(id)
     } else {
-      log.warn("fileURLsResponse received for nonexistent request, ignoring.")
+      LOG.warn("fileURLsResponse received for nonexistent request, ignoring.")
     }
   }
 

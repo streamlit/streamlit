@@ -51,7 +51,9 @@ st.write("Value 2:", w2)
 
 # Slider 6
 w3 = st.slider(
-    "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label",
+    "Label 3 - This is a very very very very very very very very very very very very very "
+    "very very very very very very very very very very very very very very very very very "
+    "very very very very very very very very very very very very very very very long label",
     0,
     100,
     1,
@@ -188,3 +190,7 @@ st.slider(
 st.slider(
     "Label 18 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 )
+
+
+st.slider("Label 19 - Width 300px", min_value=0, max_value=100, width=300)
+st.slider("Label 20 - Width Stretch", min_value=0, max_value=100, width="stretch")

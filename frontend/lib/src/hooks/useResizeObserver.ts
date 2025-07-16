@@ -40,20 +40,16 @@ export type DOMRectKeys =
  * @returns {{
  *   values: number[],
  *   elementRef: MutableRefObject<T | null>,
- *   forceRecalculate: () => void
- *   }} An object containing the observed values, a ref to the observed element,
- *   and a function to force recalculation.
+ *   }} An object containing the observed values, a ref to the observed element.
  */
 export const useResizeObserver = <T extends HTMLDivElement>(
   properties: DOMRectKeys[]
 ): {
   values: number[]
   elementRef: MutableRefObject<T | null>
-  forceRecalculate: () => void
 } => {
   const elementRef = useRef<T | null>(null)
   const [values, setValues] = useState<number[]>([])
-
   /**
    * Gets the current values of the specified DOMRect properties.
    *
@@ -64,23 +60,13 @@ export const useResizeObserver = <T extends HTMLDivElement>(
       return []
     }
 
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const rect = elementRef.current.getBoundingClientRect()
 
     return properties.map(property => {
       return rect[property]
     })
   }, [properties])
-
-  /**
-   * Forces a recalculation of the observed values.
-   *
-   * This is included for backwards compatibility after the addition of
-   * useResizeObserver but we anticipate all new cases should be implemented
-   * without this.
-   */
-  const forceRecalculate = useCallback(() => {
-    setValues(getValues())
-  }, [getValues])
 
   useEffect(() => {
     if (!elementRef.current) {
@@ -106,5 +92,5 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     }
   }, [properties, getValues])
 
-  return { values, elementRef, forceRecalculate }
+  return { values, elementRef }
 }

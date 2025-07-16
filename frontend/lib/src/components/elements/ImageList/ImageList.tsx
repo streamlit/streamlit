@@ -16,6 +16,8 @@
 
 import React, { CSSProperties, memo, ReactElement } from "react"
 
+import { getLogger } from "loglevel"
+
 import {
   ImageList as ImageListProto,
   Image as ImageProto,
@@ -35,6 +37,8 @@ import {
   StyledImageContainer,
   StyledImageList,
 } from "./styled-components"
+
+const LOG = getLogger("ImageList")
 
 export interface ImageListProps {
   endpoints: StreamlitEndpoints
@@ -107,10 +111,30 @@ function ImageList({
   if (height && isFullScreen) {
     imgStyle.maxHeight = height
     imgStyle.objectFit = "contain"
+    // @see issue https://github.com/streamlit/streamlit/issues/10904
+    // Ensure the image tries to fill the width to prevent sizeless SVGs from
+    // not rendering. Let object-fit handle aspect ratio.
+    imgStyle.width = "100%"
   } else {
-    imgStyle.width = imageWidth
+    // @see issue https://github.com/streamlit/streamlit/issues/10904
+    // Use imageWidth if defined, otherwise fallback to 100% to prevent sizeless
+    // SVGs from not rendering.
+    imgStyle.width = imageWidth ?? "100%"
     // Cap the image width, so it doesn't exceed its parent container width
     imgStyle.maxWidth = "100%"
+  }
+
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>
+  ): void => {
+    const imageUrl = e.currentTarget.src
+    LOG.error(`Client Error: Image source error - ${imageUrl}`)
+    endpoints.sendClientErrorToHost(
+      "Image",
+      "Image source failed to load",
+      "onerror triggered",
+      imageUrl
+    )
   }
 
   return (
@@ -131,11 +155,14 @@ function ImageList({
         {element.imgs.map((iimage, idx): ReactElement => {
           const image = iimage as ImageProto
           return (
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             <StyledImageContainer data-testid="stImageContainer" key={idx}>
               <img
                 style={imgStyle}
                 src={endpoints.buildMediaURL(image.url)}
                 alt={idx.toString()}
+                onError={handleImageError}
               />
               {image.caption && (
                 <StyledCaption data-testid="stImageCaption" style={imgStyle}>
@@ -157,4 +184,5 @@ function ImageList({
   )
 }
 
-export default memo(withFullScreenWrapper(ImageList))
+const ImageListWithFullScreen = withFullScreenWrapper(ImageList)
+export default memo(ImageListWithFullScreen)

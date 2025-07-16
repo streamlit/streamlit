@@ -89,8 +89,8 @@ class MemoryFile(NamedTuple):
 
 
 class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
-    def __init__(self, media_endpoint: str):
-        """Create a new MemoryMediaFileStorage instance
+    def __init__(self, media_endpoint: str) -> None:
+        """Create a new MemoryMediaFileStorage instance.
 
         Parameters
         ----------
@@ -110,10 +110,11 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     ) -> str:
         """Add a file to the manager and return its ID."""
         file_data: bytes
-        if isinstance(path_or_data, str):
-            file_data = self._read_file(path_or_data)
-        else:
-            file_data = path_or_data
+        file_data = (
+            self._read_file(path_or_data)
+            if isinstance(path_or_data, str)
+            else path_or_data
+        )
 
         # Because our file_ids are stable, if we already have a file with the
         # given ID, we don't need to create a new one.
@@ -130,7 +131,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     def get_file(self, filename: str) -> MemoryFile:
         """Return the MemoryFile with the given filename. Filenames are of the
         form "file_id.extension". (Note that this is *not* the optional
-        user-specified filename for download files.)
+        user-specified filename for download files.).
 
         Raises a MediaFileStorageError if no such file exists.
         """

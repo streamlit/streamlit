@@ -69,8 +69,7 @@ const getProps = (
 describe("ArrowVegaLiteChart", () => {
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [250],
     })
   })

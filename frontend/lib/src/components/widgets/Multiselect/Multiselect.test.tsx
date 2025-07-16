@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -70,12 +70,12 @@ describe("Multiselect widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<Multiselect {...props} />)
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      props.element.default.map(index => props.element.options[index]),
       {
         fromUi: false,
       },
@@ -83,14 +83,28 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("can pass fragmentId to setIntArrayValue", () => {
+  it("gets correct value from proto", () => {
+    const props = getProps({
+      rawValues: ["b", "c"],
+      setValue: true,
+    })
+    render(<Multiselect {...props} />)
+
+    const selections = screen.getAllByRole("button")
+    // one of the buttons is the dropdown button
+    expect(selections.length).toBe(3)
+    expect(selections[0]).toHaveTextContent("b")
+    expect(selections[1]).toHaveTextContent("c")
+  })
+
+  it("can pass fragmentId to setStringArrayValue", () => {
     const props = getProps(undefined, { fragmentId: "myFragmentId" })
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<Multiselect {...props} />)
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      props.element.default.map(index => props.element.options[index]),
       {
         fromUi: false,
       },
@@ -137,7 +151,7 @@ describe("Multiselect widget", () => {
   })
 
   describe("placeholder", () => {
-    it("renders when it's empty", () => {
+    it("renders when default is empty", () => {
       const props = getProps({ default: [] })
       render(<Multiselect {...props} />)
 
@@ -145,12 +159,47 @@ describe("Multiselect widget", () => {
       expect(placeholder).toBeInTheDocument()
     })
 
-    it("renders with empty options", () => {
-      const props = getProps({ default: [], options: [] })
+    it("renders with custom placeholder", () => {
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+        placeholder: "Custom placeholder text",
+      })
       render(<Multiselect {...props} />)
 
-      const placeholder = screen.getByText("No options to select.")
-      expect(placeholder).toBeInTheDocument()
+      expect(screen.getByText("Custom placeholder text")).toBeInTheDocument()
+    })
+
+    it("integrates with placeholder utility for default behavior", () => {
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+        placeholder: "", // Empty string to trigger default placeholder
+        acceptNewOptions: false,
+      })
+      render(<Multiselect {...props} />)
+
+      // Verifies that the integration with getSelectPlaceholder utility works
+      expect(screen.getByText("Choose options")).toBeInTheDocument()
+    })
+
+    it("handles single space placeholder as a valid placeholder", () => {
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c"],
+        placeholder: " ",
+      })
+      render(<Multiselect {...props} />)
+
+      // Should not show any default placeholder text since single space is provided
+      expect(screen.queryByText("Choose options")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("Choose or add options")
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText("Add options")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("No options to select")
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -197,10 +246,11 @@ describe("Multiselect widget", () => {
     const props = getProps()
     render(<Multiselect {...props} />)
 
+    // Add new selection (b) in addition to existing selection (a)
+    // by typing in the preferred option
     const multiSelect = screen.getByRole("combobox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(multiSelect, { target: { value: "b" } })
+    await user.type(multiSelect, "b")
+    // Select the matching option from the list
     const match = screen.getByRole("option")
     await user.click(match)
 
@@ -255,17 +305,16 @@ describe("Multiselect widget", () => {
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<Multiselect {...props} />)
 
-    // Change the widget value
+    // Change the widget value - add selection (b)
+    // to existing selection (a) by typing in
     const multiSelect = screen.getByRole("combobox")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(multiSelect, { target: { value: "b" } })
+    await user.type(multiSelect, "b")
+    // Select the matching option from the list
     const match = screen.getByRole("option")
-    // Select b
     await user.click(match)
 
     // Options list should only have c available - a & b selected
@@ -273,9 +322,9 @@ describe("Multiselect widget", () => {
     expect(remainingOptions.length).toBe(1)
     expect(remainingOptions[0]).toHaveTextContent("c")
 
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      [0, 1],
+      [props.element.options[0], props.element.options[1]],
       {
         fromUi: true,
       },
@@ -296,9 +345,9 @@ describe("Multiselect widget", () => {
     expect(updatedOptions[0]).toHaveTextContent("b")
     expect(updatedOptions[1]).toHaveTextContent("c")
 
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      props.element.default.map(index => props.element.options[index]),
       {
         fromUi: true,
       },
@@ -359,13 +408,17 @@ describe("Multiselect widget", () => {
       )
       render(<Multiselect {...props} />)
 
-      // Select another option, b
-      const multiSelect = screen.getByRole("combobox")
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(multiSelect, { target: { value: "b" } })
-      const match = screen.getByRole("option")
-      await user.click(match)
+      // Select another option, b, from the dropdown list
+      const expandListButton = screen.getAllByTitle("open")[0]
+      // Open the list
+      await user.click(expandListButton)
+      // Options list should only have b & c available - default a selected
+      const options = screen.getAllByRole("option")
+      expect(options.length).toBe(2)
+      expect(options[0]).toHaveTextContent("b")
+      expect(options[1]).toHaveTextContent("c")
+      // Select b from the list
+      await user.click(options[0])
 
       expect(
         screen.getByText(
@@ -422,5 +475,37 @@ describe("Multiselect widget", () => {
       expect(updatedOptions[0]).toHaveTextContent("a")
       expect(updatedOptions[1]).toHaveTextContent("c")
     })
+  })
+
+  it("allows case sensitive new options to be added", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["aa", "Aa", "aA"],
+      acceptNewOptions: true,
+    })
+    render(<Multiselect {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "AA")
+
+    expect(screen.getByText("Add: AA")).toBeInTheDocument()
+  })
+
+  it("predictably produces case sensitive matches", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["aa", "Aa", "aA"],
+    })
+    render(<Multiselect {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "aa")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(3)
+    expect(options[0]).toHaveTextContent("aa")
+    expect(options[1]).toHaveTextContent("Aa")
+    expect(options[2]).toHaveTextContent("aA")
   })
 })

@@ -31,7 +31,8 @@ import {
 } from "./utils"
 
 export interface SelectboxColumnParams {
-  /** A list of options available in the selectbox.
+  /**
+   * A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
   readonly options: (string | number | boolean)[]
@@ -52,7 +53,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     {
       options: isBooleanType(props.arrowType)
         ? [true, false]
-        : props.arrowType.categoricalOptions ?? [],
+        : (props.arrowType.categoricalOptions ?? []),
     },
     // User parameters:
     props.columnTypeOptions
@@ -67,7 +68,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     }
   }
 
-  const cellTemplate = {
+  const cellTemplate: DropdownCellType = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
     copyData: "",
@@ -86,12 +87,13 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       ],
       value: "",
     },
-  } as DropdownCellType
+  }
 
   return {
     ...props,
     kind: "selectbox",
     sortMode: "default",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       // Empty string refers to a missing value
       let cellData = null

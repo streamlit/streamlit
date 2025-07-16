@@ -51,10 +51,8 @@ jobs:
           pip install pre-commit
           pre-commit install-hooks
         shell: bash
-      - name: Enable and Prepare Latest Yarn
-        run: |
-          corepack enable
-          corepack prepare yarn@4.5.3 --activate
+      - name: Enable Corepack
+        run: corepack enable
         shell: bash
       - name: Install prettier
         run: cd frontend && yarn install

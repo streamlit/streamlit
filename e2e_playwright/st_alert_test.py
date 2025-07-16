@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that alerts render correctly using snapshot testing."""
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(22)
+    expect(alert_elements).to_have_count(32)
 
     # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
@@ -52,6 +52,24 @@ def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
 
     assert_snapshot(alert_elements.nth(20), name="st_alert-error_with_heading")
 
+    # Test width="stretch" alerts
+    assert_snapshot(alert_elements.nth(22), name="st_alert-error_width_stretch")
+    assert_snapshot(alert_elements.nth(23), name="st_alert-warning_width_stretch")
+    assert_snapshot(alert_elements.nth(24), name="st_alert-info_width_stretch")
+    assert_snapshot(alert_elements.nth(25), name="st_alert-success_width_stretch")
+
+    # Test width=200 alerts
+    assert_snapshot(alert_elements.nth(26), name="st_alert-error_width_200")
+    assert_snapshot(alert_elements.nth(27), name="st_alert-warning_width_200")
+    assert_snapshot(alert_elements.nth(28), name="st_alert-info_width_200")
+    assert_snapshot(alert_elements.nth(29), name="st_alert-success_width_200")
+
+    # Test width="stretch" with icon
+    assert_snapshot(alert_elements.nth(30), name="st_alert-error_width_stretch_icon")
+
+    # Test width=200 with icon
+    assert_snapshot(alert_elements.nth(31), name="st_alert-info_width_200_icon")
+
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
@@ -63,6 +81,6 @@ def test_material_symbol_from_latest_font_version_rendering(
 ):
     """Test that icon from latest version material symbols font renders correctly."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(22)
+    expect(alert_elements).to_have_count(32)
 
     assert_snapshot(alert_elements.nth(21), name="st_alert-latest_material_symbol")

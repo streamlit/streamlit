@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react-swc"
+import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
@@ -77,11 +77,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    coverage: {
-      reporter: ["text", "json", "html"],
-      include: ["src/**/*"],
-      exclude: [],
     },
   },
 })

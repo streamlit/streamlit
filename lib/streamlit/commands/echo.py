@@ -19,12 +19,12 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Generator, Iterable
 
 _SPACES_RE = re.compile("\\s*")
 _EMPTY_LINE_RE = re.compile("\\s*\n")
@@ -32,7 +32,9 @@ _EMPTY_LINE_RE = re.compile("\\s*\n")
 
 @gather_metrics("echo")
 @contextlib.contextmanager
-def echo(code_location="above"):
+def echo(
+    code_location: Literal["above", "below"] = "above",
+) -> Generator[None, None, None]:
     """Use in a `with` block to draw some code on the app, then execute it.
 
     Parameters
@@ -99,7 +101,7 @@ def echo(code_location="above"):
         show_code(code_string, "python")
 
     except FileNotFoundError as err:
-        show_warning("Unable to display code. %s" % err)
+        show_warning(f"Unable to display code. {err}")
 
 
 def _get_initial_indent(lines: Iterable[str]) -> int:

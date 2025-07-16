@@ -24,15 +24,16 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.time_util import time_to_seconds
-from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -80,6 +81,7 @@ class MediaMixin:
         end_time: MediaTime | None = None,
         loop: bool = False,
         autoplay: bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display an audio player.
 
@@ -103,9 +105,10 @@ class MediaMixin:
 
         format : str
             The MIME type for the audio file. This defaults to ``"audio/wav"``.
-            For more information, see https://tools.ietf.org/html/rfc4281.
+            For more information about MIME types, see
+            https://www.iana.org/assignments/media-types/media-types.xhtml.
 
-        start_time: int, float, timedelta, str, or None
+        start_time : int, float, timedelta, str, or None
             The time from which the element should start playing. This can be
             one of the following:
 
@@ -118,10 +121,10 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        sample_rate: int or None
+        sample_rate : int or None
             The sample rate of the audio data in samples per second. This is
             only required if ``data`` is a NumPy array.
-        end_time: int, float, timedelta, str, or None
+        end_time : int, float, timedelta, str, or None
             The time at which the element should stop playing. This can be
             one of the following:
 
@@ -134,12 +137,22 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        loop: bool
+        loop : bool
             Whether the audio should loop playback.
-        autoplay: bool
+        autoplay : bool
             Whether the audio file should start playing automatically. This is
             ``False`` by default. Browsers will not autoplay audio files if the
             user has not interacted with the page by clicking somewhere.
+        width : "stretch" or int
+            The width of the audio player element. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -180,6 +193,7 @@ class MediaMixin:
 
         """
         start_time, end_time = _parse_start_time_end_time(start_time, end_time)
+        validate_width(width)
 
         audio_proto = AudioProto()
 
@@ -206,6 +220,7 @@ class MediaMixin:
             loop,
             autoplay,
             form_id=current_form_id(self.dg),
+            width=width,
         )
         return self.dg._enqueue("audio", audio_proto)
 
@@ -221,6 +236,7 @@ class MediaMixin:
         loop: bool = False,
         autoplay: bool = False,
         muted: bool = False,
+        width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a video player.
 
@@ -238,9 +254,10 @@ class MediaMixin:
 
         format : str
             The MIME type for the video file. This defaults to ``"video/mp4"``.
-            For more information, see https://tools.ietf.org/html/rfc4281.
+            For more information about MIME types, see
+            https://www.iana.org/assignments/media-types/media-types.xhtml.
 
-        start_time: int, float, timedelta, str, or None
+        start_time : int, float, timedelta, str, or None
             The time from which the element should start playing. This can be
             one of the following:
 
@@ -253,7 +270,7 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        subtitles: str, bytes, Path, io.BytesIO, or dict
+        subtitles : str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
 
             - ``None`` (default): No subtitles.
@@ -279,7 +296,7 @@ class MediaMixin:
             in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
-        end_time: int, float, timedelta, str, or None
+        end_time : int, float, timedelta, str, or None
             The time at which the element should stop playing. This can be
             one of the following:
 
@@ -292,18 +309,28 @@ class MediaMixin:
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(seconds=70)``.
-        loop: bool
+        loop : bool
             Whether the video should loop playback.
-        autoplay: bool
+        autoplay : bool
             Whether the video should start playing automatically. This is
             ``False`` by default. Browsers will not autoplay unmuted videos
             if the user has not interacted with the page by clicking somewhere.
             To enable autoplay without user interaction, you must also set
             ``muted=True``.
-        muted: bool
+        muted : bool
             Whether the video should play with the audio silenced. This is
             ``False`` by default. Use this in conjunction with ``autoplay=True``
             to enable autoplay without user interaction.
+        width : "stretch" or int
+            The width of the video player element. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -348,14 +375,16 @@ class MediaMixin:
         `video subtitles feature demo <https://doc-video-subtitle-inputs.streamlit.app/>`_.
 
         .. note::
-           Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
-           not widely supported by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit.
+           Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV),
+           as this codec is not widely supported by browsers. Converting your video to H.264 will allow
+           the video to be displayed in Streamlit.
            See this `StackOverflow post <https://stackoverflow.com/a/49535220/2394542>`_ or this
            `Streamlit forum post <https://discuss.streamlit.io/t/st-video-doesnt-show-opencv-generated-mp4/3193/2>`_
            for more information.
 
         """
         start_time, end_time = _parse_start_time_end_time(start_time, end_time)
+        validate_width(width)
 
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
@@ -371,6 +400,7 @@ class MediaMixin:
             autoplay,
             muted,
             form_id=current_form_id(self.dg),
+            width=width,
         )
         return self.dg._enqueue("video", video_proto)
 
@@ -446,17 +476,16 @@ def _marshall_av_media(
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data_or_filename = data.getvalue()
-    elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
+    elif isinstance(data, (io.RawIOBase, io.BufferedReader)):
         data.seek(0)
         read_data = data.read()
         if read_data is None:
             return
-        else:
-            data_or_filename = read_data
+        data_or_filename = read_data
     elif type_util.is_type(data, "numpy.ndarray"):
         data_or_filename = data.tobytes()
     else:
-        raise RuntimeError("Invalid binary data format: %s" % type(data))
+        raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
@@ -482,6 +511,7 @@ def marshall_video(
     autoplay: bool = False,
     muted: bool = False,
     form_id: str | None = None,
+    width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -503,8 +533,9 @@ def marshall_video(
     subtitles: str, dict, or io.BytesIO
         Optional subtitle data for the video, supporting several input types:
         - None (default): No subtitles.
-        - A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
-            If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
+        - A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content
+            of subtitles conforming to these formats. If providing raw content, the string must
+            adhere to the WebVTT or SRT format specifications.
         - A dictionary: Pairs of labels and file paths or raw subtitle content in '.vtt' or '.srt' formats.
             Enables multiple subtitle tracks. The label will be shown in the video player.
             Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
@@ -527,6 +558,11 @@ def marshall_video(
     form_id: str | None
         The ID of the form that this element is placed in. Provide None if
         the element is not placed in a form.
+    width: int or "stretch"
+        The width of the video player. This can be one of the following:
+        - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
+        - "stretch": The default value. The video player stretches to fill
+          available space in its container.
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
@@ -538,6 +574,13 @@ def marshall_video(
     if end_time is not None:
         proto.end_time = end_time
     proto.loop = loop
+
+    width_config = WidthConfig()
+    if isinstance(width, int):
+        width_config.pixel_width = width
+    else:
+        width_config.use_stretch = True
+    proto.width_config.CopyFrom(width_config)
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -608,6 +651,7 @@ def marshall_video(
             loop=loop,
             autoplay=autoplay,
             muted=muted,
+            width=width,
         )
 
 
@@ -619,7 +663,7 @@ def _parse_start_time_end_time(
     try:
         maybe_start_time = time_to_seconds(start_time, coerce_none_to_inf=False)
         if maybe_start_time is None:
-            raise ValueError
+            raise ValueError  # noqa: TRY301
         start_time = int(maybe_start_time)
     except (StreamlitAPIException, ValueError):
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
@@ -664,7 +708,7 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
 
     transformed_data: npt.NDArray[Any] = np.array(data, dtype=float)
 
-    if len(cast(NumpyShape, transformed_data.shape)) == 1:
+    if len(transformed_data.shape) == 1:
         nchan = 1
     elif len(transformed_data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,
@@ -679,7 +723,7 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     if transformed_data.size == 0:
         return transformed_data.astype(np.int16).tobytes(), nchan
 
-    max_abs_value = np.max(np.abs(transformed_data))
+    max_abs_value: npt.NDArray[Any] = np.max(np.abs(transformed_data))
     # 16-bit samples are stored as 2's-complement signed integers,
     # ranging from -32768 to 32767.
     # scaled_data is PCM 16 bit numpy array, that's why we multiply [-1, 1] float
@@ -691,7 +735,8 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
 
 def _make_wav(data: npt.NDArray[Any], sample_rate: int) -> bytes:
     """
-    Transform a numpy array to a PCM bytestring
+    Transform a numpy array to a PCM bytestring.
+
     We use code from IPython display module to convert numpy array to wave bytes
     https://github.com/ipython/ipython/blob/1015c392f3d50cf4ff3e9f29beede8c1abfdcb2a/IPython/lib/display.py#L146
     """
@@ -728,6 +773,7 @@ def marshall_audio(
     loop: bool = False,
     autoplay: bool = False,
     form_id: str | None = None,
+    width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -757,12 +803,24 @@ def marshall_audio(
     form_id: str | None
         The ID of the form that this element is placed in. Provide None if
         the element is not placed in a form.
+    width: int or "stretch"
+        The width of the audio player. This can be one of the following:
+        - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
+        - "stretch": The default value. The audio player stretches to fill
+          available space in its container.
     """
 
     proto.start_time = start_time
     if end_time is not None:
         proto.end_time = end_time
     proto.loop = loop
+
+    width_config = WidthConfig()
+    if isinstance(width, int):
+        width_config.pixel_width = width
+    else:
+        width_config.use_stretch = True
+    proto.width_config.CopyFrom(width_config)
 
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
@@ -788,4 +846,5 @@ def marshall_audio(
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
+            width=width,
         )

@@ -16,12 +16,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Width
     from streamlit.type_util import SupportsStr
 
 
@@ -32,8 +34,9 @@ class TextMixin:
         body: SupportsStr,
         *,  # keyword-only arguments:
         help: str | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
-        """Write text without Markdown or HTML parsing.
+        r"""Write text without Markdown or HTML parsing.
 
         For monospace text, use |st.code|_.
 
@@ -53,11 +56,24 @@ class TextMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
+        width : "content", "stretch", or int
+            The width of the text element. This can be one of the following:
+
+            - ``"content"`` (default): The width of the element matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the element matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
         Example
         -------
         >>> import streamlit as st
         >>>
-        >>> st.text("This is text\\n[and more text](that's not a Markdown link).")
+        >>> st.text("This is text\n[and more text](that's not a Markdown link).")
 
         .. output ::
             https://doc-text.streamlit.app/
@@ -68,7 +84,11 @@ class TextMixin:
         text_proto.body = clean_text(body)
         if help:
             text_proto.help = help
-        return self.dg._enqueue("text", text_proto)
+
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
+        return self.dg._enqueue("text", text_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

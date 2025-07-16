@@ -47,7 +47,7 @@ _LOGGER: Final = get_logger(__name__)
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
-    """Handles a WebSocket connection from the browser"""
+    """Handles a WebSocket connection from the browser."""
 
     def initialize(self, runtime: Runtime) -> None:
         self._runtime = runtime
@@ -69,6 +69,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     ) -> bytes | None:
         """Get a signed cookie from the request. Added for compatibility with
         Tornado < 6.3.0.
+
         See release notes: https://www.tornadoweb.org/en/stable/releases/v6.3.0.html#deprecation-notices
         """
         try:
@@ -112,6 +113,12 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             del cookie_value["is_logged_in"]
             user_info.update(cookie_value)
 
+        else:
+            _LOGGER.error(
+                "Origin mismatch, the origin of websocket request is not the "
+                "same origin of redirect_uri in secrets.toml",
+            )
+
         return user_info
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
@@ -147,7 +154,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         return None
 
-    def open(self, *args, **kwargs) -> Awaitable[None] | None:
+    def open(self, *args: Any, **kwargs: Any) -> Awaitable[None] | None:
         user_info: dict[str, str | bool | None] = {}
 
         existing_session_id = None
@@ -206,7 +213,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if isinstance(payload, str):
                 # Sanity check. (The frontend should only be sending us bytes;
                 # Protobuf.ParseFromString does not accept str input.)
-                raise RuntimeError(
+                raise TypeError(  # noqa: TRY301
                     "WebSocket received an unexpected `str` message. "
                     "(We expect `bytes` only.)"
                 )

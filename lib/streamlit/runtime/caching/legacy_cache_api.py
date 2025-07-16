@@ -36,11 +36,11 @@ def cache(
     persist: bool = False,
     allow_output_mutation: bool = False,
     show_spinner: bool = True,
-    suppress_st_warning: bool = False,
+    suppress_st_warning: bool = False,  # noqa: ARG001
     hash_funcs: HashFuncsDict | None = None,
     max_entries: int | None = None,
     ttl: float | None = None,
-):
+) -> F:
     """Legacy caching decorator (deprecated).
 
     Legacy caching with ``st.cache`` has been removed from Streamlit. This is

@@ -33,6 +33,8 @@ message PageConfig {
     string report_a_bug_url = 3;
     bool hide_report_a_bug = 4;
     string about_section_md = 5;
+    // For multiple calls to set_page_config, clears set about markdown
+    bool clear_about_md = 6;
   }
 
   enum Layout {
@@ -41,6 +43,10 @@ message PageConfig {
 
     // Use the full browser width to render elements.
     WIDE = 1;
+
+    // Unset distinguishes that config was not provided - on initial call, will
+    // set to centered as default. Otherwise, inherit value from previous call
+    LAYOUT_UNSET = 2;
   }
 
   enum SidebarState {
@@ -52,5 +58,9 @@ message PageConfig {
 
     // Force the sidebar to be hidden.
     COLLAPSED = 2;
+
+    // Unset distinguishes that config was not provided - on initial call, will
+    // set to auto as default. Otherwise, inherit value from previous call
+    SIDEBAR_UNSET = 3;
   }
 }

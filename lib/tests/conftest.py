@@ -47,7 +47,7 @@ with (
     # first importing a file. We disallow this because doing so means that we
     # miss config options set via flag or environment variable.
     import streamlit as st  # noqa: F401
-    from streamlit import config, file_util, source_util
+    from streamlit import config, file_util
 
     assert not config._config_options, (
         "config.get_option() should not be called on file import!"
@@ -59,13 +59,6 @@ with (
     # Force a reparse of our config options with CONFIG_FILE_CONTENTS so the
     # result gets cached.
     config.get_config_options(force_reparse=True)
-
-    # Set source_util._cached_pages to the empty dict below so that
-    # source_util.get_pages' behavior is deterministic and doesn't depend on the
-    # filesystem of the machine tests are being run on. Tests that need
-    # source_util.get_pages to depend on the filesystem can patch this value
-    # back to None.
-    source_util._cached_pages = {}
 
 
 def pytest_addoption(parser: pytest.Parser):
@@ -96,10 +89,10 @@ def pytest_configure(config: pytest.Config):
 
 
 def pytest_runtest_setup(item: pytest.Item):
-    # Ensure Default Strategy is V1 to start
-    from streamlit.runtime.pages_manager import PagesManager, PagesStrategyV1
+    from streamlit.runtime.pages_manager import PagesManager
 
-    PagesManager.DefaultStrategy = PagesStrategyV1
+    # Ensure the pages directory feature is not set prior to the test
+    PagesManager.uses_pages_directory = None
 
     is_require_integration = item.config.getoption(
         "--require-integration", default=False
@@ -132,7 +125,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.performance)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def benchmark(
     benchmark,
     request: pytest.FixtureRequest,

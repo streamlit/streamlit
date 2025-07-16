@@ -19,7 +19,6 @@ import React, { FC, memo } from "react"
 import range from "lodash/range"
 
 import { StyledParticles } from "./styled-components"
-
 export interface ParticleProps {
   particleType: number
 }

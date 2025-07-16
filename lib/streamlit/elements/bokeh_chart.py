@@ -52,6 +52,12 @@ class BokehMixin:
             You must install ``bokeh==2.4.3`` and ``numpy<2`` to use this
             command.
 
+            If you need a newer version of Bokeh, use our |streamlit-bokeh|_
+            custom component instead.
+
+        .. |streamlit-bokeh| replace:: ``streamlit-bokeh``
+        .. _streamlit-bokeh: https://github.com/streamlit/streamlit-bokeh
+
         Parameters
         ----------
         figure : bokeh.plotting.figure.Figure

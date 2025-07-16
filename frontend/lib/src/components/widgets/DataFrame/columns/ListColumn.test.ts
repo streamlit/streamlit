@@ -100,6 +100,7 @@ describe("ListColumn", () => {
     ],
   ])(
     "supports array-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: any[] | null) => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
@@ -118,9 +119,11 @@ describe("ListColumn", () => {
     [[true, false], "true,false"],
   ])(
     "correctly prepares data for copy (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, copyData: string | undefined) => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       expect((cell as any).copyData).toEqual(copyData)
     }
   )

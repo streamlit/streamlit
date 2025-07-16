@@ -19,7 +19,6 @@ import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { MoreVert } from "@emotion-icons/material-rounded"
-import { useTheme } from "@emotion/react"
 
 import {
   BaseButton,
@@ -29,6 +28,7 @@ import {
   Icon,
   IGuestToHostMessage,
   IMenuItem,
+  useEmotionTheme,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -94,6 +94,7 @@ const getOpenInWindowCallback = (url: string) => (): void => {
 }
 
 export interface MenuItemProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   item: any
   "aria-selected": boolean
   onClick: (e: MouseEvent<HTMLLIElement>) => void
@@ -103,6 +104,7 @@ export interface MenuItemProps {
 }
 
 export interface SubMenuProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   menuItems: any[]
   closeMenu: () => void
   isDevMenu: boolean
@@ -122,8 +124,9 @@ export interface SubMenuProps {
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
+  StyledMenuItemType: typeof StyledCoreItem,
   metricsMgr: MetricsManager
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
   const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (
@@ -198,7 +201,7 @@ function buildMenuItemComponent(
 }
 
 const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors, sizes, spacing }: EmotionTheme = useTheme()
+  const { colors, sizes, spacing } = useEmotionTheme()
   const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
 
   return (
@@ -238,9 +241,12 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
 
 function getDevMenuItems(
   theme: EmotionTheme,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   coreDevMenuItems: Record<string, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any[] {
   const devMenuItems = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const preferredDevMenuOrder: any[] = [
     coreDevMenuItems.developerOptions,
     coreDevMenuItems.clearCache,
@@ -273,9 +279,13 @@ function getDevMenuItems(
 
 function getPreferredMenuOrder(
   props: Props,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   hostMenuItems: any[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   coreMenuItems: Record<string, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let preferredMenuOrder: any[]
   if (props.toolbarMode == Config.ToolbarMode.MINIMAL) {
     // If toolbar mode == minimal then show only host menu items if any.
@@ -325,14 +335,9 @@ function getPreferredMenuOrder(
 }
 
 function MainMenu(props: Readonly<Props>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const isServerDisconnected = !props.isServerConnected
-
-  const showAboutMenu =
-    props.toolbarMode != Config.ToolbarMode.MINIMAL ||
-    (props.toolbarMode == Config.ToolbarMode.MINIMAL &&
-      props.menuItems?.aboutSectionMd)
 
   const coreMenuItems = {
     DIVIDER: { isDivider: true },
@@ -368,7 +373,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         },
       }),
     settings: { onClick: props.settingsCallback, label: "Settings" },
-    ...(showAboutMenu && {
+    ...(props.menuItems?.aboutSectionMd && {
       about: { onClick: props.aboutCallback, label: "About" },
     }),
   }
@@ -415,6 +420,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
         }),
       label: item.label,
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   }, [] as any[])
 
   const preferredMenuOrder = getPreferredMenuOrder(
@@ -424,6 +430,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
   )
 
   // Remove empty entries, and add dividers into menu options as needed.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const menuItems: any[] = []
   let lastMenuItem = null
   for (const menuItem of preferredMenuOrder) {
@@ -440,6 +447,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const devMenuItems: any[] = props.developmentMode
     ? getDevMenuItems(theme, coreDevMenuItems)
     : []

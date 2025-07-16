@@ -31,22 +31,23 @@ import {
  * for data types that are currently not supported for editing.
  */
 function ObjectColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate = {
+  const cellTemplate: TextCell = {
     kind: GridCellKind.Text,
     data: "",
     displayData: "",
     allowOverlay: true,
-    contentAlignment: props.contentAlignment,
+    contentAlign: props.contentAlignment,
     allowWrapping: props.isWrappingAllowed,
     readonly: true,
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
-  } as TextCell
+  }
   return {
     ...props,
     kind: "object",
     sortMode: "default",
     isEditable: false, // Object columns are read-only.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       try {
         const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
@@ -62,6 +63,7 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
       } catch (error) {
         return getErrorCell(
           toSafeString(data),
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `The value cannot be interpreted as a string. Error: ${error}`
         )
       }

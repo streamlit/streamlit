@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { Children, forwardRef, ReactElement } from "react"
 
-import { OptionListProps, StyledEmptyState, StyledList } from "baseui/menu"
+import {
+  type OptionListProps,
+  StyledEmptyState,
+  StyledList,
+} from "baseui/menu"
 import { FixedSizeList } from "react-window"
-import { useTheme } from "@emotion/react"
 
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
 import { convertRemToPx } from "~lib/theme/utils"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
@@ -40,22 +44,29 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
   const { data, index, style } = props
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { item, overrides, ...restChildProps } = data[index].props
+
+  // isCreatable is set by baseui when the option is not in the list of options and the user is typing a new one
+  const label = item.isCreatable ? `Add: ${item.label}` : item.label
+
   return (
     <ThemedStyledDropdownListItem
       key={item.value}
       style={style}
       {...restChildProps}
     >
-      <OverflowTooltip content={item.label} placement={Placement.AUTO}>
-        {item.label}
+      <OverflowTooltip content={label} placement={Placement.AUTO}>
+        {label}
       </OverflowTooltip>
     </ThemedStyledDropdownListItem>
   )
 }
 
-const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
-  const theme = useTheme()
-  const children = React.Children.toArray(props.children) as ReactElement[]
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+const VirtualDropdown = forwardRef<any, any>((props, ref) => {
+  const theme = useEmotionTheme()
+  // TODO: Update to match React best practices
+  // eslint-disable-next-line @eslint-react/no-children-to-array
+  const children = Children.toArray(props.children) as ReactElement[]
 
   if (!children[0] || !children[0].props.item) {
     const childrenProps = children[0] ? children[0].props : {}
@@ -113,9 +124,13 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
         height={height}
         itemCount={children.length}
         itemData={children}
-        itemKey={(index: number, data: { props: OptionListProps }[]) =>
-          data[index].props.item.value
-        }
+        itemKey={(index: number, data: { props: OptionListProps }[]) => {
+          const { id, value } = data[index].props.item
+
+          // For all current use cases, id should always be defined, but
+          // we also allow the value to be used as a fallback.
+          return id ?? value
+        }}
         itemSize={convertRemToPx(theme.sizes.dropdownItemHeight)}
       >
         {FixedSizeListItem}

@@ -21,7 +21,6 @@ import sys
 from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
-from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
 from streamlit.watcher import report_watchdog_availability, watch_file
@@ -39,7 +38,7 @@ MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 def _set_up_signal_handler(server: Server) -> None:
     _LOGGER.debug("Setting up signal handler")
 
-    def signal_handler(signal_number, stack_frame):
+    def signal_handler(signal_number: int, stack_frame: Any) -> None:  # noqa: ARG001
         # The server will shut down its threads and exit its loop.
         server.stop()
 
@@ -98,7 +97,7 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
     """
     import sys
 
-    sys.argv = [main_script_path] + list(args)
+    sys.argv = [main_script_path, *list(args)]
 
 
 def _on_server_start(server: Server) -> None:
@@ -112,10 +111,10 @@ def _on_server_start(server: Server) -> None:
     # errors and display them here.
     try:
         secrets.load_if_toml_exists()
-    except Exception as ex:
-        _LOGGER.error("Failed to load secrets.toml file", exc_info=ex)
+    except Exception:
+        _LOGGER.exception("Failed to load secrets.toml file")
 
-    def maybe_open_browser():
+    def maybe_open_browser() -> None:
         if config.get_option("server.headless"):
             # Don't open browser when in headless mode.
             return
@@ -137,9 +136,12 @@ def _on_server_start(server: Server) -> None:
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
-    """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it will throw an exception"""
+    """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it
+    will throw an exception.
+    """
 
-    os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+    if "MAPBOX_API_KEY" not in os.environ:
+        os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
@@ -207,7 +209,7 @@ def _print_url(is_running_hello: bool) -> None:
                 named_urls.append(("External URL", server_util.get_url(external_ip)))
 
     cli_util.print_to_cli("")
-    cli_util.print_to_cli("  %s" % title_message, fg="blue", bold=True)
+    cli_util.print_to_cli(f"  {title_message}", fg="blue", bold=True)
     cli_util.print_to_cli("")
 
     for url_name, url in named_urls:
@@ -285,10 +287,10 @@ def load_config_options(flag_options: dict[str, Any]) -> None:
 
 
 def _install_config_watchers(flag_options: dict[str, Any]) -> None:
-    def on_config_changed(_path):
+    def on_config_changed(_path: str) -> None:
         load_config_options(flag_options)
 
-    for filename in CONFIG_FILENAMES:
+    for filename in config.get_config_files("config.toml"):
         if os.path.exists(filename):
             watch_file(filename, on_config_changed)
 
@@ -305,6 +307,7 @@ def run(
 
     This starts a blocking asyncio eventloop.
     """
+
     _fix_sys_path(main_script_path)
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
@@ -333,17 +336,22 @@ def run(
         await server.stopped
 
     # Run the server. This function will not return until the server is shut down.
-    # FIX RuntimeError: asyncio.run() cannot be called from a running event loop on Python 3.10.16
-    # asyncio.run(run_server())
+    # FIX RuntimeError: asyncio.run() cannot be called from a running event loop
+    # asyncio.run(run_server())  # noqa: ERA001
 
     # Define a main function to handle the event loop logic
-    async def main():
+    async def main() -> None:
         await run_server()
 
-    # Check if we're already in an event loop
-    if asyncio.get_event_loop().is_running():
-        # Use `asyncio.create_task` if we're in an async context
-        asyncio.create_task(main())
-    else:
-        # Otherwise, use `asyncio.run`
+    try:
+        # Check if we're already in an event loop
+        if asyncio.get_running_loop().is_running():
+            # Use `asyncio.create_task` if we're in an async context
+            # TODO(lukasmasuch): Do we have to store a reference for the task here?
+            asyncio.create_task(main())  # noqa: RUF006
+        else:
+            # Otherwise, use `asyncio.run`
+            asyncio.run(main())
+    except RuntimeError:
+        # get_running_loop throws RuntimeError if no running event loop
         asyncio.run(main())

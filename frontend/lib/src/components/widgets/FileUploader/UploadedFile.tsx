@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo } from "react"
 
 import {
   Clear,
@@ -106,4 +106,4 @@ const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
   )
 }
 
-export default UploadedFile
+export default memo(UploadedFile)

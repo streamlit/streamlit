@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import JsonCellRenderer from "./cells/JsonCell"
 import {
   AreaChartColumn,
   BarChartColumn,
@@ -22,6 +23,7 @@ import {
 import CheckboxColumn from "./CheckboxColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import ImageColumn from "./ImageColumn"
+import JsonColumn from "./JsonColumn"
 import LinkColumn from "./LinkColumn"
 import ListColumn from "./ListColumn"
 import MultiSelectColumn from "./MultiSelectColumn"
@@ -33,6 +35,7 @@ import TextColumn from "./TextColumn"
 import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
+export type { JsonCell } from "./cells/JsonCell"
 export type { DateTimeColumnParams } from "./DateTimeColumn"
 export type { LinkColumnParams } from "./LinkColumn"
 export type { NumberColumnParams } from "./NumberColumn"
@@ -62,10 +65,11 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     area_chart: AreaChartColumn,
     image: ImageColumn,
     progress: ProgressColumn,
+    json: JsonColumn,
   })
 )
 
-export const CustomCells = []
+export const CustomCells = [JsonCellRenderer]
 
 export {
   AreaChartColumn,
@@ -74,6 +78,7 @@ export {
   DateColumn,
   DateTimeColumn,
   ImageColumn,
+  JsonColumn,
   LineChartColumn,
   LinkColumn,
   ListColumn,

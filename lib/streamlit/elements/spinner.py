@@ -16,13 +16,22 @@ from __future__ import annotations
 
 import contextlib
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import streamlit as st
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+# Set the message 0.5 seconds in the future to avoid annoying
+# flickering if this spinner runs too quickly.
+DELAY_SECS: Final = 0.5
 
 
 @contextlib.contextmanager
@@ -31,6 +40,7 @@ def spinner(
     *,
     show_time: bool = False,
     _cache: bool = False,
+    width: Width = "content",
 ) -> Iterator[None]:
     """Display a loading spinner while executing a block of code.
 
@@ -55,6 +65,19 @@ def spinner(
         elapsed time is displayed with a precision of 0.1 seconds. The time
         format is not configurable.
 
+    width : "content", "stretch", or int
+        The width of the spinner element. This can be one of the following:
+
+        - ``"content"`` (default): The width of the element matches the
+          width of its content, but doesn't exceed the width of the parent
+          container.
+        - ``"stretch"``: The width of the element matches the width of the
+          parent container.
+        - An integer specifying the width in pixels: The element has a
+          fixed width. If the specified width is greater than the width of
+          the parent container, the width of the element matches the width
+          of the parent container.
+
     Example
     -------
     >>> import streamlit as st
@@ -73,24 +96,26 @@ def spinner(
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
     from streamlit.string_util import clean_text
 
+    validate_width(width, allow_content=True)
+    layout_config = LayoutConfig(width=width)
+
     message = st.empty()
 
-    # Set the message 0.5 seconds in the future to avoid annoying
-    # flickering if this spinner runs too quickly.
-    DELAY_SECS = 0.5
     display_message = True
     display_message_lock = threading.Lock()
 
     try:
 
-        def set_message():
+        def set_message() -> None:
             with display_message_lock:
                 if display_message:
                     spinner_proto = SpinnerProto()
                     spinner_proto.text = clean_text(text)
                     spinner_proto.cache = _cache
                     spinner_proto.show_time = show_time
-                    message._enqueue("spinner", spinner_proto)
+                    message._enqueue(
+                        "spinner", spinner_proto, layout_config=layout_config
+                    )
 
         add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
 

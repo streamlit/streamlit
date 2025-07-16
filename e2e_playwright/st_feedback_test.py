@@ -96,7 +96,8 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
 
 def test_feedback_buttons_are_disabled(app: Page):
     """Test that feedback buttons are disabled when `disabled=True` and that
-    they cannot be interacted with."""
+    they cannot be interacted with.
+    """
 
     container = get_element_by_key(app, "stars_container")
     expect(container).to_be_attached()
@@ -175,3 +176,17 @@ def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
 
     expect(get_element_by_key(app, "faces_feedback")).to_be_visible()
+
+
+def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test feedback widgets with different width configurations."""
+
+    # Test thumbs width examples
+    thumbs_content = get_element_by_key(app, "thumbs_content_width")
+    assert_snapshot(thumbs_content, name="st_feedback-thumbs_width_content")
+
+    thumbs_stretch = get_element_by_key(app, "thumbs_stretch_width")
+    assert_snapshot(thumbs_stretch, name="st_feedback-thumbs_width_stretch")
+
+    thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
+    assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { PureComponent } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
@@ -105,9 +105,9 @@ export interface State {
 }
 
 const MIN_SHUTTER_EFFECT_TIME_MS = 150
-const log = getLogger("CameraInput")
+const LOG = getLogger("CameraInput")
 
-class CameraInput extends React.PureComponent<Props, State> {
+class CameraInput extends PureComponent<Props, State> {
   private localFileIdCounter = 1
 
   private RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
@@ -179,7 +179,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         })
       })
       .catch(err => {
-        log.error(err)
+        LOG.error(err)
       })
   }
 
@@ -241,7 +241,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentWillUnmount(): void {
+  public override componentWillUnmount(): void {
     this.formClearHelper.disconnect()
   }
 
@@ -262,7 +262,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     return "ready"
   }
 
-  public componentDidUpdate = (): void => {
+  public override componentDidUpdate = (): void => {
     // If our status is not "ready", then we have uploads in progress.
     // We won't submit a new widgetValue until all uploads have resolved.
     if (this.status !== "ready") {
@@ -289,7 +289,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentDidMount(): void {
+  public override componentDidMount(): void {
     const newWidgetValue = this.createWidgetValue()
     const { element, widgetMgr, fragmentId } = this.props
 
@@ -351,7 +351,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     })
   }
 
-  public render(): React.ReactNode {
+  public override render(): React.ReactNode {
     const { element, widgetMgr, disabled, width } = this.props
 
     // Manage our form-clear event handler.
@@ -412,6 +412,7 @@ class CameraInput extends React.PureComponent<Props, State> {
           </>
         ) : (
           <WebcamComponent
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             handleCapture={this.handleCapture}
             width={width}
             disabled={disabled}
@@ -451,6 +452,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
 
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
     this.removeFile(fileId)

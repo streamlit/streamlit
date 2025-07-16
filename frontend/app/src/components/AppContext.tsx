@@ -14,92 +14,135 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { createContext } from "react"
 
-import { AppConfig } from "@streamlit/connection"
-import { IGitInfo, PageConfig } from "@streamlit/protobuf"
+import { IAppPage, IGitInfo, Logo, PageConfig } from "@streamlit/protobuf"
 
-export interface Props {
-  /**
-   * If true, render the app with a wider column size.
-   * Set from the UserSettings object.
-   * @see UserSettings
-   */
-  wideMode: boolean
-
+export interface AppContextProps {
   /**
    * The sidebar's default display state.
    * Set from the PageConfig protobuf.
+   * Pulled from appContext in AppView as prop to ThemedSidebar.
+   * @see Sidebar
    */
   initialSidebarState: PageConfig.SidebarState
 
   /**
-   * True if the app is embedded.
-   * @see isEmbed
-   */
-  embedded: boolean
-
-  /**
-   * True if padding is enabled.
-   * @see isPaddingDisplayed
-   */
-  showPadding: boolean
-
-  /**
-   * True if scrolling is disabled.
-   * @see isScrollingHidden
-   */
-  disableScrolling: boolean
-
-  /**
-   * True if the toolbar should be displayed.
-   * @see isToolbarDisplayed
-   */
-  showToolbar: boolean
-
-  /**
-   * True if the thin colored line at the top of the app should be displayed.
-   * @see isColoredLineDisplayed
-   */
-  showColoredLine: boolean
-
-  /**
    * Part of URL construction for an app page in a multi-page app;
    * this is set from the host communication manager via host message.
+   * Pulled from appContext in SidebarNav
    * @see SidebarNav
    */
   pageLinkBaseUrl: string
+
+  /**
+   * The current page of a multi-page app.
+   * Pulled from appContext in SidebarNavLink
+   * @see SidebarNavLink
+   */
+  currentPageScriptHash: string
+
+  /**
+   * Change the page in a multi-page app.
+   * @see SidebarNav
+   */
+  onPageChange: (pageScriptHash: string) => void
+
+  /**
+   * The nav sections in a multi-page app.
+   * Pulled from appContext in SidebarNav
+   * @see SidebarNav
+   */
+  navSections: string[]
+
+  /**
+   * The pages in a multi-page app.
+   * Pulled from appContext in SidebarNav
+   * @see SidebarNav
+   */
+  appPages: IAppPage[]
+
+  /**
+   * The app logo (displayed in top left corner of app)
+   * Pulled from appContext in Sidebar
+   * @see SidebarNav
+   */
+  appLogo: Logo | null
 
   /**
    * If non-zero, this is the number of pixels that the sidebar's
    * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
    * the current theme's spacing is used.);
    * this is set from the host communication manager via host message.
-   * @see StyledSidebarCollapsedControl
+   * Pulled from appContext in AppView & ThemedSidebar
+   * @see AppView (StyledSidebarOpenContainer)
+   * @see Sidebar (StyledSidebarOpenContainer)
    */
   sidebarChevronDownshift: number
 
   /**
+   * Whether to expand the sidebar nav.
+   * Pulled from appContext in SidebarNav
+   * @see SidebarNav
+   */
+  expandSidebarNav: boolean
+
+  /**
+   * Whether to hide the sidebar nav. Can also be configured via host message.
+   * Pulled from appContext in Sidebar
+   * @see Sidebar
+   */
+  hideSidebarNav: boolean
+
+  /**
+   * Whether to disable widgets and sidebar page navigation links, based on connection
+   * state and whether the host has disabled inputs.
+   * Pulled from appContext in AppView as prop to VerticalBlock > ElementNodeRenderer
+   * Pulled from appContext in SidebarNavLink
+   * @see ElementNodeRenderer
+   * @see SidebarNavLink
+   */
+  widgetsDisabled: boolean
+
+  /**
    * The latest state of the git information related to the app.
+   * Pulled from appContext in DeployDialog
+   * @see DeployDialog
    */
   gitInfo: IGitInfo | null
 
-  /** The app-specific configuration from the apps host which is requested via the
-   * _stcore/host-config endpoint.
+  /**
+   * Whether to show the toolbar in the app header.
+   * Can be configured via host message.
+   * Pulled from appContext in Header
+   * @see Header
    */
-  appConfig: AppConfig
+  showToolbar: boolean
+
+  /**
+   * Whether to show the colored line at the top of the app.
+   * Can be configured via host message.
+   * Pulled from appContext in Header and HeaderColoredLine
+   * @see Header
+   * @see HeaderColoredLine
+   */
+  showColoredLine: boolean
 }
 
-export const AppContext = React.createContext<Props>({
-  wideMode: false,
+export const AppContext = createContext<AppContextProps | null>({
   initialSidebarState: PageConfig.SidebarState.AUTO,
-  embedded: false,
-  showPadding: false,
-  disableScrolling: false,
-  showToolbar: false,
-  showColoredLine: false,
   pageLinkBaseUrl: "",
+  currentPageScriptHash: "",
+  onPageChange: () => {},
+  navSections: [],
+  appPages: [],
+  appLogo: null,
   sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
+  widgetsDisabled: false,
   gitInfo: null,
-  appConfig: {},
+  showToolbar: true,
+  showColoredLine: true,
 })
+AppContext.displayName = "AppContext"

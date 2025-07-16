@@ -78,4 +78,3 @@ message Styler {
   // with all the display values formatted to the user-specified rules.
   bytes display_values = 4;
 }
-

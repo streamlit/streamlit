@@ -152,7 +152,6 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
     Parameters
     ----------
-
     field : pa.Field
         The arrow field from the arrow table schema.
 
@@ -199,7 +198,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
     # Interval does not seem to work correctly:
     # if pa.types.is_interval(field_type):
-    #     return ColumnDataKind.INTERVAL
+    #     return ColumnDataKind.INTERVAL  # noqa: ERA001
 
     if pa.types.is_binary(field_type):
         return ColumnDataKind.BYTES
@@ -385,7 +384,6 @@ def determine_dataframe_schema(
 
     Returns
     -------
-
     DataframeSchema
         A mapping that contains the detected data type for the index and columns.
         The key is the column name in the underlying dataframe or ``_index`` for index columns.
@@ -458,7 +456,6 @@ def update_column_config(
 
     Parameters
     ----------
-
     column_config_mapping : ColumnConfigMapping
         The column config mapping to update.
 
@@ -522,9 +519,7 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
         # Ignore all None values and prefix columns specified by numerical index:
         return json.dumps(
             {
-                (
-                    f"{_NUMERICAL_POSITION_PREFIX}{str(k)}" if isinstance(k, int) else k
-                ): v
+                (f"{_NUMERICAL_POSITION_PREFIX}{k!s}" if isinstance(k, int) else k): v
                 for (k, v) in remove_none_values(column_config_mapping).items()
             },
             allow_nan=False,

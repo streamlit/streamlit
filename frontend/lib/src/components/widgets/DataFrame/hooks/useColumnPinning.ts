@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { Dispatch, SetStateAction, useCallback, useMemo } from "react"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+
+import { updateColumnConfigTypeProps } from "./columnConfigUtils"
 
 type ColumnPinningReturn = {
   // The number of columns to freeze.
@@ -48,8 +50,9 @@ function useColumnPinning(
   containerWidth: number,
   minColumnWidth: number,
   clearSelection: (keepRows?: boolean, keepColumns?: boolean) => void,
-  setColumnConfigMapping: React.Dispatch<
-    React.SetStateAction<Map<string, any>>
+  setColumnConfigMapping: Dispatch<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+    SetStateAction<Map<string, any>>
   >
 ): ColumnPinningReturn {
   // This is a simple heuristic to prevent the pinned columns
@@ -58,7 +61,7 @@ function useColumnPinning(
   // we just use 2x of the min column width as a fallback.
   // The combined width of all pinned columns should not exceed 60%
   // of the container width.
-  const isPinnedColumnsWidthTooLarge = React.useMemo(() => {
+  const isPinnedColumnsWidthTooLarge = useMemo(() => {
     return (
       columns
         .filter((col: BaseColumn) => col.isPinned)
@@ -74,32 +77,32 @@ function useColumnPinning(
       ? 0
       : columns.filter((col: BaseColumn) => col.isPinned).length
 
-  const unpinColumn = React.useCallback(
+  const unpinColumn = useCallback(
     (columnId: string) => {
       setColumnConfigMapping(prevColumnConfigMapping => {
-        const newColumnConfigMapping = new Map(prevColumnConfigMapping)
-        const existingConfig = newColumnConfigMapping.get(columnId)
-        newColumnConfigMapping.set(columnId, {
-          ...(existingConfig || {}),
-          pinned: false,
+        return updateColumnConfigTypeProps({
+          columnId,
+          columnConfigMapping: prevColumnConfigMapping,
+          updatedProps: {
+            pinned: false,
+          },
         })
-        return newColumnConfigMapping
       })
       clearSelection(true, false)
     },
     [clearSelection, setColumnConfigMapping]
   )
 
-  const pinColumn = React.useCallback(
+  const pinColumn = useCallback(
     (columnId: string) => {
       setColumnConfigMapping(prevColumnConfigMapping => {
-        const newColumnConfigMapping = new Map(prevColumnConfigMapping)
-        const existingConfig = newColumnConfigMapping.get(columnId)
-        newColumnConfigMapping.set(columnId, {
-          ...(existingConfig || {}),
-          pinned: true,
+        return updateColumnConfigTypeProps({
+          columnId,
+          columnConfigMapping: prevColumnConfigMapping,
+          updatedProps: {
+            pinned: true,
+          },
         })
-        return newColumnConfigMapping
       })
       clearSelection(true, false)
     },

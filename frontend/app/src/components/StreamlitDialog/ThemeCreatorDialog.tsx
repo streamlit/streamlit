@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useCallback, useContext, useState } from "react"
 
 import { Check } from "@emotion-icons/material-outlined"
 
@@ -45,6 +45,44 @@ import {
   StyledFullRow,
 } from "./styled-components"
 
+const ThemeOption = ({
+  name,
+  value,
+  onThemeOptionChange,
+}: {
+  name: string
+  value: string
+  onThemeOptionChange: (name: string, value: string) => void
+}): ReactElement | null => {
+  const themeOptionConfig = themeBuilder[name]
+  const isColor = themeOptionConfig.component === BaseColorPicker
+  // Props that vary based on component type
+  const variableProps = {
+    options: themeOptionConfig.options || undefined,
+    showValue: isColor,
+    value: themeOptionConfig.getValue(value, themeOptionConfig),
+  }
+
+  const handleChange = useCallback(
+    (newVal: string) => {
+      onThemeOptionChange(name, newVal)
+    },
+    [name, onThemeOptionChange]
+  )
+
+  return (
+    <React.Fragment key={name}>
+      <themeOptionConfig.component
+        disabled={false}
+        label={themeOptionConfig.title}
+        help={themeOptionConfig.help}
+        onChange={handleChange}
+        {...variableProps}
+      />
+    </React.Fragment>
+  )
+}
+
 export interface Props {
   backToSettings: (animateModal: boolean) => void
   onClose: () => void
@@ -52,8 +90,8 @@ export interface Props {
 }
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
-  const [copied, updateCopied] = React.useState(false)
-  const { activeTheme, addThemes, setTheme } = React.useContext(LibContext)
+  const [copied, updateCopied] = useState(false)
+  const { activeTheme, addThemes, setTheme } = useContext(LibContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
 
@@ -73,42 +111,17 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
 
   const config = toMinimalToml(themeInput)
 
-  const copyConfig = (): void => {
+  const copyConfig = async (): Promise<void> => {
     props.metricsMgr.enqueue("menuClick", {
       label: "copyThemeToClipboard",
     })
-    navigator.clipboard.writeText(config)
-    updateCopied(true)
-  }
-
-  const ThemeOption = ({
-    name,
-    value,
-  }: {
-    name: string
-    value: string
-  }): ReactElement | null => {
-    const themeOptionConfig = themeBuilder[name]
-    const isColor = themeOptionConfig.component === BaseColorPicker
-    // Props that vary based on component type
-    const variableProps = {
-      options: themeOptionConfig.options || undefined,
-      showValue: isColor,
-      value: themeOptionConfig.getValue(value, themeOptionConfig),
+    try {
+      await navigator.clipboard.writeText(config)
+      updateCopied(true)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (e) {
+      updateCopied(false)
     }
-    return (
-      <React.Fragment key={name}>
-        <themeOptionConfig.component
-          disabled={false}
-          label={themeOptionConfig.title}
-          help={themeOptionConfig.help}
-          onChange={(newVal: string) => {
-            onThemeOptionChange(name, newVal)
-          }}
-          {...variableProps}
-        />
-      </React.Fragment>
-    )
   }
 
   const onClickedBack = (): void => {
@@ -154,12 +167,25 @@ refresh the page.`}
             />
           </StyledFullRow>
 
-          <ThemeOption name="primaryColor" value={primaryColor} />
-          <ThemeOption name="backgroundColor" value={backgroundColor} />
-          <ThemeOption name="textColor" value={textColor} />
+          <ThemeOption
+            name="primaryColor"
+            value={primaryColor}
+            onThemeOptionChange={onThemeOptionChange}
+          />
+          <ThemeOption
+            name="backgroundColor"
+            value={backgroundColor}
+            onThemeOptionChange={onThemeOptionChange}
+          />
+          <ThemeOption
+            name="textColor"
+            value={textColor}
+            onThemeOptionChange={onThemeOptionChange}
+          />
           <ThemeOption
             name="secondaryBackgroundColor"
             value={secondaryBackgroundColor}
+            onThemeOptionChange={onThemeOptionChange}
           />
 
           <StyledFullRow>
@@ -184,7 +210,7 @@ To save your changes, copy your custom theme into the clipboard and paste it int
                     <Icon
                       content={Check}
                       size="lg"
-                      color={activeTheme.emotion.colors.success}
+                      color={activeTheme.emotion.colors.green}
                     />
                   </React.Fragment>
                 ) : (

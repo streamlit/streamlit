@@ -17,6 +17,7 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
@@ -33,7 +34,6 @@ const getProps = (
     url: "https://streamlit.io",
     ...elementProps,
   }),
-  disabled: false,
   ...widgetProps,
 })
 
@@ -66,6 +66,23 @@ describe("LinkButton widget", () => {
     expect(linkButton).toBeInTheDocument()
   })
 
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    render(<LinkButton {...getProps({ help: "mockHelpText" })} />)
+
+    // Ensure both the button and the tooltip target have the correct width
+    const linkButton = screen.getByRole("link")
+    expect(linkButton).toHaveStyle("width: auto")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: auto")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
   describe("wrapped BaseLinkButton", () => {
     const LINK_BUTTON_TYPES = ["primary", "secondary", "tertiary"]
 
@@ -78,7 +95,7 @@ describe("LinkButton widget", () => {
       })
 
       it(`renders disabled ${type} correctly`, () => {
-        render(<LinkButton {...getProps({ type }, { disabled: true })} />)
+        render(<LinkButton {...getProps({ type, disabled: true })} />)
 
         const linkButton = screen.getByRole("link")
         expect(linkButton).toHaveAttribute("disabled")

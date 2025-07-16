@@ -120,7 +120,7 @@ export interface AppNode {
   // A timestamp indicating based on which delta message the node was created.
   // If the node was created without a delta message, this field is undefined.
   // This helps us to update React components based on a new backend message even though other
-  // props have not changed; this can happen for UI-only interactions such as dimissing a dialog.
+  // props have not changed; this can happen for UI-only interactions such as dismissing a dialog.
   readonly deltaMsgReceivedAt?: number
 
   /**
@@ -244,12 +244,10 @@ export class ElementNode implements AppNode {
     return toReturn
   }
 
-  // eslint-disable-next-line class-methods-use-this
   public getIn(): AppNode | undefined {
     return undefined
   }
 
-  // eslint-disable-next-line class-methods-use-this
   public setIn(): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
@@ -580,7 +578,7 @@ export class AppRoot {
   public static empty(
     mainScriptHash = "",
     isInitialRender = true,
-    sidebarElements?: BlockNode | undefined,
+    sidebarElements?: BlockNode,
     logo?: Logo | null
   ): AppRoot {
     const mainNodes: AppNode[] = []
@@ -679,6 +677,7 @@ export class AppRoot {
       isNullOrUndefined(this.event) ||
       isNullOrUndefined(this.bottom)
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       throw new Error(`Invalid root node children! ${root}`)
     }
   }
@@ -917,6 +916,7 @@ export class AppRoot {
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (isNullOrUndefined(existingNode)) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 

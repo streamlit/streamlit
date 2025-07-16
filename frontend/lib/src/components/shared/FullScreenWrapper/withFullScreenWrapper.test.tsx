@@ -33,7 +33,7 @@ interface TestProps {
 }
 
 class TestComponent extends PureComponent<TestProps> {
-  public render = (): ReactNode => (
+  public override render = (): ReactNode => (
     <>
       <div>{this.props.label}</div>
       <div>
@@ -57,8 +57,7 @@ const WrappedTestComponent = withFullScreenWrapper(TestComponent)
 describe("withFullScreenWrapper HOC", () => {
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [250],
     })
   })

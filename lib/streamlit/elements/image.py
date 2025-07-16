@@ -167,15 +167,14 @@ class ImageMixin:
             elif use_column_width == "never" or use_column_width is False:
                 image_width = WidthBehavior.ORIGINAL
 
-        else:
-            if use_container_width is True:
-                image_width = WidthBehavior.MAX_IMAGE_OR_CONTAINER
-            elif image_width is not None and image_width > 0:
-                # Use the given width. It will be capped on the frontend if it
-                # exceeds the container width.
-                pass
-            elif use_container_width is False:
-                image_width = WidthBehavior.MIN_IMAGE_OR_CONTAINER
+        elif use_container_width is True:
+            image_width = WidthBehavior.MAX_IMAGE_OR_CONTAINER
+        elif image_width is not None and image_width > 0:
+            # Use the given width. It will be capped on the frontend if it
+            # exceeds the container width.
+            pass
+        elif use_container_width is False:
+            image_width = WidthBehavior.MIN_IMAGE_OR_CONTAINER
 
         image_list_proto = ImageListProto()
         marshall_images(

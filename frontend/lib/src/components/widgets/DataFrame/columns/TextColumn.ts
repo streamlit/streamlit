@@ -27,9 +27,13 @@ import {
 } from "./utils"
 
 export interface TextColumnParams {
-  // The maximum number of characters the user can enter into the text input.
+  /**
+   * The maximum number of characters the user can enter into the text input.
+   */
   readonly max_chars?: number
-  // Regular expression that the input's value must match for the value to pass
+  /**
+   * Regular expression that the input's value must match for the value to pass.
+   */
   readonly validate?: string
 }
 
@@ -49,22 +53,24 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       validateRegex = new RegExp(parameters.validate, "us")
     } catch (error) {
       // Put error message in validateRegex so we can display it in the cell
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       validateRegex = `Invalid validate regex: ${parameters.validate}.\nError: ${error}`
     }
   }
 
-  const cellTemplate = {
+  const cellTemplate: TextCell = {
     kind: GridCellKind.Text,
     data: "",
     displayData: "",
     allowOverlay: true,
-    contentAlignment: props.contentAlignment,
+    contentAlign: props.contentAlignment,
     allowWrapping: props.isWrappingAllowed,
     readonly: !props.isEditable,
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
-  } as TextCell
+  }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const validateInput = (data?: any): boolean | string => {
     if (isNullOrUndefined(data)) {
       if (props.isRequired) {
@@ -99,6 +105,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     kind: "text",
     sortMode: "default",
     validateInput,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       if (typeof validateRegex === "string") {
         // The regex is invalid, we return an error to indicate this
@@ -136,6 +143,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
         // This should never happen, but if it does, we want to show an error
         return getErrorCell(
           "Incompatible value",
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `The value cannot be interpreted as string. Error: ${error}`
         )
       }

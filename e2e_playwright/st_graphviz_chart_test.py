@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import check_top_level_class, get_radio_option
 
 
-def get_first_graph_svg(app: Page):
+def get_first_graph_svg(app: Page) -> Locator:
     return app.get_by_test_id("stGraphVizChart").nth(0).locator("svg")
 
 
@@ -69,8 +69,9 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     expect(first_graph_svg).not_to_have_attribute("width", "79pt")
     expect(first_graph_svg).not_to_have_attribute("height", "116pt")
 
-    def check_dimensions():
+    def check_dimensions() -> bool:
         svg_dimensions = first_graph_svg.bounding_box()
+        assert svg_dimensions is not None
         return svg_dimensions["width"] == 1256 and svg_dimensions["height"] == 662
 
     wait_until(app, check_dimensions)

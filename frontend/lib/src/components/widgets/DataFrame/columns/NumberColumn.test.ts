@@ -87,6 +87,14 @@ function getNumberColumn(
 }
 
 describe("NumberColumn", () => {
+  afterEach(() => {
+    // Restore original value after each test
+    Object.defineProperty(navigator, "languages", {
+      value: navigator.languages,
+      configurable: true,
+    })
+  })
+
   it("creates a valid column instance", () => {
     const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
     expect(mockColumn.kind).toEqual("number")
@@ -101,7 +109,7 @@ describe("NumberColumn", () => {
     expect((mockCell as NumberCell).data).toEqual(1.234)
   })
 
-  it("alignes numbers to the right", () => {
+  it("aligns numbers to the right", () => {
     const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
     const mockCell = mockColumn.getCell("1.123")
     expect(mockCell.contentAlign).toEqual("right")
@@ -156,7 +164,9 @@ describe("NumberColumn", () => {
 
     const mockCell = mockColumn.getCell("104")
     expect(mockCell.kind).toEqual(GridCellKind.Number)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     expect((mockCell as any).fixedDecimals).toEqual(0)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     expect((mockCell as any).allowNegative).toEqual(false)
   })
 
@@ -249,6 +259,7 @@ describe("NumberColumn", () => {
     ["--123"],
     ["2,,2"],
     ["12345678987654321"],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   ])("%p results in error cell", (input: any) => {
     const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
     const cell = mockColumn.getCell(input)
@@ -294,10 +305,13 @@ describe("NumberColumn", () => {
     [-1234.567, "accounting", "(1,234.57)"],
     [-1234.567, "dollar", "-$1,234.57"],
     [-1234.567, "euro", "-€1,234.57"],
+    [-1234.567, "yen", "-¥1,235"],
     [-1234.567, "localized", "-1,234.567"],
     [-1234.567, "plain", "-1234.567"],
     [-1234.567, "scientific", "-1.235E3"],
     [-1234.567, "engineering", "-1.235E3"],
+    [1200000, "bytes", "1.2MB"],
+    [1234, "bytes", "1.2KB"],
   ])(
     "formats %p with sprintf format %p to %p",
     (input: number, format: string, displayValue: string) => {
@@ -352,4 +366,89 @@ describe("NumberColumn", () => {
       expect(cell.copyData).toEqual(expectedCopyData)
     }
   )
+
+  // Issue #11291 - st.column_config 'localized' option
+  it("handles localized format for format=localized", () => {
+    // Update navigator.languages for this test
+    Object.defineProperty(navigator, "languages", {
+      value: ["pt-BR"],
+      configurable: true,
+    })
+
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+      format: "localized",
+    })
+
+    const cell = mockColumn.getCell(50000)
+    expect((cell as NumberCell).displayData).toEqual("50.000")
+
+    const cell2 = mockColumn.getCell(0.5)
+    expect((cell2 as NumberCell).displayData).toEqual("0,5")
+  })
+
+  it("handles localized format for format=percent", () => {
+    // Update navigator.languages for this test
+    Object.defineProperty(navigator, "languages", {
+      // Turkish displays percent sign in front
+      value: ["tr-TR"],
+      configurable: true,
+    })
+
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+      format: "percent",
+    })
+
+    const cell = mockColumn.getCell(0.5)
+    expect((cell as NumberCell).displayData).toEqual("%50")
+  })
+
+  it("handles localized format for format=engineering", () => {
+    // Update navigator.languages for this test
+    Object.defineProperty(navigator, "languages", {
+      // France displays engineering notation with comma separator
+      value: ["fr-FR"],
+      configurable: true,
+    })
+
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+      format: "scientific",
+    })
+
+    const cell = mockColumn.getCell(1234.56)
+    expect((cell as NumberCell).displayData).toEqual("1,235E3")
+  })
+
+  it("handles localized format for format=euro", () => {
+    // Update navigator.languages for this test
+    Object.defineProperty(navigator, "languages", {
+      // use locale with non-euro currency
+      value: ["en-US"],
+      configurable: true,
+    })
+
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+      format: "euro",
+    })
+
+    const cell = mockColumn.getCell(1234.56)
+    expect((cell as NumberCell).displayData).toEqual("€1,234.56")
+  })
+
+  it("handles invalid localized format - falls back to default format", () => {
+    // Update navigator.languages for this test
+    Object.defineProperty(navigator, "languages", {
+      value: ["INVALID"],
+      configurable: true,
+    })
+
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+      format: "localized",
+    })
+
+    const cell = mockColumn.getCell(50000)
+    expect((cell as NumberCell).displayData).toEqual("50,000")
+
+    const cell2 = mockColumn.getCell(0.5)
+    expect((cell2 as NumberCell).displayData).toEqual("0.5")
+  })
 })

@@ -20,6 +20,11 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -53,7 +58,7 @@ class ColorPickerSerde:
     def serialize(self, v: str) -> str:
         return str(v)
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str:
+    def deserialize(self, ui_value: str | None) -> str:
         return str(ui_value if ui_value is not None else self.value)
 
 
@@ -71,6 +76,7 @@ class ColorPickerMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> str:
         r"""Display a color picker widget.
 
@@ -133,8 +139,22 @@ class ColorPickerMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "content", "stretch", or int
+            The width of the color picker widget. This can be one of the
+            following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -164,6 +184,7 @@ class ColorPickerMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
             ctx=ctx,
         )
 
@@ -179,6 +200,7 @@ class ColorPickerMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
@@ -191,13 +213,18 @@ class ColorPickerMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             value=str(value),
             help=help,
+            width=width,
         )
 
         # set value default
@@ -206,25 +233,19 @@ class ColorPickerMixin:
 
         # make sure the value is a string
         if not isinstance(value, str):
-            raise StreamlitAPIException(
-                """
-                Color Picker Value has invalid type: %s. Expects a hex string
-                like '#00FFAA' or '#000'.
-                """
-                % type(value).__name__
-            )
+            raise StreamlitAPIException(f"""
+Color Picker Value has invalid type: {type(value).__name__}. Expects a hex string
+like '#00FFAA' or '#000'.
+""")
 
         # validate the value and expects a hex string
         match = re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", value)
 
         if not match:
-            raise StreamlitAPIException(
-                """
-                '%s' is not a valid hex code for colors. Valid ones are like
-                '#00FFAA' or '#000'.
-                """
-                % value
-            )
+            raise StreamlitAPIException(f"""
+'{value}' is not a valid hex code for colors. Valid ones are like
+'#00FFAA' or '#000'.
+""")
 
         color_picker_proto = ColorPickerProto()
         color_picker_proto.id = element_id
@@ -256,7 +277,9 @@ class ColorPickerMixin:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
 
-        self.dg._enqueue("color_picker", color_picker_proto)
+        self.dg._enqueue(
+            "color_picker", color_picker_proto, layout_config=layout_config
+        )
         return widget_state.value
 
     @property

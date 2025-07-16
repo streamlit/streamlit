@@ -54,6 +54,7 @@ const getProps = (
   disabled: false,
   widgetMgr: {
     getStringValue: vi.fn(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   } as any,
 })
 
@@ -64,8 +65,7 @@ describe("DataFrame widget", () => {
 
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [250],
     })
   })

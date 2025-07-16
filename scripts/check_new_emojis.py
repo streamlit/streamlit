@@ -19,8 +19,12 @@
 This script requires the emoji package to be installed: pip install emoji.
 """
 
+from __future__ import annotations
+
 import sys
+
 from emoji.unicode_codes import EMOJI_DATA
+
 from streamlit.emojis import ALL_EMOJIS
 
 emoji_unicodes = set(EMOJI_DATA.keys())

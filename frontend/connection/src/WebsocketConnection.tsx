@@ -40,7 +40,11 @@ import {
   StreamlitEndpoints,
 } from "./types"
 import { ConnectionState } from "./ConnectionState"
-import { doInitPings } from "./DoInitPings"
+import {
+  AsyncPingRequest,
+  doInitPings,
+  PingCancelledError,
+} from "./DoInitPings"
 
 export interface Args {
   /** The application's SessionInfo instance */
@@ -85,6 +89,16 @@ export interface Args {
   resetHostAuthToken: () => void
 
   /**
+   * Sends message to host when websocket connection errors encountered to
+   * inform where/why the error occurred.
+   */
+  sendClientError: (
+    error: string | number,
+    message: string,
+    source: string
+  ) => void
+
+  /**
    * Function to set the host config and allowed-message-origins for this app (if in a relevant deployment
    * scenario).
    */
@@ -92,10 +106,11 @@ export interface Args {
 }
 
 interface MessageQueue {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [index: number]: any
 }
 
-const log = getLogger("WebsocketConnection")
+const LOG = getLogger("WebsocketConnection")
 
 /**
  * Events of the WebsocketConnection state machine. Here's what the FSM looks
@@ -165,6 +180,11 @@ export class WebsocketConnection {
   private websocket?: WebSocket
 
   /**
+   * The AsyncPingRequest returned by doInitPings.
+   */
+  private pingRequest?: AsyncPingRequest
+
+  /**
    * WebSocket objects don't support retries, so we have to implement them
    * ourselves. We use setTimeout to wait for a connection and retry once the
    * timeout fires. This field stores the timer ID from setTimeout, so we can
@@ -174,7 +194,7 @@ export class WebsocketConnection {
 
   constructor(props: Args) {
     this.args = props
-    this.cache = new ForwardMsgCache(props.endpoints)
+    this.cache = new ForwardMsgCache()
     this.stepFsm("INITIALIZED")
   }
 
@@ -195,12 +215,13 @@ export class WebsocketConnection {
 
   // This should only be called inside stepFsm().
   private setFsmState(state: ConnectionState, errMsg?: string): void {
-    log.info(`New state: ${state}`)
+    LOG.info(`New state: ${state}`)
     this.state = state
 
     // Perform pre-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         this.pingServer()
         break
 
@@ -213,6 +234,7 @@ export class WebsocketConnection {
     // Perform post-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.CONNECTING:
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         this.connectToWebSocket()
         break
 
@@ -234,12 +256,21 @@ export class WebsocketConnection {
    * will be displayed to the user in a "Connection Error" dialog.
    */
   private stepFsm(event: Event, errMsg?: string): void {
-    log.info(`State: ${this.state}; Event: ${event}`)
+    LOG.info(`State: ${this.state}; Event: ${event}`)
 
     if (
       event === "FATAL_ERROR" &&
       this.state !== ConnectionState.DISCONNECTED_FOREVER
     ) {
+      LOG.error(
+        `Client Error: Websocket connection encountered fatal error - ${errMsg}`
+      )
+      this.args.sendClientError(
+        "Websocket connection fatal error encountered",
+        // @ts-expect-error - errMsg always passed with FATAL_ERROR event
+        errMsg,
+        "Websocket Connection"
+      )
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
       this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, errMsg)
@@ -291,7 +322,7 @@ export class WebsocketConnection {
         // process any events, and it's possible we're in this state because
         // of a fatal error. Just log these events rather than throwing more
         // exceptions.
-        log.warn(
+        LOG.warn(
           `Discarding ${event} while in ${ConnectionState.DISCONNECTED_FOREVER}`
         )
         return
@@ -308,15 +339,32 @@ export class WebsocketConnection {
   }
 
   private async pingServer(): Promise<void> {
-    this.uriIndex = await doInitPings(
+    this.pingRequest = doInitPings(
       this.args.baseUriPartsList,
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
+      this.args.sendClientError,
       this.args.onHostConfigResp
     )
 
-    this.stepFsm("SERVER_PING_SUCCEEDED")
+    try {
+      this.uriIndex = await this.pingRequest.promise
+      this.pingRequest = undefined
+      this.stepFsm("SERVER_PING_SUCCEEDED")
+    } catch (e) {
+      if (e instanceof PingCancelledError) {
+        // This is an expected error when the connection is cancelled.
+        // We don't need to do anything here.
+        LOG.info("Ping cancelled")
+      } else {
+        // This is an unexpected error.
+        this.stepFsm("FATAL_ERROR", e instanceof Error ? e.message : String(e))
+      }
+    } finally {
+      // Reset the ping request to avoid memory leaks
+      this.pingRequest = undefined
+    }
   }
 
   /**
@@ -356,7 +404,7 @@ export class WebsocketConnection {
       throw new Error("Websocket already exists")
     }
 
-    log.info("creating WebSocket")
+    LOG.info("creating WebSocket")
 
     // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
     // parameter to the WebSocket constructor) here in a slightly unfortunate
@@ -382,8 +430,8 @@ export class WebsocketConnection {
     this.websocket.addEventListener("message", (event: MessageEvent) => {
       if (checkWebsocket()) {
         this.handleMessage(event.data).catch(reason => {
-          const err = `Failed to process a Websocket message (${reason})`
-          log.error(err)
+          const err = `Failed to process a Websocket message. ${reason}`
+          LOG.error(err)
           this.stepFsm("FATAL_ERROR", err)
         })
       }
@@ -391,22 +439,28 @@ export class WebsocketConnection {
 
     this.websocket.addEventListener("open", () => {
       if (checkWebsocket()) {
-        log.info("WebSocket onopen")
+        LOG.info("WebSocket onopen")
         this.stepFsm("CONNECTION_SUCCEEDED")
       }
     })
 
     this.websocket.addEventListener("close", () => {
       if (checkWebsocket()) {
-        log.warn("WebSocket onclose")
+        LOG.warn("WebSocket onclose")
         this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }
     })
 
-    this.websocket.addEventListener("error", () => {
+    this.websocket.addEventListener("error", (event: unknown) => {
       if (checkWebsocket()) {
-        log.error("WebSocket onerror")
+        LOG.error("Client Error: WebSocket onerror")
+        this.args.sendClientError(
+          "Websocket connection onerror triggered",
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
+          `Error: ${event}`,
+          "Websocket Connection"
+        )
         this.closeConnection()
         this.stepFsm("CONNECTION_ERROR")
       }
@@ -429,7 +483,7 @@ export class WebsocketConnection {
 
       if (isNullOrUndefined(this.wsConnectionTimeoutId)) {
         // Sometimes the clearTimeout doesn't work. No idea why :-/
-        log.warn("Timeout fired after cancellation")
+        LOG.warn("Timeout fired after cancellation")
         return
       }
 
@@ -443,12 +497,17 @@ export class WebsocketConnection {
       }
 
       if (this.websocket.readyState === 0 /* CONNECTING */) {
-        log.info(`${uri} timed out`)
+        LOG.info(`Client error: ${uri} timed out`)
+        this.args.sendClientError(
+          "Websocket connection timed out",
+          `${uri} timed out`,
+          "Websocket Connection"
+        )
         this.closeConnection()
         this.stepFsm("CONNECTION_TIMED_OUT")
       }
     }, WEBSOCKET_TIMEOUT_MS)
-    log.info(`Set WS timeout ${this.wsConnectionTimeoutId}`)
+    LOG.info(`Set WS timeout ${this.wsConnectionTimeoutId}`)
   }
 
   private closeConnection(): void {
@@ -464,9 +523,14 @@ export class WebsocketConnection {
     }
 
     if (notNullOrUndefined(this.wsConnectionTimeoutId)) {
-      log.info(`Clearing WS timeout ${this.wsConnectionTimeoutId}`)
+      LOG.info(`Clearing WS timeout ${this.wsConnectionTimeoutId}`)
       window.clearTimeout(this.wsConnectionTimeoutId)
       this.wsConnectionTimeoutId = undefined
+    }
+
+    if (this.pingRequest) {
+      this.pingRequest.cancel()
+      this.pingRequest = undefined
     }
   }
 
@@ -488,8 +552,18 @@ export class WebsocketConnection {
    * Called when our script has finished running. Calls through
    * to the ForwardMsgCache, to handle cached entry expiry.
    */
-  public incrementMessageCacheRunCount(maxMessageAge: number): void {
-    this.cache.incrementRunCount(maxMessageAge)
+  public incrementMessageCacheRunCount(
+    maxMessageAge: number,
+    fragmentIdsThisRun: string[]
+  ): void {
+    this.cache.incrementRunCount(maxMessageAge, fragmentIdsThisRun)
+  }
+
+  /**
+   * Return a list of all the hashes of messages currently in the cache.
+   */
+  public getCachedMessageHashes(): string[] {
+    return this.cache.getCachedMessageHashes()
   }
 
   private async handleMessage(data: ArrayBuffer): Promise<void> {

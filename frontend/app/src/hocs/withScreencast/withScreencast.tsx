@@ -57,7 +57,7 @@ interface InjectedProps {
 
 type WrappedProps<P extends InjectedProps> = Omit<P, "screenCast">
 
-const log = getLogger("withScreencast")
+const LOG = getLogger("withScreencast")
 
 function withScreencast<P extends InjectedProps>(
   WrappedComponent: ComponentType<PropsWithChildren<P>>
@@ -116,7 +116,7 @@ function withScreencast<P extends InjectedProps>(
         recordAudio,
         onErrorOrStop: () => {
           stopRecording().catch(err =>
-            log.warn(`withScreencast.stopRecording threw an error: ${err}`)
+            LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
           )
         },
       })
@@ -124,7 +124,8 @@ function withScreencast<P extends InjectedProps>(
       try {
         await recorderRef.current.initialize()
       } catch (e) {
-        log.warn(`ScreenCastRecorder.initialize error: ${e}`)
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        LOG.warn(`ScreenCastRecorder.initialize error: ${e}`)
         setCurrentState("UNSUPPORTED")
         return
       }
@@ -147,14 +148,14 @@ function withScreencast<P extends InjectedProps>(
 
         // If we are currently in any other state, stop any ongoing recording
         stopRecording().catch(err =>
-          log.warn(`withScreencast.stopRecording threw an error: ${err}`)
+          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
         )
       },
       [currentState, stopRecording]
     )
 
     // Called when countdown ends (the actual start of the recording)
-    const onCountdownEnd = useCallback(async () => {
+    const onCountdownEnd = useCallback(() => {
       if (isNullOrUndefined(recorderRef.current)) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
@@ -164,7 +165,7 @@ function withScreencast<P extends InjectedProps>(
         setCurrentState("RECORDING")
       } else {
         stopRecording().catch(err =>
-          log.warn(`withScreencast.stopRecording threw an error: ${err}`)
+          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
         )
       }
     }, [stopRecording])
@@ -179,6 +180,7 @@ function withScreencast<P extends InjectedProps>(
       currentState,
       toggleRecordAudio,
       startRecording: showDialog, // triggers the setup/showDialog process
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       stopRecording,
     }
 
@@ -194,6 +196,7 @@ function withScreencast<P extends InjectedProps>(
           <ScreencastDialog
             recordAudio={recordAudio}
             onClose={closeDialog}
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             startRecording={startActualRecording}
             toggleRecordAudio={toggleRecordAudio}
           />

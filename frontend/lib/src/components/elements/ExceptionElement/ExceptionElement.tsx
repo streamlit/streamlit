@@ -16,7 +16,10 @@
 
 import React, { memo, ReactElement } from "react"
 
+import { getLogger } from "loglevel"
+
 import { Exception as ExceptionProto } from "@streamlit/protobuf"
+import { isLocalhost } from "@streamlit/utils"
 
 import { notNullOrUndefined } from "~lib/util/utils"
 import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
@@ -25,12 +28,17 @@ import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
 
 import {
+  StyledExceptionCopyButton,
+  StyledExceptionLinks,
   StyledExceptionMessage,
+  StyledExceptionWrapper,
   StyledMessageType,
   StyledStackTraceContent,
   StyledStackTraceRow,
   StyledStackTraceTitle,
 } from "./styled-components"
+
+export const LOG = getLogger("ExceptionElement")
 
 export interface ExceptionElementProps {
   element: ExceptionProto
@@ -82,13 +90,15 @@ function ExceptionMessage({
 function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
   // Build the stack trace display, if we got a stack trace.
   return (
-    <>
+    <div>
       <StyledStackTraceTitle>Traceback:</StyledStackTraceTitle>
       <StyledStackTrace>
         <StyledStackTraceContent>
-          <StyledCode>
+          <StyledCode wrapLines={false}>
             {stackTrace.map((row: string, index: number) => (
               <StyledStackTraceRow
+                // TODO: Update to match React best practices
+                // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={index}
                 data-testid="stExceptionTraceRow"
               >
@@ -98,7 +108,7 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
           </StyledCode>
         </StyledStackTraceContent>
       </StyledStackTrace>
-    </>
+    </div>
   )
 }
 
@@ -108,19 +118,52 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
 function ExceptionElement({
   element,
 }: Readonly<ExceptionElementProps>): ReactElement {
+  const formattedExceptionShort = `${element.type}: ${element.message}`
+  const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
+    "\n"
+  )}`
+
+  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+    formattedExceptionShort
+  )}`
+  const chatGptUrl = `https://chatgpt.com/?q=${encodeURIComponent(
+    formattedExceptionFull
+  )}`
+
+  const onCopyClick = (): void => {
+    navigator.clipboard.writeText(formattedExceptionFull).catch(error => {
+      LOG.error("Failed to copy exception details to clipboard:", error)
+    })
+  }
+
   return (
     <div className="stException" data-testid="stException">
       <AlertContainer kind={element.isWarning ? Kind.WARNING : Kind.ERROR}>
-        <StyledExceptionMessage data-testid="stExceptionMessage">
-          <ExceptionMessage
-            type={element.type}
-            message={element.message}
-            messageIsMarkdown={element.messageIsMarkdown}
-          />
-        </StyledExceptionMessage>
-        {element.stackTrace && element.stackTrace.length > 0 ? (
-          <StackTrace stackTrace={element.stackTrace} />
-        ) : null}
+        <StyledExceptionWrapper>
+          <StyledExceptionMessage data-testid="stExceptionMessage">
+            <ExceptionMessage
+              type={element.type}
+              message={element.message}
+              messageIsMarkdown={element.messageIsMarkdown}
+            />
+          </StyledExceptionMessage>
+          {element.stackTrace && element.stackTrace.length > 0 ? (
+            <StackTrace stackTrace={element.stackTrace} />
+          ) : null}
+          {isLocalhost() && (
+            <StyledExceptionLinks>
+              <StyledExceptionCopyButton onClick={onCopyClick}>
+                Copy
+              </StyledExceptionCopyButton>
+              <a href={searchUrl} target="_blank" rel="noopener noreferrer">
+                Ask Google
+              </a>
+              <a href={chatGptUrl} target="_blank" rel="noopener noreferrer">
+                Ask ChatGPT
+              </a>
+            </StyledExceptionLinks>
+          )}
+        </StyledExceptionWrapper>
       </AlertContainer>
     </div>
   )

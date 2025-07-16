@@ -21,12 +21,11 @@ const INITIAL_SLASH_RE = /^\/+/
  * Create an HTTP URI for the given path.
  */
 export function buildHttpUri(
-  { hostname, port, pathname }: URL,
+  { hostname, port, pathname, protocol }: URL,
   path: string
 ): string {
-  const protocol = isHttps() ? "https" : "http"
   const fullPath = makePath(pathname, path)
-  return `${protocol}://${hostname}:${port}/${fullPath}`
+  return `${protocol}//${hostname}:${port}/${fullPath}`
 }
 
 export function makePath(basePath: string, subPath: string): string {
@@ -40,9 +39,9 @@ export function makePath(basePath: string, subPath: string): string {
   return `${basePath}/${subPath}`
 }
 
-/**
- * True if we're connected to the host via HTTPS.
- */
-export function isHttps(): boolean {
-  return window.location.href.startsWith("https://")
+export const isLocalhost = (): boolean => {
+  return (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  )
 }

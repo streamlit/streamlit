@@ -18,6 +18,10 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.react18_utils import (
+    take_stable_snapshot,
+)
+
 if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
@@ -29,7 +33,7 @@ def assert_fullscreen_toolbar_button_interactions(
     filename_prefix: str = "",
     nth: int = 0,
     pixel_threshold: float = 0.05,
-):
+) -> None:
     """
     Shared test function to assert that clicking on fullscreen toolbar button
     expands the map into fullscreen.
@@ -57,8 +61,10 @@ def assert_fullscreen_toolbar_button_interactions(
     ).to_be_visible()
 
     # Check that it is visible
-    assert_snapshot(
+    take_stable_snapshot(
         app,
+        app,
+        assert_snapshot=assert_snapshot,
         name=f"{filename_prefix if filename_prefix != '' else widget_test_id}-fullscreen_expanded",
         pixel_threshold=pixel_threshold,
     )
@@ -69,8 +75,10 @@ def assert_fullscreen_toolbar_button_interactions(
     # Make sure that the button shows the open fullscreen button
     expect(widget_toolbar.get_by_role("button", name="Fullscreen")).to_be_visible()
 
-    assert_snapshot(
+    take_stable_snapshot(
+        app,
         fullscreen_wrapper,
+        assert_snapshot=assert_snapshot,
         name=f"{filename_prefix if filename_prefix != '' else widget_test_id}-fullscreen_collapsed",
         pixel_threshold=pixel_threshold,
     )

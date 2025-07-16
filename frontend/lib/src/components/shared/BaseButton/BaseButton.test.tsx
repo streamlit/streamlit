@@ -35,7 +35,7 @@ const getProps = (
   size: BaseButtonSize.MEDIUM,
   onClick: () => {},
   disabled: false,
-  fluidWidth: false,
+  containerWidth: false,
   children: null,
   ...propOverrides,
 })
@@ -108,7 +108,9 @@ describe("Button element", () => {
   })
 
   it("renders use container width buttons correctly", () => {
-    render(<BaseButton {...getProps({ fluidWidth: true })}>Hello</BaseButton>)
+    render(
+      <BaseButton {...getProps({ containerWidth: true })}>Hello</BaseButton>
+    )
 
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle("width: 100%")

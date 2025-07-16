@@ -27,82 +27,79 @@ np.random.seed(0)
 random.seed(0)
 
 
-class TestCaseMetadata(NamedTuple):
+class CaseMetadata(NamedTuple):
     expected_rows: int
     expected_cols: int
     expected_data_format: DataFormat
 
-    # Tell pytest this is not a TestClass despite having "Test" in the name.
-    __test__ = False
-
 
 SHARED_TEST_CASES = [
     # None:
-    (None, TestCaseMetadata(0, 0, DataFormat.EMPTY)),
+    (None, CaseMetadata(0, 0, DataFormat.EMPTY)),
     # Empty list:
-    ([], TestCaseMetadata(0, 0, DataFormat.LIST_OF_VALUES)),
+    ([], CaseMetadata(0, 0, DataFormat.LIST_OF_VALUES)),
     # Empty tuple:
-    ((), TestCaseMetadata(0, 0, DataFormat.TUPLE_OF_VALUES)),
+    ((), CaseMetadata(0, 0, DataFormat.TUPLE_OF_VALUES)),
     # Empty dict (not a an empty set!)
-    ({}, TestCaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT)),
+    ({}, CaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT)),
     # Empty set:
-    (set(), TestCaseMetadata(0, 0, DataFormat.SET_OF_VALUES)),
+    (set(), CaseMetadata(0, 0, DataFormat.SET_OF_VALUES)),
     # Empty numpy array:
     # for unknown reasons, pd.DataFrame initializes empty numpy arrays with a single column
-    (np.ndarray(0), TestCaseMetadata(0, 1, DataFormat.NUMPY_LIST)),
+    (np.ndarray(0), CaseMetadata(0, 1, DataFormat.NUMPY_LIST)),
     # Empty column value mapping with columns:
-    ({"name": [], "type": []}, TestCaseMetadata(0, 2, DataFormat.COLUMN_VALUE_MAPPING)),
+    ({"name": [], "type": []}, CaseMetadata(0, 2, DataFormat.COLUMN_VALUE_MAPPING)),
     # Empty dataframe:
-    (pd.DataFrame(), TestCaseMetadata(0, 0, DataFormat.PANDAS_DATAFRAME)),
+    (pd.DataFrame(), CaseMetadata(0, 0, DataFormat.PANDAS_DATAFRAME)),
     # Empty dataframe with columns:
     (
         pd.DataFrame(
             columns=["name", "type"], index=pd.RangeIndex(start=0, step=1)
         ),  # Explicitly set the range index to have the same behavior across versions
-        TestCaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME),
+        CaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME),
     ),
     # Pandas DataFrame:
     (
         pd.DataFrame(["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_DATAFRAME),
+        CaseMetadata(2, 1, DataFormat.PANDAS_DATAFRAME),
     ),
     # List of strings (List[str]):
     (
         ["st.text_area", "st.number_input", "st.text_input"],
-        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
+        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
     ),
     # List of integers (List[int]):
-    ([1, 2, 3], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    ([1, 2, 3], CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
     # List of floats (List[float]):
-    ([1.0, 2.0, 3.0], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    ([1.0, 2.0, 3.0], CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
     # List of booleans (List[bool]):
-    ([True, False, True], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    ([True, False, True], CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
     # List of Nones (List[None]):
-    ([None, None, None], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    ([None, None, None], CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
     # List of dates (List[date]):
     (
         [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
-        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
+        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
     ),
     # Set of strings (Set[str]):
     # Set does not have a stable order across different Python version.
     # Therefore, we are only testing this with one item.
     (
         {"st.number_input"},
-        TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
+        CaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
     ),
     # Tuple of strings (Tuple[str]):
     (
         ("st.text_area", "st.number_input", "st.text_input"),
-        TestCaseMetadata(3, 1, DataFormat.TUPLE_OF_VALUES),
+        CaseMetadata(3, 1, DataFormat.TUPLE_OF_VALUES),
     ),
     # Numpy list / 1D numpy array (np.array[str]):
     (
         np.array(["st.text_area", "st.number_input", "st.text_input"]),
-        TestCaseMetadata(3, 1, DataFormat.NUMPY_LIST),
+        CaseMetadata(3, 1, DataFormat.NUMPY_LIST),
     ),
     # np.array[int]:
-    (np.array([1, 2, 3]), TestCaseMetadata(3, 1, DataFormat.NUMPY_LIST)),
+    (np.array([1, 2, 3]), CaseMetadata(3, 1, DataFormat.NUMPY_LIST)),
     # Multi-dimensional numpy array (np.array[List[Scalar]])
     (
         np.array(
@@ -111,37 +108,37 @@ SHARED_TEST_CASES = [
                 ["st.markdown", "element"],
             ]
         ),
-        TestCaseMetadata(2, 2, DataFormat.NUMPY_MATRIX),
+        CaseMetadata(2, 2, DataFormat.NUMPY_MATRIX),
     ),
     # np.array[List[str]]:
     (
         np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
-        TestCaseMetadata(3, 1, DataFormat.NUMPY_MATRIX),
+        CaseMetadata(3, 1, DataFormat.NUMPY_MATRIX),
     ),
     # Pandas Series (pd.Series):
     (
         pd.Series(["st.text_area", "st.number_input", "st.text_input"], name="widgets"),
-        TestCaseMetadata(3, 1, DataFormat.PANDAS_SERIES),
+        CaseMetadata(3, 1, DataFormat.PANDAS_SERIES),
     ),
     # Pandas Styler (pd.Styler):
     (
         pd.DataFrame(["st.text_area", "st.markdown"]).style,
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_STYLER),
+        CaseMetadata(2, 1, DataFormat.PANDAS_STYLER),
     ),
     # Pandas Index (pd.Index):
     (
         pd.Index(["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_INDEX),
+        CaseMetadata(2, 1, DataFormat.PANDAS_INDEX),
     ),
     # Pyarrow Table (pyarrow.Table) from pandas:
     (
         pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
-        TestCaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
+        CaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
     ),
     # List of rows (List[List[Scalar]]):
     (
         [["st.text_area", "widget"], ["st.markdown", "element"]],
-        TestCaseMetadata(2, 2, DataFormat.LIST_OF_ROWS),
+        CaseMetadata(2, 2, DataFormat.LIST_OF_ROWS),
     ),
     # List of records (List[Dict[str, Scalar]]):
     (
@@ -149,7 +146,7 @@ SHARED_TEST_CASES = [
             {"name": "st.text_area", "type": "widget"},
             {"name": "st.markdown", "type": "element"},
         ],
-        TestCaseMetadata(2, 2, DataFormat.LIST_OF_RECORDS),
+        CaseMetadata(2, 2, DataFormat.LIST_OF_RECORDS),
     ),
     # Column-index mapping ({column: {index: value}}):
     (
@@ -157,7 +154,7 @@ SHARED_TEST_CASES = [
             "type": {"st.text_area": "widget", "st.markdown": "element"},
             "usage": {"st.text_area": 4.92, "st.markdown": 47.22},
         },
-        TestCaseMetadata(2, 2, DataFormat.COLUMN_INDEX_MAPPING),
+        CaseMetadata(2, 2, DataFormat.COLUMN_INDEX_MAPPING),
     ),
     # Column-value mapping ({column: List[values]}}):
     (
@@ -165,7 +162,7 @@ SHARED_TEST_CASES = [
             "name": ["st.text_area", "st.markdown"],
             "type": ["widget", "element"],
         },
-        TestCaseMetadata(2, 2, DataFormat.COLUMN_VALUE_MAPPING),
+        CaseMetadata(2, 2, DataFormat.COLUMN_VALUE_MAPPING),
     ),
     # Column-series mapping ({column: Series(values)}):
     (
@@ -173,17 +170,17 @@ SHARED_TEST_CASES = [
             "name": pd.Series(["st.text_area", "st.markdown"], name="name"),
             "type": pd.Series(["widget", "element"], name="type"),
         },
-        TestCaseMetadata(2, 2, DataFormat.COLUMN_SERIES_MAPPING),
+        CaseMetadata(2, 2, DataFormat.COLUMN_SERIES_MAPPING),
     ),
     # Key-value dict ({index: value}):
     (
         {"st.text_area": "widget", "st.markdown": "element"},
-        TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT),
+        CaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT),
     ),
     # Raw pyarrow array (pyarrow.Array):
     (
         pa.array(["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.PYARROW_ARRAY),
+        CaseMetadata(2, 1, DataFormat.PYARROW_ARRAY),
     ),
     # Raw pyarrow table (pyarrow.Array):
     (
@@ -193,7 +190,7 @@ SHARED_TEST_CASES = [
                 "usage": pa.array([4.92, 47.22]),
             }
         ),
-        TestCaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
+        CaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
     ),
 ]
 
@@ -212,7 +209,7 @@ def random_date() -> datetime:
 
 
 class TestObject:
-    def __str__(self):
+    def __str__(self) -> str:
         return "TestObject"
 
 
@@ -391,7 +388,7 @@ SPECIAL_TYPES_DF = pd.DataFrame(
             [
                 Decimal("1.1"),
                 Decimal("-0.03864734299516908213"),
-                Decimal("1000"),
+                Decimal(1000),
                 Decimal("2.212"),
                 None,
             ]
@@ -437,13 +434,13 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         "dicts": pd.Series([{"a": 1}, {"b": 2}, {"c": 2}, None]),
         "objects": pd.Series([TestObject(), TestObject(), TestObject(), None]),
         # TODO(lukasmasuch): Not supported, but currently leads to error
-        # "mixed_types_list": pd.Series(
-        #     [random.choice([1, 1.0, None, "foo"]) for _ in range(10)]
-        #     for _ in range(n_rows)
-        # ),
+        # > "mixed_types_list": pd.Series(
+        # >     [random.choice([1, 1.0, None, "foo"]) for _ in range(10)]
+        # >     for _ in range(n_rows)
+        # > ),
         # TODO(lukasmasuch): Sparse array is supported, but currently leads to error
-        # "sparse-array": pd.Series(
-        #     pd.arrays.SparseArray([random.choice([0, 1, 2]) for _ in range(n_rows)])
-        # ),
+        # > "sparse-array": pd.Series(
+        # >     pd.arrays.SparseArray([random.choice([0, 1, 2]) for _ in range(n_rows)])
+        # > ),
     }
 )

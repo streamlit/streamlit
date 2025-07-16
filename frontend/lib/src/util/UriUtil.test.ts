@@ -107,11 +107,13 @@ describe("isValidOrigin", () => {
     // issue is fixed.
     const OrigURL = globalThis.URL
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       globalThis.URL = function (url: string, ...rest: any[]) {
         if (url.includes("*")) {
           throw new Error("Invalid URL")
         }
         return new OrigURL(url, ...rest)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any
       expect(
         isValidOrigin(

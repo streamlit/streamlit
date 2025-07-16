@@ -21,7 +21,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Final, NamedTuple
 
-from streamlit import config
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -33,14 +32,8 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
-from streamlit.runtime.forward_msg_cache import (
-    ForwardMsgCache,
-    create_reference_msg,
-    populate_hash_if_needed,
-)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
-from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
@@ -174,7 +167,7 @@ class Runtime:
         """
         return cls._instance is not None
 
-    def __init__(self, config: RuntimeConfig):
+    def __init__(self, config: RuntimeConfig) -> None:
         """Create a Runtime instance. It won't be started yet.
 
         Runtime is *not* thread-safe. Its public methods are generally
@@ -203,7 +196,6 @@ class Runtime:
 
         # Initialize managers
         self._component_registry = config.component_registry
-        self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
@@ -219,7 +211,6 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
         self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
 
@@ -230,10 +221,6 @@ class Runtime:
     @property
     def component_registry(self) -> BaseComponentRegistry:
         return self._component_registry
-
-    @property
-    def message_cache(self) -> ForwardMsgCache:
-        return self._message_cache
 
     @property
     def uploaded_file_mgr(self) -> UploadedFileManager:
@@ -326,7 +313,7 @@ class Runtime:
 
         async_objs = self._get_async_objs()
 
-        def stop_on_eventloop():
+        def stop_on_eventloop() -> None:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
@@ -387,9 +374,11 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        assert not (existing_session_id and session_id_override), (
-            "Only one of existing_session_id and session_id_override should be set!"
-        )
+        if existing_session_id and session_id_override:
+            raise RuntimeError(
+                "Only one of existing_session_id and session_id_override should be set. "
+                "This should never happen."
+            )
 
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
@@ -449,7 +438,6 @@ class Runtime:
         """
         session_info = self._session_mgr.get_session_info(session_id)
         if session_info:
-            self._message_cache.remove_refs_for_session(session_info.session)
             self._session_mgr.close_session(session_id)
         self._on_session_disconnected()
 
@@ -474,14 +462,6 @@ class Runtime:
         """
         session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info:
-            # NOTE: Ideally, we'd like to keep ForwardMsgCache refs for a session around
-            # when a session is disconnected (and defer their cleanup until the session
-            # is garbage collected), but this would be difficult to do as the
-            # ForwardMsgCache is not thread safe, and we have no guarantee that the
-            # garbage collector will only run on the eventloop thread. Because of this,
-            # we clean up refs now and accept the risk that we're deleting cache entries
-            # that will be useful once the browser tab reconnects.
-            self._message_cache.remove_refs_for_session(session_info.session)
             self._session_mgr.disconnect_session(session_id)
         self._on_session_disconnected()
 
@@ -580,7 +560,7 @@ class Runtime:
             session.request_rerun(None)
 
             now = time.perf_counter()
-            while (
+            while (  # noqa: ASYNC110
                 SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
                 and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
             ):
@@ -618,7 +598,7 @@ class Runtime:
             elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
-                raise RuntimeError(f"Bad Runtime state at start: {self._state}")
+                raise RuntimeError(f"Bad Runtime state at start: {self._state}")  # noqa: TRY301
 
             # Signal that we're started and ready to accept sessions
             async_objs.started.set_result(None)
@@ -698,7 +678,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
     def _send_message(self, session_info: ActiveSessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
-
         If the client is likely to have already cached the message, we may
         instead send a "reference" message that contains only the hash of the
         message.
@@ -714,51 +693,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        msg.metadata.cacheable = is_cacheable_msg(msg)
-        msg_to_send = msg
-        if msg.metadata.cacheable:
-            populate_hash_if_needed(msg)
-
-            if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.script_run_count
-            ):
-                # This session has probably cached this message. Send
-                # a reference instead.
-                _LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
-                msg_to_send = create_reference_msg(msg)
-
-            # Cache the message so it can be referenced in the future.
-            # If the message is already cached, this will reset its
-            # age.
-            _LOGGER.debug("Caching message (hash=%s)", msg.hash)
-            self._message_cache.add_message(
-                msg, session_info.session, session_info.script_run_count
-            )
 
         # If this was a `script_finished` message, we increment the
-        # script_run_count for this session, and update the cache
+        # script_run_count for this session
         if msg.WhichOneof("type") == "script_finished" and (
             msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
-            or (
-                config.get_option(
-                    "global.includeFragmentRunsInForwardMessageCacheCount"
-                )
-                and msg.script_finished == ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
-            )
         ):
-            _LOGGER.debug(
-                "Script run finished successfully; "
-                "removing expired entries from MessageCache "
-                "(max_age=%s)",
-                config.get_option("global.maxCachedMessageAge"),
-            )
             session_info.script_run_count += 1
-            self._message_cache.remove_expired_entries_for_session(
-                session_info.session, session_info.script_run_count
-            )
 
         # Ship it off!
-        session_info.client.write_forward_msg(msg_to_send)
+        session_info.client.write_forward_msg(msg)
 
     def _enqueued_some_message(self) -> None:
         """Callback called by AppSession after the AppSession has enqueued a

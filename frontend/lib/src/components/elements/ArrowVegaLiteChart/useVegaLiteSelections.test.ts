@@ -16,7 +16,7 @@
 
 import { Mock, Mocked } from "vitest"
 import { View as VegaView } from "vega"
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
 
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { debounce } from "~lib/util/utils"
@@ -49,6 +49,7 @@ describe("useVegaLiteSelections", () => {
 
     const debouncedMock = debounce as Mock
     // By default, the mocked debounce simply calls its callback immediately.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     debouncedMock.mockImplementation((_delay: number, fn: any) => fn)
   })
 

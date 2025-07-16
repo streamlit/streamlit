@@ -20,7 +20,9 @@ from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -48,6 +50,7 @@ from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 SomeUploadedSnapshotFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
 
@@ -72,13 +75,12 @@ class CameraInputSerde:
         return state_proto
 
     def deserialize(
-        self, ui_value: FileUploaderStateProto | None, widget_id: str
+        self, ui_value: FileUploaderStateProto | None
     ) -> SomeUploadedSnapshotFile:
         upload_files = _get_upload_files(ui_value)
-        if len(upload_files) == 0:
-            return_value = None
-        else:
-            return_value = upload_files[0]
+        return_value = None if len(upload_files) == 0 else upload_files[0]
+        if return_value is not None and not isinstance(return_value, DeletedFile):
+            enforce_filename_restriction(return_value.name, [".jpg"])
         return return_value
 
 
@@ -95,6 +97,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None:
         r"""Display a widget that returns pictures from the user's webcam.
 
@@ -153,8 +156,19 @@ class CameraInputMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "stretch" or int
+            The width of the camera input widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -188,6 +202,7 @@ class CameraInputMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
             ctx=ctx,
         )
 
@@ -202,6 +217,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
@@ -219,8 +235,10 @@ class CameraInputMixin:
             "camera_input",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             help=help,
+            width=width,
         )
 
         camera_input_proto = CameraInputProto()
@@ -235,6 +253,9 @@ class CameraInputMixin:
         if help is not None:
             camera_input_proto.help = dedent(help)
 
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
         serde = CameraInputSerde()
 
         camera_input_state = register_widget(
@@ -248,7 +269,9 @@ class CameraInputMixin:
             value_type="file_uploader_state_value",
         )
 
-        self.dg._enqueue("camera_input", camera_input_proto)
+        self.dg._enqueue(
+            "camera_input", camera_input_proto, layout_config=layout_config
+        )
 
         if isinstance(camera_input_state.value, DeletedFile):
             return None

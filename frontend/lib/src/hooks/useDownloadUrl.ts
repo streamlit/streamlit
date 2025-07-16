@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useCallback } from "react"
+import { useCallback, useContext } from "react"
 
 import { LibContext } from "~lib/components/core/LibContext"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -25,7 +25,7 @@ const useDownloadUrl = (
 ): (() => void) => {
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
-  } = React.useContext(LibContext)
+  } = useContext(LibContext)
 
   const downloadUrl = useCallback(() => {
     if (!url) return

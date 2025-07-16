@@ -14,26 +14,19 @@
  * limitations under the License.
  */
 
-import { isHttps, makePath } from "@streamlit/utils"
-
-import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "./constants"
+import { makePath } from "@streamlit/utils"
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
 
 /**
- * Return the BaseUriParts for the global window
+ * Return the BaseUriParts for either the given url or the global window
  */
-export function getWindowBaseUriParts(): URL {
-  const currentUrl = new URL(window.location.href)
-  // If dev, always connect to 8501, since window.location.port is the Node
-  // server's port 3000.
-  // If changed, also change config.py
+export function parseUriIntoBaseParts(url?: string): URL {
+  const currentUrl = new URL(url ?? window.location.href)
 
-  if (IS_DEV_ENV) {
-    currentUrl.port = WEBSOCKET_PORT_DEV
-  } else if (!currentUrl.port) {
-    currentUrl.port = isHttps() ? "443" : "80"
+  if (!currentUrl.port) {
+    currentUrl.port = currentUrl.protocol === "https:" ? "443" : "80"
   }
 
   currentUrl.pathname = currentUrl.pathname
@@ -56,7 +49,9 @@ export function getWindowBaseUriParts(): URL {
 // the best path forward may be tricky as I wasn't able to come up with an
 // easy solution covering every deployment scenario.
 export function getPossibleBaseUris(): Array<URL> {
-  const baseUriParts = getWindowBaseUriParts()
+  const baseUriParts = parseUriIntoBaseParts(
+    window.__streamlit?.BACKEND_BASE_URL
+  )
   const { pathname } = baseUriParts
 
   if (pathname === "/") {
@@ -84,10 +79,10 @@ export function getPossibleBaseUris(): Array<URL> {
  * Create a ws:// or wss:// URI for the given path.
  */
 export function buildWsUri(
-  { hostname, port, pathname }: URL,
+  { hostname, port, pathname, protocol }: URL,
   path: string
 ): string {
-  const protocol = isHttps() ? "wss" : "ws"
+  const wsProtocol = protocol === "https:" ? "wss" : "ws"
   const fullPath = makePath(pathname, path)
-  return `${protocol}://${hostname}:${port}/${fullPath}`
+  return `${wsProtocol}://${hostname}:${port}/${fullPath}`
 }

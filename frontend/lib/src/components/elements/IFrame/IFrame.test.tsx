@@ -51,6 +51,30 @@ describe("st.iframe", () => {
     expect(screen.getByTestId("stIFrame")).toHaveAttribute("height", "400")
   })
 
+  describe("tabIndex attribute", () => {
+    it("should not have tabIndex attribute when not provided", () => {
+      const props = getProps({})
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).not.toHaveAttribute("tabindex")
+    })
+
+    it.each([
+      { value: 5, expected: "5", description: "positive" },
+      { value: -1, expected: "-1", description: "negative" },
+      { value: 0, expected: "0", description: "zero" },
+    ])(
+      "should set tabIndex to $description value when provided",
+      ({ value, expected }) => {
+        const props = getProps({ tabIndex: value })
+        render(<IFrame {...props} />)
+        expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+          "tabindex",
+          expected
+        )
+      }
+    )
+  })
+
   describe("Render iframe with `src` parameter", () => {
     const props = getProps({
       src: "foo",

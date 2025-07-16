@@ -50,6 +50,11 @@ export type AppConfig = {
    * Enables custom string messages to be sent to the host
    */
   enableCustomParentMessages?: boolean
+  /**
+   * Whether host wants to block error dialogs. If true, blocks error dialogs
+   * from being shown to the user, sends error info to host via postMessage
+   */
+  blockErrorDialogs?: boolean
 }
 
 export type DeployedAppMetadata = {
@@ -228,6 +233,19 @@ export type IGuestToHostMessage =
       type: "METRICS_EVENT"
       eventName: string
       data: MetricsEvent
+    }
+  | {
+      type: "CLIENT_ERROR_DIALOG"
+      error: string
+      message?: string
+    }
+  | {
+      type: "CLIENT_ERROR"
+      component: string
+      error: string | number
+      message: string
+      source: string
+      customComponentName?: string
     }
 
 export type VersionedMessage<Message> = {

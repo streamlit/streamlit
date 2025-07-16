@@ -344,20 +344,11 @@ describe("formatPeriodFromFreq", () => {
     [1, "W-SUN", "1969-12-29/1970-01-04"],
     // Invalid frequencies
     [1, "invalid", "1"],
+    [1, "W", "1"],
+    [1, "W-INVALID", "1"],
   ])("formats %s with frequency %s to %s", (value, freq, expected) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     expect(formatPeriodFromFreq(value, freq as any)).toEqual(expected)
-  })
-
-  test("handles weekly frequency without parameter", () => {
-    expect(() => formatPeriodFromFreq(1, "W")).toThrow(
-      'Frequency "W" requires parameter'
-    )
-  })
-
-  test("handles weekly frequency with invalid parameter", () => {
-    expect(() => formatPeriodFromFreq(1, "W-INVALID")).toThrow(
-      'Invalid value: INVALID. Supported values: ["SUN","MON","TUE","WED","THU","FRI","SAT"]'
-    )
   })
 })
 

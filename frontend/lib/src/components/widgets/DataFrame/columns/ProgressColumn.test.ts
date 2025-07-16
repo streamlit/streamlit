@@ -116,6 +116,7 @@ describe("ProgressColumn", () => {
     [0.1234, 0.1234],
   ])(
     "supports number-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: number | null) => {
       const mockColumn = getProgressColumn()
       const cell = mockColumn.getCell(input)
@@ -131,6 +132,7 @@ describe("ProgressColumn", () => {
     ["123.124.123"],
     ["--123"],
     ["2,,2"],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   ])("%p results in error cell", (input: any) => {
     const mockColumn = getProgressColumn()
     const cell = mockColumn.getCell(input)
@@ -157,8 +159,12 @@ describe("ProgressColumn", () => {
     [0.12, "percent", "12%"],
     [1100, "compact", "1.1K"],
     [-1234.567, "accounting", "(1,234.57)"],
+    [1000000, "bytes", "1MB"],
+    [1123456, "bytes", "1.1MB"],
+    [1234, "bytes", "1.2KB"],
     [-1234.567, "dollar", "-$1,234.57"],
     [-1234.567, "euro", "-€1,234.57"],
+    [-1234.567, "yen", "-¥1,235"],
     [-1234.567, "localized", "-1,234.567"],
     [-1234.567, "plain", "-1234.567"],
     [-1234.567, "scientific", "-1.235E3"],

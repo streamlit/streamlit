@@ -92,6 +92,7 @@ describe("ObjectColumn", () => {
     [undefined, null],
   ])(
     "supports string-compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: string | null) => {
       const mockColumn = ObjectColumn(MOCK_OBJECT_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)

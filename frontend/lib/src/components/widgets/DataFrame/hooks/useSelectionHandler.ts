@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback, useState } from "react"
 
 import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
 import isEqual from "lodash/isEqual"
@@ -64,7 +64,7 @@ function useSelectionHandler(
   columns: BaseColumn[],
   syncSelectionState: (newSelection: GridSelection) => void
 ): SelectionHandlerReturn {
-  const [gridSelection, setGridSelection] = React.useState<GridSelection>({
+  const [gridSelection, setGridSelection] = useState<GridSelection>({
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
     current: undefined,
@@ -96,7 +96,7 @@ function useSelectionHandler(
    * This callback is used to process selection changes and - if activated -
    * trigger a sync of the state with the widget state
    */
-  const processSelectionChange = React.useCallback(
+  const processSelectionChange = useCallback(
     (newSelection: GridSelection) => {
       const rowSelectionChanged = !isEqual(
         newSelection.rows.toArray(),
@@ -205,7 +205,7 @@ function useSelectionHandler(
    * @param keepRows - Whether to keep the row selection (default: false)
    * @param keepColumns - Whether to keep the column selection (default: false)
    */
-  const clearSelection = React.useCallback(
+  const clearSelection = useCallback(
     (keepRows = false, keepColumns = false) => {
       const emptySelection: GridSelection = {
         columns: keepColumns

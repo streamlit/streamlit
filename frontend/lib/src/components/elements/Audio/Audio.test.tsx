@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
@@ -28,6 +28,7 @@ import Audio, { AudioProps } from "./Audio"
 
 describe("Audio Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
+  const sendClientErrorToHost = vi.fn()
 
   const mockSetElementState = vi.fn()
   const mockGetElementState = vi.fn()
@@ -44,7 +45,10 @@ describe("Audio Element", () => {
       url: "/media/mockAudioFile.wav",
       ...elementProps,
     }),
-    endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
+    endpoints: mockEndpoints({
+      buildMediaURL: buildMediaURL,
+      sendClientErrorToHost: sendClientErrorToHost,
+    }),
     elementMgr: elementMgrMock as unknown as ElementStateManager,
   })
 
@@ -114,15 +118,31 @@ describe("Audio Element", () => {
     })
 
     const { rerender } = render(<Audio {...props} />)
-    let audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
+    let audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
 
     expect(audioElement.currentTime).toBe(0)
 
     const newProps = getProps({ startTime: 10 })
     rerender(<Audio {...newProps} />)
 
-    audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
+    audioElement = screen.getByTestId("stAudio")
 
     expect(audioElement.currentTime).toBe(10)
+  })
+
+  it("sends an CLIENT_ERROR message when the audio source fails to load", () => {
+    const props = getProps()
+    render(<Audio {...props} />)
+    const audioElement = screen.getByTestId("stAudio")
+    expect(audioElement).toBeInTheDocument()
+
+    fireEvent.error(audioElement)
+
+    expect(sendClientErrorToHost).toHaveBeenCalledWith(
+      "Audio",
+      "Audio source failed to load",
+      "onerror triggered",
+      "https://mock.media.url/"
+    )
   })
 })

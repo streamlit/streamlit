@@ -95,9 +95,13 @@ function generateTableHeader(table: Quiver): ReactElement {
   return (
     <thead>
       {getStyledHeaders(table).map((headerRow, rowIndex) => (
+        // TODO: Update to match React best practices
+        // eslint-disable-next-line @eslint-react/no-array-index-key
         <tr key={rowIndex}>
           {headerRow.map((header, colIndex) => (
             <StyledTableCellHeader
+              // TODO: Update to match React best practices
+              // eslint-disable-next-line @eslint-react/no-array-index-key
               key={colIndex}
               className={header.cssClass}
               scope="col"
@@ -142,13 +146,27 @@ function generateTableCell(
   const { type, content, contentType } = table.getCell(rowIndex, columnIndex)
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
 
-  const formattedContent =
+  let formattedContent =
     styledCell?.displayContent || formatArrowCell(content, contentType)
+  let hasStylerTooltip: boolean = false
 
   const style: React.CSSProperties = {
     textAlign: isNumericType(contentType) ? "right" : "left",
   }
 
+  if (
+    formattedContent &&
+    formattedContent.endsWith(`<span class="pd-t"></span>`)
+  ) {
+    // This is a bit hacky, but to support the Pandas Styler's tooltip feature,
+    // we need to convert the specific HTML element (used for tooltips) from
+    // the display value into an actual span element.
+    formattedContent = formattedContent.replace(
+      /<span class="pd-t"><\/span>$/,
+      ""
+    )
+    hasStylerTooltip = true
+  }
   switch (type) {
     // Index cells are from index columns which only exist if the DataFrame was created
     // based on a Pandas DataFrame.
@@ -160,6 +178,7 @@ function generateTableCell(
           id={styledCell?.cssId}
           className={styledCell?.cssClass}
         >
+          {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
@@ -175,6 +194,7 @@ function generateTableCell(
           className={styledCell?.cssClass}
           style={style}
         >
+          {hasStylerTooltip && <span className="pd-t" />}
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
@@ -183,6 +203,7 @@ function generateTableCell(
       )
     }
     default: {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       throw new Error(`Cannot parse type "${type}".`)
     }
   }

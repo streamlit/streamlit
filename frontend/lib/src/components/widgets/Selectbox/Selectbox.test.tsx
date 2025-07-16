@@ -16,7 +16,8 @@
 
 import React from "react"
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
@@ -46,14 +47,18 @@ const getProps = (
   ...widgetProps,
 })
 
-const pickOption = (selectbox: HTMLElement, value: string): void => {
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
-  fireEvent.click(selectbox)
+const pickOption = async (
+  selectbox: HTMLElement,
+  value: string
+): Promise<void> => {
+  const user = userEvent.setup()
+  // Click on the selectbox to open the dropdown
+  await user.click(selectbox)
+  // Find the desired option and click on it to select
   const valueElement = screen.getByText(value)
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
-  fireEvent.click(valueElement)
+  await user.click(valueElement)
+  // Select outside the widget to close the dropdown
+  await user.click(document.body)
 }
 
 describe("Selectbox widget", () => {
@@ -71,44 +76,55 @@ describe("Selectbox widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<Selectbox {...props} />)
-    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      props.element.options[props.element.default ?? 0],
       { fromUi: false },
       undefined
     )
   })
 
-  it("can pass fragmentId to setIntValue", () => {
+  it("gets correct value from proto", () => {
+    const props = getProps({
+      rawValue: "c",
+      setValue: true,
+    })
+    render(<Selectbox {...props} />)
+
+    const selectbox = screen.getByTestId("stSelectbox")
+    expect(within(selectbox).getByText("c")).toBeVisible()
+  })
+
+  it("can pass fragmentId to setStringValue", () => {
     const props = getProps(undefined, { fragmentId: "myFragmentId" })
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
 
     render(<Selectbox {...props} />)
-    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      props.element.options[props.element.default ?? 0],
       { fromUi: false },
       "myFragmentId"
     )
   })
 
-  it("handles the onChange event", () => {
+  it("handles the onChange event", async () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
     const selectbox = screen.getByRole("combobox")
 
-    pickOption(selectbox, "b")
+    await pickOption(selectbox, "b")
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      1,
+      "b",
       { fromUi: true },
       undefined
     )
@@ -116,22 +132,22 @@ describe("Selectbox widget", () => {
     expect(screen.getByText("b")).toBeInTheDocument()
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
     const selectbox = screen.getByRole("combobox")
-    pickOption(selectbox, "b")
+    await pickOption(selectbox, "b")
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      1,
+      "b",
       { fromUi: true },
       undefined
     )
@@ -144,13 +160,23 @@ describe("Selectbox widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByText("a")).toBeInTheDocument()
     expect(screen.queryByText("b")).not.toBeInTheDocument()
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      props.element.options[props.element.default ?? 0],
       {
         fromUi: true,
       },
       undefined
     )
+  })
+
+  it("renders a placeholder with null default", () => {
+    const props = getProps({
+      placeholder: "Please select an option...",
+      default: null,
+    })
+    render(<Selectbox {...props} />)
+
+    expect(screen.getByText("Please select an option...")).toBeInTheDocument()
   })
 })

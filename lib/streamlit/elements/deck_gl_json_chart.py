@@ -29,7 +29,6 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import config
-from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -41,6 +40,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
 )
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -91,10 +91,10 @@ def parse_selection_mode(
         )
 
     parsed_selection_modes = []
-    for selection_mode in selection_mode_set:
-        if selection_mode == "single-object":
+    for mode in selection_mode_set:
+        if mode == "single-object":
             parsed_selection_modes.append(PydeckProto.SelectionMode.SINGLE_OBJECT)
-        elif selection_mode == "multi-object":
+        elif mode == "multi-object":
             parsed_selection_modes.append(PydeckProto.SelectionMode.MULTI_OBJECT)
     return set(parsed_selection_modes)
 
@@ -233,7 +233,7 @@ class PydeckState(TypedDict, total=False):
 class PydeckSelectionSerde:
     """PydeckSelectionSerde is used to serialize and deserialize the Pydeck selection state."""
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> PydeckState:
+    def deserialize(self, ui_value: str | None) -> PydeckState:
         empty_selection_state: PydeckState = {
             "selection": {
                 "indices": {},
@@ -251,7 +251,7 @@ class PydeckSelectionSerde:
         if "selection" not in selection_state:
             selection_state = empty_selection_state
 
-        return cast(PydeckState, AttributeDictionary(selection_state))
+        return cast("PydeckState", AttributeDictionary(selection_state))
 
     def serialize(self, selection_state: PydeckState) -> str:
         return json.dumps(selection_state, default=str)
@@ -268,8 +268,9 @@ class PydeckMixin:
         height: int | None = None,
         selection_mode: Literal[
             "single-object"
-        ],  # Selection mode will only be activated by on_select param, this is a default value here to make it work with mypy
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        ],  # Selection mode will only be activated by on_select param; default value here to make it work with mypy
+        # No default value here to make it work with mypy
+        on_select: Literal["ignore"],
         key: Key | None = None,
     ) -> DeltaGenerator: ...
 
@@ -308,21 +309,34 @@ class PydeckMixin:
         - DeckGL docs: https://github.com/uber/deck.gl/tree/master/docs
         - DeckGL JSON docs: https://github.com/uber/deck.gl/tree/master/modules/json
 
-        When using this command, Mapbox provides the map tiles to render map
-        content. Note that Mapbox is a third-party product and Streamlit accepts
-        no responsibility or liability of any kind for Mapbox or for any content
-        or information made available by Mapbox.
+        When using this command, a service called Carto_ provides the map tiles to render
+        map content. If you're using advanced PyDeck features you may need to obtain
+        an API key from Carto first. You can do that as
+        ``pydeck.Deck(api_keys={"carto": YOUR_KEY})`` or by setting the CARTO_API_KEY
+        environment variable. See `PyDeck's documentation`_ for more information.
 
-        Mapbox requires users to register and provide a token before users can
-        request map tiles. Currently, Streamlit provides this token for you, but
-        this could change at any time. We strongly recommend all users create and
-        use their own personal Mapbox token to avoid any disruptions to their
-        experience. You can do this with the ``mapbox.token`` config option. The
-        use of Mapbox is governed by Mapbox's Terms of Use.
+        Another common provider for map tiles is Mapbox_. If you prefer to use that,
+        you'll need to create an account at https://mapbox.com and specify your Mapbox
+        key when creating the ``pydeck.Deck`` object. You can do that as
+        ``pydeck.Deck(api_keys={"mapbox": YOUR_KEY})`` or by setting the MAPBOX_API_KEY
+        environment variable.
 
-        To get a token for yourself, create an account at https://mapbox.com.
-        For more info on how to set config options, see
-        https://docs.streamlit.io/develop/api-reference/configuration/config.toml.
+        .. _Carto: https://carto.com
+        .. _Mapbox: https://mapbox.com
+        .. _PyDeck's documentation: https://deckgl.readthedocs.io/en/latest/deck.html
+
+        Carto and Mapbox are third-party products and Streamlit accepts no responsibility
+        or liability of any kind for Carto or Mapbox, or for any content or information
+        made available by Carto or Mapbox. The use of Carto or Mapbox is governed by
+        their respective Terms of Use.
+
+        .. note::
+            Pydeck uses two WebGL contexts per chart, and different browsers
+            have different limits on the number of WebGL contexts per page.
+            If you exceed this limit, the oldest contexts will be dropped to
+            make room for the new ones. To avoid this limitation in most
+            browsers, don't display more than eight Pydeck charts on a single
+            page.
 
         Parameters
         ----------
@@ -408,7 +422,7 @@ class PydeckMixin:
         >>>
         >>> st.pydeck_chart(
         ...     pdk.Deck(
-        ...         map_style=None,
+        ...         map_style=None,  # Use Streamlit theme to pick map style
         ...         initial_view_state=pdk.ViewState(
         ...             latitude=37.76,
         ...             longitude=-122.4,
@@ -450,10 +464,7 @@ class PydeckMixin:
 
         ctx = get_script_run_ctx()
 
-        if pydeck_obj is None:
-            spec = json.dumps(EMPTY_MAP)
-        else:
-            spec = pydeck_obj.to_json()
+        spec = json.dumps(EMPTY_MAP) if pydeck_obj is None else pydeck_obj.to_json()
 
         pydeck_proto.json = spec
         pydeck_proto.use_container_width = use_container_width
@@ -467,7 +478,13 @@ class PydeckMixin:
         if tooltip:
             pydeck_proto.tooltip = json.dumps(tooltip)
 
-        mapbox_token = config.get_option("mapbox.token")
+        # Get the Mapbox key from the PyDeck object first, and then fallback to the
+        # old mapbox.token config option.
+
+        mapbox_token = getattr(pydeck_obj, "mapbox_key", None)
+        if mapbox_token is None or mapbox_token == "":
+            mapbox_token = config.get_option("mapbox.token")
+
         if mapbox_token:
             pydeck_proto.mapbox_token = mapbox_token
 
@@ -476,7 +493,8 @@ class PydeckMixin:
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
             raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+                f"You have passed {on_select} to `on_select`. "
+                "But only 'ignore', 'rerun', or a callable is supported."
             )
 
         if is_selection_activated:
@@ -488,7 +506,7 @@ class PydeckMixin:
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                on_change=cast("WidgetCallback", on_select) if is_callback else None,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -498,6 +516,7 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
+                dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
@@ -518,7 +537,7 @@ class PydeckMixin:
 
             self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
-            return cast(PydeckState, widget_state.value)
+            return widget_state.value
 
         return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
@@ -541,6 +560,6 @@ def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:
     # For details, see: https://github.com/visgl/deck.gl/pull/7125/files
     tooltip = getattr(pydeck_obj, "_tooltip", None)
     if tooltip is not None and isinstance(tooltip, dict):
-        return cast(dict[str, str], tooltip)
+        return cast("dict[str, str]", tooltip)
 
     return None

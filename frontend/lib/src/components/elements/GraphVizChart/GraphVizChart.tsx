@@ -35,7 +35,7 @@ export interface GraphVizChartProps {
   element: GraphVizChartProto
   disableFullscreenMode?: boolean
 }
-export const log = getLogger("GraphVizChart")
+export const LOG = getLogger("GraphVizChart")
 
 function GraphVizChart({
   element,
@@ -68,7 +68,7 @@ function GraphVizChart({
         node.removeAttribute("height")
       }
     } catch (error) {
-      log.error(error)
+      LOG.error(error)
     }
   }, [
     chartId,
@@ -102,4 +102,5 @@ function GraphVizChart({
   )
 }
 
-export default memo(withFullScreenWrapper(GraphVizChart))
+const GraphVizChartWithFullScreen = withFullScreenWrapper(GraphVizChart)
+export default memo(GraphVizChartWithFullScreen)

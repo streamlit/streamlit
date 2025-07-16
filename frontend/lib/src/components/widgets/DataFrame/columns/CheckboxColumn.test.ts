@@ -81,6 +81,7 @@ describe("CheckboxColumn", () => {
     ["", null],
   ])(
     "supports boolean compatible value (%p parsed as %p)",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any, value: boolean | null) => {
       const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
@@ -91,6 +92,7 @@ describe("CheckboxColumn", () => {
 
   it.each([["foo"], [12345], [0.1], [["foo", "bar"]]])(
     "%p results in error cell: %p",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     (input: any) => {
       const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)

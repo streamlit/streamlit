@@ -12,28 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Column types that can be configured via the ``column_config`` parameter
-of ``st.dataframe`` and ``st.data_editor``.
+"""Column types that can be configured via the ``column_config`` parameter of
+``st.dataframe`` and ``st.data_editor``.
 """
 
 from __future__ import annotations
 
 __all__ = [
     "AreaChartColumn",
-    "Column",
-    "TextColumn",
-    "MultiselectColumn",
-    "NumberColumn",
     "BarChartColumn",
     "CheckboxColumn",
+    "Column",
+    "DateColumn",
     "DatetimeColumn",
     "ImageColumn",
-    "SelectboxColumn",
-    "ProgressColumn",
-    "LinkColumn",
+    "JsonColumn",
     "LineChartColumn",
+    "LinkColumn",
     "ListColumn",
-    "DateColumn",
+    "MultiselectColumn",
+    "NumberColumn",
+    "ProgressColumn",
+    "SelectboxColumn",
+    "TextColumn",
     "TimeColumn",
 ]
 
@@ -46,6 +47,7 @@ from streamlit.elements.lib.column_types import (
     DateColumn,
     DatetimeColumn,
     ImageColumn,
+    JsonColumn,
     LineChartColumn,
     LinkColumn,
     ListColumn,

@@ -20,8 +20,10 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
 
+import { StyledDialogTitle } from "./styled-components"
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
@@ -58,7 +60,16 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       onClose={() => setIsOpen(false)}
       size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
-      <ModalHeader>{title}</ModalHeader>
+      <ModalHeader>
+        <StyledDialogTitle>
+          <StreamlitMarkdown
+            source={title}
+            allowHTML={false}
+            isLabel
+            inheritFont
+          />
+        </StyledDialogTitle>
+      </ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>
   )

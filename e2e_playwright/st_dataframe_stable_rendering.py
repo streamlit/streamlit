@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This test checks that the dataframe component renders without crashing
+"""Checks that the dataframe component renders without crashing
 when used in different containers.
 
 This mainly addresses this issue: https://github.com/streamlit/streamlit/issues/7949
@@ -43,3 +43,25 @@ col3.dataframe(df, use_container_width=use_container_width, height=100)
 
 tab1.dataframe(df, use_container_width=use_container_width, height=100)
 tab2.dataframe(df, use_container_width=use_container_width, height=100)
+
+
+with st.container(key="change-data-test"):
+    df = pd.DataFrame(
+        {
+            "foo": ["one", "one", "one", "two", "two", "two"],
+            "bar": ["A", "B", "C", "A", "B", "C"],
+            "baz": [1, 2, 3, 4, 5, 6],
+            "zoo": ["x", "y", "z", "q", "w", "t"],
+        }
+    )
+
+    if st.button("Change underlying data"):
+        # Change the underlying data by transposing the dataframe
+        # This is to ensure that we can change the underlying data
+        # to a different shape and schema without crashing the rendering
+        # logic.
+        # https://github.com/streamlit/streamlit/issues/10937
+        st.dataframe(df.T)
+    else:
+        # Show the original dataframe
+        st.dataframe(df)

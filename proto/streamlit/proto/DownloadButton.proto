@@ -30,4 +30,5 @@ message DownloadButton {
   bool use_container_width = 8;
   string type = 9;
   string icon = 10;
+  bool ignore_rerun = 11;
 }

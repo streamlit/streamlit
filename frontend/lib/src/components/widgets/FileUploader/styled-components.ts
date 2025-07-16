@@ -119,7 +119,7 @@ export const StyledFileIcon = styled.div(({ theme }) => ({
 }))
 
 export const StyledFileError = styled.small(({ theme }) => ({
-  color: theme.colors.danger,
+  color: theme.colors.red,
   fontSize: theme.fontSizes.sm,
   height: theme.fontSizes.sm,
   lineHeight: theme.fontSizes.sm,
@@ -131,39 +131,49 @@ export const StyledFileError = styled.small(({ theme }) => ({
 export const StyledFileErrorIcon = styled.span({})
 
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneSection as any]: {
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructions as any]: {
     marginBottom: theme.spacing.lg,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructionsFileUploaderIcon as any]: {
     display: "none",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFiles as any]: {
     paddingRight: theme.spacing.lg,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFile as any]: {
     maxWidth: "inherit",
     flex: 1,
     alignItems: "flex-start",
     marginBottom: theme.spacing.sm,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFileName as any]: {
     width: theme.sizes.full,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFileData as any]: {
     flexDirection: "column",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileError as any]: {
     height: "auto",
     whiteSpace: "initial",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileErrorIcon as any]: {
     display: "none",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFilesListItem as any]: {
     margin: theme.spacing.none,
     padding: theme.spacing.none,

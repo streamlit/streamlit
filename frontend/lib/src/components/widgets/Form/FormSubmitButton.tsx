@@ -18,6 +18,7 @@ import React, { ReactElement, useEffect } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
+import { FormsContext } from "~lib/components/core/FormsContext"
 import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
@@ -26,19 +27,21 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
-  hasInProgressUpload: boolean
   widgetMgr: WidgetStateManager
   fragmentId?: string
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, hasInProgressUpload, fragmentId } =
-    props
+  const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
+
+  const { formsData } = useRequiredContext(FormsContext)
+  const hasInProgressUpload = formsData.formsWithUploads.has(formId)
 
   let kind = BaseButtonKind.SECONDARY_FORM_SUBMIT
   if (element.type === "primary") {
@@ -54,11 +57,14 @@ export function FormSubmitButton(props: Props): ReactElement {
 
   return (
     <Box className="stFormSubmitButton" data-testid="stFormSubmitButton">
-      <BaseButtonTooltip help={element.help}>
+      <BaseButtonTooltip
+        help={element.help}
+        containerWidth={element.useContainerWidth}
+      >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          fluidWidth={element.useContainerWidth || !!element.help}
+          containerWidth={element.useContainerWidth}
           disabled={disabled || hasInProgressUpload}
           onClick={() => {
             widgetMgr.submitForm(element.formId, fragmentId, element)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useEffect, useRef } from "react"
+import React, { FC, memo, useEffect, useLayoutEffect } from "react"
 
 import { Global } from "@emotion/react"
 
@@ -25,6 +25,7 @@ import Toolbar, {
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import {
@@ -34,6 +35,23 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
+function isFacetChart(spec: string | object): boolean {
+  try {
+    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+
+    return !!(
+      parsedSpec.facet ||
+      // TODO (lawilby): do some tests for row/column
+      // shorthand facet charts to confirm they work with
+      // sizing in the same way.
+      parsedSpec.encoding?.row ||
+      parsedSpec.encoding?.column ||
+      parsedSpec.encoding?.facet
+    )
+  } catch {
+    return false
+  }
+}
 export interface Props {
   element: VegaLiteChartElement
   widgetMgr: WidgetStateManager
@@ -49,12 +67,17 @@ const ArrowVegaLiteChart: FC<Props> = ({
 }) => {
   const {
     expanded: isFullScreen,
-    width,
     height,
+    width: fullScreenWidth,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [width, containerRef] = useCalculatedWidth()
+
+  // Facet charts need the container element to have a width and also
+  // do not work well with stretch/container width
+  // so they cannot use the width from the StyledVegaLiteChartContainer.
+  const isFacet = isFacetChart(inputElement.spec)
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -62,7 +85,13 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // 2. Stabilize some aspects of the input element to detect changes in the
   //    configuration of the chart since each element will always provide new references
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
-  const element = useVegaElementPreprocessor(inputElement)
+  const element = useVegaElementPreprocessor(
+    inputElement,
+    isFullScreen,
+    // Facet charts enter a loop when using the width from the StyledVegaLiteChartContainer.
+    isFacet ? (fullScreenWidth ?? 0) : width,
+    height ?? 0
+  )
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
@@ -76,18 +105,25 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   // Create the view once the container is ready and re-create
   // if the spec changes or the dimensions change.
-  useEffect(() => {
+  // We utilize useLayoutEffect to ensure that the view is created
+  // after the container is mounted to avoid layout shift.
+  useLayoutEffect(() => {
     if (containerRef.current !== null) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       createView(containerRef, spec)
     }
 
     return finalizeView
-  }, [createView, finalizeView, spec, width, height])
+    // We can't use width in this dependency array because it causes facet charts to enter a loop.
+    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
+    // Are the changes in the spec enough?
+  }, [createView, finalizeView, spec, fullScreenWidth, height, containerRef])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
   // this function will run regularly to update the view.
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     updateView(data, datasets)
   }, [data, datasets, updateView])
 
@@ -96,7 +132,6 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // the tooltip element is drawn outside of this component.
   return (
     <StyledToolbarElementContainer
-      width={width}
       height={height}
       useContainerWidth={element.useContainerWidth}
     >
@@ -119,4 +154,6 @@ const ArrowVegaLiteChart: FC<Props> = ({
   )
 }
 
-export default withFullScreenWrapper(ArrowVegaLiteChart)
+const ArrowVegaLiteChartWithFullScreen =
+  withFullScreenWrapper(ArrowVegaLiteChart)
+export default memo(ArrowVegaLiteChartWithFullScreen)

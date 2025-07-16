@@ -33,7 +33,7 @@ const requiredThemeColors = {
   link: colors.blue80,
 
   primary: colors.red70,
-  secondary: colors.blue70, // Used progressbar and spinners
+  secondary: colors.blue70, // Used in progress bar and spinners
   disabled: colors.gray40,
   lightestGray: colors.gray20,
   lightGray: colors.gray30,
@@ -41,8 +41,8 @@ const requiredThemeColors = {
   darkGray: colors.gray70,
   red: colors.red80,
   blue: colors.blue80,
-  green: colors.green80,
-  yellow: colors.yellow80,
+  green: colors.green90,
+  yellow: colors.yellow100,
 }
 
 interface OptionalThemeColors {

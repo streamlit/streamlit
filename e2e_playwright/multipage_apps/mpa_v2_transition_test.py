@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_v1_to_v2_transition(app: Page):
-    """Tests that Streamlit migrates from v1 to v2 progressively"""
+    """Tests that Streamlit migrates from v1 to v2 progressively."""
     headings = app.get_by_test_id("stHeading")
     # expect the main page element to show in the beginning
     expect(headings.nth(0)).to_contain_text("Main Page")

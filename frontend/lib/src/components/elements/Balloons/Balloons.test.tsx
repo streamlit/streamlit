@@ -20,11 +20,7 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import Balloons, { NUM_BALLOONS, Props } from "./Balloons"
-
-const getProps = (): Props => ({
-  scriptRunId: "51522269",
-})
+import Balloons, { NUM_BALLOONS } from "./Balloons"
 
 describe("Balloons element", () => {
   vi.useFakeTimers()
@@ -35,8 +31,7 @@ describe("Balloons element", () => {
   })
 
   it("renders without crashing", () => {
-    const props = getProps()
-    render(<Balloons {...props} />)
+    render(<Balloons scriptRunId="51522269" />)
 
     const balloonElement = screen.getByTestId("stBalloons")
     expect(balloonElement).toBeInTheDocument()
@@ -51,8 +46,7 @@ describe("Balloons element", () => {
   })
 
   it("uses correct top-level class", () => {
-    const props = getProps()
-    render(<Balloons {...props} />)
+    render(<Balloons scriptRunId="51522269" />)
 
     const balloonElement = screen.getByTestId("stBalloons")
     expect(balloonElement).toHaveClass("stBalloons")

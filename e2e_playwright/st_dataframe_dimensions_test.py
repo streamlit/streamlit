@@ -19,6 +19,7 @@ from e2e_playwright.shared.app_utils import click_button
 
 def test_data_frame_with_different_sizes(app: Page):
     """Test that st.dataframe should show different sizes as expected."""
+
     expected = [
         {"width": "704px", "height": "400px"},
         {"width": "250px", "height": "150px"},

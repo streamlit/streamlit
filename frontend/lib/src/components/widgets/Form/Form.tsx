@@ -24,7 +24,6 @@ import React, {
 
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledErrorContainer, StyledForm } from "./styled-components"
@@ -34,10 +33,14 @@ export interface Props {
   clearOnSubmit: boolean
   enterToSubmit: boolean
   hasSubmitButton: boolean
-  scriptRunState: ScriptRunState
+  scriptNotRunning: boolean
   children?: ReactNode
   widgetMgr: WidgetStateManager
   border: boolean
+  // TODO(lawilby): This prop drill-down can be removed once
+  // we are using a portal to render the toolbars. But we want to
+  // do a patch to reduce the impact on existing usages of st.form.
+  overflow?: React.CSSProperties["overflow"]
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
@@ -54,10 +57,11 @@ function Form(props: Props): ReactElement {
     widgetMgr,
     hasSubmitButton,
     children,
-    scriptRunState,
+    scriptNotRunning,
     clearOnSubmit,
     enterToSubmit,
     border,
+    overflow,
   } = props
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
@@ -75,11 +79,7 @@ function Form(props: Props): ReactElement {
 
   if (hasSubmitButton && showWarning) {
     setShowWarning(false)
-  } else if (
-    !hasSubmitButton &&
-    !showWarning &&
-    scriptRunState === ScriptRunState.NOT_RUNNING
-  ) {
+  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
     setShowWarning(true)
   }
 
@@ -93,7 +93,12 @@ function Form(props: Props): ReactElement {
   }
 
   return (
-    <StyledForm className="stForm" data-testid="stForm" border={border}>
+    <StyledForm
+      className="stForm"
+      data-testid="stForm"
+      border={border}
+      overflow={overflow}
+    >
       {children}
       {submitWarning}
     </StyledForm>

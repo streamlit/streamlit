@@ -43,12 +43,16 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Install playwright
         run: python -m playwright install --with-deps
-      - name: Run make frontend
-        run: make frontend
-      - name: Run make playwright-custom-components
+      - name: Run make frontend-fast
+        run: make frontend-fast
+      - name: Run custom component playwright tests
         run: |
           source venv/bin/activate
-          make playwright-custom-components
+          cd e2e_playwright
+          echo "Installing custom components"
+          uv pip install -r ./custom_components/components-e2e-requirements.txt
+          rm -rf ./test-results
+          pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
       - name: Upload failed test results
         uses: actions/upload-artifact@v4
         if: always()

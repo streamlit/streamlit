@@ -69,7 +69,7 @@ export const StyledErrorTextSpan = styled.span(({ theme }) => ({
 
 export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({
   color: theme.colors.link,
-  textDecoration: "underline",
+  textDecoration: theme.linkUnderline ? "underline" : "none",
 }))
 
 // Placeholder
@@ -106,10 +106,10 @@ export const StyledActionButtonStartRecordingDiv = styled.span(
   ({ theme }) => ({
     "& > button": {
       padding: theme.spacing.threeXS,
-      color: theme.colors.fadedText40,
+      color: theme.colors.fadedText60,
     },
     "& > button:hover, & > button:focus": {
-      color: theme.colors.primary,
+      color: theme.colors.bodyText,
     },
   })
 )

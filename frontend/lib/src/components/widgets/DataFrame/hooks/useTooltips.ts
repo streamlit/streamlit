@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback, useRef, useState } from "react"
 
 import {
   DataEditorProps,
@@ -60,12 +60,13 @@ function useTooltips(
   getCellContent: ([col, row]: readonly [number, number]) => GridCell,
   ignoredRowIndices: number[] = []
 ): TooltipsReturn {
-  const [tooltip, setTooltip] = React.useState<
+  const [tooltip, setTooltip] = useState<
     { content: string; left: number; top: number } | undefined
   >()
-  const timeoutRef = React.useRef<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  const timeoutRef = useRef<any>(null)
 
-  const onItemHovered = React.useCallback(
+  const onItemHovered = useCallback(
     (args: GridMouseEventArgs) => {
       // Always reset the tooltips on any change here
       clearTimeout(timeoutRef.current)
@@ -125,7 +126,7 @@ function useTooltips(
     [columns, getCellContent, setTooltip, timeoutRef, ignoredRowIndices]
   )
 
-  const clearTooltip = React.useCallback(() => {
+  const clearTooltip = useCallback(() => {
     setTooltip(undefined)
   }, [setTooltip])
 

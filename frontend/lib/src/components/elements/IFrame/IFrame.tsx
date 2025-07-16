@@ -59,6 +59,7 @@ function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"
+      tabIndex={element.tabIndex ?? undefined}
     />
   )
 }

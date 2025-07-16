@@ -14,19 +14,28 @@
  * limitations under the License.
  */
 
-import { buildHttpUri, isHttps, makePath } from "."
+import { MockInstance } from "vitest"
 
-const location: Partial<Location> = {}
-
-global.window = Object.create(window)
-Object.defineProperty(window, "location", { value: location })
+import { buildHttpUri, isLocalhost, makePath } from "."
 
 describe("uri", () => {
+  let originalLocation: Location
+  let windowSpy: MockInstance
+
+  beforeEach(() => {
+    originalLocation = window.location
+    windowSpy = vi.spyOn(window, "location", "get")
+  })
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+  })
+
   describe("buildHttpUri", () => {
     it("builds HTTP URI correctly", () => {
-      location.href = "http://something"
       const uri = buildHttpUri(
         {
+          protocol: "http:",
           hostname: "the_host",
           port: "9988",
           pathname: "foo/bar",
@@ -37,9 +46,9 @@ describe("uri", () => {
     })
 
     it("builds HTTPS URI correctly", () => {
-      location.href = "https://something"
       const uri = buildHttpUri(
         {
+          protocol: "https:",
           hostname: "the_host",
           port: "9988",
           pathname: "foo/bar",
@@ -50,9 +59,9 @@ describe("uri", () => {
     })
 
     it("builds HTTP URI with no base path", () => {
-      location.href = "http://something"
       const uri = buildHttpUri(
         {
+          protocol: "http:",
           hostname: "the_host",
           port: "9988",
           pathname: "",
@@ -75,15 +84,30 @@ describe("uri", () => {
     })
   })
 
-  describe("isHttps", () => {
-    it("returns true for HTTPS", () => {
-      location.href = "https://something"
-      expect(isHttps()).toBe(true)
+  describe("isLocalhost", () => {
+    it("returns true given localhost", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: "localhost" })
+      expect(isLocalhost()).toBe(true)
     })
 
-    it("returns false for HTTP", () => {
-      location.href = "http://something"
-      expect(isHttps()).toBe(false)
+    it("returns true given 127.0.0.1", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: "127.0.0.1" })
+      expect(isLocalhost()).toBe(true)
+    })
+
+    it("returns false given other", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: "190.1.1.1" })
+      expect(isLocalhost()).toBe(false)
+    })
+
+    it("returns false given null", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: null })
+      expect(isLocalhost()).toBe(false)
+    })
+
+    it("returns false given undefined", () => {
+      windowSpy.mockReturnValue({ ...originalLocation, hostname: undefined })
+      expect(isLocalhost()).toBe(false)
     })
   })
 })

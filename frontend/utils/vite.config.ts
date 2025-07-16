@@ -53,10 +53,5 @@ export default defineConfig({
     css: true,
     reporters: ["verbose"],
     setupFiles: ["../vitest.setup.ts"],
-    coverage: {
-      reporter: ["text", "json", "html"],
-      include: ["src/**/*"],
-      exclude: [],
-    },
   },
 })

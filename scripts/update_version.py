@@ -43,6 +43,8 @@ Then we can go to alpha, rc1, rc2, etc. but eventually its
 0.15.3
 """
 
+from __future__ import annotations
+
 import fileinput
 import os
 import re
@@ -74,7 +76,7 @@ NODE_PACKAGES = [
 ]
 
 
-def verify_pep440(version):
+def verify_pep440(version: str) -> packaging.version.Version:
     """Verify if version is PEP440 compliant.
 
     https://github.com/pypa/packaging/blob/16.7/packaging/version.py#L191
@@ -83,47 +85,40 @@ def verify_pep440(version):
     use an object that does all that.  This verifies its a valid
     version.
     """
-
-    try:
-        return packaging.version.Version(version)
-    except packaging.version.InvalidVersion as e:
-        raise (e)
+    return packaging.version.Version(version)
 
 
-def verify_semver(version):
+def verify_semver(version: str) -> str:
     """Verify if version is compliant with semantic versioning.
 
     https://semver.org/
     """
-
-    try:
-        return str(semver.Version.parse(version))
-    except ValueError as e:
-        raise (e)
+    return str(semver.Version.parse(version))
 
 
-def update_files(data, version):
+def update_files(data: dict[str, str], version: str) -> None:
     """Update files with new version number."""
 
     for filename, regex in data.items():
-        filename = os.path.join(BASE_DIR, filename)
+        file_path = os.path.join(BASE_DIR, filename)
         matched = False
         pattern = re.compile(regex)
-        for line in fileinput.input(filename, inplace=True):
+        for line in fileinput.input(file_path, inplace=True):
             if pattern.match(line.rstrip()):
                 matched = True
-            line = re.sub(regex, r"\g<pre>%s\g<post>" % version, line.rstrip())
-            print(line)
+            updated_line = re.sub(regex, rf"\g<pre>{version}\g<post>", line.rstrip())
+            print(updated_line)
         if not matched:
-            raise Exception('In file "%s", did not find regex "%s"' % (filename, regex))
+            msg = f'In file "{file_path}", did not find regex "{regex}"'
+            raise Exception(msg)
 
 
-def main():
+def main() -> None:
     """Run main loop."""
 
     if len(sys.argv) != 2:
         e = Exception(
-            'Specify semvver version as an argument, e.g.: "%s 1.2.3"' % sys.argv[0]
+            f'Specify semvver version as an argument, e.g.: "{sys.argv[0]} 1.2.3"'
         )
         raise (e)
 
@@ -142,9 +137,9 @@ def main():
             sys.argv[1].replace("rc", "-rc.").replace(".dev", "-dev")
         )
 
-    update_files(PYTHON, pep440_version)
+    update_files(PYTHON, str(pep440_version))
     for package in NODE_PACKAGES:
-        update_files(package, semver_version)
+        update_files(package, str(semver_version))
 
 
 if __name__ == "__main__":

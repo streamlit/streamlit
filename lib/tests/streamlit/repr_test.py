@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-import streamlit.util as util
+from streamlit import util
 
 
 def test_repr_simple_class():

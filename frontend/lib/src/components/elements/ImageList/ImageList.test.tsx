@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto } from "@streamlit/protobuf"
 
@@ -28,6 +28,7 @@ import ImageList, { ImageListProps } from "./ImageList"
 
 describe("ImageList Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
+  const sendClientErrorToHost = vi.fn()
 
   const getProps = (
     elementProps: Partial<ImageListProto> = {}
@@ -40,13 +41,15 @@ describe("ImageList Element", () => {
       width: -1,
       ...elementProps,
     }),
-    endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
+    endpoints: mockEndpoints({
+      buildMediaURL: buildMediaURL,
+      sendClientErrorToHost: sendClientErrorToHost,
+    }),
   })
 
   beforeEach(() => {
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-      elementRef: React.createRef(),
-      forceRecalculate: vitest.fn(),
+      elementRef: { current: null },
       values: [250],
     })
   })
@@ -101,5 +104,23 @@ describe("ImageList Element", () => {
     captions.forEach(caption => {
       expect(caption).toHaveStyle("width: 300px")
     })
+  })
+
+  it("sends an CLIENT_ERROR message when the image source fails to load", () => {
+    const props = getProps()
+    render(<ImageList {...props} />)
+    const images = screen.getAllByRole("img")
+    expect(images).toHaveLength(2)
+
+    // Trigger the error event on the first image using fireEvent
+    fireEvent.error(images[0])
+
+    // Verify the error was sent with correct parameters
+    expect(sendClientErrorToHost).toHaveBeenCalledWith(
+      "Image",
+      "Image source failed to load",
+      "onerror triggered",
+      "https://mock.media.url/"
+    )
   })
 })

@@ -20,7 +20,8 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import FileDropzone, { Props, STREAMLIT_MIME_TYPE } from "./FileDropzone"
+import FileDropzone, { Props } from "./FileDropzone"
+import { STREAMLIT_MIME_TYPE } from "./utils"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,

@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import nodeEmoji from "node-emoji"
+import * as nodeEmoji from "node-emoji"
 
-import { grabTheRightIcon } from "~lib/vendor/twemoji"
 import { IGuestToHostMessage } from "~lib/hostComm/types"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
@@ -47,11 +46,8 @@ export function handleFavicon(
   let imageUrl
 
   if (emoji && !favicon.startsWith(":material")) {
-    // Find the corresponding Twitter emoji on the CDN.
-    const codepoint = grabTheRightIcon(emoji)
-    const emojiUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${codepoint}.png`
-
-    imageUrl = emojiUrl
+    // Create a favicon data URL as SVG with the emoji embedded.
+    imageUrl = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${emoji}</text></svg>`
   } else if (favicon.startsWith(":material")) {
     imageUrl = iconToUrl(favicon)
   } else {
@@ -78,16 +74,21 @@ function overwriteFavicon(imageUrl: string): void {
 }
 
 // Return the emoji if it exists, or empty string otherwise
-function extractEmoji(maybeEmoji: string): string {
+export function extractEmoji(maybeEmoji: string): string {
+  const EMOJI_PREFIX = "emoji:"
+  if (maybeEmoji.startsWith(EMOJI_PREFIX)) {
+    // Remove the 'emoji:' prefix
+    return maybeEmoji.substring(EMOJI_PREFIX.length)
+  }
+
+  // At this point, it must be a shortcode, so we normalize and check if it exists
   const shortcode = maybeEmoji.replace("-", "_")
-  if (nodeEmoji.hasEmoji(nodeEmoji.get(shortcode))) {
+  const emoji = nodeEmoji.get(shortcode)
+  if (emoji !== undefined && nodeEmoji.has(emoji)) {
     // Format: pizza or :pizza:
-    // Since hasEmoji(':pizza:') == true, we must do this check first
-    return nodeEmoji.get(shortcode)
+    // Since has(':pizza:') == true, we must do this check first
+    return emoji
   }
-  if (nodeEmoji.hasEmoji(maybeEmoji)) {
-    // Format: 🍕
-    return maybeEmoji
-  }
+
   return ""
 }

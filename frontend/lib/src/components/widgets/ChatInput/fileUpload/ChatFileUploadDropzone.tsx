@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo } from "react"
 
 import { AcceptFileValue } from "~lib/util/utils"
 
@@ -24,7 +24,9 @@ import {
 } from "./styled-components"
 
 export interface Props {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getRootProps: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getInputProps: any
   acceptFile: AcceptFileValue
   inputHeight: string
@@ -48,4 +50,4 @@ const ChatFileUploadDropzone = ({
   </>
 )
 
-export default ChatFileUploadDropzone
+export default memo(ChatFileUploadDropzone)

@@ -41,15 +41,15 @@ def create_config_options(overrides):
 class ConfigUtilTest(unittest.TestCase):
     def test_clean(self):
         result = config_util._clean(" clean    this         text  ")
-        self.assertEqual(" clean this text ", result)
+        assert result == " clean this text "
 
     def test_clean_empty_string(self):
         result = config_util._clean("")
-        self.assertEqual("", result)
+        assert result == ""
 
     def test_clean_paragraphs(self):
         # from https://www.lipsum.com/
-        input = textwrap.dedent(
+        input_text = textwrap.dedent(
             """
             Lorem              ipsum dolor sit amet,
             consectetur adipiscing elit.
@@ -67,12 +67,12 @@ class ConfigUtilTest(unittest.TestCase):
             "Maecenas libero est,\n ultricies\neget ligula eget, ",
         ]
 
-        result = config_util._clean_paragraphs(input)
-        self.assertEqual(truth, result)
+        result = config_util._clean_paragraphs(input_text)
+        assert truth == result
 
     def test_clean_paragraphs_empty_string(self):
         result = config_util._clean_paragraphs("")
-        self.assertEqual([""], result)
+        assert result == [""]
 
     @patch("click.secho")
     def test_default_config_options_commented_out(self, patched_echo):
@@ -155,9 +155,7 @@ class ConfigUtilTest(unittest.TestCase):
     def test_server_option_changed(self, old, new, changed):
         old_options = create_config_options(old)
         new_options = create_config_options(new)
-        self.assertEqual(
-            config_util.server_option_changed(old_options, new_options), changed
-        )
+        assert config_util.server_option_changed(old_options, new_options) == changed
 
     @patch("click.secho")
     def test_newlines_preserved_in_description(self, patched_echo):
@@ -245,18 +243,23 @@ class ConfigUtilTest(unittest.TestCase):
         option_index = lines.index('# customOption = "default"')
 
         # Assert that the description appears before the option.
-        self.assertLess(description_index, option_index)
+        assert description_index < option_index
 
     @patch("click.secho")
     def test_show_config_section_formatting(self, patched_echo):
-        config_options = create_config_options({"server.address": "localhost"})
+        config_options = create_config_options(
+            {"server.address": "localhost", "theme.sidebar.primaryColor": "red"}
+        )
         config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
 
         [(args, _)] = patched_echo.call_args_list
         output = re.compile(r"\x1b[^m]*m").sub("", args[0])
         lines = output.split("\n")
 
-        self.assertIn("[server]", lines)
+        assert "[server]" in lines
+        assert 'address = "localhost"' in lines
+        assert "[theme.sidebar]" in lines
+        assert 'primaryColor = "red"' in lines
 
     @patch("click.secho")
     def test_show_config_hidden_option(self, patched_echo):
@@ -275,4 +278,19 @@ class ConfigUtilTest(unittest.TestCase):
         output = re.compile(r"\x1b[^m]*m").sub("", args[0])
         lines = output.split("\n")
 
-        self.assertNotIn("# This is a hidden option.", lines)
+        assert "# This is a hidden option." not in lines
+
+    @patch("click.secho")
+    def test_correctly_handles_show_error_details(self, patched_echo):
+        """Test that show_config correctly handles showErrorDetails = "full"
+        based on a regression.
+        """
+        config_util.show_config(
+            CONFIG_SECTION_DESCRIPTIONS,
+            create_config_options({}),
+        )
+
+        [(args, _)] = patched_echo.call_args_list
+        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+
+        assert 'showErrorDetails = "full"' in output

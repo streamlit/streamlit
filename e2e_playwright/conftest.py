@@ -29,7 +29,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
@@ -46,8 +46,9 @@ from playwright.sync_api import (
     Page,
     Response,
     Route,
+    expect,
 )
-from pytest import FixtureRequest
+from typing_extensions import Self
 
 from e2e_playwright.shared.git_utils import get_git_root
 from e2e_playwright.shared.performance import (
@@ -58,7 +59,7 @@ from e2e_playwright.shared.performance import (
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from types import ModuleType
+    from types import ModuleType, TracebackType
 
 
 # Used for static app testing
@@ -66,21 +67,25 @@ class StaticPage(Page):
     pass
 
 
-def pytest_configure(config: pytest.Config):
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom markers."""
     config.addinivalue_line(
         "markers", "no_perf: mark test to not use performance profiling"
     )
+    config.addinivalue_line(
+        "markers", "app_hash(hash): mark test to open the app with a URL hash"
+    )
 
 
-def reorder_early_fixtures(metafunc: pytest.Metafunc):
-    """Put fixtures with `pytest.mark.early` first during execution
+def reorder_early_fixtures(metafunc: pytest.Metafunc) -> None:
+    """Put fixtures with `pytest.mark.early` first during execution.
 
     This allows patch of configurations before the application is initialized
 
     Copied from: https://github.com/pytest-dev/pytest/issues/1216#issuecomment-456109892
     """
-    for fixturedef in metafunc._arg2fixturedefs.values():
-        fixturedef = fixturedef[0]
+    for fixture_definitions in metafunc._arg2fixturedefs.values():
+        fixturedef = fixture_definitions[0]
         for mark in getattr(fixturedef.func, "pytestmark", []):
             if mark.name == "early":
                 order = metafunc.fixturenames
@@ -88,21 +93,27 @@ def reorder_early_fixtures(metafunc: pytest.Metafunc):
                 break
 
 
-def pytest_generate_tests(metafunc: pytest.Metafunc):
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     reorder_early_fixtures(metafunc)
 
 
 class AsyncSubprocess:
     """A context manager. Wraps subprocess. Popen to capture output safely."""
 
-    def __init__(self, args, cwd=None, env=None):
+    args: list[str]
+    cwd: str
+    env: dict[str, str]
+    _proc: subprocess.Popen[str] | None
+    _stdout_file: TextIOWrapper | None
+
+    def __init__(self, args: list[str], cwd: str, env: dict[str, str] | None = None):
         self.args = args
         self.cwd = cwd
         self.env = env or {}
         self._proc = None
         self._stdout_file = None
 
-    def terminate(self):
+    def terminate(self) -> str | None:
         """Terminate the process and return its stdout/stderr in a string."""
         if self._proc is not None:
             self._proc.terminate()
@@ -119,11 +130,11 @@ class AsyncSubprocess:
 
         return stdout
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self.start()
         return self
 
-    def start(self):
+    def start(self) -> None:
         # Start the process and capture its stdout/stderr output to a temp
         # file. We do this instead of using subprocess.PIPE (which causes the
         # Popen object to capture the output to its own internal buffer),
@@ -139,7 +150,12 @@ class AsyncSubprocess:
             env={**os.environ.copy(), **self.env},
         )
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if self._proc is not None:
             self._proc.terminate()
             self._proc = None
@@ -244,53 +260,56 @@ def app_server_extra_args() -> list[str]:
 def app_server(
     app_port: int,
     app_server_extra_args: list[str],
-    request: FixtureRequest,
+    request: pytest.FixtureRequest,
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the Streamlit app server."""
-    streamlit_proc = AsyncSubprocess(
-        [
-            "streamlit",
-            "run",
-            resolve_test_to_script(request.module),
-            "--server.headless",
-            "true",
-            "--global.developmentMode",
-            "false",
-            "--global.e2eTest",
-            "true",
-            "--server.port",
-            str(app_port),
-            "--browser.gatherUsageStats",
-            "false",
-            "--server.fileWatcherType",
-            "none",
-            "--server.enableStaticServing",
-            "true",
-            *app_server_extra_args,
-        ],
-        cwd=".",
+    streamlit_proc = start_app_server(
+        app_port,
+        request.module,
+        extra_args=app_server_extra_args,
     )
-    streamlit_proc.start()
-    if not wait_for_app_server_to_start(app_port):
-        streamlit_stdout = streamlit_proc.terminate()
-        print(streamlit_stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
     yield streamlit_proc
     streamlit_stdout = streamlit_proc.terminate()
     print(streamlit_stdout, flush=True)
 
 
-@pytest.fixture(scope="function")
-def app(page: Page, app_port: int) -> Page:
+@pytest.fixture
+def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
     """Fixture that opens the app."""
-    page.goto(f"http://localhost:{app_port}/")
+    marker = request.node.get_closest_marker("app_hash")
+    hash_fragment = ""
+    if marker:
+        hash_fragment = f"#{marker.args[0]}"
+
+    response: Response | None = None
+    try:
+        response = page.goto(f"http://localhost:{app_port}/{hash_fragment}")
+    except Exception as e:
+        print(e, flush=True)
+
+    if response is None:
+        raise RuntimeError("Unable to load page")
+    if response.status != 200:
+        print(f"Unsuccessful in loading page. Status: {response.status}", flush=True)
+        if response.status == 404:
+            print(
+                "404 error: try building the frontend with make frontend-fast",
+                flush=True,
+            )
+        raise RuntimeError("Unable to load page")
+    print("Successfully loaded page", flush=True)
+
     start_capture_traces(page)
     wait_for_app_loaded(page)
     return page
 
 
-@pytest.fixture(scope="function")
-def static_app(page: Page, app_port: int, request) -> Page:
+@pytest.fixture
+def static_app(
+    page: Page,
+    app_port: int,
+    request: pytest.FixtureRequest,
+) -> Page:
     """Fixture that opens the app."""
     query_param = request.node.get_closest_marker("query_param")
     query_string = query_param.args[0] if query_param else ""
@@ -304,10 +323,10 @@ def static_app(page: Page, app_port: int, request) -> Page:
     return page
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def app_with_query_params(
-    page: Page, app_port: int, request: FixtureRequest
-) -> tuple[Page, dict]:
+    page: Page, app_port: int, request: pytest.FixtureRequest
+) -> tuple[Page, dict[str, Any]]:
     """Fixture that opens the app with additional query parameters.
     The query parameters are passed as a dictionary in the 'param' key of the request.
     """
@@ -342,7 +361,7 @@ class IframedPage:
     open_app: Callable[[IframedPageAttrs | None], FrameLocator]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def iframed_app(page: Page, app_port: int) -> IframedPage:
     """Fixture that returns an IframedPage.
 
@@ -357,19 +376,47 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
     app_url = f"http://localhost:{app_port}"
     # the CSP header returned for the Streamlit index.html loaded in the iframe. This is
     # similar to a common CSP we have seen in the wild.
-    app_csp_header = (
-        f"default-src 'none'; worker-src blob:; form-action 'none'; "
-        f"connect-src ws://localhost:{app_port}/_stcore/stream "
-        f"http://localhost:{app_port}/_stcore/allowed-message-origins "
-        f"http://localhost:{app_port}/_stcore/upload_file/ "
-        f"https://some-prefix.com/somethingelse/_stcore/upload_file/ "
-        f"http://localhost:{app_port}/_stcore/host-config "
-        f"http://localhost:{app_port}/_stcore/health; script-src 'unsafe-inline' "
-        f"'unsafe-eval' {app_url}/static/js/; style-src 'unsafe-inline' "
-        f"{app_url}/static/css/; img-src data: {app_url}/favicon.png "
-        f"{app_url}/favicon.ico; font-src {app_url}/static/fonts/ "
-        f"{app_url}/static/media/; frame-ancestors {fake_iframe_server_origin};"
-    )
+    app_csp_header = f"""
+default-src 'none';
+worker-src blob:;
+form-action 'none';
+frame-ancestors {fake_iframe_server_origin};
+frame-src data: {app_url}/_stcore/component/;
+img-src 'self' https: data: blob:;
+media-src 'self' https: data: blob:;
+connect-src ws://localhost:{app_port}/_stcore/stream
+    {app_url}/_stcore/allowed-message-origins
+    {app_url}/_stcore/upload_file/
+    {app_url}/_stcore/host-config
+    {app_url}/_stcore/health
+    {app_url}/_stcore/message
+    {app_url}/media/
+    https://some-prefix.com/somethingelse/_stcore/upload_file/
+    https://events.mapbox.com/
+    https://api.mapbox.com/v4/
+    https://api.mapbox.com/raster/v1/
+    https://api.mapbox.com/rasterarrays/v1/
+    https://api.mapbox.com/styles/v1/mapbox/
+    https://api.mapbox.com/fonts/v1/mapbox/
+    https://api.mapbox.com/models/v1/mapbox/
+    https://api.mapbox.com/map-sessions/v1
+    https://data.streamlit.io/tokens.json
+    https://basemaps.cartocdn.com
+    https://tiles.basemaps.cartocdn.com
+    https://tiles-a.basemaps.cartocdn.com
+    https://tiles-b.basemaps.cartocdn.com
+    https://tiles-c.basemaps.cartocdn.com
+    https://tiles-d.basemaps.cartocdn.com
+    data: blob:;
+style-src 'unsafe-inline'
+    https://api.mapbox.com/mapbox-gl-js/
+    {app_url}/static/css/
+    blob:;
+script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:
+    https://api.mapbox.com/mapbox-gl-js/
+    {app_url}/static/js/;
+font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
+""".replace("\n", " ").strip()
 
     def _open_app(iframe_element_attrs: IframedPageAttrs | None = None) -> FrameLocator:
         _iframe_element_attrs = iframe_element_attrs
@@ -424,8 +471,7 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
             # want to download a CSV via the blob: url; Chrome seems to be more lax
             frame_src_blob = ""
             if browser is not None and (
-                browser.browser_type.name == "webkit"
-                or browser.browser_type.name == "firefox"
+                browser.browser_type.name in {"webkit", "firefox"}
             ):
                 frame_src_blob = "blob:"
 
@@ -438,7 +484,7 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
                 },
             )
 
-        # intercept all requests to the fake iframe server and fullfil the request in
+        # intercept all requests to the fake iframe server and fulfill the request in
         # playwright
         page.route(fake_iframe_server_route, fulfill_iframe_request)
 
@@ -457,7 +503,8 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
             response: Response,
         ) -> bool:
             """Ensure that the routing-interception worked and that Streamlit app is
-            indeed loaded with the CSP header we expect"""
+            indeed loaded with the CSP header we expect.
+            """
 
             return (
                 response.url == src
@@ -473,13 +520,16 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
             frame_locator.nth(0).get_by_test_id("stAppViewContainer").wait_for(
                 timeout=30000, state="attached"
             )
+
         return frame_locator
 
     return IframedPage(page, _open_app)
 
 
 @pytest.fixture(scope="session")
-def browser_type_launch_args(browser_type_launch_args: dict, browser_name: str):
+def browser_type_launch_args(
+    browser_type_launch_args: dict[str, Any], browser_name: str
+) -> dict[str, Any]:
     """Fixture that adds the fake device and ui args to the browser type launch args."""
     # The browser context fixture in pytest-playwright is defined in session scope, and
     # depends on the browser_type_launch_args fixture. This means that we can't
@@ -513,13 +563,13 @@ def browser_type_launch_args(browser_type_launch_args: dict, browser_name: str):
     return browser_type_launch_args
 
 
-@pytest.fixture(scope="function", params=["light_theme", "dark_theme"])
-def app_theme(request) -> str:
+@pytest.fixture(params=["light_theme", "dark_theme"])
+def app_theme(request: pytest.FixtureRequest) -> str:
     """Fixture that returns the theme name."""
     return str(request.param)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def themed_app(page: Page, app_port: int, app_theme: str) -> Page:
     """Fixture that opens the app with the given theme."""
     page.goto(f"http://localhost:{app_port}/?embed_options={app_theme}")
@@ -537,6 +587,7 @@ class ImageCompareFunction(Protocol):
         pixel_threshold: float = 0.05,
         name: str | None = None,
         fail_fast: bool = False,
+        style: str | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -578,12 +629,14 @@ def delete_output_dir(pytestconfig: Any) -> None:
             try:
                 shutil.rmtree(output_dir)
             except FileNotFoundError:
-                # When running in parallel, another thread may have already deleted the files
+                # When running in parallel, another thread may have already deleted the
+                # files
                 pass
             except OSError as error:
                 if error.errno != 16:
                     raise
-                # We failed to remove folder, might be due to the whole folder being mounted inside a container:
+                # We failed to remove folder, might be due to the whole folder being
+                # mounted inside a container:
                 #   https://github.com/microsoft/playwright/issues/12106
                 #   https://github.com/microsoft/playwright-python/issues/1781
                 # Do a best-effort to remove all files inside of it instead.
@@ -608,12 +661,27 @@ def output_folder(pytestconfig: Any) -> Path:
     ).resolve()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def assert_snapshot(
-    request: FixtureRequest, output_folder: Path
+    request: pytest.FixtureRequest,
+    output_folder: Path,
+    pytestconfig: Any,
 ) -> Generator[ImageCompareFunction, None, None]:
     """Fixture that compares a screenshot with screenshot from a past run."""
+
+    # Check if reruns are enabled for this test run
+    flaky_marker = request.node.get_closest_marker("flaky")
+    if flaky_marker and "reruns" in flaky_marker.kwargs:
+        configured_reruns = flaky_marker.kwargs["reruns"]
+    else:
+        configured_reruns = pytestconfig.getoption("reruns", 0)
+    # Get the current execution count:
+    execution_count = getattr(request.node, "execution_count", 1)
+    # True if this is the last rerun (or the only test run)
+    is_last_rerun = execution_count - 1 == configured_reruns
+
     root_path = get_git_root()
+
     platform = str(sys.platform)
     module_name = request.module.__name__.split(".")[-1]
     test_function_name = request.node.originalname
@@ -647,6 +715,7 @@ def assert_snapshot(
         name: str | None = None,
         fail_fast: bool = False,
         file_type: Literal["png", "jpg"] = "png",
+        style: str | None = None,
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
@@ -676,12 +745,14 @@ def assert_snapshot(
         if file_type == "jpg":
             file_extension = ".jpg"
             img_bytes = element.screenshot(
-                type="jpeg", quality=90, animations="disabled"
+                type="jpeg", quality=90, animations="disabled", style=style
             )
 
         else:
             file_extension = ".png"
-            img_bytes = element.screenshot(type="png", animations="disabled")
+            img_bytes = element.screenshot(
+                type="png", animations="disabled", style=style
+            )
 
         snapshot_file_name: str = snapshot_default_file_name
         if name:
@@ -718,6 +789,8 @@ def assert_snapshot(
         img_a = Image.open(BytesIO(img_bytes))
         img_b = Image.open(snapshot_file_path)
         img_diff = Image.new("RGBA", img_a.size)
+        error_msg: str = "Unknown error"
+
         try:
             mismatch = pixelmatch(
                 img_a,
@@ -727,38 +800,66 @@ def assert_snapshot(
                 fail_fast=fail_fast,
                 alpha=0,
             )
-        except ValueError as ex:
-            # ValueError is thrown when the images have different sizes
-            # Update this in updates folder:
-            snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
-            snapshot_updates_file_path.write_bytes(img_bytes)
 
-            test_failure_messages.append(
-                f"Snapshot matching for {snapshot_file_name} failed. "
-                f"Expected size: {img_b.size}, actual size: {img_a.size}. "
+            total_pixels = img_a.size[0] * img_a.size[1]
+            max_diff_pixels = int(image_threshold * total_pixels)
+
+            if mismatch < max_diff_pixels:
+                return
+
+            error_msg = (
+                f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
+                f" {mismatch / total_pixels * 100:.2f}%)"
+            )
+
+            # Create new failures folder for this test:
+            test_failures_dir.mkdir(parents=True, exist_ok=True)
+            img_diff.save(
+                f"{test_failures_dir}/diff_{snapshot_file_name}{file_extension}"
+            )
+            img_a.save(
+                f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}"
+            )
+            img_b.save(
+                f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}"
+            )
+        except ValueError as ex:
+            # Create new failures folder for this test:
+            test_failures_dir.mkdir(parents=True, exist_ok=True)
+            img_a.save(
+                f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}"
+            )
+            img_b.save(
+                f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}"
+            )
+            # ValueError is thrown when the images have different sizes
+            # Calculate the relative difference in total pixels
+            expected_pixels = img_b.size[0] * img_b.size[1]
+            actual_pixels = img_a.size[0] * img_a.size[1]
+            pixel_diff = abs(expected_pixels - actual_pixels)
+
+            error_msg = (
+                f"Snapshot mismatch for {snapshot_file_name}. "
+                f"Wrong size: expected={img_b.size}, actual={img_a.size} "
+                f"({pixel_diff} pixels difference; "
+                f"{pixel_diff / expected_pixels * 100:.2f}%). "
                 f"Error: {ex}"
             )
-            return
-        total_pixels = img_a.size[0] * img_a.size[1]
-        max_diff_pixels = int(image_threshold * total_pixels)
 
-        if mismatch < max_diff_pixels:
-            return
-
-        # Update this in updates folder:
-        snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
-        snapshot_updates_file_path.write_bytes(img_bytes)
-
-        # Create new failures folder for this test:
-        test_failures_dir.mkdir(parents=True, exist_ok=True)
-        img_diff.save(f"{test_failures_dir}/diff_{snapshot_file_name}{file_extension}")
-        img_a.save(f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}")
-        img_b.save(f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}")
-
-        test_failure_messages.append(
-            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
-            f" {mismatch / total_pixels * 100:.2f}%)"
-        )
+        if is_last_rerun:
+            # If its the last rerun (or the only test run), update snapshots
+            # and fail after all the other snapshots have been updated in the given
+            # test.
+            snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
+            snapshot_updates_file_path.write_bytes(img_bytes)
+            # Add error to the list of test failures:
+            test_failure_messages.append(error_msg)
+        else:
+            # If there are other test reruns that will follow, fail immediately
+            # and avoid updating the snapshot. Failing here will correctly show a
+            # test error in the Github UI, which enables our flaky test tracking
+            # tool to work correctly.
+            pytest.fail(error_msg)
 
     yield compare
 
@@ -768,8 +869,10 @@ def assert_snapshot(
         )
 
 
-@pytest.fixture(scope="function", autouse=True)
-def playwright_profiling(request, page: Page):
+@pytest.fixture(autouse=True)
+def playwright_profiling(
+    request: pytest.FixtureRequest, page: Page
+) -> Generator[None, None, None]:
     if request.node.get_closest_marker("no_perf") or not is_supported_browser(page):
         yield
         return
@@ -787,7 +890,7 @@ def playwright_profiling(request, page: Page):
 def wait_for_app_run(
     page_or_locator: Page | Locator | FrameLocator,
     wait_delay: int = 100,
-):
+) -> None:
     """Wait for the given page to finish running."""
     # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
 
@@ -829,12 +932,16 @@ def wait_for_app_run(
         state="attached",
     )
 
+    # Wait for all element skeletons to be removed.
+    # This is useful to make sure that all elements have been rendered.
+    expect(page_or_locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=25000)
+
     if wait_delay > 0:
         # Give the app a little more time to render everything
         page.wait_for_timeout(wait_delay)
 
 
-def wait_for_app_loaded(page: Page):
+def wait_for_app_loaded(page: Page) -> None:
     """Wait for the app to fully load."""
     # Wait for the app view container to appear:
     page.wait_for_selector(
@@ -844,7 +951,7 @@ def wait_for_app_loaded(page: Page):
     wait_for_app_run(page)
 
 
-def rerun_app(page: Page):
+def rerun_app(page: Page) -> None:
     """Triggers an app rerun and waits for the run to be finished."""
     # Click somewhere to clear the focus from elements:
     page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
@@ -853,7 +960,9 @@ def rerun_app(page: Page):
     wait_for_app_run(page)
 
 
-def wait_until(page: Page, fn: Callable, timeout: int = 5000, interval: int = 100):
+def wait_until(
+    page: Page, fn: Callable[[], None | bool], timeout: int = 5000, interval: int = 100
+) -> None:
     """Run a test function in a loop until it evaluates to True
     or times out.
 
@@ -878,7 +987,7 @@ def wait_until(page: Page, fn: Callable, timeout: int = 5000, interval: int = 10
 
     start = time.time()
 
-    def timed_out():
+    def timed_out() -> bool:
         elapsed = time.time() - start
         elapsed_ms = elapsed * 1000
         return elapsed_ms > timeout
@@ -904,6 +1013,75 @@ def wait_until(page: Page, fn: Callable, timeout: int = 5000, interval: int = 10
             if timed_out():
                 raise TimeoutError(timeout_msg)
         page.wait_for_timeout(interval)
+
+
+def start_app_server(
+    app_port: int,
+    request_module: ModuleType,
+    *,
+    extra_env: dict[str, str] | None = None,
+    extra_args: list[str] | None = None,
+) -> AsyncSubprocess:
+    """Start a Streamlit app server for the given *test module*.
+
+    This helper centralizes the logic for spinning up a Streamlit subprocess so
+    it can be reused by different pytest fixtures (for example, tests that
+    require per-test environment variables).
+
+    Parameters
+    ----------
+    app_port : int
+        Port on which the server should listen.
+    request_module : ModuleType
+        The pytest *module object* that triggered the server start. This is
+        needed to resolve the Streamlit script that belongs to the test.
+    extra_env : dict[str, str] | None, optional
+        Additional environment variables to set for the subprocess.
+    extra_args : list[str] | None, optional
+        Additional command-line arguments to pass to *streamlit run*.
+
+    Returns
+    -------
+    AsyncSubprocess
+        The running Streamlit subprocess wrapper. *Call ``terminate()`` on the
+        returned object to stop the server and obtain the captured output.*
+    """
+    env = {**os.environ.copy(), **(extra_env or {})}
+
+    args = [
+        "streamlit",
+        "run",
+        resolve_test_to_script(request_module),
+        "--server.headless",
+        "true",
+        "--global.developmentMode",
+        "false",
+        "--global.e2eTest",
+        "true",
+        "--server.port",
+        str(app_port),
+        "--browser.gatherUsageStats",
+        "false",
+        "--server.fileWatcherType",
+        "none",
+        "--server.enableStaticServing",
+        "true",
+    ]
+
+    # Append any caller-supplied extra args at the end so they can override
+    # defaults when necessary.
+    if extra_args:
+        args.extend(extra_args)
+
+    proc = AsyncSubprocess(args, cwd=".", env=env)
+    proc.start()
+
+    if not wait_for_app_server_to_start(app_port):
+        stdout = proc.terminate()
+        print(stdout, flush=True)
+        raise RuntimeError("Unable to start Streamlit app")
+
+    return proc
 
 
 # endregion

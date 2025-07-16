@@ -42,6 +42,7 @@ type ReadyMessage = {
 }
 type ComponentValueMessage = {
   /* the value sent from the custom component can be anything */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any
   dataType: ValueType
 }
@@ -64,10 +65,12 @@ export interface IframeMessageHandlerProps {
 }
 
 export interface Args {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [name: string]: any
 }
 export interface DataframeArg {
   key: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any
 }
 
@@ -77,7 +80,7 @@ export interface DataframeArg {
  * version in the COMPONENT_READY call.
  */
 export const CUSTOM_COMPONENT_API_VERSION = 1
-export const log = getLogger("componentUtils")
+export const LOG = getLogger("componentUtils")
 
 /**
  * Create a callback to be passed to  {@link ComponentRegistry#registerListener}.
@@ -112,6 +115,7 @@ export function createIframeMessageHandler(
     const isReady = readyCheck()
 
     switch (type) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.COMPONENT_READY: {
         // Our component is ready to begin receiving messages. Send off its
         // first render message! It is *not* an error to get multiple
@@ -132,9 +136,10 @@ export function createIframeMessageHandler(
         break
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_COMPONENT_VALUE:
         if (!isReady) {
-          log.warn(
+          LOG.warn(
             `Got ${type} before ${ComponentMessageType.COMPONENT_READY}!`
           )
         } else {
@@ -149,9 +154,10 @@ export function createIframeMessageHandler(
         }
         break
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case ComponentMessageType.SET_FRAME_HEIGHT:
         if (!isReady) {
-          log.warn(
+          LOG.warn(
             `Got ${type} before ${ComponentMessageType.COMPONENT_READY}!`
           )
         } else {
@@ -162,7 +168,7 @@ export function createIframeMessageHandler(
         break
 
       default:
-        log.warn(`Unrecognized ComponentBackMsgType: ${type}`)
+        LOG.warn(`Unrecognized ComponentBackMsgType: ${type}`)
     }
   }
 }
@@ -243,13 +249,13 @@ export function sendRenderMessage(
 ): void {
   if (!iframe) {
     // This should never happen!
-    log.warn("Can't send ForwardMsg; missing our iframe!")
+    LOG.warn("Can't send ForwardMsg; missing our iframe!")
     return
   }
 
   if (isNullOrUndefined(iframe.contentWindow)) {
     // Nor should this!
-    log.warn("Can't send ForwardMsg; iframe has no contentWindow!")
+    LOG.warn("Can't send ForwardMsg; iframe has no contentWindow!")
     return
   }
 
@@ -262,7 +268,12 @@ export function sendRenderMessage(
       args: currentArgs,
       dfs: currentDataframeArgs,
       disabled: disabled,
-      theme: toExportedTheme(theme),
+      theme: {
+        ...toExportedTheme(theme),
+        // TODO(lukasmasuch): adds backwards compatibility for the deprecated font
+        // property. Should be cleaned-up at some point when we revamp custom components.
+        font: theme.genericFonts.bodyFont,
+      },
     },
     "*"
   )
@@ -278,6 +289,7 @@ export function sendRenderMessage(
  * @returns undefined
  */
 function handleSetComponentValue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   value: any, // we do not know what data the custom component is sending us, so we use 'any' here
   dataType: ValueType,
   source: Source,
@@ -286,7 +298,7 @@ function handleSetComponentValue(
   fragmentId?: string
 ): void {
   if (value === undefined) {
-    log.warn(`handleSetComponentValue: missing 'value' prop`)
+    LOG.warn(`handleSetComponentValue: missing 'value' prop`)
     return
   }
 
@@ -304,9 +316,12 @@ function handleSetComponentValue(
 
 /** Return the property with the given name, if it exists. */
 function tryGetValue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   obj: any,
   name: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   defaultValue: any = undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): any {
-  return obj.hasOwnProperty(name) ? obj[name] : defaultValue
+  return Object.hasOwn(obj, name) ? obj[name] : defaultValue
 }

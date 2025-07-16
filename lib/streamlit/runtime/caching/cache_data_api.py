@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.cache_data: pickle-based caching"""
+"""@st.cache_data: pickle-based caching."""
 
 from __future__ import annotations
 
 import pickle
 import threading
-import types
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -27,11 +26,10 @@ from typing import (
     Literal,
     TypeVar,
     Union,
-    cast,
     overload,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import ParamSpec, TypeAlias
 
 import streamlit as st
 from streamlit import runtime
@@ -41,6 +39,7 @@ from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundE
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
+    CachedFunc,
     CachedFuncInfo,
     make_cached_func_wrapper,
 )
@@ -58,7 +57,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    InvalidCacheStorageContext,
+    InvalidCacheStorageContextError,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -80,22 +79,32 @@ CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
-class CachedDataFuncInfo(CachedFuncInfo):
-    """Implements the CachedFuncInfo interface for @st.cache_data"""
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+class CachedDataFuncInfo(CachedFuncInfo[P, R]):
+    """Implements the CachedFuncInfo interface for @st.cache_data."""
+
+    persist: CachePersistType
+    max_entries: int | None
+    ttl: float | timedelta | str | None
 
     def __init__(
         self,
-        func: types.FunctionType,
-        show_spinner: bool | str,
+        func: Callable[P, R],
         persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | str | None,
+        show_spinner: bool | str,
+        show_time: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> None:
         super().__init__(
             func,
-            show_spinner=show_spinner,
             hash_funcs=hash_funcs,
+            show_spinner=show_spinner,
+            show_time=show_time,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -113,10 +122,10 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
     @property
     def display_name(self) -> str:
-        """A human-readable name for the cached function"""
+        """A human-readable name for the cached function."""
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
-    def get_function_cache(self, function_key: str) -> Cache:
+    def get_function_cache(self, function_key: str) -> Cache[R]:
         return _data_caches.get_cache(
             key=function_key,
             persist=self.persist,
@@ -127,7 +136,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
     def validate_params(self) -> None:
         """
-        Validate the params passed to @st.cache_data are compatible with cache storage
+        Validate the params passed to @st.cache_data are compatible with cache storage.
 
         When called, this method could log warnings if cache params are invalid
         for current storage.
@@ -141,11 +150,11 @@ class CachedDataFuncInfo(CachedFuncInfo):
 
 
 class DataCaches(CacheStatsProvider):
-    """Manages all DataCache instances"""
+    """Manages all DataCache instances."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, DataCache] = {}
+        self._function_caches: dict[str, DataCache[Any]] = {}
 
     def get_cache(
         self,
@@ -154,7 +163,7 @@ class DataCaches(CacheStatsProvider):
         max_entries: int | None,
         ttl: int | float | timedelta | str | None,
         display_name: str,
-    ) -> DataCache:
+    ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -270,12 +279,11 @@ class DataCaches(CacheStatsProvider):
         )
         try:
             self.get_storage_manager().check_context(cache_context)
-        except InvalidCacheStorageContext as e:
-            _LOGGER.error(
+        except InvalidCacheStorageContextError:
+            _LOGGER.exception(
                 "Cache params for function %s are incompatible with current "
                 "cache storage manager.",
                 function_name,
-                exc_info=e,
             )
             raise
 
@@ -298,11 +306,10 @@ class DataCaches(CacheStatsProvider):
     def get_storage_manager(self) -> CacheStorageManager:
         if runtime.exists():
             return runtime.get_instance().cache_storage_manager
-        else:
-            # When running in "raw mode", we can't access the CacheStorageManager,
-            # so we're falling back to InMemoryCache.
-            _LOGGER.warning("No runtime found, using MemoryCacheStorageManager")
-            return MemoryCacheStorageManager()
+        # When running in "raw mode", we can't access the CacheStorageManager,
+        # so we're falling back to InMemoryCache.
+        _LOGGER.warning("No runtime found, using MemoryCacheStorageManager")
+        return MemoryCacheStorageManager()
 
 
 # Singleton DataCaches instance
@@ -319,7 +326,7 @@ class CacheDataAPI:
     st.cache_data.clear().
     """
 
-    def __init__(self, decorator_metric_name: str):
+    def __init__(self, decorator_metric_name: str) -> None:
         """Create a CacheDataAPI instance.
 
         Parameters
@@ -336,11 +343,10 @@ class CacheDataAPI:
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
-    F = TypeVar("F", bound=Callable[..., Any])
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F: ...
+    def __call__(self, func: Callable[P, R]) -> CachedFunc[P, R]: ...
 
     # Decorator with arguments
     @overload
@@ -350,43 +356,47 @@ class CacheDataAPI:
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]: ...
+    ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
         self,
-        func: F | None = None,
+        func: Callable[P, R] | None = None,
         *,
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
+        show_time: bool = False,
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
             func,
             ttl=ttl,
             max_entries=max_entries,
             persist=persist,
             show_spinner=show_spinner,
+            show_time=show_time,
             experimental_allow_widgets=experimental_allow_widgets,
             hash_funcs=hash_funcs,
         )
 
     def _decorator(
         self,
-        func: F | None = None,
+        func: Callable[P, R] | None = None,
         *,
         ttl: float | timedelta | str | None,
         max_entries: int | None,
         show_spinner: bool | str,
+        show_time: bool = False,
         persist: CachePersistType | bool,
         experimental_allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
-    ):
+    ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
         Cached objects are stored in "pickled" form, which means that the return
@@ -434,6 +444,12 @@ class CacheDataAPI:
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
+
+        show_time : bool
+            Whether to show the elapsed time next to the spinner text. If this is
+            ``False`` (default), no time is displayed. If this is ``True``,
+            elapsed time is displayed with a precision of 0.1 seconds. The time
+            format is not configurable.
 
         persist : "disk", bool, or None
             Optional location to persist cached data to. Passing "disk" (or True)
@@ -564,12 +580,13 @@ class CacheDataAPI:
         if experimental_allow_widgets:
             show_widget_replay_deprecation("cache_data")
 
-        def wrapper(f):
+        def wrapper(f: Callable[P, R]) -> CachedFunc[P, R]:
             return make_cached_func_wrapper(
                 CachedDataFuncInfo(
                     func=f,
                     persist=persist_string,
                     show_spinner=show_spinner,
+                    show_time=show_time,
                     max_entries=max_entries,
                     ttl=ttl,
                     hash_funcs=hash_funcs,
@@ -581,9 +598,10 @@ class CacheDataAPI:
 
         return make_cached_func_wrapper(
             CachedDataFuncInfo(
-                func=cast(types.FunctionType, func),
+                func=func,
                 persist=persist_string,
                 show_spinner=show_spinner,
+                show_time=show_time,
                 max_entries=max_entries,
                 ttl=ttl,
                 hash_funcs=hash_funcs,
@@ -596,7 +614,7 @@ class CacheDataAPI:
         _data_caches.clear_all()
 
 
-class DataCache(Cache):
+class DataCache(Cache[R]):
     """Manages cached values for a single st.cache_data function."""
 
     def __init__(
@@ -607,7 +625,7 @@ class DataCache(Cache):
         max_entries: int | None,
         ttl_seconds: float | None,
         display_name: str,
-    ):
+    ) -> None:
         super().__init__()
         self.key = key
         self.display_name = display_name
@@ -621,7 +639,7 @@ class DataCache(Cache):
             return self.storage.get_stats()
         return []
 
-    def read_result(self, key: str) -> CachedResult:
+    def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
         if the value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
@@ -634,7 +652,7 @@ class DataCache(Cache):
             raise CacheError(str(e)) from e
 
         try:
-            entry = pickle.loads(pickled_entry)
+            entry = pickle.loads(pickled_entry)  # noqa: S301
             if not isinstance(entry, CachedResult):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.
@@ -645,7 +663,7 @@ class DataCache(Cache):
             raise CacheError(f"Failed to unpickle {key}") from exc
 
     @gather_metrics("_cache_data_object")
-    def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
+    def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """

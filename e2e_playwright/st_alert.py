@@ -96,6 +96,26 @@ This is a big error message.
 ### LATEST MATERIAL ICON TEST START ###
 st.success(
     "Success message to test material icon from latest material symbols font",
-    icon=":material/plug_connect:",
+    icon=":material/computer_arrow_up:",
 )
 ### LATEST MATERIAL ICON TEST END ###
+
+### Test width parameter with stretch and pixel values ###
+
+# Alerts with width="stretch" (explicitly set)
+st.error("This is an error with width='stretch'", width="stretch")
+st.warning("This is a warning with width='stretch'", width="stretch")
+st.info("This is an info message with width='stretch'", width="stretch")
+st.success("This is a success message with width='stretch'", width="stretch")
+
+# Alerts with width=200 (pixels)
+st.error("This is an error with width=200", width=200)
+st.warning("This is a warning with width=200", width=200)
+st.info("This is an info message with width=200", width=200)
+st.success("This is a success message with width=200", width=200)
+
+# Alerts with width="stretch" and icon
+st.error("This is an error with width='stretch' and icon", width="stretch", icon="🚨")
+
+# Alerts with width=200 and icon
+st.info("This is an info message with width=200 and icon", width=200, icon="👉🏻")

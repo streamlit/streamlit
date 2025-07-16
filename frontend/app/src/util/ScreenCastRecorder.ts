@@ -19,7 +19,7 @@ import { getLogger } from "loglevel"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 const BLOB_TYPE = "video/webm"
-const log = getLogger("ScreenCastRecorder")
+const LOG = getLogger("ScreenCastRecorder")
 
 interface ScreenCastRecorderOptions {
   recordAudio: boolean
@@ -46,6 +46,7 @@ class ScreenCastRecorder {
         notNullOrUndefined(navigator.mediaDevices.getDisplayMedia) &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // In the event of an error, assume it won't support screencasts
       return false
@@ -108,14 +109,16 @@ class ScreenCastRecorder {
    */
   public start(): boolean {
     if (!this.mediaRecorder) {
-      log.warn(`ScreenCastRecorder.start: mediaRecorder is null`)
+      LOG.warn(`ScreenCastRecorder.start: mediaRecorder is null`)
       return false
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     const logRecorderError = (e: any): void => {
-      log.warn(`mediaRecorder.start threw an error: ${e}`)
+      LOG.warn(`mediaRecorder.start threw an error: ${e}`)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     this.mediaRecorder.onerror = (e: any): void => {
       logRecorderError(e)
       this.onErrorOrStopCallback()

@@ -23,6 +23,7 @@ import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
+import type { StreamlitWindowObject } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -49,16 +50,21 @@ import {
 } from "./getColors"
 import { fonts } from "./primitives/typography"
 
+// Extended theme config type to include properties not in the protobuf definition
+export type ExtendedCustomThemeConfig = Partial<ICustomThemeConfig> & {
+  baseFontWeight?: number | null
+  codeFontSize?: string | number | null
+  codeFontWeight?: number | null
+  linkUnderline?: boolean | null
+  chartCategoricalColors?: string[] | null
+}
+
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
 
 declare global {
   interface Window {
-    __streamlit?: {
-      LIGHT_THEME: ICustomThemeConfig
-      DARK_THEME: ICustomThemeConfig
-      ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
-    }
+    __streamlit?: StreamlitWindowObject
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -71,7 +77,7 @@ declare global {
     >
   }
 }
-const log = getLogger("theme:utils")
+const LOG = getLogger("theme:utils")
 
 function mergeTheme(
   theme: ThemeConfig,
@@ -129,7 +135,16 @@ export const isColor = (strColor: string): boolean => {
   return s.color !== ""
 }
 
-const parseFont = (font: string): string => {
+/**
+ * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
+ * This is generally used to keep configured font sizes to round values.
+ * (ex: 0.78 -> 0.75)
+ */
+export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
+  return Math.round(remFontSize * 8) / 8
+}
+
+export const parseFont = (font: string): string => {
   // Try to map a short font family to our default
   // font families
   const fontMap: Record<string, string> = {
@@ -137,39 +152,353 @@ const parseFont = (font: string): string => {
     serif: fonts.serif,
     monospace: fonts.monospace,
   }
+  // The old font config supported "sans serif" as a font family, but this
+  // isn't a valid font family, so we need to support it by converting it to
+  // "sans-serif".
   const fontKey = font.toLowerCase().replaceAll(" ", "-")
   if (fontKey in fontMap) {
-    return fontMap[font]
+    return fontMap[fontKey]
   }
 
   // If the font is not in the map, return the font as is:
   return font
 }
 
+/**
+ * Helper function to parse/validate a config color value
+ * @param color: a string - the color value passed in as a given config
+ * @param configKey: a string - the config that the color value was passed for
+ * @param inSidebar: boolean - whether this is for sidebar theming (for error messages)
+ * @returns the validated color value or undefined if the color is invalid
+ */
+const parseColor = (
+  color: string,
+  configKey: string,
+  inSidebar: boolean = false
+): string | undefined => {
+  // First try the color as-is
+  if (isColor(color)) {
+    return color
+  }
+
+  // If that fails, try adding a # prefix
+  if (isColor(`#${color}`)) {
+    return `#${color}`
+  }
+
+  // If both fail and this is a color config, log a warning
+  const isAColorConfig = configKey.toLowerCase().includes("color")
+  if (isAColorConfig) {
+    const themeSection = inSidebar ? "theme.sidebar" : "theme"
+    LOG.warn(
+      `Invalid color passed for ${configKey} in ${themeSection}: "${color}"`
+    )
+  }
+
+  return undefined
+}
+
+/**
+ * Helper function to parse the baseRadius & buttonRadius options which allow the same possible values
+ * @param radius: a string - "none", "small", "medium", "large", "full", a number in pixels or rem
+ * @returns radius value and css unit
+ */
+export const parseRadius = (
+  radius: string
+): [number | undefined, "px" | "rem"] => {
+  let cssUnit: "px" | "rem" = "rem"
+  let radiusValue: number | undefined = undefined
+  const processedRadius = radius.trim().toLowerCase()
+
+  if (processedRadius === "none") {
+    radiusValue = 0
+  } else if (processedRadius === "small") {
+    radiusValue = 0.35
+  } else if (processedRadius === "medium") {
+    radiusValue = 0.5
+  } else if (processedRadius === "large") {
+    radiusValue = 1
+  } else if (processedRadius === "full") {
+    radiusValue = 1.4
+  } else if (processedRadius.endsWith("rem")) {
+    radiusValue = parseFloat(processedRadius)
+  } else if (processedRadius.endsWith("px")) {
+    radiusValue = parseFloat(processedRadius)
+    cssUnit = "px"
+  } else if (!isNaN(parseFloat(processedRadius))) {
+    // Fallback: if the value can be parsed as a number, treat it as pixels
+    radiusValue = parseFloat(processedRadius)
+    cssUnit = "px"
+  }
+
+  return [radiusValue, cssUnit]
+}
+
+/**
+ * Helper function to parse fontSize options which allow the same possible values
+ * @param fontSize a string number in pixels or rem; handles number values as pixels
+ * (e.g. "15px", "0.875rem", "15")
+ * @returns font size in em (e.g. "0.875em")
+ */
+export const parseFontSize = (
+  configName: string,
+  fontSize: string | number,
+  inSidebar: boolean
+): string | undefined => {
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  if (typeof fontSize === "string") {
+    // If string, check its valid (ends with "rem" or "px")
+    // and can be parsed as a number
+    const processedFontSize = fontSize.trim().toLowerCase()
+    const parsedFontSize = parseFloat(processedFontSize)
+    if (
+      parsedFontSize &&
+      (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
+    ) {
+      return processedFontSize
+    }
+
+    // Fallback: if the value can be parsed as a number, treat it as pixels
+    if (parsedFontSize.toString() === processedFontSize) {
+      return `${processedFontSize}px`
+    }
+  }
+  // If invalid, log warning and return undefined
+  LOG.warn(
+    `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
+  )
+}
+
+/**
+ * Validate a font weight config
+ */
+const isValidFontWeight = (
+  weightConfigName: string,
+  fontWeight: number | null | undefined,
+  minWeight: number,
+  maxWeight: number,
+  inSidebar?: boolean
+): boolean => {
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  // If the font weight config is set, validate it (log warning if invalid)
+  if (notNullOrUndefined(fontWeight)) {
+    const isInteger = Number.isInteger(fontWeight)
+    const isIncrementOf100 = fontWeight % 100 === 0
+    const isInRange = fontWeight >= minWeight && fontWeight <= maxWeight
+
+    if (!isInteger || !isIncrementOf100 || !isInRange) {
+      LOG.warn(
+        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 100. Falling back to default font weight.`
+      )
+      return false
+    }
+
+    return true
+  }
+
+  // If the font weight config is not set, return false
+  return false
+}
+
+/**
+ * Helper function to handle each heading font size in the headingFontSizes config
+ * @param configName: the name of the config option
+ * @param fontSize: the heading font size provided via theme config
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param inSidebar: whether this is the sidebar theme
+ * @returns the heading font size in rem
+ */
+const convertHeadingFontSizeToRem = (
+  configName: string,
+  fontSize: string,
+  baseFontSize: number,
+  inSidebar: boolean
+): string | undefined => {
+  // Validates the font size (logs warning & returns undefined if invalid)
+  const validatedSize = parseFontSize(configName, fontSize, inSidebar)
+
+  // Need each heading font size to be in rem
+  if (validatedSize && validatedSize.endsWith("rem")) {
+    return validatedSize
+  } else if (validatedSize && validatedSize.endsWith("px")) {
+    // Convert the font size to rem, and round to nearest 8th
+    const remValue = parseFloat(validatedSize) / baseFontSize
+    const roundedRemValue = roundFontSizeToNearestEighth(remValue)
+    return `${roundedRemValue}rem`
+  }
+
+  // If invalid, return undefined
+  return undefined
+}
+
+/**
+ * Set the heading font sizes in the theme config
+ * @param defaultFontSizes: the default theme font sizes
+ * @param inSidebar: whether this is the sidebar theme
+ * @param baseFontSize: the base font size (default or provided via theme config)
+ * @param headingFontSizes: the h1-h6 heading font sizes provided via theme config
+ * @returns an updated emotion theme font sizes object
+ */
+const setHeadingFontSizes = (
+  defaultFontSizes: EmotionTheme["fontSizes"],
+  inSidebar: boolean,
+  baseFontSize: number,
+  headingFontSizes: string[] | null | undefined
+): EmotionTheme["fontSizes"] => {
+  const headingFontSizesOverrides = {
+    ...defaultFontSizes,
+  }
+
+  if (headingFontSizes) {
+    headingFontSizes.forEach((size, index) => {
+      const headingFontSizeKey = `h${index + 1}FontSize`
+      // Gets the heading font size in rem if not already & logs warning if invalid
+      const convertedSize = convertHeadingFontSizeToRem(
+        `${headingFontSizeKey} in headingFontSizes`,
+        size,
+        baseFontSize,
+        inSidebar
+      )
+
+      // If valid configured value, overwrite the default heading font size
+      if (convertedSize) {
+        // @ts-expect-error
+        headingFontSizesOverrides[headingFontSizeKey] = convertedSize
+      }
+    })
+  }
+
+  return headingFontSizesOverrides
+}
+
+/**
+ * Helper function to set the normal, bold, and extrabold font weights based
+ * on the baseFontWeight option
+ * @param defaultFontWeights: the default theme font weights
+ * @param inSidebar: whether the theme is in the sidebar
+ * @param baseFontWeight: the base font weight provided via theme config
+ * @param codeFontWeight: the code font weight provided via theme config
+ * @param headingFontWeights: the h1-h6 heading font weights provided via theme config
+ * @returns an updated emotion theme font weights object
+ */
+const setFontWeights = (
+  defaultFontWeights: EmotionTheme["fontWeights"],
+  inSidebar: boolean,
+  baseFontWeight: number | null | undefined,
+  codeFontWeight: number | null | undefined,
+  headingFontWeights: number[] | null | undefined
+): EmotionTheme["fontWeights"] => {
+  const fontWeightOverrides = {
+    ...defaultFontWeights,
+    // Override default h1FontWeight for sidebar to 600
+    // Default for main theme set in typography (700)
+    h1FontWeight: inSidebar ? 600 : defaultFontWeights.h1FontWeight,
+  }
+
+  // Validate the baseFontWeight provided is an integer between 100 and 600
+  if (
+    baseFontWeight &&
+    isValidFontWeight("baseFontWeight", baseFontWeight, 100, 600)
+  ) {
+    // Set each of the font weights based on the base weight provided
+    // The provided baseFontWeight sets the normal weight
+    fontWeightOverrides.normal = baseFontWeight
+    // The semiBold weight is set to the baseFontWeight + 100
+    fontWeightOverrides.semiBold = baseFontWeight + 100
+    // The bold weight is set to the baseFontWeight + 200
+    fontWeightOverrides.bold = baseFontWeight + 200
+    // The extrabold weight is set to the baseFontWeight + 300
+    fontWeightOverrides.extrabold = baseFontWeight + 300
+
+    // Set fallback for code's font weight based on configured baseFontWeight
+    fontWeightOverrides.code = baseFontWeight
+  }
+
+  if (
+    codeFontWeight &&
+    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 900)
+  ) {
+    fontWeightOverrides.code = codeFontWeight
+  }
+
+  if (headingFontWeights) {
+    // Filling out the heading font weights array is handled in app_session.py
+    headingFontWeights.forEach((weight, index) => {
+      const headingFontWeightKey = `h${index + 1}FontWeight`
+      if (
+        isValidFontWeight(
+          `${headingFontWeightKey} in headingFontWeights`,
+          weight,
+          100,
+          900,
+          inSidebar
+        )
+      ) {
+        // @ts-expect-error
+        fontWeightOverrides[headingFontWeightKey] = weight
+      }
+    })
+  }
+
+  return fontWeightOverrides
+}
+
+/**
+ * Helper function to validate each of the colors passed in the chart colors configs
+ * @param configName: the name of the config ("chartCategoricalColors", "chartSequentialColors" or "chartDivergingColors")
+ * @param colors: the colors config passed in (array of strings)
+ * @returns the valid colors from the config
+ */
+const validateChartColors = (
+  configName: string,
+  colors: string[]
+): string[] => {
+  return (
+    colors
+      // parseColor returns undefined for invalid colors
+      .map(color => parseColor(color, configName))
+      // Filter any invalid colors
+      .filter((color): color is string => color !== undefined)
+  )
+}
+
 export const createEmotionTheme = (
-  themeInput: Partial<ICustomThemeConfig>,
+  themeInput: ExtendedCustomThemeConfig,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
-  const { colors, genericFonts } = baseThemeConfig.emotion
+  const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
   const {
     baseFontSize,
-    roundness,
-    showBorderAroundInputs,
+    baseFontWeight,
+    baseRadius,
+    buttonRadius,
+    codeFontSize,
+    codeFontWeight,
+    showWidgetBorder,
+    headingFont,
+    headingFontSizes,
+    headingFontWeights,
     bodyFont,
     codeFont,
+    showSidebarBorder,
+    linkUnderline,
+    // Since chart color configs passed as array, handle separate from parsedColors
+    chartCategoricalColors,
+    chartSequentialColors,
     ...customColors
   } = themeInput
 
   const parsedColors = Object.entries(customColors).reduce(
-    (colors: Record<string, string>, [key, color]) => {
+    (colorsArg: Record<string, string>, [key, color]) => {
       // @ts-expect-error
-      if (isColor(color)) {
-        // @ts-expect-error
-        colors[key] = color
-      } else if (isColor(`#${color}`)) {
-        colors[key] = `#${color}`
+      const validatedColor = parseColor(color, key, inSidebar)
+      if (validatedColor) {
+        colorsArg[key] = validatedColor
       }
-      return colors
+
+      return colorsArg
     },
     {}
   )
@@ -182,9 +511,12 @@ export const createEmotionTheme = (
     backgroundColor: bgColor,
     primaryColor: primary,
     textColor: bodyText,
+    dataframeBorderColor,
+    dataframeHeaderBackgroundColor,
     widgetBorderColor,
     borderColor,
     linkColor,
+    codeBackgroundColor,
   } = parsedColors
 
   const newGenericColors = { ...colors }
@@ -199,19 +531,36 @@ export const createEmotionTheme = (
   // by default for all custom themes.
   newGenericColors.secondary = newGenericColors.primary
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const conditionalOverrides: any = {}
 
   conditionalOverrides.colors = createEmotionColors(newGenericColors)
 
-  if (notNullOrUndefined(borderColor)) {
-    conditionalOverrides.colors.borderColor = borderColor
-    conditionalOverrides.colors.borderColorLight = transparentize(
-      borderColor,
-      0.55
-    )
+  if (notNullOrUndefined(codeBackgroundColor)) {
+    conditionalOverrides.colors.codeBackgroundColor = codeBackgroundColor
   }
 
-  if (showBorderAroundInputs || widgetBorderColor) {
+  if (notNullOrUndefined(borderColor)) {
+    conditionalOverrides.colors.borderColor = borderColor
+
+    const borderColorLight = transparentize(borderColor, 0.55)
+    // Used for tabs border and expander when stale
+    conditionalOverrides.colors.borderColorLight = borderColorLight
+    // Set the fallback here for dataframe & table border color
+    conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+  }
+
+  if (notNullOrUndefined(dataframeBorderColor)) {
+    // If dataframeBorderColor explicitly set, override borderColorLight fallback
+    conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
+  }
+
+  if (notNullOrUndefined(dataframeHeaderBackgroundColor)) {
+    conditionalOverrides.colors.dataframeHeaderBackgroundColor =
+      dataframeHeaderBackgroundColor
+  }
+
+  if (showWidgetBorder || widgetBorderColor) {
     // widgetBorderColor from the themeInput is deprecated. For compatibility
     // with older SiS theming, we still apply it here if provided, but we should
     // consider full removing it at some point.
@@ -219,42 +568,153 @@ export const createEmotionTheme = (
       widgetBorderColor || conditionalOverrides.colors.borderColor
   }
 
-  if (notNullOrUndefined(roundness)) {
+  if (
+    notNullOrUndefined(chartCategoricalColors) &&
+    chartCategoricalColors.length > 0
+  ) {
+    // Validate the categorical colors config
+    const validatedCategoricalColors = validateChartColors(
+      "chartCategoricalColors",
+      chartCategoricalColors
+    )
+    // Set the validated colors if non-empty array
+    if (validatedCategoricalColors.length > 0) {
+      conditionalOverrides.colors.chartCategoricalColors =
+        validatedCategoricalColors
+    }
+  }
+
+  if (
+    notNullOrUndefined(chartSequentialColors) &&
+    chartSequentialColors.length > 0
+  ) {
+    // Validate the sequential colors config
+    const validatedSequentialColors = validateChartColors(
+      "chartSequentialColors",
+      chartSequentialColors
+    )
+    // Set the validated colors, sequential colors should be an array of length 10
+    // Also checked on BE, but check here again in case one of the entries is not a valid color
+    if (validatedSequentialColors.length === 10) {
+      conditionalOverrides.colors.chartSequentialColors =
+        validatedSequentialColors
+    } else {
+      LOG.warn(
+        `Invalid chartSequentialColors: ${chartSequentialColors.toString()}. Falling back to default chartSequentialColors.`
+      )
+    }
+  }
+
+  if (notNullOrUndefined(baseRadius)) {
     conditionalOverrides.radii = {
       ...baseThemeConfig.emotion.radii,
     }
 
-    // Normalize the roundness to be between 0 and 1.6rem base radii.
-    // 1.6rem is chosen based on having our base widgets fully rounded (at 1.25rem)
-    // and some additional roundness for which other elements still look good.
-    // Also enforces that roundness is 0-1. Bigger values are capped at 1.
-    // Smaller values are capped at 0.
-    // We make sure that the value is rounded to 2 decimal places to avoid
-    // floating point precision issues.
-    const baseRadii = roundToTwoDecimals(
-      Math.max(0, Math.min(roundness, 1)) * 1.6
-    )
-    conditionalOverrides.radii.default = addRemUnit(baseRadii)
-    // Adapt all the other radii sizes based on the base radii:
-    // But use some upper limits to prevent elements from looking weird:
-    conditionalOverrides.radii.md = addRemUnit(
-      roundToTwoDecimals(baseRadii * 0.5)
-    )
-    conditionalOverrides.radii.xl = addRemUnit(
-      roundToTwoDecimals(baseRadii * 1.5)
-    )
-    conditionalOverrides.radii.xxl = addRemUnit(
-      roundToTwoDecimals(baseRadii * 2)
-    )
+    const [radiusValue, cssUnit] = parseRadius(baseRadius)
+
+    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+      const radiusWithCssUnit = addCssUnit(radiusValue, cssUnit)
+      conditionalOverrides.radii.default = radiusWithCssUnit
+
+      // Set the fallback button radius if baseRadius is set
+      conditionalOverrides.radii.button = radiusWithCssUnit
+
+      // Adapt all the other radii sizes based on the base radii:
+      // We make sure that the value is rounded to 2 decimal places to avoid
+      // floating point precision issues.
+      conditionalOverrides.radii.md = addCssUnit(
+        roundToTwoDecimals(radiusValue * 0.5),
+        cssUnit
+      )
+      conditionalOverrides.radii.xl = addCssUnit(
+        roundToTwoDecimals(radiusValue * 1.5),
+        cssUnit
+      )
+      conditionalOverrides.radii.xxl = addCssUnit(
+        roundToTwoDecimals(radiusValue * 2),
+        cssUnit
+      )
+    } else {
+      LOG.warn(
+        `Invalid base radius: ${baseRadius}. Falling back to default base radius.`
+      )
+    }
+  }
+
+  if (notNullOrUndefined(buttonRadius)) {
+    // Handles case where buttonRadius is the only radius set in the themeInput
+    if (!conditionalOverrides.radii) {
+      conditionalOverrides.radii = {
+        ...baseThemeConfig.emotion.radii,
+      }
+    }
+
+    const [radiusValue, cssUnit] = parseRadius(buttonRadius)
+
+    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+      // If valid buttonRadius set, override baseRadius fallback
+      conditionalOverrides.radii.button = addCssUnit(radiusValue, cssUnit)
+    } else {
+      LOG.warn(
+        `Invalid button radius: ${buttonRadius}. Falling back to default button radius.`
+      )
+    }
+  }
+
+  conditionalOverrides.fontSizes = {
+    ...baseThemeConfig.emotion.fontSizes,
   }
 
   if (baseFontSize && baseFontSize > 0) {
-    conditionalOverrides.fontSizes = {
-      ...baseThemeConfig.emotion.fontSizes,
-    }
-
     // Set the root font size to the configured value (used on global styles):
     conditionalOverrides.fontSizes.baseFontSize = baseFontSize
+  }
+
+  if (codeFontSize) {
+    // Returns font size as a string, or undefined if invalid
+    const parsedCodeFontSize = parseFontSize(
+      "codeFontSize",
+      codeFontSize,
+      inSidebar
+    )
+    if (parsedCodeFontSize) {
+      conditionalOverrides.fontSizes.codeFontSize = parsedCodeFontSize
+    }
+    // codeFontSize default (fallback) set in typography primitives (0.875rem)
+    // inlineCodeFontSize set in typography primitives (0.75em)
+  }
+
+  // Set the heading font sizes based on the heading font sizes config provided
+  conditionalOverrides.fontSizes = setHeadingFontSizes(
+    conditionalOverrides.fontSizes,
+    inSidebar,
+    conditionalOverrides.fontSizes.baseFontSize,
+    headingFontSizes
+  )
+
+  // Set the font weights based on the font weight configs provided
+  conditionalOverrides.fontWeights = setFontWeights(
+    baseThemeConfig.emotion.fontWeights,
+    inSidebar,
+    baseFontWeight,
+    codeFontWeight,
+    headingFontWeights
+  )
+
+  if (notNullOrUndefined(showSidebarBorder)) {
+    conditionalOverrides.showSidebarBorder = showSidebarBorder
+  }
+
+  if (notNullOrUndefined(linkUnderline)) {
+    conditionalOverrides.linkUnderline = linkUnderline
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  const fontOverrides: any = {}
+  if (headingFont) {
+    fontOverrides.headingFont = parseFont(headingFont)
+  } else if (bodyFont) {
+    fontOverrides.headingFont = parseFont(bodyFont)
   }
 
   return {
@@ -263,14 +723,12 @@ export const createEmotionTheme = (
     genericFonts: {
       ...genericFonts,
       ...(bodyFont && {
-        // We currently do not allow to set different fonts for body and heading
-        // so we use the same font for both.
         bodyFont: parseFont(bodyFont),
-        headingFont: parseFont(bodyFont),
       }),
       ...(codeFont && {
         codeFont: parseFont(codeFont),
       }),
+      ...fontOverrides,
     },
     ...conditionalOverrides,
   }
@@ -285,6 +743,7 @@ export const toThemeInput = (
     backgroundColor: colors.bgColor,
     secondaryBackgroundColor: colors.secondaryBg,
     textColor: colors.bodyText,
+    bodyFont: theme.genericFonts.bodyFont,
   }
 }
 
@@ -294,6 +753,7 @@ export type ExportedTheme = {
   backgroundColor: string
   secondaryBackgroundColor: string
   textColor: string
+  bodyFont: string
 } & DerivedColors
 
 export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
@@ -308,7 +768,7 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
     backgroundColor: themeInput.backgroundColor as string,
     secondaryBackgroundColor: themeInput.secondaryBackgroundColor as string,
     textColor: themeInput.textColor as string,
-
+    bodyFont: themeInput.bodyFont as string,
     base: bgColorToBaseString(themeInput.backgroundColor),
 
     ...computeDerivedColors(colors),
@@ -317,10 +777,10 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
 
 const completeThemeInput = (
   partialInput: Partial<CustomThemeConfig>,
-  baseTheme: ThemeConfig
+  baseThemeArg: ThemeConfig
 ): CustomThemeConfig => {
   return new CustomThemeConfig({
-    ...toThemeInput(baseTheme.emotion),
+    ...toThemeInput(baseThemeArg.emotion),
     ...partialInput,
   })
 }
@@ -349,25 +809,32 @@ export const createTheme = (
   // theme's backgroundColor instead of picking them using themeInput.base.
   // This way, things will look good even if a user sets
   // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
-  const bgColor = completedThemeInput.backgroundColor as string
+  const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
       baseThemeConfig
         ? baseThemeConfig
         : getLuminance(bgColor) > 0.5
-        ? lightTheme
-        : darkTheme
+          ? lightTheme
+          : darkTheme
     ),
     { emotion: { inSidebar } }
   )
 
   const emotion = createEmotionTheme(completedThemeInput, startingTheme)
 
+  // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
+  // primitives to be modified globally. This cloning decouples our BaseWeb theme
+  // object from the shared primitive objects and prevents unintended side effects.
+  const basewebTheme = cloneDeep(
+    createBaseUiTheme(emotion, startingTheme.primitives)
+  )
+
   return {
     ...startingTheme,
     name: themeName,
     emotion,
-    basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
+    basewebTheme,
     themeInput,
   }
 }
@@ -487,7 +954,7 @@ export function computeSpacingStyle(
       }
 
       if (!(marginValue in theme.spacing)) {
-        log.error(`Invalid spacing value: ${marginValue}`)
+        LOG.error(`Invalid spacing value: ${marginValue}`)
         return theme.spacing.none
       }
 
@@ -496,8 +963,8 @@ export function computeSpacingStyle(
     .join(" ")
 }
 
-function addRemUnit(n: number): string {
-  return `${n}rem`
+export function addCssUnit(n: number, unit: "px" | "rem"): string {
+  return `${n}${unit}`
 }
 
 function roundToTwoDecimals(n: number): number {

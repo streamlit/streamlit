@@ -12,10 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import FilePayload, Page, expect
+from playwright.sync_api import FilePayload, Page, Route, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    rerun_app,
+    wait_for_app_run,
+    wait_until,
+)
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    goto_app,
+)
 
 
 def test_file_uploader_render_correctly(
@@ -23,7 +32,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(10)
+    expect(file_uploaders).to_have_count(12)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
@@ -488,3 +497,117 @@ def test_file_uploader_works_with_fragments(app: Page):
 
     expect(app.get_by_text("File uploader in Fragment: True")).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_file_uploader_upload_error(app: Page, app_port: int):
+    """Test that the file uploader upload error is correctly logged."""
+    # Ensure file upload source request return a 404 status
+    app.route(
+        f"http://localhost:{app_port}/_stcore/upload_file/**",
+        lambda route: route.fulfill(
+            status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+        ),
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+    uploader_index = 0
+
+    # Upload a file
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
+    )
+    wait_for_app_run(app)
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: File uploader error on file upload" in message
+            for message in messages
+        ),
+    )
+
+
+def test_file_uploader_delete_error(app: Page, app_port: int):
+    """Test that the file uploader delete error is correctly logged."""
+
+    # Allow GET requests to pass through, but block DELETE requests
+    def allow_file_upload_block_delete(route: Route):
+        if route.request.method == "DELETE":
+            route.fulfill(
+                status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+            )
+        else:
+            route.fallback()
+
+    # Ensure file upload source request return a 404 status
+    app.route(
+        f"http://localhost:{app_port}/_stcore/upload_file/**",
+        allow_file_upload_block_delete,
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+    uploader_index = 0
+
+    # Upload a file
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
+    )
+    wait_for_app_run(app)
+
+    # Delete the file
+    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    wait_for_app_run(app)
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: File uploader error on file delete" in message
+            for message in messages
+        ),
+    )
+
+
+def test_file_uploader_widths(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+):
+    """Test that file_uploader renders correctly with different width settings."""
+    file_uploaders = app.get_by_test_id("stFileUploader")
+
+    expect(file_uploaders).to_have_count(12)
+
+    stretch_uploader = file_uploaders.nth(10)
+    pixel_width_uploader = file_uploaders.nth(11)
+
+    assert_snapshot(stretch_uploader, name="st_file_uploader-width_stretch")
+    assert_snapshot(pixel_width_uploader, name="st_file_uploader-width_300px")

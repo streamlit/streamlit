@@ -38,7 +38,7 @@ class NoOpPathWatcher:
         *,  # keyword-only arguments:
         glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
-    ):
+    ) -> None:
         pass
 
 
@@ -62,7 +62,7 @@ def _is_watchdog_available() -> bool:
         return False
 
 
-def report_watchdog_availability():
+def report_watchdog_availability() -> None:
     if (
         config.get_option("server.fileWatcherType") not in ["poll", "none"]
         and not _is_watchdog_available()
@@ -70,15 +70,14 @@ def report_watchdog_availability():
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
         cli_util.print_to_cli(
-            "  %s" % "For better performance, install the Watchdog module:",
+            "  For better performance, install the Watchdog module:",
             fg="blue",
             bold=True,
         )
         cli_util.print_to_cli(
-            """%s
+            f"""{msg}
   $ pip install watchdog
             """
-            % msg
         )
 
 
@@ -177,9 +176,6 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
         from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
 
         return EventBasedPathWatcher
-    elif watcher_type == "auto":
+    if watcher_type in {"auto", "poll"}:
         return PollingPathWatcher
-    elif watcher_type == "poll":
-        return PollingPathWatcher
-    else:
-        return NoOpPathWatcher
+    return NoOpPathWatcher

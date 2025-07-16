@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.runtime import get_instance
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -33,7 +34,8 @@ def _get_module_name(caller_frame: FrameType) -> str:
     # Get the caller's module name. `__name__` gives us the module's
     # fully-qualified name, which includes its package.
     module = inspect.getmodule(caller_frame)
-    assert module is not None
+    if module is None:
+        raise RuntimeError("module is None. This should never happen.")
     module_name = module.__name__
 
     # If the caller was the main module that was executed (that is, if the
@@ -76,12 +78,15 @@ def declare_component(
         The path to serve the component's frontend files from. The path should
         be absolute. If ``path`` is ``None`` (default), Streamlit will serve
         the component from the location in ``url``. Either ``path`` or ``url``
-        must be specified, but not both.
+        must be specified. If both are specified, then ``url`` will take
+        precedence.
 
     url: str or None
         The URL that the component is served from. If ``url`` is ``None``
         (default), Streamlit will serve the component from the location in
-        ``path``. Either ``path`` or ``url`` must be specified, but not both.
+        ``path``. Either ``path`` or ``url`` must be specified. If both are
+        specified, then ``url`` will take precedence.
+
 
     Returns
     -------
@@ -96,14 +101,26 @@ def declare_component(
 
     # Get our stack frame.
     current_frame: FrameType | None = inspect.currentframe()
-    assert current_frame is not None
+    if current_frame is None:
+        raise RuntimeError("current_frame is None. This should never happen.")
     # Get the stack frame of our calling function.
     caller_frame = current_frame.f_back
-    assert caller_frame is not None
+    if caller_frame is None:
+        raise RuntimeError("caller_frame is None. This should never happen.")
+
     module_name = _get_module_name(caller_frame)
 
     # Build the component name.
     component_name = f"{module_name}.{name}"
+
+    # NOTE: We intentionally don't mention this behavior in this function's
+    # docstring as we're only using it internally for now (the config option
+    # is also hidden). This should be properly documented if/when we do decide
+    # to expose it more publicly.
+    if not url and (
+        component_base_path := config.get_option("server.customComponentBaseUrlPath")
+    ):
+        url = f"{component_base_path}/{component_name}/"
 
     # Create our component object, and register it.
     component = CustomComponent(

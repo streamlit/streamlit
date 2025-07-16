@@ -21,8 +21,16 @@ from typing import TYPE_CHECKING, Literal, Union, cast, overload
 from typing_extensions import TypeAlias
 
 from streamlit import config
-from streamlit.elements.lib.file_uploader_utils import normalize_upload_file_type
+from streamlit.elements.lib.file_uploader_utils import (
+    enforce_filename_restriction,
+    normalize_upload_file_type,
+)
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    WidthWithoutContent,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -97,11 +105,17 @@ def _get_upload_files(
 @dataclass
 class FileUploaderSerde:
     accept_multiple_files: bool
+    allowed_types: Sequence[str] | None = None
 
-    def deserialize(
-        self, ui_value: FileUploaderStateProto | None, widget_id: str
-    ) -> SomeUploadedFiles:
+    def deserialize(self, ui_value: FileUploaderStateProto | None) -> SomeUploadedFiles:
         upload_files = _get_upload_files(ui_value)
+
+        for file in upload_files:
+            if isinstance(file, DeletedFile):
+                continue
+
+            if self.allowed_types:
+                enforce_filename_restriction(file.name, self.allowed_types)
 
         if len(upload_files) == 0:
             return_value: SomeUploadedFiles = [] if self.accept_multiple_files else None
@@ -116,7 +130,7 @@ class FileUploaderSerde:
 
         if not files:
             return state_proto
-        elif not isinstance(files, list):
+        if not isinstance(files, list):
             files = [files]
 
         for f in files:
@@ -158,7 +172,8 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[UploadedFile] | None: ...
+        width: WidthWithoutContent = "stretch",
+    ) -> list[UploadedFile]: ...
 
     # 1. type is given as not a keyword-only argument
     # 2. accept_multiple_files = False or omitted
@@ -176,6 +191,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None: ...
 
     # The following 2 overloads represent the cases where
@@ -199,7 +215,8 @@ class FileUploaderMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[UploadedFile] | None: ...
+        width: WidthWithoutContent = "stretch",
+    ) -> list[UploadedFile]: ...
 
     # 1. type is skipped or a keyword argument
     # 2. accept_multiple_files = False or omitted
@@ -217,6 +234,7 @@ class FileUploaderMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None: ...
 
     @gather_metrics("file_uploader")
@@ -233,12 +251,15 @@ class FileUploaderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
-        By default, uploaded files are limited to 200MB. You can configure
-        this using the ``server.maxUploadSize`` config option. For more info
-        on how to set config options, see
-        https://docs.streamlit.io/develop/api-reference/configuration/config.toml
+        By default, uploaded files are limited to 200 MB each. You can
+        configure this using the ``server.maxUploadSize`` config option. For
+        more information on how to set config options, see |config.toml|_.
+
+        .. |config.toml| replace:: ``config.toml``
+        .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
 
         Parameters
         ----------
@@ -265,13 +286,21 @@ class FileUploaderMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         type : str or list of str or None
-            Array of allowed extensions. ['png', 'jpg']
-            The default is None, which means all extensions are allowed.
+            The allowed file extension(s) for uploaded files. This can be one
+            of the following types:
+
+            - ``None`` (default): All file extensions are allowed.
+            - A string: A single file extension is allowed. For example, to
+              only accept CSV files, use ``"csv"``.
+            - A sequence of strings: Multiple file extensions are allowed. For
+              example, to only accept JPG/JPEG and PNG files, use
+              ``["jpg", "jpeg", "png"]``.
 
         accept_multiple_files : bool
-            If True, allows the user to upload multiple files at the same time,
-            in which case the return value will be a list of files.
-            Default: False
+            Whether to accept more than one file in a submission. If this is
+            ``False`` (default), the user can only submit one file at a time.
+            If this is ``True``, the user can upload multiple files at the same
+            time, in which case the return value will be a list of files.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -304,12 +333,23 @@ class FileUploaderMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "stretch" or int
+            The width of the file uploader widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
-        None or UploadedFile or list of UploadedFile
+        None, UploadedFile, or list of UploadedFile
             - If accept_multiple_files is False, returns either None or
               an UploadedFile object.
             - If accept_multiple_files is True, returns a list with the
@@ -375,6 +415,7 @@ class FileUploaderMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
             ctx=ctx,
         )
 
@@ -392,6 +433,7 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
+        width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
 
@@ -408,19 +450,22 @@ class FileUploaderMixin:
             "file_uploader",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
             help=help,
+            width=width,
         )
 
-        if type:
-            type = normalize_upload_file_type(type)
+        normalized_type = normalize_upload_file_type(type) if type else None
 
         file_uploader_proto = FileUploaderProto()
         file_uploader_proto.id = element_id
         file_uploader_proto.label = label
-        file_uploader_proto.type[:] = type if type is not None else []
+        file_uploader_proto.type[:] = (
+            normalized_type if normalized_type is not None else []
+        )
         file_uploader_proto.max_upload_size_mb = config.get_option(
             "server.maxUploadSize"
         )
@@ -434,7 +479,7 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = dedent(help)
 
-        serde = FileUploaderSerde(accept_multiple_files)
+        serde = FileUploaderSerde(accept_multiple_files, allowed_types=normalized_type)
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -450,11 +495,16 @@ class FileUploaderMixin:
             value_type="file_uploader_state_value",
         )
 
-        self.dg._enqueue("file_uploader", file_uploader_proto)
+        validate_width(width)
+        layout_config = LayoutConfig(width=width)
+
+        self.dg._enqueue(
+            "file_uploader", file_uploader_proto, layout_config=layout_config
+        )
 
         if isinstance(widget_state.value, DeletedFile):
             return None
-        elif isinstance(widget_state.value, list):
+        if isinstance(widget_state.value, list):
             return [f for f in widget_state.value if not isinstance(f, DeletedFile)]
 
         return widget_state.value

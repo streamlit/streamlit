@@ -15,7 +15,7 @@
  */
 
 import { Config } from "@streamlit/protobuf"
-import { isLocalhost } from "@streamlit/app/src/util/deploymentInfo"
+import { isLocalhost } from "@streamlit/utils"
 
 export const showDevelopmentOptions = (
   hostIsOwner: boolean | undefined,

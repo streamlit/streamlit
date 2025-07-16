@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 
@@ -42,4 +42,4 @@ const ChatUploadedFiles = ({ items, onDelete }: Props): ReactElement => (
   </StyledChatUploadedFiles>
 )
 
-export default ChatUploadedFiles
+export default memo(ChatUploadedFiles)

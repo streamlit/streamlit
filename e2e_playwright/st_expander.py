@@ -25,8 +25,6 @@ expander.button("I'm also not cut off (while focused)")
 collapsed = st.expander("_Expand_ **me**!")
 collapsed.write("I am already collapsed")
 
-st.expander("Empty expander")
-
 with st.expander("Expander with number input", expanded=True):
     # We deliberately use a list to implement this for the screenshot
     st.write("* Example list item")
@@ -79,3 +77,18 @@ expander_emoji_icon = st.expander("Expander with emoji icon!", icon="🎈").writ
 st.expander(
     "-> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 ).write("Content")
+
+
+level1 = st.expander("Nested expander", expanded=True)
+level1.write("First level expander")
+
+level2 = level1.expander("Inside expander")
+level2.write("Second level expander")
+
+with st.expander("Fixed width expander", width=200):
+    st.write("Hello")
+
+with st.expander("Stretch width expander", width="stretch"):
+    st.write("Hello")
+
+st.expander("Empty expander", expanded=True)

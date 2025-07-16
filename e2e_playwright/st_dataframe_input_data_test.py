@@ -14,16 +14,21 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_markdown, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.shared.app_utils import expect_markdown
 from e2e_playwright.shared.data_mocks import SHARED_TEST_CASES
+from e2e_playwright.shared.dataframe_utils import (
+    calc_middle_cell_position,
+    expect_canvas_to_be_stable,
+)
 
 
 def test_dataframe_input_format_rendering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.dataframe renders various data formats correctly via snapshot
-    testing."""
+    testing.
+    """
 
     for index, test_case in enumerate(SHARED_TEST_CASES):
         number_input = app.get_by_test_id("stNumberInput").locator("input")
@@ -41,3 +46,35 @@ def test_dataframe_input_format_rendering(
         expect(dataframe_element).to_be_visible()
         app.wait_for_selector("[data-testid='stDataFrame']", state="attached")
         assert_snapshot(dataframe_element, name=f"st_dataframe-input_data_{index}")
+
+
+def test_empty_dataframe_hover_no_error(app: Page):
+    """Test that hovering over an empty dataframe doesn't show 'This error should never happen' text."""
+    # Test each empty dataframe variant (indices 0-8 in SHARED_TEST_CASES)
+    for index in range(9):
+        # Set the test case to an empty dataframe variant
+        number_input = app.get_by_test_id("stNumberInput").locator("input")
+        number_input.fill(str(index))
+        number_input.press("Enter")
+        wait_for_app_run(app, wait_delay=200)
+
+        # Ensure the dataframe is visible and stable
+        dataframe_element = app.get_by_test_id("stDataFrame")
+        expect(dataframe_element).to_be_visible()
+        expect_canvas_to_be_stable(dataframe_element)
+
+        # Calculate position for first row using the utility function
+        # First row is at row_pos=1 (row 0 is the header)
+        # First column is at col_pos=0
+        first_cell_x, first_row_y = calc_middle_cell_position(1, 0)
+
+        # Hover over the first row
+        dataframe_element.hover(position={"x": first_cell_x, "y": first_row_y})
+        # Wait a moment for any potential tooltip to appear
+        app.wait_for_timeout(1000)
+
+        # verify no error tooltips appear
+        wait_until(
+            app,
+            lambda: not app.get_by_text("This error should never happen").is_visible(),
+        )

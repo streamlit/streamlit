@@ -41,6 +41,10 @@ Usage:
 <script>
   window.addEventListener("message", (event) => {
     console.log("Received message event:", event);
+
+    if (event.data.type === "REDIRECT_TO_URL") {
+      window.location.href = event.data.url
+    }
   });
 
   function sendMessage(data) {
@@ -168,8 +172,8 @@ Usage:
         skeletonBackgroundColor: "#CCDDEE",
         font: 0,
         base: 0,
-        bodyFont: '"Inter", "Source Sans Pro", sans-serif',
-        codeFont: '"Apercu Mono", "Source Code Pro", monospace',
+        bodyFont: '"Inter", "Source Sans", sans-serif',
+        codeFont: '"Source Code", monospace',
         baseFontSize: 14,
         fontFaces: [
           {
@@ -187,27 +191,34 @@ Usage:
             url: "https://rsms.me/inter/font-files/Inter-Bold.woff2?v=3.19",
             weight: 700,
           },
-          {
-            family: "Apercu Mono",
-            url: "https://app.snowflake.com/static/2c4863733dec5a69523e.woff2",
-            weight: 400,
-          },
-          {
-            family: "Apercu Mono",
-            url: "https://app.snowflake.com/static/e903ae189d31a97e231e.woff2",
-            weight: 500,
-          },
-          {
-            family: "Apercu Mono",
-            url: "https://app.snowflake.com/static/32447307374154c88bc0.woff2",
-            weight: 700,
-          },
         ],
         fontSizes: {
           tinyFontSize: 10,
           smallFontSize: 12,
           baseFontSize: 14,
         },
+      },
+    });
+  }
+
+  function sendDarkThemeMessage() {
+    sendMessage({
+      type: "SET_CUSTOM_THEME_CONFIG",
+      themeInfo: {
+        primaryColor : "#1ED760",
+        backgroundColor : "#121212",
+        secondaryBackgroundColor : "#333333",
+        textColor : "#FFFFFF",
+        linkColor : "#9D9D9D",
+        borderColor : "#7F7F7F",
+        widgetBackgroundColor: "#FFFFFF",
+        widgetBorderColor: "#D3DAE8",
+        skeletonBackgroundColor: "#CCDDEE",
+        font: 0,
+        base: 0,
+        bodyFont: '"Inter", "Source Sans", sans-serif',
+        codeFont: '"Source Code", monospace',
+        baseFontSize: 14,
       },
     });
   }
@@ -222,6 +233,13 @@ Usage:
     sendMessage({
       type: "TERMINATE_WEBSOCKET_CONNECTION",
     });
+  }
+
+  function setInputsDisabled() {
+    sendMessage({
+      type: "SET_INPUTS_DISABLED",
+      disabled: true,
+    })
   }
 </script>
 
@@ -269,6 +287,7 @@ Usage:
 <div id="toolbar" data-testid="toolbar">
   This is the host frame.
   <button onclick="sendThemeMessage()">Send Theme</button>
+  <button onclick="sendDarkThemeMessage()">Send Dark Theme</button>
   <button onclick="rerunScript()">Rerun Script</button>
   <button onclick="stopScript()">Stop Script</button>
   <button onclick="clearCache()">Clear Cache</button>
@@ -281,6 +300,7 @@ Usage:
   <button onclick="setFileUploadClientConfig()">Set file upload config</button>
   <button onclick="restartWebsocketConnection()">Restart Websocket</button>
   <button onclick="terminateWebsocketConnection()">Terminate Websocket</button>
+  <button onclick="setInputsDisabled()">Disable Inputs</button>
 </div>
 
 <!-- we replace $APP_URL during the playwright test with the correct one -->

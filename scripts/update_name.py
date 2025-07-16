@@ -19,11 +19,12 @@
 The streamlit-nightly CI job uses this to set the project name to "streamlit-nightly".
 """
 
+from __future__ import annotations
+
 import fileinput
 import os
 import re
 import sys
-from typing import Dict
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -39,22 +40,22 @@ FILES_AND_REGEXES = {
 }
 
 
-def update_files(project_name: str, files: Dict[str, str]) -> None:
+def update_files(project_name: str, files: dict[str, str]) -> None:
     """Update files with new project name."""
     for filename, regex in files.items():
-        filename = os.path.join(BASE_DIR, filename)
+        file_path = os.path.join(BASE_DIR, filename)
         matched = False
         pattern = re.compile(regex)
-        for line in fileinput.input(filename, inplace=True):
-            line = line.rstrip()
-            if pattern.match(line):
-                line = re.sub(
-                    regex, rf"\g<pre_match>{project_name}\g<post_match>", line
+        for line in fileinput.input(file_path, inplace=True):
+            updated_line = line.rstrip()
+            if pattern.match(updated_line):
+                updated_line = re.sub(
+                    regex, rf"\g<pre_match>{project_name}\g<post_match>", updated_line
                 )
                 matched = True
-            print(line)
+            print(updated_line)
         if not matched:
-            raise Exception(f'In file "{filename}", did not find regex "{regex}"')
+            raise Exception(f'In file "{file_path}", did not find regex "{regex}"')
 
 
 def main() -> None:

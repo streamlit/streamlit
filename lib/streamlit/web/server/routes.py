@@ -15,35 +15,39 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import tornado.web
 
 from streamlit import config, file_util
-from streamlit.logger import get_logger
-from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import (
+    allowlisted_origins,
     emit_endpoint_deprecation_notice,
     is_xsrf_enabled,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-_LOGGER: Final = get_logger(__name__)
+    from collections.abc import Awaitable, Sequence
 
 
-def allow_cross_origin_requests() -> bool:
-    """True if cross-origin requests are allowed.
+def allow_all_cross_origin_requests() -> bool:
+    """True if cross-origin requests from any origin are allowed.
 
-    We only allow cross-origin requests when CORS protection has been disabled
-    with server.enableCORS=False or if using the Node server. When using the
-    Node server, we have a dev and prod port, which count as two origins.
-
+    We only allow ALL cross-origin requests when CORS protection has been
+    disabled with server.enableCORS=False or if using the Node server in dev
+    mode. When in dev mode, we have a dev and prod port, which count as two
+    origins.
     """
+
     return not config.get_option("server.enableCORS") or config.get_option(
         "global.developmentMode"
     )
+
+
+def is_allowed_origin(origin: Any) -> bool:
+    if not isinstance(origin, str):
+        return False
+    return origin in allowlisted_origins()
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
@@ -52,7 +56,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         path: str,
         default_filename: str | None = None,
         reserved_paths: Sequence[str] = (),
-    ):
+    ) -> None:
         self._reserved_paths = reserved_paths
 
         super().initialize(path, default_filename)
@@ -82,15 +86,15 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
                 if os.path.sep != "/":
                     url_path = url_path.replace(os.path.sep, "/")
                 if any(url_path.endswith(x) for x in self._reserved_paths):
-                    raise e
+                    raise
 
                 self.path = self.parse_url_path(self.default_filename or "index.html")
                 absolute_path = self.get_absolute_path(self.root, self.path)
                 return super().validate_absolute_path(root, absolute_path)
 
-            raise e
+            raise
 
-    def write_error(self, status_code: int, **kwargs) -> None:
+    def write_error(self, status_code: int, **kwargs: Any) -> None:
         if status_code == 404:
             index_file = os.path.join(file_util.get_static_dir(), "index.html")
             self.render(index_file)
@@ -100,25 +104,27 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
 class AddSlashHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
-    def get(self):
+    def get(self) -> None:
         pass
 
 
 class RemoveSlashHandler(tornado.web.RequestHandler):
     @tornado.web.removeslash
-    def get(self):
+    def get(self) -> None:
         pass
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
 
-    def set_default_headers(self):
+    def set_default_headers(self) -> None:
         self.set_header("Cache-Control", "no-cache")
-        if allow_cross_origin_requests():
+        if allow_all_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
+        elif is_allowed_origin(origin := self.request.headers.get("Origin")):
+            self.set_header("Access-Control-Allow-Origin", cast("str", origin))
 
-    def options(self):
+    def options(self) -> None:
         """/OPTIONS handler for preflight CORS checks.
 
         When a browser is making a CORS request, it may sometimes first
@@ -140,8 +146,8 @@ class _SpecialRequestHandler(tornado.web.RequestHandler):
 
 
 class HealthHandler(_SpecialRequestHandler):
-    def initialize(self, callback):
-        """Initialize the handler
+    def initialize(self, callback: Callable[[], Awaitable[tuple[bool, str]]]) -> None:
+        """Initialize the handler.
 
         Parameters
         ----------
@@ -151,15 +157,15 @@ class HealthHandler(_SpecialRequestHandler):
         """
         self._callback = callback
 
-    async def get(self):
+    async def get(self) -> None:
         await self.handle_request()
 
     # Some monitoring services only support the HTTP HEAD method for requests to
     # healthcheck endpoints, so we support HEAD as well to play nicely with them.
-    async def head(self):
+    async def head(self) -> None:
         await self.handle_request()
 
-    async def handle_request(self):
+    async def handle_request(self) -> None:
         if self.request.uri and "_stcore/" not in self.request.uri:
             new_path = (
                 "/_stcore/script-health-check"
@@ -216,7 +222,7 @@ _DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
 
 
 class HostConfigHandler(_SpecialRequestHandler):
-    def initialize(self):
+    def initialize(self) -> None:
         # Make a copy of the allowedOrigins list, since we might modify it later:
         self._allowed_origins = _DEFAULT_ALLOWED_MESSAGE_ORIGINS.copy()
 
@@ -236,60 +242,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
                 "metricsUrl": "",
+                "blockErrorDialogs": False,
             }
         )
         self.set_status(200)
-
-
-class MessageCacheHandler(tornado.web.RequestHandler):
-    """Returns ForwardMsgs from our MessageCache"""
-
-    def initialize(self, cache):
-        """Initializes the handler.
-
-        Parameters
-        ----------
-        cache : MessageCache
-
-        """
-        self._cache = cache
-
-    def set_default_headers(self):
-        if allow_cross_origin_requests():
-            self.set_header("Access-Control-Allow-Origin", "*")
-
-    def get(self):
-        msg_hash = self.get_argument("hash", None)
-        if not config.get_option("global.storeCachedForwardMessagesInMemory"):
-            # We use rare status code here, to distinguish between normal 404s.
-            self.set_status(418)
-            self.finish()
-            return
-        if msg_hash is None:
-            # Hash is missing! This is a malformed request.
-            _LOGGER.error(
-                "HTTP request for cached message is missing the hash attribute."
-            )
-            self.set_status(404)
-            raise tornado.web.Finish()
-
-        message = self._cache.get_message(msg_hash)
-        if message is None:
-            # Message not in our cache.
-            _LOGGER.error(
-                "HTTP request for cached message could not be fulfilled. "
-                "No such message"
-            )
-            self.set_status(404)
-            raise tornado.web.Finish()
-
-        _LOGGER.debug("MessageCache HIT")
-        msg_str = serialize_forward_msg(message)
-        self.set_header("Content-Type", "application/octet-stream")
-        self.write(msg_str)
-        self.set_status(200)
-
-    def options(self):
-        """/OPTIONS handler for preflight CORS checks."""
-        self.set_status(204)
-        self.finish()

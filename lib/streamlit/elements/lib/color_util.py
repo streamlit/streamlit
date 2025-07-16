@@ -64,7 +64,7 @@ def to_int_color_tuple(color: MaybeColor) -> IntColorTuple:
         rgb_formatter=_int_formatter,
         alpha_formatter=_int_formatter,
     )
-    return cast(IntColorTuple, color_tuple)
+    return cast("IntColorTuple", color_tuple)
 
 
 def to_css_color(color: MaybeColor) -> Color:
@@ -76,15 +76,15 @@ def to_css_color(color: MaybeColor) -> Color:
     See tests for more info.
     """
     if is_css_color_like(color):
-        return cast(Color, color)
+        return cast("Color", color)
 
     if is_color_tuple_like(color):
-        ctuple = cast(ColorTuple, color)
+        ctuple = cast("ColorTuple", color)
         ctuple = _normalize_tuple(ctuple, _int_formatter, _float_formatter)
         if len(ctuple) == 3:
             return f"rgb({ctuple[0]}, {ctuple[1]}, {ctuple[2]})"
-        elif len(ctuple) == 4:
-            c4tuple = cast(MixedRGBAColorTuple, ctuple)
+        if len(ctuple) == 4:
+            c4tuple = cast("MixedRGBAColorTuple", ctuple)
             return f"rgba({c4tuple[0]}, {c4tuple[1]}, {c4tuple[2]}, {c4tuple[3]})"
 
     raise StreamlitInvalidColorError(color)
@@ -125,9 +125,7 @@ def _is_cssrgb_color_like(color: MaybeColor) -> bool:
     NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
     validate user input! Instead use is_hex_color_like and is_color_tuple_like.
     """
-    return isinstance(color, str) and (
-        color.startswith("rgb(") or color.startswith("rgba(")
-    )
+    return isinstance(color, str) and color.startswith(("rgb(", "rgba("))
 
 
 def is_color_tuple_like(color: MaybeColor) -> bool:
@@ -157,7 +155,7 @@ def _to_color_tuple(
     color: MaybeColor,
     rgb_formatter: Callable[[float, MaybeColor], float],
     alpha_formatter: Callable[[float, MaybeColor], float],
-):
+) -> ColorTuple:
     """Convert a potential color to a color tuple.
 
     The exact type of color tuple this outputs is dictated by the formatter parameters.
@@ -170,7 +168,7 @@ def _to_color_tuple(
     """
     if is_hex_color_like(color):
         hex_len = len(color)
-        color_hex = cast(str, color)
+        color_hex = cast("str", color)
 
         if hex_len == 4:
             r = 2 * color_hex[1]
@@ -201,7 +199,7 @@ def _to_color_tuple(
             raise StreamlitInvalidColorError(color) from ex
 
     if is_color_tuple_like(color):
-        color_tuple = cast(ColorTuple, color)
+        color_tuple = cast("ColorTuple", color)
         return _normalize_tuple(color_tuple, rgb_formatter, alpha_formatter)
 
     raise StreamlitInvalidColorError(color)
@@ -226,8 +224,8 @@ def _normalize_tuple(
         b = rgb_formatter(color[2], color)
         return r, g, b
 
-    elif len(color) == 4:
-        color_4tuple = cast(Color4Tuple, color)
+    if len(color) == 4:
+        color_4tuple = color
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)

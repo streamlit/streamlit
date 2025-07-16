@@ -21,9 +21,11 @@ import { FileURLs as FileURLsProto, IFileURLs } from "@streamlit/protobuf"
 
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { getRejectedFileInfo } from "~lib/util/FileHelper"
 
 interface CreateDropHandlerParams {
   acceptMultipleFiles: boolean
+  maxFileSize: number
   uploadClient: FileUploadClient
   uploadFile: (fileURLs: FileURLsProto, file: File) => void
   addFiles: (files: UploadFileInfo[]) => void
@@ -35,6 +37,7 @@ interface CreateDropHandlerParams {
 export const createDropHandler =
   ({
     acceptMultipleFiles,
+    maxFileSize,
     uploadClient,
     uploadFile,
     addFiles,
@@ -52,6 +55,7 @@ export const createDropHandler =
       rejectedFiles.length > 1
     ) {
       const firstFileIndex = rejectedFiles.findIndex(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
         file => file.errors?.[0].code === FileErrorCode.TooManyFiles
       )
 
@@ -88,20 +92,8 @@ export const createDropHandler =
     // Create an UploadFileInfo for each of our rejected files, and add them to
     // our state.
     if (rejectedFiles.length > 0) {
-      const rejectedInfos = rejectedFiles.map(
-        rejected =>
-          new UploadFileInfo(
-            rejected.file.name,
-            rejected.file.size,
-            getNextLocalFileId(),
-            {
-              type: "error",
-              errorMessage: rejected.errors
-                .map(err => err.message)
-                .filter(err => !!err)
-                .join(", "),
-            }
-          )
+      const rejectedInfos = rejectedFiles.map(rejected =>
+        getRejectedFileInfo(rejected, getNextLocalFileId(), maxFileSize)
       )
       addFiles(rejectedInfos)
     }

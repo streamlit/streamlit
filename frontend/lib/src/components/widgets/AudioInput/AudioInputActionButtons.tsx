@@ -54,7 +54,7 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
-    fluidWidth
+    containerWidth
     data-testid="stAudioInputActionButton"
   >
     <Icon content={iconContent} size="lg" color="inherit" />

@@ -40,7 +40,7 @@ def get_session_state() -> SafeSessionState:
     directly. Instead, SessionState objects should be accessed via
     st.session_state.
     """
-    global _state_use_warning_already_displayed
+    global _state_use_warning_already_displayed  # noqa: PLW0603
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         get_script_run_ctx,
     )
@@ -57,7 +57,7 @@ def get_session_state() -> SafeSessionState:
                     "Session state does not function when running a script without `streamlit run`"
                 )
 
-        global _mock_session_state
+        global _mock_session_state  # noqa: PLW0603
 
         if _mock_session_state is None:
             # Lazy initialize the mock session state

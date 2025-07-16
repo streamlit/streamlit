@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
+import { createContext } from "react"
 
-export const PortalContext = React.createContext<
-  (() => HTMLElement | null) | null
->(null)
+export const PortalContext = createContext<(() => HTMLElement | null) | null>(
+  null
+)
+PortalContext.displayName = "PortalContext"

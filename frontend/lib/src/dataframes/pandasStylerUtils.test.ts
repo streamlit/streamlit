@@ -133,7 +133,7 @@ describe("getStyledCell", () => {
 
     const cell = getStyledCell(mockQuiver, 1, 0)
     expect(cell).toEqual({
-      cssId: `${T_FAKE_UUID}level0_row1`,
+      cssId: `${T_FAKE_UUID}_level0_row1`,
       cssClass: "row_heading level0 row1",
       displayContent: undefined,
     })
@@ -161,7 +161,7 @@ describe("getStyledCell", () => {
 
     const cell = getStyledCell(mockQuiver, 1, 2)
     expect(cell).toEqual({
-      cssId: `${T_FAKE_UUID}row1_col1`,
+      cssId: `${T_FAKE_UUID}_row1_col1`,
       cssClass: "data row1 col1",
       displayContent: "1,2",
     })

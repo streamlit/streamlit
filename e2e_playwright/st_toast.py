@@ -18,8 +18,19 @@ st.set_page_config(layout="wide")
 st.chat_input("input here")
 st.toast("This is a default toast message", icon="🐶")
 st.toast(
-    "Random toast message that is a really really really really really really really long message, going way past the 3 line limit",
+    "Random toast message that is a really really really really really really "
+    "really long message, going way past the 3 line limit",
     icon="🦄",
 )
 
 st.toast("Your edited image was saved!", icon=":material/cabin:")
+
+
+@st.dialog("Streamlit Toast Notification")
+def toast_notification():
+    activate_toast = st.button(label="Toast from dialog")
+    if activate_toast:
+        st.toast("Toast above dialog", icon="🎉")
+
+
+st.button("Trigger dialog", on_click=toast_notification)

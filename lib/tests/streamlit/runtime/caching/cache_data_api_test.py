@@ -25,6 +25,7 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -46,7 +47,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    InvalidCacheStorageContext,
+    InvalidCacheStorageContextError,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
@@ -116,8 +117,8 @@ class CacheDataTest(unittest.TestCase):
 
         exception.assert_not_called()
 
-        self.assertEqual(r1, [1, 1])
-        self.assertEqual(r2, [0, 1])
+        assert r1 == [1, 1]
+        assert r2 == [0, 1]
 
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
@@ -127,7 +128,9 @@ class CacheDataTest(unittest.TestCase):
         class TestClass:
             @st.cache_data(
                 hash_funcs={
-                    "tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest.test_cached_member_function_with_hash_func.<locals>.TestClass": id
+                    "tests.streamlit.runtime.caching.cache_data_api_test."
+                    "CacheDataTest.test_cached_member_function_with_hash_func."
+                    "<locals>.TestClass": id
                 }
             )
             def member_func(self):
@@ -144,9 +147,9 @@ class CacheDataTest(unittest.TestCase):
                 return "static method!"
 
         obj = TestClass()
-        self.assertEqual("member func!", obj.member_func())
-        self.assertEqual("class method!", obj.class_method())
-        self.assertEqual("static method!", obj.static_method())
+        assert obj.member_func() == "member func!"
+        assert obj.class_method() == "class method!"
+        assert obj.static_method() == "static method!"
 
     def test_function_name_does_not_use_hashfuncs(self):
         """Hash funcs should only be used on arguments to a function,
@@ -191,7 +194,7 @@ class CacheDataTest(unittest.TestCase):
         def user_hash_error_func(x):
             pass
 
-        with self.assertRaises(UserHashError) as ctx:
+        with pytest.raises(UserHashError) as ctx:
             my_obj = MyObj()
             user_hash_error_func(my_obj)
 
@@ -211,8 +214,8 @@ Object of type tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest
 ```
 
 If you think this is actually a Streamlit bug, please
-[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
-        self.assertEqual(str(ctx.exception), expected_message)
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""  # noqa: E501
+        assert str(ctx.value) == expected_message
 
     def test_cached_st_function_clear_args(self):
         self.x = 0
@@ -315,7 +318,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         match = re.fullmatch(
             r"/mock/home/folder/.streamlit/cache/.*?\.memo", write_path
         )
-        self.assertIsNotNone(match)
+        assert match is not None
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
@@ -335,7 +338,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
         data = foo()
         mock_read.assert_called_once()
-        self.assertEqual("mock_pickled_value", data)
+        assert data == "mock_pickled_value"
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
@@ -350,10 +353,10 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         def foo():
             return "actual_value"
 
-        with self.assertRaises(CacheError) as error:
+        with pytest.raises(CacheError) as error:
             foo()
         mock_read.assert_called_once()
-        self.assertEqual("Unable to read from cache", str(error.exception))
+        assert str(error.value) == "Unable to read from cache"
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch("streamlit.file_util.open", mock_open(read_data=b"bad_binary_pickled_value"))
@@ -368,22 +371,22 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         def foo():
             return "actual_value"
 
-        with self.assertRaises(CacheError) as error:
+        with pytest.raises(CacheError) as error:
             foo()
         mock_read.assert_called_once()
-        self.assertIn("Failed to unpickle", str(error.exception))
+        assert "Failed to unpickle" in str(error.value)
 
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException) as e:
 
             @st.cache_data(persist="yesplz")
             def foo():
                 pass
 
-        self.assertEqual(
-            "Unsupported persist option 'yesplz'. Valid values are 'disk' or None.",
-            str(e.exception),
+        assert (
+            str(e.value)
+            == "Unsupported persist option 'yesplz'. Valid values are 'disk' or None."
         )
 
     @patch("shutil.rmtree")
@@ -420,7 +423,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         foo(1)
 
         # We should've opened two files, one for each distinct "foo" call.
-        self.assertEqual(2, mock_open.call_count)
+        assert mock_open.call_count == 2
 
         # Get the names of the two files that were created. These will look
         # something like '/mock/home/folder/.streamlit/cache/[long_hash].memo'
@@ -443,7 +446,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             foo.clear()
 
         # os.remove should have been called once for each of our created cache files
-        self.assertEqual(2, mock_os_remove.call_count)
+        assert mock_os_remove.call_count == 2
 
         removed_filenames = {
             mock_os_remove.call_args_list[0][0][0],
@@ -451,7 +454,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         }
 
         # The two files we removed should be the same two files we created.
-        self.assertEqual(created_filenames, removed_filenames)
+        assert created_filenames == removed_filenames
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
@@ -530,9 +533,9 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             st.write(user_function())
 
             output = "".join(logs.output)
-            self.assertIn(
-                "The cached function 'user_function' has a TTL that will be ignored.",
-                output,
+            assert (
+                "The cached function 'user_function' has a TTL that will be ignored."
+                in output
             )
 
     @parameterized.expand(
@@ -581,7 +584,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         st.cache_data.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_data_cache_stats_provider().get_stats())
+        assert get_data_cache_stats_provider().get_stats() == []
 
     def test_multiple_stats(self):
         @st.cache_data
@@ -618,9 +621,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(
-            set(expected), set(get_data_cache_stats_provider().get_stats())
-        )
+        assert set(expected) == set(get_data_cache_stats_provider().get_stats())
 
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
@@ -634,7 +635,7 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
 
     def test_error_logged_and_raised_on_improperly_configured_cache_data(self):
         with (
-            self.assertRaises(InvalidCacheStorageContext) as e,
+            pytest.raises(InvalidCacheStorageContextError) as e,
             self.assertLogs(
                 "streamlit.runtime.caching.cache_data_api", level=logging.ERROR
             ) as logs,
@@ -644,9 +645,9 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
             def foo():
                 return "data"
 
-        self.assertEqual(str(e.exception), "This CacheStorageManager always fails")
+        assert str(e.value) == "This CacheStorageManager always fails"
         output = "".join(logs.output)
-        self.assertIn("This CacheStorageManager always fails", output)
+        assert "This CacheStorageManager always fails" in output
 
 
 class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
@@ -659,16 +660,78 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
     def tearDown(self):
         st.cache_data.clear()
 
+    def test_media_data_tracking_only_in_cached_functions(self):
+        """Test that media data gets tracked only when called inside a cache_data function.
+
+        The test creates:
+        1. A cached function that uses st.image (should save media data)
+        2. A non-cached function that uses st.image (should NOT save media data)
+        """
+        # Create some test image data (numpy array) that will trigger media processing
+        import numpy as np
+
+        from streamlit.runtime.caching.cache_data_api import (
+            CACHE_DATA_MESSAGE_REPLAY_CTX,
+        )
+
+        test_image = np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8)
+
+        # Track when media data is actually added vs when it's skipped
+        original_save_media_data = CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data
+        media_data_saved = []
+
+        def tracking_save_media_data(media_data, mimetype, media_id):
+            # Call original first to check the in_cached_function logic
+            list_length_before = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
+            result = original_save_media_data(media_data, mimetype, media_id)
+            list_length_after = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
+
+            # Record whether media data was actually added
+            was_added = list_length_after > list_length_before
+            media_data_saved.append(was_added)
+            return result
+
+        with patch.object(
+            CACHE_DATA_MESSAGE_REPLAY_CTX,
+            "save_media_data",
+            side_effect=tracking_save_media_data,
+        ):
+            # Test 1: Call a cached function - should add media data
+            @st.cache_data
+            def cached_function_with_image():
+                st.image(test_image, caption="Test Image")
+                return "cached_result"
+
+            media_data_saved.clear()
+            cached_function_with_image()
+
+            # Should have at least one call where media data was added
+            cached_saves = sum(media_data_saved)
+            assert cached_saves > 0, (
+                f"Media data should be saved when in cached function. "
+                f"Got {cached_saves} saves out of {len(media_data_saved)} calls"
+            )
+
+            # Test 2: Call a non-cached function - should NOT add media data
+            def non_cached_function_with_image():
+                st.image(test_image, caption="Test Image")
+                return "non_cached_result"
+
+            media_data_saved.clear()
+            non_cached_function_with_image()
+
+            # Should have no calls where media data was added
+            non_cached_saves = sum(media_data_saved)
+            assert non_cached_saves == 0, (
+                f"Media data should NOT be saved when not in cached function. "
+                f"Got {non_cached_saves} saves out of {len(media_data_saved)} calls"
+            )
+
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_shows_cached_widget_replay_warning(
         self, _widget_name: str, widget_producer: ELEMENT_PRODUCER
     ):
         """Test that a warning is shown when a widget is created inside a cached function."""
-
-        if _widget_name == "experimental_audio_input":
-            # The experimental_audio_input element produces also a deprecation warning
-            # which makes this test irrelevant
-            return
 
         @st.cache_data(show_spinner=False)
         def cache_widget():
@@ -737,4 +800,4 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
         pass
 
     def check_context(self, context: CacheStorageContext) -> None:
-        raise InvalidCacheStorageContext("This CacheStorageManager always fails")
+        raise InvalidCacheStorageContextError("This CacheStorageManager always fails")

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useMemo } from "react"
+import React, { memo, ReactElement, useContext, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { StyledIcon } from "~lib/components/shared/Icon"
 import BaseButton, {
   BaseButtonKind,
@@ -31,8 +31,8 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 import { Box } from "~lib/components/shared/Base/styled-components"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
 
@@ -46,16 +46,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   empty,
   children,
 }): ReactElement => {
-  const [open, setOpen] = React.useState(false)
-  const isInSidebar = React.useContext(IsSidebarContext)
+  const [open, setOpen] = useState(false)
+  const isInSidebar = useContext(IsSidebarContext)
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const lightBackground = hasLightBackgroundColor(theme)
 
-  const {
-    values: [width],
-    elementRef,
-  } = useResizeObserver(useMemo(() => ["width"], []))
+  const [width, elementRef] = useCalculatedWidth()
 
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
@@ -130,13 +127,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         {/* This needs to be wrapped into a div, otherwise
         the BaseWeb popover implementation will not work correctly. */}
         <div>
-          <BaseButtonTooltip help={element.help}>
+          <BaseButtonTooltip
+            help={element.help}
+            containerWidth={element.useContainerWidth}
+          >
             <BaseButton
               data-testid="stPopoverButton"
               kind={BaseButtonKind.SECONDARY}
               size={BaseButtonSize.SMALL}
               disabled={empty || element.disabled}
-              fluidWidth={element.useContainerWidth || !!element.help}
+              containerWidth={element.useContainerWidth}
               onClick={() => setOpen(!open)}
             >
               <DynamicButtonLabel icon={element.icon} label={element.label} />

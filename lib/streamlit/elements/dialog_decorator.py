@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, overload
 
 from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
@@ -74,7 +74,7 @@ def _dialog_decorator(
         )
 
     @wraps(non_optional_func)
-    def wrap(*args, **kwargs) -> None:
+    def wrap(*args: Any, **kwargs: Any) -> None:
         _assert_no_nested_dialogs()
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
@@ -97,12 +97,11 @@ def _dialog_decorator(
             # if the dialog should be closed, st.rerun() has to be called
             # (same behavior as with st.fragment)
             _ = non_optional_func(*args, **kwargs)
-            return None
 
         # the fragment decorator has multiple return types so that you can pass
         # arguments to it. Here we know the return type, so we cast
         fragmented_dialog_content = cast(
-            Callable[[], None],
+            "Callable[[], None]",
             _fragment(
                 dialog_content, additional_hash_info=non_optional_func.__qualname__
             ),
@@ -110,9 +109,9 @@ def _dialog_decorator(
 
         with dialog:
             fragmented_dialog_content()
-            return None
+            return
 
-    return cast(F, wrap)
+    return cast("F", wrap)
 
 
 @overload
@@ -135,7 +134,7 @@ def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
 def dialog_decorator(
     title: F | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
-    """Function decorator to create a modal dialog.
+    r"""Function decorator to create a modal dialog.
 
     A function decorated with ``@st.dialog`` becomes a dialog
     function. When you call a dialog function, Streamlit inserts a modal dialog
@@ -174,6 +173,23 @@ def dialog_decorator(
     ----------
     title : str
         The title to display at the top of the modal dialog. It cannot be empty.
+
+        The title can optionally contain GitHub-flavored Markdown of the
+        following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+        and Images. Images display like icons, with a max height equal to
+        the font height.
+
+        Unsupported Markdown elements are unwrapped so only their children
+        (text contents) render. Display unsupported elements as literal
+        characters by backslash-escaping them. E.g.,
+        ``"1\. Not an ordered list"``.
+
+        See the ``body`` parameter of |st.markdown|_ for additional,
+        supported Markdown directives.
+
+        .. |st.markdown| replace:: ``st.markdown``
+        .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
     width : "small", "large"
         The width of the modal dialog. If ``width`` is ``"small`` (default), the
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the

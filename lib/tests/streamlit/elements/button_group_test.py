@@ -31,9 +31,10 @@ from streamlit.elements.widgets.button_group import (
     _STAR_ICON,
     _THUMB_ICONS,
     ButtonGroupMixin,
+    ButtonGroupSerde,
     SelectionMode,
-    SingleOrMultiSelectSerde,
-    SingleSelectSerde,
+    _MultiSelectSerde,
+    _SingleSelectSerde,
     get_mapped_options,
 )
 from streamlit.errors import StreamlitAPIException
@@ -41,6 +42,7 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class TestGetMappedOptions:
@@ -89,49 +91,95 @@ class TestGetMappedOptions:
 class TestSingleSelectSerde:
     def test_serialize(self):
         option_indices = [5, 6, 7]
-        serde = SingleSelectSerde[int](option_indices)
+        serde = _SingleSelectSerde[int](option_indices)
         res = serde.serialize(6)
         assert res == [1]
 
     def test_serialize_raise_option_does_not_exist(self):
         option_indices = [5, 6, 7]
-        serde = SingleSelectSerde[int](option_indices)
+        serde = _SingleSelectSerde[int](option_indices)
 
         with pytest.raises(StreamlitAPIException):
             serde.serialize(8)
 
     def test_deserialize(self):
         option_indices = [5, 6, 7]
-        serde = SingleSelectSerde[int](option_indices)
-        res = serde.deserialize([1], "")
+        serde = _SingleSelectSerde[int](option_indices)
+        res = serde.deserialize([1])
         assert res == 6
 
     def test_deserialize_with_default_value(self):
         option_indices = [5, 6, 7]
-        serde = SingleSelectSerde[int](option_indices, default_value=[2])
-        res = serde.deserialize(None, "")
+        serde = _SingleSelectSerde[int](option_indices, default_value=[2])
+        res = serde.deserialize(None)
         assert res == 7
 
     def test_deserialize_raise_indexerror(self):
         option_indices = [5, 6, 7]
-        serde = SingleSelectSerde[int](option_indices)
+        serde = _SingleSelectSerde[int](option_indices)
 
         with pytest.raises(IndexError):
-            serde.deserialize([3], "")
+            serde.deserialize([3])
+
+
+class TestMultiSelectSerde:
+    def test_serialize(self):
+        option_indices = [5, 6, 7]
+        serde = _MultiSelectSerde[int](option_indices)
+        res = serde.serialize([5, 7])
+        assert res == [0, 2]
+
+    def test_serialize_empty_list(self):
+        option_indices = [5, 6, 7]
+        serde = _MultiSelectSerde[int](option_indices)
+        res = serde.serialize([])
+        assert res == []
+
+    def test_serialize_raise_option_does_not_exist(self):
+        option_indices = [5, 6, 7]
+        serde = _MultiSelectSerde[int](option_indices)
+
+        with pytest.raises(StreamlitAPIException):
+            serde.serialize([5, 8])
+
+    def test_deserialize(self):
+        option_indices = [5, 6, 7]
+        serde = _MultiSelectSerde[int](option_indices)
+        res = serde.deserialize([0, 2])
+        assert res == [5, 7]
+
+    def test_deserialize_empty_list(self):
+        option_indices = [5, 6, 7]
+        serde = _MultiSelectSerde[int](option_indices)
+        res = serde.deserialize([])
+        assert res == []
+
+    def test_deserialize_with_default_value(self):
+        option_indices = [5, 6, 7]
+        serde = _MultiSelectSerde[int](option_indices, default_value=[0, 2])
+        res = serde.deserialize(None)
+        assert res == [5, 7]
+
+    def test_deserialize_raise_indexerror(self):
+        option_indices = [5, 6, 7]
+        serde = _MultiSelectSerde[int](option_indices)
+
+        with pytest.raises(IndexError):
+            serde.deserialize([3])
 
 
 class TestSingleOrMultiSelectSerde:
     @parameterized.expand([("single",), ("multi",)])
     def test_serialize(self, selection_mode: SelectionMode):
         option_indices = [5, 6, 7]
-        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
+        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
         res = serde.serialize(6)
         assert res == [1]
 
     @parameterized.expand([("single",), ("multi",)])
     def test_serialize_raise_option_does_not_exist(self, selection_mode: SelectionMode):
         option_indices = [5, 6, 7]
-        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
+        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
 
         with pytest.raises(StreamlitAPIException):
             serde.serialize(8)
@@ -141,8 +189,8 @@ class TestSingleOrMultiSelectSerde:
         self, selection_mode: SelectionMode, expected: int | list[int]
     ):
         option_indices = [5, 6, 7]
-        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
-        res = serde.deserialize([1], "")
+        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
+        res = serde.deserialize([1])
         assert res == expected
 
     @parameterized.expand([("single", 7), ("multi", [7])])
@@ -150,17 +198,17 @@ class TestSingleOrMultiSelectSerde:
         self, selection_mode: SelectionMode, expected: list[int] | int
     ):
         option_indices = [5, 6, 7]
-        serde = SingleOrMultiSelectSerde[int](option_indices, [2], selection_mode)
-        res = serde.deserialize(None, "")
+        serde = ButtonGroupSerde[int](option_indices, [2], selection_mode)
+        res = serde.deserialize(None)
         assert res == expected
 
     @parameterized.expand([("single",), ("multi",)])
     def test_deserialize_raise_indexerror(self, selection_mode: SelectionMode):
         option_indices = [5, 6, 7]
-        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
+        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
 
         with pytest.raises(IndexError):
-            serde.deserialize([3], "")
+            serde.deserialize([3])
 
 
 class TestFeedbackCommand(DeltaGeneratorTestCase):
@@ -185,10 +233,10 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
     def test_invalid_option_literal(self):
         with pytest.raises(StreamlitAPIException) as e:
             st.feedback("foo")
-        assert (
+        assert str(e.value) == (
             "The options argument to st.feedback must be one of "
             "['thumbs', 'faces', 'stars']. The argument passed was 'foo'."
-        ) == str(e.value)
+        )
 
     @parameterized.expand([(0,), (1,)])
     def test_widget_state_changed_via_session_state(self, session_state_index: int):
@@ -314,14 +362,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         get_command_matrix([("string_key",), (0,), (None,)], with_st_feedback=True)
     )
-    def test_key_types(self, comand: Callable[..., None], key: str | int | None):
+    def test_key_types(self, command: Callable[..., None], key: str | int | None):
         """Test that the key argument can be passed as expected."""
 
         # use options that is compatible with all commands including st.feedback
-        comand("thumbs", key=key)
+        command("thumbs", key=key)
 
         delta = self.get_delta_from_queue().new_element.button_group
-        assert delta.id.endswith(f"-{str(key)}")
+        assert delta.id.endswith(f"-{key}")
 
     @parameterized.expand(
         [
@@ -354,7 +402,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     )
     def test_default_return_value(
         self,
-        command: Callable[..., None],
+        command: Callable[..., Any],
         command_args: tuple[Any, ...],
         command_kwargs: dict | None = None,
         expected_default: str | None = None,
@@ -738,13 +786,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exception:
             command(["a", "b"], selection_mode="foo")
         assert (
-            "The selection_mode argument must be one of ['single', 'multi']. "
-            "The argument passed was 'foo'." == str(exception.value)
+            str(exception.value)
+            == "The selection_mode argument must be one of ['single', 'multi']. "
+            "The argument passed was 'foo'."
         )
 
     @parameterized.expand(get_command_matrix([]))
     def test_widget_state_changed_via_session_state_for_single_select(
-        self, command: Callable[..., None]
+        self, command: Callable[..., Any]
     ):
         st.session_state.command_key = "stars"
         val = command(["thumbs", "stars"], key="command_key")
@@ -752,11 +801,72 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(get_command_matrix([]))
     def test_widget_state_changed_via_session_state_for_multi_select(
-        self, command: Callable[..., None]
+        self, command: Callable[..., Any]
     ):
         st.session_state.command_key = ["stars"]
         val = command(["thumbs", "stars"], key="command_key", selection_mode="multi")
         assert val == ["stars"]
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_with_width(self, command: Callable[..., None]):
+        """Test button group widgets with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                command(["a", "b", "c"], width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.button_group.options[0].content == "a"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_with_invalid_width(self, command: Callable[..., None]):
+        """Test button group widgets with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    command(["a", "b", "c"], width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_default_width(self, command: Callable[..., None]):
+        """Test that button group widgets default to content width."""
+        command(["a", "b", "c"])
+
+        el = self.get_delta_from_queue().new_element
+        assert el.button_group.options[0].content == "a"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
 
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""
@@ -766,6 +876,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 st._main, ["a", "b", "c"], style="foo"
             )
         assert (
-            "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
-            "The argument passed was 'foo'." == str(exception.value)
+            str(exception.value) == "The style argument must be one of "
+            "['borderless', 'pills', 'segmented_control']. "
+            "The argument passed was 'foo'."
         )

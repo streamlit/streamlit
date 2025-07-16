@@ -16,6 +16,8 @@
 
 import React, { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
+import { getLogger } from "loglevel"
+
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -23,6 +25,7 @@ import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManag
 
 import { StyledAudio, StyledAudioContainer } from "./styled-components"
 
+const LOG = getLogger("Audio")
 export interface AudioProps {
   endpoints: StreamlitEndpoints
   element: AudioProto
@@ -46,17 +49,17 @@ function Audio({
 
     // Recover the state in case this component got unmounted
     // and mounted again for the same element.
-    const preventAutoplay = elementMgr.getElementState(
+    const preventAutoplayState = elementMgr.getElementState(
       element.id,
       "preventAutoplay"
     )
 
-    if (!preventAutoplay) {
+    if (!preventAutoplayState) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
     }
-    return preventAutoplay ?? false
+    return preventAutoplayState ?? false
   }, [element.id, elementMgr])
 
   // Handle startTime changes
@@ -102,6 +105,7 @@ function Audio({
         if (loop) {
           // If loop is true and we reached 'endTime', reset to 'startTime'
           audioNode.currentTime = startTime || 0
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
           audioNode.play()
         } else if (!stoppedByEndTime) {
           stoppedByEndTime = true
@@ -132,6 +136,7 @@ function Audio({
     const handleAudioEnd = (): void => {
       if (loop) {
         audioNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         audioNode.play()
       }
     }
@@ -147,6 +152,19 @@ function Audio({
 
   const uri = endpoints.buildMediaURL(element.url)
 
+  const handleAudioError = (
+    e: React.SyntheticEvent<HTMLAudioElement>
+  ): void => {
+    const audioUrl = e.currentTarget.src
+    LOG.error(`Client Error: Audio source error - ${audioUrl}`)
+    endpoints.sendClientErrorToHost(
+      "Audio",
+      "Audio source failed to load",
+      "onerror triggered",
+      audioUrl
+    )
+  }
+
   return (
     <StyledAudioContainer>
       <StyledAudio
@@ -156,6 +174,7 @@ function Audio({
         controls
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
+        onError={handleAudioError}
       />
     </StyledAudioContainer>
   )

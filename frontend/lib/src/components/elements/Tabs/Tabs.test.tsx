@@ -76,7 +76,7 @@ describe("st.tabs", () => {
     })
   })
 
-  it("can be disabled", () => {
+  it("doesn't disable tabs when widgets are disabled", () => {
     render(<Tabs {...getProps({ widgetsDisabled: true })} />)
     const tabs = screen.getAllByRole("tab")
 
@@ -85,7 +85,7 @@ describe("st.tabs", () => {
       if (index == 0) {
         return
       }
-      expect(tabs[index]).toBeDisabled()
+      expect(tabs[index]).not.toBeDisabled()
     })
   })
 })

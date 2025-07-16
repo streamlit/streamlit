@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { Mock } from "vitest"
-
 import { ForwardMsg } from "@streamlit/protobuf"
 
 import { ForwardMsgCache } from "./ForwardMessageCache"
@@ -23,28 +21,16 @@ import { ForwardMsgCache } from "./ForwardMessageCache"
 interface MockCache {
   cache: ForwardMsgCache
   getCachedMessage: (hash: string) => ForwardMsg | undefined
-  mockFetchCachedForwardMsg: Mock
 }
 
 function createCache(): MockCache {
-  const mockFetchCachedForwardMsg = vi.fn()
-
-  const cache = new ForwardMsgCache({
-    setStaticConfigUrl: vi.fn(),
-    buildComponentURL: vi.fn(),
-    buildMediaURL: vi.fn(),
-    buildFileUploadURL: vi.fn(),
-    buildAppPageURL: vi.fn(),
-    uploadFileUploaderFile: vi.fn(),
-    deleteFileAtURL: vi.fn(),
-    fetchCachedForwardMsg: mockFetchCachedForwardMsg,
-  })
+  const cache = new ForwardMsgCache()
 
   const getCachedMessage = (hash: string): ForwardMsg | undefined =>
     // @ts-expect-error (accessing internals for testing)
     cache.getCachedMessage(hash, false)
 
-  return { cache, getCachedMessage, mockFetchCachedForwardMsg }
+  return { cache, getCachedMessage }
 }
 
 /**
@@ -53,6 +39,21 @@ function createCache(): MockCache {
 function createForwardMsg(hash: string, cacheable = true): ForwardMsg {
   return ForwardMsg.fromObject({
     hash,
+    metadata: { cacheable, deltaId: 0 },
+  })
+}
+
+/**
+ * Create a mock ForwardMsg with the given hash and fragment ID
+ */
+function createForwardMsgWithFragment(
+  hash: string,
+  fragmentId: string,
+  cacheable = true
+): ForwardMsg {
+  return ForwardMsg.fromObject({
+    hash,
+    delta: { fragmentId },
     metadata: { cacheable, deltaId: 0 },
   })
 }
@@ -129,38 +130,17 @@ test("caches messages as a deep copy", async () => {
   expect(getCachedMessage("Cacheable")).not.toEqual(msg)
 })
 
-test("fetches uncached messages from server", async () => {
-  const msg = createForwardMsg("Cacheable", true)
+test("throws an error message on cache miss", async () => {
+  // Create a reference message to a non-existent cache entry
+  const msg = createForwardMsg("non-existent-hash", true)
   const refMsg = createRefMsg(msg)
   const encodedRefMsg = ForwardMsg.encode(refMsg).finish()
 
-  const { cache, getCachedMessage, mockFetchCachedForwardMsg } = createCache()
-  mockFetchCachedForwardMsg.mockResolvedValue(
-    new Uint8Array(ForwardMsg.encode(msg).finish())
-  )
-
-  // processMessagePayload on a reference message whose
-  // original version does *not* exist in our local cache. We
-  // should hit the server's /message endpoint to fetch it.
-  await expect(
-    cache.processMessagePayload(refMsg, encodedRefMsg)
-  ).resolves.toEqual(msg)
-
-  // The fetched message should now be cached
-  expect(getCachedMessage("Cacheable")).toEqual(msg)
-})
-
-test("errors when uncached message is not on server", async () => {
-  const msg = createForwardMsg("Cacheable", true)
-  const refMsg = createRefMsg(msg)
-  const encodedRefMsg = ForwardMsg.encode(refMsg).finish()
-
-  const { cache, mockFetchCachedForwardMsg } = createCache()
-  mockFetchCachedForwardMsg.mockRejectedValue(new Error("404"))
+  const { cache } = createCache()
 
   await expect(
     cache.processMessagePayload(refMsg, encodedRefMsg)
-  ).rejects.toThrow()
+  ).rejects.toThrow("Cached ForwardMsg MISS [hash=non-existent-hash]")
 })
 
 test("removes expired messages", () => {
@@ -174,10 +154,82 @@ test("removes expired messages", () => {
   expect(getCachedMessage(msg.hash)).toEqual(msg)
 
   // Increment our age. Our message should still exist.
-  cache.incrementRunCount(1)
+  cache.incrementRunCount(1, [])
   expect(getCachedMessage(msg.hash)).toEqual(msg)
 
   // Bump our age over the expiration threshold.
-  cache.incrementRunCount(1)
+  cache.incrementRunCount(1, [])
   expect(getCachedMessage(msg.hash)).toBeUndefined()
+})
+
+test("only expires messages with matching fragment IDs", () => {
+  const { cache, getCachedMessage } = createCache()
+
+  // Create messages with different fragment IDs
+  const msg1 = createForwardMsgWithFragment("msg1", "fragment-1")
+  const msg2 = createForwardMsgWithFragment("msg2", "fragment-2")
+  const msg3 = createForwardMsg("msg3") // Message without fragment ID
+
+  const encodedMsg1 = ForwardMsg.encode(msg1).finish()
+  const encodedMsg2 = ForwardMsg.encode(msg2).finish()
+  const encodedMsg3 = ForwardMsg.encode(msg3).finish()
+
+  // Add messages to the cache
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg1, encodedMsg1)
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg2, encodedMsg2)
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg3, encodedMsg3)
+
+  // Verify all messages are in cache
+  expect(getCachedMessage("msg1")).toEqual(msg1)
+  expect(getCachedMessage("msg2")).toEqual(msg2)
+  expect(getCachedMessage("msg3")).toEqual(msg3)
+
+  // Increment run count with fragment-1 - should only consider msg1 for expiration
+  cache.incrementRunCount(1, ["fragment-1"])
+
+  // Non-matching fragment IDs and messages without fragment ID should still be cached
+  expect(getCachedMessage("msg1")).toEqual(msg1) // Not expired yet (age = 1)
+  expect(getCachedMessage("msg2")).toEqual(msg2) // Not considered for expiration
+  expect(getCachedMessage("msg3")).toEqual(msg3) // Not considered for expiration
+
+  // Another increment with fragment-1 - should expire fragment-1 message
+  cache.incrementRunCount(1, ["fragment-1"])
+
+  // fragment1 (with fragment-1) should now be expired, others should remain
+  expect(getCachedMessage("msg1")).toBeUndefined() // Now expired (age > 1)
+  expect(getCachedMessage("msg2")).toEqual(msg2) // Still not considered
+  expect(getCachedMessage("msg3")).toEqual(msg3) // Still not considered
+
+  // Now run with no fragment IDs -> all should expire since
+  // we only allow an age of 1 after a fragment run (might be optimized at some point)
+  cache.incrementRunCount(1, [])
+
+  // Now all messages should be expired
+  expect(getCachedMessage("msg2")).toBeUndefined()
+  expect(getCachedMessage("msg3")).toBeUndefined()
+})
+
+test("throws error when reference message has no metadata", async () => {
+  const { cache } = createCache()
+  const msg1 = createForwardMsg("msg1")
+  const encodedMsg1 = ForwardMsg.encode(msg1).finish()
+
+  // Add message to the cache
+  // @ts-expect-error accessing into internals for testing
+  cache.maybeCacheMessage(msg1, encodedMsg1)
+
+  // Create a reference message without metadata
+  const refMsg = ForwardMsg.fromObject({
+    refHash: "msg1",
+    // Deliberately missing metadata
+  })
+  const encodedRefMsg = ForwardMsg.encode(refMsg).finish()
+
+  // Should throw an error
+  await expect(
+    cache.processMessagePayload(refMsg, encodedRefMsg)
+  ).rejects.toThrow("Reference ForwardMsg has no metadata")
 })

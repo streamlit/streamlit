@@ -35,19 +35,20 @@ import {
  * by using checkboxes.
  */
 function CheckboxColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate = {
+  const cellTemplate: BooleanCell = {
     kind: GridCellKind.Boolean,
     data: false,
     allowOverlay: false, // no overlay possible
     contentAlign: props.contentAlignment,
     readonly: !props.isEditable,
     style: "normal",
-  } as BooleanCell
+  }
 
   return {
     ...props,
     kind: "checkbox",
     sortMode: "default",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       let cellData = null
 

@@ -89,14 +89,21 @@ export const EmojiIcon = ({
   children,
   color,
   testid,
-}: EmojiIconProps): ReactElement => (
-  <StyledEmojiIcon
-    data-testid={testid || "stIconEmoji"}
-    aria-hidden="true"
-    {...getDefaultProps({ size, margin, padding, color })}
-  >
-    {children}
-  </StyledEmojiIcon>
-)
+}: EmojiIconProps): ReactElement => {
+  // Handle the case where the emoji is prefixed with emoji:
+  if (typeof children === "string") {
+    children = children.replace(/^emoji:/, "")
+  }
+
+  return (
+    <StyledEmojiIcon
+      data-testid={testid || "stIconEmoji"}
+      aria-hidden="true"
+      {...getDefaultProps({ size, margin, padding, color })}
+    >
+      {children}
+    </StyledEmojiIcon>
+  )
+}
 
 export default Icon

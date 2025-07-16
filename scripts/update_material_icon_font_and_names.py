@@ -15,14 +15,18 @@
 # limitations under the License.
 
 """Update the list of material icon names in `lib/streamlit/material_icon_names.py.
-and download the latest material symbols font file to
+
+And download the latest material symbols font file to
 ./frontend/app/src/assets/fonts/MaterialSymbols/MaterialSymbols-Rounded.woff2
 """
+
+from __future__ import annotations
 
 import os
 import re
 import sys
 import urllib.request
+
 import requests
 
 from streamlit.material_icon_names import ALL_MATERIAL_ICONS
@@ -89,7 +93,7 @@ generated_code = f"""### MATERIAL ICON NAMES START ###
 ALL_MATERIAL_ICONS = {{{", ".join([f'"{icon_name}"' for icon_name in sorted(icon_names)])}}}
 ### MATERIAL ICON NAMES END ###"""
 
-with open(NAMES_MODULE_PATH, "r") as file:
+with open(NAMES_MODULE_PATH) as file:
     script_content = file.read()
 
 updated_script_content = re.sub(NAMES_SET_REGEX, generated_code, script_content)
@@ -102,7 +106,8 @@ with open(NAMES_MODULE_PATH, "w") as file:
 response = requests.get(
     MATERIAL_ICONS_FONT_URL,
     headers={
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_1) AppleWebKit/605.1.15 "
+        "(KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
     },
 )
 
@@ -130,7 +135,7 @@ else:
     sys.exit(1)
 
 
-icon_from_latest_font = list(new_icon_names)[0]
+icon_from_latest_font = next(iter(new_icon_names))
 
 generated_code = f"""### LATEST MATERIAL ICON TEST START ###
 st.success(
@@ -139,7 +144,7 @@ st.success(
 )
 ### LATEST MATERIAL ICON TEST END ###"""
 
-with open(PLAYWRIGHT_TEST_MODULE_PATH, "r") as file:
+with open(PLAYWRIGHT_TEST_MODULE_PATH) as file:
     script_content = file.read()
 
 updated_script_content = re.sub(PLAYWRIGHT_TEST_REGEX, generated_code, script_content)

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo } from "react"
 
-import Dropzone, { Accept, FileRejection } from "react-dropzone"
+import Dropzone, { FileRejection } from "react-dropzone"
 
 import BaseButton, {
   BaseButtonKind,
@@ -25,6 +25,7 @@ import BaseButton, {
 
 import { StyledFileDropzoneSection } from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
+import { getAccept } from "./utils"
 
 export interface Props {
   disabled: boolean
@@ -33,18 +34,6 @@ export interface Props {
   acceptedExtensions: string[]
   maxSizeBytes: number
   label: string
-}
-
-// Before we support official MIME types, using the custom "application/streamlit" as a wild card
-// to allow file types defined in acceptedExtensions.
-export const STREAMLIT_MIME_TYPE = "application/streamlit"
-
-// Remove mimetype when this component moves to functional
-export function getAccept(acceptedExtensions: string[]): Accept | undefined {
-  const accept: Accept = {}
-  accept[STREAMLIT_MIME_TYPE] = acceptedExtensions
-
-  return acceptedExtensions.length ? accept : undefined
 }
 
 const FileDropzone = ({
@@ -93,4 +82,4 @@ const FileDropzone = ({
   </Dropzone>
 )
 
-export default FileDropzone
+export default memo(FileDropzone)

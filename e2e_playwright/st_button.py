@@ -18,7 +18,7 @@ from streamlit import runtime
 # st.session_state can only be used in streamlit
 if runtime.exists():
 
-    def on_click(x, y):
+    def on_click(x: int, y: int) -> None:
         if "click_count" not in st.session_state:
             st.session_state.click_count = 0
 
@@ -61,6 +61,11 @@ st.button(
     ":material/search: _button 7_ (**styled** :green[label]) :material/arrow_forward:"
 )
 
+st.button(
+    "button 8 (just help)",
+    help="help text",
+)
+
 st.button("Like Button", icon=":material/thumb_up:")
 st.button("Star Button", icon="⭐")
 
@@ -89,3 +94,7 @@ conn_types = [
 ]
 for i in range(len(conn_types)):
     cols[i % 3].button(conn_types[i], use_container_width=True)
+
+st.button("Foo :blue[bar] baz", type="primary")
+st.button("Foo :blue[bar] baz")
+st.button("Foo :blue[bar] baz", type="tertiary")

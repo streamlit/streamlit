@@ -45,6 +45,9 @@ message UInt32Array {
   repeated uint32 data = 1;
 }
 
+
+// DEPRECATED: This proto message is deprecated and unused. The ChatInputValue
+// proto message should be used instead.
 message StringTriggerValue {
   optional string data = 1;
 }

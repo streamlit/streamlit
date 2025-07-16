@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Final
 
 from streamlit.errors import StreamlitAPIException
 
@@ -68,17 +68,18 @@ def validate_emoji(maybe_emoji: str | None) -> str:
     if maybe_emoji is None:
         return ""
 
-    elif is_emoji(maybe_emoji):
+    if is_emoji(maybe_emoji):
         return maybe_emoji
-    else:
-        raise StreamlitAPIException(
-            f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
-        )
+    raise StreamlitAPIException(
+        f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, '
+        "please use a single character instead."
+    )
 
 
 def validate_material_icon(maybe_material_icon: str | None) -> str:
     """Validate a Material icon shortcode and return the icon in
-    normalized format if valid."""
+    normalized format if valid.
+    """
 
     supported_icon_packs = [
         "material",
@@ -96,8 +97,9 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
 
     if not icon_match:
         raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon. '
-            f"Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**"
+            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is '
+            "not a valid Material icon. Please use a Material icon shortcode like "
+            f"**`:material{invisible_white_space}/thumb_up:`**"
         )
 
     pack_name, icon_name = icon_match.groups()
@@ -108,8 +110,9 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         or not is_material_icon(icon_name)
     ):
         raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**. "
+            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a '
+            "valid Material icon. Please use a Material icon shortcode like "
+            f"**`:material{invisible_white_space}/thumb_up:`**."
         )
 
     return f":{pack_name}/{icon_name}:"
@@ -132,10 +135,6 @@ def extract_leading_emoji(text: str) -> tuple[str, str]:
     if re_match is None:
         return "", text
 
-    # This cast to Any+type annotation weirdness is done because
-    # cast(re.Match[str], ...) explodes at runtime since Python interprets it
-    # as an attempt to index into re.Match instead of as a type annotation.
-    re_match: re.Match[str] = cast(Any, re_match)
     return re_match.group(1), re_match.group(2)
 
 
@@ -165,7 +164,7 @@ def is_binary_string(inp: bytes) -> bool:
 
 
 def simplify_number(num: int) -> str:
-    """Simplifies number into Human readable format, returns str"""
+    """Simplifies number into Human readable format, returns str."""
     num_converted = float(f"{num:.2g}")
     magnitude = 0
     while abs(num_converted) >= 1000:
@@ -182,12 +181,9 @@ _OBJ_MEM_ADDRESS: Final = re.compile(
 )
 
 
-def is_mem_address_str(string):
+def is_mem_address_str(string: str) -> bool:
     """Returns True if the string looks like <foo blarg at 0x15ee6f9a0>."""
-    if _OBJ_MEM_ADDRESS.match(string):
-        return True
-
-    return False
+    return bool(_OBJ_MEM_ADDRESS.match(string))
 
 
 def to_snake_case(camel_case_str: str) -> str:

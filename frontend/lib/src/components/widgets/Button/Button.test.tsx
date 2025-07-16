@@ -124,6 +124,24 @@ describe("Button widget", () => {
     expect(buttonWidget).toHaveStyle("width: auto")
   })
 
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    // Hover to see tooltip content
+    render(<Button {...getProps({ help: "mockHelpText" })} />)
+
+    // Ensure both the button and the tooltip target have the correct width
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle("width: auto")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: auto")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
   it("passes useContainerWidth property without help correctly", () => {
     render(<Button {...getProps({ useContainerWidth: true })}>Hello</Button>)
 

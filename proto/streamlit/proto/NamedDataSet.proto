@@ -21,7 +21,7 @@ option java_outer_classname = "NamedDataSetProto";
 
 import "streamlit/proto/DataFrame.proto";
 
-// DEPRECATED: This proto message is deprecated and unsused.
+// DEPRECATED: This proto message is deprecated and unused.
 // A dataset that can be referenced by name.
 message NamedDataSet {
   // The dataset name.

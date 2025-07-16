@@ -64,41 +64,39 @@ def _new_fragment_id_queue(
     if scope == "app":
         return []
 
-    else:  # scope == "fragment"
-        curr_queue = ctx.fragment_ids_this_run
+    # > scope == "fragment"
+    curr_queue = ctx.fragment_ids_this_run
 
-        # If st.rerun(scope="fragment") is called during a full script run, we raise an
-        # exception. This occurs, of course, if st.rerun(scope="fragment") is called
-        # outside of a fragment, but it somewhat surprisingly occurs if it gets called
-        # from within a fragment during a run of the full script. While this behvior may
-        # be surprising, it seems somewhat reasonable given that the correct behavior of
-        # calling st.rerun(scope="fragment") in this situation is unclear to me:
-        #   * Rerunning just the fragment immediately may cause weirdness down the line
-        #     as any part of the script that occurs after the fragment will not be
-        #     executed.
-        #   * Waiting until the full script run completes before rerunning the fragment
-        #     seems odd (even if we normally do this before running a fragment not
-        #     triggered by st.rerun()) because it defers the execution of st.rerun().
-        #   * Rerunning the full app feels incorrect as we're seemingly ignoring the
-        #     `scope` argument.
-        # With these issues and given that it seems pretty unnatural to have a
-        # fragment-scoped rerun happen during a full script run to begin with, it seems
-        # reasonable to just disallow this completely for now.
-        if not curr_queue:
-            raise StreamlitAPIException(
-                'scope="fragment" can only be specified from `@st.fragment`-decorated '
-                "functions during fragment reruns."
-            )
+    # If st.rerun(scope="fragment") is called during a full script run, we raise an
+    # exception. This occurs, of course, if st.rerun(scope="fragment") is called
+    # outside of a fragment, but it somewhat surprisingly occurs if it gets called
+    # from within a fragment during a run of the full script. While this behavior may
+    # be surprising, it seems somewhat reasonable given that the correct behavior of
+    # calling st.rerun(scope="fragment") in this situation is unclear to me:
+    #   * Rerunning just the fragment immediately may cause weirdness down the line
+    #     as any part of the script that occurs after the fragment will not be
+    #     executed.
+    #   * Waiting until the full script run completes before rerunning the fragment
+    #     seems odd (even if we normally do this before running a fragment not
+    #     triggered by st.rerun()) because it defers the execution of st.rerun().
+    #   * Rerunning the full app feels incorrect as we're seemingly ignoring the
+    #     `scope` argument.
+    # With these issues and given that it seems pretty unnatural to have a
+    # fragment-scoped rerun happen during a full script run to begin with, it seems
+    # reasonable to just disallow this completely for now.
+    if not curr_queue:
+        raise StreamlitAPIException(
+            'scope="fragment" can only be specified from `@st.fragment`-decorated '
+            "functions during fragment reruns."
+        )
 
-        assert (
-            new_queue := list(
-                dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue)
-            )
-        ), (
+    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
+    if not new_queue:
+        raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
         )
 
-        return new_queue
+    return new_queue
 
 
 @gather_metrics("rerun")
@@ -140,6 +138,7 @@ def rerun(  # type: ignore[misc]
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
+        cached_message_hashes = ctx.cached_message_hashes
 
         ctx.script_requests.request_rerun(
             RerunData(
@@ -147,6 +146,8 @@ def rerun(  # type: ignore[misc]
                 page_script_hash=page_script_hash,
                 fragment_id_queue=_new_fragment_id_queue(ctx, scope),
                 is_fragment_scoped_rerun=scope == "fragment",
+                cached_message_hashes=cached_message_hashes,
+                context_info=ctx.context_info,
             )
         )
         # Force a yield point so the runner can do the rerun
@@ -219,7 +220,9 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
 
         if len(matched_pages) == 0:
             raise StreamlitAPIException(
-                f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
+                f"Could not find page: `{page}`. Must be the file path relative to the main script, "
+                f"from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file "
+                "and files in the `pages/` directory are supported."
             )
 
         page_script_hash = matched_pages[0]["page_script_hash"]
@@ -232,6 +235,8 @@ def switch_page(page: str | Path | StreamlitPage) -> NoReturn:  # type: ignore[m
         RerunData(
             query_string=ctx.query_string,
             page_script_hash=page_script_hash,
+            cached_message_hashes=ctx.cached_message_hashes,
+            context_info=ctx.context_info,
         )
     )
     # Force a yield point so the runner can do the rerun

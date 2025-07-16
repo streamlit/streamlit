@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
+
+from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -48,3 +51,22 @@ def normalize_upload_file_type(file_type: str | Sequence[str]) -> Sequence[str]:
             file_type.append(x)
 
     return file_type
+
+
+def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) -> None:
+    """Ensure the uploaded file's extension matches the allowed
+    types set by the app developer. In theory, this should never happen, since we
+    enforce file type check by extension on the frontend, but we check it on backend
+    before returning file to the user to protect ourselves.
+    """
+    normalized_filename = filename.lower()
+    base_name, extension = os.path.splitext(normalized_filename)
+    normalized_allowed_types = [allowed_type.lower() for allowed_type in allowed_types]
+
+    if not any(
+        normalized_filename.endswith(allowed_type)
+        for allowed_type in normalized_allowed_types
+    ):
+        raise StreamlitAPIException(
+            f"Invalid file extension: `{extension}`. Allowed: {allowed_types}"
+        )

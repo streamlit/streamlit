@@ -119,8 +119,7 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     fqn_type = get_fqn_type(obj)
     if isinstance(fqn_type_pattern, str):
         return fqn_type_pattern == fqn_type
-    else:
-        return fqn_type_pattern.match(fqn_type) is not None
+    return fqn_type_pattern.match(fqn_type) is not None
 
 
 def _is_type_instance(obj: object, type_to_check: str) -> bool:
@@ -161,7 +160,7 @@ def to_bytes(obj: BytesLike) -> bytes:
     """
     if isinstance(obj, bytearray):
         return bytes(obj)
-    elif isinstance(obj, bytes):
+    if isinstance(obj, bytes):
         return obj
 
     raise RuntimeError(f"{obj} is not convertible to bytes")
@@ -232,10 +231,10 @@ def is_graphviz_chart(
 ) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
     """True if input looks like a GraphViz chart."""
     return (
-        # GraphViz < 0.18
+        # In GraphViz < 0.18
         is_type(obj, "graphviz.dot.Graph")
         or is_type(obj, "graphviz.dot.Digraph")
-        # GraphViz >= 0.18
+        # In GraphViz >= 0.18
         or is_type(obj, "graphviz.graphs.Graph")
         or is_type(obj, "graphviz.graphs.Digraph")
         or is_type(obj, "graphviz.sources.Source")
@@ -263,16 +262,13 @@ def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
+    if any(k not in ["config", "data", "frames", "layout"] for k in obj):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
         return True
 
-    if any(_is_list_of_plotly_objs(v) for v in obj.values()):
-        return True
-
-    return False
+    return bool(any(_is_list_of_plotly_objs(v) for v in obj.values()))
 
 
 def is_delta_generator(obj: object) -> TypeGuard[DeltaGenerator]:
@@ -317,7 +313,7 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
-def is_pydantic_model(obj) -> bool:
+def is_pydantic_model(obj: object) -> bool:
     """True if input looks like a Pydantic model instance."""
 
     if isinstance(obj, type):
@@ -330,13 +326,12 @@ def is_pydantic_model(obj) -> bool:
 
 
 def _is_from_streamlit(obj: object) -> bool:
-    """True if the object is from the the streamlit package."""
+    """True if the object is from the streamlit package."""
     return obj.__class__.__module__.startswith("streamlit")
 
 
 def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:
     """True if input looks like one of the Streamlit custom dictionaries."""
-
     return (
         isinstance(obj, Mapping)
         and _is_from_streamlit(obj)
@@ -386,7 +381,8 @@ def is_list_like(obj: object) -> TypeGuard[Sequence[Any]]:
 def check_python_comparable(seq: Sequence[Any]) -> None:
     """Check if the sequence elements support "python comparison".
     That means that the equality operator (==) returns a boolean value.
-    Which is not True for e.g. numpy arrays and pandas series."""
+    Which is not True for e.g. numpy arrays and pandas series.
+    """
     try:
         bool(seq[0] == seq[0])
     except LookupError:

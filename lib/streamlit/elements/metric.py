@@ -20,6 +20,13 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
     LabelVisibility,
@@ -58,6 +65,8 @@ class MetricMixin:
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
+        width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -114,7 +123,7 @@ class MetricMixin:
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
-            label, which can help keep the widget alligned with other widgets.
+            label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         border : bool
@@ -122,9 +131,33 @@ class MetricMixin:
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown.
 
+        height : "content", "stretch", or int
+            The height of the metric element. This can be one of the following:
+
+            - ``"content"`` (default): The height of the element matches the
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+        width : "stretch", "content", or int
+            The width of the metric element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
         Examples
         --------
-
         **Example 1: Show a metric**
 
         >>> import streamlit as st
@@ -197,7 +230,7 @@ class MetricMixin:
             metric_proto.help = dedent(help)
 
         color_and_direction = _determine_delta_color_and_direction(
-            cast(DeltaColor, clean_text(delta_color)), delta
+            cast("DeltaColor", clean_text(delta_color)), delta
         )
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
@@ -205,7 +238,11 @@ class MetricMixin:
             label_visibility
         )
 
-        return self.dg._enqueue("metric", metric_proto)
+        validate_height(height, allow_content=True)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width, height=height)
+
+        return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -215,7 +252,7 @@ class MetricMixin:
 def _parse_label(label: str) -> str:
     if not isinstance(label, str):
         raise TypeError(
-            f"'{str(label)}' is of type {str(type(label))}, which is not an accepted type."
+            f"'{label}' is of type {type(label)}, which is not an accepted type."
             " label only accepts: str. Please convert the label to an accepted type."
         )
     return label
@@ -224,20 +261,20 @@ def _parse_label(label: str) -> str:
 def _parse_value(value: Value) -> str:
     if value is None:
         return "—"
-    if isinstance(value, int) or isinstance(value, float) or isinstance(value, str):
+    if isinstance(value, (int, float, str)):
         return str(value)
-    elif hasattr(value, "item"):
+    if hasattr(value, "item"):
         # Add support for numpy values (e.g. int16, float64, etc.)
         try:
             # Item could also be just a variable, so we use try, except
-            if isinstance(value.item(), float) or isinstance(value.item(), int):
+            if isinstance(value.item(), (float, int)):
                 return str(value.item())
-        except Exception:
+        except Exception:  # noqa: S110
             # If the numpy item is not a valid value, the TypeError below will be raised.
             pass
 
     raise TypeError(
-        f"'{str(value)}' is of type {str(type(value))}, which is not an accepted type."
+        f"'{value}' is of type {type(value)}, which is not an accepted type."
         " value only accepts: int, float, str, or None."
         " Please convert the value to an accepted type."
     )
@@ -248,14 +285,13 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    elif isinstance(delta, int) or isinstance(delta, float):
+    if isinstance(delta, (int, float)):
         return str(delta)
-    else:
-        raise TypeError(
-            f"'{str(delta)}' is of type {str(type(delta))}, which is not an accepted type."
-            " delta only accepts: int, float, str, or None."
-            " Please convert the value to an accepted type."
-        )
+    raise TypeError(
+        f"'{delta}' is of type {type(delta)}, which is not an accepted type."
+        " delta only accepts: int, float, str, or None."
+        " Please convert the value to an accepted type."
+    )
 
 
 def _determine_delta_color_and_direction(
@@ -264,7 +300,7 @@ def _determine_delta_color_and_direction(
 ) -> MetricColorAndDirection:
     if delta_color not in {"normal", "inverse", "off"}:
         raise StreamlitAPIException(
-            f"'{str(delta_color)}' is not an accepted value. delta_color only accepts: "
+            f"'{delta_color}' is not an accepted value. delta_color only accepts: "
             "'normal', 'inverse', or 'off'"
         )
 

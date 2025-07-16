@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import { defineConfig } from "vite"
 import { version } from "./package.json"
-import react from "@vitejs/plugin-react-swc"
-import viteTsconfigPaths from "vite-tsconfig-paths"
 
+import react from "@vitejs/plugin-react-swc"
 import path from "path"
+import viteTsconfigPaths from "vite-tsconfig-paths"
 
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
@@ -27,6 +26,10 @@ const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
 // This is a convenience for developers for debugging purposes
 const DEV_BUILD = Boolean(process.env.DEV_BUILD)
 const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
+// The URL of the backend server to proxy to:
+// Can be changed to run against a remote server or different port:
+const DEV_SERVER_BACKEND_URL =
+  process.env.DEV_SERVER_BACKEND_URL || `http://localhost:8501`
 
 /**
  * If this is a profiler build, we need to alias react-dom and scheduler to
@@ -64,14 +67,6 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      {
-        find: "~lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
-      {
-        find: "@streamlit/lib",
-        replacement: path.resolve(__dirname, "../lib/src"),
-      },
       // Alias react-syntax-highlighter to the cjs version to avoid
       // issues with the esm version causing a bug in rendering
       // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565
@@ -85,11 +80,34 @@ export default defineConfig({
   server: {
     open: true,
     port: 3000,
+    host: true,
+    proxy: {
+      // These endpoints need to be kept in sync with the endpoints in
+      // lib/streamlit/web/server/server.py
+      "^.*/_stcore/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+        ws: true,
+      },
+      "^.*/media/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/component/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+      "^.*/app/static/.*": {
+        target: DEV_SERVER_BACKEND_URL,
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: "build",
     assetsDir: "static",
     sourcemap: DEV_BUILD,
+    manifest: true,
     rollupOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js
@@ -133,11 +151,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    coverage: {
-      reporter: ["text", "json", "html"],
-      include: ["src/**/*"],
-      exclude: [],
     },
     server: {
       // Want a Non-Dev port for testing

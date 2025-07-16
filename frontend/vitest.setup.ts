@@ -29,18 +29,6 @@ if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = vi.fn()
 }
 
-// TODO: Hides console error for running FE tests
-// react-18-upgrade
-const originalConsoleError = console.error
-console.error = (...args) => {
-  if (/ReactDOM.render is no longer supported in React 18/.test(args[0])) {
-    // If the warning message matches, don't call the original console.warn
-    return
-  }
-  // For all other warnings, call the original console.warn
-  originalConsoleError(...args)
-}
-
 const originalConsoleWarn = console.warn
 console.warn = (...args) => {
   if (/`LayersManager` was not found./.test(args[0])) {
@@ -61,3 +49,5 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }))
+
+process.env.TZ = "UTC"

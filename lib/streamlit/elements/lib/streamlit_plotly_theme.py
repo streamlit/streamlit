@@ -15,6 +15,60 @@
 from __future__ import annotations
 
 import contextlib
+from typing import Final
+
+# This is the streamlit theme for plotly where we pass in a template.data
+# and a template.layout.
+# Template.data is for changing specific graph properties in a general aspect
+# such as Contour plots or Waterfall plots.
+# Template.layout is for changing things such as the x axis and fonts and other
+# general layout properties for general graphs.
+# We pass in temporary colors to the frontend and the frontend will replace
+# those colors because we want to change colors based on the background color.
+# Start at #0000001 because developers may be likely to use #000000
+CATEGORY_0: Final = "#000001"
+CATEGORY_1: Final = "#000002"
+CATEGORY_2: Final = "#000003"
+CATEGORY_3: Final = "#000004"
+CATEGORY_4: Final = "#000005"
+CATEGORY_5: Final = "#000006"
+CATEGORY_6: Final = "#000007"
+CATEGORY_7: Final = "#000008"
+CATEGORY_8: Final = "#000009"
+CATEGORY_9: Final = "#000010"
+
+SEQUENTIAL_0: Final = "#000011"
+SEQUENTIAL_1: Final = "#000012"
+SEQUENTIAL_2: Final = "#000013"
+SEQUENTIAL_3: Final = "#000014"
+SEQUENTIAL_4: Final = "#000015"
+SEQUENTIAL_5: Final = "#000016"
+SEQUENTIAL_6: Final = "#000017"
+SEQUENTIAL_7: Final = "#000018"
+SEQUENTIAL_8: Final = "#000019"
+SEQUENTIAL_9: Final = "#000020"
+
+DIVERGING_0: Final = "#000021"
+DIVERGING_1: Final = "#000022"
+DIVERGING_2: Final = "#000023"
+DIVERGING_3: Final = "#000024"
+DIVERGING_4: Final = "#000025"
+DIVERGING_5: Final = "#000026"
+DIVERGING_6: Final = "#000027"
+DIVERGING_7: Final = "#000028"
+DIVERGING_8: Final = "#000029"
+DIVERGING_9: Final = "#000030"
+DIVERGING_10: Final = "#000031"
+
+INCREASING: Final = "#000032"
+DECREASING: Final = "#000033"
+TOTAL: Final = "#000034"
+
+GRAY_70: Final = "#000036"
+GRAY_90: Final = "#000037"
+BG_COLOR: Final = "#000038"
+FADED_TEXT_05: Final = "#000039"
+BG_MIX: Final = "#000040"
 
 
 def configure_streamlit_plotly_theme() -> None:
@@ -26,59 +80,6 @@ def configure_streamlit_plotly_theme() -> None:
     with contextlib.suppress(ImportError):
         import plotly.graph_objects as go
         import plotly.io as pio
-
-        # This is the streamlit theme for plotly where we pass in a template.data
-        # and a template.layout.
-        # Template.data is for changing specific graph properties in a general aspect
-        # such as Contour plots or Waterfall plots.
-        # Template.layout is for changing things such as the x axis and fonts and other
-        # general layout properties for general graphs.
-        # We pass in temporary colors to the frontend and the frontend will replace
-        # those colors because we want to change colors based on the background color.
-        # Start at #0000001 because developers may be likely to use #000000
-        CATEGORY_0 = "#000001"
-        CATEGORY_1 = "#000002"
-        CATEGORY_2 = "#000003"
-        CATEGORY_3 = "#000004"
-        CATEGORY_4 = "#000005"
-        CATEGORY_5 = "#000006"
-        CATEGORY_6 = "#000007"
-        CATEGORY_7 = "#000008"
-        CATEGORY_8 = "#000009"
-        CATEGORY_9 = "#000010"
-
-        SEQUENTIAL_0 = "#000011"
-        SEQUENTIAL_1 = "#000012"
-        SEQUENTIAL_2 = "#000013"
-        SEQUENTIAL_3 = "#000014"
-        SEQUENTIAL_4 = "#000015"
-        SEQUENTIAL_5 = "#000016"
-        SEQUENTIAL_6 = "#000017"
-        SEQUENTIAL_7 = "#000018"
-        SEQUENTIAL_8 = "#000019"
-        SEQUENTIAL_9 = "#000020"
-
-        DIVERGING_0 = "#000021"
-        DIVERGING_1 = "#000022"
-        DIVERGING_2 = "#000023"
-        DIVERGING_3 = "#000024"
-        DIVERGING_4 = "#000025"
-        DIVERGING_5 = "#000026"
-        DIVERGING_6 = "#000027"
-        DIVERGING_7 = "#000028"
-        DIVERGING_8 = "#000029"
-        DIVERGING_9 = "#000030"
-        DIVERGING_10 = "#000031"
-
-        INCREASING = "#000032"
-        DECREASING = "#000033"
-        TOTAL = "#000034"
-
-        GRAY_70 = "#000036"
-        GRAY_90 = "#000037"
-        BG_COLOR = "#000038"
-        FADED_TEXT_05 = "#000039"
-        BG_MIX = "#000040"
 
         # Plotly represents continuous colorscale through an array of pairs.
         # The pair's first index is the starting point and the next pair's first index is the end point.

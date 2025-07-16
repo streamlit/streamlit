@@ -79,6 +79,7 @@ export interface WrappedNamedDataset {
 
 export function getInlineData(
   quiverData: Quiver | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): { [field: string]: any }[] | null {
   if (!quiverData || quiverData.dimensions.numDataRows === 0) {
     return null
@@ -89,12 +90,14 @@ export function getInlineData(
 
 export function getDataArrays(
   datasets: WrappedNamedDataset[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): { [dataset: string]: any[] } | null {
   const datasetMapping = getDataSets(datasets)
   if (isNullOrUndefined(datasetMapping)) {
     return null
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const datasetArrays: { [dataset: string]: any[] } = {}
 
   for (const [name, dataset] of Object.entries(datasetMapping)) {
@@ -135,6 +138,7 @@ export function getDataSets(
 export function getDataArray(
   quiverData: Quiver,
   startIndex = 0
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 ): { [field: string]: any }[] {
   if (quiverData.dimensions.numDataRows === 0) {
     return []
@@ -155,6 +159,7 @@ export function getDataArray(
       isDateType(firstIndexColumnType))
 
   for (let rowIndex = startIndex; rowIndex < numDataRows; rowIndex++) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {

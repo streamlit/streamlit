@@ -127,7 +127,7 @@ def unflatten(
     for k, v in list(out_dict.items()):
         # Unflatten child dicts:
         if isinstance(v, dict):
-            v = unflatten(v, encodings)
+            v = unflatten(v, encodings)  # noqa: PLW2901
         elif hasattr(v, "__iter__"):
             for i, child in enumerate(v):
                 if isinstance(child, dict):
@@ -147,8 +147,6 @@ def remove_none_values(input_dict: Mapping[Any, Any]) -> dict[Any, Any]:
     """Remove all keys with None values from a dict."""
     new_dict = {}
     for key, val in input_dict.items():
-        if isinstance(val, dict):
-            val = remove_none_values(val)
         if val is not None:
-            new_dict[key] = val
+            new_dict[key] = remove_none_values(val) if isinstance(val, dict) else val
     return new_dict

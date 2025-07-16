@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
 
 import {
   AUTO_THEME_NAME,

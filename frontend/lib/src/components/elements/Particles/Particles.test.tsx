@@ -28,10 +28,10 @@ const DummyParticle: FC<React.PropsWithChildren<ParticleProps>> = () => (
 
 const getProps = (): Props => ({
   className: "particles",
+  scriptRunId: "51522269",
   numParticles: 10,
   numParticleTypes: 5,
   ParticleComponent: DummyParticle,
-  scriptRunId: "51522269",
 })
 
 describe("Particles element", () => {
@@ -50,7 +50,6 @@ describe("Particles element", () => {
     expect(particleElement).toBeInTheDocument()
     expect(particleElement).toHaveClass("particles")
 
-    // eslint-disable-next-line testing-library/no-node-access
     const particleComponents = particleElement.children
     expect(particleComponents.length).toBe(10)
   })

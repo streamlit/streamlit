@@ -30,7 +30,7 @@ export interface StyledChatInputProps {
 export const StyledChatInput = styled.div<StyledChatInputProps>(
   ({ theme, extended }) => ({
     border: `${theme.sizes.borderWidth} solid`,
-    borderColor: theme.colors.transparent,
+    borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
     borderRadius: theme.radii.chatInput,
     backgroundColor: theme.colors.secondaryBg,
     position: "relative",

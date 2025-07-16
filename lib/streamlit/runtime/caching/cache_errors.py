@@ -14,14 +14,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any, Callable, Generic, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
-
-if TYPE_CHECKING:
-    from types import FunctionType
 
 CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/caching"
 
@@ -30,7 +27,7 @@ def get_cached_func_name_md(func: Any) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return f"`{func.__name__}()`"
-    elif hasattr(type(func), "__name__"):
+    if hasattr(type(func), "__name__"):
         return f"`{type(func).__name__}`"
     return f"`{type(func)}`"
 
@@ -49,11 +46,11 @@ class UnhashableParamError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        func: FunctionType,
+        func: Callable[..., Any],
         arg_name: str | None,
         arg_value: Any,
         orig_exc: BaseException,
-    ):
+    ) -> None:
         msg = self._create_message(cache_type, func, arg_name, arg_value)
         super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
@@ -61,7 +58,7 @@ class UnhashableParamError(StreamlitAPIException):
     @staticmethod
     def _create_message(
         cache_type: CacheType,
-        func: FunctionType,
+        func: Callable[..., Any],
         arg_name: str | None,
         arg_value: Any,
     ) -> str:
@@ -98,8 +95,8 @@ class CacheReplayClosureError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        cached_func: FunctionType,
-    ):
+        cached_func: Callable[..., Any],
+    ) -> None:
         func_name = get_cached_func_name_md(cached_func)
         decorator_name = get_decorator_api_name(cache_type)
 
@@ -107,7 +104,7 @@ class CacheReplayClosureError(StreamlitAPIException):
             f"""
 While running {func_name}, a streamlit element is called on some layout block
 created outside the function. This is incompatible with replaying the cached
-effect of that element, because the the referenced block might not exist when
+effect of that element, because the referenced block might not exist when
 the replay happens.
 
 How to fix this:
@@ -120,8 +117,11 @@ How to fix this:
         super().__init__(msg)
 
 
-class UnserializableReturnValueError(MarkdownFormattedException):
-    def __init__(self, func: FunctionType, return_value: FunctionType):
+R = TypeVar("R")
+
+
+class UnserializableReturnValueError(MarkdownFormattedException, Generic[R]):
+    def __init__(self, func: Callable[..., R], return_value: R) -> None:
         MarkdownFormattedException.__init__(
             self,
             f"""
@@ -137,6 +137,6 @@ class UnserializableReturnValueError(MarkdownFormattedException):
 
 
 class UnevaluatedDataFrameError(StreamlitAPIException):
-    """Used to display a message about uncollected dataframe being used"""
+    """Used to display a message about uncollected dataframe being used."""
 
     pass
