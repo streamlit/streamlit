@@ -115,6 +115,7 @@ function MultiSelectColumn(
       bgBubbleSelected: theme.colors.primary,
       textBubble: theme.colors.white,
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
         return {
@@ -130,7 +131,7 @@ function MultiSelectColumn(
 
       let cellData = toSafeArray(data)
 
-      cellData = cellData.map((x: any) => toSafeString(x).trim())
+      cellData = cellData.map((x: object) => toSafeString(x).trim())
 
       if (validate && cellData.length > 0) {
         // Filter out values that are not in the options list:
