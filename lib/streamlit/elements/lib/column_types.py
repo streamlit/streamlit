@@ -1545,7 +1545,7 @@ def MultiselectColumn(
     required: bool | None = None,
     default: Iterable[str] | None = None,
     options: Iterable[MultiselectOption | str] | None = None,
-):
+) -> ColumnConfig:
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
 
     This is the default column type for list-like values. This command needs to
