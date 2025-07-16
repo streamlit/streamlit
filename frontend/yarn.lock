@@ -3788,7 +3788,7 @@ __metadata:
     vitest: "npm:^3.2.4"
     vitest-canvas-mock: "npm:^0.3.3"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^7.9.9"
+    wavesurfer.js: "npm:^7.10.0"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -21105,10 +21105,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^7.9.9":
-  version: 7.9.9
-  resolution: "wavesurfer.js@npm:7.9.9"
-  checksum: 10c0/ca972bf01e68d001d55cf4b486cb09cf079a608bc397cf97e2da8b9e0ec0e109cd86a354308600bdf7c689f11fffbacaaf56e5ab612fb3eaa58f2c8bcf7b39a9
+"wavesurfer.js@npm:^7.10.0":
+  version: 7.10.0
+  resolution: "wavesurfer.js@npm:7.10.0"
+  checksum: 10c0/6971d4ebd6f109715c1fbc800b8e4d4aaa04934e556110f4a49b54cd13cbbcf05b635da0b662d6760db0b79f9468d5927d72bd437913343438e82862bd57a3cb
   languageName: node
   linkType: hard
 
