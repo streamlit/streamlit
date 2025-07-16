@@ -59,7 +59,7 @@ describe("DataFrame ColumnMenu", () => {
     render(<ColumnMenu {...defaultProps} />)
 
     const columnName = screen.getByText("testColumn")
-    expect(columnName).toBeInTheDocument()
+    expect(columnName).toBeVisible()
   })
 
   test("renders sort options", () => {
