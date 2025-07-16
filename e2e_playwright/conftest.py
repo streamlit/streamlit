@@ -890,6 +890,7 @@ def playwright_profiling(
 def wait_for_app_run(
     page_or_locator: Page | Locator | FrameLocator,
     wait_delay: int = 100,
+    initial_wait: int = 155,
 ) -> None:
     """Wait for the given page to finish running."""
     # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
@@ -903,7 +904,7 @@ def wait_for_app_run(
         page = page_or_locator.owner.page
 
     # if isinstance(page, Page):
-    page.wait_for_timeout(155)
+    page.wait_for_timeout(initial_wait)
 
     if isinstance(page_or_locator, StaticPage):
         # Check that static connection established.

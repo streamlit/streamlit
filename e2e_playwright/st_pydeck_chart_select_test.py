@@ -104,7 +104,10 @@ def _click_point_and_verify_selection(
     """Helper function to click on a point and verify the selection."""
     click_point(click_handling_div, coords)
 
-    wait_for_app_run(app, wait_delay=wait_delay)
+    # Wait for PyDeck selection debounce (200ms) to complete
+    # Otherwise, the rerun might not be triggered when we
+    # wait for the app run.
+    wait_for_app_run(app, wait_delay=wait_delay, initial_wait=210)
 
     if markdown_prefix:
         expect_prefixed_markdown(
@@ -222,7 +225,10 @@ def test_pydeck_chart_single_select_interactions_and_return_values(
     # Click on the scatterplot point with the biggest size
     click_point(click_handling_div, SCATTERPLOT_POINT_COORDS)
 
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    # Wait for PyDeck selection debounce (200ms) to complete
+    # Otherwise, the rerun might not be triggered when we
+    # wait for the app run.
+    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY, initial_wait=210)
 
     # Assert that we have deselected everything
     assert_snapshot(
@@ -256,7 +262,10 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     # Click on the hex that has count: 10
     click_point(click_handling_div, FIRST_POINT_COORDS)
 
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    # Wait for PyDeck selection debounce (200ms) to complete
+    # Otherwise, the rerun might not be triggered when we
+    # wait for the app run.
+    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY, initial_wait=210)
 
     assert_snapshot(
         click_handling_div,
@@ -267,7 +276,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     # Multiselect and click the hex that has count: 100
     click_point(click_handling_div, SECOND_POINT_COORDS)
 
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY, initial_wait=210)
 
     assert_snapshot(
         click_handling_div,
@@ -278,7 +287,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     # Deselect everything by clicking away from an object in a layer
     click_point(click_handling_div, DESELECT_COORDS)
 
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY, initial_wait=210)
 
     # Assert that we have deselected everything
     assert_snapshot(
@@ -306,12 +315,15 @@ def test_pydeck_chart_selection_state_remains_after_unmounting(
     # Click on the hex that has count: 10
     click_point(click_handling_div, FIRST_POINT_COORDS)
 
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    # Wait for PyDeck selection debounce (200ms) to complete
+    # Otherwise, the rerun might not be triggered when we
+    # wait for the app run.
+    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY, initial_wait=210)
 
     # Multiselect and click the hex that has count: 100
     click_point(click_handling_div, SECOND_POINT_COORDS)
 
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY, initial_wait=210)
 
     click_button(app, "Create some elements to unmount component")
     wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
