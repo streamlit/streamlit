@@ -92,9 +92,13 @@ EXTRA_REQUIRES = {
         # orjson speeds up large plotly figure processing by 5-10x:
         "orjson>=3.5.0",
     ],
+    # Optional SQL connection dependency:
+    "sql": [
+        "SQLAlchemy>=2.0.0",
+    ],
     # Install all optional dependencies:
     "all": [
-        "streamlit[auth,charts,snowflake]",
+        "streamlit[auth,charts,snowflake,sql]",
         # Improved exception traceback formatting:
         "rich>=11.0.0",
     ],
