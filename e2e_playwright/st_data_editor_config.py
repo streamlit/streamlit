@@ -477,17 +477,10 @@ st.data_editor(
         "category": st.column_config.MultiselectColumn(
             "App Categories",
             help="The categories of the app",
-            options=[
-                {"value": "exploration", "label": "Exploration", "color": "#ffc38a"},
-                {"value": "llm", "label": "LLM", "color": "#ebfdea"},
-                {"value": "geography", "label": "Geography", "color": "#19747E"},
-                {
-                    "value": "visualization",
-                    "label": "Visualization",
-                    "color": "#FFE8D6",
-                },
-                {"value": "finance", "label": "Finance", "color": "#90E0EF"},
-            ],
+            options=["exploration", "llm", "geography", "visualization", "finance"],
+            accept_new_options=True,
+            color=["#ffc38a", "#ebfdea", "#19747E", "#FFE8D6", "#90E0EF"],
+            format_func=lambda x: x.capitalize(),
         ),
         "tags": st.column_config.ListColumn(
             "Tags",
@@ -496,6 +489,7 @@ st.data_editor(
     },
     hide_index=True,
 )
+
 
 st.header("Multi select column:")
 
@@ -513,6 +507,7 @@ result = st.data_editor(
             "Multi select column",
             width="medium",
             help="This is a list column",
+            accept_new_options=True,
         ),
         "col_1": st.column_config.MultiselectColumn(
             options=["a", "B", "c", "d", "e"], default=["a", "B"], disabled=True

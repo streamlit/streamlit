@@ -18,7 +18,12 @@ import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { unique } from "vega-lite"
 
-import { EmotionTheme } from "~lib/theme"
+import {
+  convertRemToPx,
+  EmotionTheme,
+  getMarkdownBgColors,
+  getMarkdownTextColors,
+} from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -67,6 +72,7 @@ export const prepareOptions = (
 
 export interface MultiSelectColumnParams {
   readonly options: (string | SelectOption)[]
+  readonly accept_new_options?: boolean
 }
 
 function MultiSelectColumn(
@@ -77,6 +83,7 @@ function MultiSelectColumn(
     // Default parameters:
     {
       options: [],
+      accept_new_options: false,
     },
     // User parameters:
     props.columnTypeOptions
@@ -98,22 +105,24 @@ function MultiSelectColumn(
       kind: "multi-select-cell",
       values: [],
       options: preparedOptions,
-      allowCreation: false,
+      allowCreation: parameters.accept_new_options ?? false,
       allowDuplicates: false,
     },
     copyData: "",
   } as MultiSelectCellType
+
+  const badgeBackgroundColors = getMarkdownBgColors(theme)
+  const badgeTextColors = getMarkdownTextColors(theme)
 
   return {
     ...props,
     kind: "multiselect",
     sortMode: "default",
     themeOverride: {
-      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-      roundingRadius: 4,
-      bgBubble: theme.colors.primary,
-      bgBubbleSelected: theme.colors.primary,
-      textBubble: theme.colors.white,
+      roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
+      bgBubble: badgeBackgroundColors.primarybg,
+      bgBubbleSelected: badgeBackgroundColors.primarybg,
+      textBubble: badgeTextColors.primary,
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
@@ -133,7 +142,11 @@ function MultiSelectColumn(
 
       cellData = cellData.map((x: object) => toSafeString(x).trim())
 
-      if (validate && cellData.length > 0) {
+      if (
+        validate &&
+        cellData.length > 0 &&
+        parameters.accept_new_options === false
+      ) {
         // Filter out values that are not in the options list:
         cellData = cellData.filter((x: string) => uniqueOptions.includes(x))
         if (cellData.length === 0) {
