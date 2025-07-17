@@ -95,8 +95,8 @@ def open_browser(url: str) -> None:
         ) or (env_util.is_executable_in_path(preferred_browser)):
             _open_browser_with_command(preferred_browser, url)
             return
-        raise errors.Error(
-            f'Browser "{preferred_browser}" is not a valid browser executable or command'
+        print_to_cli(
+            f'Warning: Browser "{preferred_browser}" is not a valid browser executable or command'
         )
 
     if env_util.IS_WINDOWS:
