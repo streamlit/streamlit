@@ -251,9 +251,11 @@ const StyledButtonGroupBaseButton = styled(
     overflow: "hidden",
     textOverflow: "ellipsis",
 
-    "&:hover": {
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
+    "&:hover, &:focus-visible": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&:active": {
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       color: theme.colors.fadedText20,
@@ -290,7 +292,7 @@ export const StyledPillsButtonActive = styled(
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
-    "&:hover": {
+    "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
@@ -318,7 +320,7 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
-    "&:hover": {
+    "&:hover, &:focus-visible": {
       zIndex: theme.zIndices.priority, // Make sure overlapped borders are visible
     },
   }
@@ -332,7 +334,7 @@ export const StyledSegmentedControlButtonActive = styled(
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
     zIndex: theme.zIndices.priority,
-    "&:hover": {
+    "&:hover, &:focus-visible": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },
   }
