@@ -13,13 +13,11 @@
 # limitations under the License.
 
 from typing import Literal
-from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
@@ -522,9 +520,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         # Default width should be "content"
         assert popover_block.add_block.width_config.use_content
 
-    @patch("streamlit.elements.layouts.show_deprecation_warning")
-    def test_use_container_width_true(self, mock_show_deprecation_warning):
-        """Test use_container_width=True is mapped to width='stretch' and shows deprecation warning."""
+    def test_use_container_width_true(self):
+        """Test use_container_width=True is mapped to width='stretch'."""
         test_widths = [200, "content", "stretch", None]
 
         for width in test_widths:
@@ -541,22 +538,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
                 )
                 assert popover_block.add_block.width_config.use_stretch is True
 
-        assert mock_show_deprecation_warning.call_count == len(test_widths)
-        mock_show_deprecation_warning.assert_called_with(
-            make_deprecated_name_warning(
-                "use_container_width",
-                "width",
-                "2025-12-31",
-                "For `use_container_width=True`, use `width='stretch'`. "
-                "For `use_container_width=False`, use `width='content'`.",
-                include_st_prefix=False,
-            ),
-            show_in_browser=False,
-        )
-
-    @patch("streamlit.elements.layouts.show_deprecation_warning")
-    def test_use_container_width_false(self, mock_show_deprecation_warning):
-        """Test use_container_width=False is mapped to width='content' and shows deprecation warning."""
+    def test_use_container_width_false(self):
+        """Test use_container_width=False is mapped to width='content'."""
         test_widths = [200, "stretch", "content", None]
 
         for width in test_widths:
@@ -572,19 +555,6 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
                     == WidthConfigFields.USE_CONTENT.value
                 )
                 assert popover_block.add_block.width_config.use_content is True
-
-        assert mock_show_deprecation_warning.call_count == len(test_widths)
-        mock_show_deprecation_warning.assert_called_with(
-            make_deprecated_name_warning(
-                "use_container_width",
-                "width",
-                "2025-12-31",
-                "For `use_container_width=True`, use `width='stretch'`. "
-                "For `use_container_width=False`, use `width='content'`.",
-                include_st_prefix=False,
-            ),
-            show_in_browser=False,
-        )
 
     def test_disabled(self):
         """Test that it correctly applies disabled param."""
