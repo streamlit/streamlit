@@ -113,9 +113,11 @@ export const StyledPrimaryLinkButton = styled(
   border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
   "&:hover": {
     backgroundColor: darken(theme.colors.primary, 0.15),
+    borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:active": {
-    backgroundColor: darken(theme.colors.primary, 0.25),
+    backgroundColor: theme.colors.primary,
+    borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:visited:not(:active)": {
     color: theme.colors.white,
