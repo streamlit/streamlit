@@ -978,6 +978,15 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "browser.preferred",
+    description="""
+        Command or path for preferred browser executable. If unset, uses system default.
+    """,
+    default_val=None,
+    type_=str,
+)
+
 
 @_create_option("browser.serverPort", type_=int)
 def _browser_server_port() -> int:

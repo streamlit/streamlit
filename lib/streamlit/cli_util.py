@@ -20,7 +20,7 @@ import os
 import subprocess
 from typing import Any
 
-from streamlit import env_util, errors
+from streamlit import config, env_util, errors
 
 
 def print_to_cli(message: str, **kwargs: Any) -> None:
@@ -87,6 +87,17 @@ def open_browser(url: str) -> None:
     # (ahem... Chrome) always print "Opening in existing browser session" to
     # the terminal, which is spammy and annoying. So instead we start the
     # browser ourselves and send all its output to /dev/null.
+    preferred_browser = config.get_option("browser.preferred")
+
+    if preferred_browser:
+        if (
+            os.path.exists(preferred_browser) and os.access(preferred_browser, os.X_OK)
+        ) or (env_util.is_executable_in_path(preferred_browser)):
+            _open_browser_with_command(preferred_browser, url)
+            return
+        raise errors.Error(
+            f'Browser "{preferred_browser}" is not a valid browser executable or command'
+        )
 
     if env_util.IS_WINDOWS:
         _open_browser_with_webbrowser(url)
