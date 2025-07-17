@@ -131,11 +131,10 @@ export const StyledPrimaryButton = styled(
   color: theme.colors.white,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
   "&:hover": {
-    backgroundColor: darken(theme.colors.primary, 0.05),
+    backgroundColor: darken(theme.colors.primary, 0.15),
   },
   "&:active": {
-    backgroundColor: "transparent",
-    color: theme.colors.primary,
+    backgroundColor: darken(theme.colors.primary, 0.25),
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
     borderColor: theme.colors.borderColor,
@@ -151,17 +150,10 @@ export const StyledSecondaryButton = styled(
   backgroundColor: theme.colors.lightenedBg05,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   "&:hover": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&:active": {
-    color: theme.colors.white,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary,
-  },
-  "&:focus:not(:active)": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.darkenedBgMix25,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
     borderColor: theme.colors.borderColor,
@@ -179,9 +171,6 @@ export const StyledTertiaryButton = styled(
     backgroundColor: theme.colors.transparent,
     border: "none",
 
-    "&:active": {
-      color: theme.colors.primary,
-    },
     "&:focus": {
       outline: "none",
     },
@@ -191,6 +180,9 @@ export const StyledTertiaryButton = styled(
     },
     "&:hover": {
       color: theme.colors.primary,
+    },
+    "&:active": {
+      color: darken(theme.colors.primary, 0.25),
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       backgroundColor: theme.colors.transparent,

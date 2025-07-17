@@ -140,17 +140,10 @@ export const StyledSecondaryLinkButton = styled(
     color: theme.colors.bodyText,
   },
   "&:hover": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&:active": {
-    color: theme.colors.white,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary,
-  },
-  "&:focus:not(:active)": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.darkenedBgMix25,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
     borderColor: theme.colors.borderColor,
