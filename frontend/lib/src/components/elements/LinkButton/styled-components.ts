@@ -112,12 +112,10 @@ export const StyledPrimaryLinkButton = styled(
   color: theme.colors.white,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
   "&:hover": {
-    backgroundColor: darken(theme.colors.primary, 0.05),
-    color: theme.colors.white,
+    backgroundColor: darken(theme.colors.primary, 0.15),
   },
   "&:active": {
-    backgroundColor: "transparent",
-    color: theme.colors.primary,
+    backgroundColor: darken(theme.colors.primary, 0.25),
   },
   "&:visited:not(:active)": {
     color: theme.colors.white,
@@ -168,7 +166,7 @@ export const StyledTertiaryLinkButton = styled(
     color: theme.colors.primary,
   },
   "&:active": {
-    color: theme.colors.primary,
+    color: darken(theme.colors.primary, 0.25),
   },
   "&:focus": {
     outline: "none",
