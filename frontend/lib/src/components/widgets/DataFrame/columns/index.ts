@@ -42,28 +42,6 @@ export type { NumberColumnParams } from "./NumberColumn"
 export * from "./utils"
 
 /**
- * Mapping of column types to icons.
- */
-export const COLUMN_TYPE_ICONS: Record<string, string> = {
-  object: ":material/data_object:",
-  text: ":material/notes:",
-  checkbox: ":material/check_box:",
-  selectbox: ":material/arrow_drop_down_circle:",
-  list: ":material/list:",
-  number: ":material/tag:",
-  link: ":material/link:",
-  datetime: ":material/calendar_today:",
-  date: ":material/calendar_month:",
-  time: ":material/access_time:",
-  line_chart: ":material/show_chart:",
-  bar_chart: ":material/bar_chart:",
-  area_chart: ":material/area_chart:",
-  image: ":material/image:",
-  progress: ":material/commit:",
-  json: ":material/code_blocks:",
-}
-
-/**
  * All available column types need to be registered here.
  *
  * These names must match the column names used in the backend.

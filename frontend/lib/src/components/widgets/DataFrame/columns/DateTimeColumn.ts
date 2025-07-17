@@ -195,6 +195,12 @@ function BaseDateTimeColumn(
   return {
     ...props,
     kind,
+    typeIcon:
+      kind === "date"
+        ? ":material/calendar_month:"
+        : kind === "time"
+          ? ":material/access_time:"
+          : ":material/calendar_today:",
     sortMode: "default",
     validateInput,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

@@ -29,7 +29,7 @@ import { getLogger } from "loglevel"
 import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { COLUMN_TYPE_ICONS } from "~lib/components/widgets/DataFrame/columns"
+import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 import {
   StyledColumnHeaderRow,
@@ -50,10 +50,8 @@ export interface ColumnMenuProps {
   top: number
   // The left position of the menu
   left: number
-  // The kind of the column
-  columnKind: string
-  // The name of the column
-  columnName: string
+  // The selected column:
+  column: BaseColumn
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -85,8 +83,7 @@ function ColumnMenu({
   onCloseMenu,
   onSortColumn,
   onHideColumn,
-  columnKind,
-  columnName,
+  column,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
@@ -117,18 +114,13 @@ function ColumnMenu({
 
   const handleCopyNameToClipboard = useCallback((): void => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(columnName).catch(error => {
+      navigator.clipboard.writeText(column.title).catch(error => {
         LOG.error("Failed to copy column name to clipboard:", error)
       })
     } else {
       LOG.error("Clipboard API not supported.")
     }
-  }, [columnName])
-
-  const columnTypeIcon = useMemo(
-    () => COLUMN_TYPE_ICONS[columnKind] || COLUMN_TYPE_ICONS["text"],
-    [columnKind]
-  )
+  }, [column.title])
 
   return (
     <Popover
@@ -137,15 +129,15 @@ function ColumnMenu({
       content={
         <StyledMenuList>
           <StyledColumnHeaderRow>
-            <StyledTypeIconContainer title={columnKind}>
+            <StyledTypeIconContainer title={column.kind}>
               <DynamicIcon
-                iconValue={columnTypeIcon}
+                iconValue={column.typeIcon || ":material/notes:"}
                 size="base"
                 color="inherit"
               />
             </StyledTypeIconContainer>
-            <StyledColumnNameWithIcon title={columnName}>
-              <StyledColumnNameText>{columnName}</StyledColumnNameText>
+            <StyledColumnNameWithIcon title={column.title}>
+              <StyledColumnNameText>{column.title}</StyledColumnNameText>
               <StyledIconButton
                 onClick={handleCopyNameToClipboard}
                 title="Copy column name"
@@ -198,7 +190,7 @@ function ColumnMenu({
           )}
           {onChangeFormat && (
             <FormattingMenu
-              columnKind={columnKind}
+              columnKind={column.kind}
               isOpen={formatMenuOpen}
               onMouseEnter={() => setFormatMenuOpen(true)}
               onMouseLeave={() => setFormatMenuOpen(false)}

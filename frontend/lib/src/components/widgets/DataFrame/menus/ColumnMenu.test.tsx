@@ -20,6 +20,8 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
+import { NumberColumn } from "src/components/widgets/DataFrame/columns"
+import { ArrowType } from "~lib/dataframes/arrowTypeUtils"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
@@ -28,8 +30,18 @@ describe("DataFrame ColumnMenu", () => {
     top: 100,
     left: 100,
     isColumnPinned: false,
-    columnKind: "number",
-    columnName: "testColumn",
+    column: NumberColumn({
+      title: "testColumn",
+      id: "col-1",
+      indexNumber: 0,
+      isEditable: true,
+      name: "testColumn",
+      arrowType: {} as ArrowType,
+      isHidden: false,
+      isIndex: false,
+      isPinned: false,
+      isStretched: false,
+    }),
     onPinColumn: vi.fn(),
     onUnpinColumn: vi.fn(),
     onCloseMenu: vi.fn(),
