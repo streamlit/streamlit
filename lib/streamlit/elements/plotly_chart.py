@@ -328,8 +328,12 @@ class PlotlyMixin:
         you would call Plotly's ``py.plot`` or ``py.iplot``.
 
         .. Important::
-            You must install ``plotly`` to use this command. Your app's
-            performance may be enhanced by installing ``orjson`` as well.
+            You must install ``plotly>=4.0.0`` to use this command. Your app's
+            performance may be enhanced by installing ``orjson`` as well. You
+            can install all charting dependencies (except Bokeh) as an extra
+            with Streamlit:
+
+            >>> pip install streamlit[charts]
 
         Parameters
         ----------
