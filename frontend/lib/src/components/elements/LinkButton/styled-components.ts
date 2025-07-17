@@ -167,6 +167,12 @@ export const StyledTertiaryLinkButton = styled(
   },
   "&:hover": {
     color: theme.colors.primary,
+
+    // Also make colored text have the primary color on hover. Since text color is
+    // applied as an inline style we need to use !important to override it.
+    "span.stMarkdownColoredText": {
+      color: "inherit !important",
+    },
   },
   "&:active": {
     color: darken(theme.colors.primary, 0.25),
