@@ -47,6 +47,7 @@ function CheckboxColumn(props: BaseColumnProps): BaseColumn {
   return {
     ...props,
     kind: "checkbox",
+    typeIcon: ":material/check_box:",
     sortMode: "default",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {

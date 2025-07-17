@@ -18,8 +18,11 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { Field, Int64 } from "apache-arrow"
 
 import { render } from "~lib/test_util"
+import { NumberColumn } from "src/components/widgets/DataFrame/columns"
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
@@ -28,7 +31,28 @@ describe("DataFrame ColumnMenu", () => {
     top: 100,
     left: 100,
     isColumnPinned: false,
-    columnKind: "number",
+    column: NumberColumn({
+      title: "testColumn",
+      id: "col-1",
+      indexNumber: 0,
+      isEditable: true,
+      name: "testColumn",
+      arrowType: {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("int_column", new Int64(), true),
+        pandasType: {
+          field_name: "int_column",
+          name: "int_column",
+          pandas_type: "int64",
+          numpy_type: "int64",
+          metadata: null,
+        },
+      },
+      isHidden: false,
+      isIndex: false,
+      isPinned: false,
+      isStretched: false,
+    }),
     onPinColumn: vi.fn(),
     onUnpinColumn: vi.fn(),
     onCloseMenu: vi.fn(),
@@ -52,6 +76,13 @@ describe("DataFrame ColumnMenu", () => {
     expect(menuTarget).toHaveStyle("position: fixed")
     expect(menuTarget).toHaveStyle("top: 100px")
     expect(menuTarget).toHaveStyle("left: 100px")
+  })
+
+  test("renders the column menu with the correct column name", () => {
+    render(<ColumnMenu {...defaultProps} />)
+
+    const columnName = screen.getByText("testColumn")
+    expect(columnName).toBeVisible()
   })
 
   test("renders sort options", () => {

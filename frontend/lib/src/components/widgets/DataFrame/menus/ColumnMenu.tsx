@@ -23,25 +23,34 @@ import React, {
 } from "react"
 
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
+import { getLogger } from "loglevel"
 
 import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 import {
+  StyledColumnHeaderRow,
+  StyledColumnNameText,
+  StyledColumnNameWithIcon,
+  StyledIconButton,
   StyledMenuDivider,
   StyledMenuList,
   StyledMenuListItem,
+  StyledTypeIconContainer,
 } from "./styled-components"
 import FormattingMenu from "./FormattingMenu"
+
+const LOG = getLogger("ColumnMenu")
 
 export interface ColumnMenuProps {
   // The top position of the menu
   top: number
   // The left position of the menu
   left: number
-  // The kind of the column
-  columnKind: string
+  // The selected column:
+  column: BaseColumn
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -73,7 +82,7 @@ function ColumnMenu({
   onCloseMenu,
   onSortColumn,
   onHideColumn,
-  columnKind,
+  column,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
@@ -102,12 +111,47 @@ function ColumnMenu({
     onCloseMenu()
   }, [onCloseMenu])
 
+  const handleCopyNameToClipboard = useCallback((): void => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(column.title).catch(error => {
+        LOG.error("Failed to copy column name to clipboard:", error)
+      })
+    } else {
+      LOG.error("Clipboard API not supported.")
+    }
+  }, [column.title])
+
   return (
     <Popover
       autoFocus
       aria-label="Dataframe column menu"
       content={
         <StyledMenuList>
+          <StyledColumnHeaderRow>
+            <StyledTypeIconContainer title={column.kind}>
+              <DynamicIcon
+                iconValue={column.typeIcon || ":material/notes:"}
+                size="base"
+                color="inherit"
+              />
+            </StyledTypeIconContainer>
+            <StyledColumnNameWithIcon title={column.title}>
+              <StyledColumnNameText>{column.title}</StyledColumnNameText>
+              <StyledIconButton
+                onClick={handleCopyNameToClipboard}
+                title="Copy column name"
+                aria-label="Copy column name"
+              >
+                <DynamicIcon
+                  iconValue=":material/content_copy:"
+                  size="sm"
+                  margin="0"
+                  color="inherit"
+                />
+              </StyledIconButton>
+            </StyledColumnNameWithIcon>
+          </StyledColumnHeaderRow>
+
           {onSortColumn && (
             <>
               <StyledMenuListItem
@@ -118,7 +162,7 @@ function ColumnMenu({
                 role="menuitem"
               >
                 <DynamicIcon
-                  size={"base"}
+                  size="base"
                   margin="0"
                   color="inherit"
                   iconValue=":material/arrow_upward:"
@@ -133,7 +177,7 @@ function ColumnMenu({
                 role="menuitem"
               >
                 <DynamicIcon
-                  size={"base"}
+                  size="base"
                   margin="0"
                   color="inherit"
                   iconValue=":material/arrow_downward:"
@@ -145,7 +189,7 @@ function ColumnMenu({
           )}
           {onChangeFormat && (
             <FormattingMenu
-              columnKind={columnKind}
+              columnKind={column.kind}
               isOpen={formatMenuOpen}
               onMouseEnter={() => setFormatMenuOpen(true)}
               onMouseLeave={() => setFormatMenuOpen(false)}
@@ -160,7 +204,7 @@ function ColumnMenu({
               >
                 <div>
                   <DynamicIcon
-                    size={"base"}
+                    size="base"
                     margin="0"
                     color="inherit"
                     iconValue=":material/format_list_numbered:"
@@ -169,7 +213,7 @@ function ColumnMenu({
                 </div>
 
                 <DynamicIcon
-                  size={"base"}
+                  size="base"
                   margin="0"
                   color="inherit"
                   iconValue=":material/chevron_right:"
@@ -185,7 +229,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/arrows_outward:"
@@ -201,7 +245,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/keep_off:"
@@ -217,7 +261,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/keep:"
@@ -233,7 +277,7 @@ function ColumnMenu({
               }}
             >
               <DynamicIcon
-                size={"base"}
+                size="base"
                 margin="0"
                 color="inherit"
                 iconValue=":material/visibility_off:"

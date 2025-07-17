@@ -40,6 +40,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
   return {
     ...props,
     kind: "image",
+    typeIcon: ":material/image:",
     sortMode: "default",
     isEditable: false, // Image columns are always read-only
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
