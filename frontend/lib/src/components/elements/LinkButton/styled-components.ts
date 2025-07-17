@@ -117,7 +117,7 @@ export const StyledPrimaryLinkButton = styled(
   },
   "&:active": {
     backgroundColor: theme.colors.primary,
-    // Keeping the border darker when clicked so that the button looks "pressed"
+    // Keep the border darker when clicked so that the button looks "pressed"
     borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:visited:not(:active)": {

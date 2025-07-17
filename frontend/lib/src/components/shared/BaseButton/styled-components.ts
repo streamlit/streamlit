@@ -136,6 +136,7 @@ export const StyledPrimaryButton = styled(
   },
   "&:active": {
     backgroundColor: theme.colors.primary,
+    // Keep the border darker when clicked so that the button looks "pressed"
     borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
