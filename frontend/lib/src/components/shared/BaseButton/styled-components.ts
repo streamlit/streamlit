@@ -122,7 +122,7 @@ export const StyledPrimaryButton = styled(
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     backgroundColor: darken(theme.colors.primary, 0.15),
     borderColor: darken(theme.colors.primary, 0.15),
   },
@@ -144,7 +144,7 @@ export const StyledSecondaryButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&:active": {
@@ -165,19 +165,11 @@ export const StyledTertiaryButton = styled(
     padding: theme.spacing.none,
     backgroundColor: theme.colors.transparent,
     border: "none",
-
-    "&:focus": {
-      outline: "none",
-    },
-    "&:focus-visible": {
-      color: theme.colors.primary,
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
-    },
-    "&:hover": {
+    "&:hover, &:focus-visible": {
       color: theme.colors.primary,
 
       // Also make colored text have the primary color on hover. Since text color is
-      // applied as an inline style we need to use !important to override it. 
+      // applied as an inline style we need to use !important to override it.
       "span.stMarkdownColoredText": {
         color: "inherit !important",
       },
@@ -198,7 +190,7 @@ export const StyledGhostButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     borderColor: theme.colors.transparent,
     color: theme.colors.primary,
   },
@@ -206,10 +198,6 @@ export const StyledGhostButton = styled(
     color: theme.colors.primary,
     borderColor: theme.colors.transparent,
     backgroundColor: theme.colors.transparent,
-  },
-  "&:focus:not(:active)": {
-    borderColor: theme.colors.transparent,
-    color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
     backgroundColor: theme.colors.lightGray,

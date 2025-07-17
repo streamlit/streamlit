@@ -111,7 +111,7 @@ export const StyledPrimaryLinkButton = styled(
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     backgroundColor: darken(theme.colors.primary, 0.15),
     borderColor: darken(theme.colors.primary, 0.15),
   },
@@ -140,7 +140,7 @@ export const StyledSecondaryLinkButton = styled(
   "&:visited": {
     color: theme.colors.bodyText,
   },
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&:active": {
@@ -161,11 +161,10 @@ export const StyledTertiaryLinkButton = styled(
   backgroundColor: theme.colors.transparent,
   color: theme.colors.bodyText,
   border: "none",
-
   "&:visited": {
     color: theme.colors.bodyText,
   },
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     color: theme.colors.primary,
 
     // Also make colored text have the primary color on hover. Since text color is
@@ -176,13 +175,6 @@ export const StyledTertiaryLinkButton = styled(
   },
   "&:active": {
     color: darken(theme.colors.primary, 0.25),
-  },
-  "&:focus": {
-    outline: "none",
-  },
-  "&:focus-visible": {
-    color: theme.colors.primary,
-    boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
     backgroundColor: theme.colors.transparent,
