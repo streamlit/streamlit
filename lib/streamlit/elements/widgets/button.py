@@ -32,10 +32,6 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import runtime
-from streamlit.deprecation_util import (
-    make_deprecated_name_warning,
-    show_deprecation_warning,
-)
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
 from streamlit.elements.lib.policies import check_widget_policies
@@ -257,17 +253,6 @@ class ButtonMixin:
         ctx = get_script_run_ctx()
 
         if use_container_width is not None:
-            show_deprecation_warning(
-                make_deprecated_name_warning(
-                    "use_container_width",
-                    "width",
-                    "2025-12-31",
-                    "For `use_container_width=True`, use `width='stretch'`. "
-                    "For `use_container_width=False`, use `width='content'`.",
-                    include_st_prefix=False,
-                ),
-                show_in_browser=False,
-            )
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
@@ -574,17 +559,6 @@ class ButtonMixin:
         ctx = get_script_run_ctx()
 
         if use_container_width is not None:
-            show_deprecation_warning(
-                make_deprecated_name_warning(
-                    "use_container_width",
-                    "width",
-                    "2025-12-31",
-                    "For `use_container_width=True`, use `width='stretch'`. "
-                    "For `use_container_width=False`, use `width='content'`.",
-                    include_st_prefix=False,
-                ),
-                show_in_browser=False,
-            )
             width = "stretch" if use_container_width else "content"
 
         if type not in ["primary", "secondary", "tertiary"]:
@@ -730,17 +704,6 @@ class ButtonMixin:
             )
 
         if use_container_width is not None:
-            show_deprecation_warning(
-                make_deprecated_name_warning(
-                    "use_container_width",
-                    "width",
-                    "2025-12-31",
-                    "For `use_container_width=True`, use `width='stretch'`. "
-                    "For `use_container_width=False`, use `width='content'`.",
-                    include_st_prefix=False,
-                ),
-                show_in_browser=False,
-            )
             width = "stretch" if use_container_width else "content"
 
         return self._link_button(
@@ -877,17 +840,6 @@ class ButtonMixin:
 
         """
         if use_container_width is not None:
-            show_deprecation_warning(
-                make_deprecated_name_warning(
-                    "use_container_width",
-                    "width",
-                    "2025-12-31",
-                    "For `use_container_width=True`, use `width='stretch'`. "
-                    "For `use_container_width=False`, use `width='content'`.",
-                    include_st_prefix=False,
-                ),
-                show_in_browser=False,
-            )
             width = "stretch" if use_container_width else "content"
 
         if in_sidebar(self.dg):

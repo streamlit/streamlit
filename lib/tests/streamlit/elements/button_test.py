@@ -17,13 +17,11 @@
 from __future__ import annotations
 
 from typing import Any, Callable
-from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -128,8 +126,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button
         assert c.disabled
 
-    @patch("streamlit.elements.widgets.button.show_deprecation_warning")
-    def test_use_container_width_true(self, mock_show_deprecation_warning):
+    def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
         for button_type, button_func, width in get_button_command_matrix(
             test_params=["stretch", "content", 200]
@@ -158,21 +155,7 @@ class ButtonTest(DeltaGeneratorTestCase):
                     )
                     assert el.width_config.use_stretch is True
 
-        assert mock_show_deprecation_warning.call_count == 16
-        mock_show_deprecation_warning.assert_called_with(
-            make_deprecated_name_warning(
-                "use_container_width",
-                "width",
-                "2025-12-31",
-                "For `use_container_width=True`, use `width='stretch'`. "
-                "For `use_container_width=False`, use `width='content'`.",
-                include_st_prefix=False,
-            ),
-            show_in_browser=False,
-        )
-
-    @patch("streamlit.elements.widgets.button.show_deprecation_warning")
-    def test_use_container_width_false(self, mock_show_deprecation_warning):
+    def test_use_container_width_false(self):
         """Test use_container_width=False is mapped to width='content'."""
         for button_type, button_func, width in get_button_command_matrix(
             test_params=[
@@ -204,18 +187,6 @@ class ButtonTest(DeltaGeneratorTestCase):
                         == WidthConfigFields.USE_CONTENT.value
                     )
                     assert el.width_config.use_content is True
-        assert mock_show_deprecation_warning.call_count == 16
-        mock_show_deprecation_warning.assert_called_with(
-            make_deprecated_name_warning(
-                "use_container_width",
-                "width",
-                "2025-12-31",
-                "For `use_container_width=True`, use `width='stretch'`. "
-                "For `use_container_width=False`, use `width='content'`.",
-                include_st_prefix=False,
-            ),
-            show_in_browser=False,
-        )
 
     def test_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""

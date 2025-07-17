@@ -22,7 +22,6 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.session_state import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -402,8 +401,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
-    @patch("streamlit.elements.form.show_deprecation_warning")
-    def test_use_container_width_true(self, mock_show_deprecation_warning):
+    def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
         for width in ["stretch", "content", 200]:
             with self.subTest(f"width={width}"):
@@ -434,21 +432,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             )
             assert el.width_config.use_stretch is True
 
-        assert mock_show_deprecation_warning.call_count == 4
-        mock_show_deprecation_warning.assert_called_with(
-            make_deprecated_name_warning(
-                "use_container_width",
-                "width",
-                "2025-12-31",
-                "For `use_container_width=True`, use `width='stretch'`. "
-                "For `use_container_width=False`, use `width='content'`.",
-                include_st_prefix=False,
-            ),
-            show_in_browser=False,
-        )
-
-    @patch("streamlit.elements.form.show_deprecation_warning")
-    def test_use_container_width_false(self, mock_show_deprecation_warning):
+    def test_use_container_width_false(self):
         """Test use_container_width=False is mapped to width='content'."""
         for width in ["stretch", "content", 200]:
             with self.subTest(f"width={width}"):
@@ -478,19 +462,6 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
                 == WidthConfigFields.USE_CONTENT.value
             )
             assert el.width_config.use_content is True
-
-        assert mock_show_deprecation_warning.call_count == 4
-        mock_show_deprecation_warning.assert_called_with(
-            make_deprecated_name_warning(
-                "use_container_width",
-                "width",
-                "2025-12-31",
-                "For `use_container_width=True`, use `width='stretch'`. "
-                "For `use_container_width=False`, use `width='content'`.",
-                include_st_prefix=False,
-            ),
-            show_in_browser=False,
-        )
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
