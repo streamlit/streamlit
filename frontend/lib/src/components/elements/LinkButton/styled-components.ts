@@ -92,6 +92,9 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
         outline: "none",
       },
       "&:focus-visible": {
+        // When focus-visible (e.g. if the button was focused via keyboard navigation)
+        // we use the hover style of the respective button type (see below) and
+        // additionally show a colored focus ring
         boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       },
       "&:hover": {
