@@ -56,8 +56,7 @@ export const StyledElementContainerLayoutWrapper: FC<
       }
     } else if (
       node.element.type === "iframe" ||
-      node.element.type === "deckGlJsonChart" ||
-      node.element.type === "arrowDataFrame"
+      node.element.type === "deckGlJsonChart"
     ) {
       // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
       // if we can remove this custom handling in future layouts work.
@@ -70,6 +69,21 @@ export const StyledElementContainerLayoutWrapper: FC<
       return {
         width: "100%",
       }
+    } else if (node.element.type === "arrowDataFrame") {
+      let styles: React.CSSProperties = {
+        overflow: "visible",
+      }
+      // TODO (lawilby): This is just temporary until the width changes are
+      // implemented for dataframe.
+      if (
+        // This corresponds to "content" width type.
+        !node.element["arrowDataFrame"]?.width &&
+        !node.element["arrowDataFrame"]?.useContainerWidth
+      ) {
+        styles.width = "fit-content"
+        styles.flex = "0 0 auto"
+      }
+      return styles
     }
 
     return {}

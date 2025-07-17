@@ -84,6 +84,76 @@ with st.container(
     border=True,
     direction="horizontal",
     wrap=False,
+    key="layout-horizontal-expander-dataframe-content-width",
+):
+    df = pd.DataFrame(
+        {
+            "x": list(range(5)),
+            "y": [i * i for i in range(5)],
+        }
+    )
+    with st.expander("Expand me"):
+        st.title("Hidden Chart")
+        st.bar_chart(df.set_index("x"))
+
+    st.dataframe(df, use_container_width=False)
+
+with st.container(
+    border=True,
+    direction="horizontal",
+    wrap=False,
+    key="layout-horizontal-expander-dataframe-content-width-large",
+):
+    df = pd.DataFrame(
+        {
+            "x": list(range(5)),
+            "y": [i * i for i in range(5)],
+            "z": [i * i * i for i in range(5)],
+            "w": [i * i * i * i for i in range(5)],
+            "v": [i * i * i * i * i for i in range(5)],
+            "u": [i * i * i * i * i * i for i in range(5)],
+            "t": [i * i * i * i * i * i * i for i in range(5)],
+            "s": [i * i * i * i * i * i * i * i for i in range(5)],
+            "r": [i * i * i * i * i * i * i * i * i for i in range(5)],
+            "q": [i * i * i * i * i * i * i * i * i * i for i in range(5)],
+            "p": [i * i * i * i * i * i * i * i * i * i * i for i in range(5)],
+            "o": [i * i * i * i * i * i * i * i * i * i * i * i for i in range(5)],
+        }
+    )
+    with st.expander("Expand me"):
+        st.title("Hidden Chart")
+        st.bar_chart(df.set_index("x"))
+
+    st.dataframe(df, use_container_width=False)
+
+with st.container(
+    border=True,
+    direction="horizontal",
+    wrap=False,
+    key="layout-horizontal-dataframe-content-width-large",
+):
+    df = pd.DataFrame(
+        {
+            "x": list(range(5)),
+            "y": [i * i for i in range(5)],
+            "z": [i * i * i for i in range(5)],
+            "w": [i * i * i * i for i in range(5)],
+            "v": [i * i * i * i * i for i in range(5)],
+            "u": [i * i * i * i * i * i for i in range(5)],
+            "t": [i * i * i * i * i * i * i for i in range(5)],
+            "s": [i * i * i * i * i * i * i * i for i in range(5)],
+            "r": [i * i * i * i * i * i * i * i * i for i in range(5)],
+            "q": [i * i * i * i * i * i * i * i * i * i for i in range(5)],
+            "p": [i * i * i * i * i * i * i * i * i * i * i for i in range(5)],
+            "o": [i * i * i * i * i * i * i * i * i * i * i * i for i in range(5)],
+        }
+    )
+    st.dataframe(df, use_container_width=True)
+
+with st.container(
+    border=True,
+    direction="horizontal",
+    wrap=False,
     gap=None,
     horizontal_alignment="center",
     key="layout-horizontal-images-center",
@@ -166,6 +236,31 @@ with st.container(
     ### Hello
     #### Hello
     ##### Hello
+    ###### Hello
+    """,
+        width="content",
+    )
+
+with st.container(
+    border=True, direction="horizontal", key="layout-horizontal-content-width"
+):
+    st.markdown(
+        """
+    # Hello beautiful
+    ## Hello beautiful
+    ### Hello beautiful
+    #### Hello beautiful
+    ###### Hello beautiful
+    """,
+        width="content",
+    )
+
+    st.markdown(
+        """
+    # Hello
+    ## Hello
+    ### Hello
+    #### Hello
     ###### Hello
     """,
         width="content",

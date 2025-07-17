@@ -161,8 +161,17 @@ const getFlex = (
     direction === Direction.VERTICAL
   ) {
     return `0 0 ${heightPixels}px`
+  } else if (
+    widthType === DimensionType.CONTENT &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return "0 0 fit-content"
+  } else if (
+    widthType === DimensionType.STRETCH &&
+    direction === Direction.HORIZONTAL
+  ) {
+    return "1 1 100%"
   }
-  return undefined
 }
 
 const getDirection = (

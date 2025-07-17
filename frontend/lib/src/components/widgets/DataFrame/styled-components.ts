@@ -21,7 +21,7 @@ import styled from "@emotion/styled"
  */
 export const StyledResizableContainer = styled.div(({ theme }) => ({
   position: "relative",
-  display: "inline-block",
+  display: "flex",
 
   "& .stDataFrameGlideDataEditor": {
     height: "100%",
