@@ -18,10 +18,11 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { Field, Int64 } from "apache-arrow"
 
 import { render } from "~lib/test_util"
 import { NumberColumn } from "src/components/widgets/DataFrame/columns"
-import { ArrowType } from "~lib/dataframes/arrowTypeUtils"
+import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
@@ -36,7 +37,17 @@ describe("DataFrame ColumnMenu", () => {
       indexNumber: 0,
       isEditable: true,
       name: "testColumn",
-      arrowType: {} as ArrowType,
+      arrowType: {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("int_column", new Int64(), true),
+        pandasType: {
+          field_name: "int_column",
+          name: "int_column",
+          pandas_type: "int64",
+          numpy_type: "int64",
+          metadata: null,
+        },
+      },
       isHidden: false,
       isIndex: false,
       isPinned: false,
