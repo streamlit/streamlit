@@ -45,6 +45,13 @@ class GraphvizMixin:
     ) -> DeltaGenerator:
         """Display a graph using the dagre-d3 library.
 
+        .. Important::
+            You must install ``graphviz>=0.19.0`` to use this command. You can
+            install all charting dependencies (except Bokeh) as an extra with
+            Streamlit:
+
+            >>> pip install streamlit[charts]
+
         Parameters
         ----------
         figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, graphviz.sources.Source, str
