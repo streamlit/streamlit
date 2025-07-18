@@ -425,6 +425,22 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.disabled is True
 
     @parameterized.expand(
+        [
+            (st.segmented_control),
+            (st.pills),
+        ]
+    )
+    def test_includes_label_in_id(self, command: Callable):
+        command(label="label 1", options=["a", "b", "c"])
+
+        button_group_1 = self.get_delta_from_queue().new_element.button_group
+
+        command(label="label 2", options=["a", "b", "c"])
+        button_group_2 = self.get_delta_from_queue().new_element.button_group
+
+        assert button_group_1.id != button_group_2.id
+
+    @parameterized.expand(
         get_command_matrix(
             [
                 ((),),
