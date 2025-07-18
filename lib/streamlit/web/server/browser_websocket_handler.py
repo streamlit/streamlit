@@ -34,6 +34,7 @@ from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedE
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import (
     AUTH_COOKIE_NAME,
+    TOKENS_COOKIE_NAME,
     is_url_from_allowed_origins,
     is_xsrf_enabled,
 )
@@ -170,6 +171,12 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
                 if self._validate_xsrf_token(csrf_protocol_value):
                     user_info.update(self._parse_user_cookie(raw_cookie_value))
+
+                    # Also read in tokens if token cookie exists
+                    raw_token_cookie_value = self.get_signed_cookie(TOKENS_COOKIE_NAME)
+                    if raw_token_cookie_value:
+                        tokens = json.loads(raw_token_cookie_value)
+                        user_info["tokens"] = tokens
 
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above
