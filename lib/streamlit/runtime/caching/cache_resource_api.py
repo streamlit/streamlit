@@ -288,8 +288,17 @@ class CacheResourceAPI:
         arguments match a previous function call. Alternatively, you can
         declare custom hashing functions with ``hash_funcs``.
 
-        To cache data, use ``st.cache_data`` instead. Learn more about caching at
-        https://docs.streamlit.io/develop/concepts/architecture/caching.
+        Cached values are available to all users of your app. If you need to
+        save results that should only be accessible within a session, use
+        `Session State
+        <https://docs.streamlit.io/develop/concepts/architecture/session-stat>`_
+        instead. Within each user session, an ``@st.cache_resource``-decorated
+        function returns the cached instance of the return value (if the value
+        is already cached). Therefore, objects cached by ``st.cache_resource``
+        act like singletons and can mutate. To cache data and return copies,
+        use ``st.cache_data`` instead. To learn more about caching, see
+        `Caching overview
+        <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
         Parameters
         ----------
