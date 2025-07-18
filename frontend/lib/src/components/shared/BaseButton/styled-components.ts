@@ -261,9 +261,6 @@ const StyledButtonGroupBaseButton = styled(
     "&:hover, &:focus-visible": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
-    "&:active": {
-      backgroundColor: theme.colors.darkenedBgMix25,
-    },
     "&:disabled, &:disabled:hover, &:disabled:active":
       {
         color: theme.colors.fadedText20,
@@ -330,7 +327,7 @@ export const StyledSegmentedControlButton = styled(
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
     "&:focus-visible": {
-      // Make sure the focus ring isn't below the previous/next button. 
+      // Make sure the focus ring isn't below the previous/next button.
       zIndex: theme.zIndices.priority,
     },
   }
