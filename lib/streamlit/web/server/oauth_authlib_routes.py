@@ -29,7 +29,7 @@ from streamlit.errors import StreamlitAuthError
 from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
 from streamlit.web.server.oidc_mixin import TornadoOAuth, TornadoOAuth2App
-from streamlit.web.server.server_util import AUTH_COOKIE_NAME
+from streamlit.web.server.server_util import AUTH_COOKIE_NAME, TOKENS_COOKIE_NAME
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -72,33 +72,40 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
     def redirect_to_base(self) -> None:
         self.redirect(make_url_path(self.base_url, "/"))
 
-    def set_auth_cookie(self, user_info: dict[str, Any]) -> None:
-        serialized_cookie_value = json.dumps(user_info)
+    def set_auth_cookie(
+        self, user_info: dict[str, Any], tokens: dict[str, Any]
+    ) -> None:
+        self.set_serialized_cookie(AUTH_COOKIE_NAME, user_info)
+        self.set_serialized_cookie(TOKENS_COOKIE_NAME, tokens)
+
+    def set_serialized_cookie(self, cookie_name: str, value: dict[str, Any]) -> None:
+        """Set a serialized cookie with a value that is less than 4096 bytes."""
+        serialized_cookie_value = json.dumps(value)
 
         # log error if cookie value is larger than 4096 bytes
         if len(serialized_cookie_value.encode()) > 4096:
             _LOGGER.error(
-                "Authentication cookie size exceeds maximum browser limit of 4096 bytes. Authentication may fail."
+                "Cookie size exceeds maximum browser limit of 4096 bytes. Authentication may fail."
             )
-
         try:
             # We don't specify Tornado secure flag here because it leads to missing cookie on Safari.
             # The OIDC flow should work only on secure context anyway (localhost or HTTPS),
             # so specifying the secure flag here will not add anything in terms of security.
             self.set_signed_cookie(
-                AUTH_COOKIE_NAME,
+                cookie_name,
                 serialized_cookie_value,
                 httpOnly=True,
             )
         except AttributeError:
             self.set_secure_cookie(
-                AUTH_COOKIE_NAME,
+                cookie_name,
                 serialized_cookie_value,
                 httponly=True,
             )
 
     def clear_auth_cookie(self) -> None:
         self.clear_cookie(AUTH_COOKIE_NAME)
+        self.clear_cookie(TOKENS_COOKIE_NAME)
 
 
 class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
@@ -176,8 +183,11 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         user = cast("dict[str, Any]", token.get("userinfo"))
 
         cookie_value = dict(user, origin=origin, is_logged_in=True)
+        tokens = {k: v for k, v in token.items() if k.endswith("_token")}
+
         if user:
-            self.set_auth_cookie(cookie_value)
+            self.set_auth_cookie(cookie_value, tokens)
+            # Keep tokens in a separate cookie to avoid hitting the size limit
         else:
             _LOGGER.error(
                 "Error, missing user info.",
