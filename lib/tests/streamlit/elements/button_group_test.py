@@ -931,6 +931,7 @@ class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
     )
 
 
+
 def test_duplicate_element_id_error_message(
     self, 
     name: str, 
@@ -939,6 +940,7 @@ def test_duplicate_element_id_error_message(
     must_include: list[str], 
     must_not_include: list[str]
 ) -> None:
+
     """Test that duplicate element ID errors show the correct widget name.
     
     Verifies that when duplicate element IDs occur, the error message 
