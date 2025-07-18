@@ -27,12 +27,12 @@ import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { notNullOrUndefined } from "~lib/util/utils"
 
-import { CustomGridTheme } from "./useCustomTheme"
 import {
-  shouldUseContainerWidth,
   getConfiguredWidth,
+  shouldUseContainerWidth,
   shouldUseContentWidth,
-} from "../arrowUtils"
+} from "~lib/components/widgets/DataFrame/arrowUtils"
+import { CustomGridTheme } from "./useCustomTheme"
 
 export type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
@@ -41,8 +41,6 @@ export type AutoSizerReturn = {
   maxHeight: number
   // The minimum width of the data grid can be resized to
   minWidth: number
-  // The maximum width of the data grid can be resized to
-  maxWidth: number
   // The row height of the data grid
   rowHeight: number
   // The current (or initial) size of the data grid
@@ -247,7 +245,6 @@ function useTableSizer(
     minHeight,
     maxHeight,
     minWidth,
-    maxWidth,
     rowHeight,
     resizableSize,
     setResizableSize,

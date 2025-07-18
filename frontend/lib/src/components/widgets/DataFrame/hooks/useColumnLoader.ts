@@ -25,10 +25,10 @@ import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import {
   getColumnTypeFromArrow,
+  getConfiguredWidth,
   initAllColumnsFromArrow,
   initEmptyIndexColumn,
   shouldUseContainerWidth,
-  getConfiguredWidth,
 } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
   BaseColumn,
