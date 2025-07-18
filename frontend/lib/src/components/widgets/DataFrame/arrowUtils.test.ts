@@ -31,7 +31,7 @@ import {
   Utf8,
 } from "apache-arrow"
 
-import { Arrow as ArrowProto } from "@streamlit/protobuf"
+import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
 import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
@@ -51,9 +51,12 @@ import {
   extractCssProperty,
   getCellFromArrow,
   getColumnTypeFromArrow,
+  getConfiguredWidth,
   initAllColumnsFromArrow,
   initColumnFromArrow,
   initIndexFromArrow,
+  shouldUseContainerWidth,
+  shouldUseContentWidth,
 } from "./arrowUtils"
 import {
   CheckboxColumn,
@@ -1212,5 +1215,123 @@ it("uses arrowCell.contentType instead of column.arrowType for object types", ()
     kind: "text",
     readonly: true,
     style: "normal",
+  })
+})
+
+describe("width configuration utilities", () => {
+  describe("shouldUseContainerWidth", () => {
+    it("returns true when widthConfig.useStretch is true", () => {
+      const element = ArrowProto.create({ useContainerWidth: false })
+      const widthConfig = new streamlit.WidthConfig({ useStretch: true })
+
+      expect(shouldUseContainerWidth(element, widthConfig)).toBe(true)
+    })
+
+    it("returns false when widthConfig.useStretch is false", () => {
+      const element = ArrowProto.create({ useContainerWidth: true })
+      const widthConfig = new streamlit.WidthConfig({ useStretch: false })
+
+      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
+    })
+
+    it("returns false when widthConfig.useContent is true", () => {
+      const element = ArrowProto.create({ useContainerWidth: true })
+      const widthConfig = new streamlit.WidthConfig({ useContent: true })
+
+      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
+    })
+
+    it("returns false when widthConfig.pixelWidth is set", () => {
+      const element = ArrowProto.create({ useContainerWidth: true })
+      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
+
+      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
+    })
+
+    it("falls back to element.useContainerWidth when widthConfig is null", () => {
+      const element = ArrowProto.create({ useContainerWidth: true })
+
+      expect(shouldUseContainerWidth(element, null)).toBe(true)
+    })
+
+    it("falls back to element.useContainerWidth when widthConfig is undefined", () => {
+      const element = ArrowProto.create({ useContainerWidth: false })
+
+      expect(shouldUseContainerWidth(element, undefined)).toBe(false)
+    })
+
+    it("returns false when element.useContainerWidth is undefined", () => {
+      const element = ArrowProto.create({})
+
+      expect(shouldUseContainerWidth(element, null)).toBe(false)
+    })
+  })
+
+  describe("shouldUseContentWidth", () => {
+    it("returns true when widthConfig.useContent is true", () => {
+      const widthConfig = new streamlit.WidthConfig({ useContent: true })
+
+      expect(shouldUseContentWidth(widthConfig)).toBe(true)
+    })
+
+    it("returns false when widthConfig.useContent is false", () => {
+      const widthConfig = new streamlit.WidthConfig({ useContent: false })
+
+      expect(shouldUseContentWidth(widthConfig)).toBe(false)
+    })
+
+    it("returns false when widthConfig.useStretch is true", () => {
+      const widthConfig = new streamlit.WidthConfig({ useStretch: true })
+
+      expect(shouldUseContentWidth(widthConfig)).toBe(false)
+    })
+
+    it("returns false when widthConfig.pixelWidth is set", () => {
+      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
+
+      expect(shouldUseContentWidth(widthConfig)).toBe(false)
+    })
+
+    it("returns false when widthConfig is null", () => {
+      expect(shouldUseContentWidth(null)).toBe(false)
+    })
+
+    it("returns false when widthConfig is undefined", () => {
+      expect(shouldUseContentWidth(undefined)).toBe(false)
+    })
+  })
+
+  describe("getConfiguredWidth", () => {
+    it("returns widthConfig.pixelWidth when set", () => {
+      const element = ArrowProto.create({ width: 300 })
+      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
+
+      expect(getConfiguredWidth(element, widthConfig)).toBe(400)
+    })
+
+    it("falls back to element.width when widthConfig is null", () => {
+      const element = ArrowProto.create({ width: 300 })
+
+      expect(getConfiguredWidth(element, null)).toBe(300)
+    })
+
+    it("falls back to element.width when widthConfig is undefined", () => {
+      const element = ArrowProto.create({ width: 300 })
+
+      expect(getConfiguredWidth(element, undefined)).toBe(300)
+    })
+
+    it("returns element.width when element.width is not set (default value)", () => {
+      const element = ArrowProto.create({})
+
+      expect(getConfiguredWidth(element, null)).toBe(0)
+    })
+
+    it("returns 0 when widthConfig.pixelWidth is 0", () => {
+      const element = ArrowProto.create({ width: 300 })
+      const widthConfig = new streamlit.WidthConfig({ pixelWidth: 0 })
+
+      expect(getConfiguredWidth(element, widthConfig)).toBe(0)
+    })
   })
 })

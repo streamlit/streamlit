@@ -28,6 +28,11 @@ import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import { CustomGridTheme } from "./useCustomTheme"
+import {
+  shouldUseContainerWidth,
+  getConfiguredWidth,
+  shouldUseContentWidth,
+} from "../arrowUtils"
 
 export type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
@@ -44,43 +49,6 @@ export type AutoSizerReturn = {
   resizableSize: ResizableSize
   // A callback function to change the size of the data grid.
   setResizableSize: React.Dispatch<React.SetStateAction<ResizableSize>>
-}
-
-/**
- * Helper function to determine if we should use container width based on the widthConfig and element's configuration.
- * This handles both the new widthConfig and legacy useContainerWidth fields.
- */
-function shouldUseContainerWidth(
-  element: ArrowProto,
-  widthConfig?: streamlit.IWidthConfig | null
-): boolean {
-  if (widthConfig) {
-    return Boolean(widthConfig.useStretch)
-  }
-  return element.useContainerWidth ?? false
-}
-
-/**
- * Helper function to get the configured width from the widthConfig and element.
- * This handles both the new widthConfig and legacy width fields.
- */
-function getConfiguredWidth(
-  element: ArrowProto,
-  widthConfig?: streamlit.IWidthConfig | null
-): number | undefined {
-  if (widthConfig?.pixelWidth) {
-    return widthConfig.pixelWidth
-  }
-  return element.width
-}
-
-/**
- * Helper function to determine if the element is configured to use content width.
- */
-function shouldUseContentWidth(
-  widthConfig?: streamlit.IWidthConfig | null
-): boolean {
-  return Boolean(widthConfig?.useContent)
 }
 
 /**

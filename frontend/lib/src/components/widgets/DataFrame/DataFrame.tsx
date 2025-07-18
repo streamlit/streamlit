@@ -261,7 +261,7 @@ function DataFrame({
     columns: originalColumns,
     allColumns,
     setColumnConfigMapping,
-  } = useColumnLoader(element, data, disabled, columnOrder)
+  } = useColumnLoader(element, data, disabled, columnOrder, widthConfig)
 
   /**
    * On the first rendering, try to load initial widget state if

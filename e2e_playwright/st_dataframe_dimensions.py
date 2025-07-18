@@ -34,6 +34,8 @@ st.dataframe(small_df, width=500)
 st.dataframe(small_df)
 st.dataframe(small_df, width=200, use_container_width=True)
 st.dataframe(small_df, width=200, use_container_width=False)
+st.dataframe(small_df, width="stretch")
+st.dataframe(small_df, width="content")
 
 one_col_df = pd.DataFrame(np.random.randn(100, 1))
 st.dataframe(one_col_df, width="stretch")
@@ -44,3 +46,8 @@ else:
     st.dataframe(small_df, width=200, height=100)
 
 st.dataframe(df, height="content", width="content")
+
+short_dataframe = pd.DataFrame(np.random.randn(3, 3))
+st.dataframe(short_dataframe, width="stretch", key="stretch_dataframe")
+st.dataframe(short_dataframe, width="content", key="content_dataframe")
+st.dataframe(short_dataframe, width=400, height=300, key="fixed_dimensions_dataframe")
