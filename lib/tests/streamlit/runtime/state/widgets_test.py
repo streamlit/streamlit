@@ -515,7 +515,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 click_mode=0,
                 style="",
                 label="",
-                help="",
+                help="",  # noqa: A006
                 width="content": st.feedback("stars", disabled=disabled),
                 "button_group",
             ),
@@ -530,7 +530,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 click_mode=0,
                 style="",
                 key="",
-                help="",
+                help="",  # noqa: A006
                 width="content": st.pills(label, options, disabled=disabled),
                 "button_group",
             ),
@@ -545,7 +545,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 click_mode=0,
                 style="",
                 key="",
-                help="",
+                help="",  # noqa: A006
                 width="content": st.segmented_control(
                     label, options, disabled=disabled
                 ),
