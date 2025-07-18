@@ -153,9 +153,9 @@ def test_colored_text_hover(app: Page):
         "color", "rgb(0, 104, 201)"
     )
     primary_button_element.locator("button").hover()
-    # For primary buttons, the colored text should be white on hover to match the rest of the text
+    # For primary buttons, the colored text should stay blue on hover (no color inheritance)
     expect(primary_button_element.locator("span")).to_have_css(
-        "color", "rgb(255, 255, 255)"
+        "color", "rgb(0, 104, 201)"
     )
 
     # Check hover behavior for colored text in secondary button
@@ -167,9 +167,9 @@ def test_colored_text_hover(app: Page):
         "color", "rgb(0, 104, 201)"
     )
     secondary_button_element.locator("button").hover()
-    # For secondary buttons, the colored text should be red on hover to match the rest of the text
+    # For secondary buttons, the colored text should stay blue on hover (no color inheritance)
     expect(secondary_button_element.locator("span")).to_have_css(
-        "color", "rgb(255, 75, 75)"
+        "color", "rgb(0, 104, 201)"
     )
 
     # Check hover behavior for colored text in tertiary button
