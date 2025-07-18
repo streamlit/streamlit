@@ -3191,10 +3191,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rolldown/pluginutils@npm:1.0.0-beta.11":
-  version: 1.0.0-beta.11
-  resolution: "@rolldown/pluginutils@npm:1.0.0-beta.11"
-  checksum: 10c0/140088e33a4dd3bc21d06fa0cbe79b52e95487c9737d425aa5729e52446dc70f066fbce632489a53e45bb567f1e86c19835677c98fe5d4123ae1e2fef53f8d97
+"@rolldown/pluginutils@npm:1.0.0-beta.27":
+  version: 1.0.0-beta.27
+  resolution: "@rolldown/pluginutils@npm:1.0.0-beta.27"
+  checksum: 10c0/9658f235b345201d4f6bfb1f32da9754ca164f892d1cb68154fe5f53c1df42bd675ecd409836dff46884a7847d6c00bdc38af870f7c81e05bba5c2645eb4ab9c
   languageName: node
   linkType: hard
 
@@ -3543,7 +3543,7 @@ __metadata:
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^10.0.4"
+    "@swc/plugin-emotion": "npm:^11.0.0"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.6.3"
     "@testing-library/react": "npm:^16.3.0"
@@ -3565,7 +3565,7 @@ __metadata:
     "@types/ua-parser-js": "npm:^0.7.39"
     "@types/uuid": "npm:^10.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.37.0"
-    "@vitejs/plugin-react-swc": "npm:^3.10.2"
+    "@vitejs/plugin-react-swc": "npm:^3.11.0"
     "@vitest/eslint-plugin": "npm:^1.3.4"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
@@ -3679,7 +3679,7 @@ __metadata:
     "@sindresorhus/slugify": "npm:^2.2.1"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^10.0.4"
+    "@swc/plugin-emotion": "npm:^11.0.0"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.6.3"
     "@testing-library/react": "npm:^16.3.0"
@@ -3704,7 +3704,7 @@ __metadata:
     "@types/uuid": "npm:^10.0.0"
     "@types/wavesurfer.js": "npm:^6.0.12"
     "@types/xxhashjs": "npm:^0.2.2"
-    "@vitejs/plugin-react-swc": "npm:^3.10.2"
+    "@vitejs/plugin-react-swc": "npm:^3.11.0"
     apache-arrow: "npm:^21.0.0"
     axios: "npm:^1.10.0"
     axios-mock-adapter: "npm:^2.1.0"
@@ -3948,92 +3948,92 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-arm64@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-darwin-arm64@npm:1.12.0"
+"@swc/core-darwin-arm64@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-darwin-arm64@npm:1.13.0"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-x64@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-darwin-x64@npm:1.12.0"
+"@swc/core-darwin-x64@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-darwin-x64@npm:1.13.0"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm-gnueabihf@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.12.0"
+"@swc/core-linux-arm-gnueabihf@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.13.0"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-gnu@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-linux-arm64-gnu@npm:1.12.0"
+"@swc/core-linux-arm64-gnu@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-linux-arm64-gnu@npm:1.13.0"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-musl@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-linux-arm64-musl@npm:1.12.0"
+"@swc/core-linux-arm64-musl@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-linux-arm64-musl@npm:1.13.0"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-gnu@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-linux-x64-gnu@npm:1.12.0"
+"@swc/core-linux-x64-gnu@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-linux-x64-gnu@npm:1.13.0"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-musl@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-linux-x64-musl@npm:1.12.0"
+"@swc/core-linux-x64-musl@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-linux-x64-musl@npm:1.13.0"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-win32-arm64-msvc@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-win32-arm64-msvc@npm:1.12.0"
+"@swc/core-win32-arm64-msvc@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-win32-arm64-msvc@npm:1.13.0"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-win32-ia32-msvc@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-win32-ia32-msvc@npm:1.12.0"
+"@swc/core-win32-ia32-msvc@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-win32-ia32-msvc@npm:1.13.0"
   conditions: os=win32 & cpu=ia32
   languageName: node
   linkType: hard
 
-"@swc/core-win32-x64-msvc@npm:1.12.0":
-  version: 1.12.0
-  resolution: "@swc/core-win32-x64-msvc@npm:1.12.0"
+"@swc/core-win32-x64-msvc@npm:1.13.0":
+  version: 1.13.0
+  resolution: "@swc/core-win32-x64-msvc@npm:1.13.0"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core@npm:^1.11.31":
-  version: 1.12.0
-  resolution: "@swc/core@npm:1.12.0"
+"@swc/core@npm:^1.12.11":
+  version: 1.13.0
+  resolution: "@swc/core@npm:1.13.0"
   dependencies:
-    "@swc/core-darwin-arm64": "npm:1.12.0"
-    "@swc/core-darwin-x64": "npm:1.12.0"
-    "@swc/core-linux-arm-gnueabihf": "npm:1.12.0"
-    "@swc/core-linux-arm64-gnu": "npm:1.12.0"
-    "@swc/core-linux-arm64-musl": "npm:1.12.0"
-    "@swc/core-linux-x64-gnu": "npm:1.12.0"
-    "@swc/core-linux-x64-musl": "npm:1.12.0"
-    "@swc/core-win32-arm64-msvc": "npm:1.12.0"
-    "@swc/core-win32-ia32-msvc": "npm:1.12.0"
-    "@swc/core-win32-x64-msvc": "npm:1.12.0"
+    "@swc/core-darwin-arm64": "npm:1.13.0"
+    "@swc/core-darwin-x64": "npm:1.13.0"
+    "@swc/core-linux-arm-gnueabihf": "npm:1.13.0"
+    "@swc/core-linux-arm64-gnu": "npm:1.13.0"
+    "@swc/core-linux-arm64-musl": "npm:1.13.0"
+    "@swc/core-linux-x64-gnu": "npm:1.13.0"
+    "@swc/core-linux-x64-musl": "npm:1.13.0"
+    "@swc/core-win32-arm64-msvc": "npm:1.13.0"
+    "@swc/core-win32-ia32-msvc": "npm:1.13.0"
+    "@swc/core-win32-x64-msvc": "npm:1.13.0"
     "@swc/counter": "npm:^0.1.3"
-    "@swc/types": "npm:^0.1.22"
+    "@swc/types": "npm:^0.1.23"
   peerDependencies:
     "@swc/helpers": ">=0.5.17"
   dependenciesMeta:
@@ -4060,7 +4060,7 @@ __metadata:
   peerDependenciesMeta:
     "@swc/helpers":
       optional: true
-  checksum: 10c0/969403f881b098dbaa099e117ab648e1aa30632f597d3bf1a13ab1864bcb279e5ae2a6bea488497bb8ea826a5ff17c23fbd8d87321ffe3c4a022445e801dcb04
+  checksum: 10c0/d3f9d04e8aa5a7a06b4ee112d85bc0fdf8b6ef288ea03b4d8c3bfb6f675585863b6a428d2fc2b00106ef747774625ddd4b334c59f18685b18d29a24f3a6d2255
   languageName: node
   linkType: hard
 
@@ -4080,16 +4080,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/plugin-emotion@npm:^10.0.4":
-  version: 10.0.4
-  resolution: "@swc/plugin-emotion@npm:10.0.4"
+"@swc/plugin-emotion@npm:^11.0.0":
+  version: 11.0.0
+  resolution: "@swc/plugin-emotion@npm:11.0.0"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/03dbec104b154f77f21cf4f80c4c1844ce729500ec8ecad8d3f92bf273ef810c8d952880fde5e0784c6a310614725d86a6a96e1287cb24fe8e855de0efb9eb76
+  checksum: 10c0/1544682f936ae155918948f7e5acb9e56e00d984161b797982de500b41161404289d3ce2f0941f70f629dbc9b790ca41b7f1a867cf66320f3badf88321e0ef58
   languageName: node
   linkType: hard
 
-"@swc/types@npm:^0.1.22":
+"@swc/types@npm:^0.1.23":
   version: 0.1.23
   resolution: "@swc/types@npm:0.1.23"
   dependencies:
@@ -6022,15 +6022,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react-swc@npm:^3.10.2":
-  version: 3.10.2
-  resolution: "@vitejs/plugin-react-swc@npm:3.10.2"
+"@vitejs/plugin-react-swc@npm:^3.11.0":
+  version: 3.11.0
+  resolution: "@vitejs/plugin-react-swc@npm:3.11.0"
   dependencies:
-    "@rolldown/pluginutils": "npm:1.0.0-beta.11"
-    "@swc/core": "npm:^1.11.31"
+    "@rolldown/pluginutils": "npm:1.0.0-beta.27"
+    "@swc/core": "npm:^1.12.11"
   peerDependencies:
-    vite: ^4 || ^5 || ^6 || ^7.0.0-beta.0
-  checksum: 10c0/3d1c10ed03f9ef5ee633453dec99f36a8d697b66bdb2edc4532352d4e43ec8fc01ea01258f4cd9c316925994c89fb02bedc396ee0f2d0953b6a5719f355f6c47
+    vite: ^4 || ^5 || ^6 || ^7
+  checksum: 10c0/0d12ee81f8c8acb74b35e7acfc45d23ecc2714ab3a0f6060e4bd900a6a739dd5a9be9c6bc842388f3c406f475f2a83e7ff3ade04ec6df9172faa1242e4faa424
   languageName: node
   linkType: hard
 
