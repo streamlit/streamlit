@@ -126,13 +126,12 @@ export const StyledPrimaryLinkButton = styled(
   "&:visited:not(:active)": {
     color: theme.colors.white,
   },
-  "&[disabled], &[disabled]:hover, &[disabled]:active, &[disabled]:visited":
-    {
-      borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
-      cursor: "not-allowed",
-    },
+  "&[disabled], &[disabled]:hover, &[disabled]:active, &[disabled]:visited": {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
 }))
 
 export const StyledSecondaryLinkButton = styled(

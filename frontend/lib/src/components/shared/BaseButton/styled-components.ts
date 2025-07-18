@@ -134,13 +134,12 @@ export const StyledPrimaryButton = styled(
     // Keep the border darker when clicked so that the button looks "pressed"
     borderColor: darken(theme.colors.primary, 0.15),
   },
-  "&:disabled, &:disabled:hover, &:disabled:active":
-    {
-      borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
-      cursor: "not-allowed",
-    },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
 }))
 
 export const StyledSecondaryButton = styled(
@@ -154,13 +153,12 @@ export const StyledSecondaryButton = styled(
   "&:active": {
     backgroundColor: theme.colors.darkenedBgMix25,
   },
-  "&:disabled, &:disabled:hover, &:disabled:active":
-    {
-      borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
-      cursor: "not-allowed",
-    },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.borderColor,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
 }))
 
 export const StyledTertiaryButton = styled(
@@ -185,12 +183,11 @@ export const StyledTertiaryButton = styled(
     "&:active": {
       color: darken(theme.colors.primary, 0.25),
     },
-    "&:disabled, &:disabled:hover, &:disabled:active":
-      {
-        backgroundColor: theme.colors.transparent,
-        color: theme.colors.fadedText40,
-        cursor: "not-allowed",
-      },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
+    },
   }
 })
 
@@ -208,12 +205,11 @@ export const StyledGhostButton = styled(
     borderColor: theme.colors.transparent,
     backgroundColor: theme.colors.transparent,
   },
-  "&:disabled, &:disabled:hover, &:disabled:active":
-    {
-      backgroundColor: theme.colors.lightGray,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
-    },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    backgroundColor: theme.colors.lightGray,
+    borderColor: theme.colors.transparent,
+    color: theme.colors.gray,
+  },
 }))
 
 export const StyledMinimalButton = styled(
@@ -261,13 +257,12 @@ const StyledButtonGroupBaseButton = styled(
     "&:hover, &:focus-visible": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
-    "&:disabled, &:disabled:hover, &:disabled:active":
-      {
-        color: theme.colors.fadedText20,
-        borderColor: theme.colors.fadedText20,
-        backgroundColor: theme.colors.transparent,
-        cursor: "not-allowed",
-      },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      color: theme.colors.fadedText20,
+      borderColor: theme.colors.fadedText20,
+      backgroundColor: theme.colors.transparent,
+      cursor: "not-allowed",
+    },
 
     "& div": {
       textOverflow: "ellipsis",
