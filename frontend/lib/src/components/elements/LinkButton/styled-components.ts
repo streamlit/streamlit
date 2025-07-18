@@ -126,12 +126,13 @@ export const StyledPrimaryLinkButton = styled(
   "&:visited:not(:active)": {
     color: theme.colors.white,
   },
-  "&[disabled], &[disabled]:hover, &[disabled]:active, &[disabled]:visited": {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
-    cursor: "not-allowed",
-  },
+  "&[disabled], &[disabled]:hover, &[disabled]:active, &[disabled]:visited":
+    {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
+    },
 }))
 
 export const StyledSecondaryLinkButton = styled(
@@ -169,9 +170,12 @@ export const StyledTertiaryLinkButton = styled(
   },
   "&:hover, &:focus-visible": {
     color: theme.colors.primary,
-
+  },
+  "&:hover:not([disabled]), &:focus-visible:not([disabled])": {
     // Also make colored text have the primary color on hover. Since text color is
     // applied as an inline style we need to use !important to override it.
+    // Note that we're not doing this when disabled. We should probably do that as
+    // well but we don't do it anywhere else.
     "span.stMarkdownColoredText": {
       color: "inherit !important",
     },

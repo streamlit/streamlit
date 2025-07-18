@@ -134,12 +134,13 @@ export const StyledPrimaryButton = styled(
     // Keep the border darker when clicked so that the button looks "pressed"
     borderColor: darken(theme.colors.primary, 0.15),
   },
-  "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
-    cursor: "not-allowed",
-  },
+  "&:disabled, &:disabled:hover, &:disabled:active":
+    {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
+    },
 }))
 
 export const StyledSecondaryButton = styled(
@@ -153,12 +154,13 @@ export const StyledSecondaryButton = styled(
   "&:active": {
     backgroundColor: theme.colors.darkenedBgMix25,
   },
-  "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
-    cursor: "not-allowed",
-  },
+  "&:disabled, &:disabled:hover, &:disabled:active":
+    {
+      borderColor: theme.colors.borderColor,
+      backgroundColor: theme.colors.transparent,
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
+    },
 }))
 
 export const StyledTertiaryButton = styled(
@@ -170,9 +172,12 @@ export const StyledTertiaryButton = styled(
     border: "none",
     "&:hover, &:focus-visible": {
       color: theme.colors.primary,
-
+    },
+    "&:hover:not(:disabled), &:focus-visible:not(:disabled)": {
       // Also make colored text have the primary color on hover. Since text color is
       // applied as an inline style we need to use !important to override it.
+      // Note that we're not doing this when disabled. We should probably do that as
+      // well but we don't do it anywhere else.
       "span.stMarkdownColoredText": {
         color: "inherit !important",
       },
@@ -180,11 +185,12 @@ export const StyledTertiaryButton = styled(
     "&:active": {
       color: darken(theme.colors.primary, 0.25),
     },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
-      cursor: "not-allowed",
-    },
+    "&:disabled, &:disabled:hover, &:disabled:active":
+      {
+        backgroundColor: theme.colors.transparent,
+        color: theme.colors.fadedText40,
+        cursor: "not-allowed",
+      },
   }
 })
 
@@ -202,11 +208,12 @@ export const StyledGhostButton = styled(
     borderColor: theme.colors.transparent,
     backgroundColor: theme.colors.transparent,
   },
-  "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.lightGray,
-    borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
-  },
+  "&:disabled, &:disabled:hover, &:disabled:active":
+    {
+      backgroundColor: theme.colors.lightGray,
+      borderColor: theme.colors.transparent,
+      color: theme.colors.gray,
+    },
 }))
 
 export const StyledMinimalButton = styled(
@@ -257,11 +264,13 @@ const StyledButtonGroupBaseButton = styled(
     "&:active": {
       backgroundColor: theme.colors.darkenedBgMix25,
     },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      color: theme.colors.fadedText20,
-      borderColor: theme.colors.fadedText20,
-      cursor: "not-allowed",
-    },
+    "&:disabled, &:disabled:hover, &:disabled:active":
+      {
+        color: theme.colors.fadedText20,
+        borderColor: theme.colors.fadedText20,
+        backgroundColor: theme.colors.transparent,
+        cursor: "not-allowed",
+      },
 
     "& div": {
       textOverflow: "ellipsis",
@@ -320,8 +329,9 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
-    "&:hover, &:focus-visible": {
-      zIndex: theme.zIndices.priority, // Make sure overlapped borders are visible
+    "&:focus-visible": {
+      // Make sure the focus ring isn't below the previous/next button. 
+      zIndex: theme.zIndices.priority,
     },
   }
 })
