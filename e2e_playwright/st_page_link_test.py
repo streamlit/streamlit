@@ -25,27 +25,29 @@ def test_page_links(app: Page, assert_snapshot: ImageCompareFunction):
     page_link_elements = app.get_by_test_id("stPageLink")
     expect(page_link_elements).to_have_count(PAGE_LINK_COUNT)
 
-    page_link_links = page_link_elements.get_by_test_id("stPageLink")
-
-    assert_snapshot(page_link_links.nth(5), name="st_page_link-default")
-    assert_snapshot(page_link_links.nth(6), name="st_page_link-icon")
-    assert_snapshot(page_link_links.nth(7), name="st_page_link-help")
-    assert_snapshot(page_link_links.nth(8), name="st_page_link-disabled")
-    assert_snapshot(page_link_links.nth(9), name="st_page_link-material-icon")
+    assert_snapshot(page_link_elements.nth(5), name="st_page_link-default")
+    assert_snapshot(page_link_elements.nth(6), name="st_page_link-icon")
+    assert_snapshot(page_link_elements.nth(7), name="st_page_link-help")
+    assert_snapshot(page_link_elements.nth(8), name="st_page_link-disabled")
+    assert_snapshot(page_link_elements.nth(9), name="st_page_link-material-icon")
 
     # st.Page object page links
-    assert_snapshot(page_link_links.nth(10), name="st_page_link-st_page_with_icon")
+    assert_snapshot(page_link_elements.nth(10), name="st_page_link-st_page_with_icon")
     assert_snapshot(
-        page_link_links.nth(11), name="st_page_link-st_page_with_material_icon"
+        page_link_elements.nth(11), name="st_page_link-st_page_with_material_icon"
     )
-    assert_snapshot(page_link_links.nth(12), name="st_page_link-st_page_icon_override")
+    assert_snapshot(
+        page_link_elements.nth(12), name="st_page_link-st_page_icon_override"
+    )
 
     # Sidebar page links
-    assert_snapshot(page_link_links.nth(0), name="st_page_link-sidebar-default")
-    assert_snapshot(page_link_links.nth(1), name="st_page_link-sidebar-icon")
-    assert_snapshot(page_link_links.nth(2), name="st_page_link-sidebar-help")
-    assert_snapshot(page_link_links.nth(3), name="st_page_link-sidebar-disabled")
-    assert_snapshot(page_link_links.nth(4), name="st_page_link-sidebar-width_content")
+    assert_snapshot(page_link_elements.nth(0), name="st_page_link-sidebar-default")
+    assert_snapshot(page_link_elements.nth(1), name="st_page_link-sidebar-icon")
+    assert_snapshot(page_link_elements.nth(2), name="st_page_link-sidebar-help")
+    assert_snapshot(page_link_elements.nth(3), name="st_page_link-sidebar-disabled")
+    assert_snapshot(
+        page_link_elements.nth(4), name="st_page_link-sidebar-width_content"
+    )
 
 
 def test_page_link_help_tooltip(app: Page):
