@@ -236,6 +236,7 @@ def compute_and_register_element_id(
 
     # If form_id is provided, add it to the kwargs.
     kwargs_to_use = {"form_id": form_id, **kwargs} if form_id else kwargs
+    kwargs_to_use["style"] = style
 
     # If style is provided, use it for the error message, to provide more
     # context to the user.
