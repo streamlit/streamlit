@@ -145,6 +145,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   return {
     ...props,
     kind: "link",
+    typeIcon: ":material/link:",
     sortMode: "default",
     validateInput,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

@@ -31,6 +31,18 @@ TYPE_PAIRS = [
 ]
 
 
+def _get_main_filename_and_extension(filename: str) -> tuple[str, str]:
+    """Returns the main part of a filename and its extension."""
+    # Handle NTFS Alternate Data Streams (ADS) on Windows, e.g: "file.txt:ads" -> ("file.txt", ".txt")
+    if os.name == "nt" and ":" in filename:
+        main_filename, ads_part = filename.split(":", 1)
+        # We only treat it as an ADS if the part after the colon has an extension.
+        if os.path.splitext(ads_part)[1]:
+            return main_filename, os.path.splitext(main_filename)[1]
+
+    return filename, os.path.splitext(filename)[1]
+
+
 def normalize_upload_file_type(file_type: str | Sequence[str]) -> Sequence[str]:
     if isinstance(file_type, str):
         file_type = [file_type]
@@ -59,8 +71,15 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
     enforce file type check by extension on the frontend, but we check it on backend
     before returning file to the user to protect ourselves.
     """
-    normalized_filename = filename.lower()
-    base_name, extension = os.path.splitext(normalized_filename)
+
+    # Ensure that there isn't a null byte in a filename
+    # since this could be a workaround to bypass the file type check.
+    if "\0" in filename:
+        raise StreamlitAPIException("Filename cannot contain null bytes.")
+
+    main_filename, extension = _get_main_filename_and_extension(filename)
+    normalized_filename = main_filename.lower()
+
     normalized_allowed_types = [allowed_type.lower() for allowed_type in allowed_types]
 
     if not any(
