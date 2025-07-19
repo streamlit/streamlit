@@ -59,7 +59,9 @@ def test_click_thumbsup_and_take_snapshot(
 
     # Hover over the hover test feedback to show hover state
     hover_test_thumbs = get_element_by_key(themed_app, "thumbs_feedback_hover_test")
-    hover_test_button = get_feedback_icon_button(get_button_group(hover_test_thumbs), "thumb_up")
+    hover_test_button = get_feedback_icon_button(
+        get_button_group(hover_test_thumbs), "thumb_up"
+    )
     hover_test_button.hover()
 
     assert_snapshot(container, name="st_feedback-thumbs")
@@ -81,7 +83,9 @@ def test_clicking_on_faces_shows_sentiment_via_on_change_callback_and_take_snaps
 
     # Hover over the hover test feedback to show hover state
     hover_test_faces = get_element_by_key(themed_app, "faces_feedback_hover_test")
-    hover_test_button = get_feedback_icon_button(get_button_group(hover_test_faces), "sentiment_satisfied")
+    hover_test_button = get_feedback_icon_button(
+        get_button_group(hover_test_faces), "sentiment_satisfied"
+    )
     hover_test_button.hover()
 
     assert_snapshot(container, name="st_feedback-faces")
@@ -103,7 +107,9 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
 
     # Hover over the hover test feedback to show hover state
     hover_test_stars = get_element_by_key(themed_app, "stars_feedback_hover_test")
-    hover_test_button = get_feedback_icon_button(get_button_group(hover_test_stars), "star", 2)
+    hover_test_button = get_feedback_icon_button(
+        get_button_group(hover_test_stars), "star", 2
+    )
     hover_test_button.hover()
 
     assert_snapshot(container, name="st_feedback-stars")
