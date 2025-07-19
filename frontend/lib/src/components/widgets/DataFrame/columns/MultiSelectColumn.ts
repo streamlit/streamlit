@@ -19,10 +19,10 @@ import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { unique } from "vega-lite"
 
 import {
+  blend,
   convertRemToPx,
   EmotionTheme,
   getMarkdownBgColors,
-  getMarkdownTextColors,
 } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -38,6 +38,24 @@ import {
 
 type SelectOption = { value: string; label?: string; color?: string }
 
+const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
+  const textBackgroundColors = getMarkdownBgColors(theme)
+
+  return new Map(
+    Object.entries({
+      red: textBackgroundColors.redbg,
+      blue: textBackgroundColors.bluebg,
+      green: textBackgroundColors.greenbg,
+      yellow: textBackgroundColors.yellowbg,
+      violet: textBackgroundColors.violetbg,
+      purple: textBackgroundColors.purplebg,
+      orange: textBackgroundColors.orangebg,
+      gray: textBackgroundColors.graybg,
+      grey: textBackgroundColors.graybg,
+      primary: textBackgroundColors.primarybg,
+    })
+  )
+}
 /**
  * Unifies the options into the format required by the multi-select cell.
  *
@@ -45,11 +63,14 @@ type SelectOption = { value: string; label?: string; color?: string }
  * @returns The prepared options in the format required by the multi-select cell.
  */
 export const prepareOptions = (
-  options: readonly (string | SelectOption)[]
+  options: readonly (string | SelectOption)[],
+  theme: EmotionTheme
 ): { value: string; label?: string; color?: string }[] => {
   if (isNullOrUndefined(options)) {
     return []
   }
+
+  const colorMapping = getColorMapping(theme)
 
   return options
     .filter(opt => opt !== null && opt !== "")
@@ -62,10 +83,20 @@ export const prepareOptions = (
         }
       }
 
+      // The upstream implemenation has some issues with the alpha channel.
+      // Therefore, we are blending the color with the background to remove the alpha channel.
+
+      const optionColor = option.color
+        ? blend(
+            colorMapping.get(option.color) ?? option.color,
+            theme.colors.bgColor
+          )
+        : undefined
+
       return {
         value: toSafeString(option.value).trim(),
         label: option.label ?? undefined,
-        color: option.color ?? undefined,
+        color: optionColor,
       }
     })
 }
@@ -89,7 +120,7 @@ function MultiSelectColumn(
     props.columnTypeOptions
   ) as MultiSelectColumnParams
 
-  const preparedOptions = prepareOptions(parameters.options)
+  const preparedOptions = prepareOptions(parameters.options, theme)
   const uniqueOptions = unique(
     preparedOptions.map(opt => opt.value),
     x => x
@@ -112,7 +143,6 @@ function MultiSelectColumn(
   } as MultiSelectCellType
 
   const badgeBackgroundColors = getMarkdownBgColors(theme)
-  const badgeTextColors = getMarkdownTextColors(theme)
 
   return {
     ...props,
@@ -123,7 +153,7 @@ function MultiSelectColumn(
       roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
       bgBubble: badgeBackgroundColors.primarybg,
       bgBubbleSelected: badgeBackgroundColors.primarybg,
-      textBubble: badgeTextColors.primary,
+      textBubble: theme.colors.bodyText,
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
