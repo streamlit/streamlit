@@ -47,7 +47,12 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { StyledThumb, StyledThumbValue } from "./styled-components"
+import {
+  StyledThumb,
+  StyledThumbValue,
+  StyledSliderContainer,
+  StyledMark,
+} from "./styled-components"
 
 const DEBOUNCE_TIME_MS = 200
 
@@ -119,6 +124,39 @@ function Slider({
     },
     [debouncedSetValueWithSource]
   )
+
+  const renderCustomMarks = useCallback(() => {
+    if (
+      element.type !== SliderProto.Type.SELECT_SLIDER ||
+      !element.options.length
+    ) {
+      return null
+    }
+
+    return element.options.map((_, index) => {
+      const markValue = index
+      let isSelected = false
+
+      if (uiValue.length === 1) {
+        // For single slider: mark is selected if it's less than or equal to the thumb value
+        isSelected = markValue <= uiValue[0]
+      } else if (uiValue.length === 2) {
+        // For range slider: mark is selected if it's between the two thumb values
+        isSelected = markValue >= uiValue[0] && markValue <= uiValue[1]
+      }
+
+      const position =
+        ((markValue - element.min) / (element.max - element.min)) * 100
+
+      return (
+        <StyledMark
+          key={markValue}
+          isSelected={isSelected}
+          style={{ left: `${position}%` }}
+        />
+      )
+    })
+  }, [uiValue, element.type, element.options, element.min, element.max])
 
   // TODO: Update to match React best practices
   // eslint-disable-next-line react-hooks/react-compiler
@@ -208,11 +246,51 @@ function Slider({
   })
 
   const innerTrackStyle = useCallback(
-    ({ $disabled }: StyleProps) => ({
-      height: theme.spacing.twoXS,
-      ...($disabled ? { background: theme.colors.darkenedBgMix25 } : {}),
-    }),
-    [theme.colors.darkenedBgMix25, theme.spacing.twoXS]
+    ({ $disabled }: StyleProps) => {
+      // Calculate the percentage for the gradient based on the slider value
+      let gradientStyle = {}
+
+      if (!$disabled) {
+        if (uiValue.length === 1) {
+          // For single thumb slider
+          const singleValue = uiValue[0]
+          const gradientPercentage =
+            ((singleValue - element.min) / (element.max - element.min)) * 100
+          gradientStyle = {
+            background: `linear-gradient(to right, ${theme.colors.primary} 0%, ${theme.colors.primary} ${gradientPercentage}%, ${theme.colors.secondaryBg} ${gradientPercentage}%, ${theme.colors.secondaryBg} 100%)`,
+            backgroundImage: `linear-gradient(to right, ${theme.colors.primary} 0%, ${theme.colors.primary} ${gradientPercentage}%, ${theme.colors.secondaryBg} ${gradientPercentage}%, ${theme.colors.secondaryBg} 100%)`,
+          }
+        } else if (uiValue.length === 2) {
+          // For range slider, show primary color between the two thumbs
+          const firstValue = uiValue[0]
+          const secondValue = uiValue[1]
+          const firstPercentage =
+            ((firstValue - element.min) / (element.max - element.min)) * 100
+          const secondPercentage =
+            ((secondValue - element.min) / (element.max - element.min)) * 100
+          gradientStyle = {
+            background: `linear-gradient(to right, ${theme.colors.secondaryBg} 0%, ${theme.colors.secondaryBg} ${firstPercentage}%, ${theme.colors.primary} ${firstPercentage}%, ${theme.colors.primary} ${secondPercentage}%, ${theme.colors.secondaryBg} ${secondPercentage}%, ${theme.colors.secondaryBg} 100%)`,
+            backgroundImage: `linear-gradient(to right, ${theme.colors.secondaryBg} 0%, ${theme.colors.secondaryBg} ${firstPercentage}%, ${theme.colors.primary} ${firstPercentage}%, ${theme.colors.primary} ${secondPercentage}%, ${theme.colors.secondaryBg} ${secondPercentage}%, ${theme.colors.secondaryBg} 100%)`,
+          }
+        }
+      }
+
+      return {
+        height: theme.spacing.twoXS,
+        ...($disabled
+          ? { background: theme.colors.darkenedBgMix25 }
+          : gradientStyle),
+      }
+    },
+    [
+      theme.colors.darkenedBgMix25,
+      theme.colors.primary,
+      theme.colors.secondaryBg,
+      theme.spacing.twoXS,
+      uiValue,
+      element.min,
+      element.max,
+    ]
   )
 
   return (
@@ -233,33 +311,37 @@ function Slider({
           </StyledWidgetLabelHelp>
         )}
       </WidgetLabel>
-      <UISlider
-        min={element.min}
-        max={element.max}
-        step={element.step}
-        value={getValueAsArray(uiValue, element)}
-        onChange={handleChange}
-        disabled={disabled}
-        overrides={{
-          Thumb: renderThumb,
-          Track: {
-            style: {
-              backgroundColor: "none !important",
-              paddingLeft: theme.spacing.none,
-              paddingRight: theme.spacing.none,
-              // Set padding so total height equals minElementHeight (40px)
-              // Total height = paddingTop + innerTrack height + paddingBottom
-              paddingTop: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
-              paddingBottom: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
+      <StyledSliderContainer>
+        <UISlider
+          min={element.min}
+          max={element.max}
+          step={element.step}
+          value={getValueAsArray(uiValue, element)}
+          onChange={handleChange}
+          disabled={disabled}
+          overrides={{
+            Thumb: renderThumb,
+            Track: {
+              style: {
+                backgroundColor: "none !important",
+                paddingLeft: theme.spacing.none,
+                paddingRight: theme.spacing.none,
+                // Set padding so total height equals minElementHeight (40px)
+                // Total height = paddingTop + innerTrack height + paddingBottom
+                paddingTop: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
+                paddingBottom: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
+              },
             },
-          },
-          InnerTrack: {
-            style: innerTrackStyle,
-          },
-          // Hide min and max tick values
-          TickBar: () => null,
-        }}
-      />
+            InnerTrack: {
+              style: innerTrackStyle,
+            },
+            // Hide min and max tick values
+            TickBar: () => null,
+          }}
+        />
+        {/* Custom marks for select sliders */}
+        {renderCustomMarks()}
+      </StyledSliderContainer>
     </div>
   )
 }

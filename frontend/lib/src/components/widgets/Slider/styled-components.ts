@@ -63,3 +63,26 @@ export const StyledThumbValue = styled.div<StyledSliderProps>(
     pointerEvents: "none",
   })
 )
+
+export const StyledSliderContainer = styled.div({
+  position: "relative",
+})
+
+export interface StyledMarkProps {
+  isSelected: boolean
+}
+
+export const StyledMark = styled.div<StyledMarkProps>(
+  ({ isSelected, theme }) => ({
+    backgroundColor: isSelected
+      ? theme.colors.primary
+      : theme.colors.secondaryBg,
+    borderRadius: theme.radii.full,
+    width: `calc(${theme.sizes.sliderThumb} * 0.8333)`,
+    height: `calc(${theme.sizes.sliderThumb} * 0.8333)`,
+    position: "absolute",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    pointerEvents: "none",
+  })
+)
