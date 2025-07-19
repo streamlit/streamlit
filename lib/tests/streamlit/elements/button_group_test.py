@@ -941,10 +941,20 @@ def test_duplicate_element_id_error_message(
     must_not_include: list[str]
 ) -> None:
 
-    """Test that duplicate element ID errors show the correct widget name.
+    """Test widget name display in duplicate element ID error messages.
     
-    Verifies that when duplicate element IDs occur, the error message 
-    contains the user-facing widget name rather than the internal implementation name.
+    Parameters
+    ----------
+    name : str
+        Description of the test case
+    kwargs : dict
+        Parameters to pass to compute_and_register_element_id
+    expected_in : str
+        Expected widget name in the error message
+    must_include : list[str]
+        Strings that must be present in the error message
+    must_not_include : list[str]
+        Strings that must not be present in the error message
     """
 
     # Create element ID (no key to force element ID duplication)
