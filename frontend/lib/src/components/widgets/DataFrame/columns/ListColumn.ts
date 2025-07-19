@@ -54,6 +54,8 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
       // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
       roundingRadius: 4,
     },
+    typeIcon: ":material/list:",
+    isEditable: false, // List column is always readonly
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       if (isNullOrUndefined(data)) {
