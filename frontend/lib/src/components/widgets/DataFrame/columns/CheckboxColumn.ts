@@ -20,6 +20,7 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
+import { convertRemToPx, EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -34,7 +35,10 @@ import {
  * A column type that supports optimized rendering and editing for boolean values
  * by using checkboxes.
  */
-function CheckboxColumn(props: BaseColumnProps): BaseColumn {
+function CheckboxColumn(
+  props: BaseColumnProps,
+  theme: EmotionTheme
+): BaseColumn {
   const cellTemplate: BooleanCell = {
     kind: GridCellKind.Boolean,
     data: false,
@@ -49,6 +53,9 @@ function CheckboxColumn(props: BaseColumnProps): BaseColumn {
     kind: "checkbox",
     typeIcon: ":material/check_box:",
     sortMode: "default",
+    themeOverride: {
+      roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       let cellData = null

@@ -17,6 +17,7 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 
+import { convertRemToPx, EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -29,7 +30,7 @@ import {
 /**
  * A column type that supports optimized rendering values of array/list types.
  */
-function ListColumn(props: BaseColumnProps): BaseColumn {
+function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Custom,
     readonly: !props.isEditable,
@@ -51,8 +52,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     kind: "list",
     sortMode: "default",
     themeOverride: {
-      // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-      roundingRadius: 4,
+      roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
     },
     typeIcon: ":material/list:",
     isEditable: false, // List column is always readonly
