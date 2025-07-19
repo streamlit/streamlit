@@ -37,6 +37,7 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: "normal",
+    copyData: "",
     data: {
       kind: "multi-select-cell",
       values: [],
@@ -44,7 +45,6 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
       allowCreation: true,
       allowDuplicates: true,
     },
-    copyData: "",
   } as MultiSelectCellType
 
   return {
@@ -55,7 +55,6 @@ function ListColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
       roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
     },
     typeIcon: ":material/list:",
-    isEditable: false, // List column is always readonly
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       if (isNullOrUndefined(data)) {
