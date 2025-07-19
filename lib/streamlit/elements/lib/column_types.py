@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
@@ -940,8 +940,8 @@ def SelectboxColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     default: str | int | float | None = None,
-    options: Iterable[str | int | float | SelectboxOption] | None = None,
-    format_func: Callable[[Any], str] | None = None,
+    options: Iterable[str | int | float] | None = None,
+    format_func: Callable[[str | int | float], str] | None = None,
 ) -> ColumnConfig:
     """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1050,30 +1050,13 @@ def SelectboxColumn(
     """
 
     # Process options with format_func
-    processed_options: list[str | int | float | SelectboxOption] | None = None
-    if options is not None:
+    processed_options: Iterable[str | int | float | SelectboxOption] | None = options
+    if options and format_func is not None:
         processed_options = []
-
         for option in options:
-            # Handle different option types
-            if isinstance(option, dict):
-                # Already a SelectboxOption dict
-                option_dict = option.copy()
-
-                # Apply format_func to generate label if not already present
-                if "label" not in option_dict and format_func is not None:
-                    option_dict["label"] = format_func(option_dict["value"])
-
-                processed_options.append(option_dict)
-            # Simple value (str, int, or float)
-            elif format_func is not None:
-                # Create a SelectboxOption with formatted label
-                processed_options.append(
-                    SelectboxOption(value=option, label=format_func(option))
-                )
-            else:
-                # Keep as simple value
-                processed_options.append(option)
+            processed_options.append(
+                SelectboxOption(value=option, label=format_func(option))
+            )
 
     return ColumnConfig(
         label=label,
@@ -1083,7 +1066,10 @@ def SelectboxColumn(
         required=required,
         pinned=pinned,
         default=default,
-        type_config=SelectboxColumnConfig(type="selectbox", options=processed_options),
+        type_config=SelectboxColumnConfig(
+            type="selectbox",
+            options=list(processed_options) if processed_options is not None else None,
+        ),
     )
 
 
@@ -1582,7 +1568,7 @@ def MultiselectColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     default: Iterable[str] | None = None,
-    options: Iterable[MultiselectOption | str] | None = None,
+    options: Iterable[str] | None = None,
     accept_new_options: bool | None = None,
     color: str | Iterable[str] | None = None,
     format_func: Callable[[str], str] | None = None,
@@ -1702,12 +1688,7 @@ def MultiselectColumn(
 
         for option in options:
             # Start with the option value
-            if isinstance(option, str):
-                # Simple string option
-                option_dict = MultiselectOption(value=option)
-            else:
-                # Already a MultiselectOption dict
-                option_dict = option
+            option_dict = MultiselectOption(value=option)
 
             # Apply format_func to generate label if not already present
             if "label" not in option_dict and format_func is not None:

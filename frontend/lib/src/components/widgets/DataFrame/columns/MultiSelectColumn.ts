@@ -118,6 +118,7 @@ function MultiSelectColumn(
     ...props,
     kind: "multiselect",
     sortMode: "default",
+    typeIcon: ":material/checklist:",
     themeOverride: {
       roundingRadius: Math.round(convertRemToPx(theme.radii.md)),
       bgBubble: badgeBackgroundColors.primarybg,
