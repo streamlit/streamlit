@@ -35,6 +35,43 @@ export interface Props {
   maxSizeBytes: number
 }
 
+
+const deduplicateExtensionsForDisplay = (extensions: string[]): string[] => {
+  const extensionPairs = [
+    [".jpg", ".jpeg"],
+    [".mpg", ".mpeg"],
+    [".mp4", ".mpeg4"],
+    [".tif", ".tiff"],
+    [".htm", ".html"],
+  ]
+
+
+  const normalizedExtensions = extensions.map(ext => ext.toLowerCase())
+
+
+  const preferredExtensions = new Set<string>()
+
+
+  for (const [first, second] of extensionPairs) {
+    if (normalizedExtensions.includes(first)) {
+      preferredExtensions.add(first)
+    }
+  }
+
+  // Filter out extensions that have a preferred alternative
+  return extensions.filter(ext => {
+    const normalizedExt = ext.toLowerCase()
+
+    for (const [first, second] of extensionPairs) {
+      if (normalizedExt === second && preferredExtensions.has(first)) {
+        return false
+      }
+    }
+
+    return true
+  })
+}
+
 const FileDropzoneInstructions = ({
   multiple,
   acceptedExtensions,
@@ -51,7 +88,7 @@ const FileDropzoneInstructions = ({
       <Small>
         {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
         {acceptedExtensions.length
-          ? ` • ${acceptedExtensions
+          ? ` • ${deduplicateExtensionsForDisplay(acceptedExtensions)
               .map(ext => ext.replace(/^\./, "").toUpperCase())
               .join(", ")}`
           : null}
