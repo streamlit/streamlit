@@ -272,6 +272,20 @@ class SliderTest(DeltaGeneratorTestCase):
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
+    def test_marks_parameter(self):
+        """Test that the marks parameter is correctly set in the proto."""
+        st.select_slider("the label", options=["red", "orange", "yellow"], marks=True)
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.showMarks is True
+
+    def test_marks_parameter_default(self):
+        """Test that the marks parameter defaults to False."""
+        st.select_slider("the label", options=["red", "orange", "yellow"])
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.showMarks is False
+
 
 def test_select_slider_enum_coercion():
     """Test E2E Enum Coercion on a select_slider."""

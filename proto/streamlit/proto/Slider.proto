@@ -57,4 +57,7 @@ message Slider {
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
   Type type = 17;
+
+  // Whether to show marks on the slider track
+  bool show_marks = 18;
 }

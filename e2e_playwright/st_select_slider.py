@@ -147,6 +147,21 @@ st.select_slider(
     width="stretch",
 )
 
+# Test marks functionality
+st.select_slider(
+    "Label 15 - With Marks (Single)",
+    options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+    value="green",
+    marks=True,
+)
+
+st.select_slider(
+    "Label 16 - With Marks (Range)",
+    options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+    value=("orange", "blue"),
+    marks=True,
+)
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1

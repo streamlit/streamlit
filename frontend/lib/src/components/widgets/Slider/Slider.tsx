@@ -241,6 +241,65 @@ function Slider({
     [colors, spacing]
   )
 
+
+  const createMarks = useCallback(() => {
+    if (!element.showMarks || element.type !== SliderProto.Type.SELECT_SLIDER) {
+      return undefined
+    }
+
+    const marks: Record<number, string> = {}
+    for (let i = element.min; i <= element.max; i++) {
+      marks[i] = "" // Empty string for visual marks only
+    }
+    return marks
+  }, [element.showMarks, element.type, element.min, element.max])
+
+  // Custom mark component for select slider
+  const renderMark = useCallback(
+    ({ $markIndex }: { $markIndex: number }) => {
+      if (!element.showMarks || element.type !== SliderProto.Type.SELECT_SLIDER) {
+        return null
+      }
+
+      const currentValue = uiValue[0]
+      const isRange = uiValue.length > 1
+      const rangeStart = isRange ? Math.min(uiValue[0], uiValue[1]) : currentValue
+      const rangeEnd = isRange ? Math.max(uiValue[0], uiValue[1]) : currentValue
+
+      // Determine mark color based on position relative to thumb(s)
+      let markColor = colors.gray
+      if (isRange) {
+        // For range slider: marks between thumbs are primary color
+        if ($markIndex >= rangeStart && $markIndex <= rangeEnd) {
+          markColor = colors.primary
+        }
+      } else {
+        // For single slider: marks on or before thumb are primary color
+        if ($markIndex <= currentValue) {
+          markColor = colors.primary
+        }
+      }
+
+      return (
+        <div
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            backgroundColor: markColor,
+            border: "2px solid white",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.2)",
+            position: "absolute",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 1,
+          }}
+        />
+      )
+    },
+    [element.showMarks, element.type, uiValue, colors.primary, colors.gray]
+  )
+
   return (
     <div ref={sliderRef} className="stSlider" data-testid="stSlider">
       <WidgetLabel
@@ -266,6 +325,7 @@ function Slider({
         value={getValueAsArray(uiValue, element)}
         onChange={handleChange}
         disabled={disabled}
+        marks={createMarks()}
         overrides={{
           Thumb: renderThumb,
           Tick: {
@@ -288,6 +348,7 @@ function Slider({
             style: innerTrackStyle,
           },
           TickBar: renderTickBar,
+          Mark: renderMark,
         }}
       />
     </div>

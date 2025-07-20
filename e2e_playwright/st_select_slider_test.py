@@ -27,7 +27,7 @@ def test_select_slider_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     st_select_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_select_sliders).to_have_count(14)
+    expect(st_select_sliders).to_have_count(16)
 
     assert_snapshot(
         st_select_sliders.nth(0),
@@ -39,6 +39,8 @@ def test_select_slider_rendering(
     assert_snapshot(st_select_sliders.nth(11), name="st_select_slider-markdown_label")
     assert_snapshot(st_select_sliders.nth(12), name="st_select_slider-width_300px")
     assert_snapshot(st_select_sliders.nth(13), name="st_select_slider-width_stretch")
+    assert_snapshot(st_select_sliders.nth(14), name="st_select_slider-with_marks_single")
+    assert_snapshot(st_select_sliders.nth(15), name="st_select_slider-with_marks_range")
 
 
 def test_help_tooltip_works(app: Page):

@@ -121,6 +121,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        marks: bool = False,
     ) -> tuple[T, T]: ...
 
     @overload
@@ -139,6 +140,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        marks: bool = False,
     ) -> T: ...
 
     @gather_metrics("select_slider")
@@ -157,6 +159,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        marks: bool = False,
     ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
@@ -255,6 +258,13 @@ class SelectSliderMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        marks : bool
+            Whether to show marks on the slider track indicating all possible
+            positions. When ``True``, small circular marks will be displayed
+            at each option position, with marks on the left side of the thumb
+            colored in the primary color and marks on the right side in gray.
+            Defaults to ``False``.
+
         Returns
         -------
         any value or tuple of any value
@@ -318,6 +328,7 @@ class SelectSliderMixin:
             label_visibility=label_visibility,
             ctx=ctx,
             width=width,
+            marks=marks,
         )
 
     def _select_slider(
@@ -335,6 +346,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
+        marks: bool = False,
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
@@ -399,6 +411,7 @@ class SelectSliderMixin:
         slider_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
+        slider_proto.show_marks = marks
         if help is not None:
             slider_proto.help = dedent(help)
 
