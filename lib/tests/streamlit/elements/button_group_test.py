@@ -894,7 +894,6 @@ class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
                     style="segmented_control",
                     options=("a", "b", "c"),
                 ),
-                "segmented_control",
                 ["segmented_control"],
                 ["button_group"],
             ),
@@ -904,7 +903,6 @@ class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
                     style="pills",
                     options=("option1", "option2"),
                 ),
-                "pills",
                 ["pills"],
                 ["button_group"],
             ),
@@ -914,7 +912,6 @@ class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
                     style="borderless",
                     options="thumbs",
                 ),
-                "feedback",
                 ["feedback"],
                 ["button_group", "borderless"],
             ),
@@ -923,60 +920,51 @@ class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
                 dict(
                     options=("a", "b"),
                 ),
-                "button_group",
                 ["button_group"],
                 [],
             ),
         ]
     )
+    def test_duplicate_element_id_error_message(
+        self,
+        name: str,
+        kwargs: dict,
+        must_include: list[str],
+        must_not_include: list[str],
+    ) -> None:
+        """Test widget name display in duplicate element ID error messages.
 
+        Parameters
+        ----------
+        name : str
+            Description of the test case
+        kwargs : dict
+            Parameters to pass to compute_and_register_element_id
+        must_include : list[str]
+            Strings that must be present in the error message
+        must_not_include : list[str]
+            Strings that must not be present in the error message
+        """
 
-
-def test_duplicate_element_id_error_message(
-    self, 
-    name: str, 
-    kwargs: dict, 
-    expected_in: str, 
-    must_include: list[str], 
-    must_not_include: list[str]
-) -> None:
-
-    """Test widget name display in duplicate element ID error messages.
-    
-    Parameters
-    ----------
-    name : str
-        Description of the test case
-    kwargs : dict
-        Parameters to pass to compute_and_register_element_id
-    expected_in : str
-        Expected widget name in the error message
-    must_include : list[str]
-        Strings that must be present in the error message
-    must_not_include : list[str]
-        Strings that must not be present in the error message
-    """
-
-    # Create element ID (no key to force element ID duplication)
-    _ = compute_and_register_element_id(
-        "button_group",
-        user_key=None,
-        form_id=None,
-        **kwargs,
-    )
-    # Try to create another element with the same parameters - should raise error
-    with pytest.raises(StreamlitDuplicateElementId) as exc_info:
-        compute_and_register_element_id(
+        # Create element ID (no key to force element ID duplication)
+        _ = compute_and_register_element_id(
             "button_group",
             user_key=None,
             form_id=None,
             **kwargs,
         )
-    msg = str(exc_info.value)
-    for must in must_include:
-        assert must in msg, f"Expected '{must}' in error message for {name}"
-    for must_not in must_not_include:
-        assert must_not not in msg, (
-            f"Did not expect '{must_not}' in error message for {name}"
-        )
-
+        # Try to create another element with the same parameters - should raise error
+        with pytest.raises(StreamlitDuplicateElementId) as exc_info:
+            compute_and_register_element_id(
+                "button_group",
+                user_key=None,
+                form_id=None,
+                **kwargs,
+            )
+        msg = str(exc_info.value)
+        for must in must_include:
+            assert must in msg, f"Expected '{must}' in error message for {name}"
+        for must_not in must_not_include:
+            assert must_not not in msg, (
+                f"Did not expect '{must_not}' in error message for {name}"
+            )

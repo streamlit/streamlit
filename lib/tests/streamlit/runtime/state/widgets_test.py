@@ -643,7 +643,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 style="borderless",
             )
 
-    def test_style_is_included_in_element_id(self):
+    def test_style_is_included_in_element_id_when_style_is_not_none(self):
         """Test that style is included in element ID."""
         compute_and_register_element_id(
             element_type="button_group",
@@ -657,6 +657,44 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             form_id="form_id",
             style="pills",
         )
+
+    def test_style_is_not_included_in_element_id_when_style_is_none(self):
+        """Test that style is included in element ID."""
+        with pytest.raises(
+            errors.StreamlitDuplicateElementId,
+            match="There are multiple `test_element` elements with the same",
+        ):
+            compute_and_register_element_id(
+                element_type="test_element",
+                user_key=None,
+                form_id="form_id",
+                style=None,
+            )
+            compute_and_register_element_id(
+                element_type="test_element",
+                user_key=None,
+                form_id="form_id",
+                style=None,
+            )
+
+    def test_style_is_not_included_in_element_id_when_style_is_empty_string(self):
+        """Test that style is not included in element ID when style is empty string."""
+        with pytest.raises(
+            errors.StreamlitDuplicateElementId,
+            match="There are multiple `test_element` elements with the same",
+        ):
+            compute_and_register_element_id(
+                element_type="test_element",
+                user_key=None,
+                form_id="form_id",
+                style="",
+            )
+            compute_and_register_element_id(
+                element_type="test_element",
+                user_key=None,
+                form_id="form_id",
+                style="",
+            )
 
 
 class RegisterWidgetsTest(DeltaGeneratorTestCase):
