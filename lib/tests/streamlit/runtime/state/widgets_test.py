@@ -514,6 +514,8 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 default=[],
                 click_mode=0,
                 style="",
+                label="",
+                help="",  # noqa: A006
                 width="content": st.feedback("stars", disabled=disabled),
                 "button_group",
             ),
@@ -521,27 +523,31 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.pills does
                 # not take a label and its arguments are different.
-                lambda key,
+                lambda label,
                 options,
                 disabled=False,
                 default=[],
                 click_mode=0,
                 style="",
-                width="content": st.pills("some_label", options, disabled=disabled),
+                key="",
+                help="",  # noqa: A006
+                width="content": st.pills(label, options, disabled=disabled),
                 "button_group",
             ),
             (
                 # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.feedback does
                 # not take a label and its arguments are different.
-                lambda key,
+                lambda label,
                 options,
                 disabled=False,
                 default=[],
                 click_mode=0,
                 style="",
+                key="",
+                help="",  # noqa: A006
                 width="content": st.segmented_control(
-                    "some_label", options, disabled=disabled
+                    label, options, disabled=disabled
                 ),
                 "button_group",
             ),
