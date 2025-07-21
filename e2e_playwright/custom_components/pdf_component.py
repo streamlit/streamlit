@@ -206,7 +206,7 @@ def use_st_pdf_accessibility():
     st.markdown("### PDF Accessibility Test")
 
     heights = [200, 350, 500]
-    for i, height in enumerate(heights, 1):
+    for _, height in enumerate(heights, 1):
         st.write(f"**PDF with height {height}px**")
         pdf_bytes = _create_sample_pdf_bytes()
         st.pdf(pdf_bytes, height=height, key=f"pdf_accessibility_{height}")
