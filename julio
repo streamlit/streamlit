@@ -1,0 +1,26 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+
+st.title("📊 Dashboard Financeiro")
+
+# Dados simulados
+data = {
+    "Mês": ["Jan", "Fev", "Mar", "Abr", "Mai"],
+    "Receitas": [20000, 22000, 18000, 24000, 26000],
+    "Despesas": [15000, 17000, 16000, 18000, 20000]
+}
+df = pd.DataFrame(data)
+df["Lucro"] = df["Receitas"] - df["Despesas"]
+
+# KPIs
+st.metric("💰 Receita Total", f'R$ {df["Receitas"].sum():,.2f}')
+st.metric("💸 Despesa Total", f'R$ {df["Despesas"].sum():,.2f}')
+st.metric("📈 Lucro Total", f'R$ {df["Lucro"].sum():,.2f}')
+
+# Gráficos
+st.subheader("Receita vs Despesa")
+st.bar_chart(df.set_index("Mês")[["Receitas", "Despesas"]])
+
+st.subheader("Lucro Mensal")
+st.line_chart(df.set_index("Mês")["Lucro"]
