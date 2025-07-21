@@ -52,11 +52,11 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
   })
 )
 
-export const StyledSummaryHeading = styled.span(({ theme }) => ({
+export const StyledSummaryHeading = styled.span({
   display: "flex",
   alignItems: "center",
   flexGrow: 1,
-}))
+})
 
 interface StyledSummaryProps {
   isStale: boolean

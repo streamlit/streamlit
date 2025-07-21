@@ -14,21 +14,13 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
+import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
-import { LibContext } from "~lib/components/core/LibContext"
 import { IconSize } from "~lib/theme"
 
 import {
@@ -36,8 +28,8 @@ import {
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,
-  StyledStatusSpinner,
   StyledStatusLabel,
+  StyledStatusSpinner,
   StyledSummary,
   StyledSummaryHeading,
 } from "./styled-components"
@@ -58,7 +50,6 @@ export interface ExpanderIconProps {
  */
 export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon } = props
-  const { activeTheme } = useContext(LibContext)
 
   const isMaterialIcon = icon?.startsWith(":material")
   // Material icons need to be larger to render similar size of emojis
