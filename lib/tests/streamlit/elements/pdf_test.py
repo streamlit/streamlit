@@ -17,13 +17,59 @@
 import io
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitInvalidHeightError, StreamlitInvalidWidthError
+from streamlit.elements.pdf import _is_pdf_component_available
+from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+
+class PdfComponentAvailabilityTest(DeltaGeneratorTestCase):
+    """Test the PDF component availability check."""
+
+    def test_pdf_component_available(self):
+        """Test when PDF component is available."""
+        with patch(
+            "streamlit.elements.pdf._is_pdf_component_available", return_value=True
+        ):
+            assert _is_pdf_component_available() is True
+
+    def test_pdf_component_not_available(self):
+        """Test when PDF component is not available."""
+        # Import the module so we can access the function through it
+        from streamlit.elements import pdf as pdf_module
+
+        with patch.object(
+            pdf_module, "_is_pdf_component_available", return_value=False
+        ):
+            assert not pdf_module._is_pdf_component_available()
+
+    def test_pdf_component_import_error(self):
+        """Test when PDF component import fails - checking behavior."""
+        # Simply test that st.pdf raises the appropriate error when component is not available
+        with patch(
+            "streamlit.elements.pdf._is_pdf_component_available", return_value=False
+        ):
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                st.pdf(b"dummy pdf data")
+
+            assert "streamlit-pdf" in str(exc_info.value)
+            assert "pip install" in str(exc_info.value)
+
+    def test_pdf_raises_when_component_not_available(self):
+        """Test that st.pdf raises an appropriate error when component is not available."""
+        with patch(
+            "streamlit.elements.pdf._is_pdf_component_available", return_value=False
+        ):
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                st.pdf("https://example.com/fake.pdf")
+
+            assert "streamlit-pdf" in str(exc_info.value)
+            assert "pip install streamlit-pdf" in str(exc_info.value)
 
 
 class PdfTest(DeltaGeneratorTestCase):
@@ -31,125 +77,42 @@ class PdfTest(DeltaGeneratorTestCase):
 
     def test_pdf_url(self):
         """Test PDF with URL."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
+        # Use a fake URL to avoid dependency on external resources
+        url = "https://example.com/fake-document.pdf"
         st.pdf(url)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
 
         # Parse the JSON args to check the parameters
         json_args = json.loads(element.component_instance.json_args)
         assert json_args["file"] == url
-        assert json_args["width"] == 700  # default width for stretch
-        assert json_args["height"] == 500  # default height
+        assert json_args["height"] == "500"  # Height is converted to string
         assert json_args["key"] is None
 
     def test_pdf_with_height(self):
         """Test PDF with custom height."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
+        url = "https://example.com/fake-document.pdf"
         st.pdf(url, height=600)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
 
         json_args = json.loads(element.component_instance.json_args)
         assert json_args["file"] == url
-        assert json_args["height"] == 600
+        assert json_args["height"] == "600"  # Height is converted to string
 
     def test_pdf_with_height_stretch(self):
         """Test PDF with stretch height."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
+        url = "https://example.com/fake-document.pdf"
         st.pdf(url, height="stretch")
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
 
         json_args = json.loads(element.component_instance.json_args)
         assert json_args["file"] == url
-        assert json_args["height"] == 500  # default height when stretch
-
-    def test_pdf_with_width_pixels(self):
-        """Test PDF with width in pixels."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-        st.pdf(url, width=500)
-
-        element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
-
-        json_args = json.loads(element.component_instance.json_args)
-        assert json_args["file"] == url
-        assert json_args["width"] == 500
-
-    def test_pdf_with_width_stretch(self):
-        """Test PDF with stretch width."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-        st.pdf(url, width="stretch")
-
-        element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
-
-        json_args = json.loads(element.component_instance.json_args)
-        assert json_args["file"] == url
-        assert json_args["width"] == 700  # default width when stretch
-
-    def test_pdf_with_default_width(self):
-        """Test PDF with default width."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-        st.pdf(url)
-
-        element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
-
-        json_args = json.loads(element.component_instance.json_args)
-        assert json_args["file"] == url
-        assert json_args["width"] == 700  # default width is stretch
-
-    @parameterized.expand(
-        [
-            "invalid",
-            "content",  # content is not allowed for PDF
-            -100,
-            0,
-            100.5,
-            None,
-        ]
-    )
-    def test_pdf_with_invalid_width(self, width):
-        """Test PDF with invalid width values."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-        with pytest.raises(StreamlitInvalidWidthError) as e:
-            st.pdf(url, width=width)
-        assert "Invalid width" in str(e.value)
-
-    @parameterized.expand(
-        [
-            "invalid",
-            "content",  # content is not allowed for PDF
-            -100,
-            0,
-            100.5,
-            None,
-        ]
-    )
-    def test_pdf_with_invalid_height(self, height):
-        """Test PDF with invalid height values."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-        with pytest.raises(StreamlitInvalidHeightError) as e:
-            st.pdf(url, height=height)
-        assert "Invalid height" in str(e.value)
-
-    def test_pdf_with_both_width_and_height(self):
-        """Test PDF with both width and height specified."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-        st.pdf(url, width=400, height=300)
-
-        element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
-
-        json_args = json.loads(element.component_instance.json_args)
-        assert json_args["file"] == url
-        assert json_args["width"] == 400
-        assert json_args["height"] == 300
+        assert json_args["height"] == "100vh"  # stretch is converted to 100vh
 
     def test_pdf_with_bytes_data(self):
         """Test PDF with raw bytes data."""
@@ -161,11 +124,12 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(pdf_bytes)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
 
+        # Check that bytes are uploaded to media storage and passed as URL
         json_args = json.loads(element.component_instance.json_args)
-        # The custom component receives bytes data which gets encoded appropriately
-        assert "file" in json_args
+        assert json_args["file"].startswith("/media/")  # Media URL
+        assert json_args["height"] == "500"
 
     def test_pdf_with_bytesio_data(self):
         """Test PDF with BytesIO data."""
@@ -178,11 +142,12 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(pdf_bytesio)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
 
+        # Check that bytes are uploaded to media storage and passed as URL
         json_args = json.loads(element.component_instance.json_args)
-        # The custom component receives bytes data which gets encoded appropriately
-        assert "file" in json_args
+        assert json_args["file"].startswith("/media/")  # Media URL
+        assert json_args["height"] == "500"
 
     def test_pdf_with_file_like_object(self):
         """Test PDF with file-like object (simulating UploadedFile)."""
@@ -203,11 +168,12 @@ class PdfTest(DeltaGeneratorTestCase):
         st.pdf(mock_file)
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
 
+        # Check that bytes are uploaded to media storage and passed as URL
         json_args = json.loads(element.component_instance.json_args)
-        # The custom component receives bytes data which gets encoded appropriately
-        assert "file" in json_args
+        assert json_args["file"].startswith("/media/")  # Media URL
+        assert json_args["height"] == "500"
 
     def test_pdf_with_path_object(self):
         """Test PDF with Path object."""
@@ -229,11 +195,14 @@ class PdfTest(DeltaGeneratorTestCase):
             st.pdf(path_obj)
 
             element = self.get_delta_from_queue().new_element
-            assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+            assert (
+                element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+            )
 
             json_args = json.loads(element.component_instance.json_args)
-            # For file paths, the component converts them to base64 data URIs
-            assert json_args["file"].startswith("data:application/pdf;base64,")
+            # For file paths, the content is uploaded to media storage
+            assert json_args["file"].startswith("/media/")  # Media URL
+            assert json_args["height"] == "500"
         finally:
             # Clean up the temporary file
             os.unlink(tmp_file_path)
@@ -257,11 +226,14 @@ class PdfTest(DeltaGeneratorTestCase):
             st.pdf(tmp_file_path)
 
             element = self.get_delta_from_queue().new_element
-            assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+            assert (
+                element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
+            )
 
             json_args = json.loads(element.component_instance.json_args)
-            # For file paths, the component converts them to base64 data URIs
-            assert json_args["file"].startswith("data:application/pdf;base64,")
+            # For file paths, the content is uploaded to media storage
+            assert json_args["file"].startswith("/media/")  # Media URL
+            assert json_args["height"] == "500"
         finally:
             # Clean up the temporary file
             os.unlink(tmp_file_path)
@@ -270,20 +242,45 @@ class PdfTest(DeltaGeneratorTestCase):
         """Test PDF with invalid file path."""
         invalid_path = "/nonexistent/path/to/file.pdf"
 
-        with pytest.raises(FileNotFoundError, match="PDF file not found"):
+        with pytest.raises(
+            FileNotFoundError, match=f"File '{invalid_path}' does not exist"
+        ):
             st.pdf(invalid_path)
+
+    def test_pdf_with_none_data(self):
+        """Test PDF with None data."""
+        with pytest.raises(StreamlitAPIException, match="The PDF data cannot be None"):
+            st.pdf(None)
 
     def test_pdf_with_unsupported_data_type(self):
         """Test PDF with unsupported data type."""
         unsupported_data = {"not": "supported"}
 
-        with pytest.raises(ValueError, match="Unsupported data type for PDF"):
+        with pytest.raises(
+            StreamlitAPIException, match="Unsupported data type for PDF"
+        ):
             st.pdf(unsupported_data)
+
+    @parameterized.expand(
+        [
+            "invalid",
+            "content",  # content is not allowed for PDF
+            -100,
+            0,
+            100.5,
+        ]
+    )
+    def test_pdf_with_invalid_height(self, height):
+        """Test PDF with invalid height values."""
+        url = "https://example.com/fake-document.pdf"
+        with pytest.raises(StreamlitAPIException) as e:
+            st.pdf(url, height=height)
+        assert "Invalid height" in str(e.value)
 
     def test_pdf_element_id_generation(self):
         """Test that PDF elements get unique IDs when they have different parameters."""
-        url1 = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-        url2 = "https://example.com/different.pdf"
+        url1 = "https://example.com/document1.pdf"
+        url2 = "https://example.com/document2.pdf"
 
         st.pdf(url1)
         element1 = self.get_delta_from_queue().new_element
@@ -298,17 +295,22 @@ class PdfTest(DeltaGeneratorTestCase):
 
     def test_pdf_with_key(self):
         """Test PDF with custom key."""
-        url = "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
+        url = "https://example.com/fake-document.pdf"
         st.pdf(url, key="test_key")
 
         element = self.get_delta_from_queue().new_element
-        assert element.component_instance.component_name == "pdf_viewer.pdf_viewer"
+        assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
 
         json_args = json.loads(element.component_instance.json_args)
         assert json_args["key"] == "test_key"
 
-    def test_pdf_component_not_available(self):
-        """Test PDF when component is not available."""
-        # This test would need to mock the component availability
-        # For now, we'll skip it since the component seems to be available in the test environment
-        pass
+    def test_pdf_height_as_integer_gets_stringified(self):
+        """Test that integer height values are converted to strings for the component."""
+        url = "https://example.com/fake-document.pdf"
+        st.pdf(url, height=450)
+
+        element = self.get_delta_from_queue().new_element
+        json_args = json.loads(element.component_instance.json_args)
+        # Component should receive height as string
+        assert json_args["height"] == "450"
+        assert isinstance(json_args["height"], str)

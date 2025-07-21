@@ -76,6 +76,7 @@ class PdfMixin:
             - Raw bytes data.
         height : int or "stretch"
             Height of the PDF viewer. Can be "stretch" for full height or an integer for pixel height.
+            If "stretch", the PDF viewer will expand to match the height of its parent container.
 
         Returns
         -------
@@ -126,10 +127,11 @@ class PdfMixin:
                 # It's a local file path - validate existence before passing
                 if not os.path.exists(data_str):
                     raise FileNotFoundError(f"File '{data_str}' does not exist")
+                # Pass the file path directly - the component will handle reading it
                 file_param = data_str
 
         elif isinstance(data, bytes):
-            # Pass bytes directly
+            # Pass bytes directly - the component will handle uploading to media storage
             file_param = data
         elif hasattr(data, "read") and hasattr(data, "getvalue"):
             # Handle BytesIO and similar
@@ -145,11 +147,13 @@ class PdfMixin:
                 f"or file-like object (such as BytesIO or UploadedFile)."
             )
 
-        # Convert height to appropriate format
+        # Convert height to appropriate format for the component
         if height == "stretch":
-            component_height = 500  # Default height when stretch
+            # Use 100vh to make the component take full viewport height,
+            # matching the behavior of other Streamlit elements with stretch
+            component_height = "100vh"
         else:
-            component_height = height
+            component_height = str(height)
 
         # Call the custom component with correct parameter names
         result = pdf_component(
