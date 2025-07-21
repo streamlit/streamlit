@@ -18,6 +18,7 @@ import React from "react"
 
 import { act, fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import moment from "moment"
 
 import {
   DateInput as DateInputProto,
@@ -468,7 +469,50 @@ describe("DateInput widget", () => {
   })
 
   describe("quick select feature", () => {
-    it("shows quick select for range date inputs", async () => {
+    it("shows quick select for range date inputs if minDate is within 2 years", async () => {
+      const user = userEvent.setup()
+      const recentMinDate = moment().subtract(1, "year").format("YYYY/MM/DD")
+      const props = getProps({
+        isRange: true,
+        min: recentMinDate,
+        default: [
+          recentMinDate,
+          moment(recentMinDate).add(1, "day").format("YYYY/MM/DD"),
+        ],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should be visible for range inputs
+      const quickSelect = screen.getByRole("combobox")
+      expect(quickSelect).toBeVisible()
+    })
+
+    it("hides quick select for range date inputs if minDate is older than 2 years", async () => {
+      const user = userEvent.setup()
+      const oldMinDate = "2020/01/01"
+      const props = getProps({
+        isRange: true,
+        min: oldMinDate,
+        default: [
+          oldMinDate,
+          moment(oldMinDate).add(1, "day").format("YYYY/MM/DD"),
+        ],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should not be visible
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    })
+
+    it("hides quick select by default because minDate is 1970", async () => {
       const user = userEvent.setup()
       const props = getProps({
         isRange: true,
@@ -480,9 +524,8 @@ describe("DateInput widget", () => {
       const dateInput = screen.getByTestId("stDateInputField")
       await user.click(dateInput)
 
-      // Quick select should be visible for range inputs
-      const quickSelect = screen.getByRole("combobox")
-      expect(quickSelect).toBeVisible()
+      // Quick select should NOT be visible for range inputs with old minDate
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     })
 
     it("does not show quick select for single date inputs", async () => {
