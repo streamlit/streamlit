@@ -16,6 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_expander
 
 
 def test_status_container_rendering(
@@ -42,7 +43,7 @@ def test_status_container_rendering(
 
 def test_running_state(app: Page):
     """Test that st.status renders a spinner when in running state."""
-    running_status = app.get_by_test_id("stExpander").nth(0)
+    running_status = get_expander(app, "Running status")
     # Check if it has a spinner icon:
     expect(running_status.get_by_test_id("stExpanderIconSpinner")).to_be_visible()
 
@@ -50,7 +51,7 @@ def test_running_state(app: Page):
 def test_status_collapses_and_expands(app: Page):
     """Test that a status collapses and expands."""
     expander_content = "Doing some work..."
-    running_status = app.get_by_test_id("stExpander").nth(0)
+    running_status = get_expander(app, "Running status")
     # Starts expanded:
     expect(running_status.get_by_text(expander_content)).to_be_visible()
 
