@@ -130,10 +130,10 @@ function DateInput({
       return false
     }
 
-    // Since quick select allows to select the past 2 years,
-    // we need to disable it if the min date is smaller than 2 years ago.
+    // Since quick select allows to select ranges up to the past 2 years,
+    // we should only enable it if the min date is older than 2 years ago.
     const twoYearsAgo = moment().subtract(2, "years").toDate()
-    return minDate > twoYearsAgo
+    return minDate < twoYearsAgo
   }, [element.isRange, minDate])
 
   const clearable = element.default.length === 0 && !disabled
