@@ -56,9 +56,9 @@ def test_expander_collapses_and_expands(app: Page):
         NUMBER_OF_EXPANDERS - 1
     )  # -1 to subtract sidebar
 
-    expanders = main_expanders.all()
-    # Starts expanded
-    expander_header = expanders[0].locator(EXPANDER_HEADER_IDENTIFIER)
+    # Test expanded expander - starts expanded
+    expanded_expander = get_expander(app, "Expanded")
+    expander_header = expanded_expander.locator(EXPANDER_HEADER_IDENTIFIER)
     expect(expander_header).to_be_visible()
     toggle = expander_header.locator("svg").first
     expect(toggle).to_be_visible()
@@ -66,8 +66,9 @@ def test_expander_collapses_and_expands(app: Page):
     toggle = expander_header.locator("svg").first
     expect(toggle).to_be_visible()
 
-    # Starts collapsed
-    expander_header = expanders[1].locator(EXPANDER_HEADER_IDENTIFIER)
+    # Test collapsed expander - starts collapsed
+    collapsed_expander = get_expander(app, "Collapsed")
+    expander_header = collapsed_expander.locator(EXPANDER_HEADER_IDENTIFIER)
     expect(expander_header).to_be_visible()
     toggle = expander_header.locator("svg").first
     expect(toggle).to_be_visible()
@@ -78,7 +79,7 @@ def test_expander_collapses_and_expands(app: Page):
 
 def test_empty_expander_rendered(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that an empty expander is rendered."""
-    empty_expander = app.get_by_test_id("stExpander").nth(13)
+    empty_expander = get_expander(app, "Empty")
     expect(empty_expander).to_be_visible()
 
     assert_snapshot(empty_expander, name="st_expander-empty")
@@ -91,13 +92,14 @@ def test_expander_session_state_set(app: Page):
     expect(main_expanders).to_have_count(NUMBER_OF_EXPANDERS - 1)
 
     # Show the Number Input
-    num_input = main_expanders.nth(2).get_by_test_id("stNumberInput").locator("input")
+    number_input_expander = get_expander(app, "With number input")
+    num_input = number_input_expander.get_by_test_id("stNumberInput").locator("input")
     num_input.fill("10")
     num_input.press("Enter")
     wait_for_app_run(app)
 
     # Hide the Number Input
-    main_expanders.nth(2).locator(EXPANDER_HEADER_IDENTIFIER).click()
+    number_input_expander.locator(EXPANDER_HEADER_IDENTIFIER).click()
 
     app.get_by_text("Update Num Input").click()
     wait_for_app_run(app)
@@ -114,15 +116,11 @@ def test_expander_session_state_set(app: Page):
 
 def test_expander_renders_icon(app: Page):
     """Test that an expander renders a material icon and an emoji icon."""
-    material_icon = get_expander(app, "Expander with material icon!").get_by_test_id(
-        "stExpanderIcon"
-    )
+    material_icon = get_expander(app, "Material icon").get_by_test_id("stExpanderIcon")
     expect(material_icon).to_be_visible()
     expect(material_icon).to_have_text("bolt")
 
-    emoji_icon = get_expander(app, "Expander with emoji icon!").get_by_test_id(
-        "stExpanderIcon"
-    )
+    emoji_icon = get_expander(app, "Emoji icon").get_by_test_id("stExpanderIcon")
     expect(emoji_icon).to_be_visible()
     expect(emoji_icon).to_have_text("🎈")
 
@@ -130,17 +128,17 @@ def test_expander_renders_icon(app: Page):
 def test_expander_hover_states(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that expander hover states render correctly via snapshots."""
     # Test hover on normal collapsed expander
-    normal_expander = get_expander(themed_app, "Expand me!")
+    normal_expander = get_expander(themed_app, "Collapsed")
     normal_expander.locator("summary").hover()
     assert_snapshot(normal_expander, name="st_expander-normal_collapsed_hover")
 
     # Test hover on collapsed expander with material icon
-    material_expander = get_expander(themed_app, "Expander with material icon!")
+    material_expander = get_expander(themed_app, "Material icon")
     material_expander.locator("summary").hover()
     assert_snapshot(material_expander, name="st_expander-material_icon_collapsed_hover")
 
     # Test hover on expanded expander
-    expanded_expander = get_expander(themed_app, "Collapse me!")
+    expanded_expander = get_expander(themed_app, "Expanded")
     expanded_expander.locator("summary").hover()
     assert_snapshot(expanded_expander, name="st_expander-expanded_hover")
 
