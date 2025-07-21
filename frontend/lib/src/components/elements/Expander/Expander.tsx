@@ -258,7 +258,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
                     ? ":material/keyboard_arrow_down:"
                     : ":material/keyboard_arrow_right:"
                 }
-                testid="stExpanderToggleIcon"
                 size="lg"
                 margin="0 sm 0 0"
                 padding="0"
