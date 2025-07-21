@@ -25,6 +25,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.elements.widgets.button_group import (
     _FACES_ICONS,
     _SELECTED_STAR_ICON,
@@ -37,7 +38,7 @@ from streamlit.elements.widgets.button_group import (
     _SingleSelectSerde,
     get_mapped_options,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitDuplicateElementId
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
@@ -896,3 +897,90 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             "['borderless', 'pills', 'segmented_control']. "
             "The argument passed was 'foo'."
         )
+
+
+class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
+    """Test that button group widgets show correct command names in duplicate element ID error messages."""
+
+    @parameterized.expand(
+        [
+            (
+                "segmented_control",
+                dict(
+                    style="segmented_control",
+                    options=("a", "b", "c"),
+                ),
+                ["segmented_control"],
+                ["button_group"],
+            ),
+            (
+                "pills",
+                dict(
+                    style="pills",
+                    options=("option1", "option2"),
+                ),
+                ["pills"],
+                ["button_group"],
+            ),
+            (
+                "feedback (borderless)",
+                dict(
+                    style="borderless",
+                    options="thumbs",
+                ),
+                ["feedback"],
+                ["button_group", "borderless"],
+            ),
+            (
+                "button_group (no style)",
+                dict(
+                    options=("a", "b"),
+                ),
+                ["button_group"],
+                [],
+            ),
+        ]
+    )
+    def test_duplicate_element_id_error_message(
+        self,
+        name: str,
+        kwargs: dict,
+        must_include: list[str],
+        must_not_include: list[str],
+    ) -> None:
+        """Test widget name display in duplicate element ID error messages.
+
+        Parameters
+        ----------
+        name : str
+            Description of the test case
+        kwargs : dict
+            Parameters to pass to compute_and_register_element_id
+        must_include : list[str]
+            Strings that must be present in the error message
+        must_not_include : list[str]
+            Strings that must not be present in the error message
+        """
+
+        # Create element ID (no key to force element ID duplication)
+        _ = compute_and_register_element_id(
+            "button_group",
+            user_key=None,
+            form_id=None,
+            **kwargs,
+        )
+        # Try to create another element with the same parameters - should raise error
+        with pytest.raises(StreamlitDuplicateElementId) as exc_info:
+            compute_and_register_element_id(
+                "button_group",
+                user_key=None,
+                form_id=None,
+                **kwargs,
+            )
+        msg = str(exc_info.value)
+        for must in must_include:
+            assert must in msg, f"Expected '{must}' in error message for {name}"
+        for must_not in must_not_include:
+            assert must_not not in msg, (
+                f"Did not expect '{must_not}' in error message for {name}"
+            )
