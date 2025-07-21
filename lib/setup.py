@@ -109,7 +109,6 @@ EXTRA_REQUIRES = {
 }
 
 
-
 class VerifyVersionCommand(install):
     """Custom command to verify that the git tag matches our version."""
 
