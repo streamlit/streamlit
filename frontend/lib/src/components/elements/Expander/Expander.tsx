@@ -28,7 +28,6 @@ import {
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,
-  StyledStatusLabel,
   StyledStatusSpinner,
   StyledSummary,
   StyledSummaryHeading,
@@ -239,9 +238,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const showChevron = !element.icon || isHovered || expanded
   const showUserIcon = element.icon && !isHovered && !expanded
 
-  // Check if this is a running status by looking at the icon
-  const isRunningStatus = element.icon === "spinner"
-
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
       <StyledDetails isStale={isStale} ref={detailsRef}>
@@ -269,23 +265,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
               />
             )}
             {showUserIcon && <ExpanderIcon icon={element.icon} />}
-            {isRunningStatus ? (
-              <StyledStatusLabel isRunning={true}>
-                <StreamlitMarkdown
-                  source={label}
-                  allowHTML={false}
-                  isLabel
-                  largerLabel
-                />
-              </StyledStatusLabel>
-            ) : (
-              <StreamlitMarkdown
-                source={label}
-                allowHTML={false}
-                isLabel
-                largerLabel
-              />
-            )}
+
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              largerLabel
+            />
           </StyledSummaryHeading>
         </StyledSummary>
         <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>

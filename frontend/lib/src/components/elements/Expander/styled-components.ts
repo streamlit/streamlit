@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
 import {
@@ -129,38 +128,3 @@ export const StyledStatusSpinner = styled(
   borderTopColor: theme.colors.bodyText,
   borderWidth: `calc(${theme.sizes.spinnerThickness} * 0.75)`,
 }))
-
-const shimmer = keyframes`
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
-`
-
-interface StyledStatusLabelProps {
-  isRunning: boolean
-}
-
-export const StyledStatusLabel = styled.span<StyledStatusLabelProps>(
-  ({ isRunning, theme }) => ({
-    position: "relative",
-    display: "inline-block",
-    ...(isRunning && {
-      // TODO: Seems like this doesn't work with colored text.
-      background: `linear-gradient(
-        to right,
-        ${theme.colors.bodyText} 0%,
-        ${theme.colors.bodyText} 30%,
-        ${theme.colors.fadedText40} 50%,
-        ${theme.colors.bodyText} 70%,
-        ${theme.colors.bodyText} 100%
-      )`,
-      backgroundSize: "200% 100%",
-      WebkitBackgroundClip: "text",
-      WebkitTextFillColor: "transparent",
-      animation: `${shimmer} 1.1s linear infinite`,
-    }),
-  })
-)
