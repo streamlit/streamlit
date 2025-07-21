@@ -243,6 +243,9 @@ class HostConfigHandler(_SpecialRequestHandler):
                 "enforceDownloadInNewTab": False,
                 "metricsUrl": "",
                 "blockErrorDialogs": False,
+                # Determines whether the crossOrigin attribute is set on some elements, e.g. img, video, audio, and if
+                #   so with which value. One of None, "anonymous", "use-credentials".
+                "resourceCrossOriginMode": None,
             }
         )
         self.set_status(200)

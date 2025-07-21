@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
 
 import { getLogger } from "loglevel"
 
 import { ISubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
 
+import { LibContext } from "~lib/components/core/LibContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
@@ -44,6 +52,8 @@ function Video({
   endpoints,
   elementMgr,
 }: Readonly<VideoProps>): ReactElement {
+  const { libConfig } = useContext(LibContext)
+
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
@@ -258,7 +268,7 @@ function Video({
       crossOrigin={
         process.env.NODE_ENV === "development" && subtitles.length > 0
           ? "anonymous"
-          : undefined
+          : libConfig.resourceCrossOriginMode
       }
       onError={handleVideoError}
     >

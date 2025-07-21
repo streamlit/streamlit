@@ -20,7 +20,7 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
@@ -122,5 +122,55 @@ describe("ImageList Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("crossOrigin attribute", () => {
+    it("sets crossOrigin to 'anonymous' when resourceCrossOriginMode is 'anonymous'", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { resourceCrossOriginMode: "anonymous" },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).toHaveAttribute("crossOrigin", "anonymous")
+      })
+    })
+
+    it("sets crossOrigin to 'use-credentials' when resourceCrossOriginMode is 'use-credentials'", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { resourceCrossOriginMode: "use-credentials" },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).toHaveAttribute("crossOrigin", "use-credentials")
+      })
+    })
+
+    it("does not set crossOrigin attribute when resourceCrossOriginMode is undefined", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).not.toHaveAttribute("crossOrigin")
+      })
+    })
+
+    it("does not set crossOrigin attribute when libConfig is empty", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: {},
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).not.toHaveAttribute("crossOrigin")
+      })
+    })
   })
 })

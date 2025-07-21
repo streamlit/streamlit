@@ -39,6 +39,13 @@ export type LibConfig = {
   disableFullscreenMode?: boolean
 
   enforceDownloadInNewTab?: boolean
+
+  /**
+   * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
+   * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
+   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
+   */
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
 export interface LibContextProps {

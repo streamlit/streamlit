@@ -47,6 +47,7 @@ import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { findAndReplace } from "mdast-util-find-and-replace"
 
+import { LibContext } from "~lib/components/core/LibContext"
 import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -373,6 +374,20 @@ export const CustomPreTag: FC<ReactMarkdownProps> = ({ children }) => {
   )
 }
 
+export const CustomMediaTag: FC<
+  JSX.IntrinsicElements["img" | "video" | "audio"] &
+    ReactMarkdownProps & { node: Element }
+> = ({ node, ...props }) => {
+  const { libConfig } = useContext(LibContext)
+
+  const Tag = node.tagName
+  const attributes = {
+    ...props,
+    crossOrigin: libConfig.resourceCrossOriginMode,
+  }
+  return <Tag {...attributes} />
+}
+
 // These are common renderers that don't depend on props or context
 const BASE_RENDERERS = {
   pre: CustomPreTag,
@@ -383,6 +398,9 @@ const BASE_RENDERERS = {
   h4: CustomHeading,
   h5: CustomHeading,
   h6: CustomHeading,
+  img: CustomMediaTag,
+  video: CustomMediaTag,
+  audio: CustomMediaTag,
 }
 
 /**
