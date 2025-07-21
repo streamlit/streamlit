@@ -29,7 +29,6 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import enqueue_message
-from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -46,37 +45,22 @@ class StatusContainer(DeltaGenerator):
         label: str,
         expanded: bool = False,
         state: States = "running",
-        icon: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label or ""
 
-        # Set the status state
         if state == "running":
-            expandable_proto.status_state = BlockProto.Expandable.StatusState.RUNNING
+            expandable_proto.icon = "spinner"
         elif state == "complete":
-            expandable_proto.status_state = BlockProto.Expandable.StatusState.COMPLETE
+            expandable_proto.icon = ":material/check:"
         elif state == "error":
-            expandable_proto.status_state = BlockProto.Expandable.StatusState.ERROR
+            expandable_proto.icon = ":material/error:"
         else:
             raise StreamlitAPIException(
                 f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
             )
-
-        # Handle icon based on state and user preference
-        if state == "error":
-            # Error state always shows error icon
-            expandable_proto.icon = ":material/error:"
-        elif icon is not None:
-            # User-provided icon for running/complete states
-            expandable_proto.icon = validate_icon_or_emoji(icon)
-        # Default icons
-        elif state == "running":
-            expandable_proto.icon = "spinner"
-        elif state == "complete":
-            expandable_proto.icon = ":material/check:"
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -98,7 +82,6 @@ class StatusContainer(DeltaGenerator):
         status_container._delta_path = delta_path
         status_container._current_proto = block_proto
         status_container._current_state = state
-        status_container._user_icon = icon
 
         # We need to sleep here for a very short time to prevent issues when
         # the status is updated too quickly. If an .update() directly follows the
@@ -121,7 +104,6 @@ class StatusContainer(DeltaGenerator):
         self._current_proto: BlockProto | None = None
         self._current_state: States | None = None
         self._delta_path: list[int] | None = None
-        self._user_icon: str | None = None
 
     def update(
         self,
@@ -167,37 +149,16 @@ class StatusContainer(DeltaGenerator):
             msg.delta.add_block.expandable.label = label
 
         if state is not None:
-            # Set the status state
             if state == "running":
-                msg.delta.add_block.expandable.status_state = (
-                    BlockProto.Expandable.StatusState.RUNNING
-                )
+                msg.delta.add_block.expandable.icon = "spinner"
             elif state == "complete":
-                msg.delta.add_block.expandable.status_state = (
-                    BlockProto.Expandable.StatusState.COMPLETE
-                )
+                msg.delta.add_block.expandable.icon = ":material/check:"
             elif state == "error":
-                msg.delta.add_block.expandable.status_state = (
-                    BlockProto.Expandable.StatusState.ERROR
-                )
+                msg.delta.add_block.expandable.icon = ":material/error:"
             else:
                 raise StreamlitAPIException(
                     f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
                 )
-
-            # Handle icon based on state and user preference
-            if state == "error":
-                # Error state always shows error icon
-                msg.delta.add_block.expandable.icon = ":material/error:"
-            elif self._user_icon is not None:
-                # User-provided icon for running/complete states
-                msg.delta.add_block.expandable.icon = self._user_icon
-            # Default icons
-            elif state == "running":
-                msg.delta.add_block.expandable.icon = "spinner"
-            elif state == "complete":
-                msg.delta.add_block.expandable.icon = ":material/check:"
-
             self._current_state = state
 
         self._current_proto = msg.delta.add_block

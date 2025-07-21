@@ -842,7 +842,6 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-        icon: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
@@ -898,19 +897,6 @@ class LayoutsMixin:
             - ``running`` (default): A spinner icon is shown.
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
-
-        icon : str or None
-            An optional icon or emoji to use as a custom icon. If provided, this
-            will replace the default icon for "running" and "complete" states.
-            For "error" state, the error icon is always shown. This can be:
-
-            - An emoji, e.g. ``":material/search:"`` or ``"🔍"``.
-            - An icon from the Material Symbols library, in the format
-              ``":material/icon_name:"`` where "icon_name" is the name
-              of the icon in snake case.
-
-            When the container is hovered or expanded, chevron arrows will be
-            shown instead of any custom icon, similar to ``st.expander``.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
@@ -974,7 +960,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state, icon=icon, width=width
+            self.dg, label, expanded=expanded, state=state, width=width
         )
 
     def _dialog(

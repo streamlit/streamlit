@@ -247,9 +247,8 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const showChevron = !element.icon || isHovered || expanded
   const showUserIcon = element.icon && !isHovered && !expanded
 
-  // Check if this is a running status by looking at the status_state field
-  const isRunningStatus =
-    element.statusState === BlockProto.Expandable.StatusState.RUNNING
+  // Check if this is a running status by looking at the icon
+  const isRunningStatus = element.icon === "spinner"
 
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
