@@ -383,10 +383,7 @@ export const CustomMediaTag: FC<
   const Tag = node.tagName
   const attributes = {
     ...props,
-    crossOrigin: libConfig.setAnonymousCrossOriginPropertyOnMediaElements
-      ? "anonymous"
-      : // Setting it to undefined will not set the crossOrigin property in the DOM
-        undefined,
+    crossOrigin: libConfig.resourceCrossOriginMode,
   }
   return <Tag {...attributes} />
 }

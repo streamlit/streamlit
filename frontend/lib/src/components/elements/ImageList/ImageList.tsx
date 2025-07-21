@@ -165,12 +165,7 @@ function ImageList({
                 src={endpoints.buildMediaURL(image.url)}
                 alt={idx.toString()}
                 onError={handleImageError}
-                crossOrigin={
-                  libConfig.setAnonymousCrossOriginPropertyOnMediaElements
-                    ? "anonymous"
-                    : // Setting it to undefined will not set the crossOrigin property in the DOM
-                      undefined
-                }
+                crossOrigin={libConfig.resourceCrossOriginMode}
               />
               {image.caption && (
                 <StyledCaption data-testid="stImageCaption" style={imgStyle}>

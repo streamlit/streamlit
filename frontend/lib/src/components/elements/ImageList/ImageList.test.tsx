@@ -125,10 +125,10 @@ describe("ImageList Element", () => {
   })
 
   describe("crossOrigin attribute", () => {
-    it("sets crossOrigin to 'anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
+    it("sets crossOrigin to 'anonymous' when resourceCrossOriginMode is 'anonymous'", () => {
       const props = getProps()
       renderWithContexts(<ImageList {...props} />, {
-        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: true },
+        libConfig: { resourceCrossOriginMode: "anonymous" },
       })
       const images = screen.getAllByRole("img")
       expect(images).toHaveLength(2)
@@ -137,10 +137,22 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
+    it("sets crossOrigin to 'use-credentials' when resourceCrossOriginMode is 'use-credentials'", () => {
       const props = getProps()
       renderWithContexts(<ImageList {...props} />, {
-        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: false },
+        libConfig: { resourceCrossOriginMode: "use-credentials" },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).toHaveAttribute("crossOrigin", "use-credentials")
+      })
+    })
+
+    it("does not set crossOrigin attribute when resourceCrossOriginMode is undefined", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
       })
       const images = screen.getAllByRole("img")
       expect(images).toHaveLength(2)
@@ -149,7 +161,7 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is undefined", () => {
+    it("does not set crossOrigin attribute when libConfig is empty", () => {
       const props = getProps()
       renderWithContexts(<ImageList {...props} />, {
         libConfig: {},

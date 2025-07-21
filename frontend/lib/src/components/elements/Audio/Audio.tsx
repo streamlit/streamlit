@@ -185,12 +185,7 @@ function Audio({
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}
-        crossOrigin={
-          libConfig.setAnonymousCrossOriginPropertyOnMediaElements
-            ? "anonymous"
-            : // Setting it to undefined will not set the crossOrigin property in the DOM
-              undefined
-        }
+        crossOrigin={libConfig.resourceCrossOriginMode}
       />
     </StyledAudioContainer>
   )

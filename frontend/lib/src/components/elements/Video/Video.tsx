@@ -266,10 +266,9 @@ function Video({
       src={endpoints.buildMediaURL(url)}
       style={VIDEO_STYLE}
       crossOrigin={
-        (process.env.NODE_ENV === "development" && subtitles.length > 0) ||
-        libConfig.setAnonymousCrossOriginPropertyOnMediaElements
+        process.env.NODE_ENV === "development" && subtitles.length > 0
           ? "anonymous"
-          : undefined
+          : libConfig.resourceCrossOriginMode
       }
       onError={handleVideoError}
     >

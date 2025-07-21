@@ -618,16 +618,16 @@ describe("CustomMediaTag", () => {
 
   // Create minimal mock for LibContext focusing only on what CustomMediaTag needs
   const createMockLibContextValue = (
-    setAnonymousCrossOriginPropertyOnMediaElements: boolean
+    resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): any => {
     return {
-      libConfig: { setAnonymousCrossOriginPropertyOnMediaElements },
+      libConfig: { resourceCrossOriginMode },
     }
   }
 
   it("should render img element with crossOrigin='anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
-    const mockContextValue = createMockLibContextValue(true)
+    const mockContextValue = createMockLibContextValue("anonymous")
     render(
       <LibContext.Provider value={mockContextValue}>
         <CustomMediaTag node={mockNode} {...mockProps} />
@@ -641,7 +641,7 @@ describe("CustomMediaTag", () => {
   })
 
   it("should render img element without crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
-    const mockContextValue = createMockLibContextValue(false)
+    const mockContextValue = createMockLibContextValue(undefined)
     render(
       <LibContext.Provider value={mockContextValue}>
         <CustomMediaTag node={mockNode} {...mockProps} />
@@ -662,7 +662,7 @@ describe("CustomMediaTag", () => {
       controls: true,
     }
 
-    const mockContextValue = createMockLibContextValue(true)
+    const mockContextValue = createMockLibContextValue("anonymous")
     const { container } = render(
       <LibContext.Provider value={mockContextValue}>
         <CustomMediaTag node={videoNode} {...videoProps} />
@@ -683,7 +683,7 @@ describe("CustomMediaTag", () => {
       controls: true,
     }
 
-    const mockContextValue = createMockLibContextValue(false)
+    const mockContextValue = createMockLibContextValue(undefined)
     const { container } = render(
       <LibContext.Provider value={mockContextValue}>
         <CustomMediaTag node={videoNode} {...videoProps} />
@@ -704,7 +704,7 @@ describe("CustomMediaTag", () => {
       controls: true,
     }
 
-    const mockContextValue = createMockLibContextValue(true)
+    const mockContextValue = createMockLibContextValue("anonymous")
     const { container } = render(
       <LibContext.Provider value={mockContextValue}>
         <CustomMediaTag node={audioNode} {...audioProps} />
@@ -725,7 +725,7 @@ describe("CustomMediaTag", () => {
       controls: true,
     }
 
-    const mockContextValue = createMockLibContextValue(false)
+    const mockContextValue = createMockLibContextValue(undefined)
     const { container } = render(
       <LibContext.Provider value={mockContextValue}>
         <CustomMediaTag node={audioNode} {...audioProps} />

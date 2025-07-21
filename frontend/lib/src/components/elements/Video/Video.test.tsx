@@ -253,25 +253,34 @@ describe("Video Element", () => {
   })
 
   describe("crossOrigin attribute", () => {
-    it("sets crossOrigin to 'anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", async () => {
+    it("sets crossOrigin to 'anonymous' when resourceCrossOriginMode is 'anonymous'", async () => {
       const props = getProps()
       renderWithContexts(<Video {...props} />, {
-        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: true },
+        libConfig: { resourceCrossOriginMode: "anonymous" },
       })
       const videoElement = await screen.findByTestId("stVideo")
       expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
     })
 
-    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", async () => {
+    it("sets crossOrigin to 'use-credentials' when resourceCrossOriginMode is 'use-credentials'", async () => {
       const props = getProps()
       renderWithContexts(<Video {...props} />, {
-        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: false },
+        libConfig: { resourceCrossOriginMode: "use-credentials" },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "use-credentials")
+    })
+
+    it("does not set crossOrigin attribute when resourceCrossOriginMode is undefined", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
       })
       const videoElement = await screen.findByTestId("stVideo")
       expect(videoElement).not.toHaveAttribute("crossOrigin")
     })
 
-    it("does not set crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is undefined", async () => {
+    it("does not set crossOrigin attribute when libConfig is empty", async () => {
       const props = getProps()
       renderWithContexts(<Video {...props} />, {
         libConfig: {},
@@ -280,7 +289,7 @@ describe("Video Element", () => {
       expect(videoElement).not.toHaveAttribute("crossOrigin")
     })
 
-    it("sets crossOrigin to 'anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is false but dev mode with subtitles", async () => {
+    it("sets crossOrigin to 'anonymous' when in dev mode with subtitles regardless of resourceCrossOriginMode", async () => {
       // Store original NODE_ENV
       const originalNodeEnv = process.env.NODE_ENV
       process.env.NODE_ENV = "development"
@@ -289,7 +298,7 @@ describe("Video Element", () => {
         subtitles: [{ url: "https://mock.subtitle.url" }],
       })
       renderWithContexts(<Video {...props} />, {
-        libConfig: { setAnonymousCrossOriginPropertyOnMediaElements: false },
+        libConfig: { resourceCrossOriginMode: undefined },
       })
       const videoElement = await screen.findByTestId("stVideo")
       expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
