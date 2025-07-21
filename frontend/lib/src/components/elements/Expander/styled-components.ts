@@ -18,8 +18,13 @@ import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
-import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
+import {
+  EmotionTheme,
+  STALE_STYLES,
+  STALE_TRANSITION_PARAMS,
+} from "~lib/theme"
 import { StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import type { StyledSpinnerIconProps } from "~lib/components/shared/Icon/styled-components"
 
 export interface StyledExpandableContainerProps {
   empty: boolean
@@ -116,14 +121,14 @@ export const StyledDetailsPanel = styled.div(({ theme }) => ({
   borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))
 
-export const StyledStatusSpinner = styled(StyledSpinnerIcon as any)(
-  ({ theme }: any) => ({
-    // Make the spinner in `st.status` a bit smaller and grayscale to look
-    // similar to a material icon.
-    borderTopColor: theme.colors.bodyText,
-    borderWidth: `calc(${theme.sizes.spinnerThickness} * 0.75)`,
-  })
-)
+export const StyledStatusSpinner = styled(
+  StyledSpinnerIcon as React.ComponentType<StyledSpinnerIconProps>
+)(({ theme }: { theme: EmotionTheme }) => ({
+  // Make the spinner in `st.status` a bit thinner and grayscale to look
+  // similar to a material icon.
+  borderTopColor: theme.colors.bodyText,
+  borderWidth: `calc(${theme.sizes.spinnerThickness} * 0.75)`,
+}))
 
 const shimmer = keyframes`
   0% {
