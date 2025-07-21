@@ -14,15 +14,15 @@
 
 import streamlit as st
 
-sidebar = st.sidebar.expander("Collapsed sidebar")
+sidebar = st.sidebar.expander("Sidebar collapsed")
 sidebar.write("I am in the sidebar")
 
-expander = st.expander("Expanded", expanded=True)
+expander = st.expander("Normal expanded", expanded=True)
 expander.write("I can collapse")
 expander.slider("I don't get cut off")
 expander.button("I'm also not cut off (while focused)")
 
-collapsed = st.expander("Collapsed")
+collapsed = st.expander("Normal collapsed")
 collapsed.write("I am already collapsed")
 
 with st.expander("With number input", expanded=True):
@@ -43,7 +43,7 @@ if st.button("Print State Value"):
     st.text(st.session_state.get("number"))
 
 expander_long = st.expander(
-    "Expanded long label: "
+    "Long expanded label: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam.",
@@ -58,7 +58,7 @@ expander_long.write(
 )
 
 collapsed_long = st.expander(
-    "Collapsed long label: "
+    "Long collapsed label: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam."

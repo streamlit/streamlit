@@ -57,7 +57,7 @@ def test_expander_collapses_and_expands(app: Page):
     )  # -1 to subtract sidebar
 
     # Test expanded expander - starts expanded
-    expanded_expander = get_expander(app, "Expanded")
+    expanded_expander = get_expander(app, "Normal expanded")
     expander_header = expanded_expander.locator(EXPANDER_HEADER_IDENTIFIER)
     expect(expander_header).to_be_visible()
     toggle = expander_header.locator("svg").first
@@ -67,7 +67,7 @@ def test_expander_collapses_and_expands(app: Page):
     expect(toggle).to_be_visible()
 
     # Test collapsed expander - starts collapsed
-    collapsed_expander = get_expander(app, "Collapsed")
+    collapsed_expander = get_expander(app, "Normal collapsed")
     expander_header = collapsed_expander.locator(EXPANDER_HEADER_IDENTIFIER)
     expect(expander_header).to_be_visible()
     toggle = expander_header.locator("svg").first
@@ -128,7 +128,7 @@ def test_expander_renders_icon(app: Page):
 def test_expander_hover_states(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that expander hover states render correctly via snapshots."""
     # Test hover on normal collapsed expander
-    normal_expander = get_expander(themed_app, "Collapsed")
+    normal_expander = get_expander(themed_app, "Normal collapsed")
     normal_expander.locator("summary").hover()
     assert_snapshot(normal_expander, name="st_expander-normal_collapsed_hover")
 
@@ -138,7 +138,7 @@ def test_expander_hover_states(themed_app: Page, assert_snapshot: ImageCompareFu
     assert_snapshot(material_expander, name="st_expander-material_icon_collapsed_hover")
 
     # Test hover on expanded expander
-    expanded_expander = get_expander(themed_app, "Expanded")
+    expanded_expander = get_expander(themed_app, "Normal expanded")
     expanded_expander.locator("summary").hover()
     assert_snapshot(expanded_expander, name="st_expander-expanded_hover")
 
