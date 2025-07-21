@@ -127,6 +127,24 @@ def test_expander_renders_icon(app: Page):
     expect(emoji_icon).to_have_text("🎈")
 
 
+def test_expander_hover_states(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that expander hover states render correctly via snapshots."""
+    # Test hover on normal collapsed expander
+    normal_expander = get_expander(themed_app, "Expand me!")
+    normal_expander.locator("summary").hover()
+    assert_snapshot(normal_expander, name="st_expander-normal_collapsed_hover")
+
+    # Test hover on collapsed expander with material icon
+    material_expander = get_expander(themed_app, "Expander with material icon!")
+    material_expander.locator("summary").hover()
+    assert_snapshot(material_expander, name="st_expander-material_icon_collapsed_hover")
+
+    # Test hover on expanded expander
+    expanded_expander = get_expander(themed_app, "Collapse me!")
+    expanded_expander.locator("summary").hover()
+    assert_snapshot(expanded_expander, name="st_expander-expanded_hover")
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stExpander")
