@@ -49,6 +49,7 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
   return {
     ...props,
     kind: "json",
+    typeIcon: ":material/code_blocks:",
     sortMode: "default",
     isEditable: false, // Json columns are read-only.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
