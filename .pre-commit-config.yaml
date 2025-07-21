@@ -189,7 +189,11 @@ repos:
           |\.snap$
       - id: check-added-large-files
       - id: check-json
-        exclude: .vscode/launch.json
+        exclude: |
+          (?x)
+          |^.vscode/launch\.json$
+          |^.vscode/tasks\.json$
+          |^.vscode/settings\.json$
       - id: check-toml
       - id: check-yaml
         exclude: lib/conda-recipe/meta.yaml

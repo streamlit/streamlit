@@ -1,14 +1,19 @@
 {
   "recommendations": [
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
+    // Python Development & Testing
     "ms-python.mypy-type-checker",
     "ms-python.python",
     "ms-python.debugpy",
     "ms-python.vscode-pylance",
     "charliermarsh.ruff",
-    "EditorConfig.EditorConfig",
+
+    // TypeScript/Frontend Development & Testing
     "vitest.explorer",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // General Development
+    "EditorConfig.EditorConfig",
     "tamasfe.even-better-toml"
   ]
 }

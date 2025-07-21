@@ -1,0 +1,159 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ==============================================
+    // E2E PLAYWRIGHT TESTS
+    // ==============================================
+    {
+      "label": "Run E2E Test",
+      "type": "shell",
+      "command": "make",
+      "args": ["run-e2e-test", "${fileBasenameNoExtension}.py"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/lib"
+        }
+      }
+    },
+    {
+      "label": "Debug E2E Test",
+      "type": "shell",
+      "command": "make",
+      "args": ["debug-e2e-test", "${fileBasenameNoExtension}.py"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/lib",
+          "PWDEBUG": "1"
+        }
+      }
+    },
+
+    // ==============================================
+    // PYTHON UNIT TESTS
+    // ==============================================
+    {
+      "label": "Run Python Unit Test",
+      "type": "shell",
+      "command": "${workspaceFolder}/lib/venv/bin/python",
+      "args": ["-m", "pytest", "${file}", "-v", "--tb=short"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/lib"
+        }
+      }
+    },
+    {
+      "label": "Run Python Tests (All)",
+      "type": "shell",
+      "command": "make",
+      "args": ["python-tests"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/lib"
+        }
+      }
+    },
+
+    // ==============================================
+    // TYPESCRIPT TESTS
+    // ==============================================
+    {
+      "label": "Run TypeScript Test",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["test", "${relativeFile}"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      }
+    },
+    {
+      "label": "Run Frontend Tests (All)",
+      "type": "shell",
+      "command": "make",
+      "args": ["frontend-tests"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+
+    // ==============================================
+    // BUILD TASKS
+    // ==============================================
+    {
+      "label": "Build Frontend (Fast)",
+      "type": "shell",
+      "command": "make",
+      "args": ["frontend-fast"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ]
+}
