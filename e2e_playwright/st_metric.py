@@ -25,7 +25,7 @@ col1, col2, col3 = st.columns(3)
 
 
 def generate_sparkline_data(
-    length: int = 10, drift: float = 0.1, volatility: float = 10
+    length: int = 30, drift: float = 0.1, volatility: float = 10
 ) -> list[float]:
     random_changes = np.random.normal(loc=drift, scale=volatility, size=length)
     initial_value = np.random.normal(loc=50, scale=5)
