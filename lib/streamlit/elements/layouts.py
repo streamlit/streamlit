@@ -448,6 +448,7 @@ class LayoutsMixin:
         block_proto.flex_container.wrap = True
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
+        block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH
 
         validate_width(width=width)
         block_proto.width_config.CopyFrom(get_width_config(width=width))

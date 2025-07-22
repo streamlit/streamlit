@@ -149,16 +149,18 @@ export const ContainerContentsWrapper = (
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
   return (
-    <StyledFlexContainerBlock
-      {...defaultStyles}
-      className={classNames(
-        getClassnamePrefix(Direction.VERTICAL),
-        convertKeyToClassName(userKey)
-      )}
-      data-testid={getClassnamePrefix(Direction.VERTICAL)}
-    >
-      <ChildRenderer {...props} />
-    </StyledFlexContainerBlock>
+    <FlexContextProvider direction={Direction.VERTICAL}>
+      <StyledFlexContainerBlock
+        {...defaultStyles}
+        className={classNames(
+          getClassnamePrefix(Direction.VERTICAL),
+          convertKeyToClassName(userKey)
+        )}
+        data-testid={getClassnamePrefix(Direction.VERTICAL)}
+      >
+        <ChildRenderer {...props} />
+      </StyledFlexContainerBlock>
+    </FlexContextProvider>
   )
 }
 
