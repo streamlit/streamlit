@@ -38,7 +38,6 @@ from typing import (
     Literal,
     NamedTuple,
     Protocol,
-    TypeVar,
     Union,
     overload,
 )
@@ -54,8 +53,6 @@ if TYPE_CHECKING:
     from pydeck import Deck
 
     from streamlit.delta_generator import DeltaGenerator
-
-T = TypeVar("T")
 
 # we define our own type here because mypy doesn't seem to support the shape type and
 # reports unreachable code. When mypy supports it, we can remove this custom type.

@@ -155,7 +155,7 @@ def _fragment(
             )
 
         return wrapper
-    non_optional_func = func
+    non_optional_func: F = func
 
     @wraps(non_optional_func)
     def wrap(*args: Any, **kwargs: Any) -> Any:

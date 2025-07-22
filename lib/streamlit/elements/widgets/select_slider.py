@@ -21,6 +21,7 @@ from typing import (
     Any,
     Callable,
     Generic,
+    TypeVar,
     cast,
     overload,
 )
@@ -57,7 +58,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import T, check_python_comparable
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -65,6 +66,8 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.runtime.state.common import RegisterWidgetResult
+
+T = TypeVar("T")
 
 
 def _is_range_value(value: T | Sequence[T]) -> TypeGuard[Sequence[T]]:

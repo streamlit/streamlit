@@ -97,7 +97,10 @@ def deprecate_func_name(
         result = func(*args, **kwargs)
         show_deprecation_warning(
             make_deprecated_name_warning(
-                old_name, name_override or func.__name__, removal_date, extra_message
+                old_name,
+                name_override or func.__name__,
+                removal_date,
+                extra_message,
             )
         )
         return result

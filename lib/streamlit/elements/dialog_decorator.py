@@ -57,7 +57,7 @@ def _assert_no_nested_dialogs() -> None:
         raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
 
 
-F = TypeVar("F", bound=Callable[..., None])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def _dialog_decorator(
@@ -232,8 +232,9 @@ def dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
-            title: str = func_or_title
-            return _dialog_decorator(non_optional_func=f, title=title, width=width)
+            return _dialog_decorator(
+                non_optional_func=f, title=func_or_title, width=width
+            )
 
         return wrapper
 
@@ -267,10 +268,9 @@ def experimental_dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
-            title: str = func_or_title
             return _dialog_decorator(
                 non_optional_func=f,
-                title=title,
+                title=func_or_title,
                 width=width,
                 should_show_deprecation_warning=True,
             )
