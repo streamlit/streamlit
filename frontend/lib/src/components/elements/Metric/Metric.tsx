@@ -222,7 +222,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             ],
             mark: {
               type: "rule",
-              strokeDash: [6, 6],
+              strokeDash: [4, 4],
             },
             encoding: {
               x: {
