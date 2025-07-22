@@ -23,7 +23,10 @@ from typing_extensions import TypeAlias
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.layout_utils import (
     Height,
+    LayoutConfig,
     Width,
+    validate_height,
+    validate_width,
 )
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
@@ -65,7 +68,7 @@ class MetricMixin:
         border: bool = False,
         width: Width = "stretch",
         height: Height = "content",
-        sparkline: OptionSequence | None = None,
+        sparkline: OptionSequence[Any] | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -241,7 +244,7 @@ class MetricMixin:
             prepared_sparkline: list[float] = []
             for value in convert_anything_to_list(sparkline):
                 try:
-                    prepared_sparkline.append(float(value))  # type: ignore
+                    prepared_sparkline.append(float(value))
                 except Exception as ex:
                     raise StreamlitAPIException(
                         "Only numeric values are supported for sparkline sequence. The "
@@ -250,7 +253,12 @@ class MetricMixin:
                     ) from ex
                 if len(prepared_sparkline) > 0:
                     metric_proto.sparkline.extend(prepared_sparkline)
-        return self.dg._enqueue("metric", metric_proto)
+
+        validate_height(height, allow_content=True)
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width, height=height)
+
+        return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:
