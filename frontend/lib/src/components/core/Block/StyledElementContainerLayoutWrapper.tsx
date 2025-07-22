@@ -59,10 +59,7 @@ export const StyledElementContainerLayoutWrapper: FC<
         height: "auto",
         flex: "",
       }
-    } else if (
-      node.element.type === "iframe" ||
-      node.element.type === "deckGlJsonChart"
-    ) {
+    } else if (node.element.type === "iframe") {
       // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
       // if we can remove this custom handling in future layouts work.
       return {
@@ -92,6 +89,15 @@ export const StyledElementContainerLayoutWrapper: FC<
       // doesn't render large enough.
       return {
         width: "100%",
+      }
+    } else if (node.element.type === "deckGlJsonChart") {
+      // TODO (lawilby): When width is implemented for deckGlJsonChart, we
+      // should try to remove these custom styles.
+      // Currently, maps with use_container_width=False and a size layer
+      // don't render correctly without the width override.
+      return {
+        width: "100%",
+        overflow: "visible",
       }
     }
 
