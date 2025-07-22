@@ -71,7 +71,6 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
       <StyledStatusSpinner
         data-testid="stExpanderIconSpinner"
         {...iconProps}
-        usingCustomTheme={false}
       />
     )
   }
