@@ -37,7 +37,7 @@ PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
 def _is_pdf_component_available() -> bool:
     """Check if the pdf-viewer component is installed."""
     try:
-        import streamlit_pdf  # type: ignore # noqa: F401
+        import streamlit_pdf  # noqa: F401
 
         return True
     except ImportError:
