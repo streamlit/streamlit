@@ -31,7 +31,7 @@ def test_status_container_rendering(
 
     assert_snapshot(status_containers.nth(1), name="st_status-complete_state")
     assert_snapshot(status_containers.nth(2), name="st_status-error_state")
-    assert_snapshot(status_containers.nth(3), name="st_status-collapsed")
+    assert_snapshot(status_containers.nth(3), name="st_status-expanded")
     assert_snapshot(status_containers.nth(4), name="st_status-changed_label")
     assert_snapshot(status_containers.nth(5), name="st_status-without_cm")
     assert_snapshot(status_containers.nth(6), name="st_status-collapsed_via_update")
