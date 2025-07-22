@@ -9,4 +9,5 @@ streamlit-folium
 streamlit-option-menu
 streamlit-url-fragment
 streamlit-bokeh
+# IMP: CHANGE ON PYPI PUBLISH - uncomment and use PyPI version when available
 # streamlit-pdf  # Installed from local wheel in CI

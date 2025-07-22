@@ -45,6 +45,7 @@ jobs:
         run: python -m playwright install --with-deps
       - name: Run make frontend-fast
         run: make frontend-fast
+      # IMP: CHANGE ON PYPI PUBLISH - install from requirements.txt(PYPI) instead of local wheel
       - name: Run custom component playwright tests
         run: |
           source venv/bin/activate

@@ -38,6 +38,7 @@ IGNORE_PATTERN = re.compile(
     r"^\.(github)/"
     # Exclude images.
     r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
+    # IMP: CHANGE ON PYPI PUBLISH - remove .whl exclusion when streamlit-pdf is on PyPI
     # Exclude wheel files.
     r"|\.whl$"
     # Exclude playwright test assets folder.
