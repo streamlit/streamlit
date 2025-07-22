@@ -237,7 +237,7 @@ st.write(f"- Streamlit version: {st.__version__}")
 
 # Check if streamlit_pdf is available
 try:
-    import streamlit_pdf
+    import streamlit_pdf  # type: ignore[import-not-found]
 
     st.success("✅ streamlit_pdf module is available")
     st.write(f"- streamlit_pdf location: {streamlit_pdf.__file__}")

@@ -51,6 +51,8 @@ jobs:
           cd e2e_playwright
           echo "Installing custom components"
           uv pip install -r ./custom_components/components-e2e-requirements.txt
+          echo "Installing local streamlit_pdf wheel"
+          uv pip install ../lib/streamlit_pdf-1.0.0-py3-none-any.whl
           rm -rf ./test-results
           pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
       - name: Upload failed test results

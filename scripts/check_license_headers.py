@@ -38,6 +38,8 @@ IGNORE_PATTERN = re.compile(
     r"^\.(github)/"
     # Exclude images.
     r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
+    # Exclude wheel files.
+    r"|\.whl$"
     # Exclude playwright test assets folder.
     r"|e2e_playwright/test_assets/.*$"
     # Exclude js file we use for testing st.html.

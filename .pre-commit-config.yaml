@@ -188,6 +188,7 @@ repos:
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
       - id: check-added-large-files
+        exclude: ^lib/streamlit_pdf-.*\.whl$
       - id: check-json
         exclude: .vscode/launch.json
       - id: check-toml
