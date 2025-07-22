@@ -28,6 +28,7 @@ from streamlit.deprecation_util import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.dialog import DialogWidth
@@ -103,7 +104,7 @@ def _dialog_decorator(
         fragmented_dialog_content = cast(
             "Callable[[], None]",
             _fragment(
-                dialog_content, additional_hash_info=non_optional_func.__qualname__
+                dialog_content, additional_hash_info=get_object_name(non_optional_func)
             ),
         )
 

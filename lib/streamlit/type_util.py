@@ -124,6 +124,16 @@ def _is_type_instance(obj: object, type_to_check: str) -> bool:
     return type_to_check in [get_fqn(t) for t in type(obj).__mro__]
 
 
+def get_object_name(obj: object) -> str:
+    """Get a simplified name of the given object."""
+    if hasattr(obj, "__qualname__") and isinstance(obj.__qualname__, str):
+        return obj.__qualname__
+    if hasattr(obj, "__name__") and isinstance(obj.__name__, str):
+        return obj.__name__
+
+    return type(obj).__qualname__
+
+
 def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
     return f"{the_type.__module__}.{the_type.__qualname__}"

@@ -20,6 +20,7 @@ from typing import Any, Callable, Final, TypeVar, cast
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.type_util import get_object_name
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -98,7 +99,7 @@ def deprecate_func_name(
         show_deprecation_warning(
             make_deprecated_name_warning(
                 old_name,
-                name_override or func.__name__,
+                name_override or get_object_name(func),
                 removal_date,
                 extra_message,
             )

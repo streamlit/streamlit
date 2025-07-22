@@ -97,7 +97,7 @@ class SelectSliderSerde(Generic[T]):
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return return_value if self.is_range_value else return_value[0]
 
-    def _as_index_list(self, v: object) -> list[int]:
+    def _as_index_list(self, v: Any) -> list[int]:
         if _is_range_value(v):
             slider_value = [index_(self.options, val) for val in v]
             start, end = slider_value
@@ -355,7 +355,7 @@ class SelectSliderMixin:
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
-        def as_index_list(v: object) -> list[int]:
+        def as_index_list(v: Any) -> list[int]:
             if _is_range_value(v):
                 slider_value = [index_(opt, val) for val in v]
                 start, end = slider_value
