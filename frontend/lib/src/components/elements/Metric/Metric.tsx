@@ -23,7 +23,7 @@ import embed from "vega-embed"
 import { Global } from "@emotion/react"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
-import { useEmotionTheme } from "@streamlit/lib"
+import { convertRemToPx, useEmotionTheme } from "@streamlit/lib"
 
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
@@ -88,9 +88,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       const spec = {
         $schema: "https://vega.github.io/schema/vega-lite/v5.json",
         width: sparklineWidth,
-        // width: ,
-        // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-        height: 52,
+        height: Math.round(convertRemToPx("3.25rem")),
         data: {
           values: sparkline.map((value, index) => ({ x: index, y: value })),
         },
@@ -137,7 +135,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         },
       })
     }
-  }, [sparkline, color, theme, sparklineWidth, sparklineRef.current])
+  }, [sparkline, color, theme, sparklineWidth, sparklineRef])
 
   return (
     <StyledMetricContainer
