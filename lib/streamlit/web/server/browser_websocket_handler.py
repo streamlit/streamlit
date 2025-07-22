@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,17 @@
 
 from __future__ import annotations
 
-import base64
-import binascii
+import hmac
 import json
-from typing import TYPE_CHECKING, Any, Awaitable, Final
+from typing import TYPE_CHECKING, Any, Final
+from urllib.parse import urlparse
 
 import tornado.concurrent
 import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
+from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler
 
 from streamlit import config
@@ -31,16 +32,22 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.server_util import is_url_from_allowed_origins
+from streamlit.web.server.server_util import (
+    AUTH_COOKIE_NAME,
+    is_url_from_allowed_origins,
+    is_xsrf_enabled,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 _LOGGER: Final = get_logger(__name__)
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
-    """Handles a WebSocket connection from the browser"""
+    """Handles a WebSocket connection from the browser."""
 
     def initialize(self, runtime: Runtime) -> None:
         self._runtime = runtime
@@ -50,12 +57,69 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         # need to read the self.xsrf_token manually to set the cookie as a side
         # effect. See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
-        if config.get_option("server.enableXsrfProtection"):
+        if is_xsrf_enabled():
             _ = self.xsrf_token
+
+    def get_signed_cookie(
+        self,
+        name: str,
+        value: str | None = None,
+        max_age_days: float = 31,
+        min_version: int | None = None,
+    ) -> bytes | None:
+        """Get a signed cookie from the request. Added for compatibility with
+        Tornado < 6.3.0.
+
+        See release notes: https://www.tornadoweb.org/en/stable/releases/v6.3.0.html#deprecation-notices
+        """
+        try:
+            return super().get_signed_cookie(name, value, max_age_days, min_version)
+        except AttributeError:
+            return super().get_secure_cookie(name, value, max_age_days, min_version)
 
     def check_origin(self, origin: str) -> bool:
         """Set up CORS."""
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
+
+    def _validate_xsrf_token(self, supplied_token: str) -> bool:
+        """Inspired by tornado.web.RequestHandler.check_xsrf_cookie method,
+        to check the XSRF token passed in Websocket connection header.
+        """
+        _, token, _ = self._decode_xsrf_token(supplied_token)
+        _, expected_token, _ = self._get_raw_xsrf_token()
+
+        decoded_token = utf8(token)
+        decoded_expected_token = utf8(expected_token)
+
+        if not decoded_token or not decoded_expected_token:
+            return False
+        return hmac.compare_digest(decoded_token, decoded_expected_token)
+
+    def _parse_user_cookie(self, raw_cookie_value: bytes) -> dict[str, Any]:
+        """Process the user cookie and extract the user info after
+        validating the origin. Origin is validated for security reasons.
+        """
+        cookie_value = json.loads(raw_cookie_value)
+        user_info = {}
+
+        cookie_value_origin = cookie_value.get("origin", None)
+        parsed_origin_from_header = urlparse(self.request.headers["Origin"])
+        expected_origin_value = (
+            parsed_origin_from_header.scheme + "://" + parsed_origin_from_header.netloc
+        )
+        if cookie_value_origin == expected_origin_value:
+            user_info["is_logged_in"] = cookie_value.get("is_logged_in", False)
+            del cookie_value["origin"]
+            del cookie_value["is_logged_in"]
+            user_info.update(cookie_value)
+
+        else:
+            _LOGGER.error(
+                "Origin mismatch, the origin of websocket request is not the "
+                "same origin of redirect_uri in secrets.toml",
+            )
+
+        return user_info
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Send a ForwardMsg to the browser."""
@@ -90,22 +154,8 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         return None
 
-    def open(self, *args, **kwargs) -> Awaitable[None] | None:
-        # Extract user info from the X-Streamlit-User header
-        is_public_cloud_app = False
-
-        try:
-            header_content = self.request.headers["X-Streamlit-User"]
-            payload = base64.b64decode(header_content)
-            user_obj = json.loads(payload)
-            email = user_obj["email"]
-            is_public_cloud_app = user_obj["isPublicCloudApp"]
-        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
-            email = "test@example.com"
-
-        user_info: dict[str, str | None] = {
-            "email": None if is_public_cloud_app else email
-        }
+    def open(self, *args: Any, **kwargs: Any) -> Awaitable[None] | None:
+        user_info: dict[str, str | bool | None] = {}
 
         existing_session_id = None
         try:
@@ -113,6 +163,13 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 p.strip()
                 for p in self.request.headers["Sec-Websocket-Protocol"].split(",")
             ]
+
+            raw_cookie_value = self.get_signed_cookie(AUTH_COOKIE_NAME)
+            if is_xsrf_enabled() and raw_cookie_value:
+                csrf_protocol_value = ws_protocols[1]
+
+                if self._validate_xsrf_token(csrf_protocol_value):
+                    user_info.update(self._parse_user_cookie(raw_cookie_value))
 
             if len(ws_protocols) >= 3:
                 # See the NOTE in the docstring of the `select_subprotocol` method above
@@ -156,7 +213,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if isinstance(payload, str):
                 # Sanity check. (The frontend should only be sending us bytes;
                 # Protobuf.ParseFromString does not accept str input.)
-                raise RuntimeError(
+                raise TypeError(  # noqa: TRY301
                     "WebSocket received an unexpected `str` message. "
                     "(We expect `bytes` only.)"
                 )
@@ -166,7 +223,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             _LOGGER.debug("Received the following back message:\n%s", msg)
 
         except Exception as ex:
-            _LOGGER.error(ex)
+            _LOGGER.exception("Error deserializing back message")
             self._runtime.handle_backmsg_deserialization_exception(self._session_id, ex)
             return
 

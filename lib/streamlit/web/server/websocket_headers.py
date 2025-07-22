@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ def _get_websocket_headers() -> dict[str, str] | None:
         return None
 
     if not isinstance(session_client, BrowserWebSocketHandler):
-        raise RuntimeError(
+        raise TypeError(
             f"SessionClient is not a BrowserWebSocketHandler! ({session_client})"
         )
 

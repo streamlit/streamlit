@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   fontSize: `${theme.fontSizes.sm}`,
   maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2 * ${theme.spacing.threeXL})`,
   maxHeight: theme.sizes.maxTooltipHeight,
-  overflow: ["auto", "overlay"],
+  overflow: "auto",
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
 
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
@@ -44,6 +44,6 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
     maxWidth: "100%",
   },
   "*": {
-    fontSize: `${theme.fontSizes.sm} !important`,
+    fontSize: theme.fontSizes.sm,
   },
 }))

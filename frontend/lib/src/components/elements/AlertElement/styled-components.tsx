@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import styled from "@emotion/styled"
 import {
   StyledEmojiIcon,
   StyledIcon,
-} from "@streamlit/lib/src/components/shared/Icon/styled-components"
-import { StyledCodeBlock } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
-import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
+} from "~lib/components/shared/Icon/styled-components"
+import { StyledCodeBlock } from "~lib/components/elements/CodeBlock/styled-components"
+import { StyledMaterialIcon } from "~lib/components/shared/Icon/Material/styled-components"
 
 export const StyledAlertContent = styled.div(({ theme }) => ({
   display: "flex",

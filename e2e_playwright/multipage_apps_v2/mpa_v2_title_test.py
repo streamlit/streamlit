@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     wait_for_app_run,
@@ -24,7 +24,7 @@ expected_page_order = ["a", "1_page__2"]
 
 def get_page_link(
     app: Page, page_name: str, page_order: list[str] = expected_page_order
-):
+) -> Locator:
     return (
         app.get_by_test_id("stSidebarNav").locator("a").nth(page_order.index(page_name))
     )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,8 @@ import React, { ReactElement, ReactNode } from "react"
 
 import { ModalBody as UIModalBody } from "baseui/modal"
 import { CloseSource } from "baseui/modal/types"
-import { useTheme } from "@emotion/react"
 
-import { EmotionTheme, Modal, ModalHeader } from "@streamlit/lib"
+import { Modal, ModalHeader, useEmotionTheme } from "@streamlit/lib"
 
 interface IDeployModalProps {
   children: React.ReactNode
@@ -32,7 +31,7 @@ export interface ModalBodyProps {
 }
 
 function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
-  const { colors, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { colors, fontSizes, spacing } = useEmotionTheme()
 
   return (
     <UIModalBody

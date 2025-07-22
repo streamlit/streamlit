@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -101,7 +101,7 @@ if TYPE_CHECKING:
     )
 
     # Test with on_change, args, and kwargs
-    def on_change_callback(d: date | None):
+    def on_change_callback(d: date | None) -> None:
         pass
 
     assert_type(date_input("foo", date(2024, 1, 1), on_change=on_change_callback), date)

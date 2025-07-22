@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
 
 import { CustomGridTheme } from "./useCustomTheme"
 import useRowHover from "./useRowHover"
@@ -47,6 +47,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1], // [col, row]
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -70,6 +71,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1],
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -78,6 +80,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: undefined,
         kind: "out-of-bounds",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -94,6 +97,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 1],
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 
@@ -102,6 +106,7 @@ describe("useRowHover hook", () => {
       result.current.onItemHovered?.({
         location: [0, 2],
         kind: "cell",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       } as any)
     })
 

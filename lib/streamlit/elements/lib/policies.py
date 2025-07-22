@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final, Sequence
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config, errors, logger, runtime
 from streamlit.elements.lib.form_utils import is_in_form
@@ -31,6 +31,8 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 from streamlit.runtime.state import WidgetCallback, get_session_state
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from streamlit.delta_generator import DeltaGenerator
 
 
@@ -68,7 +70,7 @@ def check_session_state_rules(
     StreamlitAPIException:
         Raised when the described rule is violated.
     """
-    global _shown_default_value_warning
+    global _shown_default_value_warning  # noqa: PLW0603
 
     if key is None or not runtime.exists():
         return
@@ -95,7 +97,7 @@ def check_session_state_rules(
 
 
 class CachedWidgetWarning(StreamlitAPIWarning):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             """
 Your script uses a widget command in a cached function
@@ -124,7 +126,7 @@ def check_cache_replay_rules() -> None:
         exception(CachedWidgetWarning())
 
 
-def check_fragment_path_policy(dg: DeltaGenerator):
+def check_fragment_path_policy(dg: DeltaGenerator) -> None:
     """Ensures that the current widget is not written outside of the
     fragment's delta path.
 
@@ -166,7 +168,7 @@ def check_widget_policies(
     default_value: Sequence[Any] | Any | None = None,
     writes_allowed: bool = True,
     enable_check_callback_rules: bool = True,
-):
+) -> None:
     """Check all widget policies for the given DeltaGenerator."""
     check_fragment_path_policy(dg)
     check_cache_replay_rules()
@@ -177,13 +179,14 @@ def check_widget_policies(
     )
 
 
-def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
+def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) -> None:
     if not label:
         _LOGGER.warning(
             "`label` got an empty value. This is discouraged for accessibility "
             "reasons and may be disallowed in the future by raising an exception. "
             "Please provide a non-empty label and hide it with label_visibility "
-            "if needed."
+            "if needed.",
+            stack_info=True,
         )
     if label_visibility not in ("visible", "hidden", "collapsed"):
         raise errors.StreamlitAPIException(

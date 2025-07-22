@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from __future__ import annotations
 import numbers
 
 
-class JSNumberBoundsException(Exception):
+class JSNumberBoundsException(Exception):  # noqa: N818
     pass
 
 
@@ -67,7 +67,7 @@ class JSNumber:
             raise JSNumberBoundsException(
                 f"{value_name} ({value}) must be >= -((1 << 53) - 1)"
             )
-        elif value > cls.MAX_SAFE_INTEGER:
+        if value > cls.MAX_SAFE_INTEGER:
             raise JSNumberBoundsException(
                 f"{value_name} ({value}) must be <= (1 << 53) - 1"
             )
@@ -95,11 +95,11 @@ class JSNumber:
 
         if not isinstance(value, (numbers.Integral, float)):
             raise JSNumberBoundsException(f"{value_name} ({value}) is not a float")
-        elif value < cls.MIN_NEGATIVE_VALUE:
+        if value < cls.MIN_NEGATIVE_VALUE:
             raise JSNumberBoundsException(
                 f"{value_name} ({value}) must be >= -1.797e+308"
             )
-        elif value > cls.MAX_VALUE:
+        if value > cls.MAX_VALUE:
             raise JSNumberBoundsException(
                 f"{value_name} ({value}) must be <= 1.797e+308"
             )

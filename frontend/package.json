@@ -1,33 +1,28 @@
 {
   "name": "streamlit",
-  "version": "1.41.1",
+  "version": "1.47.0",
   "private": true,
   "workspaces": [
     "app",
-    "lib"
+    "connection",
+    "eslint-plugin-streamlit-custom",
+    "lib",
+    "protobuf",
+    "typescript-config",
+    "utils"
   ],
   "scripts": {
-    "postinstall": "patch-package",
     "start": "yarn workspace @streamlit/app start",
-    "build": "yarn workspace @streamlit/app build",
     "buildWithProfiler": "yarn workspace @streamlit/app buildWithProfiler",
-    "buildLib": "yarn workspace @streamlit/lib build",
-    "buildLibProd": "yarn workspace @streamlit/lib build:prod",
-    "buildApp": "yarn workspace @streamlit/app build",
-    "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
-    "lint": "yarn lintApp && yarn lintLib",
-    "lintApp": "yarn workspace @streamlit/app lint",
-    "lintLib": "yarn workspace @streamlit/lib lint",
-    "format": "prettier --write --config .prettierrc './{app,lib}/src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "prettier --check --config .prettierrc './{app,lib}/src/**/*.{js,ts,jsx,tsx}'",
-    "lint:interactive": "yarn eslint-interactive ./app/src ./lib/src",
-    "test": "yarn workspace @streamlit/lib test && yarn workspace @streamlit/app test",
-    "testcoverage": "yarn workspace @streamlit/lib test --coverage && yarn workspace @streamlit/app test --coverage",
-    "testLib": "yarn workspace @streamlit/lib testWatch",
-    "testApp": "yarn workspace @streamlit/app testWatch"
+    "test": "vitest run",
+    "testWatch": "vitest",
+    "testCoverage": "vitest run --coverage"
   },
   "resolutions": {
-    "nwsapi": "2.2.9"
+    "d3-color": "^3.1.0",
+    "dompurify": "^3.2.4",
+    "prismjs": "^1.30.0",
+    "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch"
   },
   "browserslist": [
     ">0.2%",
@@ -35,5 +30,10 @@
     "not ie <= 11",
     "not op_mini all"
   ],
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@4.5.3",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "concurrently": "^9.2.0",
+    "vitest": "^3.2.4"
+  }
 }

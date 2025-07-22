@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ from streamlit.runtime.media_file_storage import (
     MediaFileStorageError,
 )
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
-from streamlit.util import HASHLIB_KWARGS
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -55,7 +54,7 @@ def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) 
     filename
         Any string. Will be converted to bytes and used to compute a hash.
     """
-    filehash = hashlib.new("sha224", **HASHLIB_KWARGS)
+    filehash = hashlib.new("sha224", usedforsecurity=False)
     filehash.update(data)
     filehash.update(bytes(mimetype.encode()))
 
@@ -90,8 +89,8 @@ class MemoryFile(NamedTuple):
 
 
 class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
-    def __init__(self, media_endpoint: str):
-        """Create a new MemoryMediaFileStorage instance
+    def __init__(self, media_endpoint: str) -> None:
+        """Create a new MemoryMediaFileStorage instance.
 
         Parameters
         ----------
@@ -111,10 +110,11 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     ) -> str:
         """Add a file to the manager and return its ID."""
         file_data: bytes
-        if isinstance(path_or_data, str):
-            file_data = self._read_file(path_or_data)
-        else:
-            file_data = path_or_data
+        file_data = (
+            self._read_file(path_or_data)
+            if isinstance(path_or_data, str)
+            else path_or_data
+        )
 
         # Because our file_ids are stable, if we already have a file with the
         # given ID, we don't need to create a new one.
@@ -131,7 +131,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     def get_file(self, filename: str) -> MemoryFile:
         """Return the MemoryFile with the given filename. Filenames are of the
         form "file_id.extension". (Note that this is *not* the optional
-        user-specified filename for download files.)
+        user-specified filename for download files.).
 
         Raises a MediaFileStorageError if no such file exists.
         """

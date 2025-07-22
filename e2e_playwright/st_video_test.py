@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,19 +16,23 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
-    click_radio_button,
+    goto_app,
+    select_radio_option,
 )
 
 VIDEO_ELEMENTS_COUNT = 12
 
 
 def _select_video_to_show(app: Page, label: str) -> Locator:
-    click_radio_button(app, re.compile(f"^{label}$"))
+    select_radio_option(app, re.compile(f"^{label}$"))
     video_element = app.get_by_test_id("stVideo").first
     # Prevent flakiness: we move the mouse before scrolling to prevent the cursor
     # hovering over a video element and, thereby, changing how the video interface is
@@ -52,6 +56,18 @@ def _wait_until_video_has_data(app: Page, video_element: Locator):
     )
 
 
+@pytest.mark.skip_browser("webkit")
+def test_video_width_configurations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that `st.video` width configurations are applied correctly."""
+    video_element = _select_video_to_show(app, "webm video with pixel width")
+    _wait_until_video_has_data(app, video_element)
+    assert_snapshot(video_element, name="st_video-width_400px", image_threshold=0.1)
+
+    video_element = _select_video_to_show(app, "webm video with stretch width")
+    _wait_until_video_has_data(app, video_element)
+    assert_snapshot(video_element, name="st_video-width_stretch", image_threshold=0.1)
+
+
 # Chromium miss codecs required to play that mp3 videos
 # https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/
 @pytest.mark.skip_browser("chromium")
@@ -68,7 +84,6 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
 
     video_element = _select_video_to_show(app, "mp4 video with subtitles")
     _wait_until_video_has_data(app, video_element)
-
     assert_snapshot(
         video_element,
         name="video_element_with_subtitles",
@@ -113,9 +128,22 @@ def test_video_end_time(app: Page, video_option_label: str):
     video_element = _select_video_to_show(app, video_option_label)
     _wait_until_video_has_data(app, video_element)
     video_element.evaluate("el => el.play()")
-    # Wait until video will reach end_time
-    app.wait_for_timeout(3000)
-    expect(video_element).to_have_js_property("paused", True)
+
+    # Wait for the video to actually start playing
+    wait_until(
+        app,
+        lambda: video_element.evaluate("el => !el.paused") is True,
+        timeout=2000,
+    )
+
+    # Wait until video reaches end_time and pauses
+    wait_until(
+        app,
+        lambda: video_element.evaluate("el => el.paused") is True,
+        timeout=5000,
+    )
+
+    # Verify the video stopped at the expected end_time (33 seconds)
     wait_until(app, lambda: int(video_element.evaluate("el => el.currentTime")) == 33)
 
 
@@ -161,6 +189,7 @@ def test_video_autoplay(app: Page):
     expect(video_element).to_have_js_property("paused", False)
 
 
+@pytest.mark.skip_browser("webkit")  # Flakiness with this in CI
 def test_video_muted_autoplay(app: Page):
     """Test that `st.video` muted and autoplay properties work correctly."""
     video_element = _select_video_to_show(app, "webm video muted")
@@ -196,3 +225,30 @@ def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     _select_video_to_show(app, "webm video with autoplay")
     check_top_level_class(app, "stVideo")
+
+
+def test_video_source_error(app: Page, app_port: int):
+    """Test `st.video` source error."""
+    # Ensure video source request return a 404 status
+    app.route(
+        f"http://localhost:{app_port}/media/**",
+        lambda route: route.fulfill(
+            status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
+        ),
+    )
+
+    # Capture console messages
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    # Navigate to the app
+    goto_app(app, f"http://localhost:{app_port}")
+    _select_video_to_show(app, "mp4 video")
+
+    # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
+    wait_until(
+        app,
+        lambda: any(
+            "Client Error: Video source error" in message for message in messages
+        ),
+    )

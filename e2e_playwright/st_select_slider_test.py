@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ def test_select_slider_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     st_select_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_select_sliders).to_have_count(11)
+    expect(st_select_sliders).to_have_count(14)
 
     assert_snapshot(
         st_select_sliders.nth(0),
@@ -36,6 +36,9 @@ def test_select_slider_rendering(
     assert_snapshot(st_select_sliders.nth(4), name="st_select_slider-disabled")
     assert_snapshot(st_select_sliders.nth(5), name="st_select_slider-hidden_label")
     assert_snapshot(st_select_sliders.nth(6), name="st_select_slider-label_collapsed")
+    assert_snapshot(st_select_sliders.nth(11), name="st_select_slider-markdown_label")
+    assert_snapshot(st_select_sliders.nth(12), name="st_select_slider-width_300px")
+    assert_snapshot(st_select_sliders.nth(13), name="st_select_slider-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):

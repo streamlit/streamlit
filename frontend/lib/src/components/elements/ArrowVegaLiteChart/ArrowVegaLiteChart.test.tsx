@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,20 +18,17 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
-import {
-  ArrowVegaLiteChart,
-  PropsWithFullScreenAndTheme,
-} from "./ArrowVegaLiteChart"
+import ArrowVegaLiteChart, { Props } from "./ArrowVegaLiteChart"
 import { VegaLiteChartElement } from "./arrowUtils"
 
 const getProps = (
   elementProps: Partial<VegaLiteChartElement> = {},
-  props: Partial<PropsWithFullScreenAndTheme> = {}
-): PropsWithFullScreenAndTheme => ({
+  props: Partial<Props> = {}
+): Props => ({
   element: {
     data: null,
     id: "1",
@@ -62,18 +59,21 @@ const getProps = (
     vegaLiteTheme: "streamlit",
     ...elementProps,
   },
-  theme: mockTheme.emotion,
-  width: 0,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-  height: 0,
-  isFullScreen: false,
   ...props,
 })
 
 describe("ArrowVegaLiteChart", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
   it("renders without crashing", () => {
     render(<ArrowVegaLiteChart {...getProps()} />)
     const vegaLiteChart = screen.getByTestId("stVegaLiteChart")

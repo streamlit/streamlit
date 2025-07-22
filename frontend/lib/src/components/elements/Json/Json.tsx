@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,35 +14,30 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useRef } from "react"
+import React, { memo, ReactElement, useRef } from "react"
 
 import JSON5 from "json5"
 import Clipboard from "clipboard"
 import ReactJson from "react-json-view"
-import { useTheme } from "@emotion/react"
 
-import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
-import { Json as JsonProto } from "@streamlit/lib/src/proto"
-import {
-  EmotionTheme,
-  hasLightBackgroundColor,
-} from "@streamlit/lib/src/theme"
-import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
+import { Json as JsonProto } from "@streamlit/protobuf"
+
+import ErrorElement from "~lib/components/shared/ErrorElement"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { ensureError } from "~lib/util/ErrorHandling"
 
 import { StyledJsonWrapper } from "./styled-components"
+
 export interface JsonProps {
-  width: number
   element: JsonProto
 }
 
 /**
  * Functional element representing JSON structured text.
  */
-export default function Json({
-  width,
-  element,
-}: Readonly<JsonProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+function Json({ element }: Readonly<JsonProps>): ReactElement {
+  const theme = useEmotionTheme()
 
   const elementRef = useRef<HTMLDivElement>(null)
 
@@ -53,6 +48,7 @@ export default function Json({
     const error = ensureError(e)
     try {
       bodyObject = JSON5.parse(element.body)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (json5Error) {
       // If content fails to parse as Json, rebuild the error message
       // to show where the problem occurred.
@@ -66,6 +62,7 @@ export default function Json({
   // theme's background is light or dark.
   const jsonTheme = hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const handleCopy = (copy: any): void => {
     // we use ClipboardJS to do the copying, because it allows
     // us to specify a container element. This is necessary because
@@ -79,7 +76,6 @@ export default function Json({
     <StyledJsonWrapper
       className="stJson"
       data-testid="stJson"
-      width={width}
       ref={elementRef}
     >
       <ReactJson
@@ -92,7 +88,8 @@ export default function Json({
         enableClipboard={handleCopy}
         style={{
           fontFamily: theme.genericFonts.codeFont,
-          fontSize: theme.fontSizes.sm,
+          fontSize: theme.fontSizes.codeFontSize,
+          fontWeight: theme.fontWeights.code,
           backgroundColor: theme.colors.bgColor,
           whiteSpace: "pre-wrap", // preserve whitespace
         }}
@@ -100,3 +97,5 @@ export default function Json({
     </StyledJsonWrapper>
   )
 }
+
+export default memo(Json)

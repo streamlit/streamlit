@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Collection, Tuple, Union, cast
+from collections.abc import Collection
+from typing import Any, Callable, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -22,17 +23,17 @@ from streamlit.errors import StreamlitInvalidColorError
 
 # components go from 0.0 to 1.0
 # Supported by Pillow and pretty common.
-FloatRGBColorTuple: TypeAlias = Tuple[float, float, float]
-FloatRGBAColorTuple: TypeAlias = Tuple[float, float, float, float]
+FloatRGBColorTuple: TypeAlias = tuple[float, float, float]
+FloatRGBAColorTuple: TypeAlias = tuple[float, float, float, float]
 
 # components go from 0 to 255
 # DeckGL uses these.
-IntRGBColorTuple: TypeAlias = Tuple[int, int, int]
-IntRGBAColorTuple: TypeAlias = Tuple[int, int, int, int]
+IntRGBColorTuple: TypeAlias = tuple[int, int, int]
+IntRGBAColorTuple: TypeAlias = tuple[int, int, int, int]
 
 # components go from 0 to 255, except alpha goes from 0.0 to 1.0
 # CSS uses these.
-MixedRGBAColorTuple: TypeAlias = Tuple[int, int, int, float]
+MixedRGBAColorTuple: TypeAlias = tuple[int, int, int, float]
 
 Color4Tuple: TypeAlias = Union[
     FloatRGBAColorTuple,
@@ -63,7 +64,7 @@ def to_int_color_tuple(color: MaybeColor) -> IntColorTuple:
         rgb_formatter=_int_formatter,
         alpha_formatter=_int_formatter,
     )
-    return cast(IntColorTuple, color_tuple)
+    return cast("IntColorTuple", color_tuple)
 
 
 def to_css_color(color: MaybeColor) -> Color:
@@ -75,15 +76,15 @@ def to_css_color(color: MaybeColor) -> Color:
     See tests for more info.
     """
     if is_css_color_like(color):
-        return cast(Color, color)
+        return cast("Color", color)
 
     if is_color_tuple_like(color):
-        ctuple = cast(ColorTuple, color)
+        ctuple = cast("ColorTuple", color)
         ctuple = _normalize_tuple(ctuple, _int_formatter, _float_formatter)
         if len(ctuple) == 3:
             return f"rgb({ctuple[0]}, {ctuple[1]}, {ctuple[2]})"
-        elif len(ctuple) == 4:
-            c4tuple = cast(MixedRGBAColorTuple, ctuple)
+        if len(ctuple) == 4:
+            c4tuple = cast("MixedRGBAColorTuple", ctuple)
             return f"rgba({c4tuple[0]}, {c4tuple[1]}, {c4tuple[2]}, {c4tuple[3]})"
 
     raise StreamlitInvalidColorError(color)
@@ -124,9 +125,7 @@ def _is_cssrgb_color_like(color: MaybeColor) -> bool:
     NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
     validate user input! Instead use is_hex_color_like and is_color_tuple_like.
     """
-    return isinstance(color, str) and (
-        color.startswith("rgb(") or color.startswith("rgba(")
-    )
+    return isinstance(color, str) and color.startswith(("rgb(", "rgba("))
 
 
 def is_color_tuple_like(color: MaybeColor) -> bool:
@@ -156,7 +155,7 @@ def _to_color_tuple(
     color: MaybeColor,
     rgb_formatter: Callable[[float, MaybeColor], float],
     alpha_formatter: Callable[[float, MaybeColor], float],
-):
+) -> ColorTuple:
     """Convert a potential color to a color tuple.
 
     The exact type of color tuple this outputs is dictated by the formatter parameters.
@@ -169,7 +168,7 @@ def _to_color_tuple(
     """
     if is_hex_color_like(color):
         hex_len = len(color)
-        color_hex = cast(str, color)
+        color_hex = cast("str", color)
 
         if hex_len == 4:
             r = 2 * color_hex[1]
@@ -200,7 +199,7 @@ def _to_color_tuple(
             raise StreamlitInvalidColorError(color) from ex
 
     if is_color_tuple_like(color):
-        color_tuple = cast(ColorTuple, color)
+        color_tuple = cast("ColorTuple", color)
         return _normalize_tuple(color_tuple, rgb_formatter, alpha_formatter)
 
     raise StreamlitInvalidColorError(color)
@@ -225,8 +224,8 @@ def _normalize_tuple(
         b = rgb_formatter(color[2], color)
         return r, g, b
 
-    elif len(color) == 4:
-        color_4tuple = cast(Color4Tuple, color)
+    if len(color) == 4:
+        color_4tuple = color
         r = rgb_formatter(color_4tuple[0], color_4tuple)
         g = rgb_formatter(color_4tuple[1], color_4tuple)
         b = rgb_formatter(color_4tuple[2], color_4tuple)

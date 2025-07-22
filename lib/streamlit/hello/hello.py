@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ st.write(
     """
     Streamlit is an open-source app framework built specifically for
     machine learning and data science projects.
+
     **👈 Select a demo from the sidebar** to see some examples
     of what Streamlit can do!
 

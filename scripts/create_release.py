@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Create a release using Github API"""
+"""Create a release using Github API."""
+
+from __future__ import annotations
 
 import os
 
 import requests
 
 
-def create_release():
-    """Create a release from the Git Tag"""
+def create_release() -> None:
+    """Create a release from the Git Tag."""
 
     tag = os.getenv("GIT_TAG")
     access_token = os.getenv("GH_TOKEN")
@@ -59,7 +61,7 @@ def create_release():
         raise Exception(f"Unable to create release, HTTP response: {response.text}")
 
 
-def main():
+def main() -> None:
     create_release()
 
 

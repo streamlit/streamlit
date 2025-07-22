@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,16 @@ global.TextDecoder = TextDecoder;
 beforeEach(() => {
   // The Streamlit class defines several static fields. To avoid side effects,
   // we restore them to their original state.
-  const {Streamlit} = require('./streamlit')
+  const { Streamlit } = require("./streamlit");
 
-  Object.defineProperty(Streamlit, 'registeredMessageListener', {
+  Object.defineProperty(Streamlit, "registeredMessageListener", {
     value: false,
     configurable: true,
-    writable: true
-  })
-  Object.defineProperty(Streamlit, 'lastFrameHeight', {
+    writable: true,
+  });
+  Object.defineProperty(Streamlit, "lastFrameHeight", {
     value: null,
     configurable: true,
-    writable: true
-  })
-})
+    writable: true,
+  });
+});

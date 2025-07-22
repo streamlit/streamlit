@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { useFormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 /**
  * Think of useState, but the state is also persisted in the widget manager.

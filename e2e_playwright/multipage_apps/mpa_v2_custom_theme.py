@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ pg = st.navigation(
                 icon=":material/access_time:",
             ),
             st.Page(
-                "pages/05_page_with_duplicate_name.py",
+                "pages/06_page_6.py",
                 title="Events Page",
                 url_path="events",
                 icon=":material/emoji_events:",

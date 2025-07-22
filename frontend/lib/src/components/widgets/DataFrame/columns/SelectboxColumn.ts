@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,8 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
-import { getTypeName } from "@streamlit/lib/src/dataframes/arrowTypeUtils"
-import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { isBooleanType } from "~lib/dataframes/arrowTypeUtils"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
@@ -34,7 +31,8 @@ import {
 } from "./utils"
 
 export interface SelectboxColumnParams {
-  /** A list of options available in the selectbox.
+  /**
+   * A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
   readonly options: (string | number | boolean)[]
@@ -53,7 +51,9 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
-      options: getTypeName(props.arrowType) === "bool" ? [true, false] : [],
+      options: isBooleanType(props.arrowType)
+        ? [true, false]
+        : (props.arrowType.categoricalOptions ?? []),
     },
     // User parameters:
     props.columnTypeOptions
@@ -68,7 +68,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     }
   }
 
-  const cellTemplate = {
+  const cellTemplate: DropdownCellType = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
     copyData: "",
@@ -87,12 +87,14 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       ],
       value: "",
     },
-  } as DropdownCellType
+  }
 
   return {
     ...props,
     kind: "selectbox",
     sortMode: "default",
+    typeIcon: ":material/arrow_drop_down_circle:",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       // Empty string refers to a missing value
       let cellData = null

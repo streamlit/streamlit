@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,14 @@
 
 from __future__ import annotations
 
-from typing import MutableMapping
+from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
 
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
 
 
 class MemorySessionStorage(SessionStorage):

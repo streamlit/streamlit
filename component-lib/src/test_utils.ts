@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,4 +24,5 @@
 // that event handler will run to completion, as will any remaining handlers for that same
 // event, before the MessageEvent is dispatched.
 // Source: https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
-export const tick = () => new Promise((resolve) => setTimeout(() => resolve(0), 0));
+export const tick = () =>
+  new Promise((resolve) => setTimeout(() => resolve(0), 0));

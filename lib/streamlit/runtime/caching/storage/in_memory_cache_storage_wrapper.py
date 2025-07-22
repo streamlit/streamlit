@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,7 +57,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     it from multiple threads.
     """
 
-    def __init__(self, persist_storage: CacheStorage, context: CacheStorageContext):
+    def __init__(
+        self, persist_storage: CacheStorage, context: CacheStorageContext
+    ) -> None:
         self.function_key = context.function_key
         self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
@@ -81,7 +83,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     def get(self, key: str) -> bytes:
         """
         Returns the stored value for the key or raise CacheStorageKeyNotFoundError if
-        the key is not found
+        the key is not found.
         """
         try:
             entry_bytes = self._read_from_mem_cache(key)
@@ -91,38 +93,35 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         return entry_bytes
 
     def set(self, key: str, value: bytes) -> None:
-        """Sets the value for a given key"""
+        """Sets the value for a given key."""
         self._write_to_mem_cache(key, value)
         self._persist_storage.set(key, value)
 
     def delete(self, key: str) -> None:
-        """Delete a given key"""
+        """Delete a given key."""
         self._remove_from_mem_cache(key)
         self._persist_storage.delete(key)
 
     def clear(self) -> None:
-        """Delete all keys for the in memory cache, and also the persistent storage"""
+        """Delete all keys for the in memory cache, and also the persistent storage."""
         with self._mem_cache_lock:
             self._mem_cache.clear()
         self._persist_storage.clear()
 
     def get_stats(self) -> list[CacheStat]:
-        """Returns a list of stats in bytes for the cache memory storage per item"""
-        stats = []
-
+        """Returns a list of stats in bytes for the cache memory storage per item."""
         with self._mem_cache_lock:
-            for item in self._mem_cache.values():
-                stats.append(
-                    CacheStat(
-                        category_name="st_cache_data",
-                        cache_name=self.function_display_name,
-                        byte_length=len(item),
-                    )
+            return [
+                CacheStat(
+                    category_name="st_cache_data",
+                    cache_name=self.function_display_name,
+                    byte_length=len(item),
                 )
-        return stats
+                for item in self._mem_cache.values()
+            ]
 
     def close(self) -> None:
-        """Closes the cache storage"""
+        """Closes the cache storage."""
         self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:
@@ -132,9 +131,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 _LOGGER.debug("Memory cache HIT: %s", key)
                 return entry
 
-            else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheStorageKeyNotFoundError("Key not found in mem cache")
+            _LOGGER.debug("Memory cache MISS: %s", key)
+            raise CacheStorageKeyNotFoundError("Key not found in mem cache")
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
         with self._mem_cache_lock:

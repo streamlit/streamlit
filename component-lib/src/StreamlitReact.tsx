@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import { RenderData, Streamlit, Theme } from "./streamlit";
 /**
  * Props passed to custom Streamlit components.
  */
-export interface ComponentProps<ArgType=any> {
+export interface ComponentProps<ArgType = any> {
   /** Named dictionary of arguments passed from Python. */
   args: ArgType;
 
@@ -47,10 +47,10 @@ export interface ComponentProps<ArgType=any> {
  * `componentDidMount` and `componentDidUpdate` functions in your own class,
  * so that your plugin properly resizes.
  */
-export class StreamlitComponentBase<S = {}, ArgType=any> extends React.PureComponent<
-  ComponentProps<ArgType>,
-  S
-> {
+export class StreamlitComponentBase<
+  S = {},
+  ArgType = any
+> extends React.PureComponent<ComponentProps<ArgType>, S> {
   public componentDidMount(): void {
     // After we're rendered for the first time, tell Streamlit that our height
     // has changed.
@@ -68,7 +68,7 @@ export class StreamlitComponentBase<S = {}, ArgType=any> extends React.PureCompo
  *
  * Bootstraps the communication interface between Streamlit and the component.
  */
-export function withStreamlitConnection<ArgType=any>(
+export function withStreamlitConnection<ArgType = any>(
   WrappedComponent: React.ComponentType<ComponentProps>
 ): React.ComponentType {
   interface WrapperProps {}
@@ -86,7 +86,7 @@ export function withStreamlitConnection<ArgType=any>(
       super(props);
       this.state = {
         renderData: undefined,
-        componentError: undefined
+        componentError: undefined,
       };
     }
 
@@ -133,7 +133,9 @@ export function withStreamlitConnection<ArgType=any>(
      * We save the render data in State, so that it can be passed to the
      * component in our own render() function.
      */
-    private onRenderEvent = (event: CustomEvent<RenderData<ArgType>>): void => {
+    private onRenderEvent = (
+      event: CustomEvent<RenderData<ArgType>>
+    ): void => {
       // Update our state with the newest render data
       this.setState({ renderData: event.detail });
     };

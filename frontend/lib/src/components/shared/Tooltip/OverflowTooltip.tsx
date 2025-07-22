@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,8 @@ function OverflowTooltip({
 
   React.useEffect(() => {
     const newAllowTooltip = childRef?.current
-      ? childRef.current.offsetWidth < childRef.current.scrollWidth
+      ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+        childRef.current.offsetWidth < childRef.current.scrollWidth
       : false
     if (newAllowTooltip !== allowTooltip) {
       setAllowTooltip(newAllowTooltip)

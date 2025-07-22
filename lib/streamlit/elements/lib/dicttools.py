@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 def _unflatten_single_dict(flat_dict: dict[Any, Any]) -> dict[Any, Any]:
@@ -124,7 +127,7 @@ def unflatten(
     for k, v in list(out_dict.items()):
         # Unflatten child dicts:
         if isinstance(v, dict):
-            v = unflatten(v, encodings)
+            v = unflatten(v, encodings)  # noqa: PLW2901
         elif hasattr(v, "__iter__"):
             for i, child in enumerate(v):
                 if isinstance(child, dict):
@@ -144,8 +147,6 @@ def remove_none_values(input_dict: Mapping[Any, Any]) -> dict[Any, Any]:
     """Remove all keys with None values from a dict."""
     new_dict = {}
     for key, val in input_dict.items():
-        if isinstance(val, dict):
-            val = remove_none_values(val)
         if val is not None:
-            new_dict[key] = val
+            new_dict[key] = remove_none_values(val) if isinstance(val, dict) else val
     return new_dict

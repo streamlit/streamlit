@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # isort: skip_file
+# ruff: noqa: E402, A001
 
 """Streamlit.
 
@@ -115,7 +116,12 @@ from streamlit.runtime.state import (
     SessionStateProxy as _SessionStateProxy,
     QueryParamsProxy as _QueryParamsProxy,
 )
-from streamlit.user_info import UserInfoProxy as _UserInfoProxy
+from streamlit.user_info import (
+    UserInfoProxy as _UserInfoProxy,
+    DeprecatedUserInfoProxy as _DeprecatedUserInfoProxy,
+    login as _login,
+    logout as _logout,
+)
 from streamlit.commands.experimental_query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
@@ -162,6 +168,7 @@ altair_chart = _main.altair_chart
 area_chart = _main.area_chart
 audio = _main.audio
 audio_input = _main.audio_input
+badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
@@ -267,13 +274,23 @@ connection = _connection
 dialog = _dialog_decorator
 fragment = _fragment
 
+
+# Auth
+login = _login
+logout = _logout
+
+# User
+user = _UserInfoProxy()
+
 # Experimental APIs
-experimental_audio_input = _main.experimental_audio_input
 experimental_dialog = _experimental_dialog_decorator
 experimental_fragment = _experimental_fragment
-experimental_user = _UserInfoProxy()
+experimental_user = _DeprecatedUserInfoProxy()
 
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
+    "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) "
+    "for more information."
+)
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,

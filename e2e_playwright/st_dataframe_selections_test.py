@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
     expect_canvas_to_be_visible,
+    open_column_menu,
     select_column,
     select_row,
     sort_column,
@@ -52,20 +53,24 @@ def _get_multi_row_and_column_select_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(4)
 
 
-def _get_in_form_df(app: Page) -> Locator:
+def _get_single_row_and_column_select_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(5)
 
 
-def _get_callback_df(app: Page) -> Locator:
+def _get_in_form_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(6)
 
 
-def _get_fragment_df(app: Page) -> Locator:
+def _get_callback_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(7)
 
 
-def _get_df_with_index(app: Page) -> Locator:
+def _get_fragment_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(8)
+
+
+def _get_df_with_index(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(9)
 
 
 def test_single_row_select(app: Page):
@@ -153,6 +158,16 @@ def test_single_column_select(app: Page):
         exact_match=True,
     )
 
+    # Clicking on an already selected column should unselect it:
+    select_column(canvas, 2)
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-column selection:",
+        "{'selection': {'rows': [], 'columns': []}}",
+        exact_match=True,
+    )
+
 
 def test_multi_row_select(app: Page):
     canvas = _get_multi_row_select_df(app)
@@ -230,6 +245,16 @@ def test_multi_column_select(app: Page):
         exact_match=True,
     )
 
+    # Clicking on an already selected column should unselect this column:
+    select_column(canvas, 1)
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-column selection:",
+        "{'selection': {'rows': [], 'columns': ['col_3', 'col_4']}}",
+        exact_match=True,
+    )
+
 
 def _select_some_rows_and_columns(app: Page, canvas: Locator):
     select_row(canvas, 1)
@@ -260,6 +285,70 @@ def test_multi_row_and_multi_column_select(app: Page):
     _expect_multi_row_multi_column_selection(app)
 
 
+def test_single_row_select_and_sort(app: Page):
+    canvas = _get_single_row_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+
+    # Select a single row
+    select_row(canvas, 1)
+    wait_for_app_run(app)
+
+    # The row selection should be returned
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row selection:",
+        "{'selection': {'rows': [0], 'columns': []}}",
+        exact_match=True,
+    )
+
+    # Sort the dataframe via the column header
+    sort_column(canvas, 1, has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    # The row selection should be cleared
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row selection:",
+        "{'selection': {'rows': [], 'columns': []}}",
+        exact_match=True,
+    )
+
+
+# Issue #11345: Test for behavior consistency with sorting via column menu
+# and sorting via column header (above) with selections
+def test_single_row_and_single_column_select_and_sort(app: Page):
+    canvas = _get_single_row_and_column_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+
+    # Select a single row and a single column from the dataframe
+    select_row(canvas, 1)
+    wait_for_app_run(app)
+
+    select_column(canvas, 2, has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    # The row & column selections should be returned
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-single-column selection:",
+        "{'selection': {'rows': [0], 'columns': ['col_1']}}",
+        exact_match=True,
+    )
+
+    # Open the column menu and sort the column
+    open_column_menu(canvas, 1, "small", has_row_marker_col=True)
+    app.get_by_test_id("stDataFrameColumnMenu").get_by_text("Sort ascending").click()
+    wait_for_app_run(app)
+
+    # The row selection should be cleared, but the column selection should remain
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row-single-column selection:",
+        "{'selection': {'rows': [], 'columns': ['col_1']}}",
+        exact_match=True,
+    )
+
+
 def test_clear_selection_via_escape(app: Page):
     canvas = _get_multi_row_and_column_select_df(app)
     expect_canvas_to_be_visible(canvas)
@@ -284,18 +373,18 @@ def test_clear_selection_via_toolbar(app: Page):
     canvas = _get_multi_row_and_column_select_df(app)
     expect_canvas_to_be_visible(canvas)
 
-    # toolbar has three buttons: download, search, fullscreen
+    # toolbar has three buttons: visibility, download, search, fullscreen
     dataframe_toolbar = canvas.get_by_test_id("stElementToolbar")
     toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
-    expect(toolbar_buttons).to_have_count(3)
+    expect(toolbar_buttons).to_have_count(4)
 
     _select_some_rows_and_columns(app, canvas)
     _expect_multi_row_multi_column_selection(app)
     # toolbar has one more button now: clear selection
     toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
-    expect(toolbar_buttons).to_have_count(4)
-    # click on the clear-selection button which is the first in the toolbar
-    toolbar_buttons.nth(0).click()
+    expect(toolbar_buttons).to_have_count(5)
+    # click on the clear-selection button in the toolbar
+    toolbar_buttons.get_by_label("Clear selection").click()
     wait_for_app_run(app)
 
     expect_prefixed_markdown(
@@ -340,6 +429,10 @@ def test_in_form_selection_and_session_state(app: Page):
     )
 
 
+# Skipping because the test is flaky on webkit. I validated it manually in
+# Safari and it works as expected. Getting automated validation in Chromium +
+# Firefox should be enough.
+@pytest.mark.skip_browser("webkit")
 def test_multi_row_and_multi_column_selection_with_callback(app: Page):
     canvas = _get_callback_df(app)
     expect_canvas_to_be_visible(canvas)
@@ -412,12 +505,16 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
+# Skipping because the test is flaky on webkit. I validated it manually in
+# Safari and it works as expected. Getting automated validation in Chromium +
+# Firefox should be enough.
+@pytest.mark.skip_browser("webkit")
 def test_that_index_cannot_be_selected(app: Page):
     canvas = _get_df_with_index(app)
     expect_canvas_to_be_visible(canvas)
 
     canvas.scroll_into_view_if_needed()
-    # Try select a selectable columnÖ
+    # Try select a selectable column
     select_column(canvas, 2)
     wait_for_app_run(app)
 

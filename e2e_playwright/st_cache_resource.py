@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from typing import cast
 
 import streamlit as st
 
@@ -52,10 +54,10 @@ if "run_counter" not in st.session_state:
 
 
 @st.cache_resource
-def replay_element():
+def replay_element() -> int:
     st.session_state.run_counter += 1
     st.markdown(f"Cache executions: {st.session_state.run_counter}")
-    return st.session_state.run_counter
+    return cast("int", st.session_state.run_counter)
 
 
 if st.button("Cached function with element replay"):

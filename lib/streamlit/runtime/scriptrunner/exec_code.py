@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+import sys
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
+from streamlit import util
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_default_dg_stack_value,
@@ -28,8 +30,46 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
+
+
+class modified_sys_path:  # noqa: N801
+    """A context for prepending a directory to sys.path for a second.
+
+    Code inspired by IPython:
+    Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
+    """
+
+    def __init__(self, main_script_path: str) -> None:
+        self._main_script_path = main_script_path
+        self._added_path = False
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    def __enter__(self) -> None:
+        if self._main_script_path not in sys.path:
+            sys.path.insert(0, self._main_script_path)
+            self._added_path = True
+
+    def __exit__(
+        self,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
+        if self._added_path:
+            try:
+                sys.path.remove(self._main_script_path)
+            except ValueError:
+                # It's already removed.
+                pass
+
+        # Returning False causes any exceptions to be re-raised.
+        return False
 
 
 def exec_func_with_error_handling(

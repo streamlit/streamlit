@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ interface TestProps {
 }
 
 class TestComponent extends PureComponent<TestProps> {
-  public render = (): ReactElement => (
+  public override render = (): ReactElement => (
     <>
       <div>{this.props.unrelatedProp}</div>
       <div>{this.props.screenCast ? "Screencast" : "Undefined"}</div>

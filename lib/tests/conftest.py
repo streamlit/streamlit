@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,19 +36,22 @@ unitTest = true
 gatherUsageStats = false
 """
 
-with patch(
-    "streamlit.config.open", mock_open(read_data=CONFIG_FILE_CONTENTS), create=True
-), patch("streamlit.config.os.path.exists") as path_exists:
+with (
+    patch(
+        "streamlit.config.open", mock_open(read_data=CONFIG_FILE_CONTENTS), create=True
+    ),
+    patch("streamlit.config.os.path.exists") as path_exists,
+):
     # Import streamlit even if we don't do anything with it below as we want to
     # be sure to catch any instances of calling config.get_option() when
     # first importing a file. We disallow this because doing so means that we
     # miss config options set via flag or environment variable.
     import streamlit as st  # noqa: F401
-    from streamlit import config, file_util, source_util
+    from streamlit import config, file_util
 
-    assert (
-        not config._config_options
-    ), "config.get_option() should not be called on file import!"
+    assert not config._config_options, (
+        "config.get_option() should not be called on file import!"
+    )
 
     config_path = file_util.get_streamlit_file_path("config.toml")
     path_exists.side_effect = lambda path: path == config_path
@@ -56,13 +59,6 @@ with patch(
     # Force a reparse of our config options with CONFIG_FILE_CONTENTS so the
     # result gets cached.
     config.get_config_options(force_reparse=True)
-
-    # Set source_util._cached_pages to the empty dict below so that
-    # source_util.get_pages' behavior is deterministic and doesn't depend on the
-    # filesystem of the machine tests are being run on. Tests that need
-    # source_util.get_pages to depend on the filesystem can patch this value
-    # back to None.
-    source_util._cached_pages = {}
 
 
 def pytest_addoption(parser: pytest.Parser):
@@ -93,10 +89,10 @@ def pytest_configure(config: pytest.Config):
 
 
 def pytest_runtest_setup(item: pytest.Item):
-    # Ensure Default Strategy is V1 to start
-    from streamlit.runtime.pages_manager import PagesManager, PagesStrategyV1
+    from streamlit.runtime.pages_manager import PagesManager
 
-    PagesManager.DefaultStrategy = PagesStrategyV1
+    # Ensure the pages directory feature is not set prior to the test
+    PagesManager.uses_pages_directory = None
 
     is_require_integration = item.config.getoption(
         "--require-integration", default=False
@@ -116,3 +112,36 @@ def pytest_runtest_setup(item: pytest.Item):
             f"The test is skipped because it does not have the right marker. "
             f"Only tests marked with pytest.mark.require_integration() are run. {item}"
         )
+
+
+def pytest_collection_modifyitems(config, items):
+    """
+    Adds the `@pytest.mark.benchmark` marker to tests that use the `benchmark`
+    fixture. This marker allows us to run only performance tests when needed.
+    """
+    for item in items:
+        markers = item.get_closest_marker("usefixtures")
+        if markers and "benchmark" in markers.args:
+            item.add_marker(pytest.mark.performance)
+
+
+@pytest.fixture
+def benchmark(
+    benchmark,
+    request: pytest.FixtureRequest,
+):
+    # Check to see that the test has the @pytest.mark.performance mark
+    if not request.node.get_closest_marker("performance"):
+        raise ValueError(
+            "The benchmark fixture can only be used with tests marked with @pytest.mark.performance"
+        )
+
+    # If the request is a class, add benchmark to the class so that it can be
+    # accessed via `self.benchmark()`. This is most commonly used in unittest
+    # classes.
+    if request.cls:
+        request.cls.benchmark = benchmark
+
+    # For pytest functions, return the benchmark function so that it can be
+    # accessed via the fixture.
+    return benchmark

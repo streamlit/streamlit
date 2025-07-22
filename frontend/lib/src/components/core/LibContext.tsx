@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { createContext } from "react"
 
-import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { baseTheme, ThemeConfig } from "~lib/theme"
 
 /**
  * The lib config contains various configurations that the host platform can
@@ -36,6 +39,13 @@ export type LibConfig = {
   disableFullscreenMode?: boolean
 
   enforceDownloadInNewTab?: boolean
+
+  /**
+   * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
+   * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
+   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
+   */
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
 export interface LibContextProps {
@@ -101,9 +111,54 @@ export interface LibContextProps {
    * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/language
    */
   locale: typeof window.navigator.language
+
+  /**
+   * The app's current ScriptRunState. This is used in combination with
+   * scriptRunId to prune stale elements. It's also used by the app to
+   * display the "running man" indicator when the app's script is being re-run.
+   * Pulled from context in BlockNodeRenderer, ElementNodeRenderer, Tabs
+   * @see Block
+   * @see ElementNodeRender
+   * @see Tabs
+   */
+  scriptRunState: ScriptRunState
+
+  /**
+   * The ID of the current "script run". When a Streamlit script is re-run
+   * (usually as a result of the user interacting with a widget), the Streamlit
+   * backend sends a new scriptRunId to the frontend. When the script run ends,
+   * the frontend discards "stale" elements (that is, elements with a non-current
+   * scriptRunId).
+   * Pulled from context in BlockNodeRenderer, ElementNodeRenderer, Tabs
+   * @see Block
+   * @see ElementNodeRender
+   * @see Tabs
+   */
+  scriptRunId: string
+
+  /**
+   * The app's ComponentRegistry instance. Dispatches "Custom Component"
+   * iframe messages to ComponentInstances.
+   * Pulled from context in ComponentInstance
+   * @see ComponentInstance
+   */
+  componentRegistry: ComponentRegistry
 }
 
-export const LibContext = React.createContext<LibContextProps>({
+const noOpEndpoints: StreamlitEndpoints = {
+  setStaticConfigUrl: () => {},
+  sendClientErrorToHost: () => {},
+  checkSourceUrlResponse: () => Promise.resolve(),
+  buildComponentURL: () => "",
+  buildMediaURL: () => "",
+  buildFileUploadURL: () => "",
+  buildAppPageURL: () => "",
+  uploadFileUploaderFile: () =>
+    Promise.reject(new Error("unimplemented endpoint")),
+  deleteFileAtURL: () => Promise.reject(new Error("unimplemented endpoint")),
+}
+
+export const LibContext = createContext<LibContextProps>({
   isFullScreen: false,
   setFullScreen: () => {},
   addScriptFinishedHandler: () => {},
@@ -117,4 +172,9 @@ export const LibContext = React.createContext<LibContextProps>({
   libConfig: {},
   fragmentIdsThisRun: [],
   locale: window.navigator.language,
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "",
+  // This should be overwritten
+  componentRegistry: new ComponentRegistry(noOpEndpoints),
 })
+LibContext.displayName = "LibContext"

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ import React from "react"
 import { render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
+import { TestAppWrapper } from "~lib/test_util"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
@@ -51,9 +50,7 @@ describe("Tooltip component", () => {
         the child
       </OverflowTooltip>,
       {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
+        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
       }
     )
 
@@ -86,9 +83,7 @@ describe("Tooltip component", () => {
         the child
       </OverflowTooltip>,
       {
-        wrapper: ({ children }) => (
-          <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-        ),
+        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
       }
     )
 

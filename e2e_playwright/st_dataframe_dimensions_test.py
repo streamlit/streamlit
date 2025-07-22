@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from e2e_playwright.shared.app_utils import click_button
 
 def test_data_frame_with_different_sizes(app: Page):
     """Test that st.dataframe should show different sizes as expected."""
+
     expected = [
         {"width": "704px", "height": "400px"},
         {"width": "250px", "height": "150px"},

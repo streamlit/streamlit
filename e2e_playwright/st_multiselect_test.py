@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -21,6 +22,8 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     get_element_by_key,
 )
+
+MULTISELECT_COUNT = 19
 
 
 def select_for_kth_multiselect(
@@ -69,9 +72,23 @@ def del_from_kth_multiselect(page: Page, option_text: str, k: int):
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Should show widgets correctly when loaded."""
     multiselect_elements = themed_app.get_by_test_id("stMultiSelect")
-    expect(multiselect_elements).to_have_count(12)
-    for idx, el in enumerate(multiselect_elements.all()):
-        assert_snapshot(el, name="st_multiselect-" + str(idx))
+    expect(multiselect_elements).to_have_count(MULTISELECT_COUNT)
+
+    assert_snapshot(multiselect_elements.nth(0), name="st_multiselect-placeholder_help")
+    assert_snapshot(multiselect_elements.nth(1), name="st_multiselect-format_func")
+    assert_snapshot(multiselect_elements.nth(2), name="st_multiselect-empty_list")
+    assert_snapshot(multiselect_elements.nth(3), name="st_multiselect-initial_value")
+    assert_snapshot(multiselect_elements.nth(4), name="st_multiselect-long_values")
+    assert_snapshot(multiselect_elements.nth(5), name="st_multiselect-disabled")
+    assert_snapshot(multiselect_elements.nth(6), name="st_multiselect-hidden_label")
+    assert_snapshot(multiselect_elements.nth(7), name="st_multiselect-collapsed_label")
+    # The other multiselect widgets do not need to be screenshot tested since they
+    # don't have any visually interesting differences.
+    assert_snapshot(multiselect_elements.nth(11), name="st_multiselect-narrow_column")
+    assert_snapshot(multiselect_elements.nth(12), name="st_multiselect-markdown_label")
+    assert_snapshot(multiselect_elements.nth(16), name="st_multiselect-maxHeight")
+    assert_snapshot(multiselect_elements.nth(17), name="st_multiselect-width_300px")
+    assert_snapshot(multiselect_elements.nth(18), name="st_multiselect-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):
@@ -82,7 +99,8 @@ def test_help_tooltip_works(app: Page):
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
     text_elements = app.get_by_test_id("stText")
-    expect(text_elements).to_have_count(13)
+    # -3 because the last three multiselects do not have accompanying text elements
+    expect(text_elements).to_have_count(MULTISELECT_COUNT - 3)
 
     expected = [
         "value 1: []",
@@ -98,6 +116,9 @@ def test_multiselect_initial_value(app: Page):
         "value 11: []",
         "multiselect changed: False",
         "value 12: ['A long option']",
+        "value 14: []",
+        "value 15: ['apple', 'orange']",
+        "value 16: []",
     ]
 
     for text_element, expected_text in zip(text_elements.all(), expected):
@@ -139,7 +160,9 @@ def test_multiselect_long_values_in_dropdown(
 def test_multiselect_long_values_in_narrow_column(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Should show long values correctly (with ellipses) when in narrow column widths."""
+    """Should show long values correctly (with ellipses) when in narrow column
+    widths.
+    """
     multiselect_elem = app.get_by_test_id("stMultiSelect").nth(11)
     wait_for_app_run(app)
     # Wait for list items to be loaded in
@@ -167,7 +190,9 @@ def test_multiselect_max_selections_form(app: Page):
 
 
 def test_multiselect_max_selections_1(app: Page):
-    """Should show the correct text when maxSelections is reached and closing after selecting."""
+    """Should show the correct text when maxSelections is reached and closing after
+    selecting.
+    """
     select_for_kth_multiselect(app, "male", 9, True)
     app.get_by_test_id("stMultiSelect").nth(9).click()
     expect(app.locator("li")).to_have_text(
@@ -177,7 +202,9 @@ def test_multiselect_max_selections_1(app: Page):
 
 
 def test_multiselect_max_selections_2(app: Page):
-    """Should show the correct text when maxSelections is reached and not closing after selecting."""
+    """Should show the correct text when maxSelections is reached and not closing after
+    selecting.
+    """
     select_for_kth_multiselect(app, "male", 9, False)
     expect(app.locator("li")).to_have_text(
         "You can only select up to 1 option. Remove an option first.",
@@ -195,7 +222,7 @@ def test_multiselect_valid_options(app: Page):
 def test_multiselect_no_valid_options(app: Page):
     """Should show that their are no options."""
     expect(app.get_by_test_id("stMultiSelect").nth(2)).to_have_text(
-        "multiselect 3\n\nNo options to select.", use_inner_text=True
+        "multiselect 3\n\nNo options to select", use_inner_text=True
     )
 
 
@@ -246,3 +273,153 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "multiselect 9")).to_be_visible()
+
+
+def test_multiselect_accept_new_options(app: Page):
+    """Should allow adding new options when accept_new_options is True and respect
+    max_selections.
+    """
+    # Get the last multiselect (index 13)
+    multiselect_elem = app.get_by_test_id("stMultiSelect").nth(13)
+
+    # Click to open dropdown
+    multiselect_elem.locator("input").click()
+
+    # Type and add new option "mango"
+    input_elem = multiselect_elem.locator("input")
+    input_elem.fill("mango")
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+
+    # Type and add another option "grape"
+    input_elem.fill("grape")
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+
+    # Add a third option from original options
+    multiselect_elem.locator("input").click()
+    options_list = app.locator("li")
+    expect(options_list).to_have_count(4)
+    options_list.filter(has_text="apple").click()
+    wait_for_app_run(app)
+
+    # Verify three options were added successfully
+    expect(app.get_by_test_id("stText").nth(13)).to_have_text(
+        "value 14: ['mango', 'grape', 'apple']"
+    )
+    # Verify that format_func was applied to original option but not to the dynamically
+    # added option
+    expect(
+        multiselect_elem.get_by_role("button").get_by_text("APPLE", exact=True)
+    ).to_be_visible()
+    expect(
+        multiselect_elem.get_by_role("button").get_by_text("grape", exact=True)
+    ).to_be_visible()
+
+    # Try to add a fourth option - should be prevented by max_selections
+    multiselect_elem.locator("input").click()
+    expect(app.locator("li")).to_have_text(
+        "You can only select up to 3 options. Remove an option first.",
+        use_inner_text=True,
+    )
+    # Type and add another option "berries" - this should not be added
+    input_elem.fill("berries")
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+    # Verify that this option was not added as it would have exceeded max_selections
+    expect(app.get_by_test_id("stText").nth(13)).to_have_text(
+        "value 14: ['mango', 'grape', 'apple']"
+    )
+
+    # Remove one option
+    del_from_kth_multiselect(app, "mango", 13)
+    wait_for_app_run(app)
+
+    # Verify we can add another option after removing one
+    multiselect_elem.locator("input").click()
+    input_elem.fill("kiwi")
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+
+    # Verify final selections are correct
+    expect(app.get_by_test_id("stText").nth(13)).to_have_text(
+        "value 14: ['grape', 'apple', 'kiwi']"
+    )
+
+
+def test_multiselect_preset_session_state(app: Page):
+    """Should display values from session_state."""
+    # Check the initial values from session_state
+    expect(app.get_by_test_id("stText").nth(14)).to_have_text(
+        "value 15: ['apple', 'orange']"
+    )
+    multiselect_elem = app.get_by_test_id("stMultiSelect").nth(14)
+    selections_button = multiselect_elem.locator('[data-baseweb="tag"]')
+    expect(selections_button).to_have_count(2)
+    expect(selections_button.get_by_text("apple")).to_be_visible()
+    expect(selections_button.get_by_text("orange")).to_be_visible()
+
+
+def test_multiselect_empty_options_with_accept_new_options(app: Page):
+    """Should allow adding new options when options list is empty but accept_new_options is True."""
+    # Get the multiselect with empty options but accept_new_options=True (index 15)
+    multiselect_elem = app.get_by_test_id("stMultiSelect").nth(15)
+
+    # Verify the initial placeholder shows "Add options" (frontend now handles default placeholders)
+    expect(multiselect_elem).to_contain_text("Add options")
+
+    # Click to open input field
+    multiselect_elem.locator("input").click()
+
+    # Type and add new option "strawberry"
+    input_elem = multiselect_elem.locator("input")
+    input_elem.fill("strawberry")
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+
+    # Type and add another option "blueberry"
+    input_elem.fill("blueberry")
+    input_elem.press("Enter")
+    wait_for_app_run(app)
+
+    # Verify options were added successfully
+    expect(app.get_by_test_id("stText").nth(15)).to_have_text(
+        "value 16: ['strawberry', 'blueberry']"
+    )
+
+    # Verify the selections are visible in the UI
+    selections_button = multiselect_elem.locator('[data-baseweb="tag"]')
+    expect(selections_button).to_have_count(2)
+    expect(selections_button.get_by_text("strawberry")).to_be_visible()
+    expect(selections_button.get_by_text("blueberry")).to_be_visible()
+
+    # Remove one option
+    del_from_kth_multiselect(app, "strawberry", 15)
+    wait_for_app_run(app)
+
+    # Verify one option was removed
+    expect(app.get_by_test_id("stText").nth(15)).to_have_text("value 16: ['blueberry']")
+
+
+def test_multiselect_empty_options_disabled_when_no_accept_new(app: Page):
+    """Should show 'No options to select' placeholder and be disabled when empty and accept_new_options=False."""
+    # Get multiselect 3 (index 2) which has empty options and accept_new_options=False (default)
+    multiselect_elem = app.get_by_test_id("stMultiSelect").nth(2)
+
+    # Verify the placeholder shows "No options to select"
+    expect(multiselect_elem).to_contain_text("No options to select")
+
+    # Verify the input field is disabled
+    input_elem = multiselect_elem.locator("input")
+    expect(input_elem).to_be_disabled()
+
+    # Verify clicking on the multiselect doesn't open a dropdown
+    multiselect_elem.click()
+    wait_for_app_run(app)
+
+    # Verify no dropdown options appear
+    dropdown_options = app.locator("li[role='option']")
+    expect(dropdown_options).to_have_count(0)
+
+    # Verify the widget value remains empty
+    expect(app.get_by_test_id("stText").nth(2)).to_have_text("value 3: []")

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,10 +64,17 @@ function isAtBottom({
  * - The second effect attaches a focus event listener to update
  *   the scrollHeight value.
  */
-export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
+export function useScrollToBottom<T extends HTMLElement>(
+  active: boolean
+): RefObject<T> {
   const scrollableRef = useRef<T>(null)
   const [isSticky, setIsSticky, isStickyRef] = useStateRef(false)
   const [isAnimating, setIsAnimating, isAnimatingRef] = useStateRef(true)
+
+  useEffect(() => {
+    // Set isSticky to true to ensure first load scrolls to bottom
+    setIsSticky(true)
+  }, [setIsSticky])
 
   // Internal context
   const ignoreScrollEventBeforeRef = useRef(0)
@@ -129,7 +136,7 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
       }
 
       // Sticky means:
-      // - If it is scrolled programatically, we are still in sticky mode
+      // - If it is scrolled programmatically, we are still in sticky mode
       // - If it is scrolled by the user, then sticky means if we are at the end
 
       // Only update stickiness if the scroll event is not due to synthetic scroll done by Chrome
@@ -158,7 +165,7 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
   )
 
   useEffect(() => {
-    if (scrollableRef.current) {
+    if (scrollableRef.current && active) {
       let stickyButNotAtEndSince = 0
 
       const timeout = setImmediateInterval(() => {
@@ -193,6 +200,7 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
           }
         } else if (
           target &&
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
           target.scrollHeight <= target.offsetHeight &&
           !isStickyRef.current
         ) {
@@ -211,6 +219,7 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
     isStickyRef,
     setIsSticky,
     setIsAnimating,
+    active,
   ])
 
   useEffect(() => {
@@ -224,8 +233,9 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
     //   Since the "scrollHeight" is not latest value, this "scroll" event will be ignored and stickiness will not be modified.
     // - That means, if the user "focus" to a newly added element that is at the end of the scroll view, the "scroll to bottom" button will continue to show.
     const target = scrollableRef.current
-    if (target) {
+    if (target && active) {
       const handleFocus = (): void => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         scrollHeightRef.current = target.scrollHeight
       }
 
@@ -234,19 +244,18 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
         passive: true,
       })
 
-      return () => target.removeEventListener("focus", handleFocus)
+      return () => {
+        target.removeEventListener("focus", handleFocus, { capture: true })
+      }
     }
-  }, [scrollableRef])
+  }, [scrollableRef, active])
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
-  useScrollSpy(scrollableRef.current, handleScroll)
+  useScrollSpy(scrollableRef.current, handleScroll, active)
   useScrollAnimation(
-    // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
     scrollableRef.current,
     handleScrollToBottomFinished,
-    isAnimating
+    isAnimating,
+    active
   )
 
   return scrollableRef

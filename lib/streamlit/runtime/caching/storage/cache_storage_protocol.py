@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Declares the CacheStorageContext dataclass, which contains parameter information for
-each function decorated by `@st.cache_data` (for example: ttl, max_entries etc.)
+each function decorated by `@st.cache_data` (for example: ttl, max_entries etc.).
 
 Declares the CacheStorageManager protocol, which implementations are used
 to create CacheStorage instances and to optionally clear all cache storages,
@@ -61,14 +61,14 @@ from typing import Literal, Protocol
 
 
 class CacheStorageError(Exception):
-    """Base exception raised by the cache storage"""
+    """Base exception raised by the cache storage."""
 
 
 class CacheStorageKeyNotFoundError(CacheStorageError):
-    """Raised when the key is not found in the cache storage"""
+    """Raised when the key is not found in the cache storage."""
 
 
-class InvalidCacheStorageContext(CacheStorageError):
+class InvalidCacheStorageContextError(CacheStorageError):
     """Raised if the cache storage manager is not able to work with
     provided CacheStorageContext.
     """
@@ -138,17 +138,17 @@ class CacheStorage(Protocol):
 
     @abstractmethod
     def set(self, key: str, value: bytes) -> None:
-        """Sets the value for a given key"""
+        """Sets the value for a given key."""
         raise NotImplementedError
 
     @abstractmethod
     def delete(self, key: str) -> None:
-        """Delete a given key"""
+        """Delete a given key."""
         raise NotImplementedError
 
     @abstractmethod
     def clear(self) -> None:
-        """Remove all keys for the storage"""
+        """Remove all keys for the storage."""
         raise NotImplementedError
 
     def close(self) -> None:

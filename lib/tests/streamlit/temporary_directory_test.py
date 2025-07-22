@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,5 +29,5 @@ class TemporaryFileTest(unittest.TestCase):
     def test_temp_directory(self, dir):
         """Test that the directory only exists inside the context."""
         with TemporaryDirectory(dir=dir.path) as temp_fname:
-            self.assertTrue(os.path.exists(temp_fname))
-        self.assertFalse(os.path.exists(temp_fname))
+            assert os.path.exists(temp_fname)
+        assert not os.path.exists(temp_fname)

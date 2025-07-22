@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from streamlit import util
 from streamlit.runtime.stats import CacheStat, group_stats
@@ -26,13 +26,16 @@ from streamlit.runtime.uploaded_file_manager import (
     UploadFileUrlInfo,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 class MemoryUploadedFileManager(UploadedFileManager):
     """Holds files uploaded by users of the running Streamlit app.
     This class can be used safely from multiple threads simultaneously.
     """
 
-    def __init__(self, upload_endpoint: str):
+    def __init__(self, upload_endpoint: str) -> None:
         self.file_storage: dict[str, dict[str, UploadedFileRec]] = defaultdict(dict)
         self.endpoint = upload_endpoint
 
@@ -89,7 +92,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
 
         self.file_storage[session_id][file.file_id] = file
 
-    def remove_file(self, session_id, file_id):
+    def remove_file(self, session_id: str, file_id: str) -> None:
         """Remove file with given file_id associated with a given session."""
         session_storage = self.file_storage[session_id]
         session_storage.pop(file_id, None)

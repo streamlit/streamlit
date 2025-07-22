@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ message Arrow {
   repeated string column_order = 11;
   // Activated dataframe selections events
   repeated SelectionMode selection_mode = 12;
+  // Row height in pixels
+  optional uint32 row_height = 13;
 
   // Available editing modes:
   enum EditingMode {
@@ -76,4 +78,3 @@ message Styler {
   // with all the display values formatted to the user-specified rules.
   bytes display_values = 4;
 }
-

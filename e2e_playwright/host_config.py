@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,23 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+
+def page2():
+    st.header("Page 2")
+
+
+def page3():
+    st.header("Page 3")
+
+
+# Make MPA to use for dialog blocking test
+st.navigation(
+    [
+        st.Page(page2, title="02_App_Page_2", default=True),
+        st.Page(page3, title="03_App_Page_3"),
+    ]
+)
 
 # always generate the same data
 np.random.seed(0)

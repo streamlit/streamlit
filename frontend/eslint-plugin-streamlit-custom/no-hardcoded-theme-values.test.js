@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,9 @@ const { RuleTester } = require("eslint")
 const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
 
 const ruleTester = new RuleTester({
-  parserOptions: {
-    // its the same we have defined in our .eslintrc.js. For some reason,
-    // we have to specify it again, otherwise the template string tests fail.
+  languageOptions: {
     ecmaVersion: 2018,
+    sourceType: "module",
   },
 })
 

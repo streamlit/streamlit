@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ def deprecate_func_name(
     """
 
     @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
+    def wrapped_func(*args: Any, **kwargs: Any) -> Any:
         result = func(*args, **kwargs)
         show_deprecation_warning(
             make_deprecated_name_warning(
@@ -105,7 +105,7 @@ def deprecate_func_name(
     # Update the wrapped func's name & docstring so st.help does the right thing
     wrapped_func.__name__ = old_name
     wrapped_func.__doc__ = func.__doc__
-    return cast(TFunc, wrapped_func)
+    return cast("TFunc", wrapped_func)
 
 
 def deprecate_obj_name(
@@ -139,7 +139,7 @@ def deprecate_obj_name(
 
     include_st_prefix
         If False, does not prefix each of the object names in the deprecation
-        essage with `st.*`. Defaults to True.
+        message with `st.*`. Defaults to True.
     """
 
     return _create_deprecated_obj_wrapper(
@@ -167,7 +167,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             show_warning()
 
     class Wrapper:
-        def __init__(self):
+        def __init__(self) -> None:
             # Override all the Wrapped object's magic functions
             for name in Wrapper._get_magic_functions(obj.__class__):
                 setattr(
@@ -176,7 +176,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
                     property(self._make_magic_function_proxy(name)),
                 )
 
-        def __getattr__(self, attr):
+        def __getattr__(self, attr: str) -> Any:
             # We handle __getattr__ separately from our other magic
             # functions. The wrapped class may not actually implement it,
             # but we still need to implement it to call all its normal
@@ -188,22 +188,22 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             return getattr(obj, attr)
 
         @staticmethod
-        def _get_magic_functions(cls) -> list[str]:
+        def _get_magic_functions(self_cls: type[object]) -> list[str]:
             # ignore the handful of magic functions we cannot override without
             # breaking the Wrapper.
             ignore = ("__class__", "__dict__", "__getattribute__", "__getattr__")
             return [
                 name
-                for name in dir(cls)
+                for name in dir(self_cls)
                 if name not in ignore and name.startswith("__")
             ]
 
         @staticmethod
-        def _make_magic_function_proxy(name):
-            def proxy(self, *args):
+        def _make_magic_function_proxy(name: str) -> Callable[[Any], Any]:
+            def proxy(_self: Any, *args: Any) -> Any:
                 maybe_show_warning()
                 return getattr(obj, name)
 
             return proxy
 
-    return cast(TObj, Wrapper())
+    return cast("TObj", Wrapper())

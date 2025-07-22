@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -103,8 +103,8 @@ class UrlUtilTest(unittest.TestCase):
     )
     def test_is_url(self, url: Any, expected_value: bool):
         """Test the is_url utility function."""
-        self.assertEqual(
-            url_util.is_url(url, ("http", "https", "data", "mailto")), expected_value
+        assert (
+            url_util.is_url(url, ("http", "https", "data", "mailto")) == expected_value
         )
 
     @parameterized.expand(
@@ -132,6 +132,6 @@ class UrlUtilTest(unittest.TestCase):
         """Test that is_ur applies the allowed schema parameter."""
 
         if allowed_schemas is None:
-            self.assertEqual(url_util.is_url(url), expected_value)
+            assert url_util.is_url(url) == expected_value
         else:
-            self.assertEqual(url_util.is_url(url, allowed_schemas), expected_value)
+            assert url_util.is_url(url, allowed_schemas) == expected_value

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,3 +59,16 @@ for color in colors:
 
 # Empty subheader to test correct anchor behavior:
 st.subheader("")
+
+# Width examples
+st.title("Title with 400px width", width=400)
+st.title("Title with stretch width", width="stretch")
+st.title("Title with content width", width="content")
+
+st.header("Header with 400px width", width=400, divider="blue")
+st.header("Header with stretch width", width="stretch")
+st.header("Header with content width", width="content")
+
+st.subheader("Subheader with 300px width", width=300, divider="blue")
+st.subheader("Subheader with stretch width", width="stretch")
+st.subheader("Subheader with content width", width="content")

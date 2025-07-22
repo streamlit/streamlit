@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,25 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
+import React, { memo, ReactElement, useEffect, useRef } from "react"
 
 import { useTheme } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
+import { expressionInterpreter } from "vega-interpreter"
+import embed from "vega-embed"
 
-import { Metric as MetricProto } from "@streamlit/lib/src/proto"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-
+import { Metric as MetricProto } from "@streamlit/protobuf"
 import { applyStreamlitTheme } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
+import { EmotionTheme } from "@streamlit/lib"
+
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import Icon from "~lib/components/shared/Icon"
+import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+
 import {
   StyledMetricContainer,
   StyledMetricDeltaText,
@@ -37,19 +41,12 @@ import {
   StyledTruncateText,
 } from "./styled-components"
 
-import { expressionInterpreter } from "vega-interpreter"
-import { EmotionTheme } from "@streamlit/lib"
-import embed from "vega-embed"
-
 export interface MetricProps {
   element: MetricProto
   width: number
 }
 
-export default function Metric({
-  element,
-  width,
-}: Readonly<MetricProps>): ReactElement {
+function Metric({ element, width }: Readonly<MetricProps>): ReactElement {
   const theme: EmotionTheme = useTheme()
   const { MetricDirection } = MetricProto
   const {
@@ -158,7 +155,7 @@ export default function Metric({
                   : "stMetricDeltaIcon-Down"
               }
               content={metricDirection}
-              size="lg"
+              size="md"
               margin={arrowMargin}
             />
           )}
@@ -175,3 +172,5 @@ export default function Metric({
     </StyledMetricContainer>
   )
 }
+
+export default memo(Metric)

@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,4 +25,7 @@ message Spinner {
 
   // Whether spinner used in caching functions.
   bool cache = 2;
+
+  // Whether to show elapsed time next to the spinner text.
+  bool show_time = 3;
 }

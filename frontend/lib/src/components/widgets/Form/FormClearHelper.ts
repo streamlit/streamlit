@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,8 @@ import { useEffect } from "react"
 
 import { SignalConnection } from "typed-signals"
 
-import {
-  isValidFormId,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export class FormClearHelper {
   private formClearListener?: SignalConnection

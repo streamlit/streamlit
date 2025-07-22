@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,6 +106,49 @@ def test_plotly_use_container_width_true_fullscreen(
     assert_snapshot(
         themed_app.get_by_test_id("stPlotlyChart").nth(index),
         name="st_plotly_chart-container_width_true_exited_fullscreen",
+    )
+
+
+def test_plotly_fullscreen_reset_axis(app: Page, assert_snapshot: ImageCompareFunction):
+    index = 13
+    chart = app.get_by_test_id("stPlotlyChart").nth(index)
+
+    chart.hover()
+    fullscreen_button = app.locator('[data-title="Fullscreen"]').nth(index)
+    fullscreen_button.hover()
+    fullscreen_button.click()
+
+    chart_bbox = chart.bounding_box()
+
+    # Type narrowing: after the null check, mypy knows chart_bbox is not None
+    assert chart_bbox is not None
+    start_x = chart_bbox["x"] + chart_bbox["width"] * 0.3
+    start_y = chart_bbox["y"] + chart_bbox["height"] * 0.4
+    end_x = chart_bbox["x"] + chart_bbox["width"] * 0.7
+    end_y = chart_bbox["y"] + chart_bbox["height"] * 0.6
+    app.mouse.move(start_x, start_y)
+    app.mouse.down()
+    app.mouse.move(end_x, end_y)
+    app.mouse.up()
+
+    # Assert snapshot after zoom selection to verify the zoom was applied
+    assert_snapshot(
+        chart,
+        name="st_plotly_chart-fullscreen_zoomed_selection",
+    )
+
+    exit_fullscreen_button = app.locator('[data-title="Close fullscreen"]').nth(0)
+    exit_fullscreen_button.hover()
+    exit_fullscreen_button.click()
+
+    # Find and click the reset axes button (usually appears as "Reset axes" or similar)
+    reset_button = app.locator('[data-title="Reset axes"]').nth(0)
+    reset_button.hover()
+    reset_button.click()
+
+    assert_snapshot(
+        chart,
+        name="st_plotly_chart-fullscreen_reset_axis",
     )
 
 

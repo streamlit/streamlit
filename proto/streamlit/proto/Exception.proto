@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ syntax = "proto3";
 
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ExceptionProto";
+
+import "streamlit/proto/WidthConfig.proto";
 
 // A python exception.
 //
@@ -42,4 +44,7 @@ message Exception {
   // If true, this is an error that doesn't stop the execution flow. So it gets
   // rendered differently for clarity.
   bool is_warning = 5;
+
+  // Indicates the width setting: "stetch", "content" or a pixel value.
+  streamlit.WidthConfig width_config = 6;
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   BaseColumn,
@@ -40,9 +40,13 @@ export const AREA_CHART_TYPE = "area_chart"
 export const BAR_CHART_TYPE = "bar_chart"
 
 export interface ChartColumnParams {
-  // The minimum value used for plotting the chart. Defaults to 0.
+  /**
+   * The minimum value used for plotting the chart. Defaults to 0.
+   */
   readonly y_min?: number
-  // The maximum value used for plotting the chart. Defaults to 1.
+  /**
+   * The maximum value used for plotting the chart. Defaults to 1.
+   */
   readonly y_max?: number
 }
 
@@ -58,14 +62,14 @@ function BaseChartColumn(
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
-      y_min: 0,
-      y_max: 1,
+      y_min: null,
+      y_max: null,
     },
     // User parameters:
     props.columnTypeOptions
   ) as ChartColumnParams
 
-  const cellTemplate = {
+  const cellTemplate: SparklineCellType = {
     kind: GridCellKind.Custom,
     allowOverlay: false,
     copyData: "",
@@ -75,29 +79,23 @@ function BaseChartColumn(
       values: [],
       displayValues: [],
       graphKind: chart_type,
-      yAxis: [parameters.y_min, parameters.y_max],
+      yAxis: [parameters.y_min ?? 0, parameters.y_max ?? 1],
     },
-  } as SparklineCellType
+  }
 
   return {
     ...props,
     kind,
+    typeIcon:
+      kind === LINE_CHART_TYPE
+        ? ":material/show_chart:"
+        : kind === BAR_CHART_TYPE
+          ? ":material/bar_chart:"
+          : ":material/area_chart:",
     sortMode: "default",
     isEditable: false, // Chart column is always read-only
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
-      if (
-        isNullOrUndefined(parameters.y_min) ||
-        isNullOrUndefined(parameters.y_max) ||
-        Number.isNaN(parameters.y_min) ||
-        Number.isNaN(parameters.y_max) ||
-        parameters.y_min >= parameters.y_max
-      ) {
-        return getErrorCell(
-          "Invalid min/max y-axis configuration",
-          `The y_min (${parameters.y_min}) and y_max (${parameters.y_max}) configuration options must be valid numbers.`
-        )
-      }
-
       if (isNullOrUndefined(data)) {
         // TODO(lukasmasuch): Use a missing cell?
         return getEmptyCell()
@@ -141,19 +139,48 @@ function BaseChartColumn(
         convertedChartData.push(convertedValue)
       }
 
+      let maxValueDefault: number
+      let minValueDefault: number
+
+      if (chartData.length === 1) {
+        let newMaxValue: number
+
+        if (maxValue <= 0) newMaxValue = maxValue === 0 ? 1 : 0
+        else newMaxValue = maxValue
+
+        maxValueDefault = parameters.y_max ?? newMaxValue
+        minValueDefault = parameters.y_min ?? (maxValue >= 0 ? 0 : maxValue) //maxValue = minValue (only one value in chartData)
+      } else {
+        maxValueDefault = parameters.y_max ?? maxValue
+        minValueDefault = parameters.y_min ?? minValue
+      }
+
+      if (
+        isNullOrUndefined(minValueDefault) ||
+        isNullOrUndefined(maxValueDefault) ||
+        Number.isNaN(minValueDefault) ||
+        Number.isNaN(maxValueDefault) ||
+        minValueDefault >= maxValueDefault
+      ) {
+        return getErrorCell(
+          "Invalid min/max y-axis configuration",
+          `The y_min (${minValueDefault}) and y_max (${maxValueDefault}) configuration options must be valid numbers.`
+        )
+      }
+
       if (
         convertedChartData.length > 0 &&
-        (maxValue > parameters.y_max || minValue < parameters.y_min)
+        (maxValue > maxValueDefault || minValue < minValueDefault)
       ) {
         // Normalize values between the configured range
         normalizedChartData = convertedChartData.map(v =>
           maxValue - minValue === 0 // Prevent division by zero
-            ? maxValue > (parameters.y_max || 1)
-              ? parameters.y_max || 1 // Use max value
-              : parameters.y_min || 0 // Use min value
-            : ((parameters.y_max || 1) - (parameters.y_min || 0)) *
+            ? maxValue > (maxValueDefault || 1)
+              ? maxValueDefault // Use max value
+              : minValueDefault // Use min value
+            : (maxValueDefault - minValueDefault) *
                 ((v - minValue) / (maxValue - minValue)) +
-              (parameters.y_min || 0)
+              minValueDefault
         )
       } else {
         // Values are already in the configured range
@@ -167,6 +194,7 @@ function BaseChartColumn(
           ...cellTemplate.data,
           values: normalizedChartData,
           displayValues: convertedChartData.map(v => formatNumber(v)),
+          yAxis: [minValueDefault, maxValueDefault],
         },
         isMissingValue: isNullOrUndefined(data),
       } as SparklineCellType

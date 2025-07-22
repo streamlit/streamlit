@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,25 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
+import { FC } from "react"
 
 import { render, screen } from "@testing-library/react"
 
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { WindowDimensionsProvider } from "@streamlit/lib/src/components/shared/WindowDimensions/Provider"
-import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
+import ThemeProvider from "~lib/components/core/ThemeProvider"
+import { WindowDimensionsProvider } from "~lib/components/shared/WindowDimensions/Provider"
+import { mockTheme } from "~lib/mocks/mockTheme"
+
+import { useWindowDimensionsContext } from "./useWindowDimensionsContext"
 
 describe("WindowDimensionsProvider", () => {
   it("should provide the width and height of the window and take into account the theme padding", () => {
     vi.spyOn(window, "getComputedStyle").mockReturnValue({
       fontSize: "16px",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     } as any)
 
     const MyComponent: FC = () => {
-      const dimensions = useRequiredContext(WindowDimensionsContext)
+      const dimensions = useWindowDimensionsContext()
       return <div>{`${dimensions.fullWidth}x${dimensions.fullHeight}`}</div>
     }
 
@@ -62,7 +63,7 @@ describe("WindowDimensionsProvider", () => {
     )
 
     expect(() => render(<Provider />)).toThrowError(
-      "WindowDimensionsProvider should only be used once per app. If you need to read window dimensions, utilize `useRequiredContext(WindowDimensionsContext)` instead."
+      "WindowDimensionsProvider should only be used once per app. If you need to read window dimensions, utilize `useWindowDimensionsContext()` instead."
     )
     consoleError.mockRestore()
   })

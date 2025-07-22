@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import {
   lightThemePrimitives as baseuiLightThemePrimitives,
 } from "baseui"
 
-import emotionLightTheme from "./emotionLightTheme"
+import { createBaseUiTheme } from "./createBaseUiTheme"
 import emotionDarkTheme from "./emotionDarkTheme"
-import { createBaseUiTheme } from "./createThemeUtil"
+import emotionLightTheme from "./emotionLightTheme"
 
 export const baseuiLightTheme = createBaseUiTheme(
   emotionLightTheme,

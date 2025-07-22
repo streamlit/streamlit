@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,17 +18,20 @@ import dataclasses
 import inspect
 import types
 from collections import ChainMap, UserDict, UserList
-from collections.abc import ItemsView, KeysView, ValuesView
+from collections.abc import (
+    AsyncGenerator,
+    Generator,
+    ItemsView,
+    Iterable,
+    KeysView,
+    ValuesView,
+)
 from io import StringIO
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncGenerator,
     Callable,
     Final,
-    Generator,
-    Iterable,
-    List,
     cast,
 )
 
@@ -58,7 +61,7 @@ _LOGGER: Final = get_logger(__name__)
 _TEXT_CURSOR: Final = " ▏"
 
 
-class StreamingOutput(List[Any]):
+class StreamingOutput(list[Any]):
     pass
 
 
@@ -153,7 +156,7 @@ class WriteMixin:
         streamed_response: str = ""
         written_content: list[Any] = StreamingOutput()
 
-        def flush_stream_response():
+        def flush_stream_response() -> None:
             """Write the full response to the app."""
             nonlocal streamed_response
             nonlocal stream_container
@@ -190,9 +193,9 @@ class WriteMixin:
                     if len(chunk.choices) == 0 or chunk.choices[0].delta is None:
                         # The choices list can be empty. E.g. when using the
                         # AzureOpenAI client, the first chunk will always be empty.
-                        chunk = ""
+                        chunk = ""  # noqa: PLW2901
                     else:
-                        chunk = chunk.choices[0].delta.content or ""
+                        chunk = chunk.choices[0].delta.content or ""  # noqa: PLW2901
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the OpenAI ChatCompletionChunk. "
@@ -205,7 +208,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""
+                    chunk = chunk.content or ""  # noqa: PLW2901
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
@@ -242,7 +245,7 @@ class WriteMixin:
         if not written_content:
             # If nothing was streamed, return an empty string.
             return ""
-        elif len(written_content) == 1 and isinstance(written_content[0], str):
+        if len(written_content) == 1 and isinstance(written_content[0], str):
             # If the output only contains a single string, return it as a string
             return written_content[0]
 
@@ -250,49 +253,60 @@ class WriteMixin:
         return written_content
 
     @gather_metrics("write")
-    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
-        """Write arguments to the app.
+    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs: Any) -> None:
+        """Displays arguments in the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
-        things depending on what you throw at it. Unlike other Streamlit commands,
-        write() has some unique properties:
+        things depending on what you throw at it. Unlike other Streamlit
+        commands, ``st.write()`` has some unique properties:
 
-        1. You can pass in multiple arguments, all of which will be written.
-        2. Its behavior depends on the input types as follows.
-        3. It returns None, so its "slot" in the App cannot be reused.
+        - You can pass in multiple arguments, all of which will be displayed.
+        - Its behavior depends on the input type(s).
 
         Parameters
         ----------
         *args : any
-            One or many objects to print to the App.
+            One or many objects to display in the app.
 
-            Arguments are handled as follows:
+            .. list-table:: Each type of argument is handled as follows:
+                :header-rows: 1
 
-            - write(string)         : Prints the formatted Markdown string, with
-                support for LaTeX expression, emoji shortcodes, and colored text.
-                See docs for st.markdown for more.
-            - write(dataframe)      : Displays any dataframe-like object in an interactive table.
-            - write(dict)           : Displays dict-like in an interactive viewer.
-            - write(list)           : Displays list-like in an interactive viewer.
-            - write(error)          : Prints an exception specially.
-            - write(func)           : Displays information about a function.
-            - write(module)         : Displays information about a module.
-            - write(class)          : Displays information about a class.
-            - write(DeltaGenerator) : Displays information about a DeltaGenerator.
-            - write(mpl_fig)        : Displays a Matplotlib figure.
-            - write(generator)      : Streams the output of a generator.
-            - write(openai.Stream)  : Streams the output of an OpenAI stream.
-            - write(altair)         : Displays an Altair chart.
-            - write(PIL.Image)      : Displays an image.
-            - write(keras)          : Displays a Keras model.
-            - write(graphviz)       : Displays a Graphviz graph.
-            - write(plotly_fig)     : Displays a Plotly figure.
-            - write(bokeh_fig)      : Displays a Bokeh figure.
-            - write(sympy_expr)     : Prints SymPy expression using LaTeX.
-            - write(htmlable)       : Prints _repr_html_() for the object if available.
-            - write(db_cursor)      : Displays DB API 2.0 cursor results in a table.
-            - write(obj)            : Prints str(obj) if otherwise unknown.
-
+                * - Type
+                  - Handling
+                * - ``str``
+                  - Uses ``st.markdown()``.
+                * - dataframe-like, ``dict``, or ``list``
+                  - Uses ``st.dataframe()``.
+                * - ``Exception``
+                  - Uses ``st.exception()``.
+                * - function, module, or class
+                  - Uses ``st.help()``.
+                * - ``DeltaGenerator``
+                  - Uses ``st.help()``.
+                * - Altair chart
+                  - Uses ``st.altair_chart()``.
+                * - Bokeh figure
+                  - Uses ``st.bokeh_chart()``.
+                * - Graphviz graph
+                  - Uses ``st.graphviz_chart()``.
+                * - Keras model
+                  - Converts model and uses ``st.graphviz_chart()``.
+                * - Matplotlib figure
+                  - Uses ``st.pyplot()``.
+                * - Plotly figure
+                  - Uses ``st.plotly_chart()``.
+                * - ``PIL.Image``
+                  - Uses ``st.image()``.
+                * - generator or stream (like ``openai.Stream``)
+                  - Uses ``st.write_stream()``.
+                * - SymPy expression
+                  - Uses ``st.latex()``.
+                * - An object with ``._repr_html()``
+                  - Uses ``st.html()``.
+                * - Database cursor
+                  - Displays DB API 2.0 cursor results in a table.
+                * - Any
+                  - Displays ``str(arg)`` as inline code.
 
         unsafe_allow_html : bool
             Whether to render HTML within ``*args``. This only applies to
@@ -316,10 +330,12 @@ class WriteMixin:
             Use other, more specific Streamlit commands to pass additional
             keyword arguments.
 
-
-        Example
+        Returns
         -------
+        None
 
+        Examples
+        --------
         Its basic use case is to draw Markdown-formatted text, whenever the
         input is a string:
 
@@ -391,6 +407,14 @@ class WriteMixin:
                 kwargs,
             )
 
+        if len(args) == 1 and isinstance(args[0], str):
+            # Optimization: If there is only one arg, and it's a string,
+            # we can just call markdown directly and skip the buffer logic.
+            # This also prevents unnecessary usage of `st.empty()`.
+            # This covers > 80% of all `st.write` uses.
+            self.dg.markdown(args[0], unsafe_allow_html=unsafe_allow_html)
+            return
+
         string_buffer: list[str] = []
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
@@ -404,7 +428,7 @@ class WriteMixin:
                 "when called as `st.write()` or `st.sidebar.write()`."
             )
 
-        def flush_buffer():
+        def flush_buffer() -> None:
             if string_buffer:
                 text_content = " ".join(string_buffer)
                 # The usage of empty here prevents
@@ -452,14 +476,16 @@ class WriteMixin:
             elif type_util.is_graphviz_chart(arg):
                 flush_buffer()
                 self.dg.graphviz_chart(arg)
-            elif type_util.is_sympy_expession(arg):
+            elif type_util.is_sympy_expression(arg):
                 flush_buffer()
                 self.dg.latex(arg)
             elif type_util.is_pillow_image(arg):
                 flush_buffer()
                 self.dg.image(arg)
             elif type_util.is_keras_model(arg):
-                from tensorflow.python.keras.utils import vis_utils
+                from tensorflow.python.keras.utils import (  # type: ignore
+                    vis_utils,
+                )
 
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
@@ -502,17 +528,14 @@ class WriteMixin:
             ):
                 flush_buffer()
                 self.write_stream(arg)
-            elif isinstance(arg, HELP_TYPES):
-                flush_buffer()
-                self.dg.help(arg)
-            elif dataclasses.is_dataclass(arg):
+            elif isinstance(arg, HELP_TYPES) or dataclasses.is_dataclass(arg):
                 flush_buffer()
                 self.dg.help(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
                 # We cast arg to type here to appease mypy, due to bug in mypy:
                 # https://github.com/python/mypy/issues/12933
-                self.dg.help(cast(type, arg))
+                self.dg.help(cast("type", arg))
             elif unsafe_allow_html and type_util.has_callable_attr(arg, "_repr_html_"):
                 self.dg.html(arg._repr_html_())
             elif type_util.has_callable_attr(

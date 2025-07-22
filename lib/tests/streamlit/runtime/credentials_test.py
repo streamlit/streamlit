@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import os
+import re
 import textwrap
 import unittest
 from pathlib import Path
@@ -59,8 +60,8 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials constructor."""
         c = Credentials()
 
-        self.assertEqual(c._conf_file, MOCK_PATH)
-        self.assertEqual(c.activation, None)
+        assert c._conf_file == MOCK_PATH
+        assert c.activation is None
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -71,7 +72,7 @@ class CredentialsClassTest(unittest.TestCase):
         Credentials._singleton = None
         c = Credentials.get_current()
 
-        self.assertEqual(Credentials._singleton, c)
+        assert Credentials._singleton == c
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -82,8 +83,9 @@ class CredentialsClassTest(unittest.TestCase):
         Credentials()
         with pytest.raises(RuntimeError) as e:
             Credentials()
-        self.assertEqual(
-            str(e.value), "Credentials already initialized. Use .get_current() instead"
+        assert (
+            str(e.value)
+            == "Credentials already initialized. Use .get_current() instead"
         )
 
     @patch(
@@ -101,7 +103,7 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials.open", m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual("user@domain.com", c.activation.email)
+            assert c.activation.email == "user@domain.com"
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -118,7 +120,7 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials.open", m, create=True):
             c = Credentials.get_current()
             c.load()
-            self.assertEqual("", c.activation.email)
+            assert c.activation.email == ""
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -144,8 +146,9 @@ class CredentialsClassTest(unittest.TestCase):
             c.activation = None
             with pytest.raises(RuntimeError) as e:
                 c.load()
-            self.assertEqual(
-                str(e.value), 'Credentials not found. Please run "streamlit activate".'
+            assert (
+                str(e.value)
+                == 'Credentials not found. Please run "streamlit activate".'
             )
 
     @patch(
@@ -159,14 +162,12 @@ class CredentialsClassTest(unittest.TestCase):
             )
             c = Credentials.get_current()
             c.activation = None
-            with pytest.raises(Exception) as e:
-                c.load()
-            self.assertEqual(
-                str(e.value).split(":")[0],
-                "\nUnable to load credentials from "
-                f"{MOCK_PATH}.\n"
-                'Run "streamlit reset" and try again.\n',
+            expected_msg = (
+                f"\nUnable to load credentials from {MOCK_PATH}.\n"
+                'Run "streamlit reset" and try again.\n'
             )
+            with pytest.raises(RuntimeError, match=re.escape(expected_msg)):
+                c.load()
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -197,9 +198,10 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.check_activated() has an error."""
         c = Credentials.get_current()
         c.activation = _Activation("some_email", True)
-        with patch.object(c, "load", side_effect=Exception("Some error")), patch(
-            "streamlit.runtime.credentials._exit"
-        ) as p:
+        with (
+            patch.object(c, "load", side_effect=Exception("Some error")),
+            patch("streamlit.runtime.credentials._exit") as p,
+        ):
             c._check_activated(auto_resolve=False)
             p.assert_called_once_with("Some error")
 
@@ -222,13 +224,16 @@ class CredentialsClassTest(unittest.TestCase):
         )
 
         # patch streamlit.*.os.makedirs instead of os.makedirs for py35 compat
-        with patch(
-            "streamlit.runtime.credentials.open", mock_open(), create=True
-        ) as open, patch("streamlit.runtime.credentials.os.makedirs") as make_dirs:
+        with (
+            patch(
+                "streamlit.runtime.credentials.open", mock_open(), create=True
+            ) as file_open,
+            patch("streamlit.runtime.credentials.os.makedirs") as make_dirs,
+        ):
             c.save()
 
             make_dirs.assert_called_once_with(streamlit_root_path, exist_ok=True)
-            open.return_value.write.assert_called_once_with(truth)
+            file_open.return_value.write.assert_called_once_with(truth)
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -240,8 +245,8 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials._LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
-            self.assertEqual(p.error.call_count, 2)
-            self.assertEqual(p.error.call_args_list[1], call("Already activated"))
+            assert p.error.call_count == 2
+            assert p.error.call_args_list[1] == call("Already activated")
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -253,10 +258,8 @@ class CredentialsClassTest(unittest.TestCase):
         with patch("streamlit.runtime.credentials._LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
-            self.assertEqual(p.error.call_count, 2)
-            self.assertEqual(
-                str(p.error.call_args_list[1])[0:27], "call('Activation not valid."
-            )
+            assert p.error.call_count == 2
+            assert str(p.error.call_args_list[1])[0:27] == "call('Activation not valid."
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -266,15 +269,17 @@ class CredentialsClassTest(unittest.TestCase):
         c = Credentials.get_current()
         c.activation = None
 
-        with patch.object(
-            c, "load", side_effect=RuntimeError("Some error")
-        ), patch.object(c, "save") as patched_save, patch(PROMPT) as patched_prompt:
+        with (
+            patch.object(c, "load", side_effect=RuntimeError("Some error")),
+            patch.object(c, "save") as patched_save,
+            patch(PROMPT) as patched_prompt,
+        ):
             patched_prompt.side_effect = ["user@domain.com"]
             c.activate()
             patched_save.assert_called_once()
 
-            self.assertEqual(c.activation.email, "user@domain.com")
-            self.assertEqual(c.activation.is_valid, True)
+            assert c.activation.email == "user@domain.com"
+            assert c.activation.is_valid
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -287,35 +292,64 @@ class CredentialsClassTest(unittest.TestCase):
             Credentials.reset()
             p.assert_called_once_with(MOCK_PATH)
 
-        self.assertEqual(c, Credentials.get_current())
+        assert c == Credentials.get_current()
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
     )
     def test_Credentials_reset_error(self):
         """Test Credentials.reset() with error."""
-        with patch(
-            "streamlit.runtime.credentials.os.remove", side_effect=OSError("some error")
-        ), patch("streamlit.runtime.credentials._LOGGER") as p:
+        with (
+            patch(
+                "streamlit.runtime.credentials.os.remove",
+                side_effect=OSError("some error"),
+            ),
+            patch("streamlit.runtime.credentials._LOGGER") as p,
+        ):
             Credentials.reset()
-            p.error.assert_called_once_with(
-                "Error removing credentials file: some error"
-            )
+            p.exception.assert_called_once_with("Error removing credentials file.")
 
     @tempdir()
     def test_email_send(self, temp_dir):
         """Test that saving a new Credential sends an email"""
 
         with requests_mock.mock() as m:
-            m.post("https://api.segment.io/v1/t", status_code=200)
+            m.get(
+                "https://data.streamlit.io/metrics.json",
+                status_code=200,
+                json={"url": "https://www.example.com"},
+            )
+            m.post("https://www.example.com", status_code=200)
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@example.com")
             creds.save()
+            # Check that metrics url fetched
+            first_request = m.request_history[0]
+            assert first_request.method == "GET"
+            assert first_request.url == "https://data.streamlit.io/metrics.json"
+            # Check that email sent to the url fetched
             last_request = m.request_history[-1]
             assert last_request.method == "POST"
-            assert last_request.url == "https://api.segment.io/v1/t"
+            assert last_request.url == "https://www.example.com/"
             assert '"userId": "email@example.com"' in last_request.text
+
+    @tempdir()
+    def test_email_failed_metrics_fetch(self, temp_dir):
+        """Test that saving a new Credential does not send an email if metrics fetch fails"""
+
+        with requests_mock.mock() as m:
+            m.get("https://data.streamlit.io/metrics.json", status_code=404)
+            creds: Credentials = Credentials.get_current()
+            creds._conf_file = str(Path(temp_dir.path) / "config.toml")
+            creds.activation = _verify_email("email@example.com")
+            with self.assertLogs(
+                "streamlit.runtime.credentials", level="ERROR"
+            ) as mock_logger:
+                creds.save()
+                assert len(m.request_history) == 1
+                assert len(mock_logger.output) == 1
+                assert "Failed to fetch metrics URL" in mock_logger.output[0]
 
     @tempdir()
     def test_email_not_send(self, temp_dir):
@@ -324,7 +358,12 @@ class CredentialsClassTest(unittest.TestCase):
         """
 
         with requests_mock.mock() as m:
-            m.post("https://api.segment.io/v1/t", status_code=200)
+            m.get(
+                "https://data.streamlit.io/metrics.json",
+                status_code=200,
+                json={"url": "https://www.example.com"},
+            )
+            m.post("https://www.example.com", status_code=200)
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("some_email")
@@ -338,7 +377,12 @@ class CredentialsClassTest(unittest.TestCase):
         endpoint
         """
         with requests_mock.mock() as m:
-            m.post("https://api.segment.io/v1/t", status_code=403)
+            m.get(
+                "https://data.streamlit.io/metrics.json",
+                status_code=200,
+                json={"url": "https://www.example.com"},
+            )
+            m.post("https://www.example.com", status_code=403)
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@example.com")
@@ -347,7 +391,7 @@ class CredentialsClassTest(unittest.TestCase):
             ) as mock_logger:
                 creds.save()
                 assert len(mock_logger.output) == 1
-                assert "Error saving email: 403" in mock_logger.output[0]
+                assert "Error saving email" in mock_logger.output[0]
 
 
 class CredentialsModulesTest(unittest.TestCase):
@@ -355,13 +399,13 @@ class CredentialsModulesTest(unittest.TestCase):
 
     def test_verify_email(self):
         """Test _verify_email."""
-        self.assertTrue(_verify_email("user@domain.com").is_valid)
-        self.assertTrue(_verify_email("").is_valid)
-        self.assertFalse(_verify_email("missing_at_sign").is_valid)
+        assert _verify_email("user@domain.com").is_valid
+        assert _verify_email("").is_valid
+        assert not _verify_email("missing_at_sign").is_valid
 
     def test_show_emojis(self):
-        self.assertIn("👋", email_prompt())
+        assert "👋" in email_prompt()
 
     @patch("streamlit.runtime.credentials.env_util.IS_WINDOWS", new=True)
     def test_show_emojis_windows(self):
-        self.assertNotIn("👋", email_prompt())
+        assert "👋" not in email_prompt()

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,15 +21,15 @@ import streamlit as st
 from streamlit.hello.utils import show_code
 
 
-def data_frame_demo():
+def data_frame_demo() -> None:
     @st.cache_data
-    def get_UN_data():
-        AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
-        df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
+    def get_un_data() -> pd.DataFrame:
+        aws_bucket_url = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
+        df = pd.read_csv(aws_bucket_url + "/agri.csv.gz")
         return df.set_index("Region")
 
     try:
-        df = get_UN_data()
+        df = get_un_data()
         countries = st.multiselect(
             "Choose countries", list(df.index), ["China", "United States of America"]
         )

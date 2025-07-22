@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { tableToIPC, tableFromIPC, Table, Type, Vector, StructRow } from "apache-arrow";
+import {
+  tableToIPC,
+  tableFromIPC,
+  Table,
+  Type,
+  Vector,
+  StructRow,
+} from "apache-arrow";
 
 export type CellType = "blank" | "index" | "columns" | "data";
 
@@ -77,7 +84,7 @@ export class ArrowTable {
           caption: styler.caption,
           displayValuesTable: tableFromIPC(styler.displayValues),
           styles: styler.styles,
-          uuid: styler.uuid
+          uuid: styler.uuid,
         }
       : undefined;
   }
@@ -147,34 +154,34 @@ export class ArrowTable {
       return {
         type: "blank",
         classNames: classNames.join(" "),
-        content: ""
+        content: "",
       };
     } else if (isColumnsCell) {
       const dataColumnIndex = columnIndex - this.headerColumns;
       const classNames = [
         "col_heading",
         "level" + rowIndex,
-        "col" + dataColumnIndex
+        "col" + dataColumnIndex,
       ];
 
       return {
         type: "columns",
         classNames: classNames.join(" "),
-        content: this.getContent(this.columnsTable, dataColumnIndex, rowIndex)
+        content: this.getContent(this.columnsTable, dataColumnIndex, rowIndex),
       };
     } else if (isIndexCell) {
       const dataRowIndex = rowIndex - this.headerRows;
       const classNames = [
         "row_heading",
         "level" + columnIndex,
-        "row" + dataRowIndex
+        "row" + dataRowIndex,
       ];
 
       return {
         type: "index",
         id: `T_${this.uuid}level${columnIndex}_row${dataRowIndex}`,
         classNames: classNames.join(" "),
-        content: this.getContent(this.indexTable, dataRowIndex, columnIndex)
+        content: this.getContent(this.indexTable, dataRowIndex, columnIndex),
       };
     } else {
       const dataRowIndex = rowIndex - this.headerRows;
@@ -182,7 +189,7 @@ export class ArrowTable {
       const classNames = [
         "data",
         "row" + dataRowIndex,
-        "col" + dataColumnIndex
+        "col" + dataColumnIndex,
       ];
       const content = this.styler
         ? this.getContent(
@@ -196,7 +203,7 @@ export class ArrowTable {
         type: "data",
         id: `T_${this.uuid}row${dataRowIndex}_col${dataColumnIndex}`,
         classNames: classNames.join(" "),
-        content
+        content,
       };
     }
   };
@@ -229,7 +236,7 @@ export class ArrowTable {
     return {
       data: tableToIPC(this.dataTable),
       index: tableToIPC(this.indexTable),
-      columns: tableToIPC(this.columnsTable )
+      columns: tableToIPC(this.columnsTable),
     };
   }
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -62,11 +63,11 @@ def _get_abs_folder_path(path: str) -> str:
     If the path is a directory, return the absolute path.
     Otherwise, return the absolute path of the parent directory.
     """
-    return os.path.abspath(path if os.path.isdir(path) else os.path.dirname(path))
+    return os.path.realpath(path if os.path.isdir(path) else os.path.dirname(path))
 
 
 class EventBasedPathWatcher:
-    """Watches a single path on disk using watchdog"""
+    """Watches a single path on disk using watchdog."""
 
     @staticmethod
     def close_all() -> None:
@@ -100,7 +101,7 @@ class EventBasedPathWatcher:
             not exist. This can be used to watch for the creation of a file or
             directory at a given path.
         """
-        self._path = os.path.abspath(path)
+        self._path = os.path.realpath(path)
         self._on_changed = on_changed
 
         path_watcher = _MultiPathWatcher.get_singleton()
@@ -180,11 +181,19 @@ class _MultiPathWatcher:
 
             if folder_handler is None:
                 folder_handler = _FolderEventHandler()
-                self._folder_handlers[folder_path] = folder_handler
 
-                folder_handler.watch = self._observer.schedule(
-                    folder_handler, folder_path, recursive=True
-                )
+                try:
+                    folder_handler.watch = self._observer.schedule(
+                        folder_handler, folder_path, recursive=True
+                    )
+                    self._folder_handlers[folder_path] = folder_handler
+                except Exception as ex:
+                    _LOGGER.warning(
+                        "Failed to schedule watch observer for path %s",
+                        folder_path,
+                        exc_info=ex,
+                    )
+                    return
 
             folder_handler.add_path_change_listener(
                 path,
@@ -220,12 +229,14 @@ class _MultiPathWatcher:
     def close(self) -> None:
         with self._lock:
             """Close this _MultiPathWatcher object forever."""
+
             if len(self._folder_handlers) != 0:
-                self._folder_handlers = {}
                 _LOGGER.debug(
                     "Stopping observer thread even though there is a non-zero "
                     "number of event observers!"
                 )
+                self._observer.unschedule_all()
+                self._folder_handlers = {}
             else:
                 _LOGGER.debug("Stopping observer thread")
 
@@ -243,7 +254,7 @@ class WatchedPath:
         *,  # keyword-only arguments:
         glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
-    ):
+    ) -> None:
         self.md5 = md5
         self.modification_time = modification_time
 
@@ -289,19 +300,29 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         with self._lock:
             watched_path = self._watched_paths.get(path, None)
             if watched_path is None:
-                md5 = util.calc_md5_with_blocking_retries(
-                    path,
-                    glob_pattern=glob_pattern,
-                    allow_nonexistent=allow_nonexistent,
-                )
-                modification_time = util.path_modification_time(path, allow_nonexistent)
-                watched_path = WatchedPath(
-                    md5=md5,
-                    modification_time=modification_time,
-                    glob_pattern=glob_pattern,
-                    allow_nonexistent=allow_nonexistent,
-                )
-                self._watched_paths[path] = watched_path
+                try:
+                    md5 = util.calc_md5_with_blocking_retries(
+                        path,
+                        glob_pattern=glob_pattern,
+                        allow_nonexistent=allow_nonexistent,
+                    )
+                    modification_time = util.path_modification_time(
+                        path, allow_nonexistent
+                    )
+                    watched_path = WatchedPath(
+                        md5=md5,
+                        modification_time=modification_time,
+                        glob_pattern=glob_pattern,
+                        allow_nonexistent=allow_nonexistent,
+                    )
+                    self._watched_paths[path] = watched_path
+                except StreamlitMaxRetriesError as ex:
+                    _LOGGER.debug(
+                        "Failed to calculate MD5 for path %s",
+                        path,
+                        exc_info=ex,
+                    )
+                    return
 
             watched_path.on_changed.connect(callback, weak=False)
 
@@ -336,7 +357,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         elif event.event_type == events.EVENT_TYPE_MOVED:
             # Teach mypy that this event has a dest_path, because it can't infer
             # the desired subtype from the event_type check
-            event = cast(events.FileSystemMovedEvent, event)
+            event = cast("events.FileSystemMovedEvent", event)
 
             _LOGGER.debug(
                 "Move event: src %s; dest %s", event.src_path, event.dest_path
@@ -357,9 +378,33 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         if isinstance(changed_path, bytes):  # type: ignore[unreachable, unused-ignore]
             changed_path = changed_path.decode("utf-8")  # type: ignore[unreachable, unused-ignore]
 
-        abs_changed_path = os.path.abspath(changed_path)
+        if changed_path.endswith("~"):
+            # Files ending with ~ are typically backup files created by editors.
+            _LOGGER.debug("Ignoring editor backup file: %s", changed_path)
+            return
 
-        changed_path_info = self._watched_paths.get(abs_changed_path, None)
+        abs_changed_path = os.path.realpath(changed_path)
+
+        # To prevent a race condition, we hold a lock while accessing
+        # _watched_paths.
+        with self._lock:
+            # First check if the exact path is being watched
+            changed_path_info = self._watched_paths.get(abs_changed_path, None)
+
+            # If the exact path isn't found, check if it's inside any watched
+            # directories. This is necessary for the folder watching feature to
+            # detect changes to files within watched directories, not just the
+            # directories themselves.
+            if changed_path_info is None:
+                for path, info in self._watched_paths.items():
+                    if (
+                        os.path.isdir(path)
+                        and os.path.commonpath([path, abs_changed_path]) == path
+                    ):
+                        changed_path_info = info
+                        break
+
+        # If we still haven't found a matching path, ignore this event
         if changed_path_info is None:
             _LOGGER.debug(
                 "Ignoring changed path %s.\nWatched_paths: %s",
@@ -368,33 +413,40 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             )
             return
 
-        modification_time = util.path_modification_time(
-            abs_changed_path, changed_path_info.allow_nonexistent
-        )
+        try:
+            modification_time = util.path_modification_time(
+                abs_changed_path, changed_path_info.allow_nonexistent
+            )
 
-        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-        # modification_time is always 0.0 because of file system limitations.
-        if (
-            modification_time != 0.0
-            and modification_time == changed_path_info.modification_time
-        ):
-            _LOGGER.debug("File/dir timestamp did not change: %s", abs_changed_path)
+            # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+            # modification_time is always 0.0 because of file system limitations.
+            if (
+                modification_time != 0.0
+                and modification_time == changed_path_info.modification_time
+            ):
+                _LOGGER.debug("File/dir timestamp did not change: %s", abs_changed_path)
+                return
+
+            changed_path_info.modification_time = modification_time
+            new_md5 = util.calc_md5_with_blocking_retries(
+                abs_changed_path,
+                glob_pattern=changed_path_info.glob_pattern,
+                allow_nonexistent=changed_path_info.allow_nonexistent,
+            )
+            if new_md5 == changed_path_info.md5:
+                _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
+                return
+
+            _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
+            changed_path_info.md5 = new_md5
+            changed_path_info.on_changed.send(abs_changed_path)
+        except StreamlitMaxRetriesError as ex:
+            _LOGGER.debug(
+                "Ignoring file change. Failed to calculate MD5 for path %s",
+                abs_changed_path,
+                exc_info=ex,
+            )
             return
-
-        changed_path_info.modification_time = modification_time
-
-        new_md5 = util.calc_md5_with_blocking_retries(
-            abs_changed_path,
-            glob_pattern=changed_path_info.glob_pattern,
-            allow_nonexistent=changed_path_info.allow_nonexistent,
-        )
-        if new_md5 == changed_path_info.md5:
-            _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
-            return
-
-        _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
-        changed_path_info.md5 = new_md5
-        changed_path_info.on_changed.send(abs_changed_path)
 
     def on_created(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)

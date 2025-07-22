@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "@streamlit/lib/src/test_util"
+import { render } from "~lib/test_util"
 
 import FileDropzone, { Props } from "./FileDropzone"
+import { STREAMLIT_MIME_TYPE } from "./utils"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
@@ -57,6 +58,6 @@ describe("FileDropzone widget", () => {
     render(<FileDropzone {...props} />)
     expect(
       screen.queryByTestId("stFileUploaderDropzoneInput")
-    ).toHaveAttribute("accept", ".jpg")
+    ).toHaveAttribute("accept", [STREAMLIT_MIME_TYPE, ".jpg"].join(","))
   })
 })

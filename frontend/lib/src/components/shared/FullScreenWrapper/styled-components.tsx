@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ export interface StyledFullScreenFrameProps {
 
 export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
   ({ theme, isExpanded }) => ({
+    width: "100%",
     ...(isExpanded
       ? {
           position: "fixed",
@@ -33,7 +34,7 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
           zIndex: theme.zIndices.fullscreenWrapper,
           padding: theme.spacing.md,
           paddingTop: theme.sizes.fullScreenHeaderHeight,
-          overflow: ["auto", "overlay"],
+          overflow: "auto",
           display: "flex", // To avoid extra spaces that lead to scrollbars.
           alignItems: "center",
           justifyContent: "center",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ class DeltaGeneratorSingletonsTest(unittest.TestCase):
             root_container=RootContainer.MAIN,
             parent=get_dg_singleton_instance().main_dg,
         )
-        token = context_dg_stack.set(context_dg_stack.get() + (new_dg,))
+        token = context_dg_stack.set((*context_dg_stack.get(), new_dg))
 
         # get the updated dg_stack for current context
         dg_stack = context_dg_stack.get()

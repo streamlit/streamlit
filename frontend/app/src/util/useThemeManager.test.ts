@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
 
 import {
   AUTO_THEME_NAME,
@@ -33,8 +33,11 @@ const mockCustomThemeConfig = {
   backgroundColor: "#FFFFFF",
   secondaryBackgroundColor: "#F5F5F5",
   textColor: "#1A1D21",
+  // Option is deprecated, but we still test to ensure backwards compatibility:
   widgetBackgroundColor: "#FFFFFF",
+  // Option is deprecated, but we still test to ensure backwards compatibility:
   widgetBorderColor: "#D3DAE8",
+  // Option is deprecated, but we still test to ensure backwards compatibility:
   skeletonBackgroundColor: "#CCDDEE",
   fontFaces: [
     {

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,8 +46,8 @@ class ArrowDataFrameDimensionsTest(DeltaGeneratorTestCase):
 
         fn(st.dataframe, df)
         arrow_data_frame = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(arrow_data_frame.width, expectedWidth)
-        self.assertEqual(arrow_data_frame.height, expectedHeight)
+        assert arrow_data_frame.width == expectedWidth
+        assert arrow_data_frame.height == expectedHeight
 
     def _get_metadata(self):
         """Returns the metadata for the most recent element in the

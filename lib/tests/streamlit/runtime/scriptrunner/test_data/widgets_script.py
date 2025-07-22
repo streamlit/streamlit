@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,16 +22,16 @@ import streamlit as st
 # 1-delta loop. If you change this, please change that file too.
 
 checkbox = st.checkbox("checkbox", False)
-st.text("%s" % checkbox)
+st.text(checkbox)
 
 text_area = st.text_area("text_area", "ahoy!")
-st.text("%s" % text_area)
+st.text(text_area)
 
 radio = st.radio("radio", ("0", "1", "2"), 0)
-st.text("%s" % radio)
+st.text(radio)
 
 button = st.button("button")
-st.text("%s" % button)
+st.text(button)
 
 # Loop forever so that our test can check widget states
 # without the scriptrunner shutting down.

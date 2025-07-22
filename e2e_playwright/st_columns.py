@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import numpy as np
+import numpy.typing as npt
 
 import streamlit as st
 
-LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+LOREM_IPSUM = (
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor "
+    "incididunt ut labore et dolore magna aliqua."
+)
 
-BLACK_IMG = np.repeat(0, 601350).reshape(633, 950)
+BLACK_IMG: npt.NDArray[np.int_] = np.repeat(0, 601350).reshape(633, 950)
 
 # Basic columns:
 c1, c2, c3 = st.columns(3)
@@ -66,6 +69,12 @@ with st.expander("Column gap large", expanded=True):
     c11.image(BLACK_IMG)
     c12.image(BLACK_IMG)
 
+with st.expander("Column gap none", expanded=True):
+    c13, c14, c15 = st.columns(3, gap=None)
+    c13.image(BLACK_IMG)
+    c14.image(BLACK_IMG)
+    c15.image(BLACK_IMG)
+
 with st.expander("Nested columns - one level", expanded=True):
     col1, col2 = st.columns(2)
     with col1:
@@ -88,7 +97,8 @@ with st.expander("Vertical alignment - top", expanded=True):
     col1, col2, col3 = st.columns(3, vertical_alignment="top")
     col1.text_input("Text input (top)")
     col2.button("Button (top)", use_container_width=True)
-    col3.checkbox("Checkbox (top)")
+    col3.checkbox("Checkbox 1 (top)")
+    col3.checkbox("Checkbox 2 (top)")
 
 with st.expander("Vertical alignment - center", expanded=True):
     col1, col2, col3 = st.columns(3, vertical_alignment="center")
@@ -96,13 +106,15 @@ with st.expander("Vertical alignment - center", expanded=True):
     col2.button("Button (center)", use_container_width=True)
     col3.checkbox("Checkbox (center)")
 
+
 with st.expander("Vertical alignment - bottom", expanded=True):
     col1, col2, col3 = st.columns(3, vertical_alignment="bottom")
     col1.text_input("Text input (bottom)")
     col2.button("Button (bottom)", use_container_width=True)
-    col3.checkbox("Checkbox (bottom)")
+    col3.checkbox("Checkbox 1 (bottom)")
+    col3.checkbox("Checkbox 2 (bottom)")
 
-if st.button("Nested columns - two levels (raises exception)"):
+if st.button("Nested columns - two levels"):
     col1, col2 = st.columns(2)
     with col1:
         subcol1, subcol2 = st.columns(2)
@@ -114,7 +126,7 @@ if st.button("Nested columns - two levels (raises exception)"):
         subcol2.write(LOREM_IPSUM)
         st.write(LOREM_IPSUM)
 
-if st.button("Nested columns - in sidebar (raises exception)"):
+if st.button("Nested columns - in sidebar"):
     with st.sidebar:
         col1, col2 = st.columns(2)
         col1.text_input("Text input 1")
@@ -123,3 +135,16 @@ if st.button("Nested columns - in sidebar (raises exception)"):
         col3.text_input("Text input 3")
         col4.text_input("Text input 4")
         st.text_input("Text input 5")
+
+with st.expander("Columns with width configuration", expanded=True):
+    col1, col2, col3 = st.columns(3, width=300, border=True)
+    col1.write("column one")
+    col2.write("column two")
+    col3.write("column three")
+
+    st.divider()
+
+    col4, col5, col6 = st.columns(3, width="stretch", border=True)
+    col4.write("column four")
+    col5.write("column five")
+    col6.write("column six")

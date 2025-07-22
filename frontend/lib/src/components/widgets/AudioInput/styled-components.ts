@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,9 @@ export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
   position: "relative",
   paddingLeft: theme.spacing.xs,
   paddingRight: theme.spacing.sm,
+  border: theme.colors.widgetBorderColor
+    ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
+    : undefined,
 }))
 
 export const StyledWaveformInnerDiv = styled.div({
@@ -65,8 +68,8 @@ export const StyledErrorTextSpan = styled.span(({ theme }) => ({
 }))
 
 export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({
-  color: theme.colors.linkText,
-  textDecoration: "underline",
+  color: theme.colors.link,
+  textDecoration: theme.linkUnderline ? "underline" : "none",
 }))
 
 // Placeholder
@@ -103,10 +106,10 @@ export const StyledActionButtonStartRecordingDiv = styled.span(
   ({ theme }) => ({
     "& > button": {
       padding: theme.spacing.threeXS,
-      color: theme.colors.fadedText40,
+      color: theme.colors.fadedText60,
     },
     "& > button:hover, & > button:focus": {
-      color: theme.colors.primary,
+      color: theme.colors.bodyText,
     },
   })
 )
@@ -142,12 +145,11 @@ export const StyledSpinner = styled(Spinner)(({ theme }) => {
     width: theme.sizes.spinnerSize,
     height: theme.sizes.spinnerSize,
     borderWidth: theme.sizes.spinnerThickness,
-    radius: theme.radii.md,
     justifyContents: "center",
     padding: theme.spacing.none,
     margin: theme.spacing.none,
     borderColor: theme.colors.borderColor,
-    borderTopColor: theme.colors.primary,
+    borderTopColor: theme.colors.secondary,
     flexGrow: 0,
     flexShrink: 0,
   }

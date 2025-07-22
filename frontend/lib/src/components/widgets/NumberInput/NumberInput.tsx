@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 
 import React, {
+  memo,
   ReactElement,
   useCallback,
   useEffect,
@@ -23,34 +24,38 @@ import React, {
 } from "react"
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { withTheme } from "@emotion/react"
-import { sprintf } from "sprintf-js"
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
+
+import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
 import {
   isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
-import { useFormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-import { logWarning } from "@streamlit/lib/src/util/log"
-import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
-import {
-  Source,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
-import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
+} from "~lib/util/utils"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { Placement } from "~lib/components/shared/Tooltip"
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+} from "~lib/components/widgets/BaseWidget"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
+import {
+  canDecrement,
+  canIncrement,
+  formatValue,
+  getInitialValue,
+  getStep,
+} from "./utils"
 import {
   StyledInputContainer,
   StyledInputControl,
@@ -58,142 +63,39 @@ import {
   StyledInstructionsContainer,
 } from "./styled-components"
 
-/**
- * Return a string property from an element. If the string is
- * null or empty, return undefined instead.
- */
-function getNonEmptyString(
-  value: string | null | undefined
-): string | undefined {
-  return isNullOrUndefined(value) || value === "" ? undefined : value
-}
-
-/**
- * This function returns the initial value for the NumberInput widget
- * via the widget manager.
- */
-const getInitialValue = (
-  props: Pick<Props, "element" | "widgetMgr">
-): number | null => {
-  const isIntData = props.element.dataType === NumberInputProto.DataType.INT
-  const storedValue = isIntData
-    ? props.widgetMgr.getIntValue(props.element)
-    : props.widgetMgr.getDoubleValue(props.element)
-  return storedValue ?? props.element.default ?? null
-}
-
-const getStep = ({
-  step,
-  dataType,
-}: Pick<NumberInputProto, "step" | "dataType">): number => {
-  if (step) {
-    return step
-  }
-  if (dataType === NumberInputProto.DataType.INT) {
-    return 1
-  }
-  return 0.01
-}
-
-/**
- * Utilizes the sprintf library to format a number value
- * according to a given format string.
- */
-export const formatValue = ({
-  value,
-  format,
-  step,
-  dataType,
-}: {
-  value: number | null
-  format?: string | null
-  step?: number
-  dataType: NumberInputProto.DataType
-}): string | null => {
-  if (isNullOrUndefined(value)) {
-    return null
-  }
-
-  let formatString = getNonEmptyString(format)
-
-  if (isNullOrUndefined(formatString) && notNullOrUndefined(step)) {
-    const strStep = step.toString()
-    if (
-      dataType === NumberInputProto.DataType.FLOAT &&
-      step !== 0 &&
-      strStep.includes(".")
-    ) {
-      const decimalPlaces = strStep.split(".")[1].length
-      formatString = `%0.${decimalPlaces}f`
-    }
-  }
-
-  if (isNullOrUndefined(formatString)) {
-    return value.toString()
-  }
-
-  try {
-    return sprintf(formatString, value)
-  } catch (e) {
-    logWarning(`Error in sprintf(${formatString}, ${value}): ${e}`)
-    return String(value)
-  }
-}
-
-export const canDecrement = (
-  value: number | null,
-  step: number,
-  min: number
-): boolean => {
-  if (isNullOrUndefined(value)) {
-    return false
-  }
-  return value - step >= min
-}
-
-export const canIncrement = (
-  value: number | null,
-  step: number,
-  max: number
-): boolean => {
-  if (isNullOrUndefined(value)) {
-    return false
-  }
-  return value + step <= max
-}
-
 export interface Props {
   disabled: boolean
   element: NumberInputProto
   widgetMgr: WidgetStateManager
-  width: number
-  theme: EmotionTheme
   fragmentId?: string
 }
 
-export const NumberInput: React.FC<Props> = ({
+const NumberInput: React.FC<Props> = ({
   disabled,
   element,
   widgetMgr,
-  width,
-  theme,
   fragmentId,
 }: Props): ReactElement => {
+  const theme = useEmotionTheme()
+
   const {
     dataType: elementDataType,
     id: elementId,
     formId: elementFormId,
     default: elementDefault,
     format: elementFormat,
+    icon,
+    min,
+    max,
   } = element
-  const min = element.hasMin ? element.min : -Infinity
-  const max = element.hasMax ? element.max : +Infinity
 
-  const [step, setStep] = useState<number>(getStep(element))
+  const [width, elementRef] = useCalculatedWidth()
+
+  const [step, setStep] = useState<number>(() => getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })
   const [dirty, setDirty] = useState(false)
   const [value, setValue] = useState<number | null>(initialValue)
-  const [formattedValue, setFormattedValue] = useState<string | null>(
+  const [formattedValue, setFormattedValue] = useState<string | null>(() =>
     formatValue({ value: initialValue, ...element, step })
   )
   const [isFocused, setIsFocused] = useState(false)
@@ -218,11 +120,17 @@ export const NumberInput: React.FC<Props> = ({
   }, [element.dataType, element.step])
 
   const commitValue = useCallback(
-    ({ value, source }: { value: number | null; source: Source }) => {
-      if (notNullOrUndefined(value) && (min > value || value > max)) {
+    ({
+      value: valueArg,
+      source,
+    }: {
+      value: number | null
+      source: Source
+    }) => {
+      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
         inputRef.current?.reportValidity()
       } else {
-        const newValue = value ?? elementDefault ?? null
+        const newValue = valueArg ?? elementDefault ?? null
 
         switch (elementDataType) {
           case NumberInputProto.DataType.INT:
@@ -284,11 +192,13 @@ export const NumberInput: React.FC<Props> = ({
   }, [])
 
   const updateFromProtobuf = useCallback((): void => {
-    const { value } = element
+    const { value: elementValue } = element
     element.setValue = false
-    setValue(value ?? null)
-    setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
-    commitValue({ value: value ?? null, source: { fromUi: false } })
+    setValue(elementValue ?? null)
+    setFormattedValue(
+      formatValue({ value: elementValue ?? null, ...element, step })
+    )
+    commitValue({ value: elementValue ?? null, source: { fromUi: false } })
   }, [element, step, commitValue])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
@@ -299,11 +209,26 @@ export const NumberInput: React.FC<Props> = ({
       commitValue({ value, source: { fromUi: false } })
     }
 
+    const numberInput = inputRef.current
+    if (numberInput) {
+      const preventScroll: EventListener = (e): void => {
+        e.preventDefault()
+      }
+
+      // Issue #8867: Disable wheel events on the input to avoid accidental changes
+      // caused by scrolling.
+      numberInput.addEventListener("wheel", preventScroll)
+
+      return () => {
+        numberInput.removeEventListener("wheel", preventScroll)
+      }
+    }
+
     // I don't want to run this effect on every render, only on mount.
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [])
 
@@ -329,9 +254,9 @@ export const NumberInput: React.FC<Props> = ({
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    const { value } = e.target
+    const { value: targetValue } = e.target
 
-    if (value === "") {
+    if (targetValue === "") {
       setDirty(true)
       setValue(null)
       setFormattedValue(null)
@@ -339,14 +264,14 @@ export const NumberInput: React.FC<Props> = ({
       let numValue: number
 
       if (element.dataType === NumberInputProto.DataType.INT) {
-        numValue = parseInt(value, 10)
+        numValue = parseInt(targetValue, 10)
       } else {
-        numValue = parseFloat(value)
+        numValue = parseFloat(targetValue)
       }
 
       setDirty(true)
       setValue(numValue)
-      setFormattedValue(value)
+      setFormattedValue(targetValue)
     }
   }
 
@@ -397,11 +322,26 @@ export const NumberInput: React.FC<Props> = ({
     [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
   )
 
+  // Material icons need to be larger to render similar size of emojis,
+  // and we change their text color
+  const isMaterialIcon = icon?.startsWith(":material")
+  const dynamicIconSize = isMaterialIcon ? "lg" : "base"
+
+  // Adjust breakpoint for icon so the total width of the input element
+  // is same when input controls hidden
+  const iconAdjustment =
+    // Account for icon size + its left/right padding
+    convertRemToPx(theme.iconSizes.lg) +
+    2 * convertRemToPx(theme.spacing.twoXS)
+  const numberInputControlBreakpoint = icon
+    ? theme.breakpoints.hideNumberInputControls + iconAdjustment
+    : theme.breakpoints.hideNumberInputControls
+
   return (
     <div
       className="stNumberInput"
       data-testid="stNumberInput"
-      style={{ width }}
+      ref={elementRef}
     >
       <WidgetLabel
         label={element.label}
@@ -438,6 +378,15 @@ export const NumberInput: React.FC<Props> = ({
           clearOnEscape={clearable}
           disabled={disabled}
           aria-label={element.label}
+          startEnhancer={
+            element.icon && (
+              <DynamicIcon
+                data-testid="stNumberInputIcon"
+                iconValue={element.icon}
+                size={dynamicIconSize}
+              />
+            )
+          }
           id={id.current}
           overrides={{
             ClearIconContainer: {
@@ -476,12 +425,16 @@ export const NumberInput: React.FC<Props> = ({
                 inputMode: "",
               },
               style: {
+                fontWeight: theme.fontWeights.normal,
                 lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: theme.spacing.sm,
-                paddingLeft: theme.spacing.sm,
+                paddingLeft: theme.spacing.md,
                 paddingBottom: theme.spacing.sm,
                 paddingTop: theme.spacing.sm,
+                "::placeholder": {
+                  color: theme.colors.fadedText60,
+                },
               },
             },
             InputContainer: {
@@ -495,17 +448,30 @@ export const NumberInput: React.FC<Props> = ({
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderTopRightRadius: 0,
                 borderBottomRightRadius: 0,
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
                 borderLeftWidth: 0,
                 borderRightWidth: 0,
                 borderTopWidth: 0,
                 borderBottomWidth: 0,
                 paddingRight: 0,
+                paddingLeft: icon ? theme.spacing.sm : 0,
+              },
+            },
+            StartEnhancer: {
+              style: {
+                paddingLeft: 0,
+                paddingRight: 0,
+                // Keeps emoji icons from being cut off on the right
+                minWidth: theme.iconSizes.lg,
+                // Material icons color changed as inactionable
+                color: isMaterialIcon ? theme.colors.fadedText60 : "inherit",
               },
             },
           }}
         />
         {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-        {width > theme.breakpoints.hideNumberInputControls && (
+        {width > numberInputControlBreakpoint && (
           <StyledInputControls>
             <StyledInputControl
               data-testid="stNumberInputStepDown"
@@ -516,7 +482,7 @@ export const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Minus}
                 size="xs"
-                color={canDec ? "inherit" : "disabled"}
+                color={canDec ? "inherit" : theme.colors.disabled}
               />
             </StyledInputControl>
             <StyledInputControl
@@ -528,7 +494,7 @@ export const NumberInput: React.FC<Props> = ({
               <Icon
                 content={Plus}
                 size="xs"
-                color={canInc ? "inherit" : "disabled"}
+                color={canInc ? "inherit" : theme.colors.disabled}
               />
             </StyledInputControl>
           </StyledInputControls>
@@ -548,4 +514,4 @@ export const NumberInput: React.FC<Props> = ({
   )
 }
 
-export default withTheme(NumberInput)
+export default memo(NumberInput)

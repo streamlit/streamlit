@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,15 +20,18 @@ const balloons = 1000000
 const header = balloons - 10
 const bottom = sidebar - 1
 const sidebarMobile = balloons - 5
-const popupMenu = balloons + 40
 const fullscreenWrapper = balloons + 50
-// Vega tooltips should be shown even when used
-// in dialogs or in fullscreen mode
-const vegaTooltips = fullscreenWrapper + 10
+const headerDecoration = balloons - 1
+// Used for popup menus, chart tooltips, and other aspects
+// that need to be shown above the fullscreen wrapper
+const popup = fullscreenWrapper + 10
+// Used for rendering the cell overlay editor of the
+// dataframe component:
 const tablePortal = fullscreenWrapper + 60
 const cacheSpinner = sidebar + 1
 // Toasts should overlap chatInput container
-const toast = bottom + 1
+// should also show above dialog
+const toast = popup + 1
 
 export const zIndices = {
   hide: -1,
@@ -42,11 +45,11 @@ export const zIndices = {
   balloons,
   header,
   sidebarMobile,
-  popupMenu,
+  popup,
   fullscreenWrapper,
   tablePortal,
   bottom,
   cacheSpinner,
   toast,
-  vegaTooltips,
+  headerDecoration,
 }

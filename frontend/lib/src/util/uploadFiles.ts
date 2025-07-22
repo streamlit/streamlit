@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,15 @@
 
 import zip from "lodash/zip"
 
-import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
-import {
-  WidgetInfo,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
 import {
   FileUploaderState as FileUploaderStateProto,
   IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "@streamlit/lib/src/proto"
-import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
+} from "@streamlit/protobuf"
+
+import { FileUploadClient } from "~lib/FileUploadClient"
+import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import { ensureError } from "~lib/util/ErrorHandling"
 
 type SuccessfulUpload = {
   fileUrl: IFileURLs

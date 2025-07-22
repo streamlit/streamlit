@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import React, { useCallback } from "react"
+import { useCallback, useContext } from "react"
 
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import createDownloadLinkElement from "@streamlit/lib/src/util/createDownloadLinkElement"
+import { LibContext } from "~lib/components/core/LibContext"
+import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 
 const useDownloadUrl = (
   url: string | null,
@@ -25,7 +25,7 @@ const useDownloadUrl = (
 ): (() => void) => {
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
-  } = React.useContext(LibContext)
+  } = useContext(LibContext)
 
   const downloadUrl = useCallback(() => {
     if (!url) return

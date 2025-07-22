@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ def playback_callbacks(
     records_or_filename
         A list of CallbackRecords, or a string path to a pickled record list
     max_pause_time
-        The maxmimum number of seconds to pause between callbacks. By default
+        The maximum number of seconds to pause between callbacks. By default
         `playback_callbacks` sleeps between each callback for the same amount
         of time as the callback's recorded delay. You can use `max_pause_time`
         to speed up the simulation. Set `max_pause_time` to 0 to issue all

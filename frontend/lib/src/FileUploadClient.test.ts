@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,13 +36,15 @@ describe("FileUploadClient Upload", () => {
     uploader = new FileUploadClient({
       sessionInfo: mockSessionInfo(),
       endpoints: {
+        setStaticConfigUrl: vi.fn(),
+        sendClientErrorToHost: vi.fn(),
+        checkSourceUrlResponse: vi.fn(),
         buildComponentURL: vi.fn(),
         buildMediaURL: vi.fn(),
         buildFileUploadURL: vi.fn(),
         buildAppPageURL: vi.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
         deleteFileAtURL: vi.fn(),
-        fetchCachedForwardMsg: vi.fn(),
       },
       formsWithPendingRequestsChanged,
       requestFileURLs,
@@ -137,17 +139,17 @@ describe("FileUploadClient Upload", () => {
     const pendingReqs = uploader.pendingFileURLsRequests
     expect(pendingReqs.size).toBe(1)
 
-    const reqId = pendingReqs.keys().next().value
+    const reqId = pendingReqs.keys().next().value as string
 
     expect(pendingReqs.get(reqId)?.promise).toBe(fileURLsPromise)
   })
 
   it("onFileURLsResponse rejects promise on errorMsg", async () => {
-    uploader.fetchFileURLs([])
+    void uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests
-    const reqId = pendingReqs.keys().next().value
+    const reqId = pendingReqs.keys().next().value as string
     const promise = pendingReqs.get(reqId)?.promise
 
     uploader.onFileURLsResponse({
@@ -159,11 +161,11 @@ describe("FileUploadClient Upload", () => {
   })
 
   it("onFileURLsResponse resolves promise on success", async () => {
-    uploader.fetchFileURLs([])
+    void uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests
-    const reqId = pendingReqs.keys().next().value
+    const reqId = pendingReqs.keys().next().value as string
     const promise = pendingReqs.get(reqId)?.promise
 
     uploader.onFileURLsResponse({

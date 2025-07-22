@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ from streamlit.source_util import open_python_file
 class ScriptCache:
     """Thread-safe cache of Python script bytecode."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Mapping of script_path: bytecode
         self._cache: dict[str, Any] = {}
         self._lock = threading.Lock()

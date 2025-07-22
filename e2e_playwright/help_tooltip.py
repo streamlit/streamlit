@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,12 @@ with st.sidebar:
 
 
 columns_ = st.columns([9, 1.5, 1.5])
+
+with columns_[0]:
+    st.number_input(
+        "Tooltip with code test", 0, 10, 1, help="Tooltip `with some code` in it"
+    )
+
 with columns_[1].popover("Some popover"):
     pass
 

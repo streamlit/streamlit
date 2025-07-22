@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
-import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
+import { LibContext } from "~lib/components/core/LibContext"
 
 export type UseEscapeToCollapseArgs = {
   expanded: boolean
@@ -36,7 +35,7 @@ export type UseFullscreenShape = {
 export const useFullscreen = (): UseFullscreenShape => {
   const { setFullScreen } = useContext(LibContext)
   const [expanded, setExpanded] = useState(false)
-  const { fullHeight, fullWidth } = useRequiredContext(WindowDimensionsContext)
+  const { fullHeight, fullWidth } = useWindowDimensionsContext()
 
   const setExpandedState = useCallback(
     (isExpanded: boolean) => {
@@ -55,7 +54,7 @@ export const useFullscreen = (): UseFullscreenShape => {
 
   const zoomOut = useCallback(() => {
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     document.body.style.overflow = "unset"
     setExpandedState(false)
   }, [setExpandedState])

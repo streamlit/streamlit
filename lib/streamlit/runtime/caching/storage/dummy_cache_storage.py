@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
 
 class MemoryCacheStorageManager(CacheStorageManager):
     def create(self, context: CacheStorageContext) -> CacheStorage:
-        """Creates a new cache storage instance wrapped with in-memory cache layer"""
+        """Creates a new cache storage instance wrapped with in-memory cache layer."""
         persist_storage = DummyCacheStorage()
         return InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context
@@ -40,10 +40,10 @@ class MemoryCacheStorageManager(CacheStorageManager):
 
 
 class DummyCacheStorage(CacheStorage):
-    def get(self, key: str) -> bytes:
+    def get(self, key: str) -> bytes:  # noqa: ARG002
         """
         Dummy gets the value for a given key,
-        always raises an CacheStorageKeyNotFoundError
+        always raises an CacheStorageKeyNotFoundError.
         """
         raise CacheStorageKeyNotFoundError("Key not found in dummy cache")
 

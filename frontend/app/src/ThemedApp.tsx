@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 import React from "react"
 
 import {
-  CUSTOM_THEME_NAME,
   PortalProvider,
   RootStyleProvider,
   WindowDimensionsProvider,
@@ -36,15 +35,15 @@ const ThemedApp = ({
 }: ThemedAppProps): JSX.Element => {
   const [themeManager, fontFaces] = useThemeManager()
   const { activeTheme } = themeManager
-  const hasCustomFonts =
-    activeTheme.name === CUSTOM_THEME_NAME && fontFaces.length > 0
 
   return (
     <RootStyleProvider theme={activeTheme}>
       <WindowDimensionsProvider>
         {/* The data grid requires one root level portal element for rendering cell overlays */}
         <PortalProvider>
-          {hasCustomFonts && <FontFaceDeclaration fontFaces={fontFaces} />}
+          {fontFaces.length > 0 && (
+            <FontFaceDeclaration fontFaces={fontFaces} />
+          )}
           <AppWithScreencast
             theme={themeManager}
             streamlitExecutionStartedAt={streamlitExecutionStartedAt}

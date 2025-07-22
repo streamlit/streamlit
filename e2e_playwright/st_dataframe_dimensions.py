@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,14 +19,13 @@ import streamlit as st
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
-
 data = np.random.randn(100, 100)
 
 df = pd.DataFrame(data)
-st.dataframe(df)
+st.dataframe(df, use_container_width=False)
 st.dataframe(df, 250, 150)
 st.dataframe(df, width=250)
-st.dataframe(df, height=150)
+st.dataframe(df, height=150, use_container_width=False)
 st.dataframe(df, 5000, 5000)
 st.dataframe(df, use_container_width=True)
 

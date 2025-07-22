@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,17 +24,20 @@ import types
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
+from streamlit.runtime.caching.cache_utils import CachedFunc
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_runner import (
-    __file__ as SCRIPTRUNNER_FILENAME,
+    __file__ as SCRIPTRUNNER_FILENAME,  # noqa: N812
 )
 from streamlit.runtime.secrets import Secrets
 from streamlit.string_util import is_mem_address_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 
 CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
@@ -42,7 +45,9 @@ CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 class HelpMixin:
     @gather_metrics("help")
-    def help(self, obj: Any = streamlit) -> DeltaGenerator:
+    def help(
+        self, obj: Any = streamlit, *, width: WidthWithoutContent = "stretch"
+    ) -> DeltaGenerator:
         """Display help and other information for a given object.
 
         Depending on the type of object that is passed in, this displays the
@@ -54,6 +59,15 @@ class HelpMixin:
         obj : any
             The object whose information should be displayed. If left
             unspecified, this call will display help for Streamlit itself.
+        width : "stretch" or int
+            The width of the help element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -115,8 +129,14 @@ class HelpMixin:
             height: 700px
         """
         doc_string_proto = DocStringProto()
+
+        validate_width(width, allow_content=False)
+        layout_config = LayoutConfig(width=width)
         _marshall(doc_string_proto, obj)
-        return self.dg._enqueue("doc_string", doc_string_proto)
+
+        return self.dg._enqueue(
+            "doc_string", doc_string_proto, layout_config=layout_config
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -147,37 +167,29 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
     doc_string_proto.members.extend(_get_members(obj))
 
 
-def _get_name(obj):
+def _get_name(obj: object) -> str | None:
     # Try to get the fully-qualified name of the object.
-    # For example:
-    #   st.help(bar.Baz(123))
-    #
-    #   The name is bar.Baz
+    # For example: st.help(bar.Baz(123))
+    #    The name is bar.Baz
     name = getattr(obj, "__qualname__", None)
     if name:
-        return name
+        return cast("str", name)
 
     # Try to get the name of the object.
-    # For example:
-    #   st.help(bar.Baz(123))
-    #
+    # For example: st.help(bar.Baz(123))
     #   The name is Baz
-    return getattr(obj, "__name__", None)
+    return cast("str | None", getattr(obj, "__name__", None))
 
 
-def _get_module(obj):
+def _get_module(obj: object) -> str | None:
     return getattr(obj, "__module__", None)
 
 
-def _get_signature(obj):
+def _get_signature(obj: object) -> str | None:
     if not inspect.isclass(obj) and not callable(obj):
         return None
 
     sig = ""
-
-    # TODO: Can we replace below with this?
-    # with contextlib.suppress(ValueError):
-    #     sig = str(inspect.signature(obj))
 
     try:
         sig = str(inspect.signature(obj))
@@ -202,13 +214,14 @@ def _get_signature(obj):
     return sig
 
 
-def _get_docstring(obj):
+def _get_docstring(obj: object) -> str | None:
     doc_string = inspect.getdoc(obj)
 
     # Sometimes an object has no docstring, but the object's type does.
     # If that's the case here, use the type's docstring.
     # For objects where type is "type" we do not print the docs (e.g. int).
     # We also do not print the docs for functions and methods if the docstring is empty.
+    # We treat CachedFunc objects in the same way as functions.
     if doc_string is None:
         obj_type = type(obj)
 
@@ -217,6 +230,7 @@ def _get_docstring(obj):
             and obj_type is not types.ModuleType
             and not inspect.isfunction(obj)
             and not inspect.ismethod(obj)
+            and obj_type is not CachedFunc
         ):
             doc_string = inspect.getdoc(obj_type)
 
@@ -226,7 +240,7 @@ def _get_docstring(obj):
     return None
 
 
-def _get_variable_name():
+def _get_variable_name() -> str | None:
     """Try to get the name of the variable in the current line, as set by the user.
 
     For example:
@@ -243,25 +257,25 @@ def _get_variable_name():
     return _get_variable_name_from_code_str(code)
 
 
-def _get_variable_name_from_code_str(code):
+def _get_variable_name_from_code_str(code: str) -> str | None:
     tree = ast.parse(code)
 
     # Example:
     #
-    # tree = Module(
-    #   body=[
-    #     Expr(
-    #       value=Call(
-    #         args=[
-    #           Name(id='the variable name')
-    #         ],
-    #         keywords=[
-    #           ???
-    #         ],
-    #       )
-    #     )
-    #   ]
-    # )
+    # > tree = Module(
+    # >   body=[
+    # >     Expr(
+    # >       value=Call(
+    # >         args=[
+    # >           Name(id='the variable name')
+    # >         ],
+    # >         keywords=[
+    # >           ???
+    # >         ],
+    # >       )
+    # >     )
+    # >   ]
+    # > )
 
     # Check if this is an magic call (i.e. it's not st.help or st.write).
     # If that's the case, just clean it up and return it.
@@ -270,10 +284,7 @@ def _get_variable_name_from_code_str(code):
     ):
         # A common pattern is to add "," at the end of a magic command to make it print.
         # This removes that final ",", so it looks nicer.
-        if code.endswith(","):
-            code = code[:-1]
-
-        return code
+        return code.removesuffix(",")
 
     arg_node = _get_stcommand_arg(tree)
 
@@ -283,7 +294,7 @@ def _get_variable_name_from_code_str(code):
 
     # If walrus, get name.
     # E.g. st.help(foo := 123) should give you "foo".
-    elif type(arg_node) is ast.NamedExpr:
+    if type(arg_node) is ast.NamedExpr:
         # This next "if" will always be true, but need to add this for the type-checking test to
         # pass.
         if type(arg_node.target) is ast.Name:
@@ -317,7 +328,7 @@ def _get_variable_name_from_code_str(code):
 _NEWLINES = re.compile(r"[\n\r]+")
 
 
-def _get_current_line_of_code_as_str():
+def _get_current_line_of_code_as_str() -> str | None:
     scriptrunner_frame = _get_scriptrunner_frame()
 
     if scriptrunner_frame is None:
@@ -340,7 +351,7 @@ def _get_current_line_of_code_as_str():
     return re.sub(_NEWLINES, "", code_as_string.strip())
 
 
-def _get_scriptrunner_frame():
+def _get_scriptrunner_frame() -> inspect.FrameInfo | None:
     prev_frame = None
     scriptrunner_frame = None
 
@@ -363,7 +374,7 @@ def _get_scriptrunner_frame():
     return scriptrunner_frame
 
 
-def _is_stcommand(tree, command_name):
+def _is_stcommand(tree: Any, command_name: str) -> bool:
     """Checks whether the AST in tree is a call for command_name."""
     root_node = tree.body[0].value
 
@@ -379,25 +390,25 @@ def _is_stcommand(tree, command_name):
     )
 
 
-def _get_stcommand_arg(tree):
+def _get_stcommand_arg(tree: ast.Module) -> ast.expr | None:
     """Gets the argument node for the st command in tree (AST)."""
 
-    root_node = tree.body[0].value
+    root_node = tree.body[0].value  # type: ignore
 
     if root_node.args:
-        return root_node.args[0]
+        return cast("ast.expr", root_node.args[0])
 
     return None
 
 
-def _get_type_as_str(obj):
+def _get_type_as_str(obj: object) -> str:
     if inspect.isclass(obj):
         return "class"
 
     return str(type(obj).__name__)
 
 
-def _get_first_line(text):
+def _get_first_line(text: str) -> str:
     if not text:
         return ""
 
@@ -405,7 +416,7 @@ def _get_first_line(text):
     return left
 
 
-def _get_weight(value):
+def _get_weight(value: Any) -> int:
     if inspect.ismodule(value):
         return 3
     if inspect.isclass(value):
@@ -415,7 +426,7 @@ def _get_weight(value):
     return 0
 
 
-def _get_value(obj, var_name):
+def _get_value(obj: object, var_name: str | None) -> str | None:
     obj_value = _get_human_readable_value(obj)
 
     if obj_value is not None:
@@ -437,10 +448,7 @@ def _get_value(obj, var_name):
     sig = _get_signature(name_obj) or ""
 
     if name:
-        if module:
-            obj_value = f"{module}.{name}{sig}"
-        else:
-            obj_value = f"{name}{sig}"
+        obj_value = f"{module}.{name}{sig}" if module else f"{name}{sig}"
 
     if obj_value == var_name:
         # No need to repeat the same info.
@@ -450,7 +458,7 @@ def _get_value(obj, var_name):
     return obj_value
 
 
-def _get_human_readable_value(value):
+def _get_human_readable_value(value: Any) -> str | None:
     if isinstance(value, Secrets):
         # Don't want to read secrets.toml because that will show a warning if there's no
         # secrets.toml file.
@@ -473,12 +481,12 @@ def _get_human_readable_value(value):
     return _shorten(value_str)
 
 
-def _shorten(s, length=300):
+def _shorten(s: str, length: int = 300) -> str:
     s = s.strip()
     return s[:length] + "..." if len(s) > length else s
 
 
-def _is_computed_property(obj, attr_name):
+def _is_computed_property(obj: object, attr_name: str) -> bool:
     obj_class = getattr(obj, "__class__", None)
 
     if not obj_class:
@@ -499,7 +507,7 @@ def _is_computed_property(obj, attr_name):
     return False
 
 
-def _get_members(obj):
+def _get_members(obj: object) -> list[MemberProto]:
     members_for_sorting = []
 
     for attr_name in dir(obj):

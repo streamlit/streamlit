@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
-LINK_BUTTON_ELEMENTS = 11
+LINK_BUTTON_ELEMENTS = 12
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -39,6 +39,7 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(
         link_elements.nth(10), name="st_link_button-tertiary_container_width"
     )
+    assert_snapshot(link_elements.nth(11), name="st_link_button-help")
 
 
 def test_link_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):

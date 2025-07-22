@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Callable, Final
 
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -59,7 +61,7 @@ class PollingPathWatcher:
         retains references to all active instances.)
         """
         # TODO(vdonato): Modernize this by switching to pathlib.
-        self._path = path
+        self._path = Path(path)  # Changed to pathlib.Path
         self._on_changed = on_changed
 
         self._glob_pattern = glob_pattern
@@ -68,10 +70,10 @@ class PollingPathWatcher:
         self._active = True
 
         self._modification_time = util.path_modification_time(
-            self._path, self._allow_nonexistent
+            str(self._path), self._allow_nonexistent
         )
         self._md5 = util.calc_md5_with_blocking_retries(
-            self._path,
+            str(self._path),
             glob_pattern=self._glob_pattern,
             allow_nonexistent=self._allow_nonexistent,
         )
@@ -81,7 +83,7 @@ class PollingPathWatcher:
         return repr_(self)
 
     def _schedule(self) -> None:
-        def task():
+        def task() -> None:
             time.sleep(_POLLING_PERIOD_SECS)
             self._check_if_path_changed()
 
@@ -92,30 +94,41 @@ class PollingPathWatcher:
             # Don't call self._schedule()
             return
 
-        modification_time = util.path_modification_time(
-            self._path, self._allow_nonexistent
-        )
-        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-        # modification_time is always 0.0 because of file system limitations.
-        if modification_time != 0.0 and modification_time <= self._modification_time:
-            self._schedule()
-            return
+        try:
+            modification_time = util.path_modification_time(
+                str(self._path), self._allow_nonexistent
+            )
+            # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+            # modification_time is always 0.0 because of file system limitations.
+            if (
+                modification_time != 0.0
+                and modification_time <= self._modification_time
+            ):
+                self._schedule()
+                return
 
-        self._modification_time = modification_time
+            self._modification_time = modification_time
 
-        md5 = util.calc_md5_with_blocking_retries(
-            self._path,
-            glob_pattern=self._glob_pattern,
-            allow_nonexistent=self._allow_nonexistent,
-        )
-        if md5 == self._md5:
-            self._schedule()
+            md5 = util.calc_md5_with_blocking_retries(
+                str(self._path),
+                glob_pattern=self._glob_pattern,
+                allow_nonexistent=self._allow_nonexistent,
+            )
+            if md5 == self._md5:
+                self._schedule()
+                return
+        except StreamlitMaxRetriesError as ex:
+            _LOGGER.debug(
+                "Ignoring file change. Failed to calculate MD5 for path %s",
+                self._path,
+                exc_info=ex,
+            )
             return
 
         self._md5 = md5
 
         _LOGGER.debug("Change detected: %s", self._path)
-        self._on_changed(self._path)
+        self._on_changed(str(self._path))
 
         self._schedule()
 

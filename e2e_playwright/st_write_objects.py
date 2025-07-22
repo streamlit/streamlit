@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ st.write(["foo", "bar"])
 st.write({"foo": "bar"})
 
 st.write(st.session_state)
-st.write(st.experimental_user)
+st.write(st.user)
 st.write(st.query_params)
 
 
@@ -70,7 +70,7 @@ st.subheader("st.write(reprhtmlable)")
 
 
 class ClassWithReprHtml:
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return "This is an <b>HTML tag</b>!"
 
 

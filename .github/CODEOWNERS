@@ -9,7 +9,7 @@ scripts/audit_frontend_licenses.py @streamlit/open-source-release-team
 
 # Ensure changes to our GitHub Actions and related files are reviewed by
 # someone closely familiar with how our CI works.
-.github/ @streamlit/open-source-release-team @mayagbarnes
+.github/ @streamlit/open-source-release-team
 
 # Changes to the following files/directories are likely to have backwards
 # compatibility implications for platforms that host Streamlit apps, so we need

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,6 +42,15 @@ with st.sidebar:
     st.write("Hello sidebar")
 
 st.file_uploader("Upload a file")
+
+st.color_picker("Pick a color")
+
+with st.expander("Show URL"):
+    st.write(f"Full url: {st.context.url}")
+
+st.write("Is app embedded: ", st.context.is_embedded)
+
+st.write(f"Theme type: {st.context.theme.type}")
 
 # Allows for testing of script re-run / stop behavior
 time.sleep(3)
