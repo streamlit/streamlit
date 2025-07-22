@@ -6,6 +6,7 @@ globs: e2e_playwright/**/*.py
 alwaysApply: false
 -->
 
+
 ## Streamlit E2E Tests
 
 We use playwright with pytest to e2e test Streamlit library. E2E tests verify the complete Streamlit system (frontend, backend, communication, state, visual appearance) from a user's perspective (black-box). They complement Python/JS unit tests, which are faster and focus on internal logic, input/output validation, and specific message sequences. Use E2E tests when testing behavior that requires the full stack or visual verification, especially for new elements or significant changes to existing ones.
@@ -20,6 +21,7 @@ We use playwright with pytest to e2e test Streamlit library. E2E tests verify th
 - Tests can use screenshot comparisons for visual verification
 - Screenshots are stored in `e2e_playwright/__snapshots__/<os>/`
 - Other tests results are stored in `e2e_playwright/test_results/`
+
 
 ### Key Fixtures and Utilities
 
@@ -52,14 +54,15 @@ When adding or modifying tests for an element, ensure the following are covered:
 - **Visuals:** Snapshot tests for both normal and `disabled` states.
 - **Interactivity:** Test user interactions and verify the resulting app state or output (e.g., checking text written via `st.write`, potentially using helpers like `expect_markdown` from `shared/app_utils.py`).
 - **Common Contexts:** Verify behavior within:
-  - A `@st.fragment`.
-  - An `st.form`.
+    - A `@st.fragment`.
+    - An `st.form`.
 - **Core Behavior:**
-  - State persistence (widget value is retained) if the element is temporarily unmounted and remounted.
-  - The element cannot be interacted with when `disabled=True`.
-  - If the element uses the `help` parameter, verify the tooltip appears correctly on hover.
-  - If the element uses the `key` parameter, verify a corresponding CSS class or attribute is set.
+    - State persistence (widget value is retained) if the element is temporarily unmounted and remounted.
+    - The element cannot be interacted with when `disabled=True`.
+    - If the element uses the `help` parameter, verify the tooltip appears correctly on hover.
+    - If the element uses the `key` parameter, verify a corresponding CSS class or attribute is set.
 - **Custom Config:** Use module-scoped fixtures with `@pytest.mark.early` for tests requiring specific Streamlit configuration options.
+
 
 ### Running tests
 
@@ -75,6 +78,7 @@ description: List of all available make commands
 globs:
 alwaysApply: false
 -->
+
 
 ## Available `make` commands
 
@@ -126,6 +130,7 @@ description:
 globs:
 alwaysApply: true
 -->
+
 
 ## Streamlit Repo Overview
 
