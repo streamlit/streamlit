@@ -158,6 +158,14 @@ class MetricMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
+        sparkline : Iterable or None
+            A sequence of numeric values to display as a sparkline. If this is
+            ``None`` (default), no sparkline is displayed.
+            The sequence can be a ``list``, ``set``, or anything supported by
+            ``st.dataframe``. If the sequence is dataframe-like, the first
+            column will be used. Each value will be cast to ``float`` internally
+            by default.
+
         Examples
         --------
         **Example 1: Show a metric**
@@ -242,17 +250,17 @@ class MetricMixin:
 
         if sparkline is not None:
             prepared_sparkline: list[float] = []
-            for value in convert_anything_to_list(sparkline):
+            for val in convert_anything_to_list(sparkline):
                 try:
-                    prepared_sparkline.append(float(value))
-                except Exception as ex:
+                    prepared_sparkline.append(float(val))
+                except Exception as ex:  # noqa: PERF203
                     raise StreamlitAPIException(
                         "Only numeric values are supported for sparkline sequence. The "
-                        f"value '{value!s}' is of type {type(value)!s} and  "
+                        f"value '{val!s}' is of type {type(val)!s} and  "
                         "cannot be converted to float."
                     ) from ex
-                if len(prepared_sparkline) > 0:
-                    metric_proto.sparkline.extend(prepared_sparkline)
+            if len(prepared_sparkline) > 0:
+                metric_proto.sparkline.extend(prepared_sparkline)
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
