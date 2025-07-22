@@ -50,31 +50,19 @@ def test_expander_displays_correctly(
 
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
-    main_container = app.get_by_test_id("stMain")
-    main_expanders = main_container.get_by_test_id("stExpander")
-    expect(main_expanders).to_have_count(
-        NUMBER_OF_EXPANDERS - 1
-    )  # -1 to subtract sidebar
 
-    # Test expanded expander - starts expanded
+    # Check that content is initially visible (starts expanded)
     expanded_expander = get_expander(app, "Normal expanded")
-    expander_header = expanded_expander.locator(EXPANDER_HEADER_IDENTIFIER)
-    expect(expander_header).to_be_visible()
-    toggle = expander_header.locator("svg").first
-    expect(toggle).to_be_visible()
-    expander_header.click()
-    toggle = expander_header.locator("svg").first
-    expect(toggle).to_be_visible()
+    expect(expanded_expander.get_by_text("I can collapse")).to_be_visible()
 
-    # Test collapsed expander - starts collapsed
-    collapsed_expander = get_expander(app, "Normal collapsed")
-    expander_header = collapsed_expander.locator(EXPANDER_HEADER_IDENTIFIER)
-    expect(expander_header).to_be_visible()
-    toggle = expander_header.locator("svg").first
-    expect(toggle).to_be_visible()
+    # Click header to close it and check that content is no longer visible
+    expander_header = expanded_expander.locator(EXPANDER_HEADER_IDENTIFIER)
     expander_header.click()
-    toggle = expander_header.locator("svg").first
-    expect(toggle).to_be_visible()
+    expect(expanded_expander.get_by_text("I can collapse")).not_to_be_visible()
+
+    # Click header again to expand it and check that content is visible again
+    expander_header.click()
+    expect(expanded_expander.get_by_text("I can collapse")).to_be_visible()
 
 
 def test_empty_expander_rendered(app: Page, assert_snapshot: ImageCompareFunction):
