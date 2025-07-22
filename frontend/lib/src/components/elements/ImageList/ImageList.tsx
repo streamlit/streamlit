@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { CSSProperties, memo, ReactElement } from "react"
+import React, { CSSProperties, memo, ReactElement, useContext } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -31,6 +31,7 @@ import Toolbar, {
   StyledToolbarElementContainer,
 } from "~lib/components/shared/Toolbar"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { LibContext } from "~lib/components/core/LibContext"
 
 import {
   StyledCaption,
@@ -75,6 +76,7 @@ function ImageList({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
+  const { libConfig } = useContext(LibContext)
 
   // The width of the element is the width of the container, not necessarily the image.
   const elementWidth = width || 0
@@ -163,6 +165,7 @@ function ImageList({
                 src={endpoints.buildMediaURL(image.url)}
                 alt={idx.toString()}
                 onError={handleImageError}
+                crossOrigin={libConfig.resourceCrossOriginMode}
               />
               {image.caption && (
                 <StyledCaption data-testid="stImageCaption" style={imgStyle}>

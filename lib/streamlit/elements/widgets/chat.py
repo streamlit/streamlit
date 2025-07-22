@@ -467,6 +467,12 @@ class ChatMixin:
               example, to only accept JPG/JPEG and PNG files, use
               ``["jpg", "jpeg", "png"]``.
 
+            .. note::
+                This is a best-effort check, but doesn't provide a
+                security guarantee against users uploading files of other types
+                or type extensions. The correct handling of uploaded files is
+                part of the app developer's responsibility.
+
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
@@ -705,11 +711,7 @@ class ChatMixin:
             if key is not None and key in session_state:
                 # Reset the session state value to None to reflect the actual state
                 # of the widget. Which is None since the value hasn't been submitted yet.
-
-                # We need to first delete the value and then set it to `None`
-                # to not trigger the "state value cannot be modified" error.
-                del session_state[key]
-                session_state[key] = None
+                session_state.reset_state_value(key, None)
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)

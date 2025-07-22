@@ -144,11 +144,15 @@ class FormMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
-        height : "content" or int
+        height : "content", "stretch", or int
             The height of the form container. This can be one of the following:
 
             - ``"content"`` (default): The height of the container matches the
               height of its content.
+            - ``"stretch"``: The height of the container matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the container is not in a parent container, the height
+              of the container matches the height of its content.
             - An integer specifying the height in pixels: The container has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.

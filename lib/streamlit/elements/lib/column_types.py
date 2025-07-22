@@ -178,7 +178,7 @@ class ColumnConfig(TypedDict, total=False):
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -283,7 +283,7 @@ def Column(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -388,7 +388,7 @@ def NumberColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -464,6 +464,10 @@ def NumberColumn(
         have unrestricted precision. In this case, some floats may display like
         integers. Setting ``step`` for float columns will ensure a consistent
         number of digits after the decimal are displayed.
+
+        If ``format`` is a predefined format like ``"dollar"``, ``step``
+        overrides the display precision. If ``format`` is a printf-style format
+        string, ``step`` will not change the display precision.
 
     Examples
     --------
@@ -547,7 +551,7 @@ def TextColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -670,7 +674,7 @@ def LinkColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -720,7 +724,7 @@ def LinkColumn(
 
         - ``None`` (default) to display the URL itself.
         - A string that is displayed in every cell, e.g. ``"Open link"``.
-        - A material icon displayed in every cell, e.g. ``":material/open_in_new:"``
+        - A Material icon that is displayed in every cell, e.g. ``":material/open_in_new:"``.
         - A JS-flavored regular expression (detected by usage of parentheses)
           to extract a part of the URL via a capture group. For example, use
           ``"https://(.*?)\.example\.com"`` to extract the display text
@@ -829,7 +833,7 @@ def CheckboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -938,7 +942,7 @@ def SelectboxColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1062,7 +1066,7 @@ def BarChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1159,7 +1163,7 @@ def LineChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1257,7 +1261,7 @@ def AreaChartColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1361,7 +1365,7 @@ def ImageColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1444,7 +1448,7 @@ def ListColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1538,7 +1542,7 @@ def DatetimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1701,7 +1705,7 @@ def TimeColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -1855,7 +1859,7 @@ def DateColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -2007,7 +2011,7 @@ def ProgressColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If
@@ -2137,7 +2141,7 @@ def JsonColumn(
         - ``"small"``: 75px wide
         - ``"medium"``: 200px wide
         - ``"large"``: 400px wide
-        - An integer specifying the width in pixels.
+        - An integer specifying the width in pixels
 
     help: str or None
         A tooltip that gets displayed when hovering over the column label. If

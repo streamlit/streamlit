@@ -26,16 +26,16 @@ if ctx is None:
     sys.exit(0)
 
 
-running_status = st.status("Running status", expanded=True)
+running_status = st.status("Running status", expanded=False)
 running_status.write("Doing some work...")
 
-with st.status("Completed status", expanded=True, state="complete"):
+with st.status("Completed status", expanded=False, state="complete"):
     st.write("Hello world")
 
-with st.status("Error status", expanded=True, state="error"):
+with st.status("Error status", expanded=False, state="error"):
     st.error("Oh no, something went wrong!")
 
-with st.status("Collapsed", state="complete"):
+with st.status("Expanded", state="complete", expanded=True):
     st.write("Hello world")
 
 with st.status("About to change label...", state="complete") as status:

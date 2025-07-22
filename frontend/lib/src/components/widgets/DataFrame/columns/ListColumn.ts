@@ -42,6 +42,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "list",
     sortMode: "default",
+    typeIcon: ":material/list:",
     isEditable: false, // List column is always readonly
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {

@@ -32,6 +32,10 @@ if st.button("Set Value"):
     st.session_state["chat_input_3"] = "Hello, world!"
 
 if runtime.exists():
+    st.write(
+        "Chat input 3 - session state value before execution:",
+        st.session_state.get("chat_input_3"),
+    )
 
     def on_submit():
         st.markdown("chat input submitted")

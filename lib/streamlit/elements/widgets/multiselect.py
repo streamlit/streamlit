@@ -310,8 +310,8 @@ class MultiSelectMixin:
 
         placeholder: str or  None
             A string to display when no options are selected.
-            If this is ``None`` (default), the widget displays appropriate
-            default placeholder text based on the widget's configuration:
+            If this is ``None`` (default), the widget displays placeholder text
+            based on the widget's configuration:
 
             - "Choose options" is displayed when options are available and
               ``accept_new_options=False``.
@@ -320,8 +320,8 @@ class MultiSelectMixin:
             - "Add options" is displayed when no options are available and
               ``accept_new_options=True``.
             - "No options to select" is displayed when no options are available
-              and ``accept_new_options=False`` (the widget is also disabled in
-              this case).
+              and ``accept_new_options=False``. The widget is also disabled in
+              this case.
 
         disabled: bool
             An optional boolean that disables the multiselect widget if set
