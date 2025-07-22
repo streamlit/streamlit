@@ -779,7 +779,7 @@ class LayoutsMixin:
                 ``True``, the width of the button matches its parent container.
                 In both cases, if the contents of the button are wider than the
                 parent container, the contents will line wrap.
-                The popover containter's minimimun width matches the width of its
+                The popover container's minimum width matches the width of its
                 button. The popover container may be wider than its button to fit
                 the container's contents.
 
