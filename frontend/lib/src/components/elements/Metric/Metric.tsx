@@ -32,8 +32,10 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
-import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart"
-import { StyledVegaLiteChartTooltips } from "src/components/elements/ArrowVegaLiteChart/styled-components"
+import {
+  applyStreamlitTheme,
+  StyledVegaLiteChartTooltips,
+} from "~lib/components/elements/ArrowVegaLiteChart"
 
 import {
   getMetricColor,
