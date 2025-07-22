@@ -132,7 +132,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             encoding: {
               x: {
                 field: "x",
-                type: "quantitative" as const,
+                type: "quantitative",
                 axis: null,
                 scale: {
                   zero: false,
@@ -141,7 +141,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
               },
               y: {
                 field: "y",
-                type: "quantitative" as const,
+                type: "quantitative",
                 axis: null,
                 scale: {
                   zero: false,
@@ -227,7 +227,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             encoding: {
               x: {
                 field: "x",
-                type: "quantitative" as const,
+                type: "quantitative",
                 axis: null,
                 scale: {
                   zero: false,
