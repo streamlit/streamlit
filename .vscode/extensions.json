@@ -9,7 +9,6 @@
     "charliermarsh.ruff",
     "EditorConfig.EditorConfig",
     "vitest.explorer",
-    "tamasfe.even-better-toml",
-    "astral-sh.ty"
+    "tamasfe.even-better-toml"
   ]
 }
