@@ -94,7 +94,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       const spec: TopLevelSpec = {
         $schema: "https://vega.github.io/schema/vega-lite/v5.json",
         width: sparklineWidth,
-        height: Math.round(convertRemToPx("3.25rem")),
+        height: Math.round(convertRemToPx("3rem")),
         data: {
           values: sparkline.map((value, index) => ({ x: index, y: value })),
         },
