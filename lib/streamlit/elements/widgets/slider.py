@@ -724,7 +724,7 @@ class SliderMixin:
             )
 
         # Simplify future logic by always making value a list
-        prepared_value: Sequence[SliderScalar] = [value] if single_value else value  # type: ignore[invalid-assignment]
+        prepared_value: Sequence[SliderScalar] = [value] if single_value else value  # ty: ignore[invalid-assignment]
 
         def value_to_generic_type(v: Any) -> SliderProto.DataType.ValueType:
             if isinstance(v, Integral):
@@ -857,7 +857,7 @@ class SliderMixin:
             max_value = max(prepared_value[0], max_value)
         elif len(prepared_value) == 2:
             start, end = prepared_value
-            if start > end:  # type: ignore[unsupported-operator]]
+            if start > end:  # type: ignore[operator]
                 # Swap start and end, since they seem reversed
                 start, end = end, start
                 value = start, end
