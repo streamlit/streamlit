@@ -209,7 +209,6 @@ export interface StyledFlexContainerBlockProps {
   $wrap?: boolean
   height?: React.CSSProperties["height"]
   border: boolean
-  overflow?: React.CSSProperties["overflow"]
   align?: BlockProto.FlexContainer.Align | null
   justify?: BlockProto.FlexContainer.Justify | null
 }
@@ -240,7 +239,6 @@ export const StyledFlexContainerBlock =
         height: height ?? "auto",
         minWidth: "5%",
         overflowY: isInteger(height) ? "auto" : "visible",
-        overflowX: "auto",
         flexDirection: direction,
         flex,
         alignItems: getAlignItems(align),
