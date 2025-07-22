@@ -29,6 +29,11 @@ export const StyledElementContainerLayoutWrapper: FC<
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
+  const isContentWidthDataframe =
+    node.element.type === "arrowDataFrame" &&
+    !node.element["arrowDataFrame"]?.width &&
+    !node.element["arrowDataFrame"]?.useContainerWidth
+
   const styleOverrides = useMemo(() => {
     if (node.element.type === "imgs") {
       // The st.image element is potentially a list of images, so we always want
@@ -70,16 +75,12 @@ export const StyledElementContainerLayoutWrapper: FC<
         width: "100%",
       }
     } else if (node.element.type === "arrowDataFrame") {
-      let styles: React.CSSProperties = {
+      const styles: React.CSSProperties = {
         overflow: "visible",
       }
       // TODO (lawilby): This is just temporary until the width changes are
       // implemented for dataframe.
-      if (
-        // This corresponds to "content" width type.
-        !node.element["arrowDataFrame"]?.width &&
-        !node.element["arrowDataFrame"]?.useContainerWidth
-      ) {
+      if (isContentWidthDataframe) {
         styles.width = "fit-content"
         styles.flex = "0 0 auto"
       }
@@ -87,7 +88,11 @@ export const StyledElementContainerLayoutWrapper: FC<
     }
 
     return {}
-  }, [node.element.type, node.element.heightConfig?.useStretch])
+  }, [
+    node.element.type,
+    node.element.heightConfig?.useStretch,
+    isContentWidthDataframe,
+  ])
 
   const styles = useLayoutStyles({
     element: node.element,

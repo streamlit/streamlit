@@ -18,12 +18,13 @@ import React, { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
+import { isInteger } from "lodash"
+
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
 import { EmotionTheme, STALE_STYLES } from "~lib/theme"
 import { assertNever } from "~lib/util/assertNever"
-import { isInteger } from "lodash"
 
 function translateGapWidth(
   gap: streamlit.GapSize | undefined,

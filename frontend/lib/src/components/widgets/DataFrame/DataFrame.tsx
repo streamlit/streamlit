@@ -599,7 +599,6 @@ function DataFrame({
     minHeight,
     maxHeight,
     minWidth,
-    maxWidth,
     rowHeight,
     resizableSize,
     setResizableSize,
