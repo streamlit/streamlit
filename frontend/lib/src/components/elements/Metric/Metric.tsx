@@ -62,12 +62,16 @@ function getSparklineSpec(
   const randomId = Math.random().toString(36).slice(2, 10)
   const baseName = `sparkline_${randomId}`
 
+  // Special handling for single value - duplicate it to create a line
+  const sparklineData =
+    sparkline.length === 1 ? [sparkline[0], sparkline[0]] : sparkline
+
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: availableWidth,
     height: Math.round(convertRemToPx("3rem")),
     data: {
-      values: sparkline.map((value, index) => ({ x: index, y: value })),
+      values: sparklineData.map((value, index) => ({ x: index, y: value })),
     },
     layer: [
       {
