@@ -24,7 +24,9 @@ col1, col2, col3 = st.columns(3)
 # Create random sparkline data:
 
 
-def generate_sparkline_data(length=7, drift=0.05, volatility=10):
+def generate_sparkline_data(
+    length: int = 10, drift: float = 0.1, volatility: float = 10
+) -> list[float]:
     random_changes = np.random.normal(loc=drift, scale=volatility, size=length)
     initial_value = np.random.normal(loc=50, scale=5)
     data = initial_value + np.cumsum(random_changes)
@@ -32,19 +34,18 @@ def generate_sparkline_data(length=7, drift=0.05, volatility=10):
 
 
 with col1:
-    st.container(border=True).metric(
-        "User", 8231, 123, sparkline=generate_sparkline_data()
+    st.metric(
+        "User",
+        8231,
+        123,
+        sparkline=generate_sparkline_data(),
+        border=True,
+        delta_color="off",
     )
-    st.container(border=True).metric(
-        "Bugs", 200, -99, sparkline=generate_sparkline_data()
-    )
+    st.metric("Bugs", 200, -99, sparkline=generate_sparkline_data(), border=True)
 with col2:
-    st.container(border=True).metric(
-        "Views", 19321, 1053, sparkline=generate_sparkline_data()
-    )
-    st.container(border=True).metric(
-        "Patches", 7, 0, sparkline=generate_sparkline_data()
-    )
+    st.metric("Views", 19321, 1053, sparkline=generate_sparkline_data(), border=True)
+    st.metric("Patches", 7, 0, sparkline=generate_sparkline_data(), border=True)
 with col3:
     st.container(border=True).metric(
         "Apps", 452, 0, sparkline=generate_sparkline_data()

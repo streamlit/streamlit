@@ -16,15 +16,14 @@
 
 import React, { memo, ReactElement, useEffect, useRef } from "react"
 
-import { useTheme } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 import { expressionInterpreter } from "vega-interpreter"
 import embed from "vega-embed"
+import { Global } from "@emotion/react"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
-import { applyStreamlitTheme } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
-import { EmotionTheme } from "@streamlit/lib"
+import { useEmotionTheme } from "@streamlit/lib"
 
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
@@ -32,22 +31,29 @@ import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart"
+import { StyledVegaLiteChartTooltips } from "src/components/elements/ArrowVegaLiteChart/styled-components"
 
 import {
+  getMetricColor,
   StyledMetricContainer,
+  StyledMetricContent,
   StyledMetricDeltaText,
   StyledMetricLabelText,
+  StyledMetricSparkline,
   StyledMetricValueText,
   StyledTruncateText,
 } from "./styled-components"
 
 export interface MetricProps {
   element: MetricProto
-  width: number
 }
 
-function Metric({ element, width }: Readonly<MetricProps>): ReactElement {
-  const theme: EmotionTheme = useTheme()
+function Metric({ element }: Readonly<MetricProps>): ReactElement {
+  const theme = useEmotionTheme()
+  const [sparklineWidth, sparklineContainerRef] = useCalculatedWidth()
+
   const { MetricDirection } = MetricProto
   const {
     body,
@@ -81,47 +87,57 @@ function Metric({ element, width }: Readonly<MetricProps>): ReactElement {
     if (sparkline && sparklineRef.current) {
       const spec = {
         $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-        width,
-        height: 60,
+        width: sparklineWidth,
+        // width: ,
+        // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+        height: 52,
         data: {
           values: sparkline.map((value, index) => ({ x: index, y: value })),
         },
-        mark: "line",
+        mark: "line" as const,
         encoding: {
           x: {
             field: "x",
-            type: "quantitative",
+            type: "quantitative" as const,
             axis: null,
             scale: { zero: false, nice: false },
           },
           y: {
             field: "y",
-            type: "quantitative",
+            type: "quantitative" as const,
             axis: null,
             scale: { zero: false, nice: false },
           },
         },
+        // autosize: {
+        //   type: "fit",
+        //   contains: "padding",
+        // },
         config: {
           view: { stroke: null },
           padding: { left: 0, right: 0, top: 0, bottom: 0 },
+          mark: {
+            tooltip: { content: "encoding" },
+            color: getMetricColor(theme, color),
+          },
         },
       }
-      spec.config = applyStreamlitTheme(spec.config as any, theme)
+      spec.config = applyStreamlitTheme(spec.config, theme)
 
-      embed(sparklineRef.current, spec as any, {
+      void embed(sparklineRef.current, spec, {
         actions: false,
         renderer: "svg",
         ast: true,
         expr: expressionInterpreter,
         tooltip: {
           theme: "custom",
-          formatTooltip: (value: any) => {
+          formatTooltip: (value: { y: number }) => {
             return `${value.y}`
           },
         },
       })
     }
-  }, [sparkline, color, theme, width])
+  }, [sparkline, color, theme, sparklineWidth, sparklineRef.current])
 
   return (
     <StyledMetricContainer
@@ -129,45 +145,53 @@ function Metric({ element, width }: Readonly<MetricProps>): ReactElement {
       data-testid="stMetric"
       showBorder={showBorder}
     >
-      <StyledMetricLabelText
-        data-testid="stMetricLabel"
-        visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
-      >
-        <StyledTruncateText>
-          <StreamlitMarkdown source={label} allowHTML={false} isLabel />
-        </StyledTruncateText>
-        {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelpInline>
-        )}
-      </StyledMetricLabelText>
-      <StyledMetricValueText data-testid="stMetricValue">
-        <StyledTruncateText> {body} </StyledTruncateText>
-      </StyledMetricValueText>
-      {deltaExists && (
-        <StyledMetricDeltaText data-testid="stMetricDelta" metricColor={color}>
-          {metricDirection && (
-            <Icon
-              testid={
-                metricDirection === ArrowUpward
-                  ? "stMetricDeltaIcon-Up"
-                  : "stMetricDeltaIcon-Down"
-              }
-              content={metricDirection}
-              size="md"
-              margin={arrowMargin}
-            />
+      <StyledMetricContent showBorder={showBorder}>
+        <StyledMetricLabelText
+          data-testid="stMetricLabel"
+          visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
+        >
+          <StyledTruncateText>
+            <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+          </StyledTruncateText>
+          {help && (
+            <StyledWidgetLabelHelpInline>
+              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelpInline>
           )}
-          <StyledTruncateText> {delta} </StyledTruncateText>
-        </StyledMetricDeltaText>
-      )}
+        </StyledMetricLabelText>
+        <StyledMetricValueText data-testid="stMetricValue">
+          <StyledTruncateText> {body} </StyledTruncateText>
+        </StyledMetricValueText>
+        {deltaExists && (
+          <StyledMetricDeltaText
+            data-testid="stMetricDelta"
+            metricColor={color}
+          >
+            {metricDirection && (
+              <Icon
+                testid={
+                  metricDirection === ArrowUpward
+                    ? "stMetricDeltaIcon-Up"
+                    : "stMetricDeltaIcon-Down"
+                }
+                content={metricDirection}
+                size="md"
+                margin={arrowMargin}
+              />
+            )}
+            <StyledTruncateText> {delta} </StyledTruncateText>
+          </StyledMetricDeltaText>
+        )}
+      </StyledMetricContent>
       {sparkline && sparkline.length > 0 && (
-        <div
-          ref={sparklineRef}
-          data-testid="stMetricSparkline"
-          style={{ marginTop: "0.5rem" }}
-        />
+        <div ref={sparklineContainerRef}>
+          <Global styles={StyledVegaLiteChartTooltips} />
+          <StyledMetricSparkline
+            ref={sparklineRef}
+            data-testid="stMetricSparkline"
+            showBorder={showBorder}
+          />
+        </div>
       )}
     </StyledMetricContainer>
   )
