@@ -24,7 +24,7 @@ import { Global } from "@emotion/react"
 import { TopLevelSpec } from "vega-lite"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
-import { convertRemToPx, useEmotionTheme } from "@streamlit/lib"
+import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
 
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
@@ -53,8 +53,181 @@ export interface MetricProps {
   element: MetricProto
 }
 
+function getSparklineSpec(
+  sparkline: number[],
+  availableWidth: number,
+  theme: EmotionTheme,
+  metricColor: MetricProto.MetricColor
+): TopLevelSpec {
+  const randomId = Math.random().toString(36).slice(2, 10)
+  const baseName = `sparkline_${randomId}`
+
+  const spec: TopLevelSpec = {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: availableWidth,
+    height: Math.round(convertRemToPx("3rem")),
+    data: {
+      values: sparkline.map((value, index) => ({ x: index, y: value })),
+    },
+    layer: [
+      {
+        name: `${baseName}_line`,
+        mark: "line",
+        encoding: {
+          x: {
+            field: "x",
+            type: "quantitative",
+            axis: null,
+            scale: {
+              zero: false,
+              nice: false,
+            },
+          },
+          y: {
+            field: "y",
+            type: "quantitative",
+            axis: null,
+            scale: {
+              zero: false,
+              nice: false,
+            },
+          },
+        },
+      },
+      {
+        name: `${baseName}_points`,
+        mark: {
+          type: "point",
+          opacity: 0,
+        },
+        encoding: {
+          x: {
+            field: "x",
+            type: "quantitative",
+            axis: null,
+            scale: {
+              zero: false,
+              nice: false,
+            },
+          },
+          y: {
+            field: "y",
+            type: "quantitative",
+            axis: null,
+            scale: {
+              zero: false,
+              nice: false,
+            },
+          },
+        },
+        params: [
+          {
+            name: `${baseName}_hover_selection`,
+            select: {
+              type: "point",
+              encodings: ["x"],
+              nearest: true,
+              on: "mousemove",
+              clear: "mouseout",
+            },
+          },
+        ],
+      },
+      {
+        name: `${baseName}_highlighted_points`,
+        transform: [
+          {
+            filter: {
+              param: `${baseName}_hover_selection`,
+              empty: false,
+            },
+          },
+          {
+            window: [
+              {
+                op: "row_number",
+                as: "hover_selection_rank",
+              },
+            ],
+          },
+          {
+            filter: "datum.hover_selection_rank === 1",
+          },
+        ],
+        mark: {
+          type: "point",
+          filled: true,
+          size: 65,
+          tooltip: true,
+        },
+        encoding: {
+          x: {
+            field: "x",
+            type: "quantitative",
+            axis: null,
+            scale: {
+              zero: false,
+              nice: false,
+            },
+          },
+          y: {
+            field: "y",
+            type: "quantitative",
+            axis: null,
+            scale: {
+              zero: false,
+              nice: false,
+            },
+          },
+        },
+      },
+      {
+        name: `${baseName}_rule`,
+        transform: [
+          {
+            filter: {
+              param: `${baseName}_hover_selection`,
+              empty: false,
+            },
+          },
+        ],
+        mark: {
+          type: "rule",
+          strokeDash: [4, 4],
+        },
+        encoding: {
+          x: {
+            field: "x",
+            type: "quantitative",
+            axis: null,
+            scale: {
+              zero: false,
+              nice: false,
+            },
+          },
+        },
+      },
+    ],
+    config: {
+      view: { stroke: null },
+      padding: { left: 0, right: 0, top: 2, bottom: 2 },
+      mark: {
+        tooltip: { content: "encoding" },
+        color: getMetricColor(theme, metricColor),
+      },
+      rule: {
+        stroke: theme.colors.borderColorLight,
+      },
+    },
+  }
+
+  spec.config = applyStreamlitTheme(spec.config, theme)
+  return spec
+}
+
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
+  const sparklineRef = useRef<HTMLDivElement>(null)
   const [sparklineWidth, sparklineContainerRef] = useCalculatedWidth()
 
   const { MetricDirection } = MetricProto
@@ -84,173 +257,9 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const arrowMargin = "0 threeXS 0 0"
   const deltaExists = delta !== ""
 
-  const sparklineRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     if (sparkline && sparklineRef.current) {
-      const randomId = Math.random().toString(36).slice(2, 10)
-      const baseName = `sparkline_${randomId}`
-
-      const spec: TopLevelSpec = {
-        $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-        width: sparklineWidth,
-        height: Math.round(convertRemToPx("3rem")),
-        data: {
-          values: sparkline.map((value, index) => ({ x: index, y: value })),
-        },
-        layer: [
-          {
-            name: `${baseName}_line`,
-            mark: "line",
-            encoding: {
-              x: {
-                field: "x",
-                type: "quantitative",
-                axis: null,
-                scale: {
-                  zero: false,
-                  nice: false,
-                },
-              },
-              y: {
-                field: "y",
-                type: "quantitative",
-                axis: null,
-                scale: {
-                  zero: false,
-                  nice: false,
-                },
-              },
-            },
-          },
-          {
-            name: `${baseName}_points`,
-            mark: {
-              type: "point",
-              opacity: 0,
-            },
-            encoding: {
-              x: {
-                field: "x",
-                type: "quantitative",
-                axis: null,
-                scale: {
-                  zero: false,
-                  nice: false,
-                },
-              },
-              y: {
-                field: "y",
-                type: "quantitative",
-                axis: null,
-                scale: {
-                  zero: false,
-                  nice: false,
-                },
-              },
-            },
-            params: [
-              {
-                name: `${baseName}_hover_selection`,
-                select: {
-                  type: "point",
-                  encodings: ["x"],
-                  nearest: true,
-                  on: "mousemove",
-                  clear: "mouseout",
-                },
-              },
-            ],
-          },
-          {
-            name: `${baseName}_highlighted_points`,
-            transform: [
-              {
-                filter: {
-                  param: `${baseName}_hover_selection`,
-                  empty: false,
-                },
-              },
-              {
-                window: [
-                  {
-                    op: "row_number",
-                    as: "hover_selection_rank",
-                  },
-                ],
-              },
-              {
-                filter: "datum.hover_selection_rank === 1",
-              },
-            ],
-            mark: {
-              type: "point",
-              filled: true,
-              size: 65,
-              tooltip: true,
-            },
-            encoding: {
-              x: {
-                field: "x",
-                type: "quantitative",
-                axis: null,
-                scale: {
-                  zero: false,
-                  nice: false,
-                },
-              },
-              y: {
-                field: "y",
-                type: "quantitative",
-                axis: null,
-                scale: {
-                  zero: false,
-                  nice: false,
-                },
-              },
-            },
-          },
-          {
-            name: `${baseName}_rule`,
-            transform: [
-              {
-                filter: {
-                  param: `${baseName}_hover_selection`,
-                  empty: false,
-                },
-              },
-            ],
-            mark: {
-              type: "rule",
-              strokeDash: [4, 4],
-            },
-            encoding: {
-              x: {
-                field: "x",
-                type: "quantitative",
-                axis: null,
-                scale: {
-                  zero: false,
-                  nice: false,
-                },
-              },
-            },
-          },
-        ],
-        config: {
-          view: { stroke: null },
-          padding: { left: 0, right: 0, top: 2, bottom: 2 },
-          mark: {
-            tooltip: { content: "encoding" },
-            color: getMetricColor(theme, color),
-          },
-          rule: {
-            stroke: theme.colors.borderColorLight,
-          },
-        },
-      }
-
-      spec.config = applyStreamlitTheme(spec.config, theme)
+      const spec = getSparklineSpec(sparkline, sparklineWidth, theme, color)
 
       void embed(sparklineRef.current, spec, {
         actions: false,
