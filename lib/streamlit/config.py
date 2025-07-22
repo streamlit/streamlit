@@ -36,7 +36,7 @@ from streamlit.errors import StreamlitAPIException
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: dict[str, str] = OrderedDict()  # ty: ignore[invalid-argument-type]
+_section_descriptions: OrderedDict[str, str] = OrderedDict()
 
 # Ensures that we don't try to get or set config options when config.toml files
 # change so are re-parsed.
