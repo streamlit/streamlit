@@ -43,7 +43,7 @@ if st.button("Print State Value"):
     st.text(st.session_state.get("number"))
 
 expander_long = st.expander(
-    "Long expanded label: "
+    "Long label expanded: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam.",
@@ -58,7 +58,7 @@ expander_long.write(
 )
 
 collapsed_long = st.expander(
-    "Long collapsed label: "
+    "Long label collapsed: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam."
