@@ -8,5 +8,5 @@ invalid-type-form = "ignore"
 root = ["./lib/streamlit"]
 
 [src]
-include = ["lib/streamlit", "e2e_playwright"]
+include = ["lib/streamlit", "e2e_playwright", "scripts"]
 exclude = ["e2e_playwright/compilation_error_dialog.py"]
