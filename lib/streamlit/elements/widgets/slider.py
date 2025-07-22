@@ -931,6 +931,9 @@ class SliderMixin:
             max_value = _datetime_to_micros(max_value)
             step = _delta_to_micros(step)
 
+        # At this point, prepared_value is expected to be a list of floats:
+        prepared_value = cast("list[float]", prepared_value)
+
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
         # decimal. As a possible improvement we could make this function accept
@@ -957,7 +960,7 @@ class SliderMixin:
             slider_proto.help = dedent(help)
 
         serde = SliderSerde(
-            cast("list[float]", prepared_value),
+            prepared_value,
             data_type,
             single_value,
             orig_tz,
