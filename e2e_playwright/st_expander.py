@@ -43,7 +43,7 @@ if st.button("Print State Value"):
     st.text(st.session_state.get("number"))
 
 expander_long = st.expander(
-    "Long label expanded: "
+    "Long expanded: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam.",
@@ -58,7 +58,7 @@ expander_long.write(
 )
 
 collapsed_long = st.expander(
-    "Long label collapsed: "
+    "Long collapsed: "
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam."
@@ -74,7 +74,7 @@ expander_emoji_icon = st.expander("Emoji icon", icon="🎈").write(
 )
 
 st.expander(
-    "Markdown label -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
+    "Markdown -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 ).write("Content")
 
 
