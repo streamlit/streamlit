@@ -57,7 +57,6 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
     case "uploading":
       return (
         <StyledSpinnerIcon
-          usingCustomTheme={false}
           data-testid="stChatInputFileIconSpinner"
           size="lg"
           margin="0"
