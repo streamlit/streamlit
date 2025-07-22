@@ -85,6 +85,14 @@ export const StyledElementContainerLayoutWrapper: FC<
         styles.flex = "0 0 auto"
       }
       return styles
+    } else if (node.element.type === "plotlyChart") {
+      // TODO (lawilby): This can probably be removed once width is
+      // implemented for plotly charts. But currently, it seems like when
+      // we have use_container_width=False and the minWidth change the image
+      // doesn't render large enough.
+      return {
+        width: "100%",
+      }
     }
 
     return {}
