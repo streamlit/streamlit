@@ -32,19 +32,21 @@ def _error_details_in_browser_enabled() -> bool:
     return bool(config.get_option("client.showErrorDetails"))
 
 
+
 def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None:
     """Show a deprecation warning message.
 
     Parameters
     ----------
-    message
+    message : str
         The deprecation warning message.
-    show_in_browser
+    show_in_browser : bool, default=True
         Whether to show the deprecation warning in the browser. When this is True,
         we will show the deprecation warning in the browser unless the user has
         disabled error details in the browser by setting the `client.showErrorDetails`
         config option to "none".
     """
+
     if _error_details_in_browser_enabled() and show_in_browser:
         streamlit.warning(message)
 
