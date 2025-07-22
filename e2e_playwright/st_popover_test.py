@@ -72,7 +72,9 @@ def test_popover_width_stretch(app: Page, assert_snapshot: ImageCompareFunction)
     """Test popover button with width=stretch."""
     stretch_width_container = get_element_by_key(app, "test_width=stretch")
     stretch_width_popover = open_popover(app, "popover 11 (width=stretch)")
-    expect_markdown(stretch_width_popover, "Stretch width")
+    expect(stretch_width_popover.get_by_test_id("stMarkdown")).to_have_text(
+        "Stretch width"
+    )
     assert_snapshot(
         stretch_width_container,
         name="st_popover-width_stretch",
@@ -155,7 +157,9 @@ def test_applying_changes_from_popover_container(app: Page):
     expect(popover_container).not_to_be_visible()
 
     # The main app should render this text:
-    expect_markdown(app.get_by_test_id("stExpander"), "Input text in popover")
+    expect(app.get_by_test_id("stExpander").get_by_test_id("stMarkdown")).to_have_text(
+        "Input text in popover"
+    )
 
 
 def test_fullscreen_mode_is_disabled_in_popover(app: Page):
