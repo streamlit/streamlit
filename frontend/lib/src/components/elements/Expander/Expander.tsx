@@ -234,19 +234,22 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   }
 
   // Determine which icon to show
-  const showChevron = !element.icon || isHovered || expanded
-  const showUserIcon = element.icon && !isHovered && !expanded
+  const showChevron = !element.icon || isHovered
+  const showUserIcon = element.icon && !isHovered
 
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
-      <StyledDetails isStale={isStale} ref={detailsRef}>
+      <StyledDetails
+        isStale={isStale}
+        ref={detailsRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <StyledSummary
           onClick={toggle}
           ref={summaryRef}
           isStale={isStale}
           expanded={expanded}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
         >
           <StyledSummaryHeading>
             {showChevron && (
