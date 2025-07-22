@@ -57,7 +57,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.
-    minWidth: "5%",
+    minWidth: "1%",
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
@@ -236,7 +236,7 @@ export const StyledFlexContainerBlock =
         width: "100%",
         maxWidth: "100%",
         height: height ?? "auto",
-        minWidth: "5%",
+        minWidth: "1%",
         overflowY: isInteger(height) ? "auto" : "visible",
         flexDirection: direction,
         flex,
@@ -266,7 +266,7 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     flexDirection: "column",
     width,
     maxWidth: "100%",
-    minWidth: "5%",
+    minWidth: "1%",
     height,
     flex,
   })
