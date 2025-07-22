@@ -24,16 +24,6 @@ df = pd.DataFrame(np.random.randn(50, 5), columns=["a", "b", "c", "d", "e"])
 
 st.popover("popover 1 (empty)")
 
-with st.popover("popover 2 (use_container_width)", width="stretch"):
-    st.markdown("Hello")
-
-with st.popover(
-    "popover 9 (use_container_width) with help",
-    width="stretch",
-    help="help text",
-):
-    st.markdown("Hello")
-
 with st.popover(
     "popover 3 (with widgets)",
 ):

@@ -773,10 +773,15 @@ class LayoutsMixin:
             ``True``. The default is ``False``.
 
         use_container_width : bool
-                This parameter will be removed in a future version. Use the
-                ``width`` parameter instead. For ``use_container_width=True``,
-                use ``width="stretch"``. For ``use_container_width=False``,
-                use ``width="content"``.
+                Whether to expand the button's width to fill its parent container.
+                If ``use_container_width`` is ``False`` (default), Streamlit sizes
+                the button to fit its contents. If ``use_container_width`` is
+                ``True``, the width of the button matches its parent container.
+                In both cases, if the contents of the button are wider than the
+                parent container, the contents will line wrap.
+                The popover containter's minimimun width matches the width of its
+                button. The popover container may be wider than its button to fit
+                the container's contents.
 
         width : int, "stretch", or "content"
             An optional width for the popover button. This can be one of the
@@ -792,6 +797,12 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
+
+        .. deprecated::
+            ``use_container_width`` will be removed in a future version. Please use
+            the ``width`` parameter instead. For ``use_container_width=True``,
+            use ``width="stretch"``. For ``use_container_width=False``,
+            use ``width="content"``.
 
         Examples
         --------

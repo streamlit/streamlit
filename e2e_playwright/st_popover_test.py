@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_markdown,
     get_element_by_key,
     get_popover,
     open_popover,
@@ -38,10 +39,6 @@ def test_popover_button_rendering(
         name="st_popover-empty",
     )
     assert_snapshot(
-        get_popover(themed_app, "popover 2 (use_container_width)"),
-        name="st_popover-use_container_width",
-    )
-    assert_snapshot(
         get_popover(themed_app, "popover 3 (with widgets)"),
         name="st_popover-normal",
     )
@@ -58,19 +55,13 @@ def test_popover_button_rendering(
         get_popover(themed_app, "popover 8 (material icon)"),
         name="st_popover-material_icon",
     )
-    assert_snapshot(
-        get_popover(themed_app, "popover 9 (use_container_width) with help"),
-        name="st_popover-use_container_width_with_help",
-    )
 
 
 def test_popover_width_content(app: Page, assert_snapshot: ImageCompareFunction):
     """Test popover button with width=content."""
     content_width_container = get_element_by_key(app, "test_width=content")
     content_width_popover = open_popover(app, "popover 10 (width=content)")
-    expect(content_width_popover.get_by_test_id("stMarkdown")).to_have_text(
-        "Content width"
-    )
+    expect_markdown(content_width_popover, "Content width")
     assert_snapshot(
         content_width_container,
         name="st_popover-width_content",
@@ -81,9 +72,7 @@ def test_popover_width_stretch(app: Page, assert_snapshot: ImageCompareFunction)
     """Test popover button with width=stretch."""
     stretch_width_container = get_element_by_key(app, "test_width=stretch")
     stretch_width_popover = open_popover(app, "popover 11 (width=stretch)")
-    expect(stretch_width_popover.get_by_test_id("stMarkdown")).to_have_text(
-        "Stretch width"
-    )
+    expect_markdown(stretch_width_popover, "Stretch width")
     assert_snapshot(
         stretch_width_container,
         name="st_popover-width_stretch",
@@ -94,7 +83,7 @@ def test_popover_width_fixed(app: Page, assert_snapshot: ImageCompareFunction):
     """Test popover button with width=500px."""
     fixed_width_container = get_element_by_key(app, "test_width=500px")
     fixed_width_popover = open_popover(app, "popover 12 (width=500px)")
-    expect(fixed_width_popover.get_by_test_id("stMarkdown")).to_have_text("500px width")
+    expect_markdown(fixed_width_popover, "500px width")
     assert_snapshot(
         fixed_width_container,
         name="st_popover-width_500px",
@@ -105,9 +94,7 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     """Test popover buttons in columns."""
     columns_container = get_element_by_key(app, "test_columns")
     columns_popover_1 = open_popover(app, "popover 16 (in column 1)")
-    expect(columns_popover_1.get_by_test_id("stMarkdown")).to_have_text(
-        "Popover in column 1"
-    )
+    expect_markdown(columns_popover_1, "Popover in column 1")
     assert_snapshot(
         columns_container,
         name="st_popover-columns",
@@ -121,9 +108,7 @@ def test_popover_container_rendering(
     popover_container = open_popover(themed_app, "popover 3 (with widgets)")
 
     # Check that it is open:
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
-        "Hello World 👋"
-    )
+    expect_markdown(popover_container, "Hello World 👋")
 
     # Click somewhere outside the close popover container:
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
@@ -132,9 +117,7 @@ def test_popover_container_rendering(
     # Click the button to open it:
     popover_container = open_popover(themed_app, "popover 3 (with widgets)")
 
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
-        "Hello World 👋"
-    )
+    expect_markdown(popover_container, "Hello World 👋")
     expect(popover_container.get_by_test_id("stTextInput")).to_have_count(4)
 
     assert_snapshot(popover_container, name="st_popover-container")
@@ -144,9 +127,7 @@ def test_applying_changes_from_popover_container(app: Page):
     """Test that changes made in the popover container are applied correctly."""
     # Get the widgets popover container:
     popover_container = open_popover(app, "popover 3 (with widgets)")
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
-        "Hello World 👋"
-    )
+    expect_markdown(popover_container, "Hello World 👋")
 
     # Fill in the text:
     text_input_element = popover_container.get_by_test_id("stTextInput").nth(0)
@@ -167,18 +148,14 @@ def test_applying_changes_from_popover_container(app: Page):
 
     # Check that it is still open after rerun:
     expect(popover_container).to_be_visible()
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
-        "Hello World 👋"
-    )
+    expect_markdown(popover_container, "Hello World 👋")
 
     # Click somewhere outside the close popover container
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     expect(popover_container).not_to_be_visible()
 
     # The main app should render this text:
-    expect(app.get_by_test_id("stExpander").get_by_test_id("stMarkdown")).to_have_text(
-        "Input text in popover"
-    )
+    expect_markdown(app.get_by_test_id("stExpander"), "Input text in popover")
 
 
 def test_fullscreen_mode_is_disabled_in_popover(app: Page):
