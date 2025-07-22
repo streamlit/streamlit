@@ -18,12 +18,14 @@ interface DownloadLinkElementParameters {
   enforceDownloadInNewTab: boolean
   url: string
   filename: string
+  setDownloadAttribute: boolean
 }
 
 const createDownloadLinkElement = ({
   enforceDownloadInNewTab,
   url,
   filename,
+  setDownloadAttribute,
 }: DownloadLinkElementParameters): HTMLAnchorElement => {
   const link = document.createElement("a")
   link.setAttribute("href", url)
@@ -32,7 +34,10 @@ const createDownloadLinkElement = ({
   } else {
     link.setAttribute("target", "_self")
   }
-  link.setAttribute("download", filename)
+
+  if (setDownloadAttribute) {
+    link.setAttribute("download", filename)
+  }
 
   return link
 }

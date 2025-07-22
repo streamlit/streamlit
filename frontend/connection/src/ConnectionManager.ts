@@ -236,7 +236,6 @@ export class ConnectionManager {
 
   private connectToRunningServer(): WebsocketConnection {
     const baseUriPartsList = getPossibleBaseUris()
-
     return new WebsocketConnection({
       getLastSessionId: this.props.getLastSessionId,
       endpoints: this.props.endpoints,

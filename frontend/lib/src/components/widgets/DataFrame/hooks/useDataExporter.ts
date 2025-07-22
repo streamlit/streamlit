@@ -194,6 +194,7 @@ function useDataExporter(
           enforceDownloadInNewTab,
           url,
           filename: suggestedName,
+          setDownloadAttribute: true,
         })
 
         link.style.display = "none"

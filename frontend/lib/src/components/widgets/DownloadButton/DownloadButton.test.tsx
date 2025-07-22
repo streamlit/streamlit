@@ -24,8 +24,9 @@ import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { mockEndpoints } from "~lib/mocks/mocks"
+import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 
-import DownloadButton, { createDownloadLink, Props } from "./DownloadButton"
+import DownloadButton, { getDownloadUrl, Props } from "./DownloadButton"
 
 vi.mock("~lib/WidgetStateManager")
 vi.mock("~lib/StreamlitEndpoints")
@@ -119,19 +120,83 @@ describe("DownloadButton widget", () => {
 
     it("has a correct new tab behaviour download link", () => {
       const props = getProps()
-      const sameTabLink = createDownloadLink(
-        props.endpoints,
-        props.element.url,
-        false
-      )
+      const sameTabLink = createDownloadLinkElement({
+        enforceDownloadInNewTab: false,
+        url: props.element.url,
+        filename: "",
+        setDownloadAttribute: true,
+      })
       expect(sameTabLink.getAttribute("target")).toBe("_self")
 
-      const newTabLink = createDownloadLink(
-        props.endpoints,
-        props.element.url,
-        true
-      )
+      const newTabLink = createDownloadLinkElement({
+        enforceDownloadInNewTab: true,
+        url: props.element.url,
+        filename: "",
+        setDownloadAttribute: true,
+      })
       expect(newTabLink.getAttribute("target")).toBe("_blank")
+    })
+
+    it("sets download attribute correctly", () => {
+      const props = getProps()
+      const linkWithoutFilename = createDownloadLinkElement({
+        enforceDownloadInNewTab: false,
+        url: props.element.url,
+        filename: "",
+        setDownloadAttribute: true,
+      })
+      expect(linkWithoutFilename.getAttribute("download")).toBe("")
+
+      const linkWithFilename = createDownloadLinkElement({
+        enforceDownloadInNewTab: false,
+        url: props.element.url,
+        filename: "test.pdf",
+        setDownloadAttribute: true,
+      })
+      expect(linkWithFilename.getAttribute("download")).toBe("test.pdf")
+
+      const linkWithoutDownload = createDownloadLinkElement({
+        enforceDownloadInNewTab: false,
+        url: props.element.url,
+        filename: "test.pdf",
+        setDownloadAttribute: false,
+      })
+      expect(linkWithoutDownload.getAttribute("download")).toBeNull()
+    })
+
+    describe("getDownloadUrl", () => {
+      beforeEach(() => {
+        // Reset window.__streamlit before each test
+        window.__streamlit = undefined
+      })
+
+      it("returns buildMediaURL result when no DOWNLOAD_ASSETS_BASE_URL is set", () => {
+        const props = getProps()
+        const url = "/test/file.pdf"
+        getDownloadUrl(props.endpoints, url)
+        expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(url)
+      })
+
+      it("uses DOWNLOAD_ASSETS_BASE_URL when available", () => {
+        const props = getProps()
+
+        window.__streamlit = {
+          DOWNLOAD_ASSETS_BASE_URL: "https://assets.example.com",
+        }
+        const url = "/test/file.pdf"
+        getDownloadUrl(props.endpoints, url)
+        expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
+          "https://assets.example.com:/test/file.pdf"
+        )
+      })
+
+      it("handles empty url", () => {
+        const props = getProps()
+
+        const url = ""
+        getDownloadUrl(props.endpoints, url)
+        expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith("")
+      })
     })
 
     it("can set fragmentId on click", async () => {
@@ -160,6 +225,7 @@ describe("DownloadButton widget", () => {
 
   it("triggers checkSourceUrlResponse to check download url", () => {
     const props = getProps()
+    props.endpoints.buildMediaURL = vi.fn(url => url)
     render(<DownloadButton {...props} />)
 
     expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledWith(

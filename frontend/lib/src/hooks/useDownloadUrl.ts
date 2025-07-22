@@ -24,7 +24,10 @@ const useDownloadUrl = (
   filename: string
 ): (() => void) => {
   const {
-    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
+    libConfig: {
+      enforceDownloadInNewTab = false, // Default to false, if no libConfig, e.g. for tests
+      setDownloadAttributeOnLinkElements = true, // Default to true to retain existing behavior
+    },
   } = useContext(LibContext)
 
   const downloadUrl = useCallback(() => {
@@ -34,6 +37,7 @@ const useDownloadUrl = (
       enforceDownloadInNewTab,
       url,
       filename,
+      setDownloadAttribute: setDownloadAttributeOnLinkElements,
     })
 
     link.style.display = "none"
