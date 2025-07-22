@@ -256,7 +256,7 @@ class MetricMixin:
                 except Exception as ex:  # noqa: PERF203
                     raise StreamlitAPIException(
                         "Only numeric values are supported for sparkline sequence. The "
-                        f"value '{val!s}' is of type {type(val)!s} and  "
+                        f"value '{val}' is of type {type(val)} and  "
                         "cannot be converted to float."
                     ) from ex
             if len(prepared_sparkline) > 0:
