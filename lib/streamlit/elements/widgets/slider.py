@@ -860,12 +860,12 @@ class SliderMixin:
             if start > end:  # type: ignore[operator]
                 # Swap start and end, since they seem reversed
                 start, end = end, start
-                value = start, end
+                prepared_value = start, end
             min_value = min(start, min_value)
             max_value = max(end, max_value)
         else:
             # Empty list, so let's just use the outer bounds
-            value = [min_value, max_value]
+            prepared_value = [min_value, max_value]
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
@@ -941,7 +941,7 @@ class SliderMixin:
         slider_proto.id = element_id
         slider_proto.label = label
         slider_proto.format = format
-        slider_proto.default[:] = value
+        slider_proto.default[:] = prepared_value
         slider_proto.min = min_value
         slider_proto.max = max_value
         slider_proto.step = cast("float", step)
