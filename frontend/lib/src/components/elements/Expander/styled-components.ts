@@ -90,7 +90,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     "&::-webkit-details-marker": {
       display: "none",
     },
-    backgroundColor: expanded ? theme.colors.darkenedBgMix15 : "transparent",
+    backgroundColor: expanded ? theme.colors.bgMix : "transparent",
     // When expanded, only round the top corners
     borderRadius: expanded
       ? `${theme.radii.default} ${theme.radii.default} 0 0`
@@ -102,14 +102,10 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       ? `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease`
       : `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1) 300ms, background-color 150ms ease`,
     "&:hover, &:focus-visible": {
-      backgroundColor: expanded
-        ? theme.colors.darkenedBgMix25
-        : theme.colors.darkenedBgMix15,
+      backgroundColor: theme.colors.darkenedBgMix15,
     },
     "&:active": {
-      backgroundColor: expanded
-        ? theme.colors.darkenedBgMix15
-        : theme.colors.darkenedBgMix25,
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
     ...(isStale && STALE_STYLES),
   })
