@@ -32,7 +32,6 @@ def _error_details_in_browser_enabled() -> bool:
     return bool(config.get_option("client.showErrorDetails"))
 
 
-
 def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None:
     """Show a deprecation warning message.
 
