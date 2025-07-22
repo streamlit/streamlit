@@ -192,6 +192,11 @@ def start_listening_unix_socket(http_server: HTTPServer) -> None:
     if hasattr(tornado.netutil, "bind_unix_socket"):
         unix_socket = tornado.netutil.bind_unix_socket(file_name)
         http_server.add_socket(unix_socket)
+    else:
+        _LOGGER.error(
+            "Unix socket support is not available in this version of Tornado."
+        )
+        sys.exit(1)
 
 
 def start_listening_tcp_socket(http_server: HTTPServer) -> None:
