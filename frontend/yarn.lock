@@ -3546,7 +3546,7 @@ __metadata:
     "@types/iframe-resizer": "npm:~4.0.0"
     "@types/jsdom": "npm:~21.1.7"
     "@types/lodash": "npm:^4.17.20"
-    "@types/node": "npm:^24.0.14"
+    "@types/node": "npm:^24.1.0"
     "@types/prop-types": "npm:~15.7.15"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
@@ -5084,21 +5084,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24.0.14":
-  version: 24.0.14
-  resolution: "@types/node@npm:24.0.14"
-  dependencies:
-    undici-types: "npm:~7.8.0"
-  checksum: 10c0/536b5a816554ad1522e9e0c1d517b317f8478798bd76a332d83690aa42b19b5b263eb295ee25f9d0badb430ee6e36412ee9070cb5e3359f6bdcf7e08f94302f1
-  languageName: node
-  linkType: hard
-
 "@types/node@npm:^24.0.3":
   version: 24.0.12
   resolution: "@types/node@npm:24.0.12"
   dependencies:
     undici-types: "npm:~7.8.0"
   checksum: 10c0/333777c3416b758bbdb72a09e9db5599ff7789dca519d3fcf8150a1c56c79d808e0009e92d52016e80033b3c52724def08aad2c5b396e28f00dbdfe40a1756a4
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^24.1.0":
+  version: 24.1.0
+  resolution: "@types/node@npm:24.1.0"
+  dependencies:
+    undici-types: "npm:~7.8.0"
+  checksum: 10c0/6c4686bc144f6ce7bffd4cadc3e1196e2217c1da4c639c637213719c8a3ee58b6c596b994befcbffeacd9d9eb0c3bff6529d2bc27da5d1cb9d58b1da0056f9f4
   languageName: node
   linkType: hard
 
