@@ -20,7 +20,7 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
@@ -249,6 +249,62 @@ describe("Video Element", () => {
       const props = getProps()
       render(<Video {...props} />)
       expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("crossOrigin attribute", () => {
+    it("sets crossOrigin to 'anonymous' when resourceCrossOriginMode is 'anonymous'", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: "anonymous" },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
+    })
+
+    it("sets crossOrigin to 'use-credentials' when resourceCrossOriginMode is 'use-credentials'", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: "use-credentials" },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "use-credentials")
+    })
+
+    it("does not set crossOrigin attribute when resourceCrossOriginMode is undefined", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).not.toHaveAttribute("crossOrigin")
+    })
+
+    it("does not set crossOrigin attribute when libConfig is empty", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: {},
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).not.toHaveAttribute("crossOrigin")
+    })
+
+    it("sets crossOrigin to 'anonymous' when in dev mode with subtitles regardless of resourceCrossOriginMode", async () => {
+      // Store original NODE_ENV
+      const originalNodeEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "development"
+
+      const props = getProps({
+        subtitles: [{ url: "https://mock.subtitle.url" }],
+      })
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
+
+      // Restore original NODE_ENV
+      process.env.NODE_ENV = originalNodeEnv
     })
   })
 })
