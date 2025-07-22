@@ -74,7 +74,6 @@ if TYPE_CHECKING:
         WidgetKwargs,
     )
 
-# Define T locally to avoid type checker issues
 T = TypeVar("T")
 
 
