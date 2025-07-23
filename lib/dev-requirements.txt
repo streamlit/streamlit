@@ -1,4 +1,6 @@
 pre-commit
+# We fix ty to a version since its still in preview and likely breaks our CI on updates:
+ty==0.0.1a15
 # We fix ruff to a version to be in sync with the pre-commit hook:
 ruff==0.12.4
 # We are pinning the upper version to not break our CI on updates,

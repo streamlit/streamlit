@@ -184,6 +184,9 @@ python-integration-tests:
 .PHONY: python-types
 # Run the Python type checker.
 python-types:
+	# Run ty type checker:
+	ty check
+	# Run mypy type checker:
 	mypy --config-file=mypy.ini
 
 

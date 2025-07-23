@@ -109,10 +109,10 @@ class JsonMixin:
         """
 
         if is_custom_dict(body):
-            body = body.to_dict()
+            body = body.to_dict()  # ty: ignore[unresolved-attribute]
 
         if is_namedtuple(body):
-            body = body._asdict()
+            body = body._asdict()  # ty: ignore[unresolved-attribute]
 
         if isinstance(
             body, (ChainMap, types.MappingProxyType, UserDict)
@@ -120,7 +120,7 @@ class JsonMixin:
             body = dict(body)  # type: ignore
 
         if is_list_like(body):
-            body = list(body)
+            body = list(body)  # ty: ignore[invalid-argument-type]
 
         if not isinstance(body, str):
             try:

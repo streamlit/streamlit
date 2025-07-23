@@ -202,9 +202,8 @@ df = pd.DataFrame(
 styled_df = df.style
 
 # Apply formatting
-styled_df.format("{:.0f}").hide(
-    [("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns"
-)
+styled_df.format("{:.0f}")
+styled_df.hide([("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns")
 
 cell_hover = {  # for row hover use <tr> instead of <td>
     "selector": "td:hover",

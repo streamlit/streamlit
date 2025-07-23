@@ -46,6 +46,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 if TYPE_CHECKING:
     import numpy.typing as npt
+    import pandas as pd
     from PIL.Image import Image
 
 _LOGGER: Final = logger.get_logger(__name__)
@@ -415,7 +416,7 @@ class _CacheFuncHasher:
             return str(obj).encode()
 
         if type_util.is_type(obj, "pandas.core.series.Series"):
-            import pandas as pd
+            from pandas.util import hash_pandas_object
 
             series_obj: pd.Series = cast("pd.Series", obj)
             self.update(h, series_obj.size)
@@ -425,9 +426,7 @@ class _CacheFuncHasher:
                 series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
 
             try:
-                self.update(
-                    h, pd.util.hash_pandas_object(series_obj).to_numpy().tobytes()
-                )
+                self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
                 return h.digest()
             except TypeError:
                 _LOGGER.warning(
@@ -440,7 +439,7 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(series_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
-            import pandas as pd
+            from pandas.util import hash_pandas_object
 
             df_obj: pd.DataFrame = cast("pd.DataFrame", obj)
             self.update(h, df_obj.shape)
@@ -448,11 +447,9 @@ class _CacheFuncHasher:
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
                 df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
-                column_hash_bytes = self.to_bytes(
-                    pd.util.hash_pandas_object(df_obj.dtypes)
-                )
+                column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
                 self.update(h, column_hash_bytes)
-                values_hash_bytes = self.to_bytes(pd.util.hash_pandas_object(df_obj))
+                values_hash_bytes = self.to_bytes(hash_pandas_object(df_obj))
                 self.update(h, values_hash_bytes)
                 return h.digest()
             except TypeError:

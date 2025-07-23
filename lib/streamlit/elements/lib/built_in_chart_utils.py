@@ -356,7 +356,13 @@ def prep_chart_data_for_add_rows(
         df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
         add_rows_metadata.last_index = stop - 1
 
-    out_data, *_ = _prep_data(df, **add_rows_metadata.columns)
+    out_data, *_ = _prep_data(
+        df,
+        x_column=add_rows_metadata.columns["x_column"],
+        y_column_list=add_rows_metadata.columns["y_column_list"],
+        color_column=add_rows_metadata.columns["color_column"],
+        size_column=add_rows_metadata.columns["size_column"],
+    )
 
     return out_data, add_rows_metadata
 
@@ -597,7 +603,7 @@ def _maybe_reset_index_in_place(
             x_column = _SEPARATED_INDEX_COLUMN_NAME
         else:
             # Reuse index's name for the new column.
-            x_column = df.index.name
+            x_column = str(df.index.name)
 
         df.index.name = x_column
         df.reset_index(inplace=True)  # noqa: PD002

@@ -36,8 +36,8 @@ from streamlit.errors import StreamlitAPIException
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: dict[str, str] = OrderedDict(
-    _test="Special test section just used for unit tests."
+_section_descriptions: OrderedDict[str, str] = OrderedDict(  # ty: ignore
+    _test="Special test section just used for unit tests."  # ty: ignore
 )
 
 # Ensures that we don't try to get or set config options when config.toml files
@@ -1884,7 +1884,7 @@ def get_config_options(
         # Short-circuit if config files were parsed while we were waiting on
         # the lock.
         if _config_options and not force_reparse:
-            return _config_options
+            return _config_options  # ty: ignore[invalid-return-type]
 
         old_options = _config_options
         _config_options = copy.deepcopy(_config_options_template)

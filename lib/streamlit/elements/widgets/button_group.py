@@ -59,7 +59,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.string_util import is_emoji, validate_material_icon
-from streamlit.type_util import T
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -75,7 +74,7 @@ if TYPE_CHECKING:
         WidgetSerializer,
     )
 
-
+T = TypeVar("T")
 V = TypeVar("V")
 
 _THUMB_ICONS: Final = (":material/thumb_up:", ":material/thumb_down:")

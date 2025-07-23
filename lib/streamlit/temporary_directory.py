@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from streamlit import util
 
@@ -48,12 +48,13 @@ class TemporaryDirectory:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._args = args
         self._kwargs = kwargs
+        self._path: str | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def __enter__(self) -> str:
-        self._path = cast("str", tempfile.mkdtemp(*self._args, **self._kwargs))
+        self._path = tempfile.mkdtemp(*self._args, **self._kwargs)
         return self._path
 
     def __exit__(
@@ -62,4 +63,5 @@ class TemporaryDirectory:
         exc_value: BaseException | None,
         exc_traceback: TracebackType | None,
     ) -> None:
-        shutil.rmtree(self._path)
+        if self._path:
+            shutil.rmtree(self._path)
