@@ -59,6 +59,20 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent): void => {
       if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
+        const target = e.target as HTMLElement
+
+        // We don't want to prevent typing in input fields.
+        // This is the same check that is also done by react-hot-keys.
+        if (
+          target &&
+          (target.isContentEditable ||
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT")
+        ) {
+          return
+        }
+
         // Prevent the R key from bubbling up to the App level
         e.preventDefault()
         e.stopPropagation()
