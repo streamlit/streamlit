@@ -21,8 +21,7 @@ import { Spinner } from "baseui/spinner"
 
 import { computeSpacingStyle, IconSize } from "~lib/theme"
 
-interface StyledSpinnerIconProps {
-  usingCustomTheme: boolean
+export interface StyledSpinnerIconProps {
   size: IconSize
   margin: string
   padding: string
