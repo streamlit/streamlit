@@ -23,7 +23,6 @@ from e2e_playwright.shared.app_utils import (
     get_popover,
     open_popover,
 )
-from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 
 def test_popover_button_rendering(
@@ -100,7 +99,8 @@ def test_popover_width_stretch(app: Page, assert_snapshot: ImageCompareFunction)
     except TimeoutError:
         pass
 
-    wait_for_react_stability(app)
+    # Wait for the popover animation to complete.
+    app.wait_for_timeout(500)
     assert_snapshot(
         stretch_width_container,
         name="st_popover-width_stretch",
