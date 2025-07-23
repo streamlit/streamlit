@@ -5,7 +5,7 @@
 
   // Enable pytest for Python testing
   "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": true,
+  "python.testing.unittestEnabled": false,
 
   // Global pytest configuration (discovers both e2e and unit tests)
   // NOTE: Most pytest arguments are centralized in respective pytest.ini files:
