@@ -47,12 +47,7 @@ import { Placement } from "~lib/components/shared/Tooltip"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import {
-  StyledThumb,
-  StyledThumbValue,
-  StyledTickBar,
-  StyledTickBarItem,
-} from "./styled-components"
+import { StyledThumb, StyledThumbValue } from "./styled-components"
 
 const DEBOUNCE_TIME_MS = 200
 
@@ -96,11 +91,9 @@ function Slider({
     React.MutableRefObject<HTMLDivElement | null>[]
   >([])
 
-  const { colors, fonts, fontSizes, spacing } = useEmotionTheme()
+  const theme = useEmotionTheme()
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
-  const formattedMinValue = formatValue(element.min, element)
-  const formattedMaxValue = formatValue(element.max, element)
   const thumbAriaLabel = element.label
 
   // When resetting a form, `value` will change so we need to change `uiValue`
@@ -126,25 +119,6 @@ function Slider({
     },
     [debouncedSetValueWithSource]
   )
-
-  const renderTickBar = useCallback((): ReactElement => {
-    return (
-      <StyledTickBar data-testid="stSliderTickBar">
-        <StyledTickBarItem
-          disabled={disabled}
-          data-testid="stSliderTickBarMin"
-        >
-          {formattedMinValue}
-        </StyledTickBarItem>
-        <StyledTickBarItem
-          disabled={disabled}
-          data-testid="stSliderTickBarMax"
-        >
-          {formattedMaxValue}
-        </StyledTickBarItem>
-      </StyledTickBar>
-    )
-  }, [formattedMinValue, formattedMaxValue, disabled])
 
   // TODO: Update to match React best practices
   // eslint-disable-next-line react-hooks/react-compiler
@@ -235,10 +209,10 @@ function Slider({
 
   const innerTrackStyle = useCallback(
     ({ $disabled }: StyleProps) => ({
-      height: spacing.twoXS,
-      ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
+      height: theme.spacing.twoXS,
+      ...($disabled ? { background: theme.colors.darkenedBgMix25 } : {}),
     }),
-    [colors, spacing]
+    [theme.colors.darkenedBgMix25, theme.spacing.twoXS]
   )
 
   return (
@@ -268,26 +242,22 @@ function Slider({
         disabled={disabled}
         overrides={{
           Thumb: renderThumb,
-          Tick: {
-            style: {
-              fontFamily: fonts.monospace,
-            },
-          },
           Track: {
             style: {
               backgroundColor: "none !important",
-              paddingBottom: spacing.none,
-              paddingLeft: spacing.none,
-              paddingRight: spacing.none,
-              // Add additional padding to fit the thumb value
-              // which uses a fontSizes.sm.
-              paddingTop: `calc(${fontSizes.sm} * 1.35)`,
+              paddingLeft: theme.spacing.none,
+              paddingRight: theme.spacing.none,
+              // Set padding so total height equals minElementHeight (40px)
+              // Total height = paddingTop + innerTrack height + paddingBottom
+              paddingTop: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
+              paddingBottom: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
             },
           },
           InnerTrack: {
             style: innerTrackStyle,
           },
-          TickBar: renderTickBar,
+          // Hide min and max tick values
+          TickBar: () => null,
         }}
       />
     </div>
