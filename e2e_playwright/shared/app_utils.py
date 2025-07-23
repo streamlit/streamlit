@@ -153,9 +153,7 @@ def get_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def open_popover(
-    locator: Locator | Page, label: str | Pattern[str], force: bool = False
-) -> Locator:
+def open_popover(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Open a popover with the given label and return the popover container.
 
     Parameters
@@ -166,16 +164,12 @@ def open_popover(
     label : str or Pattern[str]
         The label of the element to get.
 
-    force : bool
-        Whether to bypass actionability checks and force the click.
-        Useful for Firefox automation issues.
-
     Returns
     -------
     Locator
         The popover container.
     """
-    get_popover(locator, label).get_by_role("button").first.click(force=force)
+    get_popover(locator, label).get_by_role("button").first.click()
     popover_container = locator.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
     return popover_container
