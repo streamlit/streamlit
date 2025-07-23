@@ -101,4 +101,23 @@ describe("Dialog container", () => {
     // close button - and hence dismiss - does not exist
     expect(() => screen.getByLabelText("Close")).toThrow()
   })
+
+  it("should handle modal close events when dismissible", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ dismissible: true })
+    render(
+      <Dialog {...props}>
+        <div>test content</div>
+      </Dialog>
+    )
+
+    expect(screen.getByText("test content")).toBeVisible()
+
+    // Click the close button to trigger onClose
+    const closeButton = screen.getByLabelText("Close")
+    await user.click(closeButton)
+
+    // Dialog should be closed (content no longer visible)
+    expect(() => screen.getByText("test content")).toThrow()
+  })
 })

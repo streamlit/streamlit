@@ -213,3 +213,18 @@ def dialog_with_long_title() -> None:
 
 if st.button("Open Dialog with long title"):
     dialog_with_long_title()
+
+
+@st.dialog("Non-dismissible Dialog", dismissible=False)
+def non_dismissible_dialog() -> None:
+    st.write("This dialog cannot be dismissed by pressing ESC or clicking outside!")
+    st.info(
+        "You can only close this dialog by clicking the 'Close Dialog' button below."
+    )
+
+    if st.button("Close Dialog", key="non-dismissible-close-btn"):
+        st.rerun()
+
+
+if st.button("Open Non-dismissible Dialog"):
+    non_dismissible_dialog()

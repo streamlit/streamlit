@@ -901,3 +901,17 @@ class DialogTest(DeltaGeneratorTestCase):
         assert e.value.args[0].startswith(
             "Only one dialog is allowed to be opened at the same time."
         )
+
+    def test_dialog_deltagenerator_dismissible_false(self):
+        """Test that the delta-generator dialog properly handles dismissible=False"""
+
+        dialog = st._main._dialog(DialogTest.title, dismissible=False)
+
+        with dialog:
+            """No content so that 'get_delta_from_queue' returns the dialog."""
+            pass
+
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.title == DialogTest.title
+        assert not dialog_block.add_block.dialog.is_open
+        assert dialog_block.add_block.dialog.dismissible is False

@@ -89,6 +89,10 @@ def open_dialog_with_long_title(app: Page):
     click_button(app, "Open Dialog with long title")
 
 
+def open_non_dismissible_dialog(app: Page):
+    click_button(app, "Open Non-dismissible Dialog")
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -521,3 +525,51 @@ def test_dialog_with_long_title_displays_correctly(
     dialog = app.get_by_role("dialog")
     # Take a snapshot to verify the long title doesn't overlap with the close button
     assert_snapshot(dialog, name="st_dialog-with_long_title")
+
+
+def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
+    """Test that non-dismissible dialogs do not show the close (X) button
+    and cannot be dismissed by pressing ESC or by clicking outside the dialog.
+    """
+    open_non_dismissible_dialog(app)
+    wait_for_app_run(app)
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+
+    # Verify the close button (X) is not present
+    expect(app.get_by_label("Close")).not_to_be_attached()
+
+    # Try to dismiss with ESC key
+    app.keyboard.press("Escape")
+
+    # Dialog should still be visible
+    expect(main_dialog).to_be_visible()
+    expect(main_dialog).to_have_count(1)
+
+    # Click on body element outside dialog
+    app.locator("body").click(position={"x": 50, "y": 50}, force=True)
+
+    # Dialog should still be visible
+    expect(main_dialog).to_be_visible()
+    expect(main_dialog).to_have_count(1)
+
+    # Press R hotkey:
+    app.keyboard.press("R")
+
+    # Dialog should still be visible
+    expect(main_dialog).to_be_visible()
+    expect(main_dialog).to_have_count(1)
+
+
+def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):
+    """Test that non-dismissible dialogs can still be closed by action buttons calling st.rerun()."""
+    open_non_dismissible_dialog(app)
+    wait_for_app_run(app)
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+
+    # Click the "Close Dialog" button inside the dialog
+    click_button(app, "Close Dialog")
+
+    # Dialog should now be closed
+    expect(main_dialog).to_have_count(0)
