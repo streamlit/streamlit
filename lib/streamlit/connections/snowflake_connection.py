@@ -68,10 +68,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
     .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
 
-    .. Tip::
+    .. Important::
         `snowflake-snowpark-python <https://pypi.org/project/snowflake-snowpark-python/>`_
         must be installed in your environment to use this connection. You can
-        install Snowflake extras along with Streamlit:
+        install it as an extra with Streamlit:
 
         >>> pip install streamlit[snowflake]
 

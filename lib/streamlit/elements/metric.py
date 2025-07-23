@@ -135,11 +135,14 @@ class MetricMixin:
             The height of the metric element. This can be one of the following:
 
             - ``"content"`` (default): The height of the element matches the
-              height of its content, but doesn't exceed the height of the
-              parent container.
-            - ``"stretch"``: The height of the element matches the height of the
-              parent container.
-            - An integer specifying the height in pixels.
+              height of its content.
+            - ``"stretch"``: The height of the element matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the element is not in a parent container, the height
+              of the element matches the height of its content.
+            - An integer specifying the height in pixels: The element has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
 
         width : "stretch", "content", or int
             The width of the metric element. This can be one of the following:

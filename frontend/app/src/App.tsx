@@ -478,6 +478,8 @@ export class App extends PureComponent<Props, State> {
           enforceDownloadInNewTab,
           metricsUrl,
           blockErrorDialogs,
+          setAnonymousCrossOriginPropertyOnMediaElements,
+          resourceCrossOriginMode,
         } = response
 
         const appConfig: AppConfig = {
@@ -490,6 +492,11 @@ export class App extends PureComponent<Props, State> {
           mapboxToken,
           disableFullscreenMode,
           enforceDownloadInNewTab,
+          resourceCrossOriginMode:
+            (resourceCrossOriginMode ??
+            setAnonymousCrossOriginPropertyOnMediaElements)
+              ? "anonymous"
+              : undefined,
         }
 
         // Set the metrics configuration:
@@ -583,12 +590,6 @@ export class App extends PureComponent<Props, State> {
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState: this.state.scriptRunState,
       })
-    }
-    // Rerun script if the theme changed
-    if (
-      _prevProps.theme.activeTheme.name !== this.props.theme.activeTheme.name
-    ) {
-      this.sendRerunBackMsg()
     }
   }
 
@@ -702,12 +703,16 @@ export class App extends PureComponent<Props, State> {
     return false
   }
 
+  /**
+   * Handles theme changes from host communication.
+   */
   handleThemeMessage = (
     themeName?: PresetThemeName,
     theme?: ICustomThemeConfig
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+
     if (themeName === lightTheme.name && isUsingPresetTheme) {
       this.props.theme.setTheme(lightTheme)
     } else if (themeName === darkTheme.name && isUsingPresetTheme) {
@@ -716,7 +721,6 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.setImportedTheme(theme)
     }
   }
-
   /**
    * Called by ConnectionManager when our connection state changes
    */
@@ -733,6 +737,9 @@ export class App extends PureComponent<Props, State> {
       //   2. our last script run attempt was interrupted by the websocket
       //      connection dropping, or
       //   3. the host explicitly requested a reconnect (we trigger scriptRunState to be RERUN_REQUESTED)
+      //   4. there is an indication that the script is using fragments (fragments in last run or auto-rerun),
+      //      which might need a rerun to be reinitialized if a new app session got created.
+
       const lastRunWasInterrupted =
         this.state.scriptRunState === ScriptRunState.RUNNING
       const wasRerunRequested =
@@ -741,7 +748,11 @@ export class App extends PureComponent<Props, State> {
       if (
         !this.sessionInfo.last ||
         lastRunWasInterrupted ||
-        wasRerunRequested
+        wasRerunRequested ||
+        // Script is using fragments (fragments in last run or
+        // fragment auto-reruns configured):
+        this.state.fragmentIdsThisRun.length > 0 ||
+        this.state.autoReruns.length > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)

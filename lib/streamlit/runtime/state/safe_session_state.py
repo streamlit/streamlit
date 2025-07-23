@@ -84,6 +84,14 @@ class SafeSessionState:
         with self._lock:
             return self._state.is_new_state_value(user_key)
 
+    def reset_state_value(self, user_key: str, value: Any | None) -> None:
+        """Reset a new session state value to a given value
+        without triggering the "state value cannot be modified" error.
+        """
+        self._yield_callback()
+        with self._lock:
+            self._state.reset_state_value(user_key, value)
+
     @property
     def filtered_state(self) -> dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""

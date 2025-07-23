@@ -1,0 +1,25 @@
+---
+description: Implementation guide for new features
+globs:
+alwaysApply: false
+---
+
+# New Feature - Implementation Guide
+
+- Most features need to be implemented in the backend in `lib/streamlit/`, the frontend `frontend/` and will need changes to our protobuf definitions in `proto/`.
+- New features should be covered by Python Unit Tests in `lib/tests`, Vitest Unit Tests, and e2e playwright tests in `e2e_playwright/`.
+- Implementing new element commands requires additional steps to correctly register the element (see notes below).
+
+## Order of implementation
+
+1. implement protobuf changes in `proto/` & run: `make protobuf` (-> @protobuf.mdc)
+   - Note: new elements need to be added to `proto/streamlit/proto/Element.proto`.
+2. implement backend implementation in `lib/streamlit/` (-> @python_lib.mdc)
+   - Note: new elements need to be added to `lib/streamlit/__init__.py`
+3. implement Python unit tests in `lib/tests` & run via: `PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py` (-> @python_tests.mdc)
+   - Note: new elements need to be added to `lib/tests/streamlit/element_mocks.py`
+4. implement frontend changes in `frontend/` (-> @typescript.mdc)
+   - Note: new elements need to be added to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`
+5. implement vitest unit tests in `*.test.tsx` & run via: `cd frontend && yarn vitest lib/src/components/elements/NewElement/NewElement.test.tsx` (-> @typescript_tests.mdc)
+6. implement e2e playwright test in `e2e_playwright/` & run via: `make run-e2e-test e2e_playwright/name_of_the_test.py` (-> @e2e_playwright.mdc)
+7. run `make autofix` to auto-fix linting and formatting issues.

@@ -45,8 +45,9 @@ message Block {
 
   message Vertical {
     bool border = 1;
-    // Height of the container, activates scrolling
-    uint32 height = 2;
+    // DEPRECATED: We use height_config on the top-level which is shared
+    // with other Block types.
+    uint32 height = 2 [deprecated = true];
   }
 
   message Horizontal {
@@ -55,7 +56,6 @@ message Block {
 
   message FlexContainer {
     bool border = 1;
-
     streamlit.GapConfig gap_config = 2;
     float scale = 3;
 
