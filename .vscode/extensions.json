@@ -6,6 +6,7 @@
     "ms-python.debugpy",
     "ms-python.vscode-pylance",
     "charliermarsh.ruff",
+    "ms-playwright.playwright",
 
     // TypeScript/Frontend Development & Testing
     "vitest.explorer",
