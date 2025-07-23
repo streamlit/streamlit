@@ -58,7 +58,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   // Otherwise, R would allow to dismiss the dialog by rerunning the script.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent): void => {
-      if (isOpen && (e.key === "r" || e.key === "R") && !element.dismissible) {
+      if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
         // Prevent the R key from bubbling up to the App level
         e.preventDefault()
         e.stopPropagation()
