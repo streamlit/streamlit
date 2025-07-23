@@ -81,6 +81,23 @@ def test_popover_width_stretch(app: Page, assert_snapshot: ImageCompareFunction)
     expect_markdown(stretch_width_popover, "Stretch width")
 
     wait_for_react_stability(app)
+
+    # Additional wait for ResizeObserver calculations to complete
+    # The stretch width popover needs time for the resize observer to calculate
+    # the container width and apply it as the popover's minWidth
+    try:
+        app.wait_for_function(
+            """() => {
+                const popoverBody = document.querySelector('[data-testid="stPopoverBody"]');
+                if (!popoverBody) return false;
+                const rect = popoverBody.getBoundingClientRect();
+                return rect && rect.width > 200;
+            }""",
+            timeout=2000,
+        )
+    except TimeoutError:
+        pass
+
     assert_snapshot(
         stretch_width_container,
         name="st_popover-width_stretch",
