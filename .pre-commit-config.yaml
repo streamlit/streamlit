@@ -192,7 +192,6 @@ repos:
         exclude: |
           (?x)
           |^.vscode/launch\.json$
-          |^.vscode/tasks\.json$
           |^.vscode/settings\.json$
       - id: check-toml
       - id: check-yaml
