@@ -25,6 +25,8 @@
     // ==============================================
     // E2E PLAYWRIGHT TESTS
     // ==============================================
+    // NOTE: Most pytest arguments are centralized in e2e_playwright/pytest.ini
+    // These configs only add IDE-specific arguments not suitable for pytest.ini
     {
       "name": "Run E2E Test",
       "type": "debugpy",
@@ -32,26 +34,10 @@
       "module": "pytest",
       "args": [
         "${file}",
+        // IDE-specific: Add tracing for better debugging in IDE
         "--tracing",
-        "retain-on-failure",
-        "--reruns",
-        "0",
-        "--output",
-        "./e2e_playwright/test-results/",
-        "--video",
-        "retain-on-failure",
-        "--screenshot",
-        "only-on-failure",
-        "--full-page-screenshot",
-        "-r",
-        "aR",
-        "-v",
-        "--durations=5",
-        "--reruns-delay",
-        "1",
-        "--rerun-except",
-        "Missing snapshot",
-        "--tb=short"
+        "retain-on-failure"
+        // All other args (--video, --screenshot, --reruns, etc.) come from e2e_playwright/pytest.ini
       ],
       "cwd": "${workspaceFolder}",
       "env": {
@@ -66,27 +52,15 @@
       "module": "pytest",
       "args": [
         "${file}",
+        // IDE-specific debug args that override pytest.ini defaults
         "--tracing",
         "on",
-        "--reruns",
-        "0",
-        "--output",
-        "./e2e_playwright/test-results/",
         "--video",
         "on",
         "--screenshot",
         "on",
-        "--full-page-screenshot",
-        "-r",
-        "aR",
-        "-v",
-        "-s",
-        "--durations=5",
-        "--reruns-delay",
-        "1",
-        "--rerun-except",
-        "Missing snapshot",
-        "--tb=short"
+        "-s"
+        // Base args (--reruns, --output, etc.) come from e2e_playwright/pytest.ini
       ],
       "cwd": "${workspaceFolder}",
       "env": {
@@ -99,12 +73,20 @@
     // ==============================================
     // PYTHON UNIT TESTS
     // ==============================================
+    // NOTE: Most pytest arguments are centralized in lib/pytest.ini
+    // These configs only add the file argument and IDE-specific overrides
     {
       "name": "Run Python Unit Test",
       "type": "debugpy",
       "request": "launch",
       "module": "pytest",
-      "args": ["${file}", "-v", "--tb=short"],
+      "args": [
+        "${file}",
+        // Override pytest.ini to disable coverage for faster IDE runs
+        "--no-cov",
+        "-v",
+        "--tb=short"
+      ],
       "cwd": "${workspaceFolder}",
       "env": {
         "PYTHONPATH": "${workspaceFolder}/lib"
@@ -116,7 +98,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "pytest",
-      "args": ["${file}", "-v", "-s", "--tb=short"],
+      "args": ["${file}", "--no-cov", "-v", "-s", "--tb=short"],
       "cwd": "${workspaceFolder}",
       "env": {
         "PYTHONPATH": "${workspaceFolder}/lib"

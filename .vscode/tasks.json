@@ -4,6 +4,9 @@
     // ==============================================
     // E2E PLAYWRIGHT TESTS
     // ==============================================
+    // NOTE: These tasks use make commands which rely on centralized configurations:
+    // - pytest arguments are defined in e2e_playwright/pytest.ini
+    // - make targets add only command-specific overrides
     {
       "label": "Run E2E Test",
       "type": "shell",
@@ -51,11 +54,13 @@
     // ==============================================
     // PYTHON UNIT TESTS
     // ==============================================
+    // NOTE: Python unit test arguments are centralized in lib/pytest.ini
+    // These tasks only add the file path and any task-specific overrides
     {
       "label": "Run Python Unit Test",
       "type": "shell",
       "command": "${workspaceFolder}/lib/venv/bin/python",
-      "args": ["-m", "pytest", "${file}", "-v", "--tb=short"],
+      "args": ["-m", "pytest", "${file}", "--no-cov", "-v", "--tb=short"],
       "group": "test",
       "presentation": {
         "echo": true,
@@ -121,28 +126,6 @@
       "command": "make",
       "args": ["frontend-tests"],
       "group": "test",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "options": {
-        "cwd": "${workspaceFolder}"
-      }
-    },
-
-    // ==============================================
-    // BUILD TASKS
-    // ==============================================
-    {
-      "label": "Build Frontend (Fast)",
-      "type": "shell",
-      "command": "make",
-      "args": ["frontend-fast"],
-      "group": "build",
       "presentation": {
         "echo": true,
         "reveal": "always",

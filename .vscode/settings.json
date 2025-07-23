@@ -5,9 +5,13 @@
 
   // Enable pytest for Python testing
   "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
+  "python.testing.unittestEnabled": true,
 
   // Global pytest configuration (discovers both e2e and unit tests)
+  // NOTE: Most pytest arguments are centralized in respective pytest.ini files:
+  // - e2e_playwright/pytest.ini for E2E test arguments
+  // - lib/pytest.ini for unit test arguments
+  // These args are for test discovery and IDE-specific overrides only
   "python.testing.pytestArgs": [
     "lib/tests",
     "e2e_playwright",
@@ -43,36 +47,5 @@
   },
   "terminal.integrated.env.windows": {
     "PYTHONPATH": "${workspaceFolder}/lib"
-  },
-
-  // ==============================================
-  // GENERAL CONFIGURATION
-  // ==============================================
-
-  // File associations
-  "files.associations": {
-    "*_test.py": "python",
-    "test_*.py": "python",
-    "*.test.ts": "typescript",
-    "*.test.tsx": "typescriptreact",
-    "*.spec.ts": "typescript",
-    "*.spec.tsx": "typescriptreact"
-  },
-
-  // Editor settings for test files
-  "editor.rulers": [88],
-  "editor.formatOnSave": true,
-
-  // Language-specific settings
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "testing.automaticallyOpenTestResults": "neverOpen"
+  }
 }
