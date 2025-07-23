@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import base64
 import io
-import sys
 from typing import Callable
 
 import streamlit as st
@@ -100,7 +99,6 @@ def use_st_pdf_basic():
     """Test basic st.pdf component usage."""
     pdf_bytes = _create_sample_pdf_bytes()
     st.pdf(pdf_bytes, height=400)
-    st.success("st.pdf component loaded successfully!")
 
 
 def use_st_pdf_file_upload():
@@ -109,11 +107,6 @@ def use_st_pdf_file_upload():
 
     if uploaded_file is not None:
         st.pdf(uploaded_file, height=400)
-        st.success("Uploaded PDF displayed successfully!")
-    else:
-        st.info("Showing sample PDF")
-        pdf_bytes = _create_sample_pdf_bytes()
-        st.pdf(pdf_bytes, height=300)
 
 
 def use_st_pdf_custom_size():
@@ -121,7 +114,6 @@ def use_st_pdf_custom_size():
     height = st.slider("Select PDF height", min_value=200, max_value=800, value=500)
     pdf_bytes = _create_sample_pdf_bytes()
     st.pdf(pdf_bytes, height=height)
-    st.success("PDF displayed with custom height")
 
 
 def use_st_pdf_base64():
@@ -134,7 +126,6 @@ def use_st_pdf_base64():
 
     decoded_pdf = base64.b64decode(encoded_pdf)
     st.pdf(decoded_pdf, height=400)
-    st.success("Base64 PDF displayed successfully!")
 
 
 def use_st_pdf_bytes_io():
@@ -142,7 +133,6 @@ def use_st_pdf_bytes_io():
     pdf_bytes = _create_sample_pdf_bytes()
     bytes_io = io.BytesIO(pdf_bytes)
     st.pdf(bytes_io, height=400)
-    st.success("BytesIO PDF displayed successfully!")
 
 
 def use_st_pdf_error_handling():
@@ -152,21 +142,6 @@ def use_st_pdf_error_handling():
     # Display invalid PDF data - component handles it gracefully
     invalid_pdf = b"This is not a valid PDF file"
     st.pdf(invalid_pdf, height=300)
-
-    st.error("Expected error with invalid PDF data")
-    st.info("This demonstrates error handling for invalid PDF content.")
-
-
-def use_st_pdf_multiple_files():
-    """Test st.pdf with multiple files."""
-    st.markdown("### Multiple PDF Display")
-
-    for i in range(1, 4):
-        st.write(f"**PDF #{i}**")
-        pdf_bytes = _create_sample_pdf_bytes()
-        st.pdf(pdf_bytes, height=250, key=f"pdf_multiple_{i}")
-
-    st.success("Multiple PDFs displayed successfully!")
 
 
 def use_st_pdf_in_columns():
@@ -184,8 +159,6 @@ def use_st_pdf_in_columns():
         pdf_bytes = _create_sample_pdf_bytes()
         st.pdf(pdf_bytes, height=300, key="pdf_column_2")
 
-    st.success("PDFs displayed in columns successfully!")
-
 
 def use_st_pdf_interactive():
     """Test interactive PDF features."""
@@ -198,20 +171,6 @@ def use_st_pdf_interactive():
 
     pdf_bytes = _create_sample_pdf_bytes()
     st.pdf(pdf_bytes, height=height)
-    st.success("Interactive PDF features working!")
-
-
-def use_st_pdf_accessibility():
-    """Test st.pdf accessibility features."""
-    st.markdown("### PDF Accessibility Test")
-
-    heights = [200, 350, 500]
-    for _, height in enumerate(heights, 1):
-        st.write(f"**PDF with height {height}px**")
-        pdf_bytes = _create_sample_pdf_bytes()
-        st.pdf(pdf_bytes, height=height, key=f"pdf_accessibility_{height}")
-
-    st.success("PDF accessibility features tested!")
 
 
 options: dict[str, Callable[[], None]] = {
@@ -221,39 +180,12 @@ options: dict[str, Callable[[], None]] = {
     "base64": use_st_pdf_base64,
     "bytesIO": use_st_pdf_bytes_io,
     "errorHandling": use_st_pdf_error_handling,
-    "multipleFiles": use_st_pdf_multiple_files,
     "columns": use_st_pdf_in_columns,
-    "accessibility": use_st_pdf_accessibility,
     "interactive": use_st_pdf_interactive,
 }
 
 st.markdown("# st.pdf Component Tests")
 st.write("Select a PDF test scenario to run:")
-
-# Debug information
-st.write("**Debug Information:**")
-st.write(f"- Python version: {sys.version}")
-st.write(f"- Streamlit version: {st.__version__}")
-
-# Check if streamlit_pdf is available
-try:
-    import streamlit_pdf
-
-    st.success("✅ streamlit_pdf module is available")
-    st.write(f"- streamlit_pdf location: {streamlit_pdf.__file__}")
-except ImportError as e:
-    st.error(f"❌ streamlit_pdf module not available: {e}")
-
-# Check if PDF component is available
-try:
-    from streamlit.elements.pdf import _is_pdf_component_available
-
-    if _is_pdf_component_available():
-        st.success("✅ PDF component is available")
-    else:
-        st.error("❌ PDF component is not available")
-except Exception as e:
-    st.error(f"❌ Error checking PDF component: {e}")
 
 st.divider()
 

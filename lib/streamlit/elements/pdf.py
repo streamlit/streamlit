@@ -33,19 +33,15 @@ if TYPE_CHECKING:
 PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
 
 
-# Check if the custom PDF component is available
-def _is_pdf_component_available() -> bool:
-    """Check if the pdf-viewer component is installed."""
-    try:
-        import streamlit_pdf  # noqa: F401
+def _get_pdf_component() -> Any | None:
+    """Get the PDF custom component if available.
 
-        return True
-    except ImportError:
-        return False
-
-
-def _get_pdf_component() -> Any:
-    """Get the PDF custom component if available."""
+    Returns
+    -------
+    Any | None
+        The pdf_viewer function if the streamlit-pdf component is available,
+        None otherwise.
+    """
     try:
         import streamlit_pdf
 
@@ -99,10 +95,9 @@ class PdfMixin:
         validate_height(height, allow_content=False)
 
         # Check if custom PDF component is available
-        if _is_pdf_component_available():
-            pdf_component = _get_pdf_component()
-            if pdf_component is not None:
-                return self._call_pdf_component(pdf_component, data, height, key)
+        pdf_component = _get_pdf_component()
+        if pdf_component is not None:
+            return self._call_pdf_component(pdf_component, data, height, key)
 
         # Show warning if component is not available
         return self._show_pdf_warning()
@@ -147,11 +142,11 @@ class PdfMixin:
                 f"or file-like object (such as BytesIO or UploadedFile)."
             )
 
-        # Convert height to appropriate format for the component
+        # Convert to component-compatible format
         if height == "stretch":
-            # Use 100vh to make the component take full viewport height,
-            # matching the behavior of other Streamlit elements with stretch
-            component_height = "100vh"
+            # For stretch, we need to pass a special value the component understands
+            # This maintains compatibility with the component while using standard layout
+            component_height = "stretch"
         else:
             component_height = str(height)
 
@@ -167,9 +162,9 @@ class PdfMixin:
         """Raise an exception that the PDF component is not available."""
         raise StreamlitAPIException(
             "The PDF viewer requires the `streamlit-pdf` component to be installed.\n\n"
-            "Please run `pip install streamlit-pdf` to install it.\n\n"
+            "Please run `pip install streamlit[pdf]` to install it.\n\n"
             "For more information, see the Streamlit PDF documentation at "
-            "https://docs.streamlit.io."
+            "https://docs.streamlit.io/develop/api-reference/media/st.pdf."
         )
 
     @property

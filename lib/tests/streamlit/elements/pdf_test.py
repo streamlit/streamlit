@@ -23,7 +23,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.pdf import _is_pdf_component_available
+from streamlit.elements.pdf import _get_pdf_component
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -34,42 +34,36 @@ class PdfComponentAvailabilityTest(DeltaGeneratorTestCase):
     def test_pdf_component_available(self):
         """Test when PDF component is available."""
         with patch(
-            "streamlit.elements.pdf._is_pdf_component_available", return_value=True
+            "streamlit.elements.pdf._get_pdf_component", return_value=lambda: None
         ):
-            assert _is_pdf_component_available() is True
+            assert _get_pdf_component() is not None
 
     def test_pdf_component_not_available(self):
         """Test when PDF component is not available."""
         # Import the module so we can access the function through it
         from streamlit.elements import pdf as pdf_module
 
-        with patch.object(
-            pdf_module, "_is_pdf_component_available", return_value=False
-        ):
-            assert not pdf_module._is_pdf_component_available()
+        with patch.object(pdf_module, "_get_pdf_component", return_value=None):
+            assert pdf_module._get_pdf_component() is None
 
     def test_pdf_component_import_error(self):
         """Test when PDF component import fails - checking behavior."""
         # Simply test that st.pdf raises the appropriate error when component is not available
-        with patch(
-            "streamlit.elements.pdf._is_pdf_component_available", return_value=False
-        ):
+        with patch("streamlit.elements.pdf._get_pdf_component", return_value=None):
             with pytest.raises(StreamlitAPIException) as exc_info:
                 st.pdf(b"dummy pdf data")
 
-            assert "streamlit-pdf" in str(exc_info.value)
+            assert "streamlit[pdf]" in str(exc_info.value)
             assert "pip install" in str(exc_info.value)
 
     def test_pdf_raises_when_component_not_available(self):
         """Test that st.pdf raises an appropriate error when component is not available."""
-        with patch(
-            "streamlit.elements.pdf._is_pdf_component_available", return_value=False
-        ):
+        with patch("streamlit.elements.pdf._get_pdf_component", return_value=None):
             with pytest.raises(StreamlitAPIException) as exc_info:
                 st.pdf("https://example.com/fake.pdf")
 
-            assert "streamlit-pdf" in str(exc_info.value)
-            assert "pip install streamlit-pdf" in str(exc_info.value)
+            assert "streamlit[pdf]" in str(exc_info.value)
+            assert "pip install streamlit[pdf]" in str(exc_info.value)
 
 
 class PdfTest(DeltaGeneratorTestCase):
@@ -112,7 +106,9 @@ class PdfTest(DeltaGeneratorTestCase):
 
         json_args = json.loads(element.component_instance.json_args)
         assert json_args["file"] == url
-        assert json_args["height"] == "100vh"  # stretch is converted to 100vh
+        assert (
+            json_args["height"] == "stretch"
+        )  # stretch is passed as "stretch" to component
 
     def test_pdf_with_bytes_data(self):
         """Test PDF with raw bytes data."""
