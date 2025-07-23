@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
 
 import { getLogger } from "loglevel"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
+import { LibContext } from "~lib/components/core/LibContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
@@ -37,6 +45,8 @@ function Audio({
   endpoints,
   elementMgr,
 }: Readonly<AudioProps>): ReactElement {
+  const { libConfig } = useContext(LibContext)
+
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const { startTime, endTime, loop, autoplay } = element
@@ -105,6 +115,7 @@ function Audio({
         if (loop) {
           // If loop is true and we reached 'endTime', reset to 'startTime'
           audioNode.currentTime = startTime || 0
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
           audioNode.play()
         } else if (!stoppedByEndTime) {
           stoppedByEndTime = true
@@ -135,6 +146,7 @@ function Audio({
     const handleAudioEnd = (): void => {
       if (loop) {
         audioNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         audioNode.play()
       }
     }
@@ -173,6 +185,7 @@ function Audio({
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}
+        crossOrigin={libConfig.resourceCrossOriginMode}
       />
     </StyledAudioContainer>
   )

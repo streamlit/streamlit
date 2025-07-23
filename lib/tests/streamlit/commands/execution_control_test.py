@@ -17,8 +17,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from streamlit.commands.execution_control import _new_fragment_id_queue, rerun
+from streamlit.commands.execution_control import (
+    _new_fragment_id_queue,
+    rerun,
+    switch_page,
+)
 from streamlit.errors import StreamlitAPIException
+from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.scriptrunner import RerunData
 
 
@@ -38,7 +43,10 @@ class NewFragmentIdQueueTest(unittest.TestCase):
         ctx.fragment_ids_this_run = ["some_fragment_id"]
         ctx.current_fragment_id = "some_other_fragment_id"
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match="Could not find current_fragment_id in fragment_id_queue. This should never happen.",
+        ):
             _new_fragment_id_queue(ctx, scope="fragment")
 
     def test_drops_items_in_queue_until_curr_id(self):
@@ -105,3 +113,35 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx)
 def test_st_rerun_invalid_scope_throws_error():
     with pytest.raises(StreamlitAPIException):
         rerun(scope="foo")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_context_info(patched_get_script_run_ctx):
+    """Test that context_info is passed to RerunData in st.switch_page."""
+    ctx = MagicMock()
+    ctx.pages_manager = MagicMock()  # Ensure pages_manager is present
+    ctx.main_script_path = "/some/path/your_app.py"
+    ctx.query_string = ""
+    ctx.page_script_hash = "some_hash"  # This is for the current page, not the target
+    ctx.cached_message_hashes = MagicMock()
+    ctx.context_info = {"test_key": "test_value"}  # Set a specific context_info
+
+    patched_get_script_run_ctx.return_value = ctx
+
+    # Mock the StreamlitPage object and its _script_hash attribute
+    mock_page = MagicMock(spec=StreamlitPage)
+    mock_page._script_hash = "target_page_hash"
+
+    with patch(
+        "streamlit.commands.execution_control.get_main_script_directory",
+        return_value="/some/path",
+    ):
+        switch_page(mock_page)
+
+    ctx.script_requests.request_rerun.assert_called_once()
+    call_args = ctx.script_requests.request_rerun.call_args[0][0]
+    assert isinstance(call_args, RerunData)
+    assert call_args.page_script_hash == "target_page_hash"
+    assert call_args.context_info == {"test_key": "test_value"}
+    # check that query_params.clear() was called
+    ctx.session_state.query_params.assert_called_once()

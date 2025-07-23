@@ -41,7 +41,7 @@ class FileUtilTest(unittest.TestCase):
         """Test streamlitfile_util.streamlit_read."""
         with file_util.streamlit_read(FILENAME) as file_input:
             data = file_input.read()
-        self.assertEqual("data", data)
+        assert data == "data"
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.file_util.open", mock_open(read_data=b"\xaa\xbb"))
@@ -49,7 +49,7 @@ class FileUtilTest(unittest.TestCase):
         """Test streamlitfile_util.streamlit_read."""
         with file_util.streamlit_read(FILENAME, binary=True) as file_input:
             data = file_input.read()
-        self.assertEqual(b"\xaa\xbb", data)
+        assert data == b"\xaa\xbb"
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     @patch("streamlit.file_util.open", mock_open(read_data="data"))
@@ -61,7 +61,7 @@ class FileUtilTest(unittest.TestCase):
             file_util.streamlit_read(FILENAME) as file_input,
         ):
             file_input.read()
-        self.assertEqual(str(e.value), 'Read zero byte file: "/some/cache/file"')
+        assert str(e.value) == 'Read zero byte file: "/some/cache/file"'
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
     def test_streamlit_write(self):
@@ -97,26 +97,23 @@ class FileUtilTest(unittest.TestCase):
                 "Python is limited to files below 2GB on OSX. "
                 "See https://bugs.python.org/issue24658"
             )
-            self.assertEqual(str(e.value), error_msg)
+            assert str(e.value) == error_msg
 
     def test_get_project_streamlit_file_path(self):
         expected = os.path.join(
             os.getcwd(), file_util.CONFIG_FOLDER_NAME, "some/random/file"
         )
 
-        self.assertEqual(
-            expected, file_util.get_project_streamlit_file_path("some/random/file")
-        )
+        assert expected == file_util.get_project_streamlit_file_path("some/random/file")
 
-        self.assertEqual(
-            expected,
-            file_util.get_project_streamlit_file_path("some", "random", "file"),
+        assert expected == file_util.get_project_streamlit_file_path(
+            "some", "random", "file"
         )
 
     def test_get_app_static_dir(self):
-        self.assertEqual(
-            file_util.get_app_static_dir("/some_path/to/app/myapp.py"),
-            "/some_path/to/app/static",
+        assert (
+            file_util.get_app_static_dir("/some_path/to/app/myapp.py")
+            == "/some_path/to/app/static"
         )
 
     @patch("os.path.getsize", MagicMock(return_value=42))
@@ -130,57 +127,57 @@ class FileUtilTest(unittest.TestCase):
         ),
     )
     def test_get_directory_size(self):
-        self.assertEqual(file_util.get_directory_size("the_dir"), 42 * 5)
+        assert file_util.get_directory_size("the_dir") == 42 * 5
 
 
 class FileIsInFolderTest(unittest.TestCase):
     def test_file_in_folder(self):
         # Test with and without trailing slash
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/c/")
-        self.assertTrue(ret)
+        assert ret
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/c")
-        self.assertTrue(ret)
+        assert ret
 
     def test_file_in_subfolder(self):
         # Test with and without trailing slash
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/a")
-        self.assertTrue(ret)
+        assert ret
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/")
-        self.assertTrue(ret)
+        assert ret
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b")
-        self.assertTrue(ret)
+        assert ret
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/a/b/")
-        self.assertTrue(ret)
+        assert ret
 
     def test_file_not_in_folder(self):
         # Test with and without trailing slash
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/d/e/f/")
-        self.assertFalse(ret)
+        assert not ret
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "/d/e/f")
-        self.assertFalse(ret)
+        assert not ret
 
     def test_rel_file_not_in_folder(self):
         # Test with and without trailing slash
         ret = file_util.file_is_in_folder_glob("foo.py", "/d/e/f/")
-        self.assertFalse(ret)
+        assert not ret
         ret = file_util.file_is_in_folder_glob("foo.py", "/d/e/f")
-        self.assertFalse(ret)
+        assert not ret
 
     def test_file_in_folder_glob(self):
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "**/c")
-        self.assertTrue(ret)
+        assert ret
 
     def test_file_not_in_folder_glob(self):
         ret = file_util.file_is_in_folder_glob("/a/b/c/foo.py", "**/f")
-        self.assertFalse(ret)
+        assert not ret
 
     def test_rel_file_not_in_folder_glob(self):
         ret = file_util.file_is_in_folder_glob("foo.py", "**/f")
-        self.assertFalse(ret)
+        assert not ret
 
     def test_rel_file_in_folder_glob(self):
         ret = file_util.file_is_in_folder_glob("foo.py", "")
-        self.assertTrue(ret)
+        assert ret
 
 
 class FileInPythonPathTest(unittest.TestCase):
@@ -191,54 +188,38 @@ class FileInPythonPathTest(unittest.TestCase):
 
     def test_no_pythonpath(self):
         with patch("os.environ", {}):
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("../something/dir1/dir2/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("../something/dir1/dir2/module")
             )
 
     def test_empty_pythonpath(self):
         with patch("os.environ", {"PYTHONPATH": ""}):
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something/dir1/dir2/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("something/dir1/dir2/module")
             )
 
     def test_python_path_relative(self):
         with patch("os.environ", {"PYTHONPATH": "something"}):
-            self.assertTrue(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something/dir1/dir2/module")
-                )
+            assert file_util.file_in_pythonpath(
+                self._make_it_absolute("something/dir1/dir2/module")
             )
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something_else/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("something_else/module")
             )
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("../something/dir1/dir2/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("../something/dir1/dir2/module")
             )
 
     def test_python_path_absolute(self):
         with patch("os.environ", {"PYTHONPATH": self._make_it_absolute("something")}):
-            self.assertTrue(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something/dir1/dir2/module")
-                )
+            assert file_util.file_in_pythonpath(
+                self._make_it_absolute("something/dir1/dir2/module")
             )
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something_else/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("something_else/module")
             )
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("../something/dir1/dir2/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("../something/dir1/dir2/module")
             )
 
     def test_python_path_mixed(self):
@@ -250,94 +231,64 @@ class FileInPythonPathTest(unittest.TestCase):
                 )
             },
         ):
-            self.assertTrue(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something/dir1/dir2/module")
-                )
+            assert file_util.file_in_pythonpath(
+                self._make_it_absolute("something/dir1/dir2/module")
             )
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something_else/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("something_else/module")
             )
 
     def test_current_directory(self):
         with patch("os.environ", {"PYTHONPATH": "."}):
-            self.assertTrue(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something/dir1/dir2/module")
-                )
+            assert file_util.file_in_pythonpath(
+                self._make_it_absolute("something/dir1/dir2/module")
             )
-            self.assertTrue(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("something_else/module")
-                )
+            assert file_util.file_in_pythonpath(
+                self._make_it_absolute("something_else/module")
             )
-            self.assertFalse(
-                file_util.file_in_pythonpath(
-                    self._make_it_absolute("../something_else/module")
-                )
+            assert not file_util.file_in_pythonpath(
+                self._make_it_absolute("../something_else/module")
             )
 
     def test_get_main_script_directory(self):
         """Test file_util.get_main_script_directory."""
         with patch("os.getcwd", return_value="/some/random"):
-            self.assertEqual(
-                file_util.get_main_script_directory("app.py"),
-                "/some/random",
-            )
-            self.assertEqual(
-                file_util.get_main_script_directory("./app.py"),
-                "/some/random",
-            )
-            self.assertEqual(
-                file_util.get_main_script_directory("../app.py"),
-                "/some",
-            )
-            self.assertEqual(
-                file_util.get_main_script_directory("/path/to/my/app.py"),
-                "/path/to/my",
+            assert file_util.get_main_script_directory("app.py") == "/some/random"
+            assert file_util.get_main_script_directory("./app.py") == "/some/random"
+            assert file_util.get_main_script_directory("../app.py") == "/some"
+            assert (
+                file_util.get_main_script_directory("/path/to/my/app.py")
+                == "/path/to/my"
             )
 
     def test_normalize_path_join(self):
         """Test file_util.normalize_path_join."""
-        self.assertEqual(
-            file_util.normalize_path_join("/some", "random", "path"),
-            "/some/random/path",
+        assert (
+            file_util.normalize_path_join("/some", "random", "path")
+            == "/some/random/path"
         )
-        self.assertEqual(
-            file_util.normalize_path_join("some", "random", "path"),
-            "some/random/path",
+        assert (
+            file_util.normalize_path_join("some", "random", "path")
+            == "some/random/path"
         )
-        self.assertEqual(
-            file_util.normalize_path_join("/some", "random", "./path"),
-            "/some/random/path",
+        assert (
+            file_util.normalize_path_join("/some", "random", "./path")
+            == "/some/random/path"
         )
-        self.assertEqual(
-            file_util.normalize_path_join("some", "random", "./path"),
-            "some/random/path",
+        assert (
+            file_util.normalize_path_join("some", "random", "./path")
+            == "some/random/path"
         )
-        self.assertEqual(
-            file_util.normalize_path_join("/some", "random", "../path"),
-            "/some/path",
+        assert (
+            file_util.normalize_path_join("/some", "random", "../path") == "/some/path"
         )
-        self.assertEqual(
-            file_util.normalize_path_join("some", "random", "../path"),
-            "some/path",
+        assert file_util.normalize_path_join("some", "random", "../path") == "some/path"
+        assert file_util.normalize_path_join("/some", "random", "/path") == "/path"
+        assert file_util.normalize_path_join("some", "random", "/path") == "/path"
+        assert (
+            file_util.normalize_path_join("some", "random", "path", "..")
+            == "some/random"
         )
-        self.assertEqual(
-            file_util.normalize_path_join("/some", "random", "/path"),
-            "/path",
-        )
-        self.assertEqual(
-            file_util.normalize_path_join("some", "random", "/path"),
-            "/path",
-        )
-        self.assertEqual(
-            file_util.normalize_path_join("some", "random", "path", ".."),
-            "some/random",
-        )
-        self.assertEqual(
-            file_util.normalize_path_join("some", "random", "path", "../.."),
-            "some",
+        assert (
+            file_util.normalize_path_join("some", "random", "path", "../..") == "some"
         )

@@ -124,9 +124,8 @@ describe("useWidgetManagerElementState hook", () => {
     render(<TestComponent />)
 
     // verify default value
-    const inputElement = screen.getByLabelText(
-      testInputAriaLabel
-    ) as HTMLInputElement
+    const inputElement: HTMLInputElement =
+      screen.getByLabelText(testInputAriaLabel)
     expect(inputElement.value).toBe(defaultValue)
 
     expect(widgetMgr.getElementState(elementId, stateKey)).toBe(defaultValue)
@@ -141,6 +140,7 @@ describe("useWidgetManagerElementState hook", () => {
 
     // submit the form
     // note: struggled using default html form submission, so manually triggering our submission logic here
+    // eslint-disable-next-line @typescript-eslint/await-thenable
     await act(() => {
       widgetMgr.submitForm(formId, undefined)
     })

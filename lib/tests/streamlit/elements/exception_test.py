@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import cast
 from unittest.mock import MagicMock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -52,7 +53,7 @@ File "syntax_hilite.py", line 84
                         ^
 SyntaxError: invalid syntax
 """
-        self.assertEqual(expected.strip(), _format_syntax_error_message(err))
+        assert expected.strip() == _format_syntax_error_message(err)
 
     @parameterized.expand([(True,), (False,)])
     def test_markdown_flag(self, is_uncaught_app_exception):
@@ -65,7 +66,7 @@ SyntaxError: invalid syntax
             RuntimeError("oh no!"),
             is_uncaught_app_exception=is_uncaught_app_exception,
         )
-        self.assertFalse(proto.message_is_markdown)
+        assert not proto.message_is_markdown
 
         proto = ExceptionProto()
         exception.marshall(
@@ -73,7 +74,7 @@ SyntaxError: invalid syntax
             StreamlitAPIException("oh no!"),
             is_uncaught_app_exception=is_uncaught_app_exception,
         )
-        self.assertTrue(proto.message_is_markdown)
+        assert proto.message_is_markdown
 
         proto = ExceptionProto()
         exception.marshall(
@@ -81,7 +82,7 @@ SyntaxError: invalid syntax
             errors.DuplicateWidgetID("oh no!"),
             is_uncaught_app_exception=is_uncaught_app_exception,
         )
-        self.assertTrue(proto.message_is_markdown)
+        assert proto.message_is_markdown
 
     @parameterized.expand(
         [
@@ -111,7 +112,7 @@ SyntaxError: invalid syntax
         except Exception as e:
             err = e
 
-        self.assertIsNotNone(err)
+        assert err is not None
 
         # Marshall it.
         proto = ExceptionProto()
@@ -120,11 +121,9 @@ SyntaxError: invalid syntax
         )
 
         user_module_path = os.path.join(os.path.realpath(user_module_path), "")
-        self.assertIn(user_module_path, proto.stack_trace[0], "Stack not stripped")
-        self.assertEqual(
-            len(proto.stack_trace),
-            stack_len,
-            f"Stack does not have length {stack_len}: {proto.stack_trace}",
+        assert user_module_path in proto.stack_trace[0], "Stack not stripped"
+        assert len(proto.stack_trace) == stack_len, (
+            f"Stack does not have length {stack_len}: {proto.stack_trace}"
         )
 
     @patch("streamlit.elements.exception.get_script_run_ctx")
@@ -150,7 +149,7 @@ SyntaxError: invalid syntax
         except Exception as e:
             err = e
 
-        self.assertIsNotNone(err)
+        assert err is not None
 
         original_stack_len = len(traceback.extract_tb(err.__traceback__))
 
@@ -161,11 +160,9 @@ SyntaxError: invalid syntax
         )
 
         user_module_path = os.path.join(os.path.realpath(user_module_path), "")
-        self.assertFalse(any(user_module_path in t for t in proto.stack_trace))
-        self.assertEqual(
-            len(proto.stack_trace),
-            original_stack_len,
-            f"Stack does not have length {original_stack_len}: {proto.stack_trace}",
+        assert not any(user_module_path in t for t in proto.stack_trace)
+        assert len(proto.stack_trace) == original_stack_len, (
+            f"Stack does not have length {original_stack_len}: {proto.stack_trace}"
         )
 
     @parameterized.expand([(True,), ("true",), ("True",), ("full",)])
@@ -180,7 +177,7 @@ SyntaxError: invalid syntax
                 st.format("http://not_an_image.png", width=-1)
             except Exception as e:
                 err = e
-            self.assertIsNotNone(err)
+            assert err is not None
 
             # Marshall it.
             proto = ExceptionProto()
@@ -200,7 +197,7 @@ SyntaxError: invalid syntax
                 st.format("http://not_an_image.png", width=-1)
             except Exception as e:
                 err = e
-            self.assertIsNotNone(err)
+            assert err is not None
 
             # Marshall it.
             proto = ExceptionProto()
@@ -217,7 +214,7 @@ SyntaxError: invalid syntax
                 st.format("http://not_an_image.png", width=-1)
             except Exception as e:
                 err = e
-            self.assertIsNotNone(err)
+            assert err is not None
 
             # Marshall it.
             proto = ExceptionProto()
@@ -234,7 +231,7 @@ SyntaxError: invalid syntax
                 st.format("http://not_an_image.png", width=-1)
             except Exception as e:
                 err = e
-            self.assertIsNotNone(err)
+            assert err is not None
 
             # Marshall it.
             proto = ExceptionProto()
@@ -251,7 +248,7 @@ SyntaxError: invalid syntax
                 st.format("http://not_an_image.png", width=-1)
             except Exception as e:
                 err = e
-            self.assertIsNotNone(err)
+            assert err is not None
 
             # Marshall it.
             proto = ExceptionProto()
@@ -268,44 +265,44 @@ class ExceptionWidthTest(DeltaGeneratorTestCase):
         e = RuntimeError("This is an exception")
         st.exception(e, width=500)
         c = self.get_delta_from_queue().new_element.exception
-        self.assertTrue(
+        assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.PIXEL_WIDTH.value
         )
-        self.assertEqual(c.width_config.pixel_width, 500)
+        assert c.width_config.pixel_width == 500
 
     def test_exception_with_width_stretch(self):
         """Test that exceptions can be displayed with a width of 'stretch'."""
         e = RuntimeError("This is an exception")
         st.exception(e, width="stretch")
         c = self.get_delta_from_queue().new_element.exception
-        self.assertTrue(
+        assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     def test_exception_with_default_width(self):
         """Test that the default width is used when not specified."""
         e = RuntimeError("This is an exception")
         st.exception(e)
         c = self.get_delta_from_queue().new_element.exception
-        self.assertTrue(
+        assert (
             c.width_config.WhichOneof("width_spec")
             == WidthConfigFields.USE_STRETCH.value
         )
-        self.assertTrue(c.width_config.use_stretch)
+        assert c.width_config.use_stretch
 
     def test_exception_with_invalid_width(self):
         """Test that an invalid width raises an exception."""
         e = RuntimeError("This is an exception")
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.exception(e, width="invalid")
 
     def test_exception_with_negative_width(self):
         """Test that a negative width raises an exception."""
         e = RuntimeError("This is an exception")
-        with self.assertRaises(StreamlitInvalidWidthError):
+        with pytest.raises(StreamlitInvalidWidthError):
             st.exception(e, width=-100)
 
 
@@ -325,11 +322,11 @@ class StExceptionAPITest(DeltaGeneratorTestCase):
             st.exception(e)
 
             el = self.get_delta_from_queue().new_element
-            self.assertEqual(el.exception.type, "RuntimeError")
-            self.assertEqual(el.exception.message, "Test Exception")
+            assert el.exception.type == "RuntimeError"
+            assert el.exception.message == "Test Exception"
             # We will test stack_trace when testing
             # streamlit.elements.exception_element
-            self.assertEqual(el.exception.stack_trace, [])
+            assert el.exception.stack_trace == []
 
 
 class SplitListTest(unittest.TestCase):
@@ -346,5 +343,5 @@ class SplitListTest(unittest.TestCase):
     def test_split_list(self, input_list, split_index):
         before, after = _split_list(input_list, split_point=lambda x: x == "-")
 
-        self.assertEqual(before, input_list[:split_index])
-        self.assertEqual(after, input_list[split_index:])
+        assert before == input_list[:split_index]
+        assert after == input_list[split_index:]

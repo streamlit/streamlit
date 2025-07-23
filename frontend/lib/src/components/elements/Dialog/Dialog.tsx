@@ -14,13 +14,22 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
+
+import { StyledDialogTitle } from "./styled-components"
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
@@ -45,6 +54,45 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     // changed which would lead to the dialog not opening again.
   }, [initialIsOpen, deltaMsgReceivedAt])
 
+  // Handler to suppress the R key when dialog is open and non-dismissible
+  // Otherwise, R would allow to dismiss the dialog by rerunning the script.
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent): void => {
+      if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
+        const target = e.target as HTMLElement
+
+        // We don't want to prevent typing in input fields.
+        // This is the same check that is also done by react-hot-keys.
+        if (
+          target &&
+          (target.isContentEditable ||
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT")
+        ) {
+          return
+        }
+
+        // Prevent the R key from bubbling up to the App level
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    },
+    [isOpen, element.dismissible]
+  )
+
+  // Set up keyboard event listener when dialog is open
+  useEffect(() => {
+    if (isOpen && !element.dismissible) {
+      // Add event listener with capture=true to intercept before App level
+      document.addEventListener("keydown", handleKeyDown, true)
+
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown, true)
+      }
+    }
+  }, [isOpen, element.dismissible, handleKeyDown])
+
   // don't use the Modal's isOpen prop as it feels laggy when using it
   if (!isOpen) {
     return <></>
@@ -57,7 +105,16 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       onClose={() => setIsOpen(false)}
       size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
-      <ModalHeader>{title}</ModalHeader>
+      <ModalHeader>
+        <StyledDialogTitle>
+          <StreamlitMarkdown
+            source={title}
+            allowHTML={false}
+            isLabel
+            inheritFont
+          />
+        </StyledDialogTitle>
+      </ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>
   )

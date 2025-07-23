@@ -23,13 +23,13 @@ import textwrap
 from typing import Final, NamedTuple, NoReturn, cast
 from uuid import uuid4
 
-from streamlit import cli_util, env_util, file_util, util
+from streamlit import cli_util, config, env_util, file_util, util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
 
-_CONFIG_FILE_PATH = (
+_CONFIG_FILE_PATH: Final = (
     r"%userprofile%/.streamlit/config.toml"
     if env_util.IS_WINDOWS
     else "~/.streamlit/config.toml"
@@ -247,6 +247,8 @@ class Credentials:
                     "`streamlit activate reset` then `streamlit activate`"
                 )
         else:
+            if not config.get_option("server.showEmailPrompt"):
+                return
             activated = False
 
             while not activated:
@@ -263,43 +265,30 @@ class Credentials:
                 if self.activation.is_valid:
                     self.save()
                     # IMPORTANT: Break the text below at 80 chars.
-                    TELEMETRY_TEXT = """
-  You can find our privacy policy at %(link)s
+                    telemetry_text = f"""
+  You can find our privacy policy at {cli_util.style_for_cli("https://streamlit.io/privacy-policy", underline=True)}
 
   Summary:
   - This open source library collects usage statistics.
   - We cannot see and do not store information contained inside Streamlit apps,
     such as text, charts, images, etc.
   - Telemetry data is stored in servers in the United States.
-  - If you'd like to opt out, add the following to %(config)s,
+  - If you'd like to opt out, add the following to {cli_util.style_for_cli(_CONFIG_FILE_PATH)},
     creating that file if necessary:
 
     [browser]
     gatherUsageStats = false
-""" % {
-                        "link": cli_util.style_for_cli(
-                            "https://streamlit.io/privacy-policy", underline=True
-                        ),
-                        "config": cli_util.style_for_cli(_CONFIG_FILE_PATH),
-                    }
+"""
 
-                    cli_util.print_to_cli(TELEMETRY_TEXT)
+                    cli_util.print_to_cli(telemetry_text)
                     if show_instructions:
                         # IMPORTANT: Break the text below at 80 chars.
-                        INSTRUCTIONS_TEXT = """
-  %(start)s
-  %(prompt)s %(hello)s
-""" % {
-                            "start": cli_util.style_for_cli(
-                                "Get started by typing:", fg="blue", bold=True
-                            ),
-                            "prompt": cli_util.style_for_cli("$", fg="blue"),
-                            "hello": cli_util.style_for_cli(
-                                "streamlit hello", bold=True
-                            ),
-                        }
+                        instructions_text = f"""
+  {cli_util.style_for_cli("Get started by typing:", fg="blue", bold=True)}
+  {cli_util.style_for_cli("$", fg="blue")} {cli_util.style_for_cli("streamlit hello", bold=True)}
+"""
 
-                        cli_util.print_to_cli(INSTRUCTIONS_TEXT)
+                        cli_util.print_to_cli(instructions_text)
                     activated = True
                 else:  # pragma: nocover
                     _LOGGER.error("Please try again.")

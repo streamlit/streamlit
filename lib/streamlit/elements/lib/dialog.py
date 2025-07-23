@@ -115,8 +115,11 @@ class Dialog(DeltaGenerator):
     def _update(self, should_open: bool) -> None:
         """Send an updated proto message to indicate the open-status for the dialog."""
 
-        assert self._current_proto is not None, "Dialog not correctly initialized!"
-        assert self._delta_path is not None, "Dialog not correctly initialized!"
+        if self._current_proto is None or self._delta_path is None:
+            raise RuntimeError(
+                "Dialog not correctly initialized. This should never happen."
+            )
+
         _assert_first_dialog_to_be_opened(should_open)
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path

@@ -18,7 +18,8 @@ import { PageConfig } from "@streamlit/protobuf"
 
 export function shouldCollapse(
   initialSidebarState: PageConfig.SidebarState | undefined,
-  mediumBreakpointPx: number
+  mediumBreakpointPx: number,
+  windowInnerWidth: number
 ): boolean {
   switch (initialSidebarState) {
     case PageConfig.SidebarState.EXPANDED:
@@ -28,8 +29,7 @@ export function shouldCollapse(
     case PageConfig.SidebarState.AUTO:
     default: {
       // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX
-      const { innerWidth } = window || {}
-      return innerWidth ? innerWidth <= mediumBreakpointPx : false
+      return windowInnerWidth <= mediumBreakpointPx
     }
   }
 }

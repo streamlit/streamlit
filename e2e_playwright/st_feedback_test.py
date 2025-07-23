@@ -57,6 +57,13 @@ def test_click_thumbsup_and_take_snapshot(
     get_feedback_icon_button(thumbs, "thumb_up").click()
     wait_for_app_run(themed_app)
 
+    # Hover over the hover test feedback to show hover state
+    hover_test_thumbs = get_element_by_key(themed_app, "thumbs_feedback_hover_test")
+    hover_test_button = get_feedback_icon_button(
+        get_button_group(hover_test_thumbs), "thumb_down"
+    )
+    hover_test_button.hover()
+
     assert_snapshot(container, name="st_feedback-thumbs")
 
 
@@ -74,6 +81,13 @@ def test_clicking_on_faces_shows_sentiment_via_on_change_callback_and_take_snaps
     text = get_markdown(themed_app, "Faces sentiment: 3")
     expect(text).to_be_attached()
 
+    # Hover over the hover test feedback to show hover state
+    hover_test_faces = get_element_by_key(themed_app, "faces_feedback_hover_test")
+    hover_test_button = get_feedback_icon_button(
+        get_button_group(hover_test_faces), "sentiment_very_satisfied"
+    )
+    hover_test_button.hover()
+
     assert_snapshot(container, name="st_feedback-faces")
 
 
@@ -90,6 +104,13 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Star sentiment: 3")
     expect(text).to_be_attached()
+
+    # Hover over the hover test feedback to show hover state
+    hover_test_stars = get_element_by_key(themed_app, "stars_feedback_hover_test")
+    hover_test_button = get_feedback_icon_button(
+        get_button_group(hover_test_stars), "star", 4
+    )
+    hover_test_button.hover()
 
     assert_snapshot(container, name="st_feedback-stars")
 
@@ -176,3 +197,17 @@ def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
 
     expect(get_element_by_key(app, "faces_feedback")).to_be_visible()
+
+
+def test_feedback_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test feedback widgets with different width configurations."""
+
+    # Test thumbs width examples
+    thumbs_content = get_element_by_key(app, "thumbs_content_width")
+    assert_snapshot(thumbs_content, name="st_feedback-thumbs_width_content")
+
+    thumbs_stretch = get_element_by_key(app, "thumbs_stretch_width")
+    assert_snapshot(thumbs_stretch, name="st_feedback-thumbs_width_stretch")
+
+    thumbs_300px = get_element_by_key(app, "thumbs_300px_width")
+    assert_snapshot(thumbs_300px, name="st_feedback-thumbs_width_300px")

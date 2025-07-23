@@ -202,3 +202,29 @@ def dialog_with_rerun() -> None:
 
 if st.button("Open Dialog with rerun"):
     dialog_with_rerun()
+
+
+@st.dialog(
+    "This is a very long dialog title that should not overlap with the close button"
+)
+def dialog_with_long_title() -> None:
+    st.write("This dialog has a very long title to test spacing.")
+
+
+if st.button("Open Dialog with long title"):
+    dialog_with_long_title()
+
+
+@st.dialog("Non-dismissible Dialog", dismissible=False)
+def non_dismissible_dialog() -> None:
+    st.write("This dialog cannot be dismissed by pressing ESC or clicking outside!")
+    st.info(
+        "You can only close this dialog by clicking the 'Close Dialog' button below."
+    )
+
+    if st.button("Close Dialog", key="non-dismissible-close-btn"):
+        st.rerun()
+
+
+if st.button("Open Non-dismissible Dialog"):
+    non_dismissible_dialog()

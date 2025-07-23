@@ -113,6 +113,7 @@ function useDataLoader(
       } catch (error) {
         return getErrorCell(
           "Error during cell creation",
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `This error should never happen. Please report this bug. \nError: ${error}`
         )
       }

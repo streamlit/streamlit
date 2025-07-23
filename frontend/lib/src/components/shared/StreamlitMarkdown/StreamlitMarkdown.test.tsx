@@ -17,7 +17,6 @@
 import React, { ReactElement } from "react"
 
 import ReactMarkdown from "react-markdown"
-// eslint-disable-next-line testing-library/no-manual-cleanup
 import { cleanup, screen } from "@testing-library/react"
 import { transparentize } from "color2k"
 
@@ -26,11 +25,13 @@ import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { colors } from "~lib/theme/primitives/colors"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { LibContext } from "~lib/components/core/LibContext"
 
 import StreamlitMarkdown, {
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
+  CustomMediaTag,
   CustomPreTag,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
@@ -248,6 +249,23 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveAttribute("alt", "Streamlit logo")
   })
 
+  it("renders streamlit logo with allowHTML=true", () => {
+    render(<StreamlitMarkdown source={":streamlit:"} allowHTML={true} />)
+    const image = screen.getByRole("img")
+    expect(image).toHaveAttribute("alt", "Streamlit logo")
+    expect(image).toHaveStyle("display: inline-block")
+    expect(image).toHaveStyle("user-select: none")
+  })
+
+  it("renders material icons with allowHTML=true", () => {
+    const source = `:material/search: Icon`
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const markdown = screen.getByText("search")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
+  })
+
   // Typographical symbol replacements
   const symbolReplacementCases = [
     { input: "a -> b", tag: "p", expected: "a → b" },
@@ -411,7 +429,7 @@ describe("StreamlitMarkdown", () => {
       const tagName = markdown.nodeName.toLowerCase()
       expect(tagName).toBe("span")
       expect(markdown).toHaveStyle(`color: ${style}`)
-      expect(markdown).toHaveClass("colored-text")
+      expect(markdown).toHaveClass("stMarkdownColoredText")
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
@@ -512,13 +530,10 @@ describe("StreamlitMarkdown", () => {
 const getCustomCodeTagProps = (
   props: Partial<CustomCodeTagProps> = {}
 ): CustomCodeTagProps => ({
-  children: [
-    `import streamlit as st
+  children: `import streamlit as st
 
 st.write("Hello")
 `,
-  ],
-  node: { type: "element", tagName: "tagName", children: [] },
   ...props,
 })
 
@@ -541,7 +556,7 @@ describe("CustomCodeTag Element", () => {
 
   it("should render copy button when code block has content", () => {
     const props = getCustomCodeTagProps({
-      children: ["i am not empty"],
+      children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
     const copyButton = screen.getByTitle("Copy to clipboard")
@@ -551,11 +566,11 @@ describe("CustomCodeTag Element", () => {
 
   it("should not render copy button when code block is empty", () => {
     const props = getCustomCodeTagProps({
-      children: [""],
+      children: "",
     })
     render(<CustomCodeTag {...props} />)
     // queryBy returns null vs. error
-    const copyButton = screen.queryByRole("button") // eslint-disable-line testing-library/prefer-presence-queries
+    const copyButton = screen.queryByRole("button")
 
     expect(copyButton).toBeNull()
   })
@@ -590,5 +605,136 @@ describe("CustomPreTag", () => {
     expect(preTag).toHaveTextContent(
       'import streamlit as st st.write("Hello")'
     )
+  })
+})
+
+describe("CustomMediaTag", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mockNode = { tagName: "img" } as any
+  const mockProps = {
+    src: "test-image.jpg",
+    alt: "Test image",
+  }
+
+  // Create minimal mock for LibContext focusing only on what CustomMediaTag needs
+  const createMockLibContextValue = (
+    resourceCrossOriginMode: undefined | "anonymous" | "use-credentials"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): any => {
+    return {
+      libConfig: { resourceCrossOriginMode },
+    }
+  }
+
+  it("should render img element with crossOrigin='anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
+    const mockContextValue = createMockLibContextValue("anonymous")
+    render(
+      <LibContext.Provider value={mockContextValue}>
+        <CustomMediaTag node={mockNode} {...mockProps} />
+      </LibContext.Provider>
+    )
+
+    const imgElement = screen.getByRole("img")
+    expect(imgElement).toHaveAttribute("crossOrigin", "anonymous")
+    expect(imgElement).toHaveAttribute("src", "test-image.jpg")
+    expect(imgElement).toHaveAttribute("alt", "Test image")
+  })
+
+  it("should render img element without crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
+    const mockContextValue = createMockLibContextValue(undefined)
+    render(
+      <LibContext.Provider value={mockContextValue}>
+        <CustomMediaTag node={mockNode} {...mockProps} />
+      </LibContext.Provider>
+    )
+
+    const imgElement = screen.getByRole("img")
+    expect(imgElement).not.toHaveAttribute("crossOrigin")
+    expect(imgElement).toHaveAttribute("src", "test-image.jpg")
+    expect(imgElement).toHaveAttribute("alt", "Test image")
+  })
+
+  it("should render video element with crossOrigin='anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const videoNode = { tagName: "video" } as any
+    const videoProps = {
+      src: "test-video.mp4",
+      controls: true,
+    }
+
+    const mockContextValue = createMockLibContextValue("anonymous")
+    const { container } = render(
+      <LibContext.Provider value={mockContextValue}>
+        <CustomMediaTag node={videoNode} {...videoProps} />
+      </LibContext.Provider>
+    )
+
+    const videoElement = container.querySelector("video")
+    expect(videoElement).toBeTruthy()
+    expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
+    expect(videoElement).toHaveAttribute("src", "test-video.mp4")
+  })
+
+  it("should render video element without crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const videoNode = { tagName: "video" } as any
+    const videoProps = {
+      src: "test-video.mp4",
+      controls: true,
+    }
+
+    const mockContextValue = createMockLibContextValue(undefined)
+    const { container } = render(
+      <LibContext.Provider value={mockContextValue}>
+        <CustomMediaTag node={videoNode} {...videoProps} />
+      </LibContext.Provider>
+    )
+
+    const videoElement = container.querySelector("video")
+    expect(videoElement).toBeTruthy()
+    expect(videoElement).not.toHaveAttribute("crossOrigin")
+    expect(videoElement).toHaveAttribute("src", "test-video.mp4")
+  })
+
+  it("should render audio element with crossOrigin='anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const audioNode = { tagName: "audio" } as any
+    const audioProps = {
+      src: "test-audio.mp3",
+      controls: true,
+    }
+
+    const mockContextValue = createMockLibContextValue("anonymous")
+    const { container } = render(
+      <LibContext.Provider value={mockContextValue}>
+        <CustomMediaTag node={audioNode} {...audioProps} />
+      </LibContext.Provider>
+    )
+
+    const audioElement = container.querySelector("audio")
+    expect(audioElement).toBeTruthy()
+    expect(audioElement).toHaveAttribute("crossOrigin", "anonymous")
+    expect(audioElement).toHaveAttribute("src", "test-audio.mp3")
+  })
+
+  it("should render audio element without crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const audioNode = { tagName: "audio" } as any
+    const audioProps = {
+      src: "test-audio.mp3",
+      controls: true,
+    }
+
+    const mockContextValue = createMockLibContextValue(undefined)
+    const { container } = render(
+      <LibContext.Provider value={mockContextValue}>
+        <CustomMediaTag node={audioNode} {...audioProps} />
+      </LibContext.Provider>
+    )
+
+    const audioElement = container.querySelector("audio")
+    expect(audioElement).toBeTruthy()
+    expect(audioElement).not.toHaveAttribute("crossOrigin")
+    expect(audioElement).toHaveAttribute("src", "test-audio.mp3")
   })
 })

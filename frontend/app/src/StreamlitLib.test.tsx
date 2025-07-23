@@ -95,6 +95,7 @@ class Endpoints implements StreamlitEndpoints {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface Props {}
 
 interface State {
@@ -229,6 +230,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
         widgetMgr={this.widgetMgr}
         uploadClient={this.uploadClient}
         widgetsDisabled={false}
+        height="auto"
       />
     )
   }

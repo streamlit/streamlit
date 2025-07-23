@@ -16,11 +16,15 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    goto_app,
     select_radio_option,
 )
 
@@ -124,9 +128,22 @@ def test_video_end_time(app: Page, video_option_label: str):
     video_element = _select_video_to_show(app, video_option_label)
     _wait_until_video_has_data(app, video_element)
     video_element.evaluate("el => el.play()")
-    # Wait until video will reach end_time
-    app.wait_for_timeout(3000)
-    expect(video_element).to_have_js_property("paused", True)
+
+    # Wait for the video to actually start playing
+    wait_until(
+        app,
+        lambda: video_element.evaluate("el => !el.paused") is True,
+        timeout=2000,
+    )
+
+    # Wait until video reaches end_time and pauses
+    wait_until(
+        app,
+        lambda: video_element.evaluate("el => el.paused") is True,
+        timeout=5000,
+    )
+
+    # Verify the video stopped at the expected end_time (33 seconds)
     wait_until(app, lambda: int(video_element.evaluate("el => el.currentTime")) == 33)
 
 
@@ -225,7 +242,7 @@ def test_video_source_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    app.goto(f"http://localhost:{app_port}")
+    goto_app(app, f"http://localhost:{app_port}")
     _select_video_to_show(app, "mp4 video")
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent

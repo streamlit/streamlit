@@ -53,8 +53,8 @@ from streamlit.web.server.routes import (
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import (
-    DEVELOPMENT_PORT,
     get_cookie_secret,
+    is_tornado_version_less_than,
     is_xsrf_enabled,
     make_url_path_regex,
 )
@@ -62,6 +62,7 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import Awaitable
     from ssl import SSLContext
 
@@ -70,12 +71,12 @@ _LOGGER: Final = get_logger(__name__)
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
     "compress_response": True,
-    # Ping every 1s to keep WS alive.
-    # 2021.06.22: this value was previously 20s, and was causing
-    # connection instability for a small number of users. This smaller
-    # ping_interval fixes that instability.
-    # https://github.com/streamlit/streamlit/issues/3196
-    "websocket_ping_interval": 1,
+    # Ping every 30s to keep WS alive.
+    # With recent versions of Tornado, this value must be greater than or
+    # equal to websocket_ping_timeout.
+    # For details, see https://github.com/tornadoweb/tornado/pull/3376
+    # For compatibility with older versions of Tornado, we set the value to 1.
+    "websocket_ping_interval": 1 if is_tornado_version_less_than("6.5.0") else 30,
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
@@ -203,14 +204,6 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
-        if int(port) == DEVELOPMENT_PORT:
-            _LOGGER.warning(
-                "Port %s is reserved for internal development. "
-                "It is strongly recommended to select an alternative port "
-                "for `server.port`.",
-                DEVELOPMENT_PORT,
-            )
-
         try:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
@@ -225,9 +218,6 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
                         "Port %s already in use, trying to use the next one.", port
                     )
                     port += 1
-                    # Don't use the development port here:
-                    if port == DEVELOPMENT_PORT:
-                        port += 1
 
                     config.set_option(
                         "server.port", port, ConfigOption.STREAMLIT_DEFINITION
@@ -250,6 +240,11 @@ class Server:
         self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
+
+        # The task that runs the server if an event loop is already running.
+        # We need to save a reference to it so that it doesn't get
+        # garbage collected while running.
+        self._bootstrap_task: asyncio.Task[None] | None = None
 
         # Initialize MediaFileStorage and its associated endpoint
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
@@ -428,7 +423,7 @@ class Server:
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {
-                            "path": "%s/" % static_path,
+                            "path": f"{static_path}/",
                             "default_filename": "index.html",
                             "reserved_paths": [
                                 # These paths are required for identifying

@@ -122,7 +122,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        with self.assertRaises(StreamlitValueAssignmentNotAllowedError):
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError):
             check_session_state_rules(5, key=_KEY, writes_allowed=False)
 
 
@@ -204,7 +204,7 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
         dg = MagicMock()
         dg._active_dg._cursor = MagicMock()
         dg._active_dg._cursor.delta_path = [0, 1]
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             check_fragment_path_policy(dg)
 
     @patch("streamlit.elements.lib.policies.get_script_run_ctx")
@@ -215,7 +215,7 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
         dg = MagicMock()
         dg._active_dg._cursor = MagicMock()
         dg._active_dg._cursor.delta_path = [0, 2, 0]
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             check_fragment_path_policy(dg)
 
     @patch("streamlit.elements.lib.policies.get_script_run_ctx")

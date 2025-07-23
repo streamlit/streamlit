@@ -19,8 +19,6 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "CodeProto";
 
-import "streamlit/proto/WidthConfig.proto";
-
 // st.code
 message Code {
   // Content to display.
@@ -31,8 +29,6 @@ message Code {
   bool show_line_numbers = 3;
   bool wrap_lines = 4;
 
-  uint32 height = 5;
-
-  // Width configuration
-  streamlit.WidthConfig width_config = 6;
+  // deprecated use height on Element.proto
+  uint32 height = 5 [deprecated = true];
 }

@@ -60,13 +60,15 @@ class ExceptionMixin:
         ----------
         exception : Exception
             The exception to display.
-        width : int or "stretch"
-            The desired width of the exception expressed in pixels. If this is
-            ``"stretch"`` (default), Streamlit sets the width of the exception
-            to match the width of the parent container. Otherwise, this must be
-            an integer. If the specified width is greater than the width of the
-            parent container, Streamlit sets the width of the exception to
-            match the width of the parent container.
+        width : "stretch" or int
+            The width of the exception element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -237,18 +239,10 @@ def _format_syntax_error_message(exception: SyntaxError) -> str:
         )
 
         return (
-            'File "%(filename)s", line %(lineno)s\n'
-            "  %(text)s\n"
-            "  %(caret_indent)s^\n"
-            "%(errname)s: %(msg)s"
-            % {
-                "filename": exception.filename,
-                "lineno": exception.lineno,
-                "text": exception.text.rstrip(),
-                "caret_indent": caret_indent,
-                "errname": type(exception).__name__,
-                "msg": exception.msg,
-            }
+            f'File "{exception.filename}", line {exception.lineno}\n'
+            f"  {exception.text.rstrip()}\n"
+            f"  {caret_indent}^\n"
+            f"{type(exception).__name__}: {exception.msg}"
         )
     # If a few edge cases, SyntaxErrors don't have all these nice fields. So we
     # have a fall back here.

@@ -20,6 +20,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Html_pb2 import Html as HtmlProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -35,6 +40,8 @@ class HtmlMixin:
     def html(
         self,
         body: str | Path | SupportsStr | SupportsReprHtml,
+        *,  # keyword-only arguments:
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Insert HTML into your app.
 
@@ -69,6 +76,18 @@ class HtmlMixin:
             content only contains style tags, Streamlit will send the content
             to the event container instead of the main container to avoid
             taking up space in the app.
+
+        width : "stretch", "content", or int
+            The width of the HTML element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -107,6 +126,9 @@ class HtmlMixin:
         if html_content == "":
             raise StreamlitAPIException("`st.html` body cannot be empty")
 
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         # Handle the case where there are only style tags - issue #9388
         # Use event container for style tags so they don't take up space in the app content
         if _html_only_style_tags(html_content):
@@ -115,7 +137,7 @@ class HtmlMixin:
             return self._event_dg._enqueue("html", html_proto)
         # Otherwise, send the html to the main container as normal
         html_proto.body = html_content
-        return self.dg._enqueue("html", html_proto)
+        return self.dg._enqueue("html", html_proto, layout_config=layout_config)
 
     @property
     def dg(self) -> DeltaGenerator:

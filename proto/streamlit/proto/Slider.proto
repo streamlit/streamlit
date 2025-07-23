@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "SliderProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
-import "streamlit/proto/WidthConfig.proto";
 
 message Slider {
   enum DataType {
@@ -57,7 +56,5 @@ message Slider {
   string help = 14;
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
-
   Type type = 17;
-  optional streamlit.WidthConfig width_config = 18;
 }

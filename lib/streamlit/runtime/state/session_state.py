@@ -261,7 +261,10 @@ class WStates(MutableMapping[str, Any]):
         If the widget doesn't exist, raise an Exception.
         """
         metadata = self.widget_metadata.get(widget_id)
-        assert metadata is not None
+
+        if metadata is None:
+            raise RuntimeError(f"Widget {widget_id} not found.")
+
         callback = metadata.callback
         if callback is None:
             return
@@ -315,7 +318,7 @@ class KeyIdMapper:
         self._key_id_mapping = key_id_mapping
         self._id_key_mapping = {v: k for k, v in key_id_mapping.items()}
 
-    def get_id_from_key(self, key: str, default: Any = None) -> str:
+    def get_id_from_key(self, key: str, default: str | None = None) -> str | None:
         return self._key_id_mapping.get(key, default)
 
     def get_key_from_id(self, widget_id: str) -> str:
@@ -439,6 +442,12 @@ class SessionState:
         """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
 
+    def reset_state_value(self, user_key: str, value: Any | None) -> None:
+        """Reset a new session state value to a given value
+        without triggering the "state value cannot be modified" error.
+        """
+        self._new_session_state[user_key] = value
+
     def __iter__(self) -> Iterator[Any]:
         """Return an iterator over the keys of the SessionState.
         This is a shortcut for `iter(self.keys())`.
@@ -468,7 +477,10 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        assert user_key is not None or widget_id is not None
+        if user_key is None and widget_id is None:
+            raise ValueError(
+                "user_key and widget_id cannot both be None. This should never happen."
+            )
 
         if user_key is not None:
             try:
@@ -664,7 +676,9 @@ class SessionState:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
         """
-        return self._key_id_mapper.get_id_from_key(k, k)
+        # It's guaranteed that the key is a string since the default is string,
+        # so we can cast it to str here:
+        return cast("str", self._key_id_mapper.get_id_from_key(k, k))
 
     def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapper[user_key] = widget_id

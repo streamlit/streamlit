@@ -43,14 +43,14 @@ class LoggerTest(unittest.TestCase):
         ]
         for k in data:
             logger.set_log_level(k)
-            self.assertEqual(k, logging.getLogger("streamlit").getEffectiveLevel())
+            assert k == logging.getLogger("streamlit").getEffectiveLevel()
 
     def test_set_log_level_error(self):
         """Test streamlit.logger.set_log_level."""
         with pytest.raises(SystemExit) as e:
             logger.set_log_level(90)
-        self.assertEqual(e.type, SystemExit)
-        self.assertEqual(e.value.code, 1)
+        assert e.type is SystemExit
+        assert e.value.code == 1
 
     @parameterized.expand(
         [
@@ -70,19 +70,17 @@ class LoggerTest(unittest.TestCase):
 
         with patch.object(config, "_config_options", new=config_options):
             logger.setup_formatter(LOGGER)
-            self.assertEqual(len(LOGGER.handlers), 1)
+            assert len(LOGGER.handlers) == 1
             if config_options:
-                self.assertEqual(
-                    LOGGER.handlers[0].formatter._fmt, messageFormat or "%(message)s"
+                assert LOGGER.handlers[0].formatter._fmt == (
+                    messageFormat or "%(message)s"
                 )
             else:
-                self.assertEqual(
-                    LOGGER.handlers[0].formatter._fmt, logger.DEFAULT_LOG_MESSAGE
-                )
+                assert LOGGER.handlers[0].formatter._fmt == logger.DEFAULT_LOG_MESSAGE
 
     def test_init_tornado_logs(self):
         """Test streamlit.logger.init_tornado_logs."""
         logger.init_tornado_logs()
         loggers = [x for x in logger._loggers if "tornado." in x]
         truth = ["tornado.access", "tornado.application", "tornado.general"]
-        self.assertEqual(sorted(truth), sorted(loggers))
+        assert sorted(truth) == sorted(loggers)

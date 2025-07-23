@@ -19,3 +19,9 @@ class WidthConfigFields(Enum):
     PIXEL_WIDTH = "pixel_width"
     USE_STRETCH = "use_stretch"
     USE_CONTENT = "use_content"
+
+
+class HeightConfigFields(Enum):
+    PIXEL_HEIGHT = "pixel_height"
+    USE_STRETCH = "use_stretch"
+    USE_CONTENT = "use_content"

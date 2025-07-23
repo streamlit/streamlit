@@ -19,10 +19,7 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ProgressProto";
 
-import "streamlit/proto/WidthConfig.proto";
-
 message Progress {
   uint32 value = 1;
   string text = 2;
-  streamlit.WidthConfig width_config = 3;
 }

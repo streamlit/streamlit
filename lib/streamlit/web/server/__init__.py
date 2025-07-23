@@ -13,7 +13,10 @@
 # limitations under the License.
 
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
-from streamlit.web.server.routes import allow_cross_origin_requests
+from streamlit.web.server.routes import (
+    allow_all_cross_origin_requests,
+    is_allowed_origin,
+)
 from streamlit.web.server.server import Server, server_address_is_unix_socket
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
@@ -21,6 +24,7 @@ __all__ = [
     "ComponentRequestHandler",
     "Server",
     "StatsRequestHandler",
-    "allow_cross_origin_requests",
+    "allow_all_cross_origin_requests",
+    "is_allowed_origin",
     "server_address_is_unix_socket",
 ]

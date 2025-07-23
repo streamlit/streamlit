@@ -21,16 +21,13 @@ import {
   ErrorOutline,
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
-import { useTheme } from "@emotion/react"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
-import {
-  ErrorStatus,
-  UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { assertNever } from "~lib/util/assertNever"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledChatUploadedFile,
@@ -53,14 +50,13 @@ export interface ChatUploadedFileIconProps {
 export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
   fileInfo,
 }) => {
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const { type } = fileInfo.status
 
   switch (type) {
     case "uploading":
       return (
         <StyledSpinnerIcon
-          usingCustomTheme={false}
           data-testid="stChatInputFileIconSpinner"
           size="lg"
           margin="0"
@@ -69,9 +65,7 @@ export const ChatUploadedFileIcon: FC<ChatUploadedFileIconProps> = ({
       )
     case "error":
       return (
-        <ChatUploadedFileIconTooltip
-          content={(fileInfo.status as ErrorStatus).errorMessage}
-        >
+        <ChatUploadedFileIconTooltip content={fileInfo.status.errorMessage}>
           <Icon color={theme.colors.red} content={ErrorOutline} size="lg" />
         </ChatUploadedFileIconTooltip>
       )

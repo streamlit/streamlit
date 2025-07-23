@@ -123,3 +123,52 @@ i16 = st.multiselect(
     accept_new_options=True,
 )
 st.text(f"value 16: {i16}")
+
+many_options = (
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+    "twenty",
+    "twenty-one",
+    "twenty-two",
+    "twenty-three",
+    "twenty-four",
+    "twenty-five",
+    "twenty-six",
+    "twenty-seven",
+    "twenty-eight",
+    "twenty-nine",
+    "thirty",
+)
+
+st.multiselect(
+    "multiselect 17 - show maxHeight",
+    options=many_options,
+    default=many_options[0:28],
+)
+
+st.multiselect(
+    "multiselect 18 (width=300px)", many_options, default=many_options[0:28], width=300
+)
+st.multiselect(
+    "multiselect 19 (width='stretch')",
+    many_options,
+    default=many_options[0:28],
+    width="stretch",
+)

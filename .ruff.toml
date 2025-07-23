@@ -40,12 +40,7 @@ ignore = [
   # Rules planned to be supported in the future:
   "EM101",  # Checks for the use of string literals in exception constructors.
   "EM102",  # Checks for the use of f-strings in exception constructors.
-  "S101",   # Checks for usage of assert statements.
   "TRY003", # Checks for exception messages that are not defined in the exception class itself.
-  "N806",   # Checks for non-lowercased variable names in functions.
-  "UP031",  # Checks for printf-style string formatting, and offers to replace it with str.format calls.
-  "G004",   # Checks for usage of f-strings in logging messages.
-  "PT",     # Checks for pytest anti-patterns.
   # Ignored rule sets:
   "DTZ", # Checks for usage of unsafe naive datetime class.
   "PTH", # Enforces usage of pathlib.
@@ -96,6 +91,9 @@ ignore = [
   "COM819",  # Checks for presence of prohibited trailing commas. Not recommended with formatter.
   "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
   "RET504",  # Checks for assignments that immediately precede a return of the assigned variable (too opinionated).
+  "PT012",   # Checks for pytest.raises context managers with multiple statements.
+  "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
+  "PLC0415", # Enforces imports to be at the top-level of the file.
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
@@ -125,7 +123,6 @@ extend-safe-fixes = ["TC002", "TC003"]
   "ARG",
   "S",
   "TRY",
-  "E501",
   "ANN",
   "NPY002",
 ]

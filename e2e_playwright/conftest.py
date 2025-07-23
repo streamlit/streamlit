@@ -46,8 +46,8 @@ from playwright.sync_api import (
     Page,
     Response,
     Route,
+    expect,
 )
-from pytest import FixtureRequest
 from typing_extensions import Self
 
 from e2e_playwright.shared.git_utils import get_git_root
@@ -71,6 +71,9 @@ def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line(
         "markers", "no_perf: mark test to not use performance profiling"
+    )
+    config.addinivalue_line(
+        "markers", "app_hash(hash): mark test to open the app with a URL hash"
     )
 
 
@@ -257,47 +260,30 @@ def app_server_extra_args() -> list[str]:
 def app_server(
     app_port: int,
     app_server_extra_args: list[str],
-    request: FixtureRequest,
+    request: pytest.FixtureRequest,
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the Streamlit app server."""
-    streamlit_proc = AsyncSubprocess(
-        [
-            "streamlit",
-            "run",
-            resolve_test_to_script(request.module),
-            "--server.headless",
-            "true",
-            "--global.developmentMode",
-            "false",
-            "--global.e2eTest",
-            "true",
-            "--server.port",
-            str(app_port),
-            "--browser.gatherUsageStats",
-            "false",
-            "--server.fileWatcherType",
-            "none",
-            "--server.enableStaticServing",
-            "true",
-            *app_server_extra_args,
-        ],
-        cwd=".",
+    streamlit_proc = start_app_server(
+        app_port,
+        request.module,
+        extra_args=app_server_extra_args,
     )
-    streamlit_proc.start()
-    if not wait_for_app_server_to_start(app_port):
-        streamlit_stdout = streamlit_proc.terminate()
-        print(streamlit_stdout, flush=True)
-        raise RuntimeError("Unable to start Streamlit app")
     yield streamlit_proc
     streamlit_stdout = streamlit_proc.terminate()
     print(streamlit_stdout, flush=True)
 
 
-@pytest.fixture(scope="function")
-def app(page: Page, app_port: int) -> Page:
+@pytest.fixture
+def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
     """Fixture that opens the app."""
+    marker = request.node.get_closest_marker("app_hash")
+    hash_fragment = ""
+    if marker:
+        hash_fragment = f"#{marker.args[0]}"
+
+    response: Response | None = None
     try:
-        response = page.goto(f"http://localhost:{app_port}/")
+        response = page.goto(f"http://localhost:{app_port}/{hash_fragment}")
     except Exception as e:
         print(e, flush=True)
 
@@ -318,11 +304,11 @@ def app(page: Page, app_port: int) -> Page:
     return page
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def static_app(
     page: Page,
     app_port: int,
-    request: FixtureRequest,
+    request: pytest.FixtureRequest,
 ) -> Page:
     """Fixture that opens the app."""
     query_param = request.node.get_closest_marker("query_param")
@@ -337,9 +323,9 @@ def static_app(
     return page
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def app_with_query_params(
-    page: Page, app_port: int, request: FixtureRequest
+    page: Page, app_port: int, request: pytest.FixtureRequest
 ) -> tuple[Page, dict[str, Any]]:
     """Fixture that opens the app with additional query parameters.
     The query parameters are passed as a dictionary in the 'param' key of the request.
@@ -375,7 +361,7 @@ class IframedPage:
     open_app: Callable[[IframedPageAttrs | None], FrameLocator]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def iframed_app(page: Page, app_port: int) -> IframedPage:
     """Fixture that returns an IframedPage.
 
@@ -577,13 +563,13 @@ def browser_type_launch_args(
     return browser_type_launch_args
 
 
-@pytest.fixture(scope="function", params=["light_theme", "dark_theme"])
-def app_theme(request: FixtureRequest) -> str:
+@pytest.fixture(params=["light_theme", "dark_theme"])
+def app_theme(request: pytest.FixtureRequest) -> str:
     """Fixture that returns the theme name."""
     return str(request.param)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def themed_app(page: Page, app_port: int, app_theme: str) -> Page:
     """Fixture that opens the app with the given theme."""
     page.goto(f"http://localhost:{app_port}/?embed_options={app_theme}")
@@ -675,16 +661,20 @@ def output_folder(pytestconfig: Any) -> Path:
     ).resolve()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def assert_snapshot(
-    request: FixtureRequest,
+    request: pytest.FixtureRequest,
     output_folder: Path,
     pytestconfig: Any,
 ) -> Generator[ImageCompareFunction, None, None]:
     """Fixture that compares a screenshot with screenshot from a past run."""
 
     # Check if reruns are enabled for this test run
-    configured_reruns = pytestconfig.getoption("reruns", 0)
+    flaky_marker = request.node.get_closest_marker("flaky")
+    if flaky_marker and "reruns" in flaky_marker.kwargs:
+        configured_reruns = flaky_marker.kwargs["reruns"]
+    else:
+        configured_reruns = pytestconfig.getoption("reruns", 0)
     # Get the current execution count:
     execution_count = getattr(request.node, "execution_count", 1)
     # True if this is the last rerun (or the only test run)
@@ -879,9 +869,9 @@ def assert_snapshot(
         )
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def playwright_profiling(
-    request: FixtureRequest, page: Page
+    request: pytest.FixtureRequest, page: Page
 ) -> Generator[None, None, None]:
     if request.node.get_closest_marker("no_perf") or not is_supported_browser(page):
         yield
@@ -900,9 +890,21 @@ def playwright_profiling(
 def wait_for_app_run(
     page_or_locator: Page | Locator | FrameLocator,
     wait_delay: int = 100,
+    initial_wait: int = 210,
 ) -> None:
-    """Wait for the given page to finish running."""
-    # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
+    """Wait for the given page to finish running.
+
+    Parameters
+    ----------
+    page_or_locator : Page | Locator | FrameLocator
+        The page or locator to wait for.
+    wait_delay : int, optional
+        The delay to wait for the rerun to finish.
+    initial_wait : int, optional
+        The initial wait before checking for the rerun to finish.
+        This is needed for some widgets that have a debounce timeout.
+        For example, pydeck charts have a debounce timeout of 200ms.
+    """
 
     page = None
     if isinstance(page_or_locator, Page):
@@ -912,8 +914,7 @@ def wait_for_app_run(
     elif isinstance(page_or_locator, FrameLocator):
         page = page_or_locator.owner.page
 
-    # if isinstance(page, Page):
-    page.wait_for_timeout(155)
+    page.wait_for_timeout(initial_wait)
 
     if isinstance(page_or_locator, StaticPage):
         # Check that static connection established.
@@ -941,6 +942,10 @@ def wait_for_app_run(
         timeout=25000,
         state="attached",
     )
+
+    # Wait for all element skeletons to be removed.
+    # This is useful to make sure that all elements have been rendered.
+    expect(page_or_locator.get_by_test_id("stSkeleton")).to_have_count(0, timeout=25000)
 
     if wait_delay > 0:
         # Give the app a little more time to render everything
@@ -1019,6 +1024,75 @@ def wait_until(
             if timed_out():
                 raise TimeoutError(timeout_msg)
         page.wait_for_timeout(interval)
+
+
+def start_app_server(
+    app_port: int,
+    request_module: ModuleType,
+    *,
+    extra_env: dict[str, str] | None = None,
+    extra_args: list[str] | None = None,
+) -> AsyncSubprocess:
+    """Start a Streamlit app server for the given *test module*.
+
+    This helper centralizes the logic for spinning up a Streamlit subprocess so
+    it can be reused by different pytest fixtures (for example, tests that
+    require per-test environment variables).
+
+    Parameters
+    ----------
+    app_port : int
+        Port on which the server should listen.
+    request_module : ModuleType
+        The pytest *module object* that triggered the server start. This is
+        needed to resolve the Streamlit script that belongs to the test.
+    extra_env : dict[str, str] | None, optional
+        Additional environment variables to set for the subprocess.
+    extra_args : list[str] | None, optional
+        Additional command-line arguments to pass to *streamlit run*.
+
+    Returns
+    -------
+    AsyncSubprocess
+        The running Streamlit subprocess wrapper. *Call ``terminate()`` on the
+        returned object to stop the server and obtain the captured output.*
+    """
+    env = {**os.environ.copy(), **(extra_env or {})}
+
+    args = [
+        "streamlit",
+        "run",
+        resolve_test_to_script(request_module),
+        "--server.headless",
+        "true",
+        "--global.developmentMode",
+        "false",
+        "--global.e2eTest",
+        "true",
+        "--server.port",
+        str(app_port),
+        "--browser.gatherUsageStats",
+        "false",
+        "--server.fileWatcherType",
+        "none",
+        "--server.enableStaticServing",
+        "true",
+    ]
+
+    # Append any caller-supplied extra args at the end so they can override
+    # defaults when necessary.
+    if extra_args:
+        args.extend(extra_args)
+
+    proc = AsyncSubprocess(args, cwd=".", env=env)
+    proc.start()
+
+    if not wait_for_app_server_to_start(app_port):
+        stdout = proc.terminate()
+        print(stdout, flush=True)
+        raise RuntimeError("Unable to start Streamlit app")
+
+    return proc
 
 
 # endregion

@@ -69,3 +69,64 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
   marginTop: theme.spacing.xs,
   marginBottom: theme.spacing.xs,
 }))
+
+export const StyledColumnHeaderRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: `${theme.spacing.sm} ${theme.spacing.sm}`,
+  cursor: "default",
+  gap: theme.spacing.twoXS,
+}))
+
+export const StyledTypeIconContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing.twoXS,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  borderRadius: theme.radii.md,
+  backgroundColor: "transparent",
+  color: theme.colors.bodyText,
+  height: "fit-content",
+}))
+
+export const StyledColumnNameWithIcon = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexGrow: 1,
+  padding: `${theme.spacing.threeXS} ${theme.spacing.threeXS}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  borderRadius: theme.radii.md,
+  backgroundColor: theme.colors.secondaryBg,
+  minWidth: 0,
+  overflow: "hidden",
+}))
+
+export const StyledColumnNameText = styled.span(({ theme }) => ({
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  flexGrow: 1,
+  margin: `0 ${theme.spacing.xs}`,
+  fontSize: theme.fontSizes.twoSm,
+  maxWidth: "4rem",
+}))
+
+export const StyledIconButton = styled.button(({ theme }) => ({
+  background: "none",
+  border: "none",
+  padding: theme.spacing.twoXS,
+  cursor: "pointer",
+  color: theme.colors.bodyText,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: theme.radii.md,
+  transition: "background-color 0.2s ease",
+  "&:hover": {
+    backgroundColor: theme.colors.fadedText05,
+  },
+  "&:active": {
+    backgroundColor: theme.colors.fadedText10,
+  },
+}))

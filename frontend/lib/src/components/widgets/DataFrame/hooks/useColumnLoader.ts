@@ -15,7 +15,6 @@
  */
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 
-import { useTheme } from "@emotion/react"
 import isArray from "lodash/isArray"
 import isEmpty from "lodash/isEmpty"
 import merge from "lodash/merge"
@@ -37,7 +36,8 @@ import {
   ObjectColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 // Using this ID for column config will apply the config to all index columns
@@ -104,7 +104,7 @@ const mergeColumnConfig = (
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const customMergeArrays = (objValue: object, srcValue: object): any => {
+  const customMergeArrays = (_objValue: object, srcValue: object): any => {
     // If the new value is an array, just return it as is (overwriting the old)
     if (isArray(srcValue)) {
       return srcValue
@@ -281,7 +281,7 @@ function useColumnLoader(
   disabled: boolean,
   columnOrder: string[]
 ): ColumnLoaderReturn {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   // Memoize the column config parsing to avoid unnecessary re-renders & re-parsing:
   const parsedColumnConfig = useMemo(

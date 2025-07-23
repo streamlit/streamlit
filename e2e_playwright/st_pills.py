@@ -44,7 +44,7 @@ pills_options = [
     "🏗️ App builders",
     "🔌 Integrations with other tools",
     "📦 Collections of components",
-    "📦 Very very long text" * 20,  # pill with very long text
+    "📦 Very very long text" * 21,  # pill with very long text
 ]
 s1 = st.pills(
     "Select some options",
@@ -116,7 +116,7 @@ st.write(
 st.header("Pills in fragment")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     s5 = st.pills(
         "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_fragment"
@@ -138,6 +138,28 @@ if st.button("Create some elements to unmount component"):
 s6 = st.pills("Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sleep")
 st.write("pills-after-sleep:", str(s6))
 
+
+st.header("Pills - width examples")
+st.pills(
+    "Pills with content width (default)",
+    ["Option 1", "Option 2", "Option 3"],
+    width="content",
+    key="pills_content_width",
+)
+
+st.pills(
+    "Pills with stretch width",
+    ["Option 1", "Option 2", "Option 3"],
+    width="stretch",
+    key="pills_stretch_width",
+)
+
+st.pills(
+    "Pills with 300px width",
+    ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"],
+    width=300,
+    key="pills_300px_width",
+)
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0

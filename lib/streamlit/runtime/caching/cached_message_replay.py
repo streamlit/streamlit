@@ -17,7 +17,9 @@ from __future__ import annotations
 import contextlib
 import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union
+
+from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import runtime, util
@@ -29,7 +31,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from types import FunctionType
 
     from google.protobuf.message import Message
 
@@ -70,13 +71,16 @@ class BlockMsgData:
 MsgData = Union[ElementMsgData, BlockMsgData]
 
 
+R = TypeVar("R")
+
+
 @dataclass
-class CachedResult:
+class CachedResult(Generic[R]):
     """The full results of calling a cache-decorated function, enough to
     replay the st functions called while executing it.
     """
 
-    value: Any
+    value: R
     messages: list[MsgData]
     main_id: str
     sidebar_id: str
@@ -132,7 +136,7 @@ class CachedMessageReplayContext(threading.local):
         return util.repr_(self)
 
     @contextlib.contextmanager
-    def calling_cached_function(self, func: FunctionType) -> Iterator[None]:  # noqa: ARG002
+    def calling_cached_function(self, func: Callable[..., Any]) -> Iterator[None]:  # noqa: ARG002
         """Context manager that should wrap the invocation of a cached function.
         It allows us to track any `st.foo` messages that are generated from inside the
         function for playback during cache retrieval.
@@ -169,8 +173,9 @@ class CachedMessageReplayContext(threading.local):
         executing cached functions, so they can be replayed any time the function's
         execution is skipped because they're in the cache.
         """
-        if not runtime.exists():
+        if not runtime.exists() or not in_cached_function.get():
             return
+
         if len(self._cached_message_stack) >= 1:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
 
@@ -200,6 +205,9 @@ class CachedMessageReplayContext(threading.local):
         used_dg_id: str,
         returned_dg_id: str,
     ) -> None:
+        if not in_cached_function.get():
+            return
+
         id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
         for msgs in self._cached_message_stack:
             msgs.append(BlockMsgData(block_proto, id_to_save, returned_dg_id))
@@ -220,14 +228,20 @@ class CachedMessageReplayContext(threading.local):
             return acting_on_id
         return invoked_id
 
-    def save_image_data(
-        self, image_data: bytes | str, mimetype: str, image_id: str
+    def save_media_data(
+        self, media_data: bytes | str, mimetype: str, media_id: str
     ) -> None:
-        self._media_data.append(MediaMsgData(image_data, mimetype, image_id))
+        if not in_cached_function.get():
+            return
+
+        self._media_data.append(MediaMsgData(media_data, mimetype, media_id))
+
+
+P = ParamSpec("P")
 
 
 def replay_cached_messages(
-    result: CachedResult, cache_type: CacheType, cached_func: FunctionType
+    result: CachedResult[R], cache_type: CacheType, cached_func: Callable[P, R]
 ) -> None:
     """Replay the st element function calls that happened when executing a
     cache-decorated function.

@@ -14,23 +14,20 @@
 
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 from PIL import Image, ImageDraw
 
 import streamlit as st
-
-if TYPE_CHECKING:
-    import numpy.typing as npt
-
 
 # Construct test assets path relative to this script file to
 # allow its execution with different working directories.
 TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
 
-img = np.repeat(0, 10000).reshape(100, 100)
-img800 = np.repeat(0, 640000).reshape(800, 800)
+img: npt.NDArray[np.int_] = np.repeat(0, 10000).reshape(100, 100)
+img800: npt.NDArray[np.int_] = np.repeat(0, 640000).reshape(800, 800)
 
 
 st.header("Images from numpy arrays")
@@ -189,15 +186,16 @@ st.image(red_bgr_img, caption="RGB channel (blue).", channels="RGB", width=100)
 
 st.header("use_column_width parameter (deprecated)")
 
-col1, col2, col3, col4 = st.columns(4)
-col1.image(img)  # 100 px
-col1.image(img, use_column_width="auto")  # 100 px
-col1.image(img, use_column_width="never")  # 100 px
-col1.image(img, use_column_width=False)  # 100 px
+with st.container(key="use_column_width"):
+    col1, col2, col3, col4 = st.columns(4)
+    col1.image(img)  # 100 px
+    col1.image(img, use_column_width="auto")  # 100 px
+    col1.image(img, use_column_width="never")  # 100 px
+    col1.image(img, use_column_width=False)  # 100 px
 
-col2.image(img, use_column_width="always")  # column width
-col2.image(img, use_column_width=True)  # column width
-col2.image(img800, use_column_width="auto")  # column width
+    col2.image(img, use_column_width="always")  # column width
+    col2.image(img, use_column_width=True)  # column width
+    col2.image(img800, use_column_width="auto")  # column width
 
 st.header("List of images")
 
@@ -212,35 +210,33 @@ st.image(
 
 st.header("use_container_width parameter")
 
+with st.container(key="use_container_width"):
+    col5, col6, col7, col8 = st.columns(4)
 
-col5, col6, col7, col8 = st.columns(4)
+    # Full container width, since use_container_width is explicitly set to True
+    col5.image(img, use_container_width=True, width=50)
+    # Full container width
+    col5.image(img, use_container_width=True)
+    # Full container width, since 1000 would overflow the container
+    col5.image(
+        img800,
+        width=1000,
+    )
 
+    # Full container width, since 800 would overflow the container
+    col6.image(img800)
+    # Full container width, since 800 would overflow the container
+    col6.image(img800, use_container_width=True)
+    # Full container width, since 800 would overflow the container
+    col6.image(img800, use_container_width=False)
 
-# Full container width, since use_container_width is explicitly set to True
-col5.image(img, use_container_width=True, width=50)
-# Full container width
-col5.image(img, use_container_width=True)
-# Full container width, since 1000 would overflow the container
-col5.image(
-    img800,
-    width=1000,
-)
-
-# Full container width, since 800 would overflow the container
-col6.image(img800)
-# Full container width, since 800 would overflow the container
-col6.image(img800, use_container_width=True)
-# Full container width, since 800 would overflow the container
-col6.image(img800, use_container_width=False)
-
-
-col7.image(img)  # 100 px
-# 100 px since that is the width of the image, and it does not exceed the container width
-col7.image(img, use_container_width=False)
-# 50 px since the width parameter is given
-col7.image(img, width=50)
-# 50 px since the width parameter is given, and use_container_width is not True
-col7.image(img, use_container_width=False, width=50)
+    col7.image(img)  # 100 px
+    # 100 px since that is the width of the image, and it does not exceed the container width
+    col7.image(img, use_container_width=False)
+    # 50 px since the width parameter is given
+    col7.image(img, width=50)
+    # 50 px since the width parameter is given, and use_container_width is not True
+    col7.image(img, use_container_width=False, width=50)
 
 
 st.image(

@@ -23,6 +23,8 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
+MULTISELECT_COUNT = 19
+
 
 def select_for_kth_multiselect(
     page: Page, option_text: str, k: int, close_after_selecting: bool
@@ -70,7 +72,7 @@ def del_from_kth_multiselect(page: Page, option_text: str, k: int):
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Should show widgets correctly when loaded."""
     multiselect_elements = themed_app.get_by_test_id("stMultiSelect")
-    expect(multiselect_elements).to_have_count(16)
+    expect(multiselect_elements).to_have_count(MULTISELECT_COUNT)
 
     assert_snapshot(multiselect_elements.nth(0), name="st_multiselect-placeholder_help")
     assert_snapshot(multiselect_elements.nth(1), name="st_multiselect-format_func")
@@ -84,6 +86,9 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
     # don't have any visually interesting differences.
     assert_snapshot(multiselect_elements.nth(11), name="st_multiselect-narrow_column")
     assert_snapshot(multiselect_elements.nth(12), name="st_multiselect-markdown_label")
+    assert_snapshot(multiselect_elements.nth(16), name="st_multiselect-maxHeight")
+    assert_snapshot(multiselect_elements.nth(17), name="st_multiselect-width_300px")
+    assert_snapshot(multiselect_elements.nth(18), name="st_multiselect-width_stretch")
 
 
 def test_help_tooltip_works(app: Page):
@@ -94,7 +99,8 @@ def test_help_tooltip_works(app: Page):
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
     text_elements = app.get_by_test_id("stText")
-    expect(text_elements).to_have_count(16)
+    # -3 because the last three multiselects do not have accompanying text elements
+    expect(text_elements).to_have_count(MULTISELECT_COUNT - 3)
 
     expected = [
         "value 1: []",
@@ -359,7 +365,7 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
     # Get the multiselect with empty options but accept_new_options=True (index 15)
     multiselect_elem = app.get_by_test_id("stMultiSelect").nth(15)
 
-    # Verify the initial placeholder shows "Add options"
+    # Verify the initial placeholder shows "Add options" (frontend now handles default placeholders)
     expect(multiselect_elem).to_contain_text("Add options")
 
     # Click to open input field
@@ -393,3 +399,27 @@ def test_multiselect_empty_options_with_accept_new_options(app: Page):
 
     # Verify one option was removed
     expect(app.get_by_test_id("stText").nth(15)).to_have_text("value 16: ['blueberry']")
+
+
+def test_multiselect_empty_options_disabled_when_no_accept_new(app: Page):
+    """Should show 'No options to select' placeholder and be disabled when empty and accept_new_options=False."""
+    # Get multiselect 3 (index 2) which has empty options and accept_new_options=False (default)
+    multiselect_elem = app.get_by_test_id("stMultiSelect").nth(2)
+
+    # Verify the placeholder shows "No options to select"
+    expect(multiselect_elem).to_contain_text("No options to select")
+
+    # Verify the input field is disabled
+    input_elem = multiselect_elem.locator("input")
+    expect(input_elem).to_be_disabled()
+
+    # Verify clicking on the multiselect doesn't open a dropdown
+    multiselect_elem.click()
+    wait_for_app_run(app)
+
+    # Verify no dropdown options appear
+    dropdown_options = app.locator("li[role='option']")
+    expect(dropdown_options).to_have_count(0)
+
+    # Verify the widget value remains empty
+    expect(app.get_by_test_id("stText").nth(2)).to_have_text("value 3: []")

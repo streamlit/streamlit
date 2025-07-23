@@ -79,6 +79,12 @@ class MarkdownFormattedException(Error):  # noqa: N818
     pass
 
 
+class StreamlitMaxRetriesError(Error):
+    """An exception raised when a file or folder cannot be accessed after multiple retries."""
+
+    pass
+
+
 class StreamlitAPIException(MarkdownFormattedException):
     """Base class for Streamlit API exceptions.
 
@@ -478,5 +484,20 @@ class StreamlitInvalidWidthError(LocalizableStreamlitException):
         super().__init__(
             "Invalid width value: {width}. Width must be either {valid_values}.",
             width=repr(width),
+            valid_values=valid_values,
+        )
+
+
+class StreamlitInvalidHeightError(LocalizableStreamlitException):
+    """Exception raised when an invalid height value is provided."""
+
+    def __init__(self, height: Any, allow_content: bool = False) -> None:
+        valid_values = "an integer (pixels) or 'stretch'"
+        if allow_content:
+            valid_values = "an integer (pixels), 'stretch', or 'content'"
+
+        super().__init__(
+            "Invalid height value: {height}. Height must be either {valid_values}.",
+            height=repr(height),
             valid_values=valid_values,
         )

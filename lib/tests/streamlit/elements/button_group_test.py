@@ -25,6 +25,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.elements.widgets.button_group import (
     _FACES_ICONS,
     _SELECTED_STAR_ICON,
@@ -37,11 +38,12 @@ from streamlit.elements.widgets.button_group import (
     _SingleSelectSerde,
     get_mapped_options,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitDuplicateElementId
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class TestGetMappedOptions:
@@ -422,6 +424,22 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         delta = self.get_delta_from_queue().new_element.button_group
         assert delta.disabled is True
+
+    @parameterized.expand(
+        [
+            (st.segmented_control),
+            (st.pills),
+        ]
+    )
+    def test_includes_label_in_id(self, command: Callable):
+        command(label="label 1", options=["a", "b", "c"])
+
+        button_group_1 = self.get_delta_from_queue().new_element.button_group
+
+        command(label="label 2", options=["a", "b", "c"])
+        button_group_2 = self.get_delta_from_queue().new_element.button_group
+
+        assert button_group_1.id != button_group_2.id
 
     @parameterized.expand(
         get_command_matrix(
@@ -806,6 +824,67 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         val = command(["thumbs", "stars"], key="command_key", selection_mode="multi")
         assert val == ["stars"]
 
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_with_width(self, command: Callable[..., None]):
+        """Test button group widgets with different width types."""
+        test_cases = [
+            (500, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 500),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                command(["a", "b", "c"], width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                assert el.button_group.options[0].content == "a"
+
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_with_invalid_width(self, command: Callable[..., None]):
+        """Test button group widgets with invalid width values."""
+        test_cases = [
+            (
+                "invalid",
+                "Invalid width value: 'invalid'. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                -100,
+                "Invalid width value: -100. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                0,
+                "Invalid width value: 0. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+            (
+                100.5,
+                "Invalid width value: 100.5. Width must be either an integer (pixels), 'stretch', or 'content'.",
+            ),
+        ]
+
+        for width_value, expected_error_message in test_cases:
+            with self.subTest(width_value=width_value):
+                with pytest.raises(StreamlitAPIException) as exc:
+                    command(["a", "b", "c"], width=width_value)
+
+                assert str(exc.value) == expected_error_message
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_default_width(self, command: Callable[..., None]):
+        """Test that button group widgets default to content width."""
+        command(["a", "b", "c"])
+
+        el = self.get_delta_from_queue().new_element
+        assert el.button_group.options[0].content == "a"
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_CONTENT.value
+        )
+        assert el.width_config.use_content is True
+
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""
 
@@ -818,3 +897,90 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             "['borderless', 'pills', 'segmented_control']. "
             "The argument passed was 'foo'."
         )
+
+
+class TestButtonGroupDuplicateElementIdErrorMessages(DeltaGeneratorTestCase):
+    """Test that button group widgets show correct command names in duplicate element ID error messages."""
+
+    @parameterized.expand(
+        [
+            (
+                "segmented_control",
+                dict(
+                    style="segmented_control",
+                    options=("a", "b", "c"),
+                ),
+                ["segmented_control"],
+                ["button_group"],
+            ),
+            (
+                "pills",
+                dict(
+                    style="pills",
+                    options=("option1", "option2"),
+                ),
+                ["pills"],
+                ["button_group"],
+            ),
+            (
+                "feedback (borderless)",
+                dict(
+                    style="borderless",
+                    options="thumbs",
+                ),
+                ["feedback"],
+                ["button_group", "borderless"],
+            ),
+            (
+                "button_group (no style)",
+                dict(
+                    options=("a", "b"),
+                ),
+                ["button_group"],
+                [],
+            ),
+        ]
+    )
+    def test_duplicate_element_id_error_message(
+        self,
+        name: str,
+        kwargs: dict,
+        must_include: list[str],
+        must_not_include: list[str],
+    ) -> None:
+        """Test widget name display in duplicate element ID error messages.
+
+        Parameters
+        ----------
+        name : str
+            Description of the test case
+        kwargs : dict
+            Parameters to pass to compute_and_register_element_id
+        must_include : list[str]
+            Strings that must be present in the error message
+        must_not_include : list[str]
+            Strings that must not be present in the error message
+        """
+
+        # Create element ID (no key to force element ID duplication)
+        _ = compute_and_register_element_id(
+            "button_group",
+            user_key=None,
+            form_id=None,
+            **kwargs,
+        )
+        # Try to create another element with the same parameters - should raise error
+        with pytest.raises(StreamlitDuplicateElementId) as exc_info:
+            compute_and_register_element_id(
+                "button_group",
+                user_key=None,
+                form_id=None,
+                **kwargs,
+            )
+        msg = str(exc_info.value)
+        for must in must_include:
+            assert must in msg, f"Expected '{must}' in error message for {name}"
+        for must_not in must_not_include:
+            assert must_not not in msg, (
+                f"Did not expect '{must_not}' in error message for {name}"
+            )

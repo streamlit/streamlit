@@ -66,6 +66,7 @@ def _dialog_decorator(
     *,
     width: DialogWidth = "small",
     should_show_deprecation_warning: bool = False,
+    dismissible: bool = True,
 ) -> F:
     if title is None or title == "":
         raise StreamlitAPIException(
@@ -80,7 +81,7 @@ def _dialog_decorator(
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
-            title=title, dismissible=True, width=width
+            title=title, dismissible=dismissible, width=width
         )
         dialog.open()
 
@@ -116,7 +117,7 @@ def _dialog_decorator(
 
 @overload
 def dialog_decorator(
-    title: str, *, width: DialogWidth = "small"
+    title: str, *, width: DialogWidth = "small", dismissible: bool = True
 ) -> Callable[[F], F]: ...
 
 
@@ -127,14 +128,16 @@ def dialog_decorator(
 # this 'trick'. The overload is required to have a good type hint for the decorated
 # function args.
 @overload
-def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
+def dialog_decorator(
+    title: F, *, width: DialogWidth = "small", dismissible: bool = True
+) -> F: ...
 
 
 @gather_metrics("dialog")
 def dialog_decorator(
-    title: F | str, *, width: DialogWidth = "small"
+    title: F | str, *, width: DialogWidth = "small", dismissible: bool = True
 ) -> F | Callable[[F], F]:
-    """Function decorator to create a modal dialog.
+    r"""Function decorator to create a modal dialog.
 
     A function decorated with ``@st.dialog`` becomes a dialog
     function. When you call a dialog function, Streamlit inserts a modal dialog
@@ -149,7 +152,10 @@ def dialog_decorator(
     "**X**" in its upper-right corner, or pressing ``ESC`` on their keyboard.
     Dismissing a modal dialog does not trigger an app rerun. To close the modal
     dialog programmatically, call ``st.rerun()`` explicitly inside of the
-    dialog function.
+    dialog function. To enforce that dialogs are always closed programmatically,
+    you can set the ``dismissible`` parameter to ``False``. This will hide the "**X**"
+    button in the upper-right corner of the dialog and prevent the user from dismissing
+    the dialog by clicking outside of it or pressing ``ESC``.
 
     ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
@@ -173,10 +179,37 @@ def dialog_decorator(
     ----------
     title : str
         The title to display at the top of the modal dialog. It cannot be empty.
+
+        The title can optionally contain GitHub-flavored Markdown of the
+        following types: Bold, Italics, Strikethroughs, Inline Code, Links,
+        and Images. Images display like icons, with a max height equal to
+        the font height.
+
+        Unsupported Markdown elements are unwrapped so only their children
+        (text contents) render. Display unsupported elements as literal
+        characters by backslash-escaping them. E.g.,
+        ``"1\. Not an ordered list"``.
+
+        See the ``body`` parameter of |st.markdown|_ for additional,
+        supported Markdown directives.
+
+        .. |st.markdown| replace:: ``st.markdown``
+        .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
     width : "small", "large"
         The width of the modal dialog. If ``width`` is ``"small`` (default), the
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
         modal dialog will be about 750 pixels wide.
+
+    dismissible : bool
+        Whether the modal dialog can be dismissed by the user by clicking outside of
+        it or by pressing ``ESC``. Setting it to False also hides the ``X``
+        button in the upper-right corner of the dialog.
+
+        .. note::
+            Setting ``dismissible`` to False does not guarantee that all
+            interactions in the main app are blocked. Please don't rely on
+            dismissible for security-critical checks.
 
     Examples
     --------
@@ -216,12 +249,14 @@ def dialog_decorator(
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title
-            return _dialog_decorator(non_optional_func=f, title=title, width=width)
+            return _dialog_decorator(
+                non_optional_func=f, title=title, width=width, dismissible=dismissible
+            )
 
         return wrapper
 
     func: F = func_or_title
-    return _dialog_decorator(func, "", width=width)
+    return _dialog_decorator(func, "", width=width, dismissible=dismissible)
 
 
 @overload

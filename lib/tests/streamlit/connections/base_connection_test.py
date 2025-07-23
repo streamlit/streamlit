@@ -64,9 +64,9 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         with pytest.raises(AttributeError) as e:
             MockConnection("my_mock_connection").some_raw_connection_method()
 
-        assert (
-            str(e.value)
-            == "`some_raw_connection_method` doesn't exist here, but you can call `._instance.some_raw_connection_method` instead"
+        assert str(e.value) == (
+            "`some_raw_connection_method` doesn't exist here, but you can call "
+            "`._instance.some_raw_connection_method` instead"
         )
         assert (
             MockConnection("my_mock_connection")._instance.some_raw_connection_method()

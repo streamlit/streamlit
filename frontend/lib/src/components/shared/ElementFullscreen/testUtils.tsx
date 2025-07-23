@@ -16,7 +16,6 @@
 
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
-/* eslint-disable import/no-extraneous-dependencies */
 import {
   renderHook as reactTestingLibraryRenderHook,
   RenderHookOptions,

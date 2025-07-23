@@ -18,7 +18,7 @@ import React, { PureComponent, ReactNode } from "react"
 
 import moment from "moment"
 import Hotkeys from "react-hot-keys"
-import { enableAllPlugins as enableImmerPlugins } from "immer"
+import { enableMapSet, enablePatches } from "immer"
 import classNames from "classnames"
 import without from "lodash/without"
 import { getLogger } from "loglevel"
@@ -49,6 +49,7 @@ import {
   getUrl,
   handleFavicon,
   hashString,
+  hasLightBackgroundColor,
   HostCommunicationManager,
   IMenuItem,
   isColoredLineDisplayed,
@@ -111,7 +112,6 @@ import StatusWidget from "@streamlit/app/src/components/StatusWidget"
 import MainMenu from "@streamlit/app/src/components/MainMenu"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
 import DeployButton from "@streamlit/app/src/components/DeployButton"
-import Header from "@streamlit/app/src/components/Header"
 import {
   ConnectionErrorProps,
   DialogProps,
@@ -127,6 +127,7 @@ import {
   DefaultStreamlitEndpoints,
   IHostConfigResponse,
   LibConfig,
+  parseUriIntoBaseParts,
   StreamlitEndpoints,
 } from "@streamlit/connection"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
@@ -137,6 +138,7 @@ import { StyledApp } from "@streamlit/app/src/styled-components"
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
+import { useViewportSize } from "@streamlit/app/src/hooks/useViewportSize"
 
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Used to import fonts + responsive reboot items
@@ -153,6 +155,7 @@ export interface Props {
   screenCast: ScreenCastHOC
   theme: ThemeManager
   streamlitExecutionStartedAt: number
+  isMobileViewport: boolean
 }
 
 interface State {
@@ -178,6 +181,7 @@ interface State {
   hideColoredLine: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
+  navigationPosition: Navigation.Position
   appPages: IAppPage[]
   navSections: string[]
   // The hash of the current page executing
@@ -202,13 +206,13 @@ interface State {
   appConfig: AppConfig
   autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
+  scriptChangedOnDisk: boolean
 }
 
 const INITIAL_SCRIPT_RUN_ID = "<null>"
 
 export const LOG = getLogger("App")
 
-// eslint-disable-next-line
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -263,7 +267,8 @@ export class App extends PureComponent<Props, State> {
     super(props)
 
     // Initialize immerjs
-    enableImmerPlugins()
+    enablePatches()
+    enableMapSet()
 
     // Theme hashes are only created for custom theme, and the custom theme
     // may come from localStorage. We need to create the hash here to ensure
@@ -325,6 +330,8 @@ export class App extends PureComponent<Props, State> {
       appConfig: {},
       autoReruns: [],
       inputsDisabled: false,
+      navigationPosition: Navigation.Position.SIDEBAR,
+      scriptChangedOnDisk: false,
     }
 
     this.connectionManager = null
@@ -471,6 +478,8 @@ export class App extends PureComponent<Props, State> {
           enforceDownloadInNewTab,
           metricsUrl,
           blockErrorDialogs,
+          setAnonymousCrossOriginPropertyOnMediaElements,
+          resourceCrossOriginMode,
         } = response
 
         const appConfig: AppConfig = {
@@ -483,6 +492,11 @@ export class App extends PureComponent<Props, State> {
           mapboxToken,
           disableFullscreenMode,
           enforceDownloadInNewTab,
+          resourceCrossOriginMode:
+            (resourceCrossOriginMode ??
+            setAnonymousCrossOriginPropertyOnMediaElements)
+              ? "anonymous"
+              : undefined,
         }
 
         // Set the metrics configuration:
@@ -523,6 +537,7 @@ export class App extends PureComponent<Props, State> {
           const taggedEls = document.querySelectorAll("[data-iframe-height]")
           // Use ceil to avoid fractional pixels creating scrollbars.
           const lowestBounds = Array.from(taggedEls).map(el =>
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             Math.ceil(el.getBoundingClientRect().bottom)
           )
 
@@ -533,7 +548,7 @@ export class App extends PureComponent<Props, State> {
       }
 
       // @ts-expect-error
-      import("iframe-resizer/js/iframeResizer.contentWindow")
+      void import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
     this.hostCommunicationMgr.sendMessageToHost({
@@ -547,7 +562,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidUpdate(
-    prevProps: Readonly<Props>,
+    _prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
     // @ts-expect-error
@@ -565,6 +580,7 @@ export class App extends PureComponent<Props, State> {
             ScriptRunState.RUNNING,
             ScriptRunState.NOT_RUNNING
           )
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
@@ -687,12 +703,16 @@ export class App extends PureComponent<Props, State> {
     return false
   }
 
+  /**
+   * Handles theme changes from host communication.
+   */
   handleThemeMessage = (
     themeName?: PresetThemeName,
     theme?: ICustomThemeConfig
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+
     if (themeName === lightTheme.name && isUsingPresetTheme) {
       this.props.theme.setTheme(lightTheme)
     } else if (themeName === darkTheme.name && isUsingPresetTheme) {
@@ -701,7 +721,6 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.setImportedTheme(theme)
     }
   }
-
   /**
    * Called by ConnectionManager when our connection state changes
    */
@@ -718,6 +737,9 @@ export class App extends PureComponent<Props, State> {
       //   2. our last script run attempt was interrupted by the websocket
       //      connection dropping, or
       //   3. the host explicitly requested a reconnect (we trigger scriptRunState to be RERUN_REQUESTED)
+      //   4. there is an indication that the script is using fragments (fragments in last run or auto-rerun),
+      //      which might need a rerun to be reinitialized if a new app session got created.
+
       const lastRunWasInterrupted =
         this.state.scriptRunState === ScriptRunState.RUNNING
       const wasRerunRequested =
@@ -726,7 +748,11 @@ export class App extends PureComponent<Props, State> {
       if (
         !this.sessionInfo.last ||
         lastRunWasInterrupted ||
-        wasRerunRequested
+        wasRerunRequested ||
+        // Script is using fragments (fragments in last run or
+        // fragment auto-reruns configured):
+        this.state.fragmentIdsThisRun.length > 0 ||
+        this.state.autoReruns.length > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -893,8 +919,11 @@ export class App extends PureComponent<Props, State> {
     }
 
     // Only change layout/sidebar when the page config has changed.
-    // This preserves the user's previous choice, and prevents extra re-renders.
-    if (layout !== this.state.layout) {
+    // This preserves the user's previous choice/default, and prevents extra re-renders.
+    if (
+      layout !== this.state.layout &&
+      layout !== PageConfig.Layout.LAYOUT_UNSET
+    ) {
       this.setState((prevState: State) => ({
         layout,
         userSettings: {
@@ -903,7 +932,11 @@ export class App extends PureComponent<Props, State> {
         },
       }))
     }
-    if (initialSidebarState !== this.state.initialSidebarState) {
+
+    if (
+      initialSidebarState !== this.state.initialSidebarState &&
+      initialSidebarState !== PageConfig.SidebarState.SIDEBAR_UNSET
+    ) {
       this.setState(() => ({
         initialSidebarState,
       }))
@@ -956,8 +989,9 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  handleNavigation = (navigationMsg: Navigation): void => {
-    this.maybeSetState(this.appNavigation.handleNavigation(navigationMsg))
+  handleNavigation = (navigation: Navigation): void => {
+    this.setState({ navigationPosition: navigation.position })
+    this.maybeSetState(this.appNavigation.handleNavigation(navigation))
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -1033,6 +1067,10 @@ export class App extends PureComponent<Props, State> {
         },
         dialog,
         scriptRunState,
+        // Reset scriptChangedOnDisk when script starts running
+        scriptChangedOnDisk: statusChangeProto.scriptIsRunning
+          ? false
+          : prevState.scriptChangedOnDisk,
       }
     })
   }
@@ -1054,6 +1092,8 @@ export class App extends PureComponent<Props, State> {
         newDialog,
         sessionEvent.scriptCompilationException?.message ?? "No message"
       )
+    } else if (sessionEvent.type === "scriptChangedOnDisk") {
+      this.setState({ scriptChangedOnDisk: true })
     }
   }
 
@@ -1069,8 +1109,16 @@ export class App extends PureComponent<Props, State> {
     isViewingMainPage: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
+
     if (baseUriParts) {
-      const { pathname } = baseUriParts
+      let pathname
+      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+        pathname = parseUriIntoBaseParts(
+          window.__streamlit.MAIN_PAGE_BASE_URL
+        ).pathname
+      } else {
+        pathname = baseUriParts.pathname
+      }
 
       const prevPageNameInPath = extractPageNameFromPathName(
         document.location.pathname,
@@ -1206,6 +1254,7 @@ export class App extends PureComponent<Props, State> {
       SessionInfo.propsFromNewSessionMessage(newSessionProto)
     )
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
       sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
@@ -1312,6 +1361,7 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       Promise.resolve().then(() => {
         // Notify any subscribers of this event (and do it on the next cycle of
         // the event loop)
@@ -1619,7 +1669,6 @@ export class App extends PureComponent<Props, State> {
     }
 
     const { currentPageScriptHash } = this.state
-    const { pathname } = baseUriParts
     let queryString = this.getQueryString()
     let pageName = ""
 
@@ -1629,6 +1678,7 @@ export class App extends PureComponent<Props, State> {
       locale: getLocaleLanguage(),
       url: getUrl(),
       isEmbedded: isEmbed(),
+      colorScheme: this.getThemeColorScheme(),
     }
 
     if (pageScriptHash) {
@@ -1648,6 +1698,15 @@ export class App extends PureComponent<Props, State> {
       // rerun the current page.
       pageScriptHash = currentPageScriptHash
     } else {
+      let pathname
+      if (window.__streamlit?.MAIN_PAGE_BASE_URL) {
+        pathname = parseUriIntoBaseParts(
+          window.__streamlit.MAIN_PAGE_BASE_URL
+        ).pathname
+      } else {
+        pathname = baseUriParts.pathname
+      }
+
       // We must be in the case where the user is navigating directly to a
       // non-main page of this app. Since we haven't received the list of the
       // app's pages from the server at this point, we fall back to requesting
@@ -1784,6 +1843,7 @@ export class App extends PureComponent<Props, State> {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Not connected. Cannot send back message: ${msg}`)
     }
   }
@@ -1813,6 +1873,7 @@ export class App extends PureComponent<Props, State> {
   settingsCallback = (animateModal = true): void => {
     const newDialog: DialogProps = {
       type: DialogType.SETTINGS,
+      sessionInfo: this.sessionInfo,
       isServerConnected: this.isServerConnected(),
       settings: this.state.userSettings,
       allowRunOnSave: this.state.allowRunOnSave,
@@ -1833,7 +1894,6 @@ export class App extends PureComponent<Props, State> {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
-      sessionInfo: this.sessionInfo,
       onClose: this.closeDialog,
       aboutSectionMd: menuItems?.aboutSectionMd,
     }
@@ -1860,6 +1920,7 @@ export class App extends PureComponent<Props, State> {
       } else {
         windowToPrint = window
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       windowToPrint = window
     } finally {
@@ -1929,6 +1990,15 @@ export class App extends PureComponent<Props, State> {
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }
 
+  getThemeColorScheme = (): string => {
+    const { activeTheme } = this.props.theme
+
+    if (hasLightBackgroundColor(activeTheme.emotion)) {
+      return "light"
+    }
+    return "dark"
+  }
+
   isInCloudEnvironment = (): boolean => {
     const { hostMenuItems } = this.state
     return hostMenuItems && hostMenuItems?.length > 0
@@ -1994,6 +2064,26 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  /**
+   * Determines whether the toolbar should be visible based on embed mode,
+   * toolbar mode settings, and availability of host menu/toolbar items.
+   */
+  private shouldShowToolbar = (
+    hostMenuItems: IMenuItem[],
+    hostToolbarItems: IToolbarItem[]
+  ): boolean => {
+    // Show toolbar if not embedded or if specifically configured to display in embed mode
+    const isToolbarAllowedInEmbed = !isEmbed() || isToolbarDisplayed()
+
+    // Show toolbar if not in minimal mode or if there are host items to display
+    const hasContentToShow =
+      this.state.toolbarMode !== Config.ToolbarMode.MINIMAL ||
+      hostMenuItems.length > 0 ||
+      hostToolbarItems.length > 0
+
+    return isToolbarAllowedInEmbed && hasContentToShow
+  }
+
   override render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -2020,7 +2110,15 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled,
       appPages,
       navSections,
+      navigationPosition,
+      scriptChangedOnDisk,
     } = this.state
+
+    // Always use sidebar navigation on mobile, regardless of the server setting
+    const effectiveNavigationPosition = this.props.isMobileViewport
+      ? Navigation.Position.SIDEBAR
+      : navigationPosition
+
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
       this.state.toolbarMode
@@ -2042,10 +2140,10 @@ export class App extends PureComponent<Props, State> {
         })
       : null
 
-    const showToolbar = !isEmbed() || isToolbarDisplayed()
+    // Determine toolbar visibility using helper method
+    const showToolbar = this.shouldShowToolbar(hostMenuItems, hostToolbarItems)
     const showColoredLine =
       (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
-    const showHeader = isEmbed() ? showToolbar || showColoredLine : true
     const showPadding = !isEmbed() || isPaddingDisplayed()
     const disableScrolling = isScrollingHidden()
 
@@ -2080,6 +2178,8 @@ export class App extends PureComponent<Props, State> {
         scriptRunState={scriptRunState}
         scriptRunId={scriptRunId}
         componentRegistry={this.componentRegistry}
+        showToolbar={showToolbar}
+        showColoredLine={showColoredLine}
       >
         <Hotkeys
           keyName="r,c,esc"
@@ -2094,56 +2194,6 @@ export class App extends PureComponent<Props, State> {
             }
             data-test-connection-state={connectionState}
           >
-            {showHeader && (
-              <Header
-                showToolbar={showToolbar}
-                showColoredLine={showColoredLine}
-              >
-                {!hideTopBar && (
-                  <>
-                    <StatusWidget
-                      connectionState={connectionState}
-                      sessionEventDispatcher={this.sessionEventDispatcher}
-                      scriptRunState={scriptRunState}
-                      rerunScript={this.rerunScript}
-                      stopScript={this.stopScript}
-                      allowRunOnSave={allowRunOnSave}
-                    />
-                    <ToolbarActions
-                      hostToolbarItems={hostToolbarItems}
-                      sendMessageToHost={
-                        this.hostCommunicationMgr.sendMessageToHost
-                      }
-                      metricsMgr={this.metricsMgr}
-                    />
-                  </>
-                )}
-                {this.showDeployButton() && (
-                  <DeployButton
-                    onClick={this.deployButtonClicked.bind(this)}
-                  />
-                )}
-                <MainMenu
-                  isServerConnected={this.isServerConnected()}
-                  quickRerunCallback={this.rerunScript}
-                  clearCacheCallback={this.openClearCacheDialog}
-                  settingsCallback={this.settingsCallback}
-                  aboutCallback={this.aboutCallback}
-                  printCallback={this.printCallback}
-                  screencastCallback={this.screencastCallback}
-                  screenCastState={this.props.screenCast.currentState}
-                  hostMenuItems={hostMenuItems}
-                  developmentMode={developmentMode}
-                  sendMessageToHost={
-                    this.hostCommunicationMgr.sendMessageToHost
-                  }
-                  menuItems={menuItems}
-                  metricsMgr={this.metricsMgr}
-                  toolbarMode={this.state.toolbarMode}
-                />
-              </Header>
-            )}
-
             <AppView
               endpoints={this.endpoints}
               sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
@@ -2151,13 +2201,68 @@ export class App extends PureComponent<Props, State> {
               widgetMgr={this.widgetMgr}
               uploadClient={this.uploadClient}
               appLogo={elements.logo}
-              multiplePages={appPages.length > 1}
+              appPages={appPages}
+              navSections={navSections}
+              onPageChange={this.onPageChange}
+              hideSidebarNav={
+                hideSidebarNav ||
+                hostHideSidebarNav ||
+                effectiveNavigationPosition === Navigation.Position.TOP
+              }
+              expandSidebarNav={expandSidebarNav}
+              navigationPosition={effectiveNavigationPosition}
+              pageLinkBaseUrl={this.state.pageLinkBaseUrl}
               wideMode={userSettings.wideMode}
               embedded={isEmbed()}
-              addPaddingForHeader={showToolbar || showColoredLine}
               showPadding={showPadding}
               disableScrolling={disableScrolling}
-              hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+              currentPageScriptHash={currentPageScriptHash}
+              topRightContent={
+                <>
+                  {!hideTopBar && (
+                    <StatusWidget
+                      connectionState={connectionState}
+                      scriptRunState={scriptRunState}
+                      rerunScript={this.rerunScript}
+                      stopScript={this.stopScript}
+                      allowRunOnSave={allowRunOnSave}
+                      showScriptChangedActions={scriptChangedOnDisk}
+                    />
+                  )}
+                  {!hideTopBar && (
+                    <ToolbarActions
+                      hostToolbarItems={hostToolbarItems}
+                      sendMessageToHost={
+                        this.hostCommunicationMgr.sendMessageToHost
+                      }
+                      metricsMgr={this.metricsMgr}
+                    />
+                  )}
+                  {this.showDeployButton() && !scriptChangedOnDisk && (
+                    <DeployButton onClick={this.deployButtonClicked} />
+                  )}
+                  {!hideTopBar && (
+                    <MainMenu
+                      isServerConnected={this.isServerConnected()}
+                      quickRerunCallback={this.rerunScript}
+                      clearCacheCallback={this.openClearCacheDialog}
+                      settingsCallback={this.settingsCallback}
+                      aboutCallback={this.aboutCallback}
+                      printCallback={this.printCallback}
+                      screencastCallback={this.screencastCallback}
+                      screenCastState={this.props.screenCast.currentState}
+                      hostMenuItems={hostMenuItems}
+                      developmentMode={developmentMode}
+                      sendMessageToHost={
+                        this.hostCommunicationMgr.sendMessageToHost
+                      }
+                      menuItems={menuItems}
+                      metricsMgr={this.metricsMgr}
+                      toolbarMode={this.state.toolbarMode}
+                    />
+                  )}
+                </>
+              }
             />
             {renderedDialog}
           </StyledApp>
@@ -2168,4 +2273,13 @@ export class App extends PureComponent<Props, State> {
 }
 
 const AppWithScreenCast = withScreencast(App)
-export default AppWithScreenCast
+
+// Wrapper component to handle viewport size
+const AppWrapper: React.FC<
+  Omit<Props, "isMobileViewport" | "screenCast">
+> = props => {
+  const { isMobile } = useViewportSize()
+  return <AppWithScreenCast {...props} isMobileViewport={isMobile} />
+}
+
+export default AppWrapper

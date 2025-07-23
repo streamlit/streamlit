@@ -29,7 +29,7 @@ from typing_extensions import TypeGuard
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
@@ -49,7 +49,6 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -246,9 +245,15 @@ class SelectSliderMixin:
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
         width : "stretch" or int
-            The width of the slider. If "stretch", the slider will stretch to
-            fill the available space. If an integer, the slider will have a fixed
-            width in pixels.
+            The width of the slider widget. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the widget matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -370,6 +375,7 @@ class SelectSliderMixin:
             "select_slider",
             user_key=key,
             form_id=current_form_id(self.dg),
+            dg=self.dg,
             label=label,
             options=[str(format_func(option)) for option in opt],
             value=slider_value,
@@ -396,14 +402,8 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        # Set width config
         validate_width(width)
-        width_config = WidthConfig()
-        if isinstance(width, int):
-            width_config.pixel_width = width
-        else:
-            width_config.use_stretch = True
-        slider_proto.width_config.CopyFrom(width_config)
+        layout_config = LayoutConfig(width=width)
 
         serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
@@ -431,7 +431,7 @@ class SelectSliderMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue("slider", slider_proto)
+        self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
         return widget_state.value
 
     @property

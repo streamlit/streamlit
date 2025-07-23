@@ -19,8 +19,8 @@ import React, { memo, useCallback, useEffect, useState } from "react"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
-import { useTheme } from "@emotion/react"
 
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
@@ -28,7 +28,6 @@ import {
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { LabelVisibilityOptions } from "~lib/util/utils"
-import { EmotionTheme } from "~lib/theme"
 
 import {
   StyledChromePicker,
@@ -58,6 +57,7 @@ SaturationComponent.prototype.getContainerRenderWindow = function () {
       lastRenderWindow = renderWindow
       renderWindow = renderWindow.parent as Window & typeof globalThis
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     renderWindow = lastRenderWindow
   }
@@ -87,7 +87,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
     help,
   } = props
   const [value, setValue] = useState(propValue)
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   // Reset the value when the prop value changes
   useEffect(() => {

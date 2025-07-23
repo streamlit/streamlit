@@ -17,7 +17,6 @@
 import React, { ReactElement, ReactNode, useContext } from "react"
 
 import classNames from "classnames"
-import { useTheme } from "@emotion/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -39,6 +38,7 @@ import Expander from "~lib/components/elements/Expander"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   assignDividerColor,
@@ -49,15 +49,12 @@ import {
   getActivateScrollToBottomBackwardsCompatible,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getHeightBackwardsCompatible,
   getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 import {
-  StyledBlockWrapper,
-  StyledBlockWrapperProps,
   StyledColumn,
   StyledFlexContainerBlock,
   StyledFlexContainerBlockProps,
@@ -68,7 +65,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { libConfig } = useContext(LibContext)
 
   // Handle cycling of colors for dividers:
-  assignDividerColor(props.node, useTheme())
+  assignDividerColor(props.node, useEmotionTheme())
 
   // Capture all the element ids to avoid rendering the same element twice
   const elementKeySet = new Set<string>()
@@ -87,7 +84,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
             const childProps = {
               ...props,
               disableFullscreenMode,
-              node: node as ElementNode,
+              node,
             }
 
             const key = getElementId(node.element) || index.toString()
@@ -113,7 +110,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
             const childProps = {
               ...props,
               disableFullscreenMode,
-              node: node as BlockNode,
+              node,
             }
 
             // TODO: Update to match React best practices
@@ -122,6 +119,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
           }
 
           // We don't have any other node types!
+          // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
           throw new Error(`Unrecognized AppNode: ${node}`)
         })}
     </>
@@ -130,6 +128,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
 
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
+  height: React.CSSProperties["height"]
 }
 
 export const ContainerContentsWrapper = (
@@ -139,6 +138,9 @@ export const ContainerContentsWrapper = (
     direction: Direction.VERTICAL,
     flex: 1,
     gap: streamlit.GapSize.SMALL,
+    height: props.height,
+    // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+    border: false,
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
@@ -156,28 +158,6 @@ export const ContainerContentsWrapper = (
   )
 }
 
-export interface ScrollToBottomBlockWrapperProps
-  extends StyledBlockWrapperProps {
-  children: ReactNode
-}
-
-// A wrapper for Blocks that adds scrolling with pinned to bottom behavior.
-function ScrollToBottomBlockWrapper(
-  props: ScrollToBottomBlockWrapperProps
-): ReactElement {
-  const { children } = props
-  const scrollContainerRef = useScrollToBottom()
-
-  return (
-    <StyledBlockWrapper
-      {...props}
-      ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
-    >
-      {children}
-    </StyledBlockWrapper>
-  )
-}
-
 interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
 }
@@ -187,59 +167,56 @@ export const FlexBoxContainer = (
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
 
-  // TODO: as advanced layouts is rolled out, we will add useLayoutStyles
-  // here to get the correct styles for the flexbox container based on user
-  // settings.
+  const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
+    props.node
+  )
+  const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
+
+  const layout_styles = useLayoutStyles({
+    element: props.node.deltaBlock,
+    subElement:
+      (props.node.deltaBlock.type &&
+        props.node.deltaBlock[props.node.deltaBlock.type]) ||
+      undefined,
+  })
+
+  // TODO: as advanced layouts is rolled out, more of these styles will
+  // be provided by useLayoutStyles
   const styles = {
-    flex: 1,
     gap:
       // This is backwards compatible with old proto messages since previously
       // the gap size was defaulted to small.
       props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
       streamlit.GapSize.SMALL,
     direction: direction,
-    // This is also backwards capatible since previously wrap was not added
+    // This is also backwards compatible since previously wrap was not added
     // to the flex container.
-    wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
-  }
-
-  const activateScrollToBottom = getActivateScrollToBottomBackwardsCompatible(
-    props.node
-  )
-
-  // Decide which wrapper to use based on whether we need to activate scrolling to bottom
-  // This is done for performance reasons, to prevent the usage of useScrollToBottom
-  // if it is not needed.
-  const BlockBorderWrapper = activateScrollToBottom
-    ? ScrollToBottomBlockWrapper
-    : StyledBlockWrapper
-
-  const blockBorderWrapperProps = {
+    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    overflow: layout_styles.overflow,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    height: getHeightBackwardsCompatible(props.node.deltaBlock),
+    // We need the height on the container for scrolling.
+    height: layout_styles.height,
+    // Flex properties are set on the LayoutWrapper.
+    flex: "1",
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
 
   return (
-    <BlockBorderWrapper
-      {...blockBorderWrapperProps}
-      data-testid="stVerticalBlockBorderWrapper"
+    <StyledFlexContainerBlock
+      {...styles}
+      className={classNames(
+        getClassnamePrefix(direction),
+        convertKeyToClassName(userKey)
+      )}
+      data-testid={getClassnamePrefix(direction)}
+      ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
       data-test-scroll-behavior={
         activateScrollToBottom ? "scroll-to-bottom" : "normal"
       }
     >
-      <StyledFlexContainerBlock
-        {...styles}
-        className={classNames(
-          getClassnamePrefix(direction),
-          convertKeyToClassName(userKey)
-        )}
-        data-testid={getClassnamePrefix(direction)}
-      >
-        <ChildRenderer {...props} />
-      </StyledFlexContainerBlock>
-    </BlockBorderWrapper>
+      <ChildRenderer {...props} />
+    </StyledFlexContainerBlock>
   )
 }
 
@@ -254,7 +231,8 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { formsData } = useRequiredContext(FormsContext)
 
   const styles = useLayoutStyles({
-    element:
+    element: node.deltaBlock,
+    subElement:
       (node.deltaBlock.type && node.deltaBlock[node.deltaBlock.type]) ||
       undefined,
   })
@@ -279,18 +257,18 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
 
-  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    return <FlexBoxContainer {...childProps} />
-  }
-
+  let containerElement: ReactElement | undefined
   const child: ReactElement = (
     <ContainerContentsWrapper
       {...childProps}
       disableFullscreenMode={disableFullscreenMode}
+      height="100%"
     />
   )
 
-  let containerElement: ReactElement | undefined
+  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
+    containerElement = <FlexBoxContainer {...childProps} />
+  }
 
   if (node.deltaBlock.dialog) {
     return (
@@ -304,9 +282,8 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   }
 
   if (node.deltaBlock.expandable) {
-    return (
+    containerElement = (
       <Expander
-        empty={node.isEmpty}
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
       >
@@ -333,7 +310,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     const hasSubmitButton =
       submitButtons !== undefined && submitButtons.length > 0
     const scriptNotRunning = scriptRunState === ScriptRunState.NOT_RUNNING
-    return (
+    containerElement = (
       <Form
         formId={formId}
         clearOnSubmit={clearOnSubmit}
@@ -342,6 +319,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
         scriptNotRunning={scriptNotRunning}
         widgetMgr={props.widgetMgr}
         border={border}
+        overflow={styles.overflow}
       >
         {child}
       </Form>
@@ -381,10 +359,17 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
       // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      return <ContainerContentsWrapper {...mappedChildProps} />
+      return <ContainerContentsWrapper {...mappedChildProps} height="auto" />
     }
-    const tabsProps: TabProps = { ...childProps, isStale, renderTabContent }
+    // We can't use StyledLayoutWrapper for tabs currently because of the horizontal scrolling
+    // management that is handled in the Tabs component. TODO(lwilby): Investigate whether it makes
+    // sense to consolidate that logic with the StyledLayoutWrapper.
+    const tabsProps: TabProps = {
+      ...childProps,
+      isStale,
+      renderTabContent,
+      width: styles.width,
+    }
     return <Tabs {...tabsProps} />
   }
 

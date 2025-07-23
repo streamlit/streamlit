@@ -41,10 +41,8 @@ class BaseCustomComponent(ABC):
         url: str | None = None,
         module_name: str | None = None,
     ) -> None:
-        if (path is None and url is None) or (path is not None and url is not None):
-            raise StreamlitAPIException(
-                "Either 'path' or 'url' must be set, but not both."
-            )
+        if path is None and url is None:
+            raise StreamlitAPIException("Either 'path' or 'url' must be set.")
 
         self._name = name
         self._path = path
@@ -97,6 +95,9 @@ class BaseCustomComponent(ABC):
 
     def __str__(self) -> str:
         return f"'{self.name}': {self.path if self.path is not None else self.url}"
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.path, self.url, self.module_name))
 
     @abstractmethod
     def __eq__(self, other: object) -> bool:

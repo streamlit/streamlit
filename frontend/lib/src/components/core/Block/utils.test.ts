@@ -25,7 +25,6 @@ import {
   convertKeyToClassName,
   getActivateScrollToBottomBackwardsCompatible,
   getBorderBackwardsCompatible,
-  getHeightBackwardsCompatible,
   getKeyFromId,
   isElementStale,
 } from "./utils"
@@ -311,42 +310,6 @@ describe("getBorderBackwardsCompatible", () => {
   })
 })
 
-describe("getHeightBackwardsCompatible", () => {
-  const testCases = [
-    {
-      description:
-        "returns pixelHeight when flexContainer.heightConfig.pixelHeight exists",
-      blockProto: { flexContainer: { heightConfig: { pixelHeight: 100 } } },
-      expected: 100,
-    },
-    {
-      description: "returns height when vertical.height exists",
-      blockProto: { vertical: { height: 200 } },
-      expected: 200,
-    },
-    {
-      description: "returns undefined when none exist",
-      blockProto: {},
-      expected: undefined,
-    },
-    {
-      description:
-        "prioritizes flexContainer.heightConfig.pixelHeight when both exist",
-      blockProto: {
-        flexContainer: { heightConfig: { pixelHeight: 300 } },
-        vertical: { height: 400 },
-      },
-      expected: 300,
-    },
-  ]
-
-  test.each(testCases)("$description", ({ blockProto, expected }) => {
-    expect(getHeightBackwardsCompatible(blockProto as BlockProto)).toBe(
-      expected
-    )
-  })
-})
-
 describe("getActivateScrollToBottomBackwardsCompatible", () => {
   // Helper function to create a proper BlockNode instance for testing
   const createBlockNode = (
@@ -389,7 +352,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
 
   it("returns true when flexContainer has heightConfig and has chatMessage child", () => {
     const mockNode = createBlockNode(
-      { flexContainer: { heightConfig: { pixelHeight: 100 } } },
+      { heightConfig: { pixelHeight: 100 } },
       true // Has chatMessage child
     )
 
@@ -407,7 +370,7 @@ describe("getActivateScrollToBottomBackwardsCompatible", () => {
 
   it("returns false when has height but no chatMessage child", () => {
     const mockNode = createBlockNode(
-      { flexContainer: { heightConfig: { pixelHeight: 100 } } },
+      { heightConfig: { pixelHeight: 100 } },
       false // No chatMessage child
     )
 

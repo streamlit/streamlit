@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import tornado.httputil
 import tornado.web
@@ -60,8 +60,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header("Vary", "Origin")
             self.set_header("Access-Control-Allow-Credentials", "true")
-        elif routes.allow_cross_origin_requests():
+        elif routes.allow_all_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
+        elif routes.is_allowed_origin(origin := self.request.headers.get("Origin")):
+            self.set_header("Access-Control-Allow-Origin", cast("str", origin))
 
     def options(self, **kwargs: Any) -> None:
         """/OPTIONS handler for preflight CORS checks.

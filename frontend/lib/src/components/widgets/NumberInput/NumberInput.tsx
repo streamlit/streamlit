@@ -24,7 +24,6 @@ import React, {
 } from "react"
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { useTheme } from "@emotion/react"
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
 
@@ -46,7 +45,8 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
 import {
@@ -76,7 +76,7 @@ const NumberInput: React.FC<Props> = ({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement => {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
 
   const {
     dataType: elementDataType,
@@ -228,7 +228,7 @@ const NumberInput: React.FC<Props> = ({
     // Additionally, it's okay if commitValue changes, because we only call
     // it once in the beginning anyways.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [])
 
@@ -425,12 +425,16 @@ const NumberInput: React.FC<Props> = ({
                 inputMode: "",
               },
               style: {
+                fontWeight: theme.fontWeights.normal,
                 lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: theme.spacing.sm,
                 paddingLeft: theme.spacing.md,
                 paddingBottom: theme.spacing.sm,
                 paddingTop: theme.spacing.sm,
+                "::placeholder": {
+                  color: theme.colors.fadedText60,
+                },
               },
             },
             InputContainer: {

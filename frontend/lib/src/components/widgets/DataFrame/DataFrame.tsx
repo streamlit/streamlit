@@ -178,6 +178,16 @@ function DataFrame({
   const [showColumnVisibilityMenu, setShowColumnVisibilityMenu] =
     useState(false)
 
+  const handleToggleColumnVisibilityMenu = useCallback(
+    (): void => setShowColumnVisibilityMenu(show => !show),
+    []
+  )
+
+  const handleCloseColumnVisibilityMenu = useCallback(
+    () => setShowColumnVisibilityMenu(false),
+    []
+  )
+
   // Determine if the device is primary using touch as input:
   const isTouchDevice = useMemo<boolean>(
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
@@ -245,7 +255,7 @@ function DataFrame({
   useEffect(() => {
     setColumnOrder(element.columnOrder)
 
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.columnOrder.join(",")])
 
@@ -288,7 +298,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
@@ -446,7 +456,7 @@ function DataFrame({
     clearSelection(true, true)
     // Only run this on changes to the fullscreen mode:
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen])
 
@@ -539,7 +549,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
@@ -737,6 +747,7 @@ function DataFrame({
     setTimeout(() => {
       if (resizableContainerRef.current && dataEditorRef.current) {
         // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         const scrollAreaBounds = resizableContainerRef.current
           ?.querySelector(".dvn-stack")
           ?.getBoundingClientRect()
@@ -749,9 +760,11 @@ function DataFrame({
         if (scrollAreaBounds) {
           setHasVerticalScroll(
             scrollAreaBounds.height >
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
               resizableContainerRef.current.clientHeight
           )
           setHasHorizontalScroll(
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             scrollAreaBounds.width > resizableContainerRef.current.clientWidth
           )
         }
@@ -776,6 +789,7 @@ function DataFrame({
         if (resizableContainerRef.current && hasCustomizedScrollbars) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
 
           if (
@@ -866,6 +880,7 @@ function DataFrame({
             onClick={() => {
               if (onRowAppended) {
                 setIsFocused(true)
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
                 onRowAppended()
                 clearTooltip()
                 // Automatically scroll to the new row on the vertical axis:
@@ -882,12 +897,12 @@ function DataFrame({
             hideColumn={hideColumn}
             showColumn={showColumn}
             isOpen={showColumnVisibilityMenu}
-            onClose={() => setShowColumnVisibilityMenu(false)}
+            onClose={handleCloseColumnVisibilityMenu}
           >
             <ToolbarAction
               label="Show/hide columns"
               icon={Visibility}
-              onClick={() => setShowColumnVisibilityMenu(true)}
+              onClick={handleToggleColumnVisibilityMenu}
             />
           </ColumnVisibilityMenu>
         )}
@@ -895,7 +910,7 @@ function DataFrame({
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
-            onClick={() => exportToCsv()}
+            onClick={exportToCsv}
           />
         )}
         {!isEmptyTable && (
@@ -1007,6 +1022,7 @@ function DataFrame({
             }
           }}
           showSearch={showSearch}
+          searchResults={!showSearch ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
@@ -1017,6 +1033,11 @@ function DataFrame({
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
               return
+            }
+
+            // Hide search before sorting to clear search results
+            if (showSearch) {
+              setShowSearch(false)
             }
 
             if (isRowSelectionActivated && isRowSelected) {
@@ -1031,6 +1052,7 @@ function DataFrame({
               // which can be confusing. So we clear all cell selections before sorting.
               clearSelection(true, true)
             }
+
             sortColumn(columnIdx, "auto")
           }}
           gridSelection={gridSelection}
@@ -1104,19 +1126,22 @@ function DataFrame({
           {...(isRowSelectionActivated && {
             rowMarkers: {
               // Apply style settings for the row markers column:
-              kind: "checkbox",
+              kind: "checkbox-visible",
               checkboxStyle: "square",
               theme: {
                 bgCell: gridTheme.glideTheme.bgHeader,
                 bgCellMedium: gridTheme.glideTheme.bgHeader,
+                // Use a lighter color for the checkboxes in the row markers column,
+                // otherwise its a bit too prominent:
+                textMedium: gridTheme.glideTheme.textLight,
               },
             },
             rowSelectionMode: isMultiRowSelectionActivated ? "multi" : "auto",
             rowSelect: disabled
               ? "none"
               : isMultiRowSelectionActivated
-              ? "multi"
-              : "single",
+                ? "multi"
+                : "single",
             rowSelectionBlending: "mixed",
             // Deactivate the combination of row selections
             // and cell selections. This will automatically clear
@@ -1130,8 +1155,8 @@ function DataFrame({
             columnSelect: disabled
               ? "none"
               : isMultiColumnSelectionActivated
-              ? "multi"
-              : "single",
+                ? "multi"
+                : "single",
             columnSelectionBlending: "mixed",
             // Deactivate the combination of column selections
             // and cell selections. This will automatically clear
@@ -1203,14 +1228,27 @@ function DataFrame({
           <ColumnMenu
             top={showMenu.headerBounds.y + showMenu.headerBounds.height}
             left={showMenu.headerBounds.x + showMenu.headerBounds.width}
-            columnKind={originalColumns[showMenu.columnIdx].kind}
+            column={originalColumns[showMenu.columnIdx]}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
               isSortingEnabled
                 ? (direction: "asc" | "desc" | undefined) => {
-                    // Cell selection are kept on the old position,
-                    // which can be confusing. So we clear all cell selections before sorting.
-                    clearSelection(true, true)
+                    // Hide search before sorting to clear search results
+                    if (showSearch) {
+                      setShowSearch(false)
+                    }
+
+                    if (isRowSelectionActivated && isRowSelected) {
+                      // Keeping row selections when sorting columns is not supported at the moment.
+                      // So we need to clear the selected rows before we do the sorting (Issue #11345).
+                      // Maintain column selections as these are not impacted.
+                      clearSelection(false, true)
+                    } else {
+                      // Cell selection are kept on the old position,
+                      // which can be confusing. So we clear all cell selections before sorting.
+                      clearSelection(true, true)
+                    }
+
                     sortColumn(showMenu.columnIdx, direction, true)
                   }
                 : undefined

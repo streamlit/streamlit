@@ -61,9 +61,12 @@ PAGE_FILENAME_REGEX = re.compile(r"([0-9]*)[_ -]*(.*)\.py")
 def page_sort_key(script_path: Path) -> tuple[float, str]:
     matches = re.findall(PAGE_FILENAME_REGEX, script_path.name)
 
-    # Failing this assert should only be possible if script_path isn't a Python
+    # Failing this should only be possible if script_path isn't a Python
     # file, which should never happen.
-    assert len(matches) > 0, f"{script_path} is not a Python file"
+    if len(matches) == 0:
+        raise ValueError(
+            f"{script_path} is not a Python file. This should never happen."
+        )
 
     [(number, label)] = matches
     label = label.lower()

@@ -27,15 +27,70 @@ from tests import testutil
 
 
 class ServerUtilTest(unittest.TestCase):
+    def test_allowlisted_origins_empty_string(self):
+        with testutil.patch_config_options({"server.corsAllowedOrigins": []}):
+            assert server_util.allowlisted_origins() == set()
+
+    def test_allowlisted_origins_singleton(self):
+        with testutil.patch_config_options(
+            {"server.corsAllowedOrigins": ["http://example.com"]}
+        ):
+            assert server_util.allowlisted_origins() == {"http://example.com"}
+
+    def test_allowlisted_origins_multiple_entries(self):
+        with testutil.patch_config_options(
+            {
+                "server.corsAllowedOrigins": [
+                    "http://example.com",
+                    "https://streamlit.io",
+                ]
+            }
+        ):
+            assert server_util.allowlisted_origins() == {
+                "http://example.com",
+                "https://streamlit.io",
+            }
+
+    def test_allowlisted_origins_string_with_whitespace(self):
+        with testutil.patch_config_options(
+            {
+                "server.corsAllowedOrigins": [
+                    " http://example.com       ",
+                    "       https://streamlit.io ",
+                ]
+            }
+        ):
+            assert server_util.allowlisted_origins() == {
+                "http://example.com",
+                "https://streamlit.io",
+            }
+
     def test_is_url_from_allowed_origins_allowed_domains(self):
-        self.assertTrue(server_util.is_url_from_allowed_origins("localhost"))
-        self.assertTrue(server_util.is_url_from_allowed_origins("127.0.0.1"))
+        with testutil.patch_config_options(
+            {
+                "server.corsAllowedOrigins": [
+                    "http://example.com",
+                    "https://streamlit.io",
+                ]
+            }
+        ):
+            for origin in [
+                "localhost",
+                "127.0.0.1",
+                "http://example.com",
+                "https://streamlit.io",
+            ]:
+                assert server_util.is_url_from_allowed_origins(origin)
+
+            assert not server_util.is_url_from_allowed_origins(
+                "http://some-other-origin.com"
+            )
 
     def test_is_url_from_allowed_origins_CORS_off(self):
         with patch(
             "streamlit.web.server.server_util.config.get_option", side_effect=[False]
         ):
-            self.assertTrue(server_util.is_url_from_allowed_origins("does not matter"))
+            assert server_util.is_url_from_allowed_origins("does not matter")
 
     def test_is_url_from_allowed_origins_browser_serverAddress(self):
         with (
@@ -45,12 +100,10 @@ class ServerUtilTest(unittest.TestCase):
             ),
             patch(
                 "streamlit.web.server.server_util.config.get_option",
-                side_effect=[True, "browser.server.address"],
+                side_effect=[True, [], "browser.server.address"],
             ),
         ):
-            self.assertTrue(
-                server_util.is_url_from_allowed_origins("browser.server.address")
-            )
+            assert server_util.is_url_from_allowed_origins("browser.server.address")
 
     @parameterized.expand(
         [
@@ -75,7 +128,7 @@ class ServerUtilTest(unittest.TestCase):
         with patch.object(config, "get_option", new=mock_get_option):
             actual_url = server_util.get_url("the_ip_address")
 
-        self.assertEqual(expected_url, actual_url)
+        assert expected_url == actual_url
 
     def test_make_url_path_regex(self):
         assert (

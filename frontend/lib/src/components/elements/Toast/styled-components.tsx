@@ -52,10 +52,6 @@ export const StyledToastWrapper = styled.div<StyledToastMessageProps>(
   })
 )
 
-export const StyledIcon = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.xl,
-}))
-
 export const StyledMessageWrapper = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",

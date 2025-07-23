@@ -39,7 +39,7 @@ st.header("Pandas Styler: Background color")
 
 
 def highlight_first(value: float) -> str:
-    return "background-color: yellow" if value == 0 else ""
+    return "background-color: yellow;" if value == 0 else ""
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
@@ -64,7 +64,9 @@ styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
 )
 
 styled_df.apply(
-    highlight_max, props="color:white;background-color:rgb(255, 0, 0)", axis=0
+    highlight_max,
+    props="color:white;background-color:rgb(255, 0, 0);font-weight:800;",
+    axis=0,
 )
 
 styled_df.apply(
@@ -154,6 +156,27 @@ st.dataframe(
         "number": st.column_config.NumberColumn(),
         "url": st.column_config.LinkColumn(),
         "datetime": st.column_config.DatetimeColumn(),
+    },
+    hide_index=True,
+)
+
+st.header("Pandas Styler: text color support")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "text": ["a", "b"],
+            "number": [1, 2],
+            "link": ["streamlit.io", "docs.streamlit.io"],
+            "list": [["a", "b", "c"], ["a", "d", "e"]],
+            "datetime": [pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-02")],
+        }
+    ).style.apply(
+        lambda x: x.apply(lambda _: "color: green"),
+    ),
+    column_config={
+        "list": st.column_config.ListColumn(),
+        "link": st.column_config.LinkColumn(),
     },
     hide_index=True,
 )

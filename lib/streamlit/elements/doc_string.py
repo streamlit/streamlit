@@ -24,10 +24,10 @@ import types
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
-from streamlit.elements.lib.layout_utils import validate_width
+from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
-from streamlit.proto.WidthConfig_pb2 import WidthConfig
+from streamlit.runtime.caching.cache_utils import CachedFunc
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_runner import (
     __file__ as SCRIPTRUNNER_FILENAME,  # noqa: N812
@@ -60,8 +60,14 @@ class HelpMixin:
             The object whose information should be displayed. If left
             unspecified, this call will display help for Streamlit itself.
         width : "stretch" or int
-            The width of the help element. Can be "stretch" to fill the container
-            width, or an integer to specify a fixed width in pixels.
+            The width of the help element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Example
         -------
@@ -125,9 +131,12 @@ class HelpMixin:
         doc_string_proto = DocStringProto()
 
         validate_width(width, allow_content=False)
-        _marshall(doc_string_proto, obj, width)
+        layout_config = LayoutConfig(width=width)
+        _marshall(doc_string_proto, obj)
 
-        return self.dg._enqueue("doc_string", doc_string_proto)
+        return self.dg._enqueue(
+            "doc_string", doc_string_proto, layout_config=layout_config
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -135,9 +144,7 @@ class HelpMixin:
         return cast("DeltaGenerator", self)
 
 
-def _marshall(
-    doc_string_proto: DocStringProto, obj: Any, width: WidthWithoutContent = "stretch"
-) -> None:
+def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
     """Construct a DocString object.
 
     See DeltaGenerator.help for docs.
@@ -158,14 +165,6 @@ def _marshall(
         doc_string_proto.value = obj_value
 
     doc_string_proto.members.extend(_get_members(obj))
-
-    # Set width configuration
-    width_config = WidthConfig()
-    if isinstance(width, int):
-        width_config.pixel_width = width
-    else:
-        width_config.use_stretch = True
-    doc_string_proto.width_config.CopyFrom(width_config)
 
 
 def _get_name(obj: object) -> str | None:
@@ -222,6 +221,7 @@ def _get_docstring(obj: object) -> str | None:
     # If that's the case here, use the type's docstring.
     # For objects where type is "type" we do not print the docs (e.g. int).
     # We also do not print the docs for functions and methods if the docstring is empty.
+    # We treat CachedFunc objects in the same way as functions.
     if doc_string is None:
         obj_type = type(obj)
 
@@ -230,6 +230,7 @@ def _get_docstring(obj: object) -> str | None:
             and obj_type is not types.ModuleType
             and not inspect.isfunction(obj)
             and not inspect.ismethod(obj)
+            and obj_type is not CachedFunc
         ):
             doc_string = inspect.getdoc(obj_type)
 

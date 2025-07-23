@@ -21,6 +21,7 @@ import { act, fireEvent, screen } from "@testing-library/react"
 
 import {
   ComponentInstance as ComponentInstanceProto,
+  IComponentInstance as IComponentInstanceProto,
   SpecialArg,
 } from "@streamlit/protobuf"
 
@@ -68,6 +69,7 @@ const MOCK_COMPONENT_NAME = "mock_component_name"
 
 describe("ComponentInstance", () => {
   let logWarnSpy: MockInstance
+  let originalStreamlitWindowObj: typeof window.__streamlit
   const getComponentRegistry = (): ComponentRegistry => {
     return new ComponentRegistry(mockEndpoints())
   }
@@ -85,6 +87,11 @@ describe("ComponentInstance", () => {
       elementRef: { current: null },
       values: [250],
     })
+    originalStreamlitWindowObj = window.__streamlit
+  })
+
+  afterEach(() => {
+    window.__streamlit = originalStreamlitWindowObj
   })
 
   it("registers a message listener on render", () => {
@@ -157,6 +164,59 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("allow", DEFAULT_IFRAME_FEATURE_POLICY)
     expect(iframe).toHaveAttribute("sandbox", DEFAULT_IFRAME_SANDBOX_POLICY)
     expect(iframe).toHaveClass("stCustomComponentV1")
+  })
+
+  it("Gets URL from componentRegistry if one is not set in proto", () => {
+    const componentRegistry = getComponentRegistry()
+    // @ts-expect-error - accessing private properties for testing
+    componentRegistry.endpoints.buildComponentURL = vi
+      .fn()
+      .mockImplementation(() => "http://another.mock.url")
+
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({}, [], { url: undefined })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+      />,
+      {
+        componentRegistry,
+      }
+    )
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute(
+      "src",
+      "http://another.mock.url?streamlitUrl=http%3A%2F%2Flocalhost%3A3000%2F"
+    )
+  })
+
+  it("includes window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID in queryString if set", () => {
+    window.__streamlit = { CUSTOM_COMPONENT_CLIENT_ID: "foobar" }
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp()}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+      />,
+      {
+        componentRegistry: getComponentRegistry(),
+      }
+    )
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute(
+      "src",
+      "http://a.mock.url?__streamlit_parent_client_id=foobar&streamlitUrl=http%3A%2F%2Flocalhost%3A3000%2F"
+    )
   })
 
   it("displays a skeleton initially with a certain height", () => {
@@ -526,7 +586,7 @@ describe("ComponentInstance", () => {
       ).toBeVisible()
     })
 
-    it("warns if COMPONENT_READY hasn't been received after a timeout", () => {
+    it("warns if COMPONENT_READY hasn't been received after a timeout", async () => {
       renderWithContexts(
         <ComponentInstance
           element={createElementProp()}
@@ -543,7 +603,7 @@ describe("ComponentInstance", () => {
         }
       )
       // Advance past our warning timeout, and force a re-render.
-      act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
+      await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
 
       expect(
         screen.getByText(/The app is attempting to load the component from/)
@@ -580,7 +640,7 @@ describe("ComponentInstance", () => {
       )
     })
 
-    it("triggers component registry's sendTimeoutError when component has timed out waiting for READY message", () => {
+    it("triggers component registry's sendTimeoutError when component has timed out waiting for READY message", async () => {
       const componentRegistry = getComponentRegistry()
       // spy on Component Registry's sendTimeoutError method
       const sendTimeoutErrorSpy = vi.spyOn(
@@ -604,7 +664,7 @@ describe("ComponentInstance", () => {
         }
       )
       // Advance past our warning timeout, and force a re-render.
-      act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
+      await act(() => vi.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
 
       expect(sendTimeoutErrorSpy).toHaveBeenCalledWith(
         "http://a.mock.url?streamlitUrl=http%3A%2F%2Flocalhost%3A3000%2F",
@@ -926,7 +986,8 @@ describe("ComponentInstance", () => {
   function createElementProp(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     jsonArgs: { [name: string]: any } = {},
-    specialArgs: SpecialArg[] = []
+    specialArgs: SpecialArg[] = [],
+    overrides: Partial<IComponentInstanceProto> = {}
   ): ComponentInstanceProto {
     return ComponentInstanceProto.create({
       jsonArgs: JSON.stringify(jsonArgs),
@@ -934,6 +995,7 @@ describe("ComponentInstance", () => {
       componentName: MOCK_COMPONENT_NAME,
       id: MOCK_WIDGET_ID,
       url: MOCK_COMPONENT_URL,
+      ...overrides,
     })
   }
 })

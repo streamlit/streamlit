@@ -23,8 +23,15 @@
 import { CancelToken } from "axios"
 
 import { IAppPage } from "@streamlit/protobuf"
+import type { StreamlitWindowObject } from "@streamlit/utils"
 
 import { ConnectionState } from "./ConnectionState"
+
+declare global {
+  interface Window {
+    __streamlit?: StreamlitWindowObject
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export type OnMessage = (ForwardMsg: any) => void
@@ -176,6 +183,16 @@ export type LibConfig = {
   disableFullscreenMode?: boolean
 
   enforceDownloadInNewTab?: boolean
+
+  /**
+   * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
+   * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
+   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
+   */
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+
+  /** Deprecated. Use resourceCrossOriginMode instead. If set to true, the value of resourceCrossOriginMode will be "anonymous". */
+  setAnonymousCrossOriginPropertyOnMediaElements?: boolean
 }
 
 /**
@@ -218,6 +235,7 @@ export type MetricsConfig = {
    * Setting to "off" disables metrics collection.
    * If undefined, metricsUrl requested from centralized config file.
    */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   metricsUrl?: string | "postMessage" | "off"
 }
 

@@ -284,7 +284,10 @@ class ScriptRequests:
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 
-            assert self._state == ScriptRequestType.STOP
+            if self._state != ScriptRequestType.STOP:
+                raise RuntimeError(
+                    f"Unrecognized ScriptRunnerState: {self._state}. This should never happen."
+                )
             return ScriptRequest(ScriptRequestType.STOP)
 
     def on_scriptrunner_ready(self) -> ScriptRequest:

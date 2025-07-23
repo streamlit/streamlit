@@ -15,7 +15,6 @@
  */
 
 // Private members use _.
-/* eslint-disable no-underscore-dangle */
 
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"

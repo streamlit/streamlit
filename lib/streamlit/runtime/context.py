@@ -17,12 +17,13 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Mapping
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from streamlit import runtime
 from streamlit.runtime.context_util import maybe_add_page_path, maybe_trim_page_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.util import AttributeDictionary
 
 if TYPE_CHECKING:
     from http.cookies import Morsel
@@ -61,6 +62,26 @@ def _normalize_header(name: str) -> str:
     'Content-Type'
     """
     return "-".join(w.capitalize() for w in name.split("-"))
+
+
+class StreamlitTheme(AttributeDictionary):
+    """A dictionary-like object containing theme information.
+
+    This class extends the functionality of a standard dictionary to allow items
+    to be accessed via attribute-style dot notation in addition to the traditional
+    key-based access. If a dictionary item is accessed and is itself a dictionary,
+    it is automatically wrapped in another `AttributeDictionary`, enabling recursive
+    attribute-style access.
+    """
+
+    type: Literal["dark", "light"] | None
+
+    def __init__(self, theme_info: dict[str, str | None]):
+        super().__init__(theme_info)
+
+    @classmethod
+    def from_context_info(cls, context_dict: dict[str, str | None]) -> StreamlitTheme:
+        return cls(context_dict)
 
 
 class StreamlitHeaders(Mapping[str, str]):
@@ -214,6 +235,46 @@ class ContextProxy:
 
         cookies = session_client_request.cookies
         return StreamlitCookies.from_tornado_cookies(cookies)
+
+    @property
+    @gather_metrics("context.theme")
+    def theme(self) -> StreamlitTheme:
+        """A read-only, dictionary-like object containing theme information.
+
+        Theme information is restricted to the ``type`` of the theme (dark or
+        light) and is inferred from the background color of the app.
+
+        .. note::
+            Changes made to the background color through CSS are not included.
+            Additionally, the theme type may be incorrect during a change in
+            theme, like in the following situations:
+
+            - When the app is first loaded within a session
+            - When the user changes the theme in the settings menu
+
+            For more information and to upvote an improvement, see GitHub issue
+            `#11920 <https://github.com/streamlit/streamlit/issues/11920>`_.
+
+        Attributes
+        ----------
+        type : "light", "dark"
+            The theme type inferred from the background color of the app.
+
+        Example
+        -------
+        Access the theme type of the app:
+
+        >>> import streamlit as st
+        >>>
+        >>> st.write(f"The current theme type is {st.context.theme.type}.")
+
+        """
+        ctx = get_script_run_ctx()
+
+        if ctx is None or ctx.context_info is None:
+            return StreamlitTheme({"type": None})
+
+        return StreamlitTheme.from_context_info({"type": ctx.context_info.color_scheme})
 
     @property
     @gather_metrics("context.timezone")

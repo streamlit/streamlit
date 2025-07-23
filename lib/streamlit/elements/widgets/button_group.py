@@ -31,6 +31,11 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    Width,
+    validate_width,
+)
 from streamlit.elements.lib.options_selector_utils import (
     check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
@@ -276,6 +281,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
     ) -> Literal[0, 1] | None: ...
     @overload
     def feedback(
@@ -287,6 +293,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
     ) -> Literal[0, 1, 2, 3, 4] | None: ...
     @gather_metrics("feedback")
     def feedback(
@@ -298,6 +305,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        width: Width = "content",
     ) -> int | None:
         """Display a feedback widget.
 
@@ -307,7 +315,7 @@ class ButtonGroupMixin:
 
         Parameters
         ----------
-        options: "thumbs", "faces", or "stars"
+        options : "thumbs", "faces", or "stars"
             The feedback options displayed to the user. ``options`` can be one
             of the following:
 
@@ -337,6 +345,19 @@ class ButtonGroupMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        width : "content", "stretch", or int
+            The width of the feedback widget. This can be one of the following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -408,6 +429,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             selection_visualization=selection_visualization,
             style="borderless",
+            width=width,
         )
         return sentiment.value
 
@@ -427,6 +449,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> V | None: ...
     @overload
     def pills(
@@ -444,6 +467,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -461,6 +485,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -470,7 +495,7 @@ class ButtonGroupMixin:
 
         Parameters
         ----------
-        label: str
+        label : str
             A short label explaining to the user what this widget is for.
             The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, Links,
@@ -492,7 +517,7 @@ class ButtonGroupMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        options: Iterable of V
+        options : Iterable of V
             Labels for the select options in an ``Iterable``. This can be a
             ``list``, ``set``, or anything supported by ``st.dataframe``. If
             ``options`` is dataframe-like, the first column will be used. Each
@@ -500,18 +525,18 @@ class ButtonGroupMixin:
             optionally contain GitHub-flavored Markdown, including the Markdown
             directives described in the ``body`` parameter of ``st.markdown``.
 
-        selection_mode: "single" or "multi"
+        selection_mode : "single" or "multi"
             The selection mode for the widget. If this is ``"single"``
             (default), only one option can be selected. If this is ``"multi"``,
             multiple options can be selected.
 
-        default: Iterable of V, V, or None
+        default : Iterable of V, V, or None
             The value of the widget when it first renders. If the
             ``selection_mode`` is ``multi``, this can be a list of values, a
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
 
-        format_func: function
+        format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
@@ -519,13 +544,13 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key: str or int
+        key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
 
-        help: str or None
+        help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
             only displays the tooltip when ``label_visibility="visible"``. If
             this is ``None`` (default), no tooltip is displayed.
@@ -534,24 +559,37 @@ class ButtonGroupMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change: callable
+        on_change : callable
             An optional callback invoked when this widget's value changes.
 
-        args: tuple
+        args : tuple
             An optional tuple of args to pass to the callback.
 
-        kwargs: dict
+        kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        disabled: bool
+        disabled : bool
             An optional boolean that disables the widget if set to ``True``.
             The default is ``False``.
 
-        label_visibility: "visible", "hidden", or "collapsed"
+        label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "content", "stretch", or int
+            The width of the pills widget. This can be one of the following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -618,6 +656,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
         )
 
     @overload
@@ -636,6 +675,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> V | None: ...
     @overload
     def segmented_control(
@@ -653,6 +693,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -671,6 +712,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -701,7 +743,7 @@ class ButtonGroupMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        options: Iterable of V
+        options : Iterable of V
             Labels for the select options in an ``Iterable``. This can be a
             ``list``, ``set``, or anything supported by ``st.dataframe``. If
             ``options`` is dataframe-like, the first column will be used. Each
@@ -709,18 +751,18 @@ class ButtonGroupMixin:
             optionally contain GitHub-flavored Markdown, including the Markdown
             directives described in the ``body`` parameter of ``st.markdown``.
 
-        selection_mode: "single" or "multi"
+        selection_mode : "single" or "multi"
             The selection mode for the widget. If this is ``"single"``
             (default), only one option can be selected. If this is ``"multi"``,
             multiple options can be selected.
 
-        default: Iterable of V, V, or None
+        default : Iterable of V, V, or None
             The value of the widget when it first renders. If the
             ``selection_mode`` is ``multi``, this can be a list of values, a
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
 
-        format_func: function
+        format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
@@ -728,13 +770,13 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key: str or int
+        key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
 
-        help: str or None
+        help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
             only displays the tooltip when ``label_visibility="visible"``. If
             this is ``None`` (default), no tooltip is displayed.
@@ -743,24 +785,38 @@ class ButtonGroupMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change: callable
+        on_change : callable
             An optional callback invoked when this widget's value changes.
 
-        args: tuple
+        args : tuple
             An optional tuple of args to pass to the callback.
 
-        kwargs: dict
+        kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        disabled: bool
+        disabled : bool
             An optional boolean that disables the widget if set to ``True``.
             The default is ``False``.
 
-        label_visibility: "visible", "hidden", or "collapsed"
+        label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        width : "content", "stretch", or int
+            The width of the segmented control widget. This can be one of the
+            following:
+
+            - ``"content"`` (default): The width of the widget matches the
+              width of its content, but doesn't exceed the width of the parent
+              container.
+            - ``"stretch"``: The width of the widget matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The widget has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the widget matches the width
+              of the parent container.
 
         Returns
         -------
@@ -830,6 +886,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            width=width,
         )
 
     @gather_metrics("_internal_button_group")
@@ -849,6 +906,7 @@ class ButtonGroupMixin:
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
+        width: Width = "content",
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -902,6 +960,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             label=label,
             label_visibility=label_visibility,
+            width=width,
         )
 
         if selection_mode == "multi":
@@ -932,6 +991,7 @@ class ButtonGroupMixin:
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
+        width: Width = "content",
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -967,6 +1027,9 @@ class ButtonGroupMixin:
         if default is not None and len(default) == 0:
             _default = None
 
+        validate_width(width, allow_content=True)
+        layout_config = LayoutConfig(width=width)
+
         check_widget_policies(self.dg, key, on_change, default_value=_default)
 
         widget_name = "button_group"
@@ -984,10 +1047,14 @@ class ButtonGroupMixin:
             widget_name,
             user_key=key,
             form_id=form_id,
+            dg=self.dg,
             options=formatted_options,
             default=default,
             click_mode=parsed_selection_mode,
             style=style,
+            width=width,
+            label=label,
+            help=help,
         )
 
         proto = _build_proto(
@@ -1022,7 +1089,7 @@ class ButtonGroupMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue(widget_name, proto)
+        self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
         return widget_state
 

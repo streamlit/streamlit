@@ -45,7 +45,7 @@ class BokehTest(DeltaGeneratorTestCase):
         st.bokeh_chart(plot)
 
         c = self.get_delta_from_queue().new_element.bokeh_chart
-        self.assertEqual(hasattr(c, "figure"), True)
+        assert hasattr(c, "figure")
 
     @unittest.skipIf(
         is_version_less_than(np.__version__, "2.0.0") is False,
@@ -57,7 +57,7 @@ class BokehTest(DeltaGeneratorTestCase):
 
         with patch("bokeh.__version__", return_value="2.4.0"):
             plot = figure()
-            with self.assertRaises(StreamlitAPIException):
+            with pytest.raises(StreamlitAPIException):
                 st.bokeh_chart(plot)
 
 
@@ -75,5 +75,5 @@ class BokehMissingTest(DeltaGeneratorTestCase):
 
     def test_bokeh_chart_missing_dependency(self):
         """Test that ModuleNotFoundError is raised when bokeh is not installed."""
-        with self.assertRaises(ModuleNotFoundError):
+        with pytest.raises(ModuleNotFoundError):
             st.bokeh_chart(None)

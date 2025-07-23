@@ -20,7 +20,7 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
@@ -118,14 +118,14 @@ describe("Audio Element", () => {
     })
 
     const { rerender } = render(<Audio {...props} />)
-    let audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
+    let audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
 
     expect(audioElement.currentTime).toBe(0)
 
     const newProps = getProps({ startTime: 10 })
     rerender(<Audio {...newProps} />)
 
-    audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
+    audioElement = screen.getByTestId("stAudio")
 
     expect(audioElement.currentTime).toBe(10)
   })
@@ -144,5 +144,43 @@ describe("Audio Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("crossOrigin attribute", () => {
+    it("sets crossOrigin to 'anonymous' when resourceCrossOriginMode is 'anonymous'", () => {
+      const props = getProps()
+      renderWithContexts(<Audio {...props} />, {
+        libConfig: { resourceCrossOriginMode: "anonymous" },
+      })
+      const audioElement = screen.getByTestId("stAudio")
+      expect(audioElement).toHaveAttribute("crossOrigin", "anonymous")
+    })
+
+    it("sets crossOrigin to 'use-credentials' when resourceCrossOriginMode is 'use-credentials'", () => {
+      const props = getProps()
+      renderWithContexts(<Audio {...props} />, {
+        libConfig: { resourceCrossOriginMode: "use-credentials" },
+      })
+      const audioElement = screen.getByTestId("stAudio")
+      expect(audioElement).toHaveAttribute("crossOrigin", "use-credentials")
+    })
+
+    it("does not set crossOrigin attribute when resourceCrossOriginMode is undefined", () => {
+      const props = getProps()
+      renderWithContexts(<Audio {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const audioElement = screen.getByTestId("stAudio")
+      expect(audioElement).not.toHaveAttribute("crossOrigin")
+    })
+
+    it("does not set crossOrigin attribute when libConfig is empty", () => {
+      const props = getProps()
+      renderWithContexts(<Audio {...props} />, {
+        libConfig: {},
+      })
+      const audioElement = screen.getByTestId("stAudio")
+      expect(audioElement).not.toHaveAttribute("crossOrigin")
+    })
   })
 })

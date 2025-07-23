@@ -59,9 +59,9 @@ class ConfigTest(unittest.TestCase):
     def test_set_user_option_scriptable(self):
         """Test that scriptable options can be set from API."""
         # This is set in lib/tests/conftest.py to off
-        self.assertEqual(
-            ShowErrorDetailsConfigOptions.FULL,
-            config.get_option("client.showErrorDetails"),
+        assert (
+            config.get_option("client.showErrorDetails")
+            == ShowErrorDetailsConfigOptions.FULL
         )
 
         try:
@@ -69,9 +69,9 @@ class ConfigTest(unittest.TestCase):
             config.set_user_option(
                 "client.showErrorDetails", ShowErrorDetailsConfigOptions.STACKTRACE
             )
-            self.assertEqual(
-                ShowErrorDetailsConfigOptions.STACKTRACE,
-                config.get_option("client.showErrorDetails"),
+            assert (
+                config.get_option("client.showErrorDetails")
+                == ShowErrorDetailsConfigOptions.STACKTRACE
             )
         finally:
             # Restore original value
@@ -82,9 +82,9 @@ class ConfigTest(unittest.TestCase):
     def test_set_user_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
         # This is set in lib/tests/conftest.py to off
-        self.assertEqual(True, config.get_option("server.enableCORS"))
+        assert config.get_option("server.enableCORS")
 
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             config.set_user_option("server.enableCORS", False)
 
     def test_simple_config_option(self):
@@ -110,6 +110,7 @@ class ConfigTest(unittest.TestCase):
             "_test.simpleParam",
             description="Simple config option.",
             default_val=[12345],
+            multiple=True,
         )
 
         assert config_option.key == "_test.simpleParam"
@@ -131,20 +132,23 @@ class ConfigTest(unittest.TestCase):
             return 12345
 
         # Test that it works.
-        self.assertEqual(config_option.key, "_test.complexParam")
-        self.assertEqual(config_option.section, "_test")
-        self.assertEqual(config_option.name, "complexParam")
-        self.assertEqual(config_option.description, "Complex config option.")
-        self.assertEqual(config_option.where_defined, ConfigOption.DEFAULT_DEFINITION)
-        self.assertEqual(config_option.value, 12345)
-        self.assertEqual(config_option.env_var, "STREAMLIT__TEST_COMPLEX_PARAM")
+        assert config_option.key == "_test.complexParam"
+        assert config_option.section == "_test"
+        assert config_option.name == "complexParam"
+        assert config_option.description == "Complex config option."
+        assert config_option.where_defined == ConfigOption.DEFAULT_DEFINITION
+        assert config_option.value == 12345
+        assert config_option.env_var == "STREAMLIT__TEST_COMPLEX_PARAM"
 
     def test_complex_config_option_must_have_doc_strings(self):
         """Test that complex config options use funcs with doc stringsself.
 
         This is because the doc string forms the option's description.
         """
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match="Complex config options require doc strings for their description.",
+        ):
 
             @ConfigOption("_test.noDocString")
             def no_doc_string():
@@ -152,23 +156,32 @@ class ConfigTest(unittest.TestCase):
 
     def test_invalid_config_name(self):
         """Test setting an invalid config section."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            ValueError,
+            match='Key "_test.myParam." has invalid format.',
+        ):
             ConfigOption("_test.myParam.")
 
     def test_invalid_config_section(self):
         """Test setting an invalid config section."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(RuntimeError):
             config._create_option("mySection.myParam")
 
     def test_cannot_overwrite_config_section(self):
         """Test overwriting a config section using _create_section."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match='Cannot define section "_test2" twice.',
+        ):
             config._create_section("_test2", "A test section.")
             config._create_section("_test2", "A test section.")
 
     def test_cannot_overwrite_config_key(self):
         """Test overwriting a config option using _create_option."""
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            RuntimeError,
+            match='Cannot define option "_test.overwriteKey" twice.',
+        ):
             config._create_option("_test.overwriteKey")
             config._create_option("_test.overwriteKey")
 
@@ -178,7 +191,10 @@ class ConfigTest(unittest.TestCase):
         Note the exception is the "_test" section which is used
         for unit testing.
         """
-        with self.assertRaises(AssertionError):
+        with pytest.raises(
+            ValueError,
+            match='Key "_test.snake_case" has invalid format.',
+        ):
             config._create_option("_test.snake_case")
 
     def test_get_set_and_complex_config_options(self):
@@ -205,39 +221,37 @@ class ConfigTest(unittest.TestCase):
         config.get_config_options(force_reparse=True)
 
         # Check that the default values are good.
-        self.assertEqual(config.get_option("_test.independentOption"), DUMMY_VAL_1)
-        self.assertEqual(config.get_option("_test.dependentOption"), DUMMY_VAL_1)
-        self.assertEqual(
-            config.get_where_defined("_test.independentOption"),
-            ConfigOption.DEFAULT_DEFINITION,
+        assert config.get_option("_test.independentOption") == DUMMY_VAL_1
+        assert config.get_option("_test.dependentOption") == DUMMY_VAL_1
+        assert (
+            config.get_where_defined("_test.independentOption")
+            == ConfigOption.DEFAULT_DEFINITION
         )
-        self.assertEqual(
-            config.get_where_defined("_test.dependentOption"),
-            ConfigOption.DEFAULT_DEFINITION,
+        assert (
+            config.get_where_defined("_test.dependentOption")
+            == ConfigOption.DEFAULT_DEFINITION
         )
 
         # Override the independent option. Both update!
         config.set_option("_test.independentOption", DUMMY_VAL_2)
-        self.assertEqual(config.get_option("_test.independentOption"), DUMMY_VAL_2)
-        self.assertEqual(config.get_option("_test.dependentOption"), DUMMY_VAL_2)
-        self.assertEqual(
-            config.get_where_defined("_test.independentOption"), config._USER_DEFINED
+        assert config.get_option("_test.independentOption") == DUMMY_VAL_2
+        assert config.get_option("_test.dependentOption") == DUMMY_VAL_2
+        assert (
+            config.get_where_defined("_test.independentOption") == config._USER_DEFINED
         )
-        self.assertEqual(
-            config.get_where_defined("_test.dependentOption"),
-            ConfigOption.DEFAULT_DEFINITION,
+        assert (
+            config.get_where_defined("_test.dependentOption")
+            == ConfigOption.DEFAULT_DEFINITION
         )
 
         # Override the dependent option. Only that updates!
         config.set_option("_test.dependentOption", DUMMY_VAL_3)
-        self.assertEqual(config.get_option("_test.independentOption"), DUMMY_VAL_2)
-        self.assertEqual(config.get_option("_test.dependentOption"), DUMMY_VAL_3)
-        self.assertEqual(
-            config.get_where_defined("_test.independentOption"), config._USER_DEFINED
+        assert config.get_option("_test.independentOption") == DUMMY_VAL_2
+        assert config.get_option("_test.dependentOption") == DUMMY_VAL_3
+        assert (
+            config.get_where_defined("_test.independentOption") == config._USER_DEFINED
         )
-        self.assertEqual(
-            config.get_where_defined("_test.dependentOption"), config._USER_DEFINED
-        )
+        assert config.get_where_defined("_test.dependentOption") == config._USER_DEFINED
 
     def test_create_theme_options(self):
         config._create_theme_options(
@@ -250,16 +264,14 @@ class ConfigTest(unittest.TestCase):
         options = config.get_config_options(force_reparse=True)
 
         theme_key = "theme.testConfig"
-        self.assertEqual(options[theme_key].name, "testConfig")
-        self.assertEqual(options[theme_key].section, "theme")
-        self.assertEqual(options[theme_key].description, "This is a test config")
-        self.assertEqual(options[theme_key].value, "TEST")
+        assert options[theme_key].name == "testConfig"
+        assert options[theme_key].section == "theme"
+        assert options[theme_key].description == "This is a test config"
+        assert options[theme_key].value == "TEST"
 
         config._delete_option(theme_key)
 
-        self.assertNotIn(
-            f"theme.{CustomThemeCategories.SIDEBAR.value}.testConfig", options
-        )
+        assert f"theme.{CustomThemeCategories.SIDEBAR.value}.testConfig" not in options
 
     def test_create_theme_options_for_categories(self):
         config._create_theme_options(
@@ -272,18 +284,19 @@ class ConfigTest(unittest.TestCase):
         options = config.get_config_options(force_reparse=True)
 
         theme_key = "theme.testConfig"
-        self.assertEqual(options[theme_key].name, "testConfig")
-        self.assertEqual(options[theme_key].section, "theme")
-        self.assertEqual(options[theme_key].description, "This is a test config")
-        self.assertEqual(options[theme_key].value, "TEST")
+        assert options[theme_key].name == "testConfig"
+        assert options[theme_key].section == "theme"
+        assert options[theme_key].description == "This is a test config"
+        assert options[theme_key].value == "TEST"
 
         sidebar_key = f"theme.{CustomThemeCategories.SIDEBAR.value}.testConfig"
-        self.assertEqual(options[sidebar_key].name, "testConfig")
-        self.assertEqual(
-            options[sidebar_key].section, f"theme.{CustomThemeCategories.SIDEBAR.value}"
+        assert options[sidebar_key].name == "testConfig"
+        assert (
+            options[sidebar_key].section
+            == f"theme.{CustomThemeCategories.SIDEBAR.value}"
         )
-        self.assertEqual(options[sidebar_key].description, "This is a test config")
-        self.assertEqual(options[sidebar_key].value, "TEST")
+        assert options[sidebar_key].description == "This is a test config"
+        assert options[sidebar_key].value == "TEST"
 
         config._delete_option(theme_key)
         config._delete_option(sidebar_key)
@@ -301,22 +314,20 @@ class ConfigTest(unittest.TestCase):
             default_val=DUMMY_VAL_1,
         )
         config.get_config_options(force_reparse=True)
-        self.assertEqual(config.get_option("_test.tomlTest"), DUMMY_VAL_1)
-        self.assertEqual(
-            config.get_where_defined("_test.tomlTest"), ConfigOption.DEFAULT_DEFINITION
+        assert config.get_option("_test.tomlTest") == DUMMY_VAL_1
+        assert (
+            config.get_where_defined("_test.tomlTest")
+            == ConfigOption.DEFAULT_DEFINITION
         )
 
         # Override it with some TOML
-        NEW_TOML = (
-            """
+        NEW_TOML = f"""
             [_test]
-            tomlTest="%s"
+            tomlTest="{DUMMY_VAL_2}"
         """
-            % DUMMY_VAL_2
-        )
         config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
-        self.assertEqual(config.get_option("_test.tomlTest"), DUMMY_VAL_2)
-        self.assertEqual(config.get_where_defined("_test.tomlTest"), DUMMY_DEFINITION)
+        assert config.get_option("_test.tomlTest") == DUMMY_VAL_2
+        assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
 
     def test_parsing_invalid_toml(self):
         """Test that exceptions during toml.loads are caught and logged."""
@@ -344,10 +355,10 @@ class ConfigTest(unittest.TestCase):
             mock_logger.assert_called_once()
 
         # Verify the value remains unchanged
-        self.assertEqual(config.get_option("_test.invalidTomlTest"), initial_value)
-        self.assertEqual(
-            config.get_where_defined("_test.invalidTomlTest"),
-            ConfigOption.DEFAULT_DEFINITION,
+        assert config.get_option("_test.invalidTomlTest") == initial_value
+        assert (
+            config.get_where_defined("_test.invalidTomlTest")
+            == ConfigOption.DEFAULT_DEFINITION
         )
 
     def test_parsing_env_vars_in_toml(self):
@@ -363,9 +374,10 @@ class ConfigTest(unittest.TestCase):
             default_val=DEFAULT_VAL,
         )
         config.get_config_options(force_reparse=True)
-        self.assertEqual(config.get_option("_test.tomlTest"), DEFAULT_VAL)
-        self.assertEqual(
-            config.get_where_defined("_test.tomlTest"), ConfigOption.DEFAULT_DEFINITION
+        assert config.get_option("_test.tomlTest") == DEFAULT_VAL
+        assert (
+            config.get_where_defined("_test.tomlTest")
+            == ConfigOption.DEFAULT_DEFINITION
         )
 
         os.environ["TEST_ENV_VAR"] = DESIRED_VAL
@@ -376,8 +388,8 @@ class ConfigTest(unittest.TestCase):
             tomlTest="env:TEST_ENV_VAR"
         """
         config._update_config_with_toml(NEW_TOML, DUMMY_DEFINITION)
-        self.assertEqual(config.get_option("_test.tomlTest"), DESIRED_VAL)
-        self.assertEqual(config.get_where_defined("_test.tomlTest"), DUMMY_DEFINITION)
+        assert config.get_option("_test.tomlTest") == DESIRED_VAL
+        assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
 
     def test_parsing_sensitive_options(self):
         """Test config._update_config_with_sensitive_env_var()."""
@@ -392,17 +404,17 @@ class ConfigTest(unittest.TestCase):
             sensitive=True,
         )
         config.get_config_options(force_reparse=True)
-        self.assertEqual(config.get_option("_test.sensitiveTest"), DUMMY_VAL_1)
-        self.assertEqual(
-            config.get_where_defined("_test.sensitiveTest"),
-            ConfigOption.DEFAULT_DEFINITION,
+        assert config.get_option("_test.sensitiveTest") == DUMMY_VAL_1
+        assert (
+            config.get_where_defined("_test.sensitiveTest")
+            == ConfigOption.DEFAULT_DEFINITION
         )
         with patch.dict(os.environ, STREAMLIT__TEST_SENSITIVE_TEST=DUMMY_VAL_2):
             config.get_config_options(force_reparse=True)
-            self.assertEqual(config.get_option("_test.sensitiveTest"), DUMMY_VAL_2)
-            self.assertEqual(
-                config.get_where_defined("_test.sensitiveTest"),
-                config._DEFINED_BY_ENV_VAR,
+            assert config.get_option("_test.sensitiveTest") == DUMMY_VAL_2
+            assert (
+                config.get_where_defined("_test.sensitiveTest")
+                == config._DEFINED_BY_ENV_VAR
             )
 
     def test_delete_option(self):
@@ -413,15 +425,13 @@ class ConfigTest(unittest.TestCase):
             default_val="delete me!",
         )
         config.get_config_options(force_reparse=True)
-        self.assertEqual(config.get_option("_test.testDeleteOption"), "delete me!")
+        assert config.get_option("_test.testDeleteOption") == "delete me!"
 
         config._delete_option("_test.testDeleteOption")
 
         with pytest.raises(RuntimeError) as e:
             config.get_option("_test.testDeleteOption")
-        self.assertEqual(
-            str(e.value), 'Config key "_test.testDeleteOption" not defined.'
-        )
+        assert str(e.value) == 'Config key "_test.testDeleteOption" not defined.'
 
         config._delete_option("_test.testDeleteOption")
 
@@ -430,6 +440,7 @@ class ConfigTest(unittest.TestCase):
             "_test.testMultipleValueOption",
             description="This option tests multiple values for an option",
             default_val=["Option 1", "Option 2"],
+            multiple=True,
         )
 
         assert option.multiple
@@ -458,7 +469,7 @@ class ConfigTest(unittest.TestCase):
             ]
         )
         keys = sorted(config._section_descriptions.keys())
-        self.assertEqual(sections, keys)
+        assert sections == keys
 
     def test_config_option_keys(self):
         config_options = sorted(
@@ -475,28 +486,46 @@ class ConfigTest(unittest.TestCase):
                 "theme.secondaryBackgroundColor",
                 "theme.textColor",
                 "theme.baseFontSize",
+                "theme.baseFontWeight",
                 "theme.baseRadius",
+                "theme.buttonRadius",
                 "theme.font",
                 "theme.headingFont",
                 "theme.codeFont",
+                "theme.codeFontSize",
+                "theme.codeFontWeight",
+                "theme.headingFontSizes",
+                "theme.headingFontWeights",
                 "theme.fontFaces",
                 "theme.borderColor",
+                "theme.dataframeBorderColor",
                 "theme.showWidgetBorder",
                 "theme.linkColor",
+                "theme.linkUnderline",
                 "theme.codeBackgroundColor",
+                "theme.dataframeHeaderBackgroundColor",
                 "theme.showSidebarBorder",
+                "theme.chartCategoricalColors",
+                "theme.chartSequentialColors",
                 "theme.sidebar.primaryColor",
                 "theme.sidebar.backgroundColor",
                 "theme.sidebar.secondaryBackgroundColor",
                 "theme.sidebar.textColor",
                 "theme.sidebar.baseRadius",
+                "theme.sidebar.buttonRadius",
                 "theme.sidebar.font",
                 "theme.sidebar.headingFont",
                 "theme.sidebar.codeFont",
+                "theme.sidebar.codeFontSize",
+                "theme.sidebar.headingFontSizes",
+                "theme.sidebar.headingFontWeights",
                 "theme.sidebar.borderColor",
+                "theme.sidebar.dataframeBorderColor",
                 "theme.sidebar.showWidgetBorder",
                 "theme.sidebar.linkColor",
+                "theme.sidebar.linkUnderline",
                 "theme.sidebar.codeBackgroundColor",
+                "theme.sidebar.dataframeHeaderBackgroundColor",
                 "global.appTest",
                 "global.developmentMode",
                 "global.disableWidgetStateDuplicationWarning",
@@ -519,8 +548,10 @@ class ConfigTest(unittest.TestCase):
                 "mapbox.token",
                 "secrets.files",
                 "server.baseUrlPath",
+                "server.customComponentBaseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
+                "server.corsAllowedOrigins",
                 "server.scriptHealthCheckEnabled",
                 "server.enableWebsocketCompression",
                 "server.enableXsrfProtection",
@@ -528,6 +559,7 @@ class ConfigTest(unittest.TestCase):
                 "server.folderWatchList",
                 "server.folderWatchBlacklist",
                 "server.headless",
+                "server.showEmailPrompt",
                 "server.address",
                 "server.allowRunOnSave",
                 "server.port",
@@ -543,17 +575,16 @@ class ConfigTest(unittest.TestCase):
             ]
         )
         keys = sorted(config._config_options.keys())
-        self.assertEqual(config_options, keys)
+        assert config_options == keys
 
     def test_check_conflicts_server_port(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("server.port", 1234, "test")
-        with pytest.raises(AssertionError) as e:
+        with pytest.raises(
+            RuntimeError,
+            match="server.port does not work when global.developmentMode is true.",
+        ):
             config._check_conflicts()
-        self.assertEqual(
-            str(e.value),
-            "server.port does not work when global.developmentMode is true.",
-        )
 
     @patch("streamlit.logger.get_logger")
     def test_check_conflicts_server_csrf(self, get_logger):
@@ -566,29 +597,26 @@ class ConfigTest(unittest.TestCase):
     def test_check_conflicts_browser_serverport(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("browser.serverPort", 1234, "test")
-        with pytest.raises(AssertionError) as e:
+        with pytest.raises(
+            RuntimeError,
+            match="browser.serverPort does not work when global.developmentMode is true.",
+        ):
             config._check_conflicts()
-        self.assertEqual(
-            str(e.value),
-            "browser.serverPort does not work when global.developmentMode is true.",
-        )
 
     def test_maybe_convert_to_number(self):
-        self.assertEqual(1234, config._maybe_convert_to_number("1234"))
-        self.assertEqual(1234.5678, config._maybe_convert_to_number("1234.5678"))
-        self.assertEqual("1234.5678ex", config._maybe_convert_to_number("1234.5678ex"))
+        assert config._maybe_convert_to_number("1234") == 1234
+        assert config._maybe_convert_to_number("1234.5678") == 1234.5678
+        assert config._maybe_convert_to_number("1234.5678ex") == "1234.5678ex"
 
     def test_maybe_read_env_variable(self):
-        self.assertEqual(
-            "env:RANDOM_TEST", config._maybe_read_env_variable("env:RANDOM_TEST")
-        )
+        assert config._maybe_read_env_variable("env:RANDOM_TEST") == "env:RANDOM_TEST"
         os.environ["RANDOM_TEST"] = "1234"
-        self.assertEqual(1234, config._maybe_read_env_variable("env:RANDOM_TEST"))
+        assert config._maybe_read_env_variable("env:RANDOM_TEST") == 1234
 
     def test_update_config_with_toml(self):
-        self.assertEqual(
-            ShowErrorDetailsConfigOptions.FULL,
-            config.get_option("client.showErrorDetails"),
+        assert (
+            config.get_option("client.showErrorDetails")
+            == ShowErrorDetailsConfigOptions.FULL
         )
         toml = textwrap.dedent(
             """
@@ -597,52 +625,53 @@ class ConfigTest(unittest.TestCase):
         """
         )
         config._update_config_with_toml(toml, "test")
-        self.assertEqual(
-            ShowErrorDetailsConfigOptions.TYPE,
-            config.get_option("client.showErrorDetails"),
+        assert (
+            config.get_option("client.showErrorDetails")
+            == ShowErrorDetailsConfigOptions.TYPE
         )
 
     def test_set_option(self):
         with self.assertLogs(logger="streamlit.config", level="WARNING") as cm:
             config._set_option("not.defined", "no.value", "test")
         # cm.output is a list of messages and there shouldn't be any other messages besides one created by this test
-        self.assertIn(
-            '"not.defined" is not a valid config option. If you previously had this config option set, it may have been removed.',
-            cm.output[0],
+        assert (
+            '"not.defined" is not a valid config option. '
+            "If you previously had this config option set, it may have been removed."
+            in cm.output[0]
         )
 
         config._set_option("browser.gatherUsageStats", "test", "test")
-        self.assertEqual("test", config.get_option("browser.gatherUsageStats"))
+        assert config.get_option("browser.gatherUsageStats") == "test"
 
     def test_is_manually_set(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual(True, config.is_manually_set("browser.serverAddress"))
+        assert config.is_manually_set("browser.serverAddress")
 
         config._set_option("browser.serverAddress", "some.bucket", "<default>")
-        self.assertEqual(False, config.is_manually_set("browser.serverAddress"))
+        assert not config.is_manually_set("browser.serverAddress")
 
     def test_is_unset(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual(False, config._is_unset("browser.serverAddress"))
+        assert not config._is_unset("browser.serverAddress")
 
         config._set_option("browser.serverAddress", "some.bucket", "<default>")
-        self.assertEqual(True, config._is_unset("browser.serverAddress"))
+        assert config._is_unset("browser.serverAddress")
 
     def test_get_where_defined(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual("test", config.get_where_defined("browser.serverAddress"))
+        assert config.get_where_defined("browser.serverAddress") == "test"
 
         with pytest.raises(RuntimeError) as e:
             config.get_where_defined("doesnt.exist")
-        self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
+        assert str(e.value) == 'Config key "doesnt.exist" not defined.'
 
     def test_get_option(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual("some.bucket", config.get_option("browser.serverAddress"))
+        assert config.get_option("browser.serverAddress") == "some.bucket"
 
         with pytest.raises(RuntimeError) as e:
             config.get_option("doesnt.exist")
-        self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
+        assert str(e.value) == 'Config key "doesnt.exist" not defined.'
 
     def test_with_no_theme_options(self):
         """Test that all theme options are None when no theme options are set."""
@@ -650,21 +679,32 @@ class ConfigTest(unittest.TestCase):
             "base": None,
             "primaryColor": None,
             "baseRadius": None,
+            "buttonRadius": None,
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
             "textColor": None,
             "borderColor": None,
+            "dataframeBorderColor": None,
             "showWidgetBorder": None,
             "linkColor": None,
+            "linkUnderline": None,
             "font": None,
             "headingFont": None,
             "codeFont": None,
+            "codeFontSize": None,
+            "codeFontWeight": None,
             "fontFaces": None,
             "baseFontSize": None,
+            "baseFontWeight": None,
             "codeBackgroundColor": None,
+            "dataframeHeaderBackgroundColor": None,
             "showSidebarBorder": None,
+            "headingFontSizes": None,
+            "headingFontWeights": None,
+            "chartCategoricalColors": None,
+            "chartSequentialColors": None,
         }
-        self.assertEqual(config.get_options_for_section("theme"), expected)
+        assert config.get_options_for_section("theme") == expected
 
     def test_with_theme_options(self):
         """Test that the theme options are correctly set."""
@@ -674,12 +714,16 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.base", "dark", "test")
         config._set_option("theme.textColor", "#DFFDE0", "test")
         config._set_option("theme.baseRadius", "1.2rem", "test")
+        config._set_option("theme.buttonRadius", "medium", "test")
         config._set_option("theme.secondaryBackgroundColor", "#021A09", "test")
         config._set_option("theme.backgroundColor", "#001200", "test")
         config._set_option("theme.borderColor", "#0B4C0B", "test")
+        config._set_option("theme.dataframeBorderColor", "#280f63", "test")
         config._set_option("theme.showWidgetBorder", True, "test")
         config._set_option("theme.linkColor", "#2EC163", "test")
+        config._set_option("theme.linkUnderline", False, "test")
         config._set_option("theme.codeBackgroundColor", "#29361e", "test")
+        config._set_option("theme.dataframeHeaderBackgroundColor", "#29361e", "test")
         config._set_option("theme.font", "Inter", "test")
         config._set_option("theme.headingFont", "Inter", "test")
         config._set_option(
@@ -694,23 +738,53 @@ class ConfigTest(unittest.TestCase):
             "test",
         )
         config._set_option("theme.codeFont", "Monaspace Argon", "test")
+        config._set_option("theme.codeFontSize", "12px", "test")
+        config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
+        config._set_option("theme.baseFontWeight", 300, "test")
+        config._set_option("theme.headingFontWeights", [700, 600, 500], "test")
+        config._set_option(
+            "theme.headingFontSizes",
+            ["2.875rem", "2.75rem", "2rem", "1.75rem", "1.5rem", "1.25rem"],
+            "test",
+        )
         config._set_option("theme.showSidebarBorder", True, "test")
+        config._set_option(
+            "theme.chartCategoricalColors", ["#000000", "#111111", "#222222"], "test"
+        )
+        config._set_option(
+            "theme.chartSequentialColors", ["#000000", "#111111", "#222222"], "test"
+        )
 
         expected = {
             "base": "dark",
             "primaryColor": "#1BD760",
             "baseRadius": "1.2rem",
+            "buttonRadius": "medium",
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
             "borderColor": "#0B4C0B",
+            "dataframeBorderColor": "#280f63",
             "showWidgetBorder": True,
             "linkColor": "#2EC163",
+            "linkUnderline": False,
             "font": "Inter",
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
+            "codeFontSize": "12px",
+            "codeFontWeight": 300,
+            "headingFontSizes": [
+                "2.875rem",
+                "2.75rem",
+                "2rem",
+                "1.75rem",
+                "1.5rem",
+                "1.25rem",
+            ],
+            "headingFontWeights": [700, 600, 500],
             "codeBackgroundColor": "#29361e",
+            "dataframeHeaderBackgroundColor": "#29361e",
             "fontFaces": [
                 {
                     "family": "Inter",
@@ -719,9 +793,12 @@ class ConfigTest(unittest.TestCase):
                 },
             ],
             "baseFontSize": 14,
+            "baseFontWeight": 300,
             "showSidebarBorder": True,
+            "chartCategoricalColors": ["#000000", "#111111", "#222222"],
+            "chartSequentialColors": ["#000000", "#111111", "#222222"],
         }
-        self.assertEqual(config.get_options_for_section("theme"), expected)
+        assert config.get_options_for_section("theme") == expected
 
     def test_with_sidebar_theme_options(self):
         """Test that the sidebar theme options are correctly set."""
@@ -730,31 +807,49 @@ class ConfigTest(unittest.TestCase):
 
         config._set_option("theme.sidebar.textColor", "#DFFDE0", "test")
         config._set_option("theme.sidebar.baseRadius", "1.2rem", "test")
+        config._set_option("theme.sidebar.buttonRadius", "medium", "test")
         config._set_option("theme.sidebar.secondaryBackgroundColor", "#021A09", "test")
         config._set_option("theme.sidebar.backgroundColor", "#001200", "test")
         config._set_option("theme.sidebar.borderColor", "#0B4C0B", "test")
+        config._set_option("theme.sidebar.dataframeBorderColor", "#280f63", "test")
         config._set_option("theme.sidebar.showWidgetBorder", True, "test")
         config._set_option("theme.sidebar.linkColor", "#2EC163", "test")
+        config._set_option("theme.sidebar.linkUnderline", False, "test")
         config._set_option("theme.sidebar.font", "Inter", "test")
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
+        config._set_option("theme.sidebar.codeFontSize", "12px", "test")
+        config._set_option(
+            "theme.sidebar.headingFontSizes", ["2.875rem", "2.75rem"], "test"
+        )
+        config._set_option("theme.sidebar.headingFontWeights", [600, 500, 500], "test")
         config._set_option("theme.sidebar.codeBackgroundColor", "#29361e", "test")
+        config._set_option(
+            "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
+        )
 
         expected = {
             "primaryColor": "#FFF000",
             "baseRadius": "1.2rem",
+            "buttonRadius": "medium",
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
             "borderColor": "#0B4C0B",
+            "dataframeBorderColor": "#280f63",
             "showWidgetBorder": True,
             "linkColor": "#2EC163",
+            "linkUnderline": False,
             "font": "Inter",
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
+            "codeFontSize": "12px",
+            "headingFontSizes": ["2.875rem", "2.75rem"],
+            "headingFontWeights": [600, 500, 500],
             "codeBackgroundColor": "#29361e",
+            "dataframeHeaderBackgroundColor": "#29361e",
         }
-        self.assertEqual(config.get_options_for_section("theme.sidebar"), expected)
+        assert config.get_options_for_section("theme.sidebar") == expected
 
     def test_with_sidebar_theme_unsupported_options(self):
         """Test that the sidebar theme cannot set unsupported options."""
@@ -764,16 +859,17 @@ class ConfigTest(unittest.TestCase):
             with self.assertLogs(logger="streamlit.config", level="WARNING") as cm:
                 config._set_option(f"theme.sidebar.{option}", True, "test")
             # cm.output is a list of messages and there shouldn't be any other messages besides one created by this test
-            self.assertIn(
-                f'"theme.sidebar.{option}" is not a valid config option. If you previously had this config option set, it may have been removed.',
-                cm.output[0],
+            assert (
+                f'"theme.sidebar.{option}" is not a valid config option. '
+                "If you previously had this config option set, it may have been removed."
+                in cm.output[0]
             )
 
     def test_browser_server_port(self):
         # developmentMode must be False for server.port to be modified
         config.set_option("global.developmentMode", False)
         config.set_option("server.port", 1234)
-        self.assertEqual(1234, config.get_option("browser.serverPort"))
+        assert config.get_option("browser.serverPort") == 1234
 
     def test_server_headless(self):
         orig_display = None
@@ -784,7 +880,7 @@ class ConfigTest(unittest.TestCase):
         orig_is_linux_or_bsd = env_util.IS_LINUX_OR_BSD
         env_util.IS_LINUX_OR_BSD = True
 
-        self.assertEqual(True, config.get_option("server.headless"))
+        assert config.get_option("server.headless")
 
         env_util.IS_LINUX_OR_BSD = orig_is_linux_or_bsd
         if orig_display:
@@ -792,15 +888,15 @@ class ConfigTest(unittest.TestCase):
 
     def test_global_dev_mode(self):
         config.set_option("global.developmentMode", True)
-        self.assertEqual(True, config.get_option("global.developmentMode"))
+        assert config.get_option("global.developmentMode")
 
     def test_global_log_level_debug(self):
         config.set_option("global.developmentMode", True)
-        self.assertEqual("debug", config.get_option("logger.level"))
+        assert config.get_option("logger.level") == "debug"
 
     def test_global_log_level(self):
         config.set_option("global.developmentMode", False)
-        self.assertEqual("info", config.get_option("logger.level"))
+        assert config.get_option("logger.level") == "info"
 
     @parameterized.expand(
         [
@@ -847,13 +943,10 @@ class ConfigTest(unittest.TestCase):
             expected_global_path = os.path.join(
                 os.path.expanduser("~"), ".streamlit", "secrets.toml"
             )
-        self.assertEqual(
-            [
-                expected_global_path,
-                os.path.abspath("./.streamlit/secrets.toml"),
-            ],
-            config.get_option("secrets.files"),
-        )
+        assert [
+            expected_global_path,
+            os.path.abspath("./.streamlit/secrets.toml"),
+        ] == config.get_option("secrets.files")
 
 
 class ConfigLoadingTest(unittest.TestCase):
@@ -880,8 +973,8 @@ class ConfigLoadingTest(unittest.TestCase):
             path_exists.return_value = False
             config.get_config_options()
 
-            self.assertEqual(True, config.get_option("browser.gatherUsageStats"))
-            self.assertIsNone(config.get_option("theme.font"))
+            assert config.get_option("browser.gatherUsageStats")
+            assert config.get_option("theme.font") is None
 
     def test_load_global_config(self):
         """Test that ~/.streamlit/config.toml is read."""
@@ -902,8 +995,8 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
-            self.assertEqual("sans serif", config.get_option("theme.font"))
-            self.assertIsNone(config.get_option("theme.textColor"))
+            assert config.get_option("theme.font") == "sans serif"
+            assert config.get_option("theme.textColor") is None
 
     def test_load_local_config(self):
         """Test that $CWD/.streamlit/config.toml is read, even
@@ -928,8 +1021,8 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
-            self.assertEqual("#FFFFFF", config.get_option("theme.textColor"))
-            self.assertIsNone(config.get_option("theme.font"))
+            assert config.get_option("theme.textColor") == "#FFFFFF"
+            assert config.get_option("theme.font") is None
 
     def test_load_global_local_config(self):
         """Test that $CWD/.streamlit/config.toml gets overlaid on
@@ -970,13 +1063,13 @@ class ConfigLoadingTest(unittest.TestCase):
             config.get_config_options()
 
             # theme.base set in both local and global
-            self.assertEqual("light", config.get_option("theme.base"))
+            assert config.get_option("theme.base") == "light"
 
             # theme.font is set in global, and not in local
-            self.assertEqual("sans serif", config.get_option("theme.font"))
+            assert config.get_option("theme.font") == "sans serif"
 
             # theme.textColor is set in local and not in global
-            self.assertEqual("#FFFFFF", config.get_option("theme.textColor"))
+            assert config.get_option("theme.textColor") == "#FFFFFF"
 
     def test_load_global_local_flag_config(self):
         """Test that CLI flags have higher priority than both
@@ -1017,15 +1110,15 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(options_from_flags={"theme.font": "monospace"})
 
-            self.assertEqual("light", config.get_option("theme.base"))
-            self.assertEqual("#FFFFFF", config.get_option("theme.textColor"))
-            self.assertEqual("monospace", config.get_option("theme.font"))
+            assert config.get_option("theme.base") == "light"
+            assert config.get_option("theme.textColor") == "#FFFFFF"
+            assert config.get_option("theme.font") == "monospace"
 
     def test_upload_file_default_values(self):
-        self.assertEqual(200, config.get_option("server.maxUploadSize"))
+        assert config.get_option("server.maxUploadSize") == 200
 
     def test_max_message_size_default_values(self):
-        self.assertEqual(200, config.get_option("server.maxMessageSize"))
+        assert config.get_option("server.maxMessageSize") == 200
 
     def test_config_options_removed_on_reparse(self):
         """Test that config options that are removed in a file are also removed
@@ -1047,8 +1140,8 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
-            self.assertEqual("dark", config.get_option("theme.base"))
-            self.assertEqual("sans serif", config.get_option("theme.font"))
+            assert config.get_option("theme.base") == "dark"
+            assert config.get_option("theme.font") == "sans serif"
 
         global_config = """
         [theme]
@@ -1059,8 +1152,8 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(force_reparse=True)
 
-            self.assertEqual("dark", config.get_option("theme.base"))
-            self.assertEqual(None, config.get_option("theme.font"))
+            assert config.get_option("theme.base") == "dark"
+            assert None is config.get_option("theme.font")
 
     @patch("streamlit.logger.get_logger")
     def test_config_options_warn_on_server_change(self, get_logger):

@@ -92,9 +92,9 @@ describe("FlexBoxContainer Block Component", () => {
     expect(horizontalBlock).toHaveAttribute("direction", "row")
 
     expect(screen.getAllByTestId("stColumn")).toHaveLength(4)
-    expect(
-      screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
-    ).not.toHaveStyle("overflow: auto")
+    expect(screen.getAllByTestId("stVerticalBlock")[0]).not.toHaveStyle(
+      "overflow: auto"
+    )
   })
 
   it("should add the user-specified key as class", () => {
@@ -113,15 +113,15 @@ describe("FlexBoxContainer Block Component", () => {
     const block: BlockNode = makeVerticalBlock(
       [makeHorizontalBlockWithColumns(4)],
       {
-        flexContainer: { heightConfig: { pixelHeight: 100 } },
+        heightConfig: { pixelHeight: 100 },
       }
     )
 
     renderWithContexts(makeVerticalBlockComponent(block), {})
 
-    expect(
-      screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
-    ).toHaveStyle("overflow: auto")
+    expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
+      "overflow: auto"
+    )
   })
 
   it("should show border when border is True", () => {
@@ -133,9 +133,9 @@ describe("FlexBoxContainer Block Component", () => {
     )
     renderWithContexts(makeVerticalBlockComponent(block), {})
 
-    expect(
-      screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
-    ).toHaveStyle("border: 1px solid rgba(49, 51, 63, 0.2);")
+    expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
+      "border: 1px solid rgba(49, 51, 63, 0.2);"
+    )
   })
 
   describe("VerticalBlock", () => {

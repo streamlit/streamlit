@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "TextInputProto";
 
 import "streamlit/proto/LabelVisibilityMessage.proto";
-import "streamlit/proto/WidthConfig.proto";
 
 message TextInput {
   enum Type {
@@ -45,5 +44,4 @@ message TextInput {
   bool disabled = 12;
   LabelVisibilityMessage label_visibility = 13;
   string icon = 14;
-  optional streamlit.WidthConfig width_config = 15;
 }

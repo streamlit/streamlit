@@ -131,6 +131,40 @@ describe("PageLink", () => {
     expect(pageLinkIcon).toHaveTextContent("home")
   })
 
+  it("renders an emoji icon when provided", () => {
+    const props = getProps({ icon: "🏠" })
+    render(<PageLink {...props} />)
+
+    const pageLinkIcon = screen.getByTestId("stIconEmoji")
+    expect(pageLinkIcon).toHaveTextContent("🏠")
+  })
+
+  it("does not render an icon when empty string is provided", () => {
+    const props = getProps({ icon: "" })
+    render(<PageLink {...props} />)
+
+    // Icon should not be rendered when empty string is provided
+    const pageLinkIcon = screen.queryByTestId("stIconMaterial")
+    expect(pageLinkIcon).not.toBeInTheDocument()
+
+    // Also check for emoji icons
+    const emojiIcon = screen.queryByTestId("stIconEmoji")
+    expect(emojiIcon).not.toBeInTheDocument()
+  })
+
+  it("does not render an icon when icon is not provided", () => {
+    const props = getProps({}) // No icon provided
+    render(<PageLink {...props} />)
+
+    // Icon should not be rendered when no icon is provided
+    const pageLinkIcon = screen.queryByTestId("stIconMaterial")
+    expect(pageLinkIcon).not.toBeInTheDocument()
+
+    // Also check for emoji icons
+    const emojiIcon = screen.queryByTestId("stIconEmoji")
+    expect(emojiIcon).not.toBeInTheDocument()
+  })
+
   it("renders with container width properly", () => {
     const props = getProps({ useContainerWidth: true })
     render(<PageLink {...props} />)
