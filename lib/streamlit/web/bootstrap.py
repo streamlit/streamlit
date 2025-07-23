@@ -335,23 +335,29 @@ def run(
         # by a debug websocket session.
         await server.stopped
 
-    # Run the server. This function will not return until the server is shut down.
-    # FIX RuntimeError: asyncio.run() cannot be called from a running event loop
-    # asyncio.run(run_server())  # noqa: ERA001
-
     # Define a main function to handle the event loop logic
     async def main() -> None:
         await run_server()
 
+    # Handle running in existing event loop vs creating new one
+    running_in_event_loop = False
     try:
         # Check if we're already in an event loop
-        if asyncio.get_running_loop().is_running():
-            # Use `asyncio.create_task` if we're in an async context
-            # TODO(lukasmasuch): Do we have to store a reference for the task here?
-            asyncio.create_task(main())  # noqa: RUF006
-        else:
-            # Otherwise, use `asyncio.run`
-            asyncio.run(main())
+        asyncio.get_running_loop()
+        running_in_event_loop = True
     except RuntimeError:
-        # get_running_loop throws RuntimeError if no running event loop
+        # No running event loop - this is expected for normal CLI usage
+        pass
+
+    if running_in_event_loop:
+        _LOGGER.debug("Running server in existing event loop.")
+        # We're in an existing event loop.
+        task = asyncio.create_task(main(), name="bootstrap.run_server")
+        # Store task reference on the server to keep it alive
+        # This prevents the task from being garbage collected
+        server._bootstrap_task = task
+    else:
+        # No running event loop, so we can use asyncio.run
+        # This is the normal case when running streamlit from the command line
+        _LOGGER.debug("Starting new event loop for server")
         asyncio.run(main())

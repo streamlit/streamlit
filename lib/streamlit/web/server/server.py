@@ -62,6 +62,7 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import Awaitable
     from ssl import SSLContext
 
@@ -239,6 +240,11 @@ class Server:
         self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
+
+        # The task that runs the server if an event loop is already running.
+        # We need to save a reference to it so that it doesn't get
+        # garbage collected while running.
+        self._bootstrap_task: asyncio.Task[None] | None = None
 
         # Initialize MediaFileStorage and its associated endpoint
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
