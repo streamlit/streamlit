@@ -25,7 +25,6 @@
 
   // Use workspace-relative path for portability across all developers
   "python.defaultInterpreterPath": "${workspaceFolder}/lib/venv/bin/python",
-  "python.pythonPath": "${workspaceFolder}/lib/venv/bin/python",
 
   // Python analysis and paths (this handles PYTHONPATH automatically)
   "python.terminal.activateEnvironment": true,

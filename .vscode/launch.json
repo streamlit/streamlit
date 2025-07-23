@@ -123,7 +123,8 @@
       "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/frontend/node_modules/.bin/vitest",
-      "args": ["run", "${file}", "--inspect-brk"],
+      "args": ["run", "${file}"],
+      "runtimeArgs": ["--inspect-brk"],
       "cwd": "${workspaceFolder}/frontend",
       "console": "integratedTerminal"
     }
