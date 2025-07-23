@@ -37,7 +37,11 @@ import {
 } from "@streamlit/lib"
 import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
-import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
+import {
+  getSavedSidebarState,
+  saveSidebarState,
+  shouldCollapse,
+} from "@streamlit/app/src/components/Sidebar/utils"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
 import { TopNav } from "@streamlit/app/src/components/Navigation"
@@ -203,29 +207,71 @@ function AppView(props: AppViewProps): ReactElement {
     />
   )
 
-  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(true)
+  // Initialize sidebar state with user preference or fallback to initial config
+  const getInitialSidebarCollapsed = useCallback((): boolean => {
+    const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
+    if (savedSidebarState !== null) {
+      // User has adjusted the sidebar, respect it
+      return savedSidebarState
+    }
 
-  // Update sidebar state when innerWidth changes and is > 0
+    // No saved preference, use initial config + screen size logic
+    return shouldCollapse(
+      initialSidebarState,
+      parseInt(activeTheme.emotion.breakpoints.md, 10),
+      innerWidth
+    )
+  }, [
+    pageLinkBaseUrl,
+    initialSidebarState,
+    activeTheme.emotion.breakpoints.md,
+    innerWidth,
+  ])
+
+  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() =>
+    getInitialSidebarCollapsed()
+  )
+
   useExecuteWhenChanged(() => {
     if (innerWidth > 0 && showSidebar) {
-      setSidebarIsCollapsed(
-        shouldCollapse(
-          initialSidebarState,
-          parseInt(activeTheme.emotion.breakpoints.md, 10),
-          innerWidth
+      const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
+
+      if (savedSidebarState !== null) {
+        // User has adjusted the sidebar, respect it
+        setSidebarIsCollapsed(savedSidebarState)
+      } else {
+        setSidebarIsCollapsed(
+          shouldCollapse(
+            initialSidebarState,
+            parseInt(activeTheme.emotion.breakpoints.md, 10),
+            innerWidth
+          )
         )
-      )
+      }
     }
   }, [
     innerWidth,
     showSidebar,
     initialSidebarState,
     activeTheme.emotion.breakpoints.md,
+    pageLinkBaseUrl,
   ])
 
   const toggleSidebar = useCallback(() => {
-    setSidebarIsCollapsed(prev => !prev)
-  }, [])
+    setSidebarIsCollapsed(prev => {
+      const newState = !prev
+      saveSidebarState(pageLinkBaseUrl, newState)
+      return newState
+    })
+  }, [pageLinkBaseUrl])
+
+  const setSidebarCollapsedWithPersistence = useCallback(
+    (isCollapsed: boolean) => {
+      setSidebarIsCollapsed(isCollapsed)
+      saveSidebarState(pageLinkBaseUrl, isCollapsed)
+    },
+    [pageLinkBaseUrl]
+  )
 
   // logo component to be used in the header when sidebar is closed
   const logoElement = appLogo ? (
@@ -273,7 +319,7 @@ function AppView(props: AppViewProps): ReactElement {
               hideSidebarNav={hideSidebarNav}
               expandSidebarNav={expandSidebarNav}
               isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={setSidebarIsCollapsed}
+              onToggleCollapse={setSidebarCollapsedWithPersistence}
             >
               <StyledSidebarBlockContainer>
                 {renderBlock(elements.sidebar)}

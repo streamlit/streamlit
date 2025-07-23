@@ -131,6 +131,7 @@ describe("Sidebar Component", () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    window.localStorage.clear()
   })
 
   it("should render without crashing", () => {
@@ -399,5 +400,25 @@ describe("Sidebar Component", () => {
         LOGO_IMAGE_URL
       )
     })
+  })
+
+  describe("Width Persistence", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    it("should initialize with default width when no localStorage value exists", () => {
+      renderSidebar({})
+
+      const sidebar = screen.getByTestId("stSidebar")
+      expect(sidebar).toHaveStyle("width: 256px")
+    })
+
+    window.localStorage.setItem("sidebarWidth", "320")
+
+    renderSidebar({})
+
+    const sidebar = screen.getByTestId("stSidebar")
+    expect(sidebar).toHaveStyle("width: 320px")
   })
 })
