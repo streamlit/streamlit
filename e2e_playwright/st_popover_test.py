@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     get_popover,
     open_popover,
 )
+from e2e_playwright.shared.react18_utils import wait_for_react_stability
 
 
 def test_popover_button_rendering(
@@ -62,6 +63,8 @@ def test_popover_width_content(app: Page, assert_snapshot: ImageCompareFunction)
     content_width_container = get_element_by_key(app, "test_width=content")
     content_width_popover = open_popover(app, "popover 10 (width=content)")
     expect_markdown(content_width_popover, "Content width")
+
+    wait_for_react_stability(app)
     assert_snapshot(
         content_width_container,
         name="st_popover-width_content",
@@ -70,11 +73,14 @@ def test_popover_width_content(app: Page, assert_snapshot: ImageCompareFunction)
 
 def test_popover_width_stretch(app: Page, assert_snapshot: ImageCompareFunction):
     """Test popover button with width=stretch."""
+
     stretch_width_container = get_element_by_key(app, "test_width=stretch")
     stretch_width_popover = open_popover(app, "popover 11 (width=stretch)")
-    expect(stretch_width_popover.get_by_test_id("stMarkdown")).to_have_text(
-        "Stretch width"
-    )
+
+    expect(stretch_width_popover).to_be_visible()
+    expect_markdown(stretch_width_popover, "Stretch width")
+
+    wait_for_react_stability(app)
     assert_snapshot(
         stretch_width_container,
         name="st_popover-width_stretch",
@@ -86,6 +92,8 @@ def test_popover_width_fixed(app: Page, assert_snapshot: ImageCompareFunction):
     fixed_width_container = get_element_by_key(app, "test_width=500px")
     fixed_width_popover = open_popover(app, "popover 12 (width=500px)")
     expect_markdown(fixed_width_popover, "500px width")
+
+    wait_for_react_stability(app)
     assert_snapshot(
         fixed_width_container,
         name="st_popover-width_500px",
@@ -97,6 +105,8 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     columns_container = get_element_by_key(app, "test_columns")
     columns_popover_1 = open_popover(app, "popover 16 (in column 1)")
     expect_markdown(columns_popover_1, "Popover in column 1")
+
+    wait_for_react_stability(app)
     assert_snapshot(
         columns_container,
         name="st_popover-columns",
