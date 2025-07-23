@@ -571,5 +571,5 @@ def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):
     # Click the "Close Dialog" button inside the dialog
     click_button(app, "Close Dialog")
 
-    # Dialog should now be closed)
+    # Dialog should now be closed
     expect(main_dialog).to_have_count(0)
