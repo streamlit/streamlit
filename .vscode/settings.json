@@ -59,14 +59,6 @@
     "*.spec.tsx": "typescriptreact"
   },
 
-  // Test UI and discovery settings
-  "python.testing.showTestOutputDebugConsole": true,
-  "testExplorer.useNativeTesting": true,
-  "python.testing.openOutputPanel": true,
-  "python.testing.showTestResultOnFailure": true,
-  "test.defaultGutterClickAction": "run",
-  "testing.openTesting": "neverOpen",
-
   // Editor settings for test files
   "editor.rulers": [88],
   "editor.formatOnSave": true,
