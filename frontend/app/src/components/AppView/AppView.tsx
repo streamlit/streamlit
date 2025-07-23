@@ -40,7 +40,10 @@ import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
 import { shouldCollapse } from "@streamlit/app/src/components/Sidebar/utils"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
-import { TopNav } from "@streamlit/app/src/components/Navigation"
+import {
+  shouldShowNavigation,
+  TopNav,
+} from "@streamlit/app/src/components/Navigation"
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { LogoComponent } from "@streamlit/app/src/components/Logo"
 import HeaderColoredLine from "@streamlit/app/src/components/HeaderColoredLine"
@@ -59,39 +62,6 @@ import {
   StyledStickyBottomContainer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
-
-/**
- * Determines if navigation should be shown based on pages and sections.
- * Navigation should be hidden only when:
- * - There is only 1 page total (no sections)
- * - There is 1 section with only 1 page in it
- * Otherwise, navigation should be shown.
- */
-function shouldShowTopNavigation(
-  appPages: IAppPage[],
-  navSections: string[]
-): boolean {
-  // If there's only one page total, hide nav
-  if (appPages.length <= 1) {
-    return false
-  }
-
-  // If there are no sections, we have multiple pages without sections, show nav
-  if (navSections.length === 0) {
-    return true
-  }
-
-  // If there are multiple sections, show nav
-  if (navSections.length > 1) {
-    return true
-  }
-
-  // If there's exactly one section, we need to check how many pages it has
-  // If it has more than 1 page, show nav
-  // The fact that we got here means appPages.length > 1 and navSections.length === 1
-  // So the single section must have multiple pages
-  return true
-}
 
 export interface AppViewProps {
   elements: AppRoot
@@ -275,15 +245,12 @@ function AppView(props: AppViewProps): ReactElement {
   // Only transparent when no content is shown at all
   const shouldShowLogo = logoElement && (!showSidebar || isSidebarCollapsed)
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
-  const shouldShowNavigation =
+  const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
-    shouldShowTopNavigation(appPages, navSections)
+    shouldShowNavigation(appPages, navSections)
 
   const hasHeaderUserContent =
-    shouldShowLogo ||
-    shouldShowExpandButton ||
-    shouldShowNavigation ||
-    showToolbar
+    shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -322,7 +289,7 @@ function AppView(props: AppViewProps): ReactElement {
             onToggleSidebar={toggleSidebar}
             navigation={
               navigationPosition === Navigation.Position.TOP &&
-              shouldShowTopNavigation(appPages, navSections) ? (
+              shouldShowNavigation(appPages, navSections) ? (
                 <TopNav
                   endpoints={endpoints}
                   pageLinkBaseUrl={pageLinkBaseUrl}
@@ -352,7 +319,7 @@ function AppView(props: AppViewProps): ReactElement {
                 hasHeader={hasHeaderUserContent}
                 hasSidebar={showSidebar}
                 showToolbar={showToolbar}
-                hasTopNav={shouldShowNavigation}
+                hasTopNav={shouldShowTopNav}
                 embedded={embedded}
               >
                 {renderBlock(elements.main)}
