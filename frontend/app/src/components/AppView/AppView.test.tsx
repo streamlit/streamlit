@@ -988,6 +988,58 @@ describe("AppView element", () => {
       expect(screen.queryByText("page1")).not.toBeInTheDocument()
       expect(screen.queryByTestId("stSidebar")).not.toBeInTheDocument()
     })
+
+    it("renders top nav when there is one section with multiple pages", () => {
+      render(
+        <AppView
+          {...getProps({
+            navigationPosition: Navigation.Position.TOP,
+            appPages: [
+              {
+                pageName: "page1",
+                pageScriptHash: "hash1",
+                sectionHeader: "Section 1",
+              },
+              {
+                pageName: "page2",
+                pageScriptHash: "hash2",
+                sectionHeader: "Section 1",
+              },
+            ],
+            navSections: ["Section 1"],
+          })}
+        />
+      )
+
+      // The navigation should be visible
+      expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
+      // Check for the overflow container which contains navigation items
+      const overflowContainer = screen
+        .getByTestId("stToolbar")
+        .querySelector(".rc-overflow")
+      expect(overflowContainer).toBeInTheDocument()
+    })
+
+    it("does not render top nav when there is one section with one page", () => {
+      render(
+        <AppView
+          {...getProps({
+            navigationPosition: Navigation.Position.TOP,
+            appPages: [
+              {
+                pageName: "page1",
+                pageScriptHash: "hash1",
+                sectionHeader: "Section 1",
+              },
+            ],
+            navSections: ["Section 1"],
+          })}
+        />
+      )
+
+      // The navigation should not be visible
+      expect(screen.queryByText("Section 1")).not.toBeInTheDocument()
+    })
   })
 
   describe("header transparency and padding logic", () => {
