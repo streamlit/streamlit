@@ -32,6 +32,7 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     border: theme.colors.widgetBorderColor
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
+    height: theme.sizes.largestElementHeight,
     ":focus": {
       outline: "none",
     },
@@ -58,7 +59,6 @@ export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
 export const StyledFileDropzoneInstructionsText = styled.span<{
   disabled?: boolean
 }>(({ theme, disabled }) => ({
-  marginBottom: theme.spacing.twoXS,
   color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
 }))
 
@@ -144,6 +144,7 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
+    height: "auto",
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructions as any]: {
