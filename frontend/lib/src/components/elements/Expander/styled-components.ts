@@ -17,13 +17,13 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+import { StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import type { StyledSpinnerIconProps } from "~lib/components/shared/Icon/styled-components"
 import {
   EmotionTheme,
   STALE_STYLES,
   STALE_TRANSITION_PARAMS,
 } from "~lib/theme"
-import { StyledSpinnerIcon } from "~lib/components/shared/Icon"
-import type { StyledSpinnerIconProps } from "~lib/components/shared/Icon/styled-components"
 
 export interface StyledExpandableContainerProps {
   empty: boolean
@@ -83,7 +83,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     paddingRight: theme.spacing.md,
     paddingTop: theme.spacing.twoXS,
     paddingBottom: theme.spacing.twoXS,
-    minHeight: theme.sizes.minElementHeight,
+    minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
     alignItems: "center",
     cursor: "pointer",
     listStyleType: "none",
