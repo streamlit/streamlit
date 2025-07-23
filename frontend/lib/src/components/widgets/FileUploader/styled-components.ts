@@ -155,6 +155,10 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
     display: "none",
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileDropzoneInstructionsText as any]: {
+    marginBottom: theme.spacing.twoXS,
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFiles as any]: {
     paddingRight: theme.spacing.lg,
   },
