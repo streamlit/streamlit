@@ -194,32 +194,6 @@ function getSparklineSpec(
           },
         },
       },
-      {
-        name: `${baseName}_rule`,
-        transform: [
-          {
-            filter: {
-              param: `${baseName}_hover_selection`,
-              empty: false,
-            },
-          },
-        ],
-        mark: {
-          type: "rule",
-          strokeDash: [4, 4],
-        },
-        encoding: {
-          x: {
-            field: "x",
-            type: "quantitative",
-            axis: null,
-            scale: {
-              zero: false,
-              nice: false,
-            },
-          },
-        },
-      },
     ],
     config: {
       view: { stroke: null },
