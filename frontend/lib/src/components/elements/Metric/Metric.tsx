@@ -22,6 +22,7 @@ import { expressionInterpreter } from "vega-interpreter"
 import embed from "vega-embed"
 import { Global } from "@emotion/react"
 import { TopLevelSpec } from "vega-lite"
+import { transparentize } from "color2k"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
 import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
@@ -77,6 +78,11 @@ function getSparklineSpec(
       {
         name: `${baseName}_line`,
         mark: "line",
+        // mark: {
+        //   type: "area",
+        //   opacity: 0.2,
+        //   line: { color: getMetricColor(theme, metricColor) },
+        // },
         encoding: {
           x: {
             field: "x",
