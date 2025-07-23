@@ -202,11 +202,14 @@ def dialog_decorator(
         modal dialog will be about 750 pixels wide.
 
     dismissible : bool
-        Whether the modal dialog can be dismissed by clicking outside of it or by pressing ``ESC``.
-        Setting it to False also hides the ``X`` button in the upper-right corner of the dialog.
+        Whether the modal dialog can be dismissed by the user by clicking outside of
+        it or by pressing ``ESC``. Setting it to False also hides the ``X``
+        button in the upper-right corner of the dialog.
 
         .. note::
-            dismissible = False does not
+            Setting ``dismissible`` to False does not guarantee that all
+            interactions in the main app are blocked. Please don't rely on
+            dismissible for security-critical checks.
 
     Examples
     --------
