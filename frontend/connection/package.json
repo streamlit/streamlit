@@ -30,7 +30,7 @@
   "dependencies": {
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
-    "axios": "^1.10.0",
+    "axios": "^1.11.0",
     "lodash": "^4.17.21",
     "loglevel": "^1.9.2"
   },
