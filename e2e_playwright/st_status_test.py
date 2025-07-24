@@ -26,9 +26,9 @@ def test_status_container_rendering(
     status_containers = themed_app.get_by_test_id("stExpander")
     expect(status_containers).to_have_count(11)
 
-    # Don't check screenshot for first element,
-    # since we cannot reliably screenshot test the spinner icon.
-
+    # Note that animations are disabled in snapshots, so we can reliably screenshot the
+    # spinner
+    assert_snapshot(status_containers.nth(0), name="st_status-running_state")
     assert_snapshot(status_containers.nth(1), name="st_status-complete_state")
     assert_snapshot(status_containers.nth(2), name="st_status-error_state")
     assert_snapshot(status_containers.nth(3), name="st_status-expanded")
