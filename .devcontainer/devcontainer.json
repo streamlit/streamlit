@@ -22,7 +22,8 @@
         "charliermarsh.ruff",
         "EditorConfig.EditorConfig",
         "vitest.explorer",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "anysphere.cursorpyright"
       ],
       "settings": {
         "[javascript]": {
@@ -106,6 +107,17 @@
         "python.analysis.typeCheckingMode": "off",
         "python.terminal.activateEnvInCurrentTerminal": true,
         "python.testing.pytestEnabled": true,
+        "cursorpyright.analysis.exclude": ["lib/build"],
+        "cursorpyright.analysis.include": [
+          "lib/**/*",
+          "scripts/**/*",
+          "e2e_playwright/**/*"
+        ],
+        "cursorpyright.analysis.extraPaths": ["./lib"],
+        "cursorpyright.analysis.typeCheckingMode": "off",
+        "cursorpyright.analysis.useTypingExtensions": true,
+        "cursorpyright.shouldImportPylanceSettings": "always",
+        "cursorpyright.analysis.logLevel": "Information",
         "terminal.integrated.profiles.linux": {
           "frontend-dev": {
             "path": "bash",

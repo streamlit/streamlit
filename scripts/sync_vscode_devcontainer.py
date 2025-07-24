@@ -142,6 +142,7 @@ def check_files_in_sync(
             print("❌ Extensions are out of sync:")
             print(f"   VSCode extensions: {len(expected_extensions)} items")
             print(f"   Devcontainer extensions: {len(actual_extensions)} items")
+            print("   Run 'make sync-vscode-devcontainer' to fix this")
             return False
 
         # Check if settings are in sync
@@ -156,6 +157,7 @@ def check_files_in_sync(
             print("❌ Settings are out of sync:")
             print(f"   VSCode settings: {len(expected_settings)} items")
             print(f"   Devcontainer settings: {len(actual_settings)} items")
+            print("   Run 'make sync-vscode-devcontainer' to fix this")
             return False
 
         print("✅ All files are in sync!")
