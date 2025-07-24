@@ -63,13 +63,14 @@ export function getMetricChartSpec(
   const randomId = Math.random().toString(36).slice(2, 10)
   const baseName = `metric_chart_${randomId}`
 
-  // Special handling for single value - duplicate it to create a line
+  // Special handling for single value - duplicate it since line / area
+  // charts need at least two points:
   const data =
     chartData.length === 1 ? [chartData[0], chartData[0]] : chartData
 
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: Math.round(availableWidth), // Ensure positive integer width
+    width: Math.round(availableWidth),
     height: Math.round(convertRemToPx("3.5rem")),
     data: {
       values: data.map((value, index) => ({ x: index, y: value })),
@@ -86,8 +87,7 @@ export function getMetricChartSpec(
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
-            // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-            cornerRadius: 9999,
+            cornerRadius: parseFloat(theme.radii.full),
           }),
           ...(chartType === MetricProto.ChartType.AREA && {
             type: "area",
@@ -210,8 +210,12 @@ export function getMetricChartSpec(
     ],
     config: {
       view: { stroke: null },
+      // We need negative padding here to allow the chart to go from
+      // left to right. For whatever reason, there is a ~3px padding
+      // otherwise.
       padding: { left: -3, right: -3, top: 2, bottom: 2 },
       ...(chartType === MetricProto.ChartType.BAR && {
+        // Bar chart doesn't need the negative padding:
         padding: { left: 0, right: 0, top: 2, bottom: 2 },
       }),
       mark: {
