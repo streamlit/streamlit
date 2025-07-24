@@ -17,6 +17,7 @@
 import React from "react"
 
 import { fireEvent, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import {
   AppRoot,
@@ -989,7 +990,8 @@ describe("AppView element", () => {
       expect(screen.queryByTestId("stSidebar")).not.toBeInTheDocument()
     })
 
-    it("renders top nav when there is one section with multiple pages", () => {
+    it("renders top nav when there is one section with multiple pages", async () => {
+      const user = userEvent.setup()
       render(
         <AppView
           {...getProps({
@@ -1011,13 +1013,15 @@ describe("AppView element", () => {
         />
       )
 
-      // The navigation should be visible
-      expect(screen.getByTestId("stToolbar")).toBeInTheDocument()
-      // Check for the overflow container which contains navigation items
-      const overflowContainer = screen
-        .getByTestId("stToolbar")
-        .querySelector(".rc-overflow")
-      expect(overflowContainer).toBeInTheDocument()
+      // The navigation should be visible - users should see the section header
+      expect(screen.getByText("Section 1")).toBeInTheDocument()
+
+      // Click on the section to open the dropdown
+      await user.click(screen.getByText("Section 1"))
+
+      // Now the pages should be visible in the dropdown
+      expect(screen.getByText("page1")).toBeInTheDocument()
+      expect(screen.getByText("page2")).toBeInTheDocument()
     })
 
     it("does not render top nav when there is one section with one page", () => {
