@@ -259,6 +259,45 @@ describe("Sidebar Component", () => {
         `padding-top: ${expectedPadding}`
       )
     })
+
+    it("shows navigation when there is one section with multiple pages", () => {
+      const appPagesWithSection = [
+        {
+          pageName: "page1",
+          pageScriptHash: "hash1",
+          sectionHeader: "Section 1",
+        },
+        {
+          pageName: "page2",
+          pageScriptHash: "hash2",
+          sectionHeader: "Section 1",
+        },
+      ]
+      mockAppContext({
+        appPages: appPagesWithSection,
+        navSections: ["Section 1"],
+      })
+      renderSidebar()
+
+      expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
+    })
+
+    it("hides navigation when there is one section with one page", () => {
+      const appPagesWithSection = [
+        {
+          pageName: "page1",
+          pageScriptHash: "hash1",
+          sectionHeader: "Section 1",
+        },
+      ]
+      mockAppContext({
+        appPages: appPagesWithSection,
+        navSections: ["Section 1"],
+      })
+      renderSidebar()
+
+      expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
+    })
   })
 
   it("applies scrollbarGutter style to sidebar content", () => {
