@@ -1,50 +1,90 @@
 {
-  // ==============================================
-  // PYTHON TESTING CONFIGURATION
-  // ==============================================
-
-  // Enable pytest for Python testing
-  "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
-
-  // Global pytest configuration (discovers both e2e and unit tests)
-  // NOTE: Most pytest arguments are centralized in respective pytest.ini files:
-  // - e2e_playwright/pytest.ini for E2E test arguments
-  // - lib/pytest.ini for unit test arguments
-  // These args are for test discovery and IDE-specific overrides only
-  "python.testing.pytestArgs": [
-    "lib/tests",
-    "e2e_playwright",
-    "-v",
-    "--tb=short",
-    "--disable-warnings",
-    "--no-cov"
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    },
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnType": true
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[yml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.formatOnSave": true
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.trimFinalNewlines": true,
+  "files.insertFinalNewline": true,
+  "search.exclude": {
+    "lib/build/**": true
+  },
+  "makefile.configureOnOpen": false,
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
   ],
-  "python.testing.cwd": "${workspaceFolder}",
-  "python.testing.autoTestDiscoverOnSaveEnabled": true,
-
-  // Use workspace-relative path for portability across all developers
-  "python.defaultInterpreterPath": "${workspaceFolder}/lib/venv/bin/python",
-
-  // Python analysis and paths (this handles PYTHONPATH automatically)
-  "python.terminal.activateEnvironment": true,
-  "python.testing.debugPort": 5678,
-
-  // Additional test discovery settings
-  "python.testing.promptToConfigure": false,
-  "python.analysis.extraPaths": ["${workspaceFolder}/lib"],
-
-  // Environment variables for test discovery and execution
+  "eslint.lintTask.enable": true,
+  "editor.codeActionsOnSave": { "source.fixAll": "always" },
+  "vitest.maximumConfigs": 5,
+  "mypy-type-checker.importStrategy": "fromEnvironment",
+  "mypy-type-checker.preferDaemon": false,
+  "mypy-type-checker.args": ["--config-file=mypy.ini"],
+  "ruff.nativeServer": true,
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+  "python.analysis.exclude": ["lib/build"],
+  "python.analysis.include": [
+    "lib/**/*",
+    "scripts/**/*",
+    "e2e_playwright/**/*"
+  ],
+  "python.analysis.extraPaths": ["./lib"],
+  "python.analysis.typeCheckingMode": "off",
   "python.terminal.activateEnvInCurrentTerminal": true,
-
-  // Set PYTHONPATH for test discovery and execution
-  "terminal.integrated.env.linux": {
-    "PYTHONPATH": "${workspaceFolder}/lib"
+  "python.testing.pytestEnabled": true,
+  "terminal.integrated.profiles.linux": {
+    "frontend-dev": {
+      "path": "bash",
+      "args": ["-c", "make frontend-dev"]
+    }
   },
-  "terminal.integrated.env.osx": {
-    "PYTHONPATH": "${workspaceFolder}/lib"
-  },
-  "terminal.integrated.env.windows": {
-    "PYTHONPATH": "${workspaceFolder}/lib"
-  }
+  "typescript.tsdk": "frontend/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "git.branchProtection": ["develop"]
 }

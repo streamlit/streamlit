@@ -4,129 +4,16 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
-    // ==============================================
-    // STREAMLIT APP DEBUGGING
-    // ==============================================
     {
       "name": "Debug Streamlit App",
       "type": "debugpy",
       "request": "launch",
       "module": "streamlit",
-      "args": ["run", "${file}"],
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/lib"
-      }
+      "args": ["run", "${file}"]
       // allows to set breakpoints in installed packages, such as the Streamlit lib itself or custom component code etc.
       // "justMyCode": false,
       // allows to use a different installed version of streamlit in another venv folder, e.g.
       // "program": "~/Projects/streamlit/lib/venv/bin/pytest"
-    },
-
-    // ==============================================
-    // E2E PLAYWRIGHT TESTS
-    // ==============================================
-    // NOTE: Most pytest arguments are centralized in e2e_playwright/pytest.ini
-    // These configs only add IDE-specific arguments not suitable for pytest.ini
-    {
-      "name": "Run E2E Test",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "${file}",
-        // IDE-specific: Add tracing for better debugging in IDE
-        "--tracing",
-        "retain-on-failure"
-        // All other args (--video, --screenshot, --reruns, etc.) come from e2e_playwright/pytest.ini
-      ],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/lib"
-      },
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "Debug E2E Test",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "${file}",
-        // IDE-specific debug args that override pytest.ini defaults
-        "--tracing",
-        "on",
-        "--video",
-        "on",
-        "--screenshot",
-        "on",
-        "-s"
-        // Base args (--reruns, --output, etc.) come from e2e_playwright/pytest.ini
-      ],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/lib",
-        "PWDEBUG": "1"
-      },
-      "console": "integratedTerminal"
-    },
-
-    // ==============================================
-    // PYTHON UNIT TESTS
-    // ==============================================
-    // NOTE: Most pytest arguments are centralized in lib/pytest.ini
-    // These configs only add the file argument and IDE-specific overrides
-    {
-      "name": "Run Python Unit Test",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "${file}",
-        // Override pytest.ini to disable coverage for faster IDE runs
-        "--no-cov",
-        "-v",
-        "--tb=short"
-      ],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/lib"
-      },
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "Debug Python Unit Test",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pytest",
-      "args": ["${file}", "--no-cov", "-v", "-s", "--tb=short"],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/lib"
-      },
-      "console": "integratedTerminal"
-    },
-
-    // ==============================================
-    // TYPESCRIPT TESTS
-    // ==============================================
-    {
-      "name": "Run TypeScript Test",
-      "type": "node",
-      "request": "launch",
-      "program": "${workspaceFolder}/frontend/node_modules/.bin/vitest",
-      "args": ["run", "${file}"],
-      "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "Debug TypeScript Test",
-      "type": "node",
-      "request": "launch",
-      "program": "${workspaceFolder}/frontend/node_modules/.bin/vitest",
-      "args": ["run", "${file}"],
-      "runtimeArgs": ["--inspect-brk"],
-      "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal"
     }
   ]
 }
