@@ -81,6 +81,15 @@ repos:
         files: ^.github/.*\.(yml|yaml)$
         language: node
         pass_filenames: false
+      - id: prettier-vscode-devcontainer-json
+        name: Prettier VSCode/devcontainer JSON
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
+        # We perform this in the app directory because prettier is installed there. TODO: Break this out to a new package
+        entry: ./scripts/run_in_subdirectory.py frontend/app yarn prettier "../../.vscode/*.json" "../../.devcontainer/*.json" --write --config ../.prettierrc
+        files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
+        language: node
+        pass_filenames: false
       - id: license-headers
         name: Checks license headers
         entry: ./scripts/check_license_headers.py
@@ -98,6 +107,12 @@ repos:
         entry: ./scripts/generate_copilot_instructions.py
         language: system
         files: ^.cursor/.*\.(mdc)$
+        pass_filenames: false
+      - id: vscode-devcontainer-sync
+        name: Check VSCode/devcontainer sync
+        entry: ./scripts/sync_vscode_devcontainer.py --check
+        language: system
+        files: ^(.vscode/(settings|extensions)\.json|\.devcontainer/devcontainer\.json)$
         pass_filenames: false
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
@@ -189,7 +204,10 @@ repos:
           |\.snap$
       - id: check-added-large-files
       - id: check-json
-        exclude: .vscode/launch.json
+        exclude: |
+          (?x)
+          |^.vscode/launch\.json$
+          |^.vscode/settings\.json$
       - id: check-toml
       - id: check-yaml
         exclude: lib/conda-recipe/meta.yaml

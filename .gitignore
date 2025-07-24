@@ -116,6 +116,7 @@ e2e_playwright/__snapshots__/*
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
+!.vscode/settings.json
 
 .swc/
 
