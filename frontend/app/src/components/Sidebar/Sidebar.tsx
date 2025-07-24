@@ -29,7 +29,10 @@ import {
   ResizeDirection,
 } from "re-resizable"
 
-import { SidebarNav } from "@streamlit/app/src/components/Navigation"
+import {
+  shouldShowNavigation,
+  SidebarNav,
+} from "@streamlit/app/src/components/Navigation"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
@@ -217,7 +220,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     )
   }
 
-  const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
+  const hasPageNavAbove =
+    shouldShowNavigation(appPages, navSections) && !hideSidebarNav
 
   // The tabindex is required to support scrolling by arrow keys.
   return (

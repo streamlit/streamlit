@@ -50,8 +50,10 @@ const TopNav: React.FC<Props> = ({
     return groupBy(appPages, p => p.sectionHeader)
   }, [appPages])
 
-  // NOTE: this is > 1, not > 0 which is why the line 56-58 ternary is needed
-  const hasSections = Object.keys(navSections).length > 1
+  // Check if there are ANY sections (including single sections)
+  const hasSections = Object.keys(navSections).some(
+    key => key !== "undefined" && key !== ""
+  )
 
   const data = hasSections
     ? Object.values(navSections)

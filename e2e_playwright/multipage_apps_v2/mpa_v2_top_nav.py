@@ -54,6 +54,9 @@ def page5():
 # Configuration checkboxes
 test_overflow = st.checkbox("Test Overflow (5 pages)", key="test_overflow")
 test_sections = st.checkbox("Test Sections", key="test_sections")
+test_single_section = st.checkbox(
+    "Test Single Section (3 pages)", key="test_single_section"
+)
 test_hidden = st.checkbox("Test Hidden Navigation", key="test_hidden")
 test_switching = st.checkbox("Test Navigation Switching", key="test_switching")
 test_sidebar = st.checkbox("Test Sidebar Content", key="test_sidebar")
@@ -100,6 +103,15 @@ elif test_sections:
         "Section B": [
             st.Page(page3, title="Page 3"),
             st.Page(page4, title="Page 4"),
+        ],
+    }
+elif test_single_section:
+    # Create a single section with 3 pages
+    pages = {
+        "My Section": [
+            st.Page(page1, title="Page 1", icon="🏠"),
+            st.Page(page2, title="Page 2", icon="📊"),
+            st.Page(page3, title="Page 3", icon="🔧"),
         ],
     }
 else:
