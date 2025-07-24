@@ -18,7 +18,7 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def _select_pdf_scenario(app: Page, scenario: str):
@@ -30,20 +30,14 @@ def _select_pdf_scenario(app: Page, scenario: str):
     wait_for_app_run(app)
 
 
-def _expect_no_exception(app: Page):
-    """Expect that no exception was thrown."""
-    expect(app.get_by_test_id("stException")).not_to_be_visible()
-
-
 def _expect_iframe_attached(app: Page):
     """Expect a component iframe to be attached to the DOM."""
     expect(app.locator("iframe").first).to_be_attached()
 
 
-def test_st_pdf_basic_functionality(app: Page):
-    """Test basic st.pdf component functionality."""
+def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test basic st.pdf component functionality with snapshot."""
     _select_pdf_scenario(app, "basic")
-    _expect_no_exception(app)
     _expect_iframe_attached(app)
 
     # Verify iframe has proper attributes for PDF rendering
@@ -51,11 +45,14 @@ def test_st_pdf_basic_functionality(app: Page):
     expect(iframe).to_have_attribute("src", re.compile(r".*"))
     expect(iframe).to_have_attribute("height", "400")
 
+    # Wait for iframe to be fully loaded and take snapshot
+    expect(iframe).to_be_visible()
+    assert_snapshot(iframe, name="st_pdf-basic_functionality")
 
-def test_st_pdf_file_upload_no_file(app: Page):
+
+def test_st_pdf_file_upload_no_file(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.pdf with file upload when no file is uploaded."""
     _select_pdf_scenario(app, "fileUpload")
-    _expect_no_exception(app)
 
     file_uploader = app.get_by_test_id("stFileUploader")
     expect(file_uploader).to_be_visible()
@@ -63,22 +60,32 @@ def test_st_pdf_file_upload_no_file(app: Page):
     # Should not display any PDF when no file is uploaded
     expect(app.locator("iframe")).not_to_be_attached()
 
+    # Take snapshot of the file uploader state
+    main_area = app.get_by_test_id("stMain")
+    assert_snapshot(main_area, name="st_pdf-file_upload_no_file")
 
-def test_st_pdf_custom_size(app: Page):
+
+def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.pdf with custom height."""
     _select_pdf_scenario(app, "customSize")
-    _expect_no_exception(app)
 
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
 
     _expect_iframe_attached(app)
 
+    # Wait for components to stabilize and take snapshot
+    iframe = app.locator("iframe").first
+    expect(iframe).to_be_visible()
 
-def test_st_pdf_base64_encoding(app: Page):
+    # Capture the slider and PDF together
+    main_area = app.get_by_test_id("stMain")
+    assert_snapshot(main_area, name="st_pdf-custom_size")
+
+
+def test_st_pdf_base64_encoding(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.pdf with base64 encoded data."""
     _select_pdf_scenario(app, "base64")
-    _expect_no_exception(app)
 
     base64_info = app.get_by_test_id("stMarkdown").filter(has_text="Base64 PDF length:")
     expect(base64_info).to_be_visible()
@@ -88,29 +95,50 @@ def test_st_pdf_base64_encoding(app: Page):
 
     _expect_iframe_attached(app)
 
+    # Wait for all elements to be stable
+    iframe = app.locator("iframe").first
+    expect(iframe).to_be_visible()
 
-def test_st_pdf_bytes_io(app: Page):
+    # Take snapshot of the entire scenario including info text, code block, and PDF
+    main_area = app.get_by_test_id("stMain")
+    assert_snapshot(main_area, name="st_pdf-base64_encoding")
+
+
+def test_st_pdf_bytes_io(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.pdf with BytesIO object."""
     _select_pdf_scenario(app, "bytesIO")
-    _expect_no_exception(app)
     _expect_iframe_attached(app)
 
+    # Wait for iframe to be visible and take snapshot
+    iframe = app.locator("iframe").first
+    expect(iframe).to_be_visible()
+    assert_snapshot(iframe, name="st_pdf-bytes_io")
 
-def test_st_pdf_error_handling(app: Page):
+
+def test_st_pdf_error_handling(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.pdf error handling with invalid data."""
     _select_pdf_scenario(app, "errorHandling")
-    _expect_no_exception(app)
 
     warning_message = app.get_by_test_id("stAlert").filter(
         has_text="Attempting to display invalid PDF data"
     )
     expect(warning_message).to_be_visible()
 
+    # Even with invalid data, the component should still render an iframe
+    _expect_iframe_attached(app)
 
-def test_st_pdf_in_columns(app: Page):
+    # Wait for elements to stabilize
+    iframe = app.locator("iframe").first
+    expect(iframe).to_be_visible()
+
+    # Capture both the warning and the PDF component
+    main_area = app.get_by_test_id("stMain")
+    assert_snapshot(main_area, name="st_pdf-error_handling")
+
+
+def test_st_pdf_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.pdf in columns layout."""
     _select_pdf_scenario(app, "columns")
-    _expect_no_exception(app)
 
     description = app.get_by_test_id("stMarkdown").filter(
         has_text="PDFs in Columns Layout"
@@ -127,11 +155,18 @@ def test_st_pdf_in_columns(app: Page):
     iframes = app.locator("iframe")
     expect(iframes).to_have_count(2)
 
+    # Wait for both iframes to be visible
+    expect(iframes.first).to_be_visible()
+    expect(iframes.last).to_be_visible()
 
-def test_st_pdf_interactive(app: Page):
+    # Take snapshot of the columns layout
+    main_area = app.get_by_test_id("stMain")
+    assert_snapshot(main_area, name="st_pdf-in_columns")
+
+
+def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
     """Test interactive PDF features."""
     _select_pdf_scenario(app, "interactive")
-    _expect_no_exception(app)
 
     subheader = app.get_by_test_id("stMarkdown").filter(has_text="Interactive PDF Test")
     expect(subheader).to_be_visible()
@@ -143,6 +178,25 @@ def test_st_pdf_interactive(app: Page):
     expect(reset_button).to_be_visible()
 
     _expect_iframe_attached(app)
+
+    # Wait for all interactive elements to be stable
+    iframe = app.locator("iframe").first
+    expect(iframe).to_be_visible()
+
+    # Take snapshot of initial state
+    main_area = app.get_by_test_id("stMain")
+    assert_snapshot(main_area, name="st_pdf-interactive_initial")
+
+    # Test that the reset button actually works
+    reset_button.click()
+    wait_for_app_run(app)
+
+    # After reset, the PDF should still be visible
+    _expect_iframe_attached(app)
+
+    # Take snapshot after reset to verify state
+    expect(iframe).to_be_visible()
+    assert_snapshot(main_area, name="st_pdf-interactive_after_reset")
 
 
 def test_st_pdf_app_title_and_selection(app: Page):
@@ -170,13 +224,12 @@ def test_st_pdf_app_title_and_selection(app: Page):
         subheader = app.get_by_test_id("stMarkdown").filter(
             has_text=f"Running: {scenario}"
         )
-    expect(subheader).to_be_visible()
+        expect(subheader).to_be_visible()
 
 
 def test_st_pdf_component_iframe_behavior(app: Page):
     """Test that st.pdf component creates proper iframe elements."""
     _select_pdf_scenario(app, "basic")
-    _expect_no_exception(app)
 
     iframe = app.locator("iframe").first
     expect(iframe).to_be_attached()
@@ -187,7 +240,6 @@ def test_st_pdf_component_iframe_behavior(app: Page):
 def test_st_pdf_widget_interactions(app: Page):
     """Test interactions with st.pdf widget controls."""
     _select_pdf_scenario(app, "customSize")
-    _expect_no_exception(app)
 
     height_slider = app.get_by_test_id("stSlider")
     expect(height_slider).to_be_visible()
@@ -195,3 +247,45 @@ def test_st_pdf_widget_interactions(app: Page):
     slider_thumb = height_slider.locator("[role='slider']")
     expect(slider_thumb).to_be_visible()
     expect(slider_thumb).to_have_attribute("aria-valuenow", re.compile(r".*"))
+
+    # Verify that the PDF renders with the current slider value
+    _expect_iframe_attached(app)
+
+
+def test_st_pdf_different_heights_snapshots(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test PDF component with different height values for visual comparison."""
+    _select_pdf_scenario(app, "customSize")
+
+    height_slider = app.get_by_test_id("stSlider")
+    expect(height_slider).to_be_visible()
+
+    # Wait for initial PDF to load
+    _expect_iframe_attached(app)
+    iframe = app.locator("iframe").first
+    expect(iframe).to_be_visible()
+
+    # Take snapshot at default height (500px)
+    assert_snapshot(iframe, name="st_pdf-height_default")
+
+    # Get the actual slider element
+    slider_element = height_slider.get_by_role("slider")
+    expect(slider_element).to_be_visible()
+
+    # Move slider to minimum by pressing Left arrow multiple times
+    slider_element.click()
+    for _ in range(10):  # Move towards minimum
+        slider_element.press("ArrowLeft")
+    wait_for_app_run(app)
+
+    expect(iframe).to_be_visible()
+    assert_snapshot(iframe, name="st_pdf-height_minimum")
+
+    # Move slider to maximum by pressing Right arrow multiple times
+    for _ in range(20):  # Move towards maximum
+        slider_element.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect(iframe).to_be_visible()
+    assert_snapshot(iframe, name="st_pdf-height_maximum")

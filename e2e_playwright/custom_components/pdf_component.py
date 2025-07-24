@@ -27,72 +27,24 @@ from typing import Callable
 
 import streamlit as st
 
+# Compact dummy PDF for testing
+_DUMMY_PDF_CONTENT = (
+    "%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n"
+    "2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n"
+    "3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n"
+    "/Contents 4 0 R\n/Resources <<\n/Font <<\n/F1 5 0 R\n>>\n>>\n>>\nendobj\n"
+    "4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n100 700 Td\n"
+    "(Hello PDF World!) Tj\nET\nendstream\nendobj\n"
+    "5 0 obj\n<<\n/Type /Font\n/Subtype /Type1\n/BaseFont /Helvetica\n>>\nendobj\n"
+    "xref\n0 6\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n"
+    "0000000115 00000 n\n0000000274 00000 n\n0000000373 00000 n\ntrailer\n"
+    "<<\n/Size 6\n/Root 1 0 R\n>>\nstartxref\n446\n%%EOF"
+)
+
 
 def _create_sample_pdf_bytes() -> bytes:
     """Create a simple PDF as bytes for testing."""
-    pdf_content = """%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
-/Resources <<
-/Font <<
-/F1 5 0 R
->>
->>
->>
-endobj
-4 0 obj
-<<
-/Length 44
->>
-stream
-BT
-/F1 12 Tf
-100 700 Td
-(Hello PDF World!) Tj
-ET
-endstream
-endobj
-5 0 obj
-<<
-/Type /Font
-/Subtype /Type1
-/BaseFont /Helvetica
->>
-endobj
-xref
-0 6
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000274 00000 n
-0000000373 00000 n
-trailer
-<<
-/Size 6
-/Root 1 0 R
->>
-startxref
-446
-%%EOF"""
-    return pdf_content.encode("latin-1")
+    return _DUMMY_PDF_CONTENT.encode("latin-1")
 
 
 def use_st_pdf_basic():
@@ -164,9 +116,20 @@ def use_st_pdf_interactive():
     """Test interactive PDF features."""
     st.markdown("### Interactive PDF Test")
 
-    height = st.slider("Adjust PDF height", min_value=200, max_value=800, value=400)
+    # Initialize height in session state if not present
+    if "pdf_height" not in st.session_state:
+        st.session_state.pdf_height = 400
+
+    height = st.slider(
+        "Adjust PDF height",
+        min_value=200,
+        max_value=800,
+        value=st.session_state.pdf_height,
+        key="height_slider",
+    )
 
     if st.button("Reset Height"):
+        st.session_state.pdf_height = 400
         st.rerun()
 
     pdf_bytes = _create_sample_pdf_bytes()
@@ -193,10 +156,4 @@ component_selection = st.selectbox("PDF Test Scenarios", options=options.keys())
 
 if component_selection:
     st.markdown(f"### Running: {component_selection}")
-    try:
-        options[component_selection]()
-    except Exception as e:
-        st.error(f"Error running {component_selection}: {e}")
-        import traceback
-
-        st.text(traceback.format_exc())
+    options[component_selection]()

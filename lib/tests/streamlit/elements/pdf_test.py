@@ -69,6 +69,12 @@ class PdfComponentAvailabilityTest(DeltaGeneratorTestCase):
 class PdfTest(DeltaGeneratorTestCase):
     """Test ability to marshall PDF protos."""
 
+    # Dummy PDF bytes for testing (not a real PDF, but sufficient for testing)
+    DUMMY_PDF_BYTES = (
+        b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 1\n0000000000 65535"
+        b"f \ntrailer\n<<\n/Size 1\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF"
+    )
+
     def test_pdf_url(self):
         """Test PDF with URL."""
         # Use a fake URL to avoid dependency on external resources
@@ -112,12 +118,7 @@ class PdfTest(DeltaGeneratorTestCase):
 
     def test_pdf_with_bytes_data(self):
         """Test PDF with raw bytes data."""
-        # Create some dummy PDF bytes (not a real PDF, but sufficient for testing)
-        pdf_bytes = (
-            b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 1\n0000000000 65535"
-            b"f \ntrailer\n<<\n/Size 1\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF"
-        )
-        st.pdf(pdf_bytes)
+        st.pdf(self.DUMMY_PDF_BYTES)
 
         element = self.get_delta_from_queue().new_element
         assert element.component_instance.component_name == "streamlit_pdf.pdf_viewer"
@@ -129,12 +130,7 @@ class PdfTest(DeltaGeneratorTestCase):
 
     def test_pdf_with_bytesio_data(self):
         """Test PDF with BytesIO data."""
-        # Create some dummy PDF bytes
-        pdf_bytes = (
-            b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 1\n0000000000 65535"
-            b"f \ntrailer\n<<\n/Size 1\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF"
-        )
-        pdf_bytesio = io.BytesIO(pdf_bytes)
+        pdf_bytesio = io.BytesIO(self.DUMMY_PDF_BYTES)
         st.pdf(pdf_bytesio)
 
         element = self.get_delta_from_queue().new_element
@@ -156,11 +152,7 @@ class PdfTest(DeltaGeneratorTestCase):
             def read(self):
                 return self._data
 
-        pdf_bytes = (
-            b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 1\n0000000000 65535"
-            b"f \ntrailer\n<<\n/Size 1\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF"
-        )
-        mock_file = MockUploadedFile(pdf_bytes)
+        mock_file = MockUploadedFile(self.DUMMY_PDF_BYTES)
         st.pdf(mock_file)
 
         element = self.get_delta_from_queue().new_element
@@ -177,13 +169,8 @@ class PdfTest(DeltaGeneratorTestCase):
         import os
         import tempfile
 
-        pdf_bytes = (
-            b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 1\n0000000000 65535"
-            b"f \ntrailer\n<<\n/Size 1\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF"
-        )
-
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
-            tmp_file.write(pdf_bytes)
+            tmp_file.write(self.DUMMY_PDF_BYTES)
             tmp_file_path = tmp_file.name
 
         try:
@@ -209,13 +196,8 @@ class PdfTest(DeltaGeneratorTestCase):
         import os
         import tempfile
 
-        pdf_bytes = (
-            b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 1\n0000000000 65535"
-            b"f \ntrailer\n<<\n/Size 1\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF"
-        )
-
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
-            tmp_file.write(pdf_bytes)
+            tmp_file.write(self.DUMMY_PDF_BYTES)
             tmp_file_path = tmp_file.name
 
         try:
@@ -239,7 +221,7 @@ class PdfTest(DeltaGeneratorTestCase):
         invalid_path = "/nonexistent/path/to/file.pdf"
 
         with pytest.raises(
-            FileNotFoundError, match=f"File '{invalid_path}' does not exist"
+            StreamlitAPIException, match=f"Unable to read file '{invalid_path}'"
         ):
             st.pdf(invalid_path)
 

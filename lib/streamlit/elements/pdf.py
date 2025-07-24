@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import io
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast
 
@@ -45,7 +44,6 @@ def _get_pdf_component() -> Any | None:
     try:
         import streamlit_pdf
 
-        # Return the pdf_viewer function directly
         return streamlit_pdf.pdf_viewer
     except Exception:
         return None
@@ -91,16 +89,12 @@ class PdfMixin:
                 "bytes data, or file-like object."
             )
 
-        # Validate height parameter
-        validate_height(height, allow_content=False)
-
-        # Check if custom PDF component is available
+        # Check if custom PDF component is available first
         pdf_component = _get_pdf_component()
-        if pdf_component is not None:
-            return self._call_pdf_component(pdf_component, data, height, key)
+        if pdf_component is None:
+            return self._show_pdf_warning()
 
-        # Show warning if component is not available
-        return self._show_pdf_warning()
+        return self._call_pdf_component(pdf_component, data, height, key)
 
     def _call_pdf_component(
         self,
@@ -110,6 +104,9 @@ class PdfMixin:
         key: str | None,
     ) -> DeltaGenerator:
         """Call the custom PDF component with the provided data."""
+        # Validate height parameter after confirming component is available
+        validate_height(height, allow_content=False)
+
         # Convert data to the format expected by pdf_viewer component
         file_param: str | bytes
 
@@ -119,11 +116,14 @@ class PdfMixin:
                 # It's a URL - pass directly
                 file_param = data_str
             else:
-                # It's a local file path - validate existence before passing
-                if not os.path.exists(data_str):
-                    raise FileNotFoundError(f"File '{data_str}' does not exist")
-                # Pass the file path directly - the component will handle reading it
-                file_param = data_str
+                # It's a local file path - read the content as bytes for security
+                try:
+                    with open(data_str, "rb") as file:
+                        file_param = file.read()
+                except (FileNotFoundError, PermissionError) as e:
+                    raise StreamlitAPIException(
+                        f"Unable to read file '{data_str}': {e}"
+                    )
 
         elif isinstance(data, bytes):
             # Pass bytes directly - the component will handle uploading to media storage
