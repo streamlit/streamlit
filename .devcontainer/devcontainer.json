@@ -86,7 +86,9 @@
           }
         ],
         "eslint.lintTask.enable": true,
-        "editor.codeActionsOnSave": { "source.fixAll": "always" },
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "always"
+        },
         "vitest.maximumConfigs": 5,
         "mypy-type-checker.importStrategy": "fromEnvironment",
         "mypy-type-checker.preferDaemon": false,
