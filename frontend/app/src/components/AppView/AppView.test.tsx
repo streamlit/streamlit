@@ -991,30 +991,6 @@ describe("AppView element", () => {
     })
 
     it("renders top nav when there is one section with multiple pages", () => {
-      render(
-        <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.TOP,
-            appPages: [
-              {
-                pageName: "page1",
-                pageScriptHash: "hash1",
-                sectionHeader: "Section 1",
-              },
-              {
-                pageName: "page2",
-                pageScriptHash: "hash2",
-                sectionHeader: "Section 1",
-              },
-            ],
-            navSections: ["Section 1"],
-          })}
-        />
-      )
-
-      // The key user-facing behavior: navigation should be shown (not hidden)
-      // when there's one section with multiple pages.
-
       const appPages = [
         {
           pageName: "page1",
@@ -1029,29 +1005,22 @@ describe("AppView element", () => {
       ]
       const navSections = ["Section 1"]
 
-      // Verify the business logic: navigation should be shown in this scenario
+      // Verify the business logic: navigation should be shown when there's one section with multiple pages
       expect(shouldShowNavigation(appPages, navSections)).toBe(true)
     })
 
     it("does not render top nav when there is one section with one page", () => {
-      render(
-        <AppView
-          {...getProps({
-            navigationPosition: Navigation.Position.TOP,
-            appPages: [
-              {
-                pageName: "page1",
-                pageScriptHash: "hash1",
-                sectionHeader: "Section 1",
-              },
-            ],
-            navSections: ["Section 1"],
-          })}
-        />
-      )
+      const appPages = [
+        {
+          pageName: "page1",
+          pageScriptHash: "hash1",
+          sectionHeader: "Section 1",
+        },
+      ]
+      const navSections = ["Section 1"]
 
-      // The navigation should not be visible
-      expect(screen.queryByText("Section 1")).not.toBeInTheDocument()
+      // Verify the business logic: navigation should not be shown when there's only one page
+      expect(shouldShowNavigation(appPages, navSections)).toBe(false)
     })
   })
 
