@@ -126,12 +126,12 @@ const SAMPLE_PAGES_WITH_URLS = [
 
 describe("Sidebar Component", () => {
   beforeEach(() => {
+    window.localStorage.clear()
     mockAppContext({})
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
-    window.localStorage.clear()
   })
 
   it("should render without crashing", () => {
@@ -414,11 +414,13 @@ describe("Sidebar Component", () => {
       expect(sidebar).toHaveStyle("width: 256px")
     })
 
-    window.localStorage.setItem("sidebarWidth", "320")
+    it("should initialize with saved width when localStorage value exists", () => {
+      window.localStorage.setItem("sidebarWidth", "320")
 
-    renderSidebar({})
+      renderSidebar({})
 
-    const sidebar = screen.getByTestId("stSidebar")
-    expect(sidebar).toHaveStyle("width: 320px")
+      const sidebar = screen.getByTestId("stSidebar")
+      expect(sidebar).toHaveStyle("width: 320px")
+    })
   })
 })
