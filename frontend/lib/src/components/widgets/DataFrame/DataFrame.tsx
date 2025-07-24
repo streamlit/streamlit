@@ -90,6 +90,8 @@ import Tooltip from "./Tooltip"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 
 // Debounce time for triggering a widget state update
 // This prevents rapid updates to the widget state.
@@ -150,6 +152,10 @@ function DataFrame({
     width: containerWidth,
     height: containerHeight,
   } = useRequiredContext(ElementFullscreenContext)
+
+  const flexContext = useRequiredContext(FlexContext)
+  const isInHorizontalContainer =
+    flexContext.direction === Direction.HORIZONTAL
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
@@ -599,6 +605,7 @@ function DataFrame({
     minHeight,
     maxHeight,
     minWidth,
+    maxWidth,
     rowHeight,
     resizableSize,
     setResizableSize,
@@ -875,7 +882,7 @@ function DataFrame({
         minHeight={minHeight}
         maxHeight={maxHeight}
         minWidth={minWidth}
-        maxWidth={undefined}
+        maxWidth={isInHorizontalContainer ? undefined : maxWidth}
         size={resizableSize}
         enable={{
           top: false,
@@ -883,7 +890,7 @@ function DataFrame({
           bottom: false,
           left: false,
           topRight: false,
-          bottomRight: true,
+          bottomRight: isInHorizontalContainer ? false : true,
           bottomLeft: false,
           topLeft: false,
         }}
