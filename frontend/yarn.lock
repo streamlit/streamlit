@@ -3575,7 +3575,7 @@ __metadata:
     eslint-plugin-react: "npm:^7.37.5"
     eslint-plugin-react-hooks: "npm:^6.0.0-rc.1"
     eslint-plugin-streamlit-custom: "workspace:^"
-    eslint-plugin-testing-library: "npm:^7.6.0"
+    eslint-plugin-testing-library: "npm:^7.6.1"
     globals: "npm:^16.3.0"
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.0.0"
@@ -3625,7 +3625,7 @@ __metadata:
     "@streamlit/utils": "workspace:^"
     "@types/eslint": "npm:^9.6.1"
     "@types/lodash": "npm:~4.17.20"
-    axios: "npm:^1.10.0"
+    axios: "npm:^1.11.0"
     axios-mock-adapter: "npm:^2.1.0"
     eslint: "npm:^9.31.0"
     lodash: "npm:^4.17.21"
@@ -3697,7 +3697,7 @@ __metadata:
     "@types/xxhashjs": "npm:^0.2.2"
     "@vitejs/plugin-react-swc": "npm:^3.11.0"
     apache-arrow: "npm:^21.0.0"
-    axios: "npm:^1.10.0"
+    axios: "npm:^1.11.0"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     classnames: "npm:^2.3.2"
@@ -7033,14 +7033,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^1.10.0":
-  version: 1.10.0
-  resolution: "axios@npm:1.10.0"
+"axios@npm:^1.11.0":
+  version: 1.11.0
+  resolution: "axios@npm:1.11.0"
   dependencies:
     follow-redirects: "npm:^1.15.6"
-    form-data: "npm:^4.0.0"
+    form-data: "npm:^4.0.4"
     proxy-from-env: "npm:^1.1.0"
-  checksum: 10c0/2239cb269cc789eac22f5d1aabd58e1a83f8f364c92c2caa97b6f5cbb4ab2903d2e557d9dc670b5813e9bcdebfb149e783fb8ab3e45098635cd2f559b06bd5d8
+  checksum: 10c0/5de273d33d43058610e4d252f0963cc4f10714da0bfe872e8ef2cbc23c2c999acc300fd357b6bce0fc84a2ca9bd45740fa6bb28199ce2c1266c8b1a393f2b36e
   languageName: node
   linkType: hard
 
@@ -10709,15 +10709,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"eslint-plugin-testing-library@npm:^7.6.0":
-  version: 7.6.0
-  resolution: "eslint-plugin-testing-library@npm:7.6.0"
+"eslint-plugin-testing-library@npm:^7.6.1":
+  version: 7.6.1
+  resolution: "eslint-plugin-testing-library@npm:7.6.1"
   dependencies:
     "@typescript-eslint/scope-manager": "npm:^8.15.0"
     "@typescript-eslint/utils": "npm:^8.15.0"
   peerDependencies:
     eslint: ^8.57.0 || ^9.0.0
-  checksum: 10c0/dc3ae74f68548b84c94e21faed3f6fb94d009150caa660db786580ddfe9332a7931ef928e405de0c26d4f6198e6045b1de208d6f22f1fae59adc41fe9de6bd10
+  checksum: 10c0/d6bf84792e8829fdf5a50ddc0096e0bc9ca55d99bf2f542408d98e23c5def773780bc00e5cdaf92fd0f6b7daa440717000d222ac5070feff87a9b5bf49da7ff8
   languageName: node
   linkType: hard
 
@@ -11416,7 +11416,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"form-data@npm:^4.0.0":
+"form-data@npm:^4.0.0, form-data@npm:^4.0.4":
   version: 4.0.4
   resolution: "form-data@npm:4.0.4"
   dependencies:

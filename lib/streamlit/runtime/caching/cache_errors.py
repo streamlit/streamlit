@@ -64,7 +64,7 @@ class UnhashableParamError(StreamlitAPIException):
     ) -> str:
         arg_name_str = arg_name if arg_name is not None else "(unnamed)"
         arg_type = type_util.get_fqn_type(arg_value)
-        func_name = func.__name__
+        func_name = func.__name__ if hasattr(func, "__name__") else "unknown"
         arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
 
         return (

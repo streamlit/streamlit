@@ -20,42 +20,44 @@ import { CloudUpload } from "@emotion-icons/material-outlined"
 
 import Icon from "~lib/components/shared/Icon"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
-import { Small } from "~lib/components/shared/TextElements"
 
 import {
   StyledFileDropzoneInstructions,
   StyledFileDropzoneInstructionsColumn,
   StyledFileDropzoneInstructionsFileUploaderIcon,
-  StyledFileDropzoneInstructionsStyledSpan,
+  StyledFileDropzoneInstructionsSubtext,
+  StyledFileDropzoneInstructionsText,
 } from "./styled-components"
 
 export interface Props {
   multiple: boolean
   acceptedExtensions: string[]
   maxSizeBytes: number
+  disabled?: boolean
 }
 
 const FileDropzoneInstructions = ({
   multiple,
   acceptedExtensions,
   maxSizeBytes,
+  disabled,
 }: Props): React.ReactElement => (
   <StyledFileDropzoneInstructions data-testid="stFileUploaderDropzoneInstructions">
     <StyledFileDropzoneInstructionsFileUploaderIcon>
       <Icon content={CloudUpload} size="threeXL" />
     </StyledFileDropzoneInstructionsFileUploaderIcon>
     <StyledFileDropzoneInstructionsColumn>
-      <StyledFileDropzoneInstructionsStyledSpan>
+      <StyledFileDropzoneInstructionsText disabled={disabled}>
         Drag and drop file{multiple ? "s" : ""} here
-      </StyledFileDropzoneInstructionsStyledSpan>
-      <Small>
+      </StyledFileDropzoneInstructionsText>
+      <StyledFileDropzoneInstructionsSubtext disabled={disabled}>
         {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions
               .map(ext => ext.replace(/^\./, "").toUpperCase())
               .join(", ")}`
           : null}
-      </Small>
+      </StyledFileDropzoneInstructionsSubtext>
     </StyledFileDropzoneInstructionsColumn>
   </StyledFileDropzoneInstructions>
 )
