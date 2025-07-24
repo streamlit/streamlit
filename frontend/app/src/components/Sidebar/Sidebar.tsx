@@ -67,7 +67,7 @@ export interface SidebarProps {
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   isCollapsed: boolean
-  onToggleCollapse: (collapsed: boolean) => void
+  onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
 }
 
 const DEFAULT_WIDTH = "256"
@@ -151,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     // Collapse the sidebar if the window was narrowed and is now mobile-sized
     if (innerWidth < lastInnerWidth && innerWidth <= mediumBreakpointPx) {
       if (!isCollapsed) {
-        onToggleCollapse(true)
+        onToggleCollapse(true, false)
       }
     }
     setLastInnerWidth(innerWidth)

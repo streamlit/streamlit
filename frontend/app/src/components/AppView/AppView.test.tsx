@@ -1417,4 +1417,126 @@ describe("AppView element", () => {
       // The actual fix will ensure sidebar shows after script finishes
     })
   })
+
+  describe("sidebar toggle state persistence", () => {
+    let elementsWithSidebar: AppRoot
+
+    beforeEach(() => {
+      window.localStorage.clear()
+
+      const sidebarElement = new ElementNode(
+        makeElementWithInfoText("sidebar content"),
+        ForwardMsgMetadata.create({}),
+        "no script run id",
+        FAKE_SCRIPT_HASH
+      )
+
+      const sidebar = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [sidebarElement],
+        new BlockProto({ allowEmpty: true })
+      )
+
+      const main = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [],
+        new BlockProto({ allowEmpty: true })
+      )
+      const event = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [],
+        new BlockProto({ allowEmpty: true })
+      )
+      const bottom = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [],
+        new BlockProto({ allowEmpty: true })
+      )
+
+      elementsWithSidebar = new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      )
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+      window.localStorage.clear()
+    })
+
+    const mockSidebarContext = (
+      initialSidebarState: PageConfig.SidebarState,
+      pageLinkBaseUrl = ""
+    ): ReturnType<typeof vi.spyOn> => {
+      return vi
+        .spyOn(StreamlitContextProviderModule, "useAppContext")
+        .mockImplementation(() =>
+          getContextOutput({
+            initialSidebarState,
+            pageLinkBaseUrl,
+          })
+        )
+    }
+
+    const renderAppViewWithSidebar = (): ReturnType<typeof render> => {
+      return render(
+        <AppView {...getProps({ elements: elementsWithSidebar })} />
+      )
+    }
+
+    it("uses initial sidebar config when no localStorage value exists", () => {
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBeNull()
+
+      mockSidebarContext(PageConfig.SidebarState.EXPANDED)
+
+      renderAppViewWithSidebar()
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("uses initial sidebar config for collapsed state when no localStorage value exists", () => {
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBeNull()
+
+      mockSidebarContext(PageConfig.SidebarState.COLLAPSED)
+
+      renderAppViewWithSidebar()
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("restores collapsed state from localStorage on initial load", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "true")
+
+      mockSidebarContext(PageConfig.SidebarState.EXPANDED)
+
+      renderAppViewWithSidebar()
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("restores expanded state from localStorage on initial load", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "false")
+
+      mockSidebarContext(PageConfig.SidebarState.COLLAPSED)
+
+      renderAppViewWithSidebar()
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("handles invalid localStorage values gracefully", () => {
+      window.localStorage.setItem("stSidebarCollapsed-", "invalid")
+
+      mockSidebarContext(PageConfig.SidebarState.EXPANDED)
+
+      renderAppViewWithSidebar()
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+  })
 })
