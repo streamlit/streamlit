@@ -261,7 +261,7 @@ class MetricMixin:
                 except Exception as ex:  # noqa: PERF203
                     raise StreamlitAPIException(
                         "Only numeric values are supported for chart data sequence. The "
-                        f"value '{val}' is of type {type(val)} and  "
+                        f"value '{val}' is of type {type(val)} and "
                         "cannot be converted to float."
                     ) from ex
             if len(prepared_data) > 0:
