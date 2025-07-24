@@ -260,9 +260,6 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     expect(popover).to_be_visible()
     assert_snapshot(popover, name="st_navigation-top_nav_section_popover")
 
-    # Close the popover by clicking outside
-    app.locator("body").click(position={"x": 10, "y": 10})
-
     # Test single section
     # First uncheck the Test Sections checkbox
     click_checkbox(app, "Test Sections")
