@@ -78,7 +78,7 @@ export const StyledMembersTable = styled.table(({ theme }) => ({
 }))
 
 export const StyledMembersRow = styled.tr(({ theme }) => ({
-  "&:not(:last-child) td": {
+  "&:not(:last-child)": {
     borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   },
 }))
