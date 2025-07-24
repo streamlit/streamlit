@@ -22,6 +22,28 @@ import subprocess
 import sys
 from typing import Any, cast
 
+# Extensions to exclude from devcontainer configuration file
+DEVCONTAINER_EXCLUDED_EXTENSIONS = [
+    "anysphere.cursorpyright",
+]
+
+
+def filter_extensions_for_devcontainer(extensions: list[str]) -> list[str]:
+    """Filter out extensions that should not be included in devcontainer
+    configuration file.
+
+    Parameters
+    ----------
+    extensions : list[str]
+        List of VSCode extensions
+
+    Returns
+    -------
+    list[str]
+        Filtered list of extensions with excluded items removed
+    """
+    return [ext for ext in extensions if ext not in DEVCONTAINER_EXCLUDED_EXTENSIONS]
+
 
 def load_json_file(file_path: str) -> dict[str, Any]:
     """Load and parse a JSON file.
@@ -152,7 +174,9 @@ def check_files_in_sync(
         devcontainer_config = load_json_file(devcontainer_path)
 
         # Check if extensions are in sync
-        expected_extensions = vscode_extensions.get("recommendations", [])
+        expected_extensions = filter_extensions_for_devcontainer(
+            vscode_extensions.get("recommendations", [])
+        )
         actual_extensions = (
             devcontainer_config.get("customizations", {})
             .get("vscode", {})
@@ -242,7 +266,9 @@ def sync_vscode_devcontainer(
         print("Error: 'recommendations' key not found in .vscode/extensions.json")
         return False
 
-    extensions_list = vscode_extensions["recommendations"]
+    extensions_list = filter_extensions_for_devcontainer(
+        vscode_extensions["recommendations"]
+    )
 
     # Update devcontainer configuration
     if "customizations" not in devcontainer_config:
@@ -251,7 +277,7 @@ def sync_vscode_devcontainer(
     if "vscode" not in devcontainer_config["customizations"]:
         devcontainer_config["customizations"]["vscode"] = {}
 
-    # Sync extensions
+    # Sync extensions (with filtering applied)
     devcontainer_config["customizations"]["vscode"]["extensions"] = extensions_list
 
     # Sync settings
@@ -269,7 +295,13 @@ def sync_vscode_devcontainer(
         )
 
     print("✅ Synchronization complete!")
-    print(f"   - Synced {len(extensions_list)} extensions")
+    original_count = len(vscode_extensions["recommendations"])
+    filtered_count = len(extensions_list)
+    excluded_count = original_count - filtered_count
+
+    print(
+        f"   - Synced {filtered_count} extensions (excluded {excluded_count} dev-only extensions)"
+    )
     print(f"   - Synced {len(vscode_settings)} settings")
     return True
 
