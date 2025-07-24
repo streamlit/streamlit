@@ -581,13 +581,13 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            True,
-            False,
+            ("horizontal", True),
+            ("vertical", False),
         ],
     )
-    def test_container_wrap(self, wrap: bool) -> None:
+    def test_container_wrap(self, direction: str, wrap: bool) -> None:
         """Test that st.container sets the wrap property correctly."""
-        st.container(wrap=wrap)
+        st.container(direction=direction)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.wrap == wrap
 

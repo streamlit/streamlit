@@ -19,7 +19,6 @@ import streamlit as st
 with st.container(
     border=False,
     direction="vertical",
-    wrap=False,
     key="layout-dashboard-example",
 ):
     st.title("Q3 Results")
@@ -27,7 +26,6 @@ with st.container(
     with st.container(
         border=True,
         direction="horizontal",
-        wrap=False,
     ):
         df = pd.DataFrame(
             {
@@ -35,12 +33,11 @@ with st.container(
                 "y": [i * i for i in range(5)],
             }
         )
-        st.line_chart(df.set_index("x"))
+        st.line_chart(df.set_index("x"), width=300, use_container_width=False)
 
         with st.container(
             border=False,
             direction="vertical",
-            wrap=False,
         ):
             st.metric(label="Metric", value=156, delta=10, height=100, width=70)
             st.dataframe(df)
@@ -48,7 +45,6 @@ with st.container(
 with st.container(
     border=True,
     direction="horizontal",
-    wrap=False,
     key="layout-horizontal-form",
 ):
     with st.form("Form", width=400):
@@ -65,7 +61,6 @@ with st.container(
 with st.container(
     border=True,
     direction="horizontal",
-    wrap=False,
     key="layout-horizontal-expander-dataframe",
 ):
     df = pd.DataFrame(
@@ -83,7 +78,6 @@ with st.container(
 with st.container(
     border=True,
     direction="horizontal",
-    wrap=False,
     key="layout-horizontal-expander-dataframe-content-width",
 ):
     df = pd.DataFrame(
@@ -101,7 +95,6 @@ with st.container(
 with st.container(
     border=True,
     direction="horizontal",
-    wrap=False,
     key="layout-horizontal-expander-dataframe-content-width-large",
 ):
     df = pd.DataFrame(
@@ -129,31 +122,6 @@ with st.container(
 with st.container(
     border=True,
     direction="horizontal",
-    wrap=False,
-    key="layout-horizontal-dataframe-content-width-large",
-):
-    df = pd.DataFrame(
-        {
-            "x": list(range(5)),
-            "y": [i * i for i in range(5)],
-            "z": [i * i * i for i in range(5)],
-            "w": [i * i * i * i for i in range(5)],
-            "v": [i * i * i * i * i for i in range(5)],
-            "u": [i * i * i * i * i * i for i in range(5)],
-            "t": [i * i * i * i * i * i * i for i in range(5)],
-            "s": [i * i * i * i * i * i * i * i for i in range(5)],
-            "r": [i * i * i * i * i * i * i * i * i for i in range(5)],
-            "q": [i * i * i * i * i * i * i * i * i * i for i in range(5)],
-            "p": [i * i * i * i * i * i * i * i * i * i * i for i in range(5)],
-            "o": [i * i * i * i * i * i * i * i * i * i * i * i for i in range(5)],
-        }
-    )
-    st.dataframe(df, use_container_width=True)
-
-with st.container(
-    border=True,
-    direction="horizontal",
-    wrap=False,
     gap=None,
     horizontal_alignment="center",
     key="layout-horizontal-images-center",
@@ -165,7 +133,6 @@ with st.container(
 with st.container(
     border=True,
     direction="horizontal",
-    wrap=False,
     horizontal_alignment="distribute",
     vertical_alignment="center",
     key="layout-horizontal-images-distribute",
@@ -174,7 +141,7 @@ with st.container(
     st.image("https://images.unsplash.com/photo-1519125323398-675f0ddb6308", width=50)
     st.image("https://images.unsplash.com/photo-1506744038136-46273834b3fb", width=300)
 
-with st.container(border=True, direction="horizontal", key="layout-horizontal-columns"):
+with st.container(border=True, direction="vertical", key="layout-horizontal-columns"):
     st.title("Columns")
     df = pd.DataFrame(
         {
@@ -182,18 +149,18 @@ with st.container(border=True, direction="horizontal", key="layout-horizontal-co
             "y": [i * i for i in range(5)],
         }
     )
-    col1, col2 = st.columns(2)
-    with col1:
-        with st.container(
-            border=False,
-            direction="horizontal",
-            wrap=False,
-        ):
-            st.info("Very important information")
-            st.dataframe(df)
+    with st.container(border=False, direction="horizontal"):
+        col1, col2 = st.columns(2)
+        with col1:
+            with st.container(
+                border=False,
+                direction="horizontal",
+            ):
+                st.info("Very important information")
+                st.dataframe(df)
 
-    with col2:
-        st.dataframe(df)
+        with col2:
+            st.dataframe(df)
 
 with st.container(border=True, direction="horizontal", key="layout-horizontal-tabs"):
     import altair as alt
@@ -210,7 +177,6 @@ with st.container(border=True, direction="horizontal", key="layout-horizontal-ta
         with st.container(
             border=False,
             direction="horizontal",
-            wrap=False,
         ):
             st.info("This is a tab")
             st.dataframe(df)
@@ -225,7 +191,6 @@ with st.container(border=True, direction="horizontal", key="layout-horizontal-ta
 with st.container(
     border=True,
     direction="horizontal",
-    wrap=False,
     key="layout-horizontal-map",
 ):
     st.map(pd.DataFrame({"lat": [37.76, 37.77], "lon": [-122.4, -122.41]}))

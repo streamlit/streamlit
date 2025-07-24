@@ -49,7 +49,6 @@ with st.container(
     border=True,
     horizontal_alignment="distribute",
     key="container-horizontal-align-distribute",
-    wrap=False,
 ):
     st.html('<div style="background:lightblue;">One</div>', width="content")
     st.html('<div style="background:lightblue;">Two</div>', width="content")
@@ -59,7 +58,6 @@ with st.container(
     direction="horizontal",
     border=True,
     vertical_alignment="top",
-    wrap=False,
     key="container-horizontal-vertical-align-top",
 ):
     st.container(border=True, height=70)
@@ -70,7 +68,6 @@ with st.container(
     direction="horizontal",
     border=True,
     vertical_alignment="center",
-    wrap=False,
     key="container-horizontal-vertical-align-center",
 ):
     st.container(border=True, height=70)
@@ -81,7 +78,6 @@ with st.container(
     direction="horizontal",
     border=True,
     vertical_alignment="bottom",
-    wrap=False,
     key="container-horizontal-vertical-align-bottom",
 ):
     st.container(border=True, height=70)
@@ -92,7 +88,6 @@ with st.container(
     direction="vertical",
     border=True,
     vertical_alignment="top",
-    wrap=False,
     height=300,
     key="container-vertical-vertical-align-top",
 ):
@@ -104,7 +99,6 @@ with st.container(
     direction="vertical",
     border=True,
     vertical_alignment="center",
-    wrap=False,
     height=300,
     key="container-vertical-vertical-align-center",
 ):
@@ -116,7 +110,6 @@ with st.container(
     direction="vertical",
     border=True,
     vertical_alignment="bottom",
-    wrap=False,
     height=300,
     key="container-vertical-vertical-align-bottom",
 ):
@@ -128,7 +121,6 @@ with st.container(
     direction="vertical",
     border=True,
     vertical_alignment="distribute",
-    wrap=False,
     height=300,
     key="container-vertical-vertical-align-distribute",
 ):
@@ -140,7 +132,6 @@ with st.container(
     direction="vertical",
     border=True,
     horizontal_alignment="left",
-    wrap=False,
     key="container-vertical-horizontal-align-left",
 ):
     st.html('<div style="background:lightblue;">One</div>', width="content")
@@ -151,7 +142,6 @@ with st.container(
     direction="vertical",
     border=True,
     horizontal_alignment="center",
-    wrap=False,
     key="container-vertical-horizontal-align-center",
 ):
     st.html('<div style="background:lightblue;">One</div>', width="content")
@@ -162,7 +152,6 @@ with st.container(
     direction="vertical",
     border=True,
     horizontal_alignment="right",
-    wrap=False,
     key="container-vertical-horizontal-align-right",
 ):
     st.html('<div style="background:lightblue;">One</div>', width="content")

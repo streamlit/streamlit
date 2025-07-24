@@ -18,7 +18,6 @@ with st.container(
     direction="horizontal",
     border=True,
     key="container-horizontal-basic",
-    wrap=False,
 ):
     st.html(
         '<div style="background:lightblue">Hello</div>',
@@ -43,7 +42,6 @@ with st.container(direction="vertical", border=True, key="container-vertical-bas
 with st.container(
     direction="horizontal",
     border=True,
-    wrap=False,
     key="container-horizontal-fixed-width-and-stretch-element",
 ):
     st.html(
@@ -59,7 +57,6 @@ with st.container(
 with st.container(
     direction="horizontal",
     border=True,
-    wrap=False,
     key="container-horizontal-fixed-height-element",
 ):
     with st.container(height=500, border=True):
@@ -70,7 +67,6 @@ with st.container(
 # Vertical layout with a fixed-width element
 with st.container(
     direction="vertical",
-    border=True,
     key="container-vertical-fixed-width-and-stretch-element",
 ):
     st.html(

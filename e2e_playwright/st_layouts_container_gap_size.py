@@ -18,7 +18,6 @@ with st.container(
     border=True,
     gap="small",
     direction="horizontal",
-    wrap=False,
     key="container-horizontal-gap-small",
 ):
     st.html(
@@ -42,7 +41,6 @@ with st.container(
     border=True,
     gap="medium",
     direction="horizontal",
-    wrap=False,
     key="container-horizontal-gap-medium",
 ):
     st.html(
@@ -66,7 +64,6 @@ with st.container(
     border=True,
     gap="large",
     direction="horizontal",
-    wrap=False,
     key="container-horizontal-gap-large",
 ):
     st.html(
@@ -90,7 +87,6 @@ with st.container(
     border=True,
     gap=None,
     direction="horizontal",
-    wrap=False,
     key="container-horizontal-gap-none",
 ):
     st.html(

@@ -70,7 +70,6 @@ class LayoutsMixin:
         direction: Literal["horizontal", "vertical"] = "vertical",
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
-        wrap: bool = True,
         gap: Gap | None = "small",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
@@ -182,7 +181,6 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.wrap = wrap
         block_proto.flex_container.gap_config.gap_size = get_gap_size(
             gap, "st.container"
         )
@@ -191,12 +189,14 @@ class LayoutsMixin:
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
         if direction == "horizontal":
+            block_proto.flex_container.wrap = True
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.HORIZONTAL
             )
             block_proto.flex_container.justify = get_justify(horizontal_alignment)
             block_proto.flex_container.align = get_align(vertical_alignment)
         elif direction == "vertical":
+            block_proto.flex_container.wrap = False
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.VERTICAL
             )

@@ -170,7 +170,7 @@ const getFlex = (
     widthType === DimensionType.STRETCH &&
     direction === Direction.HORIZONTAL
   ) {
-    return "1 1 100%"
+    return "1 1"
   }
 }
 
