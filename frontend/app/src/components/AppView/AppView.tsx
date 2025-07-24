@@ -247,21 +247,19 @@ function AppView(props: AppViewProps): ReactElement {
     pageLinkBaseUrl,
   ])
 
-  const toggleSidebar = useCallback(() => {
-    setSidebarIsCollapsed(prev => {
-      const newState = !prev
-      saveSidebarState(pageLinkBaseUrl, newState)
-      return newState
-    })
-  }, [pageLinkBaseUrl])
-
-  const setSidebarCollapsedWithPersistence = useCallback(
-    (isCollapsed: boolean) => {
+  const setSidebarCollapsedWithOptionalPersistence = useCallback(
+    (isCollapsed: boolean, shouldPersist: boolean = true) => {
       setSidebarIsCollapsed(isCollapsed)
-      saveSidebarState(pageLinkBaseUrl, isCollapsed)
+      if (shouldPersist) {
+        saveSidebarState(pageLinkBaseUrl, isCollapsed)
+      }
     },
     [pageLinkBaseUrl]
   )
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsedWithOptionalPersistence(!isSidebarCollapsed, true)
+  }, [setSidebarCollapsedWithOptionalPersistence, isSidebarCollapsed])
 
   // logo component to be used in the header when sidebar is closed
   const logoElement = appLogo ? (
@@ -309,7 +307,7 @@ function AppView(props: AppViewProps): ReactElement {
               hideSidebarNav={hideSidebarNav}
               expandSidebarNav={expandSidebarNav}
               isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={setSidebarCollapsedWithPersistence}
+              onToggleCollapse={setSidebarCollapsedWithOptionalPersistence}
             >
               <StyledSidebarBlockContainer>
                 {renderBlock(elements.sidebar)}
