@@ -49,10 +49,17 @@ import {
   StyledTruncateText,
 } from "./styled-components"
 
-export interface MetricProps {
-  element: MetricProto
-}
-
+/**
+ * Returns a Vega-Lite spec for a metric chart.
+ *
+ * @param chartData - The data to display in the chart.
+ * @param chartType - The type of chart to display.
+ * @param availableWidth - The available width to use for rendering the chart.
+ * @param theme - The Streamlit theme.
+ * @param metricColor - The color of the metric.
+ *
+ * @returns A Vega-Lite spec for the chart.
+ */
 export function getMetricChartSpec(
   chartData: number[],
   chartType: MetricProto.ChartType,
@@ -60,6 +67,7 @@ export function getMetricChartSpec(
   theme: EmotionTheme,
   metricColor: MetricProto.MetricColor
 ): TopLevelSpec {
+  // Use a random ID to avoid conflicts with other charts:
   const randomId = Math.random().toString(36).slice(2, 10)
   const baseName = `metric_chart_${randomId}`
 
@@ -77,6 +85,7 @@ export function getMetricChartSpec(
     },
     layer: [
       {
+        // The actual line/bar/area chart layer:
         name: `${baseName}_mark`,
         mark: {
           type: "line",
@@ -121,6 +130,8 @@ export function getMetricChartSpec(
         },
       },
       {
+        // This layer is needed for detecting the nearest point on the
+        // chart that gets selected when hovering over the chart:
         name: `${baseName}_points`,
         mark: {
           type: "point",
@@ -160,6 +171,7 @@ export function getMetricChartSpec(
         ],
       },
       {
+        // This is used to render the point on the chart when hovering:
         name: `${baseName}_highlighted_points`,
         transform: [
           {
@@ -222,14 +234,15 @@ export function getMetricChartSpec(
         tooltip: { content: "encoding" },
         color: getMetricColor(theme, metricColor),
       },
-      rule: {
-        stroke: theme.colors.borderColorLight,
-      },
     },
   }
 
   spec.config = applyStreamlitTheme(spec.config, theme)
   return spec
+}
+
+export interface MetricProps {
+  element: MetricProto
 }
 
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
@@ -270,7 +283,8 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       chartData &&
       chartData.length > 0 &&
       chartRef.current &&
-      chartWidth > 0 // Ensure positive width
+      // Having a chart width <= 0 causes issues with vega-embed:
+      chartWidth > 0
     ) {
       const spec = getMetricChartSpec(
         chartData,
@@ -288,6 +302,8 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         tooltip: {
           theme: "custom",
           formatTooltip: (value: { y: number }) => {
+            // Only show the y value in the tooltip since
+            // the x value is just the numeric index of the point:
             return `${value.y}`
           },
         },

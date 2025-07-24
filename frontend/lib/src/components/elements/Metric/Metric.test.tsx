@@ -308,6 +308,31 @@ describe("Metric element", () => {
         )
       })
     })
+
+    it("formats the tooltip correctly", async () => {
+      const chartData = [10.123, 20.456, 30.789]
+      const props = getProps({
+        chartData,
+        chartType: MetricProto.ChartType.LINE,
+      })
+
+      render(<Metric {...props} />)
+
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalled()
+      })
+
+      const embedCall = vi.mocked(embed).mock.calls[0]
+      const tooltipOptions = embedCall[2]?.tooltip as
+        | { formatTooltip: (value: { y: number }) => string }
+        | undefined
+
+      expect(tooltipOptions).toBeDefined()
+      if (tooltipOptions) {
+        expect(tooltipOptions.formatTooltip({ y: 12.345 })).toBe("12.345")
+        expect(tooltipOptions.formatTooltip({ y: 42 })).toBe("42")
+      }
+    })
   })
 
   describe("getMetricChartSpec function", () => {
