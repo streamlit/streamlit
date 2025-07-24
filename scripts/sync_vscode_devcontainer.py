@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
 import argparse
 import json
@@ -28,286 +29,301 @@ DEVCONTAINER_EXCLUDED_EXTENSIONS = [
 ]
 
 
-def filter_extensions_for_devcontainer(extensions: list[str]) -> list[str]:
-    """Filter out extensions that should not be included in devcontainer
-    configuration file.
+class DevcontainerSync:
+    """Handles synchronization between VSCode and devcontainer configurations."""
 
-    Parameters
-    ----------
-    extensions : list[str]
-        List of VSCode extensions
+    def __init__(self, repo_root: str | None = None) -> None:
+        """Initialize with repository root path.
 
-    Returns
-    -------
-    list[str]
-        Filtered list of extensions with excluded items removed
-    """
-    return [ext for ext in extensions if ext not in DEVCONTAINER_EXCLUDED_EXTENSIONS]
+        Parameters
+        ----------
+        repo_root : str | None, default None
+            Repository root directory. If None, auto-detected from script location.
+        """
+        self.repo_root = repo_root or self._get_repo_root()
+        self.vscode_settings_path = os.path.join(
+            self.repo_root, ".vscode", "settings.json"
+        )
+        self.vscode_extensions_path = os.path.join(
+            self.repo_root, ".vscode", "extensions.json"
+        )
+        self.devcontainer_path = os.path.join(
+            self.repo_root, ".devcontainer", "devcontainer.json"
+        )
 
+    @staticmethod
+    def _get_repo_root() -> str:
+        """Get repository root directory from script location.
 
-def load_json_file(file_path: str) -> dict[str, Any]:
-    """Load and parse a JSON file.
+        Returns
+        -------
+        str
+            Absolute path to the repository root directory
+        """
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    Parameters
-    ----------
-    file_path : str
-        Path to the JSON file
+    def _load_json_file(self, file_path: str) -> dict[str, Any]:
+        """Load and parse a JSON file.
 
-    Returns
-    -------
-    dict[str, Any]
-        Parsed JSON content as dictionary
+        Parameters
+        ----------
+        file_path : str
+            Path to the JSON file
 
-    Raises
-    ------
-    FileNotFoundError
-        If the file doesn't exist
-    json.JSONDecodeError
-        If the file contains invalid JSON
-    """
-    try:
-        with open(file_path, encoding="utf-8") as f:
-            return cast("dict[str, Any]", json.load(f))
-    except FileNotFoundError:
-        print(f"Error: File not found: {file_path}")
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in {file_path}: {e}")
-        sys.exit(1)
+        Returns
+        -------
+        dict[str, Any]
+            Parsed JSON content as dictionary
 
+        Raises
+        ------
+        SystemExit
+            If file cannot be loaded or parsed
+        """
+        try:
+            with open(file_path, encoding="utf-8") as f:
+                return cast("dict[str, Any]", json.load(f))
+        except FileNotFoundError:
+            print(f"Error: File not found: {file_path}")
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON in {file_path}: {e}")
+            sys.exit(1)
 
-def save_json_file(file_path: str, data: dict[str, Any]) -> None:
-    """Save data to a JSON file with proper formatting.
+    def _save_json_file(self, file_path: str, data: dict[str, Any]) -> None:
+        """Save data to a JSON file with proper formatting.
 
-    Parameters
-    ----------
-    file_path : str
-        Path to save the JSON file
-    data : dict[str, Any]
-        Data to save
-    """
-    try:
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-            f.write("\n")  # Add final newline
-        print(f"Successfully updated: {file_path}")
-    except Exception as e:
-        print(f"Error: Failed to save {file_path}: {e}")
-        sys.exit(1)
+        Parameters
+        ----------
+        file_path : str
+            Path to save the JSON file
+        data : dict[str, Any]
+            Data to save
 
+        Raises
+        ------
+        SystemExit
+            If file cannot be saved
+        """
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                f.write("\n")  # Add final newline
+            print(f"Successfully updated: {file_path}")
+        except Exception as e:
+            print(f"Error: Failed to save {file_path}: {e}")
+            sys.exit(1)
 
-def format_json_files_with_prettier(repo_root: str, file_paths: list[str]) -> None:
-    """Format JSON files using prettier.
+    @staticmethod
+    def _filter_extensions(extensions: list[str]) -> list[str]:
+        """Filter out extensions that should not be included in devcontainer.
 
-    Parameters
-    ----------
-    repo_root : str
-        Repository root directory
-    file_paths : list[str]
-        List of file paths to format
-    """
-    if not file_paths:
-        return
+        Parameters
+        ----------
+        extensions : list[str]
+            List of VSCode extensions
 
-    try:
-        # Convert absolute paths to relative paths from repo root
-        relative_paths = []
-        for file_path in file_paths:
-            if os.path.isabs(file_path):
-                relative_paths.append(os.path.relpath(file_path, repo_root))
-            else:
-                relative_paths.append(file_path)
-
-        # Use the same approach as the pre-commit hooks
-        cmd = [
-            "./scripts/run_in_subdirectory.py",
-            "frontend/app",
-            "yarn",
-            "prettier",
-            "--write",
-            "--config",
-            "../.prettierrc",
+        Returns
+        -------
+        list[str]
+            Filtered list of extensions with excluded items removed
+        """
+        return [
+            ext for ext in extensions if ext not in DEVCONTAINER_EXCLUDED_EXTENSIONS
         ]
 
-        # Add each file path
-        for relative_path in relative_paths:
-            cmd.append(f"../../{relative_path}")
+    def _get_devcontainer_vscode_config(
+        self, devcontainer_config: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Get or create the VSCode configuration section in devcontainer config.
 
-        print("Formatting JSON files with prettier...")
-        result = subprocess.run(
-            cmd, check=False, cwd=repo_root, capture_output=True, text=True
-        )
+        Parameters
+        ----------
+        devcontainer_config : dict[str, Any]
+            The devcontainer configuration dictionary
 
-        if result.returncode != 0:
-            print(f"Warning: Prettier formatting failed: {result.stderr}")
-            print(f"Command: {' '.join(cmd)}")
-        else:
-            print("✅ JSON files formatted successfully")
+        Returns
+        -------
+        dict[str, Any]
+            The VSCode configuration section
+        """
+        if "customizations" not in devcontainer_config:
+            devcontainer_config["customizations"] = {}
 
-    except Exception as e:
-        print(f"Warning: Failed to format files with prettier: {e}")
+        if "vscode" not in devcontainer_config["customizations"]:
+            devcontainer_config["customizations"]["vscode"] = {}
 
+        return cast("dict[str, Any]", devcontainer_config["customizations"]["vscode"])
 
-def check_files_in_sync(
-    vscode_settings_path: str, vscode_extensions_path: str, devcontainer_path: str
-) -> bool:
-    """Check if the files are in sync without modifying them.
+    def _load_all_configs(
+        self,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        """Load all configuration files.
 
-    Parameters
-    ----------
-    vscode_settings_path : str
-        Path to the VSCode settings.json file
-    vscode_extensions_path : str
-        Path to the VSCode extensions.json file
-    devcontainer_path : str
-        Path to the devcontainer.json file
+        Returns
+        -------
+        tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
+            Tuple containing (VSCode settings, VSCode extensions, devcontainer config)
+        """
+        vscode_settings = self._load_json_file(self.vscode_settings_path)
+        vscode_extensions = self._load_json_file(self.vscode_extensions_path)
+        devcontainer_config = self._load_json_file(self.devcontainer_path)
+        return vscode_settings, vscode_extensions, devcontainer_config
 
-    Returns
-    -------
-    bool
-        True if files are in sync, False otherwise
-    """
-    try:
-        # Load all files
-        vscode_settings = load_json_file(vscode_settings_path)
-        vscode_extensions = load_json_file(vscode_extensions_path)
-        devcontainer_config = load_json_file(devcontainer_path)
+    def _format_with_prettier(self, file_paths: list[str]) -> None:
+        """Format JSON files using prettier.
 
-        # Check if extensions are in sync
-        expected_extensions = filter_extensions_for_devcontainer(
-            vscode_extensions.get("recommendations", [])
-        )
-        actual_extensions = (
-            devcontainer_config.get("customizations", {})
-            .get("vscode", {})
-            .get("extensions", [])
-        )
+        Parameters
+        ----------
+        file_paths : list[str]
+            List of file paths to format
+        """
+        if not file_paths:
+            return
 
-        if expected_extensions != actual_extensions:
-            print("❌ Extensions are out of sync:")
-            print(f"   VSCode extensions: {len(expected_extensions)} items")
-            print(f"   Devcontainer extensions: {len(actual_extensions)} items")
-            print("   Run 'make sync-vscode-devcontainer' to fix this")
+        try:
+            # Convert to relative paths from repo root
+            relative_paths = [
+                os.path.relpath(path, self.repo_root) if os.path.isabs(path) else path
+                for path in file_paths
+            ]
+
+            cmd = [
+                "./scripts/run_in_subdirectory.py",
+                "frontend/app",
+                "yarn",
+                "prettier",
+                "--write",
+                "--config",
+                "../.prettierrc",
+            ]
+
+            # Add file paths with proper relative path prefix
+            cmd.extend(f"../../{relative_path}" for relative_path in relative_paths)
+
+            print("Formatting JSON files with prettier...")
+            result = subprocess.run(
+                cmd, check=False, cwd=self.repo_root, capture_output=True, text=True
+            )
+
+            if result.returncode != 0:
+                print(f"Warning: Prettier formatting failed: {result.stderr}")
+                print(f"Command: {' '.join(cmd)}")
+            else:
+                print("✅ JSON files formatted successfully")
+
+        except Exception as e:
+            print(f"Warning: Failed to format files with prettier: {e}")
+
+    def check_sync_status(self) -> bool:
+        """Check if the files are in sync without modifying them.
+
+        Returns
+        -------
+        bool
+            True if files are in sync, False otherwise
+        """
+        try:
+            vscode_settings, vscode_extensions, devcontainer_config = (
+                self._load_all_configs()
+            )
+            vscode_config = self._get_devcontainer_vscode_config(devcontainer_config)
+
+            # Check extensions sync
+            expected_extensions = self._filter_extensions(
+                vscode_extensions.get("recommendations", [])
+            )
+            actual_extensions = vscode_config.get("extensions", [])
+
+            if expected_extensions != actual_extensions:
+                print("❌ Extensions are out of sync:")
+                print(f"   VSCode extensions: {len(expected_extensions)} items")
+                print(f"   Devcontainer extensions: {len(actual_extensions)} items")
+                print("   Run 'make sync-vscode-devcontainer' to fix this")
+                return False
+
+            # Check settings sync
+            actual_settings = vscode_config.get("settings", {})
+            if vscode_settings != actual_settings:
+                print("❌ Settings are out of sync:")
+                print(f"   VSCode settings: {len(vscode_settings)} items")
+                print(f"   Devcontainer settings: {len(actual_settings)} items")
+                print("   Run 'make sync-vscode-devcontainer' to fix this")
+                return False
+
+            print("✅ All files are in sync!")
+            return True
+
+        except Exception as e:
+            print(f"❌ Error checking sync status: {e}")
             return False
 
-        # Check if settings are in sync
-        expected_settings = vscode_settings
-        actual_settings = (
-            devcontainer_config.get("customizations", {})
-            .get("vscode", {})
-            .get("settings", {})
+    def sync_configurations(self, format_with_prettier: bool = True) -> bool:
+        """Sync VSCode settings and extensions with devcontainer configuration.
+
+        Parameters
+        ----------
+        format_with_prettier : bool, default True
+            If True, format JSON files with prettier after syncing
+
+        Returns
+        -------
+        bool
+            True if sync was successful, False otherwise
+        """
+        print("Loading source files...")
+        vscode_settings, vscode_extensions, devcontainer_config = (
+            self._load_all_configs()
         )
 
-        if expected_settings != actual_settings:
-            print("❌ Settings are out of sync:")
-            print(f"   VSCode settings: {len(expected_settings)} items")
-            print(f"   Devcontainer settings: {len(actual_settings)} items")
-            print("   Run 'make sync-vscode-devcontainer' to fix this")
+        # Validate extensions structure
+        if "recommendations" not in vscode_extensions:
+            print("Error: 'recommendations' key not found in .vscode/extensions.json")
             return False
 
-        print("✅ All files are in sync!")
+        print("Syncing extensions and settings...")
+
+        # Get filtered extensions
+        extensions_list = self._filter_extensions(vscode_extensions["recommendations"])
+
+        # Update devcontainer configuration
+        vscode_config = self._get_devcontainer_vscode_config(devcontainer_config)
+        vscode_config["extensions"] = extensions_list
+        vscode_config["settings"] = vscode_settings
+
+        print("Saving updated devcontainer configuration...")
+        self._save_json_file(self.devcontainer_path, devcontainer_config)
+
+        # Format with prettier if requested
+        if format_with_prettier:
+            self._format_with_prettier(
+                [
+                    self.vscode_settings_path,
+                    self.vscode_extensions_path,
+                    self.devcontainer_path,
+                ]
+            )
+
+        # Print summary
+        original_count = len(vscode_extensions["recommendations"])
+        excluded_count = original_count - len(extensions_list)
+
+        print("✅ Synchronization complete!")
+        print(
+            f"   - Synced {len(extensions_list)} extensions (excluded {excluded_count} dev-only extensions)"
+        )
+        print(f"   - Synced {len(vscode_settings)} settings")
         return True
 
-    except Exception as e:
-        print(f"❌ Error checking sync status: {e}")
-        return False
 
-
-def sync_vscode_devcontainer(
-    check_only: bool = False, format_with_prettier: bool = True
-) -> bool:
-    """Sync VSCode settings and extensions with devcontainer configuration.
-
-    Parameters
-    ----------
-    check_only : bool, default False
-        If True, only check if files are in sync without modifying them
-    format_with_prettier : bool, default True
-        If True, format JSON files with prettier after syncing
+def _parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments.
 
     Returns
     -------
-    bool
-        True if sync was successful or files are already in sync, False otherwise
-
-    Notes
-    -----
-    This function:
-    1. Reads .vscode/settings.json (source of truth for settings)
-    2. Reads .vscode/extensions.json (source of truth for extensions)
-    3. Updates .devcontainer/devcontainer.json with the synced data (unless check_only=True)
-    4. Optionally formats JSON files with prettier
+    argparse.Namespace
+        Parsed command line arguments containing check and no_prettier flags
     """
-    # Get the repository root directory
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    # Define file paths
-    vscode_settings_path = os.path.join(repo_root, ".vscode", "settings.json")
-    vscode_extensions_path = os.path.join(repo_root, ".vscode", "extensions.json")
-    devcontainer_path = os.path.join(repo_root, ".devcontainer", "devcontainer.json")
-
-    if check_only:
-        print("🔍 Checking if VSCode configuration is in sync with devcontainer...")
-        return check_files_in_sync(
-            vscode_settings_path, vscode_extensions_path, devcontainer_path
-        )
-
-    print("Loading source files...")
-
-    # Load source files
-    vscode_settings = load_json_file(vscode_settings_path)
-    vscode_extensions = load_json_file(vscode_extensions_path)
-    devcontainer_config = load_json_file(devcontainer_path)
-
-    print("Syncing extensions and settings...")
-
-    # Extract extensions list from .vscode/extensions.json
-    if "recommendations" not in vscode_extensions:
-        print("Error: 'recommendations' key not found in .vscode/extensions.json")
-        return False
-
-    extensions_list = filter_extensions_for_devcontainer(
-        vscode_extensions["recommendations"]
-    )
-
-    # Update devcontainer configuration
-    if "customizations" not in devcontainer_config:
-        devcontainer_config["customizations"] = {}
-
-    if "vscode" not in devcontainer_config["customizations"]:
-        devcontainer_config["customizations"]["vscode"] = {}
-
-    # Sync extensions (with filtering applied)
-    devcontainer_config["customizations"]["vscode"]["extensions"] = extensions_list
-
-    # Sync settings
-    devcontainer_config["customizations"]["vscode"]["settings"] = vscode_settings
-
-    print("Saving updated devcontainer configuration...")
-
-    # Save the updated devcontainer configuration
-    save_json_file(devcontainer_path, devcontainer_config)
-
-    # Format with prettier if requested
-    if format_with_prettier:
-        format_json_files_with_prettier(
-            repo_root, [vscode_settings_path, vscode_extensions_path, devcontainer_path]
-        )
-
-    print("✅ Synchronization complete!")
-    original_count = len(vscode_extensions["recommendations"])
-    filtered_count = len(extensions_list)
-    excluded_count = original_count - filtered_count
-
-    print(
-        f"   - Synced {filtered_count} extensions (excluded {excluded_count} dev-only extensions)"
-    )
-    print(f"   - Synced {len(vscode_settings)} settings")
-    return True
-
-
-def parse_arguments() -> argparse.Namespace:
-    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Sync VSCode settings and extensions with devcontainer configuration"
     )
@@ -325,17 +341,22 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> None:
-    """Main entry point for the script."""
-    args = parse_arguments()
+    """Main entry point for the script.
+
+    Parses command line arguments and executes the appropriate sync or check operation.
+    Exits with status 0 on success, 1 on failure.
+    """
+    args = _parse_arguments()
+    syncer = DevcontainerSync()
 
     if args.check:
         print("🔍 Checking VSCode/devcontainer configuration sync...")
-        success = sync_vscode_devcontainer(check_only=True)
-        sys.exit(0 if success else 1)
+        success = syncer.check_sync_status()
     else:
         print("🔄 Syncing VSCode configuration with devcontainer...")
-        success = sync_vscode_devcontainer(format_with_prettier=not args.no_prettier)
-        sys.exit(0 if success else 1)
+        success = syncer.sync_configurations(format_with_prettier=not args.no_prettier)
+
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
