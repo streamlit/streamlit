@@ -35,7 +35,7 @@ def _expect_iframe_attached(app: Page):
     expect(app.locator("iframe").first).to_be_attached()
 
 
-def _wait_for_pdf_to_load(app: Page, timeout: int = 7000):
+def _wait_for_pdf_to_load(app: Page, timeout: int = 3000):
     """Wait for PDF content to finish loading inside the iframe.
 
     This function waits for the PDF viewer to finish loading by checking
@@ -47,6 +47,13 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 7000):
         The page containing the PDF component
     timeout : int
         Maximum time to wait in milliseconds
+
+    Raises
+    ------
+    TimeoutError
+        If the PDF doesn't load within the timeout period
+    AssertionError
+        If the PDF is still showing loading text after the wait
     """
     iframe = app.locator("iframe").first
 
@@ -55,41 +62,95 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 7000):
     expect(iframe).to_be_visible()
 
     # Then wait for the PDF content to load by checking that loading text is gone
-    wait_until(
-        app,
-        lambda: iframe.evaluate(
+    try:
+        wait_until(
+            app,
+            lambda: iframe.evaluate(
+                """
+                (iframe) => {
+                    try {
+                        // Check if the iframe content has loaded and doesn't contain loading text
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (!doc) return false;
+
+                        // Look for loading indicators - if none found, PDF is likely loaded
+                        const bodyText = doc.body ? doc.body.textContent || '' : '';
+                        const hasLoadingText = bodyText.includes('Loading PDF') ||
+                                             bodyText.includes('Loading...') ||
+                                             bodyText.includes('loading');
+
+                        // Also check if the document has meaningful content beyond just loading text
+                        const hasContent = doc.body && doc.body.children.length > 0;
+
+                        return hasContent && !hasLoadingText;
+                    } catch (e) {
+                        // Since we're testing local PDFs, not URLs, this shouldn't happen
+                        // If it does, it's likely a real error we should know about
+                        console.error('Error accessing iframe content:', e);
+                        return false;
+                    }
+                }
+                """,
+                iframe,
+            )
+            is True,
+            timeout=timeout,
+        )
+    except TimeoutError as e:
+        # If we timeout, let's check what state the PDF is in
+        current_state = iframe.evaluate(
             """
             (iframe) => {
                 try {
-                    // Check if the iframe content has loaded and doesn't contain loading text
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (!doc) return false;
+                    if (!doc || !doc.body) return 'No document body found';
 
-                    // Look for loading indicators - if none found, PDF is likely loaded
-                    const bodyText = doc.body ? doc.body.textContent || '' : '';
-                    const hasLoadingText = bodyText.includes('Loading PDF') ||
-                                         bodyText.includes('Loading...') ||
-                                         bodyText.includes('loading');
+                    const bodyText = doc.body.textContent || '';
+                    const childCount = doc.body.children.length;
 
-                    // Also check if the document has meaningful content beyond just loading text
-                    const hasContent = doc.body && doc.body.children.length > 0;
-
-                    return hasContent && !hasLoadingText;
+                    return {
+                        hasLoadingText: bodyText.includes('Loading') || bodyText.includes('loading'),
+                        textContent: bodyText.substring(0, 200), // First 200 chars for debugging
+                        childrenCount: childCount,
+                        hasContent: childCount > 0
+                    };
                 } catch (e) {
-                    // If we can't access iframe content (CORS), assume it's loading external content
-                    // In this case, we'll use a timeout-based approach
-                    return false;
+                    return { error: e.toString() };
                 }
             }
             """,
             iframe,
         )
-        is True,
-        timeout=timeout,
+        raise TimeoutError(
+            f"PDF failed to load within {timeout}ms. Current state: {current_state}"
+        ) from e
+
+    # Final validation: ensure the PDF actually loaded and isn't showing loading text
+    final_check = iframe.evaluate(
+        """
+        (iframe) => {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (!doc || !doc.body) return { loaded: false, reason: 'No document body' };
+
+                const bodyText = doc.body.textContent || '';
+                const hasLoadingText = bodyText.includes('Loading') || bodyText.includes('loading');
+
+                return {
+                    loaded: !hasLoadingText && doc.body.children.length > 0,
+                    hasLoadingText: hasLoadingText,
+                    bodyPreview: bodyText.substring(0, 100)
+                };
+            } catch (e) {
+                return { loaded: false, error: e.toString() };
+            }
+        }
+        """,
+        iframe,
     )
 
-    # Add a small additional delay to ensure PDF is fully rendered
-    app.wait_for_timeout(1000)
+    if not final_check.get("loaded", False):
+        raise AssertionError(f"PDF did not load properly. Final state: {final_check}")
 
 
 def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunction):
