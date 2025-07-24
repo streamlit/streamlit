@@ -19,61 +19,69 @@ import streamlit as st
 np.random.seed(0)
 
 
-col1, col2, col3 = st.columns(3)
-
 # Create random sparkline data:
-
-
 def generate_sparkline_data(
     length: int = 30, drift: float = 0.1, volatility: float = 10
 ) -> list[float]:
     random_changes = np.random.normal(loc=drift, scale=volatility, size=length)
     initial_value = np.random.normal(loc=50, scale=5)
     data = initial_value + np.cumsum(random_changes)
-    return data.tolist()
+    return data.tolist()  # type: ignore
 
+
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric(
-        "User",
-        8231,
+        "User growth",
         123,
+        123,
+        delta_color="normal",
         chart_data=generate_sparkline_data(),
-        chart_type="line",
-        border=True,
-        delta_color="off",
-    )
-    st.metric(
-        "Bugs",
-        200,
-        -99,
-        chart_data=generate_sparkline_data(),
-        chart_type="bar",
         border=True,
     )
 with col2:
     st.metric(
-        "Views",
-        19321,
-        1053,
+        "S&P 500",
+        -4.56,
+        -50,
         chart_data=generate_sparkline_data(),
         chart_type="area",
         border=True,
     )
+with col3:
     st.metric(
-        "Patches",
-        7,
-        0,
+        "Apples I've eaten",
+        "23k",
+        " -20",
+        delta_color="off",
         chart_data=generate_sparkline_data(),
-        chart_type="line",
+        chart_type="bar",
         border=True,
     )
+
+
+with col1:
+    st.metric("Test 3", -4.56, 1.23, label_visibility="visible")
+with col2:
+    st.metric("Test 4", -4.56, 1.23, label_visibility="hidden")
 with col3:
-    st.container(border=True).metric(
-        "Apps", 452, 0, chart_data=generate_sparkline_data(), chart_type="bar"
-    )
-    st.container(border=True).metric(
-        "Sign-ups", 132, 12, chart_data=generate_sparkline_data(), chart_type="area"
+    st.metric("Test 5", -4.56, 1.23, label_visibility="collapsed")
+
+st.metric(
+    "User growth and a relatively long title", 123, help="testing help without a column"
+)
+
+st.metric("label title", None, None, help="testing help without a column")
+
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+
+with col1:
+    st.metric(
+        label="Example metric",
+        help="Something should feel right",
+        value=150.59,
+        delta="Very high",
     )
 
 st.metric("Test 9", -4.56, 1.23, help="Test help with code `select * from table`")
