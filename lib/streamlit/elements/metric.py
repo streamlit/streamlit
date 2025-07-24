@@ -62,13 +62,15 @@ class MetricMixin:
         label: str,
         value: Value,
         delta: Delta = None,
+        *,
         delta_color: DeltaColor = "normal",
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
         width: Width = "stretch",
         height: Height = "content",
-        sparkline: OptionSequence[Any] | None = None,
+        chart_data: OptionSequence[Any] | None = None,
+        chart_type: Literal["line", "bar", "area"] = "line",
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -158,13 +160,16 @@ class MetricMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        sparkline : Iterable or None
-            A sequence of numeric values to display as a sparkline. If this is
-            ``None`` (default), no sparkline is displayed.
+        chart_data : Iterable or None
+            A sequence of numeric values to display as a sparkline chart. If this
+            is ``None`` (default), no chart is displayed.
             The sequence can be a ``list``, ``set``, or anything supported by
             ``st.dataframe``. If the sequence is dataframe-like, the first
             column will be used. Each value will be cast to ``float`` internally
             by default.
+
+        chart_type : "line", "bar", or "area"
+            The type of sparkline chart to display. Defaults to line chart.
 
         Examples
         --------
@@ -248,19 +253,21 @@ class MetricMixin:
             label_visibility
         )
 
-        if sparkline is not None:
-            prepared_sparkline: list[float] = []
-            for val in convert_anything_to_list(sparkline):
+        if chart_data is not None:
+            prepared_data: list[float] = []
+            for val in convert_anything_to_list(chart_data):
                 try:
-                    prepared_sparkline.append(float(val))
+                    prepared_data.append(float(val))
                 except Exception as ex:  # noqa: PERF203
                     raise StreamlitAPIException(
-                        "Only numeric values are supported for sparkline sequence. The "
+                        "Only numeric values are supported for chart data sequence. The "
                         f"value '{val}' is of type {type(val)} and  "
                         "cannot be converted to float."
                     ) from ex
-            if len(prepared_sparkline) > 0:
-                metric_proto.sparkline.extend(prepared_sparkline)
+            if len(prepared_data) > 0:
+                metric_proto.chart_data.extend(prepared_data)
+
+        metric_proto.chart_type = _parse_chart_type(chart_type)
 
         validate_height(height, allow_content=True)
         validate_width(width, allow_content=True)
@@ -271,6 +278,17 @@ class MetricMixin:
     @property
     def dg(self) -> DeltaGenerator:
         return cast("DeltaGenerator", self)
+
+
+def _parse_chart_type(
+    chart_type: Literal["line", "bar", "area"],
+) -> MetricProto.ChartType.ValueType:
+    if chart_type == "bar":
+        return MetricProto.ChartType.BAR
+    if chart_type == "area":
+        return MetricProto.ChartType.AREA
+    # Use line as default chart:
+    return MetricProto.ChartType.LINE
 
 
 def _parse_label(label: str) -> str:

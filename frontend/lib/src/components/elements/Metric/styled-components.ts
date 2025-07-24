@@ -47,7 +47,7 @@ export const StyledMetricContent = styled.div<{ showBorder: boolean }>(
   })
 )
 
-export const StyledMetricSparkline = styled.div<{ showBorder: boolean }>(
+export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
   ({ theme, showBorder }) => ({
     marginTop: showBorder ? undefined : theme.spacing.lg,
     marginBottom: showBorder ? theme.spacing.twoXL : undefined,

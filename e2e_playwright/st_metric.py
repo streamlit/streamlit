@@ -38,20 +38,42 @@ with col1:
         "User",
         8231,
         123,
-        sparkline=generate_sparkline_data(),
+        chart_data=generate_sparkline_data(),
+        chart_type="line",
         border=True,
         delta_color="off",
     )
-    st.metric("Bugs", 200, -99, sparkline=generate_sparkline_data(), border=True)
+    st.metric(
+        "Bugs",
+        200,
+        -99,
+        chart_data=generate_sparkline_data(),
+        chart_type="bar",
+        border=True,
+    )
 with col2:
-    st.metric("Views", 19321, 1053, sparkline=generate_sparkline_data(), border=True)
-    st.metric("Patches", 7, 0, sparkline=generate_sparkline_data(), border=True)
+    st.metric(
+        "Views",
+        19321,
+        1053,
+        chart_data=generate_sparkline_data(),
+        chart_type="area",
+        border=True,
+    )
+    st.metric(
+        "Patches",
+        7,
+        0,
+        chart_data=generate_sparkline_data(),
+        chart_type="line",
+        border=True,
+    )
 with col3:
     st.container(border=True).metric(
-        "Apps", 452, 0, sparkline=generate_sparkline_data()
+        "Apps", 452, 0, chart_data=generate_sparkline_data(), chart_type="bar"
     )
     st.container(border=True).metric(
-        "Sign-ups", 132, 12, sparkline=generate_sparkline_data()
+        "Sign-ups", 132, 12, chart_data=generate_sparkline_data(), chart_type="area"
     )
 
 st.metric("Test 9", -4.56, 1.23, help="Test help with code `select * from table`")

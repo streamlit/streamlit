@@ -40,11 +40,11 @@ import {
 
 import {
   getMetricColor,
+  StyledMetricChart,
   StyledMetricContainer,
   StyledMetricContent,
   StyledMetricDeltaText,
   StyledMetricLabelText,
-  StyledMetricSparkline,
   StyledMetricValueText,
   StyledTruncateText,
 } from "./styled-components"
@@ -53,49 +53,52 @@ export interface MetricProps {
   element: MetricProto
 }
 
-function getSparklineSpec(
-  sparkline: number[],
+function getMetricChartSpec(
+  chartData: number[],
+  chartType: MetricProto.ChartType,
   availableWidth: number,
   theme: EmotionTheme,
   metricColor: MetricProto.MetricColor
 ): TopLevelSpec {
   const randomId = Math.random().toString(36).slice(2, 10)
-  const baseName = `sparkline_${randomId}`
+  const baseName = `metric_chart_${randomId}`
 
   // Special handling for single value - duplicate it to create a line
-  const sparklineData =
-    sparkline.length === 1 ? [sparkline[0], sparkline[0]] : sparkline
+  const data =
+    chartData.length === 1 ? [chartData[0], chartData[0]] : chartData
 
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: availableWidth,
-    // height: Math.round(convertRemToPx("4.5rem")),
-    height: Math.round(convertRemToPx("3rem")),
+    width: Math.round(availableWidth), // Ensure positive integer width
+    height: Math.round(convertRemToPx("3.5rem")),
     data: {
-      values: sparklineData.map((value, index) => ({ x: index, y: value })),
+      values: data.map((value, index) => ({ x: index, y: value })),
     },
     layer: [
       {
-        name: `${baseName}_line`,
-        // mark: {
-        //   type: "bar",
-
-        //   // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-        //   cornerRadius: 10,
-        //   // binSpacing: 1000,
-        //   // strokeWidth: 2,
-        // },
+        name: `${baseName}_mark`,
         mark: {
-          type: "area",
-          opacity: 0.2,
-          strokeCap: "round",
-          line: { color: getMetricColor(theme, metricColor) },
+          type: "line",
+          ...(chartType === MetricProto.ChartType.LINE && {
+            type: "line",
+            strokeCap: "round",
+            strokeWidth: 2,
+          }),
+          ...(chartType === MetricProto.ChartType.BAR && {
+            type: "bar",
+            // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+            cornerRadius: 9999,
+          }),
+          ...(chartType === MetricProto.ChartType.AREA && {
+            type: "area",
+            opacity: 0.2,
+            line: {
+              color: getMetricColor(theme, metricColor),
+              strokeWidth: 2,
+              strokeCap: "round",
+            },
+          }),
         },
-        // mark: {
-        //   type: "line",
-        //   strokeCap: "round",
-        //   strokeWidth: 2,
-        // },
         encoding: {
           x: {
             field: "x",
@@ -207,8 +210,10 @@ function getSparklineSpec(
     ],
     config: {
       view: { stroke: null },
-      padding: { left: -3, right: -3, top: 0, bottom: -3 },
-      // padding: { left: 0, right: 0, top: 2, bottom: 2 },
+      padding: { left: -3, right: -3, top: 2, bottom: 2 },
+      ...(chartType === MetricProto.ChartType.BAR && {
+        padding: { left: 0, right: 0, top: 2, bottom: 2 },
+      }),
       mark: {
         tooltip: { content: "encoding" },
         color: getMetricColor(theme, metricColor),
@@ -225,8 +230,8 @@ function getSparklineSpec(
 
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
-  const sparklineRef = useRef<HTMLDivElement>(null)
-  const [sparklineWidth, sparklineContainerRef] = useCalculatedWidth()
+  const chartRef = useRef<HTMLDivElement>(null)
+  const [chartWidth, chartContainerRef] = useCalculatedWidth()
 
   const { MetricDirection } = MetricProto
   const {
@@ -238,7 +243,8 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     labelVisibility,
     help,
     showBorder,
-    sparkline,
+    chartData,
+    chartType,
   } = element
 
   let metricDirection: EmotionIcon | null = null
@@ -256,10 +262,21 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const deltaExists = delta !== ""
 
   useEffect(() => {
-    if (sparkline && sparklineRef.current) {
-      const spec = getSparklineSpec(sparkline, sparklineWidth, theme, color)
+    if (
+      chartData &&
+      chartData.length > 0 &&
+      chartRef.current &&
+      chartWidth > 0 // Ensure positive width
+    ) {
+      const spec = getMetricChartSpec(
+        chartData,
+        chartType,
+        chartWidth,
+        theme,
+        color
+      )
 
-      void embed(sparklineRef.current, spec, {
+      void embed(chartRef.current, spec, {
         actions: false,
         renderer: "svg",
         ast: true,
@@ -272,7 +289,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         },
       })
     }
-  }, [sparkline, color, theme, sparklineWidth, sparklineRef])
+  }, [chartData, color, theme, chartWidth, chartType, chartRef])
 
   return (
     <StyledMetricContainer
@@ -318,12 +335,12 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           </StyledMetricDeltaText>
         )}
       </StyledMetricContent>
-      {sparkline && sparkline.length > 0 && (
-        <div ref={sparklineContainerRef}>
+      {chartData && chartData.length > 0 && (
+        <div ref={chartContainerRef}>
           <Global styles={StyledVegaLiteChartTooltips} />
-          <StyledMetricSparkline
-            ref={sparklineRef}
-            data-testid="stMetricSparkline"
+          <StyledMetricChart
+            ref={chartRef}
+            data-testid="stMetricChart"
             showBorder={showBorder}
           />
         </div>
