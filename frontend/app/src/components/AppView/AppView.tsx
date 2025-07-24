@@ -207,8 +207,7 @@ function AppView(props: AppViewProps): ReactElement {
     />
   )
 
-  // Initialize sidebar state with user preference or fallback to initial config
-  const getInitialSidebarCollapsed = useCallback((): boolean => {
+  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() => {
     const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
     if (savedSidebarState !== null) {
       // User has adjusted the sidebar, respect it
@@ -221,16 +220,7 @@ function AppView(props: AppViewProps): ReactElement {
       parseInt(activeTheme.emotion.breakpoints.md, 10),
       innerWidth
     )
-  }, [
-    pageLinkBaseUrl,
-    initialSidebarState,
-    activeTheme.emotion.breakpoints.md,
-    innerWidth,
-  ])
-
-  const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() =>
-    getInitialSidebarCollapsed()
-  )
+  })
 
   useExecuteWhenChanged(() => {
     if (innerWidth > 0 && showSidebar) {
