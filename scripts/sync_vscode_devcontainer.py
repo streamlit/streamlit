@@ -304,7 +304,7 @@ class DevcontainerSync:
 
         print("✅ Synchronization complete!")
         print(
-            f"   - Synced {len(extensions_list)} extensions (excluded {excluded_count} dev-only extensions)"
+            f"   - Synced {len(extensions_list)} extensions (excluded {excluded_count} non-devcontainer extensions)"
         )
         print(f"   - Synced {len(vscode_settings)} settings")
         return True
