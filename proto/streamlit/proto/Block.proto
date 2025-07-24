@@ -45,7 +45,7 @@ message Block {
 
   message Vertical {
     bool border = 1;
-    // DEPRECATED: We use height_config on the top-level which is shared
+    // DEPRECATED: We use height_config on the top-level which is shared.
     // with other Block types.
     uint32 height = 2 [deprecated = true];
   }
@@ -119,7 +119,8 @@ message Block {
 
   message Popover {
     string label = 1;
-    bool use_container_width = 2;
+    // DEPRECATED: We use widthConfig on the top-level which is shared.
+    bool use_container_width = 2 [deprecated = true];
     string help = 3;
     bool disabled = 4;
     string icon = 5;
