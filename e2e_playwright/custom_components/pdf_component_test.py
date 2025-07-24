@@ -249,8 +249,26 @@ def test_st_pdf_error_handling(app: Page, assert_snapshot: ImageCompareFunction)
     iframe = app.locator("iframe").first
     expect(iframe).to_be_visible()
 
-    # Give it time to render the error state
-    app.wait_for_timeout(1000)
+    # Wait for the error state to render using wait_until instead of timeout
+    wait_until(
+        app,
+        lambda: iframe.evaluate(
+            """
+            (iframe) => {
+                try {
+                    // Check if error state has rendered by ensuring the iframe has content
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    return doc && doc.body && doc.body.children.length > 0;
+                } catch (e) {
+                    // If we can't access the iframe content, assume it's still loading
+                    return false;
+                }
+            }
+            """,
+            iframe,
+        ),
+        timeout=3000,
+    )
 
     # Capture both the warning and the PDF component
     main_area = app.get_by_test_id("stMain")
