@@ -72,11 +72,14 @@ export const StyledMembersTable = styled.table(({ theme }) => ({
   backgroundColor: theme.colors.bgMix,
   tableLayout: "fixed", // Fix table to container's boundaries.
   borderCollapse: "collapse",
+  // Add rounded corners to the bottom of the table to match container
+  borderBottomLeftRadius: theme.radii.default,
+  borderBottomRightRadius: theme.radii.default,
 }))
 
 export const StyledMembersRow = styled.tr(({ theme }) => ({
-  "&:not(:last-child)": {
-    borderBottom: `${theme.sizes.borderWidth} dotted ${theme.colors.borderColor}`,
+  "&:not(:last-child) td": {
+    borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   },
 }))
 
