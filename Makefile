@@ -288,11 +288,6 @@ update-snapshots-changed:
 update-material-icons:
 	python ./scripts/update_material_icon_font_and_names.py
 
-.PHONY: sync-vscode-devcontainer
-# Sync VSCode settings and extensions with devcontainer configuration and format with prettier.
-sync-vscode-devcontainer:
-	python ./scripts/sync_vscode_devcontainer.py
-
 .PHONY: update-notices
 # Update the notices file (licenses of frontend assets and dependencies).
 update-notices:
