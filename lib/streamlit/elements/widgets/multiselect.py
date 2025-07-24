@@ -16,7 +16,16 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
@@ -51,7 +60,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.type_util import (
-    T,
     is_iterable,
 )
 
@@ -65,6 +73,8 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+
+T = TypeVar("T")
 
 
 class MultiSelectSerde(Generic[T]):

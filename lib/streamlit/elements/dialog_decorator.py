@@ -28,6 +28,7 @@ from streamlit.deprecation_util import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.dialog import DialogWidth
@@ -57,7 +58,7 @@ def _assert_no_nested_dialogs() -> None:
         raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
 
 
-F = TypeVar("F", bound=Callable[..., None])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def _dialog_decorator(
@@ -104,7 +105,7 @@ def _dialog_decorator(
         fragmented_dialog_content = cast(
             "Callable[[], None]",
             _fragment(
-                dialog_content, additional_hash_info=non_optional_func.__qualname__
+                dialog_content, additional_hash_info=get_object_name(non_optional_func)
             ),
         )
 
@@ -248,9 +249,11 @@ def dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
-            title: str = func_or_title
             return _dialog_decorator(
-                non_optional_func=f, title=title, width=width, dismissible=dismissible
+                non_optional_func=f,
+                title=func_or_title,
+                width=width,
+                dismissible=dismissible,
             )
 
         return wrapper
@@ -285,10 +288,9 @@ def experimental_dialog_decorator(
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
-            title: str = func_or_title
             return _dialog_decorator(
                 non_optional_func=f,
-                title=title,
+                title=func_or_title,
                 width=width,
                 should_show_deprecation_warning=True,
             )

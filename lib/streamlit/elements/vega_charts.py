@@ -93,7 +93,7 @@ _CHANNELS: Final = {
     "column",
 }
 
-VegaLiteSpec: TypeAlias = "dict[str, Any]"
+VegaLiteSpec: TypeAlias = dict[str, Any]
 AltairChart: TypeAlias = Union[
     "alt.Chart",
     "alt.ConcatChart",

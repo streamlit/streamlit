@@ -264,7 +264,10 @@ class AppTest:
         """
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
-        module = source + f"\n{script.__name__}(*__args, **__kwargs)"
+        module = (
+            source
+            + f"\n{script.__name__ if hasattr(script, '__name__') else 'script'}(*__args, **__kwargs)"
+        )
         return cls._from_string(
             module, default_timeout=default_timeout, args=args, kwargs=kwargs
         )

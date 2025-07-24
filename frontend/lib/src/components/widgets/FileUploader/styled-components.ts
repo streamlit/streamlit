@@ -32,13 +32,14 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     border: theme.colors.widgetBorderColor
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
+    height: theme.sizes.largestElementHeight,
     ":focus": {
       outline: "none",
     },
     ":focus-visible": {
       boxShadow: `0 0 0 1px ${theme.colors.primary}`,
     },
-    color: isDisabled ? theme.colors.gray : theme.colors.bodyText,
+    cursor: isDisabled ? "not-allowed" : "pointer",
   })
 )
 
@@ -55,11 +56,18 @@ export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
   })
 )
 
-export const StyledFileDropzoneInstructionsStyledSpan = styled.span(
-  ({ theme }) => ({
-    marginBottom: theme.spacing.twoXS,
-  })
-)
+export const StyledFileDropzoneInstructionsText = styled.span<{
+  disabled?: boolean
+}>(({ theme, disabled }) => ({
+  color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+}))
+
+export const StyledFileDropzoneInstructionsSubtext = styled.span<{
+  disabled?: boolean
+}>(({ theme, disabled }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+}))
 
 export const StyledFileDropzoneInstructionsColumn = styled.div({
   display: "flex",
@@ -136,14 +144,19 @@ const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
+    height: "auto",
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructions as any]: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructionsFileUploaderIcon as any]: {
     display: "none",
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileDropzoneInstructionsText as any]: {
+    marginBottom: theme.spacing.twoXS,
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFiles as any]: {

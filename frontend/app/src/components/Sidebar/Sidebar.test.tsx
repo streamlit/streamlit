@@ -126,6 +126,7 @@ const SAMPLE_PAGES_WITH_URLS = [
 
 describe("Sidebar Component", () => {
   beforeEach(() => {
+    window.localStorage.clear()
     mockAppContext({})
   })
 
@@ -398,6 +399,28 @@ describe("Sidebar Component", () => {
         "onerror triggered",
         LOGO_IMAGE_URL
       )
+    })
+  })
+
+  describe("Width Persistence", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    it("should initialize with default width when no localStorage value exists", () => {
+      renderSidebar({})
+
+      const sidebar = screen.getByTestId("stSidebar")
+      expect(sidebar).toHaveStyle("width: 256px")
+    })
+
+    it("should initialize with saved width when localStorage value exists", () => {
+      window.localStorage.setItem("sidebarWidth", "320")
+
+      renderSidebar({})
+
+      const sidebar = screen.getByTestId("stSidebar")
+      expect(sidebar).toHaveStyle("width: 320px")
     })
   })
 })

@@ -22,6 +22,7 @@ from typing_extensions import TypeAlias
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
     Height,
+    Width,
     WidthWithoutContent,
     get_height_config,
     get_width_config,
@@ -703,7 +704,8 @@ class LayoutsMixin:
         help: str | None = None,
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
         r"""Insert a popover container.
 
@@ -771,17 +773,36 @@ class LayoutsMixin:
             ``True``. The default is ``False``.
 
         use_container_width : bool
-            Whether to expand the button's width to fill its parent container.
-            If ``use_container_width`` is ``False`` (default), Streamlit sizes
-            the button to fit its contents. If ``use_container_width`` is
-            ``True``, the width of the button matches its parent container.
+                Whether to expand the button's width to fill its parent container.
+                If ``use_container_width`` is ``False`` (default), Streamlit sizes
+                the button to fit its contents. If ``use_container_width`` is
+                ``True``, the width of the button matches its parent container.
+                In both cases, if the contents of the button are wider than the
+                parent container, the contents will line wrap.
+                The popover container's minimum width matches the width of its
+                button. The popover container may be wider than its button to fit
+                the container's contents.
 
-            In both cases, if the contents of the button are wider than the
-            parent container, the contents will line wrap.
+        width : int, "stretch", or "content"
+            An optional width for the popover button. This can be one of the
+            following:
 
-            The popover containter's minimimun width matches the width of its
+            - An integer which corresponds to the desired button width in
+              pixels.
+            - ``"stretch"``: The button's width expands to fill its parent
+              container.
+            - ``"content"`` (default): The button's width is set to fit its
+              contents.
+
+            The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
+
+        .. deprecated::
+            ``use_container_width`` will be removed in a future version. Please use
+            the ``width`` parameter instead. For ``use_container_width=True``,
+            use ``width="stretch"``. For ``use_container_width=False``,
+            use ``width="content"``.
 
         Examples
         --------
@@ -820,9 +841,11 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for a popover")
 
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
+
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
-        popover_proto.use_container_width = use_container_width
         popover_proto.disabled = disabled
         if help:
             popover_proto.help = str(help)
@@ -832,6 +855,9 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.popover.CopyFrom(popover_proto)
+
+        validate_width(width, allow_content=True)
+        block_proto.width_config.CopyFrom(get_width_config(width))
 
         return self.dg._block(block_proto=block_proto)
 

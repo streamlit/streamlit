@@ -19,21 +19,24 @@ import { Spinner } from "baseui/spinner"
 
 export const StyledAudioInputContainerDiv = styled.div()
 
-export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
-  height: theme.sizes.largestElementHeight,
-  width: "100%",
-  background: theme.colors.secondaryBg,
-  borderRadius: theme.radii.default,
-  marginBottom: theme.spacing.twoXS,
-  display: "flex",
-  alignItems: "center",
-  position: "relative",
-  paddingLeft: theme.spacing.xs,
-  paddingRight: theme.spacing.sm,
-  border: theme.colors.widgetBorderColor
-    ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
-    : undefined,
-}))
+export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
+  ({ theme, disabled }) => ({
+    height: theme.sizes.largestElementHeight,
+    width: "100%",
+    background: theme.colors.secondaryBg,
+    borderRadius: theme.radii.default,
+    marginBottom: theme.spacing.twoXS,
+    display: "flex",
+    alignItems: "center",
+    position: "relative",
+    paddingLeft: theme.spacing.xs,
+    paddingRight: theme.spacing.sm,
+    border: theme.colors.widgetBorderColor
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
+      : undefined,
+    cursor: disabled ? "not-allowed" : "auto",
+  })
+)
 
 export const StyledWaveformInnerDiv = styled.div({
   flex: 1,
@@ -47,12 +50,15 @@ export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
 
 export const StyledWaveformTimeCode = styled.span<{
   isPlayingOrRecording: boolean
-}>(({ theme, isPlayingOrRecording }) => ({
+  disabled?: boolean
+}>(({ theme, isPlayingOrRecording, disabled }) => ({
   margin: theme.spacing.sm,
   fontFamily: theme.fonts.monospace,
-  color: isPlayingOrRecording
-    ? theme.colors.bodyText
-    : theme.colors.fadedText60,
+  color: disabled
+    ? theme.colors.fadedText40
+    : isPlayingOrRecording
+      ? theme.colors.bodyText
+      : theme.colors.fadedText60,
   backgroundColor: theme.colors.secondaryBg,
   fontSize: theme.fontSizes.sm,
 }))

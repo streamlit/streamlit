@@ -56,7 +56,7 @@ os.environ["MPLBACKEND"] = "Agg"
 
 
 def _command_to_string(command: str | list[str]) -> str:
-    return " ".join(command) if isinstance(command, list) else command
+    return " ".join(command) if isinstance(command, list) else str(command)
 
 
 def _get_filenames(folders: list[str]) -> list[str]:
