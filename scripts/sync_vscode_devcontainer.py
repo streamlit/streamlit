@@ -258,13 +258,8 @@ class DevcontainerSync:
             print(f"❌ Error checking sync status: {e}")
             return False
 
-    def sync_configurations(self, format_with_prettier: bool = True) -> bool:
+    def sync_configurations(self) -> bool:
         """Sync VSCode settings and extensions with devcontainer configuration.
-
-        Parameters
-        ----------
-        format_with_prettier : bool, default True
-            If True, format JSON files with prettier after syncing
 
         Returns
         -------
@@ -294,15 +289,14 @@ class DevcontainerSync:
         print("Saving updated devcontainer configuration...")
         self._save_json_file(self.devcontainer_path, devcontainer_config)
 
-        # Format with prettier if requested
-        if format_with_prettier:
-            self._format_with_prettier(
-                [
-                    self.vscode_settings_path,
-                    self.vscode_extensions_path,
-                    self.devcontainer_path,
-                ]
-            )
+        # Format with prettier
+        self._format_with_prettier(
+            [
+                self.vscode_settings_path,
+                self.vscode_extensions_path,
+                self.devcontainer_path,
+            ]
+        )
 
         # Print summary
         original_count = len(vscode_extensions["recommendations"])
@@ -322,7 +316,7 @@ def _parse_arguments() -> argparse.Namespace:
     Returns
     -------
     argparse.Namespace
-        Parsed command line arguments containing check and no_prettier flags
+        Parsed command line arguments containing check flag
     """
     parser = argparse.ArgumentParser(
         description="Sync VSCode settings and extensions with devcontainer configuration"
@@ -331,11 +325,6 @@ def _parse_arguments() -> argparse.Namespace:
         "--check",
         action="store_true",
         help="Check if files are in sync without modifying them (useful for pre-commit hooks)",
-    )
-    parser.add_argument(
-        "--no-prettier",
-        action="store_true",
-        help="Skip formatting JSON files with prettier",
     )
     return parser.parse_args()
 
@@ -354,7 +343,7 @@ def main() -> None:
         success = syncer.check_sync_status()
     else:
         print("🔄 Syncing VSCode configuration with devcontainer...")
-        success = syncer.sync_configurations(format_with_prettier=not args.no_prettier)
+        success = syncer.sync_configurations()
 
     sys.exit(0 if success else 1)
 
