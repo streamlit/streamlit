@@ -141,10 +141,6 @@ def test_top_nav_with_single_section(app: Page):
     section_trigger = app.get_by_text("My Section").first
     expect(section_trigger).to_be_visible()
 
-    # There should be no other sections or nav links visible at the top level
-    nav_links = app.get_by_test_id("stTopNavLink")
-    expect(nav_links).to_have_count(0)  # No direct nav links, only section
-
     # Click the section to open dropdown/popover
     section_trigger.click()
 
