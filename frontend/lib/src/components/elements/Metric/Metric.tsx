@@ -53,7 +53,7 @@ export interface MetricProps {
   element: MetricProto
 }
 
-function getMetricChartSpec(
+export function getMetricChartSpec(
   chartData: number[],
   chartType: MetricProto.ChartType,
   availableWidth: number,
