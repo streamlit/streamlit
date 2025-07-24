@@ -26,17 +26,22 @@ from typing import Any, cast
 def load_json_file(file_path: str) -> dict[str, Any]:
     """Load and parse a JSON file.
 
-    Args:
-        file_path: Path to the JSON file
+    Parameters
+    ----------
+    file_path : str
+        Path to the JSON file
 
     Returns
     -------
+    dict[str, Any]
         Parsed JSON content as dictionary
 
     Raises
     ------
-        FileNotFoundError: If the file doesn't exist
-        json.JSONDecodeError: If the file contains invalid JSON
+    FileNotFoundError
+        If the file doesn't exist
+    json.JSONDecodeError
+        If the file contains invalid JSON
     """
     try:
         with open(file_path, encoding="utf-8") as f:
@@ -52,9 +57,12 @@ def load_json_file(file_path: str) -> dict[str, Any]:
 def save_json_file(file_path: str, data: dict[str, Any]) -> None:
     """Save data to a JSON file with proper formatting.
 
-    Args:
-        file_path: Path to save the JSON file
-        data: Data to save
+    Parameters
+    ----------
+    file_path : str
+        Path to save the JSON file
+    data : dict[str, Any]
+        Data to save
     """
     try:
         with open(file_path, "w", encoding="utf-8") as f:
@@ -69,9 +77,12 @@ def save_json_file(file_path: str, data: dict[str, Any]) -> None:
 def format_json_files_with_prettier(repo_root: str, file_paths: list[str]) -> None:
     """Format JSON files using prettier.
 
-    Args:
-        repo_root: Repository root directory
-        file_paths: List of file paths to format
+    Parameters
+    ----------
+    repo_root : str
+        Repository root directory
+    file_paths : list[str]
+        List of file paths to format
     """
     if not file_paths:
         return
@@ -120,8 +131,18 @@ def check_files_in_sync(
 ) -> bool:
     """Check if the files are in sync without modifying them.
 
+    Parameters
+    ----------
+    vscode_settings_path : str
+        Path to the VSCode settings.json file
+    vscode_extensions_path : str
+        Path to the VSCode extensions.json file
+    devcontainer_path : str
+        Path to the devcontainer.json file
+
     Returns
     -------
+    bool
         True if files are in sync, False otherwise
     """
     try:
@@ -173,14 +194,20 @@ def sync_vscode_devcontainer(
 ) -> bool:
     """Sync VSCode settings and extensions with devcontainer configuration.
 
-    Args:
-        check_only: If True, only check if files are in sync without modifying them
-        format_with_prettier: If True, format JSON files with prettier after syncing
+    Parameters
+    ----------
+    check_only : bool, default False
+        If True, only check if files are in sync without modifying them
+    format_with_prettier : bool, default True
+        If True, format JSON files with prettier after syncing
 
     Returns
     -------
+    bool
         True if sync was successful or files are already in sync, False otherwise
 
+    Notes
+    -----
     This function:
     1. Reads .vscode/settings.json (source of truth for settings)
     2. Reads .vscode/extensions.json (source of truth for extensions)
