@@ -69,6 +69,7 @@ function getSparklineSpec(
   const spec: TopLevelSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: availableWidth,
+    // height: Math.round(convertRemToPx("4.5rem")),
     height: Math.round(convertRemToPx("3rem")),
     data: {
       values: sparklineData.map((value, index) => ({ x: index, y: value })),
@@ -77,15 +78,24 @@ function getSparklineSpec(
       {
         name: `${baseName}_line`,
         // mark: {
-        //   type: "area",
-        //   opacity: 0.2,
-        //   line: { color: getMetricColor(theme, metricColor) },
+        //   type: "bar",
+
+        //   // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+        //   cornerRadius: 10,
+        //   // binSpacing: 1000,
+        //   // strokeWidth: 2,
         // },
         mark: {
-          type: "line",
+          type: "area",
+          opacity: 0.2,
           strokeCap: "round",
-          strokeWidth: 2,
+          line: { color: getMetricColor(theme, metricColor) },
         },
+        // mark: {
+        //   type: "line",
+        //   strokeCap: "round",
+        //   strokeWidth: 2,
+        // },
         encoding: {
           x: {
             field: "x",
@@ -197,7 +207,8 @@ function getSparklineSpec(
     ],
     config: {
       view: { stroke: null },
-      padding: { left: 0, right: 0, top: 2, bottom: 2 },
+      padding: { left: -3, right: -3, top: 0, bottom: -3 },
+      // padding: { left: 0, right: 0, top: 2, bottom: 2 },
       mark: {
         tooltip: { content: "encoding" },
         color: getMetricColor(theme, metricColor),
