@@ -18,7 +18,7 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 
 
 def _select_pdf_scenario(app: Page, scenario: str):
@@ -35,6 +35,63 @@ def _expect_iframe_attached(app: Page):
     expect(app.locator("iframe").first).to_be_attached()
 
 
+def _wait_for_pdf_to_load(app: Page, timeout: int = 7000):
+    """Wait for PDF content to finish loading inside the iframe.
+
+    This function waits for the PDF viewer to finish loading by checking
+    that the "Loading PDF..." text is no longer present in the iframe content.
+
+    Parameters
+    ----------
+    app : Page
+        The page containing the PDF component
+    timeout : int
+        Maximum time to wait in milliseconds
+    """
+    iframe = app.locator("iframe").first
+
+    # First ensure the iframe is attached and visible
+    expect(iframe).to_be_attached()
+    expect(iframe).to_be_visible()
+
+    # Then wait for the PDF content to load by checking that loading text is gone
+    wait_until(
+        app,
+        lambda: iframe.evaluate(
+            """
+            (iframe) => {
+                try {
+                    // Check if the iframe content has loaded and doesn't contain loading text
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (!doc) return false;
+
+                    // Look for loading indicators - if none found, PDF is likely loaded
+                    const bodyText = doc.body ? doc.body.textContent || '' : '';
+                    const hasLoadingText = bodyText.includes('Loading PDF') ||
+                                         bodyText.includes('Loading...') ||
+                                         bodyText.includes('loading');
+
+                    // Also check if the document has meaningful content beyond just loading text
+                    const hasContent = doc.body && doc.body.children.length > 0;
+
+                    return hasContent && !hasLoadingText;
+                } catch (e) {
+                    // If we can't access iframe content (CORS), assume it's loading external content
+                    // In this case, we'll use a timeout-based approach
+                    return false;
+                }
+            }
+            """,
+            iframe,
+        )
+        is True,
+        timeout=timeout,
+    )
+
+    # Add a small additional delay to ensure PDF is fully rendered
+    app.wait_for_timeout(1000)
+
+
 def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunction):
     """Test basic st.pdf component functionality with snapshot."""
     _select_pdf_scenario(app, "basic")
@@ -45,8 +102,8 @@ def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunc
     expect(iframe).to_have_attribute("src", re.compile(r".*"))
     expect(iframe).to_have_attribute("height", "400")
 
-    # Wait for iframe to be fully loaded and take snapshot
-    expect(iframe).to_be_visible()
+    # Wait for PDF to be fully loaded before taking snapshot
+    _wait_for_pdf_to_load(app)
     assert_snapshot(iframe, name="st_pdf-basic_functionality")
 
 
@@ -74,9 +131,8 @@ def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
 
     _expect_iframe_attached(app)
 
-    # Wait for components to stabilize and take snapshot
-    iframe = app.locator("iframe").first
-    expect(iframe).to_be_visible()
+    # Wait for PDF to be fully loaded
+    _wait_for_pdf_to_load(app)
 
     # Capture the slider and PDF together
     main_area = app.get_by_test_id("stMain")
@@ -95,9 +151,8 @@ def test_st_pdf_base64_encoding(app: Page, assert_snapshot: ImageCompareFunction
 
     _expect_iframe_attached(app)
 
-    # Wait for all elements to be stable
-    iframe = app.locator("iframe").first
-    expect(iframe).to_be_visible()
+    # Wait for PDF to be fully loaded
+    _wait_for_pdf_to_load(app)
 
     # Take snapshot of the entire scenario including info text, code block, and PDF
     main_area = app.get_by_test_id("stMain")
@@ -109,9 +164,10 @@ def test_st_pdf_bytes_io(app: Page, assert_snapshot: ImageCompareFunction):
     _select_pdf_scenario(app, "bytesIO")
     _expect_iframe_attached(app)
 
-    # Wait for iframe to be visible and take snapshot
+    # Wait for PDF to be fully loaded before taking snapshot
+    _wait_for_pdf_to_load(app)
+
     iframe = app.locator("iframe").first
-    expect(iframe).to_be_visible()
     assert_snapshot(iframe, name="st_pdf-bytes_io")
 
 
@@ -127,9 +183,13 @@ def test_st_pdf_error_handling(app: Page, assert_snapshot: ImageCompareFunction)
     # Even with invalid data, the component should still render an iframe
     _expect_iframe_attached(app)
 
-    # Wait for elements to stabilize
+    # For error cases, we still need to wait for the component to finish loading
+    # even if it shows an error state
     iframe = app.locator("iframe").first
     expect(iframe).to_be_visible()
+
+    # Give it time to render the error state
+    app.wait_for_timeout(1000)
 
     # Capture both the warning and the PDF component
     main_area = app.get_by_test_id("stMain")
@@ -159,6 +219,9 @@ def test_st_pdf_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
     expect(iframes.first).to_be_visible()
     expect(iframes.last).to_be_visible()
 
+    # Wait for both PDFs to load
+    _wait_for_pdf_to_load(app)
+
     # Take snapshot of the columns layout
     main_area = app.get_by_test_id("stMain")
     assert_snapshot(main_area, name="st_pdf-in_columns")
@@ -179,9 +242,8 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
 
     _expect_iframe_attached(app)
 
-    # Wait for all interactive elements to be stable
-    iframe = app.locator("iframe").first
-    expect(iframe).to_be_visible()
+    # Wait for PDF to be fully loaded
+    _wait_for_pdf_to_load(app)
 
     # Take snapshot of initial state
     main_area = app.get_by_test_id("stMain")
@@ -194,8 +256,10 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
     # After reset, the PDF should still be visible
     _expect_iframe_attached(app)
 
+    # Wait for PDF to load again after reset
+    _wait_for_pdf_to_load(app)
+
     # Take snapshot after reset to verify state
-    expect(iframe).to_be_visible()
     assert_snapshot(main_area, name="st_pdf-interactive_after_reset")
 
 
@@ -263,8 +327,9 @@ def test_st_pdf_different_heights_snapshots(
 
     # Wait for initial PDF to load
     _expect_iframe_attached(app)
+    _wait_for_pdf_to_load(app)
+
     iframe = app.locator("iframe").first
-    expect(iframe).to_be_visible()
 
     # Take snapshot at default height (500px)
     assert_snapshot(iframe, name="st_pdf-height_default")
@@ -279,7 +344,8 @@ def test_st_pdf_different_heights_snapshots(
         slider_element.press("ArrowLeft")
     wait_for_app_run(app)
 
-    expect(iframe).to_be_visible()
+    # Wait for PDF to adjust to new height and fully load
+    _wait_for_pdf_to_load(app)
     assert_snapshot(iframe, name="st_pdf-height_minimum")
 
     # Move slider to maximum by pressing Right arrow multiple times
@@ -287,5 +353,6 @@ def test_st_pdf_different_heights_snapshots(
         slider_element.press("ArrowRight")
     wait_for_app_run(app)
 
-    expect(iframe).to_be_visible()
+    # Wait for PDF to adjust to new height and fully load
+    _wait_for_pdf_to_load(app)
     assert_snapshot(iframe, name="st_pdf-height_maximum")
