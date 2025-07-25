@@ -140,10 +140,6 @@ class Dialog(DeltaGenerator):
         dialog._delta_path = delta_path
         dialog._current_proto = block_proto
 
-        dialog._is_dismiss_activated = is_dismiss_activated
-        dialog._on_dismiss_callback = on_dismiss if callable(on_dismiss) else None
-        dialog._element_id = element_id
-
         return dialog
 
     def __init__(
@@ -158,9 +154,6 @@ class Dialog(DeltaGenerator):
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._delta_path: list[int] | None = None
-        self._is_dismiss_activated: bool = False
-        self._on_dismiss_callback: WidgetCallback | None = None
-        self._element_id: str | None = None
 
     def _update(self, should_open: bool) -> None:
         """Send an updated proto message to indicate the open-status for the dialog."""
