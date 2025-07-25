@@ -26,6 +26,7 @@ from e2e_playwright.shared.app_utils import (
     expect_exception,
     expect_markdown,
     expect_no_exception,
+    expect_prefixed_markdown,
     get_button,
     get_markdown,
     is_child_bounding_box_inside_parent,
@@ -91,6 +92,14 @@ def open_dialog_with_long_title(app: Page):
 
 def open_non_dismissible_dialog(app: Page):
     click_button(app, "Open Non-dismissible Dialog")
+
+
+def open_on_dismiss_rerun_dialog(app: Page):
+    click_button(app, "Open on_dismiss=rerun Dialog")
+
+
+def open_on_dismiss_callback_dialog(app: Page):
+    click_button(app, "Open on_dismiss callback Dialog")
 
 
 def click_to_dismiss(app: Page):
@@ -573,3 +582,81 @@ def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):
 
     # Dialog should now be closed
     expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_on_dismiss_rerun(app: Page):
+    """Test that dismissing dialog with on_dismiss='rerun' triggers rerun."""
+    # Get initial rerun count for calculating expected values
+    initial_count = 1
+
+    # Open the rerun dialog
+    open_on_dismiss_rerun_dialog(app)
+    wait_for_app_run(app)
+
+    # Dialog should be visible
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+    expect(dialog).to_contain_text("This dialog triggers rerun on dismiss")
+
+    # Rerun count should have increased after opening dialog
+    expected_after_open = initial_count + 1
+    expect_prefixed_markdown(app, "Rerun count:", str(expected_after_open))
+
+    # Dismiss the dialog by pressing Escape
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Dialog should be closed
+    expect(dialog).not_to_be_attached()
+
+    # Rerun count should have increased after dismiss triggered rerun
+    expected_final = expected_after_open + 1
+    expect_prefixed_markdown(app, "Rerun count:", str(expected_final))
+
+
+def test_dialog_on_dismiss_callback(app: Page):
+    """Test that dismissing dialog with callback executes callback and triggers rerun."""
+    # Open the callback dialog
+    open_on_dismiss_callback_dialog(app)
+    wait_for_app_run(app)
+
+    # Dialog should be visible
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+    expect(dialog).to_contain_text("This dialog executes callback on dismiss")
+
+    # Callback should not be executed yet
+    expect(app.get_by_text("times!")).not_to_be_attached()
+
+    # Dismiss the dialog by pressing Escape
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    # Dialog should be closed
+    expect(dialog).not_to_be_attached()
+
+    # Callback should have been executed
+    expect_prefixed_markdown(app, "Callback executions:", "1")
+
+
+def test_dialog_multiple_dismissals_callback(app: Page):
+    """Test that multiple dismissals of callback dialog work correctly."""
+    # Open and dismiss callback dialog multiple times
+    for i in range(1, 4):  # Test 3 times
+        # Open the callback dialog
+        open_on_dismiss_callback_dialog(app)
+        wait_for_app_run(app)
+
+        # Dialog should be visible
+        dialog = app.get_by_test_id(modal_test_id)
+        expect(dialog).to_be_visible()
+
+        # Dismiss the dialog by pressing Escape
+        app.keyboard.press("Escape")
+        wait_for_app_run(app)
+
+        # Dialog should be closed
+        expect(dialog).not_to_be_attached()
+
+        # Check that callback was executed the correct number of times
+        expect_prefixed_markdown(app, "Callback executions:", str(i))
