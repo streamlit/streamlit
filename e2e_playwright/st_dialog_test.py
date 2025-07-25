@@ -110,7 +110,6 @@ def click_to_dismiss(app: Page):
 def test_displays_dialog_properly(app: Page):
     """Test that dialog is displayed properly."""
     open_dialog_with_images(app)
-    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
 
@@ -122,7 +121,6 @@ def test_displays_dialog_properly(app: Page):
 def _test_dialog_closes_properly(app: Page):
     """Test that dialog closes after clicking on action button."""
     open_dialog_with_images(app)
-    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
     close_button = main_dialog.get_by_test_id("stButton").locator("button").first
@@ -146,7 +144,6 @@ def test_dialog_open_and_close_performance(app: Page):
 def test_dialog_dismisses_properly(app: Page):
     """Test that dialog is dismissed properly after clicking on close (= dismiss)."""
     open_dialog_with_images(app)
-    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
 
@@ -162,7 +159,6 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
     # open and close the dialog multiple times
     for _ in range(10):
         open_dialog_without_images(app)
-        wait_for_app_run(app)
 
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
@@ -201,7 +197,6 @@ def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Pa
     """
 
     open_dialog_without_images(app)
-    wait_for_app_run(app)
 
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
@@ -222,7 +217,6 @@ def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Pa
 
     # reopen dialog
     open_dialog_without_images(app)
-    wait_for_app_run(app)
 
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
@@ -260,7 +254,7 @@ def test_actions_for_dialog_headings(app: Page):
     expect(main_dialog).to_have_count(1)
 
     # check that the actions-element is there
-    action_elements = app.get_by_test_id("stHeaderActionElements")
+    action_elements = main_dialog.get_by_test_id("stHeaderActionElements")
     expect(action_elements).to_have_count(1)
 
     # check that the tooltip icon is there and hoverable
@@ -275,7 +269,6 @@ def test_actions_for_dialog_headings(app: Page):
 
 def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
     open_dialog_without_images(app)
-    wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
@@ -291,7 +284,6 @@ def test_largewidth_dialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     open_largewidth_dialog(app)
-    wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
@@ -311,7 +303,6 @@ def test_dialog_shows_error_inline(app: Page, assert_snapshot: ImageCompareFunct
     script execution (not a fragment-only rerun) are rendered within the dialog.
     """
     open_dialog_with_internal_error(app)
-    wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the
     # screenshot stable. Then hover over the button for visual effect.
@@ -336,7 +327,6 @@ def test_sidebar_dialog_displays_correctly(
 def test_nested_dialogs(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
     open_nested_dialogs(app)
-    wait_for_app_run(app)
     expect_exception(
         app, "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
     )
@@ -348,7 +338,6 @@ def test_nested_dialogs(app: Page):
 def test_dialogs_have_different_fragment_ids(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
     open_submit_button_dialog(app)
-    wait_for_app_run(app)
     large_width_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
     dialog = app.get_by_role("dialog")
     submit_button = get_button(dialog, "Submit")
@@ -356,7 +345,6 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     wait_for_app_run(app)
 
     open_nested_dialogs(app)
-    wait_for_app_run(app)
     nested_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
     expect_exception(
         app, "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
@@ -389,9 +377,8 @@ def test_dialog_copy_buttons_work(app: Page):
     """
 
     open_dialog_with_copy_buttons(app)
-    wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stMarkdown")).to_have_text("")
+    expect_markdown(app, "")
 
     # click icon button
     json_element = app.get_by_test_id("stJson")
@@ -404,7 +391,7 @@ def test_dialog_copy_buttons_work(app: Page):
     app.keyboard.press("Enter")
 
     # we should see the pasted content written to the dialog
-    expect(app.get_by_test_id("stMarkdown")).to_have_text("[1,2,3]")
+    expect_markdown(app, "[1,2,3]")
 
 
 def test_experimental_dialog_deprecation_warning(app: Page):
@@ -422,7 +409,6 @@ def test_experimental_dialog_deprecation_warning(app: Page):
 
 def test_dialog_with_chart(app: Page):
     open_dialog_with_chart(app)
-    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
 
@@ -530,7 +516,6 @@ def test_dialog_with_long_title_displays_correctly(
 ):
     """Test that a dialog with a very long title displays correctly without overlapping the close button."""
     open_dialog_with_long_title(app)
-    wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     # Take a snapshot to verify the long title doesn't overlap with the close button
     assert_snapshot(dialog, name="st_dialog-with_long_title")
@@ -541,7 +526,6 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
     and cannot be dismissed by pressing ESC or by clicking outside the dialog.
     """
     open_non_dismissible_dialog(app)
-    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
 
@@ -573,7 +557,6 @@ def test_non_dismissible_dialog_displays_cannot_be_dismissed(app: Page):
 def test_non_dismissible_dialog_can_be_closed_programmatically(app: Page):
     """Test that non-dismissible dialogs can still be closed by action buttons calling st.rerun()."""
     open_non_dismissible_dialog(app)
-    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
 
