@@ -77,13 +77,6 @@ def _dialog_decorator(
             '`@st.dialog("Example Title")`.'
         )
 
-    # Validation for on_dismiss parameter
-    if on_dismiss not in ["ignore", "rerun"] and not callable(on_dismiss):
-        raise StreamlitAPIException(
-            f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
-            "'rerun', or a callable is supported."
-        )
-
     @wraps(non_optional_func)
     def wrap(*args: Any, **kwargs: Any) -> None:
         _assert_no_nested_dialogs()
