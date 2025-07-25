@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 CONTAINER_KEYS = [
     "layout-dashboard-example",
@@ -55,14 +55,12 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
 
     for container_key in CONTAINER_KEYS_WITH_EXPANDERS:
         container = get_element_by_key(app, container_key)
-
         expect(container).to_be_visible()
 
-        expander = get_expander(container, "Expand me")
-        expander_header = expander.locator("summary").first
-        expect(expander_header).to_be_visible()
-
-        expander_header.click()
+        # Get the first (and only) expander in this container
+        container_expanders = container.get_by_test_id("stExpander")
+        expander = container_expanders.first
+        expander.click()
 
         assert_snapshot(
             expander,

@@ -22,25 +22,43 @@ from e2e_playwright.shared.toolbar_utils import (
 
 def test_vega_lite_chart_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
     """Test fullscreen open/close for the vega_lite_chart in the first container."""
-    # Wait for the app to fully load and VegaLite charts to render
     wait_for_app_run(app)
     expect(app.get_by_test_id("stVegaLiteChart")).to_have_count(1)
 
-    # VegaLite charts have async rendering - wait for the canvas to be ready
-    # This ensures the chart is fully interactive before testing toolbar
-    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_be_attached(
-        timeout=10000
+    widget_element = app.get_by_test_id("stVegaLiteChart").first
+    widget_toolbar = widget_element.locator("..").get_by_test_id("stElementToolbar")
+    fullscreen_wrapper = app.get_by_test_id("stFullScreenFrame").first
+
+    fullscreen_toolbar_button = widget_toolbar.get_by_test_id(
+        "stElementToolbarButton"
+    ).last
+
+    widget_element.hover()
+    expect(widget_toolbar).to_have_css("opacity", "1")
+
+    assert_snapshot(
+        widget_element,
+        name="st_layouts_container_directions_fullscreen_elements-vega_lite_chart-normal",
     )
 
-    # Additional wait to ensure VegaLite view.runAsync() has completed
-    app.wait_for_timeout(1000)
+    fullscreen_toolbar_button.click()
 
-    assert_fullscreen_toolbar_button_interactions(
+    expect(
+        widget_toolbar.get_by_role("button", name="Close fullscreen")
+    ).to_be_visible()
+
+    assert_snapshot(
         app,
-        assert_snapshot=assert_snapshot,
-        widget_test_id="stVegaLiteChart",
-        filename_prefix="st_layouts_container_directions_fullscreen_elements-vega_lite_chart",
-        nth=0,
+        name="st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_expanded",
+    )
+
+    fullscreen_toolbar_button.click()
+
+    expect(widget_toolbar.get_by_role("button", name="Fullscreen")).to_be_visible()
+
+    assert_snapshot(
+        fullscreen_wrapper,
+        name="st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_collapsed",
     )
 
 

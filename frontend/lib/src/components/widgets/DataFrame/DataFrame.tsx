@@ -50,6 +50,8 @@ import { createPortal } from "react-dom"
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
 import { LibContext } from "~lib/components/core/LibContext"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
@@ -90,8 +92,6 @@ import Tooltip from "./Tooltip"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
-import { FlexContext } from "~lib/components/core/Layout/FlexContext"
-import { Direction } from "~lib/components/core/Layout/utils"
 
 // Debounce time for triggering a widget state update
 // This prevents rapid updates to the widget state.
