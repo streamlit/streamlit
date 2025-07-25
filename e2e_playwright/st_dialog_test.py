@@ -618,8 +618,6 @@ def test_dialog_on_dismiss_callback(app: Page):
     """Test that dismissing dialog with callback executes callback and triggers rerun."""
     # Open the callback dialog
     open_on_dismiss_callback_dialog(app)
-    wait_for_app_run(app)
-
     # Dialog should be visible
     dialog = app.get_by_test_id(modal_test_id)
     expect(dialog).to_be_visible()
@@ -640,25 +638,24 @@ def test_dialog_on_dismiss_callback(app: Page):
     # Callback should have been executed
     expect_prefixed_markdown(app, "Callback executions:", "1")
 
+    # Test dismissing by clicking the close button
+    open_on_dismiss_callback_dialog(app)
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+    # Dismiss the dialog by pressing Escape
+    app.get_by_label("Close").click()
+    wait_for_app_run(app)
+    # Dialog should be closed
+    expect(dialog).not_to_be_attached()
+    # Callback should have been executed
+    expect_prefixed_markdown(app, "Callback executions:", "2")
 
-def test_dialog_multiple_dismissals_callback(app: Page):
-    """Test that multiple dismissals of callback dialog work correctly."""
-    # Open and dismiss callback dialog multiple times
-    for i in range(1, 4):  # Test 3 times
-        # Open the callback dialog
-        open_on_dismiss_callback_dialog(app)
-        wait_for_app_run(app)
-
-        # Dialog should be visible
-        dialog = app.get_by_test_id(modal_test_id)
-        expect(dialog).to_be_visible()
-
-        # Dismiss the dialog by pressing Escape
-        app.keyboard.press("Escape")
-        wait_for_app_run(app)
-
-        # Dialog should be closed
-        expect(dialog).not_to_be_attached()
-
-        # Check that callback was executed the correct number of times
-        expect_prefixed_markdown(app, "Callback executions:", str(i))
+    # Test dismissing by clicking outside the dialog
+    open_on_dismiss_callback_dialog(app)
+    dialog = app.get_by_test_id(modal_test_id)
+    expect(dialog).to_be_visible()
+    # Dismiss the dialog by clicking outside
+    app.locator("body").click(position={"x": 50, "y": 50}, force=True)
+    expect(dialog).not_to_be_attached()
+    # Callback should have been executed
+    expect_prefixed_markdown(app, "Callback executions:", "3")
