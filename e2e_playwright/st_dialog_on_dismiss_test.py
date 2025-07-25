@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def test_dialog_on_dismiss_rerun(app: Page):
-    """Test that dismissing dialog with on_dismiss='rerun' triggers rerun"""
+    """Test that dismissing dialog with on_dismiss='rerun' triggers rerun."""
     # Initial rerun count should be 1 (initial page load)
     expect_markdown(app, "Rerun count: 1")
 
@@ -51,7 +51,7 @@ def test_dialog_on_dismiss_rerun(app: Page):
 
 
 def test_dialog_on_dismiss_callback(app: Page):
-    """Test that dismissing dialog with callback executes callback and triggers rerun"""
+    """Test that dismissing dialog with callback executes callback and triggers rerun."""
     # Open the callback dialog
     click_button(app, "Open Callback Dialog")
     wait_for_app_run(app)
@@ -76,10 +76,10 @@ def test_dialog_on_dismiss_callback(app: Page):
 
 
 def test_dialog_on_dismiss_ignore(app: Page):
-    """Test that dismissing dialog with on_dismiss='ignore' does not trigger rerun"""
+    """Test that dismissing dialog with on_dismiss='ignore' does not trigger rerun."""
     # Get initial rerun count
     rerun_text = app.get_by_text(text=lambda t: t.startswith("Rerun count:"))
-    initial_count = int(rerun_text.text_content().split(": ")[1])
+    int(rerun_text.text_content().split(": ")[1])
 
     # Open the ignore dialog
     click_button(app, "Open Ignore Dialog")
@@ -116,7 +116,7 @@ def test_dialog_on_dismiss_ignore(app: Page):
 
 
 def test_non_dismissible_dialog_with_on_dismiss(app: Page):
-    """Test that non-dismissible dialogs don't trigger on_dismiss when trying to dismiss"""
+    """Test that non-dismissible dialogs don't trigger on_dismiss when trying to dismiss."""
     # Open the non-dismissible dialog
     click_button(app, "Open Non-dismissible Dialog")
     wait_for_app_run(app)
@@ -162,9 +162,9 @@ def test_non_dismissible_dialog_with_on_dismiss(app: Page):
 
 
 def test_dialog_multiple_dismissals(app: Page):
-    """Test that multiple dismissals of callback dialog work correctly"""
+    """Test that multiple dismissals of callback dialog work correctly."""
     # Open and dismiss callback dialog multiple times
-    for i in range(3):
+    for _i in range(3):
         # Open the callback dialog
         click_button(app, "Open Callback Dialog")
         wait_for_app_run(app)
@@ -185,7 +185,7 @@ def test_dialog_multiple_dismissals(app: Page):
 
 
 def test_dialog_reopen_after_dismiss(app: Page):
-    """Test that dialog can be reopened after being dismissed"""
+    """Test that dialog can be reopened after being dismissed."""
     # Open rerun dialog
     click_button(app, "Open Rerun Dialog")
     wait_for_app_run(app)
