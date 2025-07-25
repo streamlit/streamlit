@@ -133,7 +133,7 @@ const ModalButton: FunctionComponent<
 )
 
 export type StreamlitModalProps = Omit<ModalProps, "size"> & {
-  size?: "auto" | "default" | "full"
+  size?: "auto" | "default" | "full" | "stretch"
 }
 
 /**
@@ -151,6 +151,9 @@ export function calculateModalSize(
   width?: string,
   padding?: string
 ): ModalProps["size"] {
+  if (size === "stretch") {
+    return "100%"
+  }
   if (size === "full" && width && padding) {
     // This is the same width incl. padding as the AppView container is using 704px (736px (= contentMaxWidth) - 32px padding).
     // The dialog's total left and right padding is 48px. So the dialog needs a total width of 752px (=704px + 48px).

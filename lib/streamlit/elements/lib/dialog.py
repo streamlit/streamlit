@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.runtime.state import WidgetCallback
 
-DialogWidth: TypeAlias = Literal["small", "large"]
+DialogWidth: TypeAlias = Literal["small", "large", "stretch"]
 
 
 def _process_dialog_width_input(
@@ -47,6 +47,8 @@ def _process_dialog_width_input(
     """
     if width == "large":
         return BlockProto.Dialog.DialogWidth.LARGE
+    if width == "stretch":
+        return BlockProto.Dialog.DialogWidth.STRETCH
 
     return BlockProto.Dialog.DialogWidth.SMALL
 

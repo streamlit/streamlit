@@ -995,7 +995,7 @@ class LayoutsMixin:
         title: str,
         *,
         dismissible: bool = True,
-        width: Literal["small", "large"] = "small",
+        width: Literal["small", "large", "stretch"] = "small",
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.

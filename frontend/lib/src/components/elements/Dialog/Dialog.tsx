@@ -123,7 +123,13 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       isOpen
       closeable={dismissible}
       onClose={handleClose}
-      size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
+      size={
+        width === BlockProto.Dialog.DialogWidth.LARGE
+          ? "full"
+          : width === BlockProto.Dialog.DialogWidth.STRETCH
+            ? "stretch"
+            : "default"
+      }
     >
       <ModalHeader>
         <StyledDialogTitle>

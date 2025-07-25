@@ -61,7 +61,7 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
-@st.dialog("Large-width Dialog", width="large")
+@st.dialog("Large-width Dialog", width="stretch")
 def large_width_dialog() -> None:
     st.write("This dialog has a large width.")
 

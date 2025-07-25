@@ -211,10 +211,11 @@ def dialog_decorator(
         .. |st.markdown| replace:: ``st.markdown``
         .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-    width : "small", "large"
+    width : "small", "large", "stretch"
         The width of the modal dialog. If ``width`` is ``"small`` (default), the
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
-        modal dialog will be about 750 pixels wide.
+        modal dialog will be about 750 pixels wide. If ``width`` is ``"stretch"``,
+        the modal dialog will stretch the width of the window.
 
     dismissible : bool
         Whether the modal dialog can be dismissed by the user by clicking outside of
