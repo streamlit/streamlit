@@ -113,7 +113,3 @@ st.divider()
 st.header("Debug Information")
 st.write("Session State:")
 st.json(dict(st.session_state))
-
-import time
-
-time.sleep(2)
