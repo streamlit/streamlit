@@ -25,6 +25,16 @@ def test_vega_lite_chart_fullscreen(app: Page, assert_snapshot: ImageCompareFunc
     # Wait for the app to fully load and VegaLite charts to render
     wait_for_app_run(app)
     expect(app.get_by_test_id("stVegaLiteChart")).to_have_count(1)
+
+    # VegaLite charts have async rendering - wait for the canvas to be ready
+    # This ensures the chart is fully interactive before testing toolbar
+    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_be_attached(
+        timeout=10000
+    )
+
+    # Additional wait to ensure VegaLite view.runAsync() has completed
+    app.wait_for_timeout(1000)
+
     assert_fullscreen_toolbar_button_interactions(
         app,
         assert_snapshot=assert_snapshot,
