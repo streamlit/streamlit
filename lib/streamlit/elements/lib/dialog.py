@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from typing_extensions import Self, TypeAlias
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -26,6 +27,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
+from streamlit.runtime.state import register_widget
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -102,8 +104,6 @@ class Dialog(DeltaGenerator):
 
         if is_dismiss_activated:
             # Register as widget when on_dismiss is activated
-            from streamlit.elements.lib.utils import compute_and_register_element_id
-            from streamlit.runtime.state import register_widget
 
             ctx = get_script_run_ctx()
 
