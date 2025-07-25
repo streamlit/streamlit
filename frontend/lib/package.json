@@ -84,7 +84,7 @@
     "native-file-system-adapter": "^3.0.1",
     "node-emoji": "^2.2.0",
     "numbro": "^2.5.0",
-    "plotly.js": "^3.0.1",
+    "plotly.js": "^3.0.3",
     "protobufjs": "^7.5.3",
     "query-string": "^9.2.2",
     "re-resizable": "^6.11.2",
