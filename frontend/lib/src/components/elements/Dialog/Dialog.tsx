@@ -35,8 +35,8 @@ import { StyledDialogTitle } from "./styled-components"
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
-  widgetMgr?: WidgetStateManager
-  fragmentId?: string
+  widgetMgr: WidgetStateManager
+  fragmentId: string | undefined
 }
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({

@@ -37,6 +37,11 @@ const getProps = (
     dismissible: true,
     ...elementProps,
   }),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  }),
+  fragmentId: undefined,
   ...props,
 })
 
@@ -124,7 +129,7 @@ describe("Dialog container", () => {
   })
 
   describe("on_dismiss functionality", () => {
-    it("does not send widget event when id is not set", async () => {
+    it("does not trigger rerun when id is not set", async () => {
       const user = userEvent.setup()
       const mockWidgetMgr = {
         setTriggerValue: vi.fn(),
@@ -153,7 +158,7 @@ describe("Dialog container", () => {
       expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
     })
 
-    it("sends widget event when id is set", async () => {
+    it("triggers rerun when id is set", async () => {
       const user = userEvent.setup()
       const mockWidgetMgr = {
         setTriggerValue: vi.fn().mockResolvedValue(undefined),
@@ -187,7 +192,7 @@ describe("Dialog container", () => {
       )
     })
 
-    it("sends widget event without fragmentId when not provided", async () => {
+    it("triggers rerun without fragmentId when not provided", async () => {
       const user = userEvent.setup()
       const mockWidgetMgr = {
         setTriggerValue: vi.fn().mockResolvedValue(undefined),
@@ -221,29 +226,7 @@ describe("Dialog container", () => {
       )
     })
 
-    it("does not send widget event when widgetMgr is not provided", async () => {
-      const user = userEvent.setup()
-
-      const props = getProps({
-        id: "test-dialog-id", // id present but no widgetMgr
-        dismissible: true,
-      })
-
-      render(
-        <Dialog {...props}>
-          <div>test content</div>
-        </Dialog>
-      )
-
-      // Should not throw error when clicking close
-      const closeButton = screen.getByLabelText("Close")
-      await user.click(closeButton)
-
-      // Dialog should still close
-      expect(() => screen.getByText("test content")).toThrow()
-    })
-
-    it("does not send widget event when dialog is non-dismissible", () => {
+    it("does not trigger rerun when dialog is non-dismissible", () => {
       const mockWidgetMgr = {
         setTriggerValue: vi.fn(),
       }
