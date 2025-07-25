@@ -230,7 +230,6 @@ if st.button("Open Non-dismissible Dialog"):
     non_dismissible_dialog()
 
 
-# Test on_dismiss functionality - simplified integration
 st.divider()
 st.subheader("Dialog on_dismiss Tests")
 
@@ -253,7 +252,7 @@ if st.button("Open on_dismiss=rerun Dialog"):
 
 
 def on_dialog_dismiss_callback():
-    """Callback function for on_dismiss test"""
+    """Callback function for on_dismiss test."""
     st.session_state.callback_executed = True
     st.session_state.dismiss_count = st.session_state.get("dismiss_count", 0) + 1
 
