@@ -989,7 +989,7 @@ class DialogTest(DeltaGeneratorTestCase):
             dialog = st._main._dialog(DialogTest.title, on_dismiss="rerun")
 
             with dialog:
-                """No content so that 'get_delta_from_queue' returns the dialog."""
+                # No content so that 'get_delta_from_queue' returns the dialog.
                 pass
 
             mock_register.assert_called_once()
