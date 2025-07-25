@@ -227,9 +227,18 @@ def dialog_decorator(
             dismissible for security-critical checks.
 
     on_dismiss : "ignore", "rerun" or callable
-        What to do when the dialog is dismissed. If "ignore" (default), the dialog
-        will be closed and the app will not rerun. If "rerun", the app will rerun.
-        If a callable, the callable will be called when the dialog is dismissed.
+        How the dialog should respond to dismissal events.
+        ``on_dismiss`` can be one of the following:
+
+        - ``"ignore"`` (default): Streamlit will not rerun on dismissal
+          of the dialog.
+
+        - ``"rerun"``: Streamlit will rerun the app when the user dismisses
+          the dialog.
+
+        - A ``callable``: Streamlit will rerun the app when the user dismisses
+          the dialog and execute the ``callable`` as a callback function
+          before the rest of the app.
 
     Examples
     --------
