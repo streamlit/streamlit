@@ -15,20 +15,27 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.shared.app_utils import get_element_by_key, get_expander
 
 CONTAINER_KEYS = [
     "layout-dashboard-example",
     "layout-horizontal-form",
     "layout-horizontal-expander-dataframe",
+    "layout-horizontal-expander-dataframe-content-width",
+    "layout-horizontal-expander-dataframe-content-width-large",
     "layout-horizontal-images-center",
     "layout-horizontal-images-distribute",
     "layout-horizontal-columns",
     "layout-horizontal-tabs",
     "layout-horizontal-map",
+    "layout-horizontal-content-width",
 ]
 
-EXPANDER_KEY = "container-various-expander"
+CONTAINER_KEYS_WITH_EXPANDERS = [
+    "layout-horizontal-expander-dataframe",
+    "layout-horizontal-expander-dataframe-content-width",
+    "layout-horizontal-expander-dataframe-content-width-large",
+]
 
 
 def test_layouts_container_various_elements(
@@ -39,13 +46,18 @@ def test_layouts_container_various_elements(
         locator = get_element_by_key(app, key)
         assert_snapshot(locator, name=f"st_layouts_container_various_elements-{key}")
 
-    # Snapshot test for the expander after opening it
-    expander = app.get_by_test_id("stExpander").filter(
-        has=get_element_by_key(app, EXPANDER_KEY)
-    )
-    expander_header = expander.locator("summary").first
-    expect(expander_header).to_be_visible()
-    expander_header.click()
-    assert_snapshot(
-        expander, name="st_layouts_container_various_elements-expander-opened"
-    )
+
+def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test expander functionality in containers that contain expanders."""
+    for container_key in CONTAINER_KEYS_WITH_EXPANDERS:
+        container = get_element_by_key(app, container_key)
+        expander = get_expander(container, "Expand me")
+        expander_header = expander.locator("summary").first
+        expect(expander_header).to_be_visible()
+
+        expander_header.click()
+
+        assert_snapshot(
+            expander,
+            name=f"st_layouts_container_various_elements-{container_key}-expander-opened",
+        )

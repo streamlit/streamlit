@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
@@ -22,7 +22,9 @@ from e2e_playwright.shared.toolbar_utils import (
 
 def test_vega_lite_chart_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
     """Test fullscreen open/close for the vega_lite_chart in the first container."""
-    # The first vega_lite_chart on the page
+    # Wait for the app to fully load and VegaLite charts to render
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stVegaLiteChart")).to_have_count(1)
     assert_fullscreen_toolbar_button_interactions(
         app,
         assert_snapshot=assert_snapshot,
@@ -34,7 +36,8 @@ def test_vega_lite_chart_fullscreen(app: Page, assert_snapshot: ImageCompareFunc
 
 def test_dataframe_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
     """Test fullscreen open/close for the dataframe in the second container."""
-    # The first dataframe on the page (in the second container)
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_fullscreen_toolbar_button_interactions(
         app,
         assert_snapshot=assert_snapshot,
