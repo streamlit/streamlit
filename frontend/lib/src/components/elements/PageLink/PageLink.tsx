@@ -24,13 +24,13 @@ import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LibContext } from "~lib/components/core/LibContext"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
 import {
   StyledNavLink,
   StyledNavLinkContainer,
   StyledNavLinkText,
 } from "./styled-components"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
 export interface Props {
   disabled: boolean
