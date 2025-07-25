@@ -32,7 +32,7 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "704px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "400px"},
-        {"width": "708px", "height": "398px"},
+        {"width": "704px", "height": "398px"},
         {"width": "227px", "height": "398px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
