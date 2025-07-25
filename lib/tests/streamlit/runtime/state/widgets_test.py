@@ -492,6 +492,10 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
+        # use_container_width is being deprecated and is not used for element ID calculation
+        if "use_container_width" in expected_sig:
+            del expected_sig["use_container_width"]
+
         if widget_func == st.button:
             expected_sig["is_form_submitter"] = ANY
         # we exclude `data` for `st.download_button` here and not

@@ -31,7 +31,6 @@ function BaseLinkButton({
   kind,
   size,
   disabled,
-  containerWidth,
   children,
   autoFocus,
   href,
@@ -51,7 +50,7 @@ function BaseLinkButton({
     <ComponentType
       kind={kind}
       size={size || BaseButtonSize.MEDIUM}
-      containerWidth={containerWidth || false}
+      containerWidth={true}
       disabled={disabled || false}
       autoFocus={autoFocus || false}
       href={href}

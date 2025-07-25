@@ -45,7 +45,6 @@ def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None
         disabled error details in the browser by setting the `client.showErrorDetails`
         config option to "none".
     """
-
     if _error_details_in_browser_enabled() and show_in_browser:
         streamlit.warning(message)
 

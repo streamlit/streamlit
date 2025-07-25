@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto } from "@streamlit/protobuf"
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { Direction, getDirectionOfBlock } from "./utils"
+import { Direction, getDirectionOfBlock, shouldChildrenStretch } from "./utils"
 
 describe("getDirectionOfBlock", () => {
   const testCases = [
@@ -76,5 +76,36 @@ describe("getDirectionOfBlock", () => {
   test.each(testCases)("$description", ({ block, expected }) => {
     const blockProto = new BlockProto(block)
     expect(getDirectionOfBlock(blockProto)).toBe(expected)
+  })
+})
+
+describe("shouldChildrenStretch", () => {
+  it("returns false if widthConfig is undefined", () => {
+    expect(shouldChildrenStretch(undefined)).toBe(false)
+  })
+
+  it("returns true if useStretch is true", () => {
+    const widthConfig = { useStretch: true } as streamlit.WidthConfig
+    expect(shouldChildrenStretch(widthConfig)).toBe(true)
+  })
+
+  it("returns true if pixelWidth is a positive number", () => {
+    const widthConfig = { pixelWidth: 200 } as streamlit.WidthConfig
+    expect(shouldChildrenStretch(widthConfig)).toBe(true)
+  })
+
+  it("returns false if pixelWidth is 0", () => {
+    const widthConfig = { pixelWidth: 0 } as streamlit.WidthConfig
+    expect(shouldChildrenStretch(widthConfig)).toBe(false)
+  })
+
+  it("returns false if useContent is true", () => {
+    const widthConfig = { useContent: true } as streamlit.WidthConfig
+    expect(shouldChildrenStretch(widthConfig)).toBe(false)
+  })
+
+  it("returns false for an empty widthConfig object", () => {
+    const widthConfig = {} as streamlit.WidthConfig
+    expect(shouldChildrenStretch(widthConfig)).toBe(false)
   })
 })

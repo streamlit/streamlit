@@ -246,7 +246,8 @@ class FormMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> bool:
         r"""Display a form submit button.
 
@@ -328,6 +329,11 @@ class FormMixin:
             ``enter_to_submit=False``.
 
         use_container_width : bool
+                This parameter will be removed in a future version. Use the
+                ``width`` parameter instead. For ``use_container_width=True``,
+                use ``width="stretch"``. For ``use_container_width=False``,
+                use ``width="content"``.
+
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -336,12 +342,26 @@ class FormMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
+        width : int, "stretch", or "content"
+            An optional width for the submit button. This can be one of the
+            following:
+
+            - An integer which corresponds to the desired button width in
+              pixels.
+            - ``"stretch"``: The button's width expands to fill its parent
+              container.
+            - ``"content"`` (default): The button's width is set to fit its
+              contents.
+
         Returns
         -------
         bool
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
+
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
         if type not in ["primary", "secondary", "tertiary"]:
@@ -359,8 +379,8 @@ class FormMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     def _form_submit_button(
@@ -374,8 +394,8 @@ class FormMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
+        width: Width = "content",
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = f"FormSubmitter:{form_id}-{label}"
@@ -390,8 +410,8 @@ class FormMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     @property

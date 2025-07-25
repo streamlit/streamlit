@@ -19,7 +19,12 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+
+from streamlit.proto.RootContainer_pb2 import RootContainer
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -94,3 +99,8 @@ class AttributeDictionary(dict[Any, Any]):
 
     def __setattr__(self, name: str, value: Any) -> None:
         self[name] = value
+
+
+def in_sidebar(dg: DeltaGenerator) -> bool:
+    """Check if the DeltaGenerator is in the sidebar."""
+    return dg._active_dg._root_container == RootContainer.SIDEBAR

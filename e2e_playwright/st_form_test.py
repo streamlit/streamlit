@@ -20,6 +20,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    get_element_by_key,
 )
 
 
@@ -340,3 +341,15 @@ def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
         form_container,
         name="st_form-with_dataframe_toolbar",
     )
+
+
+def test_form_submit_button_width_examples(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test form submit button width examples via screenshot matching."""
+    form = get_element_by_key(app, "width_tests")
+    submit_elements = form.get_by_test_id("stFormSubmitButton")
+
+    assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
+    assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
+    assert_snapshot(submit_elements.nth(2), name="st_form_submit_button-width_250px")
