@@ -18,10 +18,12 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { vi } from "vitest"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Dialog, { Props as DialogProps } from "./Dialog"
 
@@ -35,6 +37,11 @@ const getProps = (
     dismissible: true,
     ...elementProps,
   }),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  }),
+  fragmentId: undefined,
   ...props,
 })
 
@@ -119,5 +126,130 @@ describe("Dialog container", () => {
 
     // Dialog should be closed (content no longer visible)
     expect(() => screen.getByText("test content")).toThrow()
+  })
+
+  describe("on_dismiss functionality", () => {
+    it("does not trigger rerun when id is not set", async () => {
+      const user = userEvent.setup()
+      const mockWidgetMgr = {
+        setTriggerValue: vi.fn(),
+      }
+
+      const props = getProps(
+        {
+          id: "", // No id means on_dismiss="ignore"
+          dismissible: true,
+        },
+        {
+          widgetMgr: mockWidgetMgr as unknown as WidgetStateManager,
+        }
+      )
+
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
+
+      // Simulate dismiss action
+      const closeButton = screen.getByLabelText("Close")
+      await user.click(closeButton)
+
+      expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
+    })
+
+    it("triggers rerun when id is set", async () => {
+      const user = userEvent.setup()
+      const mockWidgetMgr = {
+        setTriggerValue: vi.fn().mockResolvedValue(undefined),
+      }
+
+      const props = getProps(
+        {
+          id: "test-dialog-id", // id present means on_dismiss is activated
+          dismissible: true,
+        },
+        {
+          widgetMgr: mockWidgetMgr as unknown as WidgetStateManager,
+          fragmentId: "test-fragment-id",
+        }
+      )
+
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
+
+      // Simulate dismiss action
+      const closeButton = screen.getByLabelText("Close")
+      await user.click(closeButton)
+
+      expect(mockWidgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        { id: "test-dialog-id", formId: "" },
+        { fromUi: true },
+        "test-fragment-id"
+      )
+    })
+
+    it("triggers rerun without fragmentId when not provided", async () => {
+      const user = userEvent.setup()
+      const mockWidgetMgr = {
+        setTriggerValue: vi.fn().mockResolvedValue(undefined),
+      }
+
+      const props = getProps(
+        {
+          id: "test-dialog-id",
+          dismissible: true,
+        },
+        {
+          widgetMgr: mockWidgetMgr as unknown as WidgetStateManager,
+          // fragmentId not provided
+        }
+      )
+
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
+
+      // Simulate dismiss action
+      const closeButton = screen.getByLabelText("Close")
+      await user.click(closeButton)
+
+      expect(mockWidgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        { id: "test-dialog-id", formId: "" },
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("does not trigger rerun when dialog is non-dismissible", () => {
+      const mockWidgetMgr = {
+        setTriggerValue: vi.fn(),
+      }
+
+      const props = getProps(
+        {
+          id: "test-dialog-id",
+          dismissible: false, // Non-dismissible dialog
+        },
+        {
+          widgetMgr: mockWidgetMgr as unknown as WidgetStateManager,
+        }
+      )
+
+      render(
+        <Dialog {...props}>
+          <div>test content</div>
+        </Dialog>
+      )
+
+      // No close button should exist, so no way to trigger dismiss event
+      expect(() => screen.getByLabelText("Close")).toThrow()
+      expect(mockWidgetMgr.setTriggerValue).not.toHaveBeenCalled()
+    })
   })
 })

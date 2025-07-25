@@ -228,3 +228,44 @@ def non_dismissible_dialog() -> None:
 
 if st.button("Open Non-dismissible Dialog"):
     non_dismissible_dialog()
+
+
+st.divider()
+st.subheader("Dialog on_dismiss Tests")
+
+# Counter for tracking reruns caused by on_dismiss
+if "rerun_count" not in st.session_state:
+    st.session_state.rerun_count = 0
+st.session_state.rerun_count += 1
+st.write(f"Rerun count: {st.session_state.rerun_count}")
+
+
+@st.dialog("Dialog with on_dismiss=rerun", on_dismiss="rerun")
+def dialog_on_dismiss_rerun():
+    st.write("This dialog triggers rerun on dismiss")
+    if st.button("Close", key="close-rerun-dialog"):
+        st.rerun()
+
+
+if st.button("Open on_dismiss=rerun Dialog"):
+    dialog_on_dismiss_rerun()
+
+
+def on_dialog_dismiss_callback():
+    """Callback function for on_dismiss test."""
+    st.session_state.callback_executed = True
+    st.session_state.dismiss_count = st.session_state.get("dismiss_count", 0) + 1
+
+
+@st.dialog("Dialog with on_dismiss callback", on_dismiss=on_dialog_dismiss_callback)
+def dialog_on_dismiss_callback():
+    st.write("This dialog executes callback on dismiss")
+    if st.button("Close", key="close-callback-dialog"):
+        st.rerun()
+
+
+if st.button("Open on_dismiss callback Dialog"):
+    dialog_on_dismiss_callback()
+
+if st.session_state.get("callback_executed"):
+    st.write("Callback executions:", st.session_state.get("dismiss_count", 0))

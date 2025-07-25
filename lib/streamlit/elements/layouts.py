@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
+    from streamlit.runtime.state import WidgetCallback
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 
@@ -995,6 +996,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
+        on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.
 
@@ -1002,7 +1004,7 @@ class LayoutsMixin:
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
         return get_dg_singleton_instance().dialog_container_cls._create(
-            self.dg, title, dismissible=dismissible, width=width
+            self.dg, title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
         )
 
     @property

@@ -13,11 +13,13 @@
 # limitations under the License.
 
 from typing import Literal
+from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.dialog_decorator import dialog_decorator
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
@@ -807,6 +809,7 @@ class DialogTest(DeltaGeneratorTestCase):
         assert dialog_block.add_block.dialog.title == DialogTest.title
         assert not dialog_block.add_block.dialog.is_open
         assert dialog_block.add_block.dialog.dismissible
+        assert not dialog_block.add_block.dialog.id
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
@@ -966,3 +969,47 @@ class DialogTest(DeltaGeneratorTestCase):
         assert dialog_block.add_block.dialog.title == DialogTest.title
         assert not dialog_block.add_block.dialog.is_open
         assert dialog_block.add_block.dialog.dismissible is False
+
+    def test_dialog_decorator_invalid_on_dismiss(self):
+        """Test dialog decorator with invalid on_dismiss raises error"""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+
+            @dialog_decorator("Test Dialog", on_dismiss="invalid")
+            def test_dialog():
+                pass
+
+            test_dialog()
+
+        assert "You have passed invalid to `on_dismiss`" in str(exc_info.value)
+
+    def test_dialog_on_dismiss_rerun(self):
+        """Test that the dialog decorator with on_dismiss='rerun'."""
+
+        with patch("streamlit.elements.lib.dialog.register_widget") as mock_register:
+            dialog = st._main._dialog(DialogTest.title, on_dismiss="rerun")
+
+            with dialog:
+                # No content so that 'get_delta_from_queue' returns the dialog.
+                pass
+
+            mock_register.assert_called_once()
+
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.id
+
+    def test_dialog_on_dismiss_callback(self):
+        """Test that the dialog decorator with on_dismiss=callback."""
+
+        def callback():
+            pass
+
+        with patch("streamlit.elements.lib.dialog.register_widget") as mock_register:
+            dialog = st._main._dialog(DialogTest.title, on_dismiss=callback)
+
+            with dialog:
+                # No content so that 'get_delta_from_queue' returns the dialog.
+                pass
+            mock_register.assert_called_once()
+
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.id
