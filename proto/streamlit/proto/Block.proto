@@ -102,7 +102,7 @@ message Block {
     DialogWidth width = 3;
     optional bool is_open = 4;
 
-    // If id is set, dismiss events will trigger a rerun:
+    // If id is set, dismissal of the dialog will trigger a rerun.
     string id = 5;
   }
 
