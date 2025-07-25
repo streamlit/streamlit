@@ -821,7 +821,7 @@ class DialogTest(DeltaGeneratorTestCase):
     def test_dialog_width(
         self, width: str, expected_width: BlockProto.Dialog.DialogWidth.ValueType
     ):
-        """Test that the dialog width is stretch"""
+        """Test that the dialog width parameter works correctly for all supported values"""
         dialog = st._main._dialog(DialogTest.title, width=width)
         with dialog:
             # No content so that 'get_delta_from_queue' returns the dialog.
