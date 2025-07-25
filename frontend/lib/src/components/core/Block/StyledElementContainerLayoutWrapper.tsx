@@ -20,6 +20,8 @@ import type { ElementNode } from "~lib/AppNode"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 
 import { StyledElementContainer } from "./styled-components"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { FlexContext } from "../Layout/FlexContext"
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
@@ -29,6 +31,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
+  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
   const isContentWidthDataframe =
     node.element.type === "arrowDataFrame" &&
     !node.element["arrowDataFrame"]?.width &&
@@ -47,16 +50,23 @@ export const StyledElementContainerLayoutWrapper: FC<
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
       // flex with height to be set on the element container.
-      // TODO(lawilby): The PR expanding the height of text_area elements will
-      // make st.text_area consistent with the other elements and we can remove this.
       if (node.element.heightConfig?.useStretch) {
         return {
+          height: "100%",
+          flex: "1 1",
+        }
+      } else if (isInHorizontalLayout) {
+        return {
           height: "auto",
-          flex: "1 1 auto",
+          // In horizontal we need the flex here
+          // so that the text area will share the row with the other elements
+          // and not cause them to immediately wrap.
+          flex: "1 1",
         }
       }
       return {
         height: "auto",
+        // Content height text area in vertical layout cannot have flex.
         flex: "",
       }
     } else if (node.element.type === "iframe") {

@@ -230,3 +230,10 @@ with st.container(
     """,
         width="content",
     )
+
+with st.container(
+    direction="horizontal", height=300, key="layout-horizontal-text-area"
+):
+    st.text_area("Hello", width="stretch", height="stretch")
+    st.text_area("Hello", width="stretch")
+    st.container(border=True, width="stretch")

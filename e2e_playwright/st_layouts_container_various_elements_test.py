@@ -29,6 +29,7 @@ CONTAINER_KEYS = [
     "layout-horizontal-tabs",
     "layout-horizontal-map",
     "layout-horizontal-content-width",
+    "layout-horizontal-text-area",
 ]
 
 CONTAINER_KEYS_WITH_EXPANDERS = [

@@ -105,6 +105,16 @@ with st.form("form2", height=500):
     )
     st.form_submit_button("submit")
 
+with st.container(
+    direction="horizontal", height=300, key="layout-horizontal-text-area"
+):
+    st.text_area(
+        "text area (height='content') - Height adjusts to content.",
+        """Line 1\nLine 2\nLine 3""",
+        width="stretch",
+        height="content",
+    )
+
 with st.form("form3", height=500):
     st.text_area(
         "text area 20 (height='stretch)",

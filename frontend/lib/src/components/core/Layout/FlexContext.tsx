@@ -20,6 +20,7 @@ import { Direction } from "./utils"
 
 export interface IFlexContext {
   direction: Direction | undefined
+  isInHorizontalLayout: boolean
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
@@ -50,8 +51,10 @@ export const FlexContextProvider: FC<PropsWithChildren<IFlexContext>> = ({
   direction,
 }) => {
   const value = useMemo<IFlexContext>(() => {
+    const isInHorizontalLayout = direction === Direction.HORIZONTAL
     return {
       direction,
+      isInHorizontalLayout,
     }
   }, [direction])
 
