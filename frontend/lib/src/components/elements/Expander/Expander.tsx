@@ -18,7 +18,7 @@ import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon, StyledSpinnerIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
 import { IconSize } from "~lib/theme"
@@ -28,7 +28,6 @@ import {
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,
-  StyledStatusSpinner,
   StyledSummary,
   StyledSummaryHeading,
 } from "./styled-components"
@@ -68,10 +67,7 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 
   if (icon === "spinner") {
     return (
-      <StyledStatusSpinner
-        data-testid="stExpanderIconSpinner"
-        {...iconProps}
-      />
+      <StyledSpinnerIcon data-testid="stExpanderIconSpinner" {...iconProps} />
     )
   }
 
