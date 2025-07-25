@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast, overload
 
 from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
@@ -32,6 +32,7 @@ from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.dialog import DialogWidth
+    from streamlit.runtime.state import WidgetCallback
 
 
 def _assert_no_nested_dialogs() -> None:
@@ -68,11 +69,19 @@ def _dialog_decorator(
     width: DialogWidth = "small",
     should_show_deprecation_warning: bool = False,
     dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
     if title is None or title == "":
         raise StreamlitAPIException(
             "A non-empty `title` argument has to be provided for dialogs, for example "
             '`@st.dialog("Example Title")`.'
+        )
+
+    # Validation for on_dismiss parameter
+    if on_dismiss not in ["ignore", "rerun"] and not callable(on_dismiss):
+        raise StreamlitAPIException(
+            f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
+            "'rerun', or a callable is supported."
         )
 
     @wraps(non_optional_func)
@@ -82,7 +91,7 @@ def _dialog_decorator(
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
-            title=title, dismissible=dismissible, width=width
+            title=title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
         )
         dialog.open()
 
@@ -118,7 +127,11 @@ def _dialog_decorator(
 
 @overload
 def dialog_decorator(
-    title: str, *, width: DialogWidth = "small", dismissible: bool = True
+    title: str,
+    *,
+    width: DialogWidth = "small",
+    dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> Callable[[F], F]: ...
 
 
@@ -130,13 +143,21 @@ def dialog_decorator(
 # function args.
 @overload
 def dialog_decorator(
-    title: F, *, width: DialogWidth = "small", dismissible: bool = True
+    title: F,
+    *,
+    width: DialogWidth = "small",
+    dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F: ...
 
 
 @gather_metrics("dialog")
 def dialog_decorator(
-    title: F | str, *, width: DialogWidth = "small", dismissible: bool = True
+    title: F | str,
+    *,
+    width: DialogWidth = "small",
+    dismissible: bool = True,
+    on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F | Callable[[F], F]:
     r"""Function decorator to create a modal dialog.
 
@@ -212,6 +233,11 @@ def dialog_decorator(
             interactions in the main app are blocked. Please don't rely on
             dismissible for security-critical checks.
 
+    on_dismiss : "ignore", "rerun" or callable
+        What to do when the dialog is dismissed. If "ignore" (default), the dialog
+        will be closed and the app will not rerun. If "rerun", the app will rerun.
+        If a callable, the callable will be called when the dialog is dismissed.
+
     Examples
     --------
     The following example demonstrates the basic usage of ``@st.dialog``.
@@ -254,12 +280,15 @@ def dialog_decorator(
                 title=func_or_title,
                 width=width,
                 dismissible=dismissible,
+                on_dismiss=on_dismiss,
             )
 
         return wrapper
 
     func: F = func_or_title
-    return _dialog_decorator(func, "", width=width, dismissible=dismissible)
+    return _dialog_decorator(
+        func, "", width=width, dismissible=dismissible, on_dismiss=on_dismiss
+    )
 
 
 @overload
