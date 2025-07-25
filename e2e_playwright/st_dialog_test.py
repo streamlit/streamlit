@@ -626,7 +626,9 @@ def test_dialog_on_dismiss_callback(app: Page):
     expect(dialog).to_contain_text("This dialog executes callback on dismiss")
 
     # Callback should not be executed yet
-    expect(app.get_by_text("times!")).not_to_be_attached()
+    expect(
+        app.get_by_text(re.compile(r"Callback executions: \d+"))
+    ).not_to_be_attached()
 
     # Dismiss the dialog by pressing Escape
     app.keyboard.press("Escape")
