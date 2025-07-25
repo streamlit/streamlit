@@ -30,18 +30,40 @@ import {
   StyledNavLinkContainer,
   StyledNavLinkText,
 } from "./styled-components"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
 export interface Props {
   disabled: boolean
   element: PageLinkProto
 }
 
+function shouldUseContainerWidth(
+  useContainerWidth: boolean | null | undefined,
+  isInSidebar: boolean
+): boolean {
+  if (useContainerWidth === null && isInSidebar) {
+    return true
+  } else if (useContainerWidth === null && !isInSidebar) {
+    return false
+  }
+  return useContainerWidth === true ? true : false
+}
+
 function PageLink(props: Readonly<Props>): ReactElement {
   const { onPageChange, currentPageScriptHash } = useContext(LibContext)
+  const isInSidebar = useContext(IsSidebarContext)
 
   const { colors } = useEmotionTheme()
 
   const { disabled, element } = props
+
+  // TODO(lawilby): Removing this caused some styling changes,
+  // so leaving it here for now and will investigate removing it
+  // as a follow up.
+  const useContainerWidth = shouldUseContainerWidth(
+    element.useContainerWidth,
+    isInSidebar
+  )
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
@@ -65,7 +87,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
       <BaseButtonTooltip
         help={element.help}
         placement={Placement.TOP_RIGHT}
-        containerWidth={true}
+        containerWidth={useContainerWidth}
       >
         <StyledNavLinkContainer>
           <StyledNavLink
