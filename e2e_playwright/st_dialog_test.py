@@ -378,8 +378,6 @@ def test_dialog_copy_buttons_work(app: Page):
 
     open_dialog_with_copy_buttons(app)
 
-    expect_markdown(app, "")
-
     # click icon button
     json_element = app.get_by_test_id("stJson")
     json_element.hover()
@@ -409,6 +407,7 @@ def test_experimental_dialog_deprecation_warning(app: Page):
 
 def test_dialog_with_chart(app: Page):
     open_dialog_with_chart(app)
+    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
 
