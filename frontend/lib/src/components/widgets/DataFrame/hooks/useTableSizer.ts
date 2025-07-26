@@ -25,13 +25,13 @@ import { Size as ResizableSize } from "re-resizable"
 
 import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
 
-import { notNullOrUndefined } from "~lib/util/utils"
-
 import {
   getConfiguredWidth,
   shouldUseContainerWidth,
   shouldUseContentWidth,
 } from "~lib/components/widgets/DataFrame/arrowUtils"
+import { notNullOrUndefined } from "~lib/util/utils"
+
 import { CustomGridTheme } from "./useCustomTheme"
 
 export type AutoSizerReturn = {

@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import click_button, get_element_by_key
+from e2e_playwright.shared.app_utils import click_button
 
 
 def test_data_frame_with_different_sizes(app: Page):
@@ -32,11 +32,14 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "704px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "400px"},
-        {"width": "704px", "height": "398px"},
-        {"width": "227px", "height": "398px"},
+        {"width": "704px", "height": "400px"},
+        {"width": "229px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
         {"width": "704px", "height": "3537px"},
+        {"width": "704px", "height": "142px"},
+        {"width": "229px", "height": "142px"},
+        {"width": "400px", "height": "300px"},
     ]
 
     dataframe_elements = app.get_by_test_id("stDataFrame")
@@ -50,7 +53,7 @@ def test_data_frame_with_different_sizes(app: Page):
 def test_data_frame_resizing(app: Page):
     """Test that st.dataframe should resize as expected."""
 
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(11)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(13)
     expect(dataframe_element).to_have_css("width", "200px")
     expect(dataframe_element).to_have_css("height", "100px")
 
@@ -61,15 +64,13 @@ def test_data_frame_resizing(app: Page):
 
 def test_data_frame_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.dataframe should render as expected with width and height."""
-    stretch_dataframe = get_element_by_key(app, "stretch_dataframe")
+    stretch_dataframe = app.get_by_test_id("stDataFrame").nth(15)
     assert_snapshot(stretch_dataframe, name="stretch_dataframe")
 
-    content_dataframe_element = get_element_by_key(app, "content_dataframe")
+    content_dataframe_element = app.get_by_test_id("stDataFrame").nth(16)
     assert_snapshot(content_dataframe_element, name="content_dataframe")
 
-    fixed_dimensions_dataframe_element = get_element_by_key(
-        app, "fixed_dimensions_dataframe"
-    )
+    fixed_dimensions_dataframe_element = app.get_by_test_id("stDataFrame").nth(17)
     assert_snapshot(
         fixed_dimensions_dataframe_element, name="fixed_dimensions_dataframe"
     )
