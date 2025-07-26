@@ -229,10 +229,6 @@ def non_dismissible_dialog() -> None:
 if st.button("Open Non-dismissible Dialog"):
     non_dismissible_dialog()
 
-
-st.divider()
-st.subheader("Dialog on_dismiss Tests")
-
 # Counter for tracking reruns caused by on_dismiss
 if "rerun_count" not in st.session_state:
     st.session_state.rerun_count = 0
