@@ -198,8 +198,6 @@ st.segmented_control(
     key="segmented_control_300px_width",
 )
 
-
-
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
