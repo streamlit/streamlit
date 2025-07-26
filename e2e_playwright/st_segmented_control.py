@@ -198,27 +198,7 @@ st.segmented_control(
     key="segmented_control_300px_width",
 )
 
-# Enhanced examples to demonstrate wrapping issue (Issue #12038)
-st.subheader("Wrapping behavior demonstration")
-st.segmented_control(
-    "Stretch width with wrapping (uneven lengths)",
-    [
-        "Short",
-        "Medium length option",
-        "A very long option that demonstrates the wrapping issue",
-        "Another",
-        "Final",
-    ],
-    width="stretch",
-    key="segmented_control_stretch_wrapping_demo",
-)
 
-st.segmented_control(
-    "Stretch width with many similar options",
-    [f"Option {i}" for i in range(1, 10)],
-    width="stretch",
-    key="segmented_control_stretch_many_demo",
-)
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0

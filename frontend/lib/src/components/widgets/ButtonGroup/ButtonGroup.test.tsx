@@ -650,7 +650,7 @@ describe("ButtonGroup width behavior", () => {
       }
     )
     render(<ButtonGroup {...props} />)
-    
+
     // The button group container should have the containerWidth prop
     const buttonGroup = screen.getByTestId("stButtonGroup")
     expect(buttonGroup).toBeInTheDocument()
@@ -666,7 +666,7 @@ describe("ButtonGroup width behavior", () => {
       }
     )
     render(<ButtonGroup {...props} />)
-    
+
     // The button group container should have the containerWidth prop
     const buttonGroup = screen.getByTestId("stButtonGroup")
     expect(buttonGroup).toBeInTheDocument()
@@ -677,7 +677,7 @@ describe("ButtonGroup width behavior", () => {
       style: ButtonGroupProto.Style.PILLS,
     })
     render(<ButtonGroup {...props} />)
-    
+
     const buttonGroup = screen.getByTestId("stButtonGroup")
     expect(buttonGroup).toBeInTheDocument()
   })
