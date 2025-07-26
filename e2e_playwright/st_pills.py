@@ -161,6 +161,28 @@ st.pills(
     key="pills_300px_width",
 )
 
+# Enhanced examples to demonstrate wrapping issue (Issue #12038)
+st.subheader("Wrapping behavior demonstration")
+st.pills(
+    "Stretch width with wrapping (uneven lengths)",
+    [
+        "Short",
+        "Medium length option",
+        "A very long option that demonstrates the wrapping issue",
+        "Another",
+        "Final",
+    ],
+    width="stretch",
+    key="pills_stretch_wrapping_demo",
+)
+
+st.pills(
+    "Stretch width with many similar options",
+    [f"Option {i}" for i in range(1, 12)],
+    width="stretch",
+    key="pills_stretch_many_demo",
+)
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1

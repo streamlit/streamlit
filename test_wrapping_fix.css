@@ -1,0 +1,22 @@
+/* CSS to test the wrapping fix for st.pills and st.segmented_control */
+
+/* For Pills with stretch width */
+.stButtonGroup[data-testid="stButtonGroup"] button[kind="pills"] {
+  flex: 1 1 calc(100% / 3) !important;
+  min-width: fit-content !important;
+  max-width: calc(100% / 2 - 4px) !important;
+}
+
+/* For Segmented Control with stretch width */
+.stButtonGroup[data-testid="stButtonGroup"] button[kind="segmentedControl"] {
+  flex: 1 1 calc(100% / 3) !important;
+  min-width: fit-content !important;
+  max-width: calc(100% / 2 - 4px) !important;
+}
+
+/* Alternative more specific selectors if the above doesn't work */
+.stButtonGroup button {
+  flex: 1 1 calc(100% / 3) !important;
+  min-width: fit-content !important;
+  max-width: calc(100% / 2 - 4px) !important;
+}

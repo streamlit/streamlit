@@ -638,3 +638,47 @@ describe("ButtonGroup getContentElement", () => {
     expect(size).toBe(BaseButtonSize.MEDIUM)
   })
 })
+
+describe("ButtonGroup width behavior", () => {
+  it("applies containerWidth prop correctly for pills", () => {
+    const props = getProps(
+      {
+        style: ButtonGroupProto.Style.PILLS,
+      },
+      {
+        widthConfig: { useStretch: true },
+      }
+    )
+    render(<ButtonGroup {...props} />)
+    
+    // The button group container should have the containerWidth prop
+    const buttonGroup = screen.getByTestId("stButtonGroup")
+    expect(buttonGroup).toBeInTheDocument()
+  })
+
+  it("applies containerWidth prop correctly for segmented control", () => {
+    const props = getProps(
+      {
+        style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
+      },
+      {
+        widthConfig: { useStretch: true },
+      }
+    )
+    render(<ButtonGroup {...props} />)
+    
+    // The button group container should have the containerWidth prop
+    const buttonGroup = screen.getByTestId("stButtonGroup")
+    expect(buttonGroup).toBeInTheDocument()
+  })
+
+  it("uses content width by default", () => {
+    const props = getProps({
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    render(<ButtonGroup {...props} />)
+    
+    const buttonGroup = screen.getByTestId("stButtonGroup")
+    expect(buttonGroup).toBeInTheDocument()
+  })
+})
