@@ -82,12 +82,13 @@ export const StyledElementContainerLayoutWrapper: FC<
         width: "100%",
       }
     } else if (node.element.type === "arrowDataFrame") {
+      // TODO (lawilby): Some of this can be removed once the width changes
+      // are implemented for dataframe.
       const styles: React.CSSProperties = {
         overflow: "visible",
+        width: "100%",
       }
-      // TODO (lawilby): This is just temporary until the width changes are
-      // implemented for dataframe.
-      if (isContentWidthDataframe) {
+      if (isContentWidthDataframe && isInHorizontalLayout) {
         styles.width = "fit-content"
         styles.flex = "0 0 auto"
       }
