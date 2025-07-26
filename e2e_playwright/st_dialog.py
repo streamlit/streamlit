@@ -73,6 +73,18 @@ if st.button("Open large-width Dialog"):
     large_width_dialog()
 
 
+@st.dialog("Stretch-width Dialog", width="stretch")
+def stretch_width_dialog() -> None:
+    st.write("This dialog has a stretch width.")
+
+    if st.button("Submit", key="stretch-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open stretch-width Dialog"):
+    stretch_width_dialog()
+
+
 @st.dialog("Dialog with headings")
 def headings_dialog() -> None:
     st.header("Header", help="Some tooltip!")
@@ -265,15 +277,3 @@ if st.button("Open on_dismiss callback Dialog"):
 
 if st.session_state.get("callback_executed"):
     st.write("Callback executions:", st.session_state.get("dismiss_count", 0))
-
-
-@st.dialog("Stretch-width Dialog", width="stretch")
-def stretch_width_dialog() -> None:
-    st.write("This dialog has a stretch width.")
-
-    if st.button("Submit", key="stretch-dialog-btn"):
-        st.rerun()
-
-
-if st.button("Open stretch-width Dialog"):
-    stretch_width_dialog()
