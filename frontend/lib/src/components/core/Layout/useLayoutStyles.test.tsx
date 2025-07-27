@@ -26,7 +26,13 @@ import { FlexContext } from "./FlexContext"
 
 function withFlexContextProvider(direction: Direction) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    const value = React.useMemo(() => ({ direction }), [])
+    const value = React.useMemo(
+      () => ({
+        direction,
+        isInHorizontalLayout: direction === Direction.HORIZONTAL,
+      }),
+      []
+    )
     return (
       <FlexContext.Provider value={value}>{children}</FlexContext.Provider>
     )
@@ -671,14 +677,14 @@ describe("#useLayoutStyles", () => {
         expect(result.current.flex).toBeUndefined()
       })
 
-      it("should not include flex for horizontal direction with stretch width", () => {
+      it("should include flex for horizontal direction with stretch width", () => {
         const element = new MockElement({
           widthConfig: new streamlit.WidthConfig({ useStretch: true }),
         })
         const { result } = renderHook(() => useLayoutStyles({ element }), {
           wrapper: withFlexContextProvider(Direction.HORIZONTAL),
         })
-        expect(result.current.flex).toBeUndefined()
+        expect(result.current.flex).toBe("1 1")
       })
 
       it("should not include flex for vertical direction with content height", () => {
@@ -691,14 +697,14 @@ describe("#useLayoutStyles", () => {
         expect(result.current.flex).toBeUndefined()
       })
 
-      it("should not include flex for horizontal direction with content width", () => {
+      it("should include flex for horizontal direction with content width", () => {
         const element = new MockElement({
           widthConfig: new streamlit.WidthConfig({ useContent: true }),
         })
         const { result } = renderHook(() => useLayoutStyles({ element }), {
           wrapper: withFlexContextProvider(Direction.HORIZONTAL),
         })
-        expect(result.current.flex).toBeUndefined()
+        expect(result.current.flex).toBe("0 0 fit-content")
       })
     })
 
