@@ -44,6 +44,7 @@ export function shouldChildrenStretch(
   // Some elements (e.g. ButtonGroup) need styles applied to the element itself, to support
   // the width configuration.
   return !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
+}
 
 /**
  * Returns the direction from FlexContext, defaulting to VERTICAL if not set.
