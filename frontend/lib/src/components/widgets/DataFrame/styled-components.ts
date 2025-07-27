@@ -16,12 +16,19 @@
 
 import styled from "@emotion/styled"
 
+export interface StyledResizableContainerProps {
+  hasCustomizedScrollbars: boolean
+  isInHorizontalLayout: boolean
+}
+
 /**
  * A resizable data grid container component.
  */
-export const StyledResizableContainer = styled.div(({ theme }) => ({
-  position: "relative",
-  display: "flex",
+export const StyledResizableContainer =
+  styled.div<StyledResizableContainerProps>(
+    ({ theme, isInHorizontalLayout }) => ({
+      position: "relative",
+      display: isInHorizontalLayout ? "flex" : "inline-block",
 
   "& .stDataFrameGlideDataEditor": {
     height: "100%",
