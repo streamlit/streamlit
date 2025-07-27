@@ -46,10 +46,9 @@ FlexContext.displayName = "FlexContext"
  * Search the codebase for `<FlexContextProvider` to see where this is used.
  *
  */
-export const FlexContextProvider: FC<PropsWithChildren<IFlexContext>> = ({
-  children,
-  direction,
-}) => {
+export const FlexContextProvider: FC<
+  PropsWithChildren<{ direction: Direction }>
+> = ({ children, direction }) => {
   const value = useMemo<IFlexContext>(() => {
     const isInHorizontalLayout = direction === Direction.HORIZONTAL
     return {
