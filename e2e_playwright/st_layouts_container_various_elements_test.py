@@ -64,6 +64,6 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
         expander.click()
 
         assert_snapshot(
-            expander,
+            container,
             name=f"st_layouts_container_various_elements-{container_key}-expander-opened",
         )

@@ -68,6 +68,7 @@ with st.container(
 with st.container(
     direction="vertical",
     key="container-vertical-fixed-width-and-stretch-element",
+    border=True,
 ):
     st.html(
         '<div style="background:lightyellow">Fixed width element (500px)</div>',
