@@ -17,11 +17,11 @@
 import React, { FC, useMemo } from "react"
 
 import type { ElementNode } from "~lib/AppNode"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
-
-import { StyledElementContainer } from "./styled-components"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { FlexContext } from "../Layout/FlexContext"
+
+import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
@@ -117,6 +117,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.type,
     node.element.heightConfig?.useStretch,
     isContentWidthDataframe,
+    isInHorizontalLayout,
   ])
 
   const styles = useLayoutStyles({
