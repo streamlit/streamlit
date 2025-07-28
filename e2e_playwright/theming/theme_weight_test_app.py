@@ -19,6 +19,15 @@ import streamlit as st
 
 
 def run_theme_weight_tester_app():
+    # Better show the charts by minimizing the dead space
+    st.html("""
+        <style>
+            .stMainBlockContainer {
+                padding-top: 4rem;
+            }
+        </style>
+    """)
+
     st.set_page_config(initial_sidebar_state="expanded", layout="wide")
 
     st.header("Custom Theme Weights :green[App]")
@@ -135,8 +144,8 @@ def run_theme_weight_tester_app():
             "`is` [Streamlit](https://streamlit.io).",
             help="Tooltip",
         )
-        st.success("Wohooo!")
         st.code("# st.code\na = 1234")
+        st.success("Wohooo!")
         st.divider()
         st.text_input(
             "Text Input in Sidebar", value="Some Text", help="Tooltip", max_chars=10
