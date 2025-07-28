@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useState, useRef } from "react"
+import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
@@ -125,7 +125,15 @@ const ArrowVegaLiteChart: FC<Props> = ({
     // We can't use width in this dependency array because it causes facet charts to enter a loop.
     // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
     // Are the changes in the spec enough?
-  }, [createView, finalizeView, spec, fullScreenWidth, height, showData, containerRef])
+  }, [
+    createView,
+    finalizeView,
+    spec,
+    fullScreenWidth,
+    height,
+    showData,
+    containerRef,
+  ])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
@@ -155,7 +163,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             styler: null,
             // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
             width: null,
-            // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+
             height: chartHeight ?? null,
             id: "",
             columns: "",
