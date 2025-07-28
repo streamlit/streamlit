@@ -657,7 +657,8 @@ class WindowsSignalHandlingTest(RuntimeTestCase):
                 await asyncio.sleep(0.1)
                 self.runtime.stop()
 
-            asyncio.create_task(delayed_stop())  # noqa: RUF006
+            delayed_stop_task = asyncio.create_task(delayed_stop())
+            await delayed_stop_task  # Ensure the task completes
 
             # The runtime should stop within the Windows timeout interval
             await asyncio.wait_for(self.runtime.stopped, timeout=0.5)
