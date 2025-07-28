@@ -170,7 +170,8 @@ const getFlex = (
     widthType === DimensionType.STRETCH &&
     direction === Direction.HORIZONTAL
   ) {
-    return "1 1"
+    // TODO: This interferes with return from full screen.
+    return "1 1 fit-content"
   }
 }
 

@@ -87,9 +87,11 @@ export const StyledElementContainerLayoutWrapper: FC<
         overflow: "visible",
         width: "100%",
       }
-      if (isContentWidthDataframe && isInHorizontalLayout) {
+      if (isContentWidthDataframe) {
         styles.width = "fit-content"
         styles.flex = "0 0 auto"
+      } else if (node.element.arrowDataFrame?.useContainerWidth) {
+        styles.flex = "1 1"
       }
       return styles
     } else if (node.element.type === "plotlyChart") {
