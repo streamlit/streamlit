@@ -164,6 +164,7 @@ class PdfMixin:
             "Please run `pip install streamlit[pdf]` to install it.\n\n"
             "For more information, see the Streamlit PDF documentation at "
             "https://docs.streamlit.io/develop/api-reference/media/st.pdf."
+            # TODO: Update this URL when docs are updated
         )
 
     @property
