@@ -136,6 +136,7 @@ def run_theme_weight_tester_app():
             help="Tooltip",
         )
         st.success("Wohooo!")
+        st.code("# st.code\na = 1234")
         st.divider()
         st.text_input(
             "Text Input in Sidebar", value="Some Text", help="Tooltip", max_chars=10
