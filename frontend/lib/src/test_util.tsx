@@ -118,19 +118,16 @@ export const renderWithContexts = (
     formsData: createFormsData(),
   }
 
-  const flexContextValue = useMemo(
-    () => ({
-      direction: Direction.VERTICAL,
-      isInHorizontalLayout: false,
-    }),
-    []
-  )
-
   return reactTestingLibraryRender(component, {
     wrapper: ({ children }) => (
       <ThemeProvider theme={baseTheme.emotion}>
         <WindowDimensionsProvider>
-          <FlexContext.Provider value={flexContextValue}>
+          <FlexContext.Provider
+            value={{
+              direction: Direction.VERTICAL,
+              isInHorizontalLayout: false,
+            }}
+          >
             <LibContext.Provider
               value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
             >
