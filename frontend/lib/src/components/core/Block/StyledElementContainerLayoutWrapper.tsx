@@ -87,7 +87,7 @@ export const StyledElementContainerLayoutWrapper: FC<
         overflow: "visible",
         width: "100%",
       }
-      if (isContentWidthDataframe) {
+      if (isContentWidthDataframe && isInHorizontalLayout) {
         styles.width = "fit-content"
         styles.flex = "0 0 auto"
       } else if (node.element.arrowDataFrame?.useContainerWidth) {

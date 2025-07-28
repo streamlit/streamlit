@@ -157,10 +157,10 @@ with st.container(border=True, direction="vertical", key="layout-horizontal-colu
                 direction="horizontal",
             ):
                 st.info("Very important information")
-                st.dataframe(df)
+                st.dataframe(df, use_container_width=False)
 
         with col2:
-            st.dataframe(df)
+            st.dataframe(df, use_container_width=False)
 
 with st.container(border=True, direction="horizontal", key="layout-horizontal-tabs"):
     import altair as alt
