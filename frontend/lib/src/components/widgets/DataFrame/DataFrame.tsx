@@ -1007,6 +1007,8 @@ function DataFrame({
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()
               }
+              // Close the column menu if it is open:
+              setShowMenu(undefined)
             }
           }}
           theme={gridTheme.glideTheme}

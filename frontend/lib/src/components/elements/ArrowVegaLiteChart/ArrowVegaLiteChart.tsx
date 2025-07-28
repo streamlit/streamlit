@@ -78,7 +78,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  const [width, containerRef] = useCalculatedWidth()
+  const [width, containerRef] = useCalculatedWidth([showData])
 
   // Facet charts need the container element to have a width and also
   // do not work well with stretch/container width
