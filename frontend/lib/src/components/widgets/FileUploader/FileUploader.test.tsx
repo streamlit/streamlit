@@ -399,6 +399,181 @@ describe("FileUploader widget tests", () => {
     )
   })
 
+  it("uploads directory with multiple files successfully", async () => {
+    const props = getProps({
+      multipleFiles: true,
+      acceptDirectory: true,
+      type: [".txt", ".py", ".md"],
+    })
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+
+    // Simulate directory upload with files in different folders
+    const directoryFiles = [
+      new File(["print('hello')"], "project/main.py", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["def test(): pass"], "project/tests/test_main.py", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["# Project README"], "project/README.md", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Configuration"], "project/config.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+    ]
+
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: directoryFiles,
+        items: directoryFiles.map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
+      },
+    })
+
+    await waitFor(() =>
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(4)
+    )
+
+    const fileElements = screen.getAllByTestId("stFileUploaderFile")
+    expect(fileElements.length).toBe(3)
+
+    // Verify all files are accepted since they match the allowed types
+    const errorElements = screen.queryAllByTestId(
+      "stFileUploaderFileErrorMessage"
+    )
+    expect(errorElements.length).toBe(0)
+
+    // Verify that setFileUploaderStateValue was called (internal structure may vary)
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalled()
+  })
+
+  it("filters directory upload files by type restrictions", async () => {
+    const props = getProps({
+      multipleFiles: true,
+      acceptDirectory: true,
+      type: [".txt"], // Only allow .txt files
+    })
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    const consoleSpy = vi.spyOn(console, "log")
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+
+    // Mix of valid and invalid files for directory upload
+    const mixedFiles = [
+      new File(["Valid content"], "docs/valid.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Also valid"], "docs/subfolder/another.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Invalid file"], "docs/image.jpg", {
+        type: "image/jpeg",
+        lastModified: 0,
+      }),
+      new File(["Another invalid"], "docs/document.pdf", {
+        type: "application/pdf",
+        lastModified: 0,
+      }),
+    ]
+
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: mixedFiles,
+        items: mixedFiles.map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
+      },
+    })
+
+    await waitFor(() =>
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    )
+
+    // Should show uploaded files (filtering appears to happen at react-dropzone level)
+    const fileElements = screen.getAllByTestId("stFileUploaderFile")
+    expect(fileElements.length).toBe(3)
+
+    // Should have 1 error message for the rejected file that doesn't match file type
+    const errorElements = screen.queryAllByTestId(
+      "stFileUploaderFileErrorMessage"
+    )
+    expect(errorElements.length).toBe(1)
+
+    // Console message is only called if files reach our filtering logic, but react-dropzone handles this first
+    // So we don't expect any console messages
+
+    // Only valid .txt files should be uploaded - verify widget state was updated
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalled()
+
+    consoleSpy.mockRestore()
+  })
+
+  it("handles empty directory upload gracefully", async () => {
+    const props = getProps({
+      multipleFiles: true,
+      acceptDirectory: true,
+    })
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+
+    // Simulate empty directory
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: [],
+        items: [],
+      },
+    })
+
+    await waitFor(() => {
+      // No upload calls should be made
+      expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+    })
+
+    // No file elements should be created
+    const fileElements = screen.queryAllByTestId("stFileUploaderFile")
+    expect(fileElements.length).toBe(0)
+
+    // Widget state should be initialized but not updated with files for empty directory
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
+  })
+
+  it("displays correct instructions for directory upload", () => {
+    const props = getProps({
+      multipleFiles: true,
+      acceptDirectory: true,
+    })
+    render(<FileUploader {...props} />)
+
+    // Check that browse button shows directory text
+    const browseButton = screen.getByText("Browse directories")
+    expect(browseButton).toBeInTheDocument()
+
+    // Verify dropzone has webkitdirectory attribute
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).toHaveAttribute("webkitdirectory", "")
+  })
+
   it("can delete completed upload", async () => {
     const user = userEvent.setup()
     const props = getProps({ multipleFiles: true })

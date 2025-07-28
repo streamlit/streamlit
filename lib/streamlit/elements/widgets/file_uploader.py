@@ -465,8 +465,7 @@ class FileUploaderMixin:
             dg=self.dg,
             label=label,
             type=type,
-            # Normalize accept_multiple_files for consistent hashing
-            accept_multiple_files=str(accept_multiple_files),
+            accept_multiple_files=accept_multiple_files,
             help=help,
             width=width,
         )

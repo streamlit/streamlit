@@ -102,16 +102,14 @@ export const createDropHandler =
     // For directory uploads, we need to do our own file type filtering
     // because webkitdirectory bypasses react-dropzone's normal validation
     if (acceptDirectoryFiles && acceptedFiles.length > 0) {
-      let { accepted, rejected } = filterDirectoryFiles(acceptedFiles, element)
+      const { accepted, rejected } = filterDirectoryFiles(
+        acceptedFiles,
+        element
+      )
       acceptedFiles = accepted
       rejectedFiles = [...rejectedFiles, ...rejected]
 
-      // Show a summary message for directory uploads
-      if (rejected.length > 0) {
-        console.log(
-          `Directory upload: ${accepted.length} files accepted, ${rejected.length} files rejected due to file type restrictions.`
-        )
-      }
+      // Directory uploads filter files automatically based on type restrictions
     }
 
     // If only single file upload is allowed but multiple were dropped/selected,

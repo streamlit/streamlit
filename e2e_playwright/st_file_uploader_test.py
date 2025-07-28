@@ -32,16 +32,22 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(12)
+    expect(file_uploaders).to_have_count(
+        14
+    )  # Updated count to include new directory uploaders
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
     assert_snapshot(file_uploaders.nth(2), name="st_file_uploader-multiple_files")
-    assert_snapshot(file_uploaders.nth(4), name="st_file_uploader-hidden_label")
-    assert_snapshot(file_uploaders.nth(5), name="st_file_uploader-collapsed_label")
+    assert_snapshot(file_uploaders.nth(3), name="st_file_uploader-directory")
+    assert_snapshot(file_uploaders.nth(5), name="st_file_uploader-hidden_label")
+    assert_snapshot(file_uploaders.nth(6), name="st_file_uploader-collapsed_label")
     # The other file uploaders do not need to be snapshot tested.
-    assert_snapshot(file_uploaders.nth(8), name="st_file_uploader-markdown_label")
-    assert_snapshot(file_uploaders.nth(9), name="st_file_uploader-compact")
+    assert_snapshot(file_uploaders.nth(9), name="st_file_uploader-markdown_label")
+    assert_snapshot(file_uploaders.nth(10), name="st_file_uploader-compact")
+    assert_snapshot(
+        file_uploaders.nth(13), name="st_file_uploader-restricted_directory"
+    )
 
 
 def test_file_uploader_error_message_disallowed_files(
@@ -217,13 +223,155 @@ def test_uploads_and_deletes_multiple_files(
 
     wait_for_app_run(app)
 
+    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
+    expect(uploaded_file_names).to_have_count(1)
+
+    expect(uploaded_file_names).to_have_text(files[0]["name"], use_inner_text=True)
+
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
-        "True", use_inner_text=True
+    file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    assert_snapshot(file_uploader, name="st_file_uploader-multi_file_one_deleted")
+
+    # Delete the remaining file
+    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        "No upload", use_inner_text=True
     )
+
+
+def test_uploads_directory_with_multiple_files(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that directory upload works correctly with multiple files."""
+    # Create mock directory structure with multiple files
+    directory_files = [
+        FilePayload(name="folder/file1.txt", mimeType="text/plain", buffer=b"content1"),
+        FilePayload(
+            name="folder/file2.py", mimeType="text/plain", buffer=b"print('hello')"
+        ),
+        FilePayload(
+            name="folder/subfolder/file3.md",
+            mimeType="text/plain",
+            buffer=b"# Markdown",
+        ),
+    ]
+
+    uploader_index = 3  # Directory uploader index
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(files=directory_files)
+
+    wait_for_app_run(app, wait_delay=1000)
+
+    # Verify the directory upload was processed
+    uploader_text = app.get_by_test_id("stText").nth(uploader_index)
+    expect(uploader_text).to_contain_text("Directory contains 3 files:")
+    expect(uploader_text).to_contain_text("folder/file1.txt")
+    expect(uploader_text).to_contain_text("folder/file2.py")
+    expect(uploader_text).to_contain_text("folder/subfolder/file3.md")
+
+    # Take snapshot of directory upload state
+    file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    assert_snapshot(file_uploader, name="st_file_uploader-directory_uploaded")
+
+    # Test deleting files from directory upload
+    delete_buttons = app.get_by_test_id("stFileUploaderDeleteBtn")
+    if delete_buttons.count() > 0:
+        delete_buttons.first.click()
+        wait_for_app_run(app)
+
+        # Verify file count decreased
+        uploader_text = app.get_by_test_id("stText").nth(uploader_index)
+        expect(uploader_text).to_contain_text("Directory contains 2 files:")
+
+
+def test_directory_upload_with_file_type_filtering(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that directory upload correctly filters files by type."""
+    # Create directory with mixed file types, only .txt should be accepted
+    mixed_files = [
+        FilePayload(
+            name="folder/allowed.txt", mimeType="text/plain", buffer=b"allowed content"
+        ),
+        FilePayload(
+            name="folder/rejected.jpg",
+            mimeType="image/jpeg",
+            buffer=b"fake jpeg content",
+        ),
+        FilePayload(
+            name="folder/also_allowed.txt",
+            mimeType="text/plain",
+            buffer=b"also allowed",
+        ),
+        FilePayload(
+            name="folder/rejected.pdf",
+            mimeType="application/pdf",
+            buffer=b"fake pdf content",
+        ),
+    ]
+
+    uploader_index = 13  # Restricted directory uploader index
+
+    # Capture console messages to verify filtering feedback
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(files=mixed_files)
+
+    wait_for_app_run(app, wait_delay=1000)
+
+    # Verify only .txt files were accepted
+    uploader_text = app.get_by_test_id("stText").nth(uploader_index)
+    expect(uploader_text).to_contain_text("Restricted directory contains 2 .txt files:")
+    expect(uploader_text).to_contain_text("allowed.txt")
+    expect(uploader_text).to_contain_text("also_allowed.txt")
+
+    # Verify rejected files are not shown
+    expect(uploader_text).not_to_contain_text("rejected.jpg")
+    expect(uploader_text).not_to_contain_text("rejected.pdf")
+
+    # Verify console message about filtering
+    wait_until(
+        app,
+        lambda: any(
+            "Directory upload:" in message and "files rejected" in message
+            for message in messages
+        ),
+        timeout=3000,
+    )
+
+    file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
+    assert_snapshot(file_uploader, name="st_file_uploader-directory_filtered")
+
+
+def test_directory_upload_empty_directory(app: Page):
+    """Test that directory upload handles empty directories gracefully."""
+    uploader_index = 3  # Directory uploader index
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(files=[])  # Empty directory
+
+    wait_for_app_run(app, wait_delay=500)
+
+    # Verify empty directory is handled correctly
+    uploader_text = app.get_by_test_id("stText").nth(uploader_index)
+    expect(uploader_text).to_have_text("No directory upload", use_inner_text=True)
 
 
 def test_uploads_multiple_files_one_by_one_quickly(app: Page):

@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -426,6 +426,264 @@ describe("ChatInput widget", () => {
       // Try to submit by pressing Enter
       await user.type(chatInput, "{enter}")
       expect(spy).not.toHaveBeenCalled()
+    })
+  })
+
+  it("renders directory upload UI correctly", () => {
+    const props = getProps({
+      element: {
+        ...getProps().element,
+        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+        fileType: ["txt", "py", "md"],
+      },
+    })
+
+    render(<ChatInput {...props} />)
+
+    // Check that file upload button is visible for directory uploads
+    const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
+    expect(uploadButton).toBeInTheDocument()
+
+    // Verify aria labels and accessibility
+    const chatInput = screen.getByTestId("stChatInputTextArea")
+    expect(chatInput).toBeInTheDocument()
+  })
+
+  it("handles directory upload with multiple files", async () => {
+    const user = userEvent.setup()
+    const mockSetChatInputValue = vi.fn()
+    const mockWidgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+    })
+    mockWidgetMgr.setChatInputValue = mockSetChatInputValue
+
+    const props = getProps({
+      element: {
+        ...getProps().element,
+        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+        fileType: ["txt", "py", "md"],
+      },
+      widgetMgr: mockWidgetMgr,
+    })
+
+    render(<ChatInput {...props} />)
+
+    // Simulate directory file upload
+    const directoryFiles = [
+      new File(["print('hello')"], "project/main.py", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["def test(): pass"], "project/tests/test_main.py", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["# Project"], "project/README.md", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+    ]
+
+    // Find the file input and simulate file selection
+    const fileInput = screen
+      .getByTestId("stChatInputTextArea")
+      .querySelector('input[type="file"]')
+    expect(fileInput).toBeInTheDocument()
+
+    if (fileInput) {
+      // Upload files using userEvent
+      await user.upload(fileInput, directoryFiles)
+    }
+
+    await waitFor(() => {
+      // Files should be processed for upload
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(3)
+    })
+
+    // Verify files are displayed in UI
+    const uploadedFiles = screen.getByTestId("stChatUploadedFiles")
+    expect(uploadedFiles).toBeInTheDocument()
+
+    // Type a message
+    const textarea = screen.getByTestId("stChatInputTextArea")
+    await user.type(textarea, "Here are the project files")
+
+    // Submit the chat input
+    const submitButton = screen.getByTestId("stChatInputSubmitButton")
+    await user.click(submitButton)
+
+    await waitFor(() => {
+      expect(mockSetChatInputValue).toHaveBeenCalledWith(
+        props.element,
+        expect.objectContaining({
+          data: "Here are the project files",
+          fileUploaderState: expect.any(Object),
+        }),
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    // Verify input is cleared after submission
+    expect(textarea).toHaveTextContent("")
+  })
+
+  it("filters directory files by allowed types", async () => {
+    const user = userEvent.setup()
+    const consoleSpy = vi.spyOn(console, "log")
+
+    const props = getProps({
+      element: {
+        ...getProps().element,
+        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+        fileType: ["txt"], // Only allow .txt files
+      },
+    })
+
+    render(<ChatInput {...props} />)
+
+    // Mix of valid and invalid files
+    const mixedFiles = [
+      new File(["Valid content"], "docs/valid.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Another valid"], "docs/another.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Invalid"], "docs/image.jpg", {
+        type: "image/jpeg",
+        lastModified: 0,
+      }),
+      new File(["Also invalid"], "docs/script.py", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+    ]
+
+    const fileInput = screen
+      .getByTestId("stChatInputTextArea")
+      .querySelector('input[type="file"]')
+
+    if (fileInput) {
+      // Upload files using userEvent
+      await user.upload(fileInput, mixedFiles)
+    }
+
+    await waitFor(() => {
+      // Only 2 valid .txt files should be uploaded
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    })
+
+    // Verify console message about filtering
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Directory upload: 2 files accepted, 2 files rejected"
+      )
+    )
+
+    consoleSpy.mockRestore()
+  })
+
+  it("handles empty directory upload", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      element: {
+        ...getProps().element,
+        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      },
+    })
+
+    render(<ChatInput {...props} />)
+
+    const fileInput = screen
+      .getByTestId("stChatInputTextArea")
+      .querySelector('input[type="file"]')
+
+    if (fileInput) {
+      // Simulate empty directory upload
+      await user.upload(fileInput, [])
+    }
+
+    await waitFor(() => {
+      // No uploads should occur for empty directory
+      expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+    })
+
+    // Should still be able to type and submit message
+    const textarea = screen.getByTestId("stChatInputTextArea")
+    await user.type(textarea, "No files to share")
+
+    const submitButton = screen.getByTestId("stChatInputSubmitButton")
+    expect(submitButton).toBeEnabled()
+  })
+
+  it("displays directory upload instructions correctly", () => {
+    const props = getProps({
+      element: {
+        ...getProps().element,
+        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      },
+    })
+
+    render(<ChatInput {...props} />)
+
+    // Check for directory-specific UI elements
+    const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
+    expect(uploadButton).toBeInTheDocument()
+
+    // Verify file input has directory attributes
+    const fileInput = screen
+      .getByTestId("stChatInputTextArea")
+      .querySelector('input[type="file"]')
+    expect(fileInput).toHaveAttribute("webkitdirectory")
+    expect(fileInput).toHaveAttribute("multiple")
+  })
+
+  it("removes directory files when deleted individually", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      element: {
+        ...getProps().element,
+        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      },
+    })
+
+    render(<ChatInput {...props} />)
+
+    // Upload directory files
+    const directoryFiles = [
+      new File(["File 1"], "dir/file1.txt", { type: "text/plain" }),
+      new File(["File 2"], "dir/file2.txt", { type: "text/plain" }),
+    ]
+
+    const fileInput = screen
+      .getByTestId("stChatInputTextArea")
+      .querySelector('input[type="file"]')
+
+    if (fileInput) {
+      // Upload directory files
+      await user.upload(fileInput, directoryFiles)
+    }
+
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    })
+
+    // Delete one file
+    const deleteButtons = screen.getAllByTestId("stChatInputDeleteBtn")
+    expect(deleteButtons).toHaveLength(2)
+
+    await user.click(deleteButtons[0])
+
+    await waitFor(() => {
+      // Should have one less delete button
+      const remainingDeleteButtons = screen.getAllByTestId(
+        "stChatInputDeleteBtn"
+      )
+      expect(remainingDeleteButtons).toHaveLength(1)
     })
   })
 })

@@ -49,19 +49,25 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
 def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.chat_input widgets are correctly rendered via screenshot matching."""
     # set taller height to ensure inputs do not overlap
-    app.set_viewport_size({"width": 750, "height": 2000})
+    app.set_viewport_size({"width": 750, "height": 2500})
 
     chat_input_widgets = app.get_by_test_id("stChatInput")
-    expect(chat_input_widgets).to_have_count(8)
+    expect(chat_input_widgets).to_have_count(
+        10
+    )  # Updated count to include new directory inputs
 
     assert_snapshot(chat_input_widgets.nth(0), name="st_chat_input-inline")
     assert_snapshot(chat_input_widgets.nth(1), name="st_chat_input-in_column_disabled")
     assert_snapshot(chat_input_widgets.nth(2), name="st_chat_input-callback")
     assert_snapshot(chat_input_widgets.nth(3), name="st_chat_input-single-file")
     assert_snapshot(chat_input_widgets.nth(4), name="st_chat_input-multiple-files")
-    assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-width_300px")
-    assert_snapshot(chat_input_widgets.nth(6), name="st_chat_input-width_stretch")
-    assert_snapshot(chat_input_widgets.nth(7), name="st_chat_input-bottom")
+    assert_snapshot(chat_input_widgets.nth(5), name="st_chat_input-directory")
+    assert_snapshot(chat_input_widgets.nth(6), name="st_chat_input-width_300px")
+    assert_snapshot(chat_input_widgets.nth(7), name="st_chat_input-width_stretch")
+    assert_snapshot(
+        chat_input_widgets.nth(8), name="st_chat_input-restricted_directory"
+    )
+    assert_snapshot(chat_input_widgets.nth(9), name="st_chat_input-bottom")
 
 
 def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunction):
@@ -317,6 +323,137 @@ def test_uploads_and_deletes_multiple_files(
     expect(uploaded_file_names).to_have_count(1)
 
     expect(uploaded_file_names).to_have_text(files[1]["name"], use_inner_text=True)
+
+
+def test_uploads_directory_via_chat_input(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that directory upload works correctly via chat input."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+    chat_input = app.get_by_test_id("stChatInput").nth(5)  # Directory chat input
+
+    # Create mock directory structure
+    directory_files = [
+        FilePayload(
+            name="project/main.py", mimeType="text/plain", buffer=b"print('main')"
+        ),
+        FilePayload(
+            name="project/utils.py", mimeType="text/plain", buffer=b"def helper(): pass"
+        ),
+        FilePayload(
+            name="project/README.md", mimeType="text/plain", buffer=b"# Project"
+        ),
+        FilePayload(
+            name="project/tests/test_main.py",
+            mimeType="text/plain",
+            buffer=b"def test(): pass",
+        ),
+    ]
+
+    file_upload_helper(app, chat_input, directory_files)
+
+    # Verify files are displayed
+    uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(3)
+    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    expect(uploaded_file_names).to_have_count(4)
+
+    # Verify file names are shown
+    file_name_texts = [element.inner_text() for element in uploaded_file_names.all()]
+    expected_names = [
+        "project/main.py",
+        "project/utils.py",
+        "project/README.md",
+        "project/tests/test_main.py",
+    ]
+    for expected_name in expected_names:
+        assert any(expected_name in text for text in file_name_texts), (
+            f"Expected file name {expected_name} not found in {file_name_texts}"
+        )
+
+    assert_snapshot(uploaded_files, name="st_chat_input-directory_uploaded")
+
+    # Test submission with directory and text
+    chat_input_area = chat_input.locator("textarea")
+    chat_input_area.type("Here are the project files:")
+
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    submit_button.click()
+
+    wait_for_app_run(app)
+
+    # Verify submission was processed and files are cleared
+    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    expect(uploaded_file_names).to_have_count(0)
+    expect(chat_input_area).to_have_value("")
+
+
+def test_directory_upload_with_file_type_filtering_chat_input(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that directory upload correctly filters files by type in chat input."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+    chat_input = app.get_by_test_id("stChatInput").nth(
+        8
+    )  # Restricted directory chat input
+
+    # Create directory with mixed file types, only .txt should be accepted
+    mixed_files = [
+        FilePayload(
+            name="docs/readme.txt", mimeType="text/plain", buffer=b"readme content"
+        ),
+        FilePayload(name="docs/image.jpg", mimeType="image/jpeg", buffer=b"fake jpeg"),
+        FilePayload(
+            name="docs/notes.txt", mimeType="text/plain", buffer=b"notes content"
+        ),
+        FilePayload(
+            name="docs/document.pdf", mimeType="application/pdf", buffer=b"fake pdf"
+        ),
+    ]
+
+    # Capture console messages to verify filtering
+    messages = []
+    app.on("console", lambda msg: messages.append(msg.text))
+
+    file_upload_helper(app, chat_input, mixed_files)
+
+    # Verify only .txt files were accepted
+    uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(4)
+    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    expect(uploaded_file_names).to_have_count(2)
+
+    # Verify correct file names are shown
+    file_name_texts = [element.inner_text() for element in uploaded_file_names.all()]
+    assert any("readme.txt" in text for text in file_name_texts)
+    assert any("notes.txt" in text for text in file_name_texts)
+
+    # Verify rejected files are not shown
+    assert not any("image.jpg" in text for text in file_name_texts)
+    assert not any("document.pdf" in text for text in file_name_texts)
+
+    assert_snapshot(uploaded_files, name="st_chat_input-directory_filtered")
+
+
+def test_directory_upload_error_handling_chat_input(app: Page):
+    """Test error handling for directory uploads in chat input."""
+    app.set_viewport_size({"width": 750, "height": 2000})
+    chat_input = app.get_by_test_id("stChatInput").nth(5)  # Directory chat input
+
+    # Test with empty directory
+    file_upload_helper(app, chat_input, [])
+
+    uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(3)
+    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    expect(uploaded_file_names).to_have_count(0)
+
+    # Test submitting without files should work
+    chat_input_area = chat_input.locator("textarea")
+    chat_input_area.type("No files attached")
+
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    submit_button.click()
+
+    wait_for_app_run(app)
+    expect(chat_input_area).to_have_value("")
 
 
 def test_file_upload_error_message_disallowed_files(

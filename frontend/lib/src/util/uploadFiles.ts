@@ -96,7 +96,9 @@ export const uploadFiles = async ({
           new UploadedFileInfoProto({
             fileId: fileUrl.fileId,
             fileUrls: fileUrl,
-            name: (file as any).webkitRelativePath || file.name,
+            name:
+              (file as File & { webkitRelativePath?: string })
+                .webkitRelativePath || file.name,
             size: file.size,
           })
       ),

@@ -283,7 +283,10 @@ class FileUploader extends PureComponent<InnerProps, State> {
   ): void => {
     const { element } = this.props
     const { multipleFiles } = element
-    const isDirectoryUpload = (element as any).acceptDirectory || false
+    const isDirectoryUpload = Boolean(
+      (element as InnerProps["element"] & { acceptDirectory?: boolean })
+        .acceptDirectory
+    )
 
     // For directory uploads, we need to do our own file type filtering
     // because webkitdirectory bypasses react-dropzone's normal validation
@@ -292,12 +295,7 @@ class FileUploader extends PureComponent<InnerProps, State> {
       acceptedFiles = accepted
       rejectedFiles = [...rejectedFiles, ...rejected]
 
-      // Show a summary message for directory uploads
-      if (rejected.length > 0) {
-        console.log(
-          `Directory upload: ${accepted.length} files accepted, ${rejected.length} files rejected due to file type restrictions.`
-        )
-      }
+      // Directory uploads filter files automatically based on type restrictions
     }
 
     // If this is a single-file uploader and multiple files were dropped,
@@ -371,7 +369,9 @@ class FileUploader extends PureComponent<InnerProps, State> {
     const cancelToken = axios.CancelToken.source()
 
     // For directory uploads, use the relative path to preserve directory structure
-    const fileName = (file as any).webkitRelativePath || file.name
+    const fileName =
+      (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+      file.name
 
     const uploadingFileInfo = new UploadFileInfo(
       fileName,
@@ -620,7 +620,10 @@ class FileUploader extends PureComponent<InnerProps, State> {
           maxSizeBytes={this.maxUploadSizeInBytes}
           label={element.label}
           disabled={disabled}
-          acceptDirectory={(element as any).acceptDirectory || false}
+          acceptDirectory={Boolean(
+            (element as InnerProps["element"] & { acceptDirectory?: boolean })
+              .acceptDirectory
+          )}
         />
         {newestToOldestFiles.length > 0 && (
           <UploadedFiles
