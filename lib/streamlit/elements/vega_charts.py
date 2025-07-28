@@ -395,10 +395,19 @@ def _convert_altair_to_vega_lite_spec(
 
     alt.data_transformers.register("id", id_transform)  # type: ignore[arg-type,attr-defined,unused-ignore]
 
+    # alt.themes was deprecated in Altair 5.5.0 in favor of alt.theme
+    altair_theme = (
+        alt.themes if type_util.is_altair_version_less_than("5.5.0") else alt.theme
+    )
+
     # The default altair theme has some width/height defaults defined
     # which are not useful for Streamlit. Therefore, we change the theme to
     # "none" to avoid those defaults.
-    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():  # type: ignore[attr-defined,unused-ignore]
+    with (
+        altair_theme.enable("none")
+        if altair_theme.active == "default"
+        else nullcontext()
+    ):  # type: ignore[attr-defined,unused-ignore]
         with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
