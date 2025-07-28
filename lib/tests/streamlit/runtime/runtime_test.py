@@ -575,3 +575,90 @@ time.sleep(5)
         event_based_path_watcher._MultiPathWatcher._singleton = None
         assert expected_loads == ok
         assert expected_msg == msg
+
+
+class WindowsSignalHandlingTest(RuntimeTestCase):
+    """Tests for Windows signal handling when no sessions are connected."""
+
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only test")
+    async def test_stop_works_with_no_sessions_windows(self):
+        """Test that Runtime.stop() works on Windows when no sessions are connected.
+
+        This is a regression test for the issue where Ctrl+C wouldn't work on Windows
+        when the server had no connected browser sessions.
+        """
+        await self.runtime.start()
+
+        # Ensure we're in NO_SESSIONS_CONNECTED state
+        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+
+        # Call stop() which simulates what happens when Ctrl+C is pressed
+        self.runtime.stop()
+
+        # The runtime should stop within a reasonable timeout (1 second)
+        # On Windows without the fix, this would hang indefinitely
+        try:
+            await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
+            stopped = True
+        except asyncio.TimeoutError:
+            stopped = False
+
+        assert stopped, "Runtime did not stop within timeout on Windows"
+        assert self.runtime.state == RuntimeState.STOPPED
+
+    @pytest.mark.skipif(os.name == "nt", reason="Non-Windows test")
+    async def test_stop_works_with_no_sessions_non_windows(self):
+        """Test that Runtime.stop() continues to work on non-Windows platforms.
+
+        This ensures our Windows fix doesn't break behavior on other platforms.
+        """
+        await self.runtime.start()
+
+        # Ensure we're in NO_SESSIONS_CONNECTED state
+        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+
+        # Call stop()
+        self.runtime.stop()
+
+        # Should stop promptly on non-Windows platforms
+        await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
+        assert self.runtime.state == RuntimeState.STOPPED
+
+    async def test_windows_timeout_allows_loop_continuation(self):
+        """Test that the Windows timeout in asyncio.wait allows the loop to continue.
+
+        This verifies that the periodic timeout on Windows allows the event loop
+        to process other events like shutdown signals.
+        """
+        await self.runtime.start()
+
+        # Mock the platform to simulate Windows behavior
+        with patch("sys.platform", "win32"):
+            # Connect and disconnect a session to trigger state changes
+            client = MockSessionClient()
+            session_id = self.runtime.connect_session(
+                client=client, user_info=MagicMock()
+            )
+
+            # Let the runtime process the connection
+            await self.tick_runtime_loop()
+
+            # Disconnect the session
+            self.runtime.disconnect_session(session_id)
+
+            # Let the runtime process the disconnection
+            await self.tick_runtime_loop()
+
+            # Now we should be back to NO_SESSIONS_CONNECTED
+            assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+
+            # Schedule stop after a small delay to simulate signal during wait
+            async def delayed_stop():
+                await asyncio.sleep(0.1)
+                self.runtime.stop()
+
+            asyncio.create_task(delayed_stop())  # noqa: RUF006
+
+            # The runtime should stop within the Windows timeout interval
+            await asyncio.wait_for(self.runtime.stopped, timeout=0.5)
+            assert self.runtime.state == RuntimeState.STOPPED
