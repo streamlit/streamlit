@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
+import React, {
+  FC,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
@@ -28,7 +35,7 @@ import Toolbar, {
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import {
@@ -78,7 +85,14 @@ const ArrowVegaLiteChart: FC<Props> = ({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-  const [width, containerRef] = useCalculatedWidth([showData])
+
+  const {
+    values: [width, chartHeight],
+    elementRef: containerRef,
+  } = useResizeObserver(
+    useMemo(() => ["width", "height"], []),
+    [showData]
+  )
 
   // Facet charts need the container element to have a width and also
   // do not work well with stretch/container width
@@ -152,8 +166,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   if (showData) {
     return (
       <ReadOnlyGrid
-        data={data ?? datasets[0].data}
-        height={height ?? undefined}
+        data={data ?? datasets[0]?.data}
+        height={height ?? chartHeight ?? undefined}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
