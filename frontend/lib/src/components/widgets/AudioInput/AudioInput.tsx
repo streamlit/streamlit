@@ -442,7 +442,7 @@ const AudioInput: React.FC<Props> = ({
           </StyledWidgetLabelHelp>
         )}
       </WidgetLabel>
-      <StyledWaveformContainerDiv>
+      <StyledWaveformContainerDiv disabled={disabled}>
         <Toolbar
           isFullScreen={false}
           disableFullscreenMode={true}
@@ -493,6 +493,7 @@ const AudioInput: React.FC<Props> = ({
         </StyledWaveformInnerDiv>
         <StyledWaveformTimeCode
           isPlayingOrRecording={isPlayingOrRecording}
+          disabled={disabled}
           data-testid="stAudioInputWaveformTimeCode"
         >
           {shouldUpdatePlaybackTime ? progressTime : recordingTime}

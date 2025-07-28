@@ -17,13 +17,7 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-import {
-  EmotionTheme,
-  STALE_STYLES,
-  STALE_TRANSITION_PARAMS,
-} from "~lib/theme"
-import { StyledSpinnerIcon } from "~lib/components/shared/Icon"
-import type { StyledSpinnerIconProps } from "~lib/components/shared/Icon/styled-components"
+import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
 
 export interface StyledExpandableContainerProps {
   empty: boolean
@@ -83,7 +77,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
     paddingRight: theme.spacing.md,
     paddingTop: theme.spacing.twoXS,
     paddingBottom: theme.spacing.twoXS,
-    minHeight: theme.sizes.minElementHeight,
+    minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
     alignItems: "center",
     cursor: "pointer",
     listStyleType: "none",
@@ -114,13 +108,4 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
 export const StyledDetailsPanel = styled.div(({ theme }) => ({
   padding: theme.spacing.lg,
   borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-}))
-
-export const StyledStatusSpinner = styled(
-  StyledSpinnerIcon as React.ComponentType<StyledSpinnerIconProps>
-)(({ theme }: { theme: EmotionTheme }) => ({
-  // Make the spinner in `st.status` a bit thinner and grayscale to look
-  // similar to a material icon.
-  borderTopColor: theme.colors.bodyText,
-  borderWidth: `calc(${theme.sizes.spinnerThickness} * 0.75)`,
 }))

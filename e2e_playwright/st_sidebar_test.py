@@ -13,12 +13,44 @@
 # limitations under the License.
 
 import math
-from typing import cast
+from typing import Callable, cast
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import check_top_level_class
+
+
+def create_sidebar_collapsed_checker(sidebar: Locator) -> Callable[[], bool]:
+    """Helper to create a function that checks if sidebar is collapsed."""
+
+    def check_sidebar_collapsed() -> bool:
+        return sidebar.get_attribute("aria-expanded") == "false"
+
+    return check_sidebar_collapsed
+
+
+def create_sidebar_expanded_checker(sidebar: Locator) -> Callable[[], bool]:
+    """Helper to create a function that checks if sidebar is expanded."""
+
+    def check_sidebar_expanded() -> bool:
+        return sidebar.get_attribute("aria-expanded") == "true"
+
+    return check_sidebar_expanded
+
+
+def create_sidebar_exists_checker(sidebar: Locator) -> Callable[[], bool]:
+    """Helper to create a function that checks if sidebar element exists."""
+
+    def check_sidebar_exists() -> bool:
+        return sidebar.count() > 0
+
+    return check_sidebar_exists
+
+
+def get_sidebar_width(sidebar: Locator) -> int:
+    """Helper to get the current width of the sidebar."""
+    return cast("int", sidebar.evaluate("el => el.getBoundingClientRect().width"))
 
 
 def test_sidebar_displays_correctly(
@@ -89,21 +121,16 @@ def test_check_top_level_class(app: Page):
 def test_sidebar_resize_functionality(app: Page):
     """Test that sidebar can be resized by dragging and not by clicking."""
 
-    # Get the sidebar element
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_visible()
 
-    # Get the initial width of the sidebar
-    initial_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    initial_width = get_sidebar_width(sidebar)
 
-    # Find the resize handle (the element with cursor: col-resize)
     resize_handle = app.locator("div[style*='cursor: col-resize']")
     expect(resize_handle).to_be_visible()
 
-    # Get resize handle position
     handle_box = resize_handle.bounding_box()
 
-    # Get the handle's starting position
     assert handle_box is not None
 
     handle_x = handle_box["x"] + handle_box["width"] / 2
@@ -116,20 +143,15 @@ def test_sidebar_resize_functionality(app: Page):
     app.mouse.move(handle_x + drag_distance, handle_y)
     app.mouse.up()
 
-    # Wait for the resize to take effect
     def check_width_changed() -> bool:
-        current_width: int = sidebar.evaluate("el => el.getBoundingClientRect().width")
-        return current_width > initial_width
+        return get_sidebar_width(sidebar) > initial_width
 
     wait_until(app, check_width_changed)
 
-    # Measure the width after dragging
-    after_drag_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    after_drag_width = get_sidebar_width(sidebar)
 
-    # Verify the width increased by approximately drag_distance
-    # We use a tolerance of +/- 3px to account for rounding and rendering differences
     def check_approximate_width_change() -> bool:
-        current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+        current_width = get_sidebar_width(sidebar)
         width_change = current_width - initial_width
         return math.isclose(width_change, drag_distance, abs_tol=3)
 
@@ -144,7 +166,7 @@ def test_sidebar_resize_functionality(app: Page):
 
     def check_width_stabilized() -> bool:
         nonlocal last_seen_width, stable_count
-        current_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+        current_width = get_sidebar_width(sidebar)
 
         if current_width == last_seen_width:
             stable_count += 1
@@ -159,26 +181,259 @@ def test_sidebar_resize_functionality(app: Page):
     wait_until(app, check_width_stabilized)
 
     # Now get the stable width after clicking
-    click_width = cast(
-        "int", sidebar.evaluate("el => el.getBoundingClientRect().width")
-    )
+    click_width = get_sidebar_width(sidebar)
 
     # Finally, test double-click to reset width
     resize_handle.dblclick()
 
     # Wait for the reset to take effect
     def check_width_reset() -> bool:
-        reset_width = cast(
-            "int", sidebar.evaluate("el => el.getBoundingClientRect().width")
-        )
+        reset_width = get_sidebar_width(sidebar)
         return reset_width != click_width
 
     wait_until(app, check_width_reset)
 
     # Measure the width after double-clicking
-    after_dblclick_width = sidebar.evaluate("el => el.getBoundingClientRect().width")
+    after_dblclick_width = get_sidebar_width(sidebar)
 
     # Verify the width changed (reset to default)
     assert after_dblclick_width != click_width, (
         f"Width didn't reset after double-clicking: {after_dblclick_width} == {click_width}"
     )
+
+
+def test_sidebar_width_localstorage_persistence(app: Page):
+    """Test that sidebar width is saved to localStorage and restored on page reload."""
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    default_width = get_sidebar_width(sidebar)
+
+    resize_handle = app.locator("div[style*='cursor: col-resize']")
+    expect(resize_handle).to_be_visible()
+
+    handle_box = resize_handle.bounding_box()
+    assert handle_box is not None
+
+    handle_x = handle_box["x"] + handle_box["width"] / 2
+    handle_y = handle_box["y"] + handle_box["height"] / 2
+
+    # Drag by 50px to make a significant width change
+    drag_distance = 50
+    app.mouse.move(handle_x, handle_y)
+    app.mouse.down()
+    app.mouse.move(handle_x + drag_distance, handle_y)
+    app.mouse.up()
+
+    def check_width_changed() -> bool:
+        current_width = get_sidebar_width(sidebar)
+        return abs(current_width - default_width) >= (drag_distance - 5)
+
+    wait_until(app, check_width_changed)
+
+    new_width = get_sidebar_width(sidebar)
+
+    saved_width = app.evaluate("() => window.localStorage.getItem('sidebarWidth')")
+    assert saved_width == str(new_width), (
+        f"Width not saved to localStorage: expected {new_width}, got {saved_width}"
+    )
+
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    def check_width_restored() -> bool:
+        restored_width = get_sidebar_width(sidebar)
+        return (
+            abs(restored_width - new_width) <= 3
+        )  # Allow small tolerance for rendering
+
+    wait_until(app, check_width_restored)
+
+    restored_width = get_sidebar_width(sidebar)
+    assert abs(restored_width - new_width) <= 3, (
+        f"Width not restored from localStorage: expected ~{new_width}, got {restored_width}"
+    )
+
+
+def test_sidebar_width_double_click_updates_localstorage(app: Page):
+    """Test that double-clicking to reset width also updates localStorage."""
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    default_width = get_sidebar_width(sidebar)
+
+    resize_handle = app.locator("div[style*='cursor: col-resize']")
+    expect(resize_handle).to_be_visible()
+
+    handle_box = resize_handle.bounding_box()
+    assert handle_box is not None
+
+    handle_x = handle_box["x"] + handle_box["width"] / 2
+    handle_y = handle_box["y"] + handle_box["height"] / 2
+
+    # Drag to make the sidebar wider
+    app.mouse.move(handle_x, handle_y)
+    app.mouse.down()
+    app.mouse.move(handle_x + 40, handle_y)
+    app.mouse.up()
+
+    def check_width_increased() -> bool:
+        current_width = get_sidebar_width(sidebar)
+        return current_width > default_width + 30
+
+    wait_until(app, check_width_increased)
+
+    custom_width_saved = app.evaluate(
+        "() => window.localStorage.getItem('sidebarWidth')"
+    )
+    assert custom_width_saved is not None
+    assert int(custom_width_saved) > default_width
+
+    resize_handle.dblclick()
+
+    def check_width_reset() -> bool:
+        current_width = get_sidebar_width(sidebar)
+        return abs(current_width - default_width) <= 3
+
+    wait_until(app, check_width_reset)
+
+    reset_width_saved = app.evaluate(
+        "() => window.localStorage.getItem('sidebarWidth')"
+    )
+    assert reset_width_saved == str(default_width), (
+        f"localStorage not updated after double-click reset: expected {default_width}, got {reset_width_saved}"
+    )
+
+
+def test_sidebar_width_initial_load_from_localstorage(app: Page):
+    """Test that sidebar respects width from localStorage on initial load."""
+
+    custom_width = 350
+    app.evaluate(f"() => window.localStorage.setItem('sidebarWidth', '{custom_width}')")
+
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    def check_initial_width() -> bool:
+        current_width = get_sidebar_width(sidebar)
+        return abs(current_width - custom_width) <= 3
+
+    wait_until(app, check_initial_width)
+
+    actual_width = get_sidebar_width(sidebar)
+    assert abs(actual_width - custom_width) <= 3, (
+        f"Sidebar didn't use localStorage width on initial load: expected ~{custom_width}, got {actual_width}"
+    )
+
+
+def test_sidebar_toggle_state_localstorage_persistence(app: Page):
+    """Test that sidebar toggle state is saved to localStorage and restored on page reload."""
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+    sidebar_header = app.get_by_test_id("stSidebarHeader")
+    expect(sidebar_header).to_be_visible()
+    sidebar_header.hover()
+
+    collapse_button = app.get_by_test_id("stSidebarCollapseButton")
+    expect(collapse_button).to_be_visible()
+    collapse_button.click()
+
+    wait_until(app, create_sidebar_collapsed_checker(sidebar))
+
+    saved_state = app.evaluate(
+        "() => window.localStorage.getItem('stSidebarCollapsed-')"
+    )
+    assert saved_state == "true", (
+        f"Collapsed state not saved to localStorage: expected 'true', got {saved_state}"
+    )
+
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+
+    wait_until(app, create_sidebar_exists_checker(sidebar))
+
+    wait_until(app, create_sidebar_collapsed_checker(sidebar))
+
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expect(expand_button).to_be_visible()
+    expand_button.click()
+
+    wait_until(app, create_sidebar_expanded_checker(sidebar))
+
+    expect(sidebar).to_be_visible()
+
+    saved_state_expanded = app.evaluate(
+        "() => window.localStorage.getItem('stSidebarCollapsed-')"
+    )
+    assert saved_state_expanded == "false", (
+        f"Expanded state not saved to localStorage: expected 'false', got {saved_state_expanded}"
+    )
+
+
+def test_sidebar_toggle_state_initial_load_from_localstorage(app: Page):
+    """Test that sidebar respects toggle state from localStorage on initial load."""
+
+    app.evaluate("() => window.localStorage.setItem('stSidebarCollapsed-', 'true')")
+
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    wait_until(app, create_sidebar_exists_checker(sidebar))
+
+    wait_until(app, create_sidebar_collapsed_checker(sidebar))
+
+    app.evaluate("() => window.localStorage.setItem('stSidebarCollapsed-', 'false')")
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    wait_until(app, create_sidebar_expanded_checker(sidebar))
+
+
+def test_sidebar_toggle_state_invalid_localstorage_fallback(app: Page):
+    """Test that sidebar falls back gracefully when localStorage has invalid values."""
+
+    app.evaluate("() => window.localStorage.setItem('stSidebarCollapsed-', 'invalid')")
+
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    wait_until(app, create_sidebar_expanded_checker(sidebar))
+
+
+def test_sidebar_toggle_state_overrides_initial_config(app: Page):
+    """Test that localStorage toggle state overrides initial sidebar configuration.
+    This test verifies that if a user has manually set a preference,
+    it takes precedence over any st.set_page_config(initial_sidebar_state=...).
+    """
+
+    app.evaluate("() => window.localStorage.setItem('stSidebarCollapsed-', 'true')")
+
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    wait_until(app, create_sidebar_exists_checker(sidebar))
+
+    wait_until(app, create_sidebar_collapsed_checker(sidebar))
+
+    app.evaluate("() => window.localStorage.removeItem('stSidebarCollapsed-')")
+    app.reload()
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+
+    wait_until(app, create_sidebar_expanded_checker(sidebar))

@@ -20,13 +20,13 @@ import { CloudUpload } from "@emotion-icons/material-outlined"
 
 import Icon from "~lib/components/shared/Icon"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
-import { Small } from "~lib/components/shared/TextElements"
 
 import {
   StyledFileDropzoneInstructions,
   StyledFileDropzoneInstructionsColumn,
   StyledFileDropzoneInstructionsFileUploaderIcon,
-  StyledFileDropzoneInstructionsStyledSpan,
+  StyledFileDropzoneInstructionsSubtext,
+  StyledFileDropzoneInstructionsText,
 } from "./styled-components"
 
 export interface Props {
@@ -34,6 +34,7 @@ export interface Props {
   acceptedExtensions: string[]
   maxSizeBytes: number
   acceptDirectory?: boolean
+  disabled?: boolean
 }
 
 const FileDropzoneInstructions = ({
@@ -41,6 +42,7 @@ const FileDropzoneInstructions = ({
   acceptedExtensions,
   maxSizeBytes,
   acceptDirectory = false,
+  disabled,
 }: Props): React.ReactElement => {
   // Determine what type of content we're accepting
   const getContentTypeText = (): string => {
@@ -69,13 +71,13 @@ const FileDropzoneInstructions = ({
         <Icon content={CloudUpload} size="threeXL" />
       </StyledFileDropzoneInstructionsFileUploaderIcon>
       <StyledFileDropzoneInstructionsColumn>
-        <StyledFileDropzoneInstructionsStyledSpan>
+        <StyledFileDropzoneInstructionsText disabled={disabled}>
           Drag and drop {getContentTypeText()} here
-        </StyledFileDropzoneInstructionsStyledSpan>
-        <Small>
+        </StyledFileDropzoneInstructionsText>
+        <StyledFileDropzoneInstructionsSubtext disabled={disabled}>
           {getSizeLimit()}
           {getFileTypeInfo()}
-        </Small>
+        </StyledFileDropzoneInstructionsSubtext>
       </StyledFileDropzoneInstructionsColumn>
     </StyledFileDropzoneInstructions>
   )
