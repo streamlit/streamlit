@@ -19,9 +19,7 @@ import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
 
-import { Arrow, Arrow as ArrowProto } from "@streamlit/protobuf"
-
-import DataFrame from "~lib/components/widgets/DataFrame"
+import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import Toolbar, {
   StyledToolbarElementContainer,
@@ -72,7 +70,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
 }) => {
   const [showData, setShowData] = useState(false)
   const [enableShowData, setEnableShowData] = useState(false)
-  const [chartHeight, setChartHeight] = useState<number | null>(null)
+
   const {
     expanded: isFullScreen,
     height,
@@ -141,7 +139,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
     updateView(data, datasets)
-  }, [data, datasets, updateView])
+  }, [data, datasets, updateView, showData])
 
   useEffect(() => {
     if (data || (datasets && datasets[0]?.data)) {
@@ -153,32 +151,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   if (showData) {
     return (
-      <DataFrame
-        element={
-          new ArrowProto({
-            useContainerWidth: true,
-            editingMode: Arrow.EditingMode.READ_ONLY,
-            disabled: true,
-            data: new Uint8Array(),
-            styler: null,
-            // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-            width: null,
-
-            height: chartHeight ?? null,
-            id: "",
-            columns: "",
-            formId: "",
-            columnOrder: [],
-            selectionMode: [],
-          })
-        }
+      <ReadOnlyGrid
         data={data ?? datasets[0].data}
-        widgetMgr={widgetMgr}
-        width={width}
         height={height ?? undefined}
-        disabled={true}
-        fragmentId={fragmentId}
-        disableFullscreenMode={true}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
@@ -213,9 +188,6 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label="Show data"
             icon={TableChart}
             onClick={() => {
-              setChartHeight(
-                containerRef.current?.getBoundingClientRect().height ?? null
-              )
               setShowData(true)
             }}
           />

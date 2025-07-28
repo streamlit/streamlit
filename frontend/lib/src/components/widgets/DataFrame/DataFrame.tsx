@@ -115,10 +115,9 @@ export interface DataFrameProps {
   element: ArrowProto
   data: Quiver
   disabled: boolean
-  widgetMgr: WidgetStateManager
+  widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
   fragmentId?: string
-  height?: number
   customToolbarActions?: React.ReactNode[]
 }
 
@@ -271,7 +270,7 @@ function DataFrame({
    */
   useEffect(
     () => {
-      if (element.editingMode === READ_ONLY) {
+      if (element.editingMode === READ_ONLY || !widgetMgr) {
         // We don't need to load the initial widget state
         // for read-only dataframes.
         return
@@ -324,6 +323,10 @@ function DataFrame({
       // we would need to integrate the `syncEditState` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
+
+      if (!widgetMgr) {
+        return
+      }
 
       const selectionState: DataframeState = {
         selection: {
@@ -434,7 +437,10 @@ function DataFrame({
    */
   useEffect(
     () => {
-      if (!isRowSelectionActivated && !isColumnSelectionActivated) {
+      if (
+        (!isRowSelectionActivated && !isColumnSelectionActivated) ||
+        !widgetMgr
+      ) {
         // Only run this if selections are activated.
         return
       }
@@ -502,6 +508,10 @@ function DataFrame({
    * Its split out to allow better dependency inspection.
    */
   const innerSyncEditState = useCallback(() => {
+    if (!widgetMgr) {
+      return
+    }
+
     const currentEditingState = editingState.current.toJson(columns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
