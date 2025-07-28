@@ -494,6 +494,24 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
         assert isinstance(self.runtime._get_async_objs(), AsyncObjects)
 
+    @pytest.mark.skipif(os.name == "nt", reason="Non-Windows test")
+    async def test_stop_works_with_no_sessions_non_windows(self):
+        """Test that Runtime.stop() continues to work on non-Windows platforms.
+
+        This ensures our Windows fix doesn't break behavior on other platforms.
+        """
+        await self.runtime.start()
+
+        # Ensure we're in NO_SESSIONS_CONNECTED state
+        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+
+        # Call stop()
+        self.runtime.stop()
+
+        # Should stop promptly on non-Windows platforms
+        await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
+        assert self.runtime.state == RuntimeState.STOPPED
+
 
 class ScriptCheckTest(RuntimeTestCase):
     """Tests for Runtime.does_script_run_without_error"""
@@ -575,51 +593,3 @@ time.sleep(5)
         event_based_path_watcher._MultiPathWatcher._singleton = None
         assert expected_loads == ok
         assert expected_msg == msg
-
-
-class WindowsSignalHandlingTest(RuntimeTestCase):
-    """Tests for Windows signal handling when no sessions are connected."""
-
-    @pytest.mark.skipif(os.name != "nt", reason="Windows-only test")
-    async def test_stop_works_with_no_sessions_windows(self):
-        """Test that Runtime.stop() works on Windows when no sessions are connected.
-
-        This is a regression test for the issue where Ctrl+C wouldn't work on Windows
-        when the server had no connected browser sessions.
-        """
-        await self.runtime.start()
-
-        # Ensure we're in NO_SESSIONS_CONNECTED state
-        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
-
-        # Call stop() which simulates what happens when Ctrl+C is pressed
-        self.runtime.stop()
-
-        # The runtime should stop within a reasonable timeout (1 second)
-        # On Windows without the fix, this would hang indefinitely
-        try:
-            await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
-            stopped = True
-        except asyncio.TimeoutError:
-            stopped = False
-
-        assert stopped, "Runtime did not stop within timeout on Windows"
-        assert self.runtime.state == RuntimeState.STOPPED
-
-    @pytest.mark.skipif(os.name == "nt", reason="Non-Windows test")
-    async def test_stop_works_with_no_sessions_non_windows(self):
-        """Test that Runtime.stop() continues to work on non-Windows platforms.
-
-        This ensures our Windows fix doesn't break behavior on other platforms.
-        """
-        await self.runtime.start()
-
-        # Ensure we're in NO_SESSIONS_CONNECTED state
-        assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
-
-        # Call stop()
-        self.runtime.stop()
-
-        # Should stop promptly on non-Windows platforms
-        await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
-        assert self.runtime.state == RuntimeState.STOPPED
