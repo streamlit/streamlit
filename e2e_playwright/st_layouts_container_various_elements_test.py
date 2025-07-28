@@ -30,12 +30,13 @@ CONTAINER_KEYS = [
     "layout-horizontal-tabs",
     "layout-horizontal-content-width",
     "layout-horizontal-text-area",
+    # Don't expand this one, doesn't work well with the snapshot.
+    "layout-horizontal-expander-dataframe-content-width-large",
 ]
 
 CONTAINER_KEYS_WITH_EXPANDERS = [
     "layout-horizontal-expander-dataframe",
     "layout-horizontal-expander-dataframe-content-width",
-    "layout-horizontal-expander-dataframe-content-width-large",
 ]
 
 

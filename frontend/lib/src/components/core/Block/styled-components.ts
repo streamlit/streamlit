@@ -18,7 +18,6 @@ import React, { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
-
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
