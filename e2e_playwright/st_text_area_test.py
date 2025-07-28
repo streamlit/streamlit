@@ -28,7 +28,7 @@ def test_text_area_widget_rendering(
 ):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = themed_app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(22)
+    expect(text_area_widgets).to_have_count(23)
 
     assert_snapshot(text_area_widgets.nth(0), name="st_text_area-default")
     assert_snapshot(text_area_widgets.nth(1), name="st_text_area-value_some_text")
@@ -60,7 +60,7 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(form_container, name="st_text_area-height_stretch")
 
     # Snapshot the column area containing both text areas
-    column_container = app.get_by_test_id("stHorizontalBlock")
+    column_container = app.get_by_test_id("stHorizontalBlock").nth(1)
     assert_snapshot(column_container, name="st_text_area-columns_layout")
 
     vertical_layout_container = get_element_by_key(app, "layout-horizontal-text-area")
@@ -77,7 +77,7 @@ def test_help_tooltip_works(app: Page):
 def test_text_area_has_correct_initial_values(app: Page):
     """Test that st.text_area has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(17)
+    expect(markdown_elements).to_have_count(16)
 
     expected = [
         "value 1: ",
