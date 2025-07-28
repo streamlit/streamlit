@@ -24,6 +24,7 @@ from typing import (
     Generic,
     Literal,
     TypeVar,
+    Union,
     cast,
     get_args,
 )
@@ -43,7 +44,7 @@ T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
 
-WidgetArgs: TypeAlias = tuple[Any, ...]
+WidgetArgs: TypeAlias = Union[tuple[Any, ...], list[Any]]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
 

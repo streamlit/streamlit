@@ -288,8 +288,8 @@ class FormMixin:
             parameter of ``st.markdown``.
         on_click : callable
             An optional callback invoked when this button is clicked.
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
         type : "primary", "secondary", or "tertiary"

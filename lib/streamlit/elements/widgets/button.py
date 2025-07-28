@@ -141,8 +141,8 @@ class ButtonMixin:
         on_click : callable
             An optional callback invoked when this button is clicked.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -382,8 +382,8 @@ class ButtonMixin:
             - ``None``: This is same as ``on_click="rerun"``. This value exists
               for backwards compatibility and shouldn't be used.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.

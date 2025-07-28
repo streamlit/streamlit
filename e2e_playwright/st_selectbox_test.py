@@ -15,7 +15,10 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+)
 
 
 def test_selectbox_widget_rendering(
@@ -183,6 +186,9 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
         "selectbox changed: True", use_inner_text=True
     )
+    expect(
+        app.get_by_text("Selectbox widget callback triggered: x=1, y=2, z=3")
+    ).to_be_visible()
 
     # Change different input to trigger delta path change
     empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").first
