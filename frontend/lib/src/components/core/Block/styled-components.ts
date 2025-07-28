@@ -17,7 +17,7 @@
 import React, { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
-import { isInteger } from "lodash"
+
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
