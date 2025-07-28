@@ -28,19 +28,25 @@ import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledDialogTitle } from "./styled-components"
+
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
+  widgetMgr: WidgetStateManager
+  fragmentId: string | undefined
 }
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   element,
   deltaMsgReceivedAt,
   children,
+  widgetMgr,
+  fragmentId,
 }): ReactElement => {
-  const { title, dismissible, width, isOpen: initialIsOpen } = element
+  const { title, dismissible, width, isOpen: initialIsOpen, id } = element
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -53,6 +59,20 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     // since dismissing is a UI-only action, the initialIsOpen prop might not have
     // changed which would lead to the dialog not opening again.
   }, [initialIsOpen, deltaMsgReceivedAt])
+
+  // Handle dialog dismiss with widget event
+  const handleClose = useCallback(() => {
+    setIsOpen(false)
+
+    // Send widget event if on_dismiss is activated (indicated by presence of id)
+    if (id && widgetMgr) {
+      void widgetMgr.setTriggerValue(
+        { id, formId: "" }, // WidgetInfo object - dialogs are not compatible with forms
+        { fromUi: true },
+        fragmentId
+      )
+    }
+  }, [id, widgetMgr, fragmentId])
 
   // Handler to suppress the R key when dialog is open and non-dismissible
   // Otherwise, R would allow to dismiss the dialog by rerunning the script.
@@ -102,7 +122,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     <Modal
       isOpen
       closeable={dismissible}
-      onClose={() => setIsOpen(false)}
+      onClose={handleClose}
       size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
       <ModalHeader>

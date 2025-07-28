@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.47.0",
+  "version": "1.47.1",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -84,7 +84,7 @@
     "native-file-system-adapter": "^3.0.1",
     "node-emoji": "^2.2.0",
     "numbro": "^2.5.0",
-    "plotly.js": "^3.0.1",
+    "plotly.js": "^3.0.3",
     "protobufjs": "^7.5.3",
     "query-string": "^9.2.2",
     "re-resizable": "^6.11.2",
@@ -118,7 +118,7 @@
     "vega-embed": "^6.29.0",
     "vega-interpreter": "^2.0.0",
     "vega-lite": "5.23.0",
-    "wavesurfer.js": "^7.10.0",
+    "wavesurfer.js": "^7.10.1",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {

@@ -44,7 +44,10 @@ import {
 } from "@streamlit/app/src/components/Sidebar/utils"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import Header from "@streamlit/app/src/components/Header"
-import { TopNav } from "@streamlit/app/src/components/Navigation"
+import {
+  shouldShowNavigation,
+  TopNav,
+} from "@streamlit/app/src/components/Navigation"
 import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { LogoComponent } from "@streamlit/app/src/components/Logo"
 import HeaderColoredLine from "@streamlit/app/src/components/HeaderColoredLine"
@@ -276,14 +279,12 @@ function AppView(props: AppViewProps): ReactElement {
   // Only transparent when no content is shown at all
   const shouldShowLogo = logoElement && (!showSidebar || isSidebarCollapsed)
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
-  const shouldShowNavigation =
-    navigationPosition === Navigation.Position.TOP && appPages.length > 1
+  const shouldShowTopNav =
+    navigationPosition === Navigation.Position.TOP &&
+    shouldShowNavigation(appPages, navSections)
 
   const hasHeaderUserContent =
-    shouldShowLogo ||
-    shouldShowExpandButton ||
-    shouldShowNavigation ||
-    showToolbar
+    shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -322,7 +323,7 @@ function AppView(props: AppViewProps): ReactElement {
             onToggleSidebar={toggleSidebar}
             navigation={
               navigationPosition === Navigation.Position.TOP &&
-              appPages.length > 1 ? (
+              shouldShowNavigation(appPages, navSections) ? (
                 <TopNav
                   endpoints={endpoints}
                   pageLinkBaseUrl={pageLinkBaseUrl}
@@ -352,7 +353,7 @@ function AppView(props: AppViewProps): ReactElement {
                 hasHeader={hasHeaderUserContent}
                 hasSidebar={showSidebar}
                 showToolbar={showToolbar}
-                hasTopNav={shouldShowNavigation}
+                hasTopNav={shouldShowTopNav}
                 embedded={embedded}
               >
                 {renderBlock(elements.main)}
