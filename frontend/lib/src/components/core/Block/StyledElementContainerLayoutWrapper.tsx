@@ -121,6 +121,8 @@ export const StyledElementContainerLayoutWrapper: FC<
   }, [
     node.element.type,
     node.element.heightConfig?.useStretch,
+    node.element.deckGlJsonChart?.useContainerWidth,
+    node.element.deckGlJsonChart?.width,
     isContentWidthDataframe,
     isInHorizontalLayout,
   ])

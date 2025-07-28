@@ -71,6 +71,6 @@ def test_dataframe_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
         assert_snapshot=assert_snapshot,
         widget_test_id="stDataFrame",
         filename_prefix="st_layouts_container_directions_fullscreen_elements-dataframe",
-        # Second full screen wrapper.
-        nth=1,
+        nth=0,
+        fullscreen_wrapper_nth=1,
     )

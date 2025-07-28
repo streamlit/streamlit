@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, PropsWithChildren, ReactElement } from "react"
+import React, { FC, PropsWithChildren, ReactElement, useMemo } from "react"
 
 import {
   render as reactTestingLibraryRender,
@@ -40,10 +40,13 @@ import { baseTheme } from "./theme"
 import { createFormsData } from "./WidgetStateManager"
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
-  const flexContextValue = {
-    direction: Direction.VERTICAL,
-    isInHorizontalLayout: false,
-  }
+  const flexContextValue = useMemo(
+    () => ({
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+    }),
+    []
+  )
 
   return (
     <ThemeProvider theme={mockTheme.emotion}>
@@ -115,10 +118,13 @@ export const renderWithContexts = (
     formsData: createFormsData(),
   }
 
-  const flexContextValue = {
-    direction: Direction.VERTICAL,
-    isInHorizontalLayout: false,
-  }
+  const flexContextValue = useMemo(
+    () => ({
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+    }),
+    []
+  )
 
   return reactTestingLibraryRender(component, {
     wrapper: ({ children }) => (
