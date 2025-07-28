@@ -26,6 +26,7 @@ import React, {
 import { getLogger } from "loglevel"
 
 import { ISubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
+import { getCrossOriginAttributeValue } from "@streamlit/connection"
 
 import { LibContext } from "~lib/components/core/LibContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -254,6 +255,11 @@ function Video({
 
   // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
   // when streamlit frontend and backend are running on different ports
+  const crossOrigin =
+    process.env.NODE_ENV === "development" && subtitles.length > 0
+      ? "anonymous"
+      : getCrossOriginAttributeValue(libConfig.resourceCrossOriginMode, url)
+
   return (
     // eslint-disable-next-line jsx-a11y/media-has-caption
     <video
@@ -265,11 +271,7 @@ function Video({
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       style={VIDEO_STYLE}
-      crossOrigin={
-        process.env.NODE_ENV === "development" && subtitles.length > 0
-          ? "anonymous"
-          : libConfig.resourceCrossOriginMode
-      }
+      crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
       {subtitles &&

@@ -47,6 +47,8 @@ import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { findAndReplace } from "mdast-util-find-and-replace"
 
+import { getCrossOriginAttributeValue } from "@streamlit/connection"
+
 import { LibContext } from "~lib/components/core/LibContext"
 import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
@@ -381,9 +383,13 @@ export const CustomMediaTag: FC<
   const { libConfig } = useContext(LibContext)
 
   const Tag = node.tagName
+
   const attributes = {
     ...props,
-    crossOrigin: libConfig.resourceCrossOriginMode,
+    crossOrigin: getCrossOriginAttributeValue(
+      libConfig.resourceCrossOriginMode,
+      props.src
+    ),
   }
   return <Tag {...attributes} />
 }

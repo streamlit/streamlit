@@ -86,3 +86,53 @@ export function buildWsUri(
   const fullPath = makePath(pathname, path)
   return `${wsProtocol}://${hostname}:${port}/${fullPath}`
 }
+
+/**
+ * Return the crossorigin attribute value for the given resourceCrossOriginMode and given url.
+ *
+ * Returns the configured resourceCrossOriginMode if the URL is a full URL (not just a path) and is equal to window.__streamlit.BACKEND_BASE_URL,
+ * as it points to the same origin as the backend server or if the URL is relative and, thus, also points to the backend server.
+ * Note that window.__streamlit.BACKEND_BASE_URL is used to configure the backend base URL when the Streamlit app origin is different from the backend server origin!
+ * This can happen when the Streamlit app is loaded in an iframe or loaded via a proxy. In this case, the request to window.__streamlit?.BACKEND_BASE_URL is a
+ * cross-origin request and the crossorigin attribute is required to avoid CORS errors.
+ * If window.__streamlit.BACKEND_BASE_URL is set to the same origin as the Streamlit app origin, the request is a same-origin request and the crossorigin attribute is ignored by the browser so it can be omitted.
+ *
+ * Returns undefined if the URL is a full URL (not just a path) and is not equal to window.__streamlit.BACKEND_BASE_URL, as it
+ * likely points to an external server in this case, where the crossOrigin attribute might lead to CORS errors depending on the external server configuration.
+ *
+ * If the URL is not a valid URL, e.g. it's relative, it returns the resourceCrossOriginMode if window.__streamlit.BACKEND_BASE_URL is set,
+ * otherwise it returns undefined (in this case, the request would go against the window's origin and is a same-origin request anyways).
+ */
+export function getCrossOriginAttributeValue(
+  resourceCrossOriginMode: undefined | "anonymous" | "use-credentials",
+  url?: string
+): undefined | "anonymous" | "use-credentials" {
+  if (!url) {
+    return undefined
+  }
+
+  try {
+    const parsedUrl = new URL(url)
+
+    // The passed URL is absolute and it's pointing to the same origin as the backend server,
+    // so we should use the configured resourceCrossOriginMode. We don't check for requests going to the same
+    // origin as window.location.origin because that's a same-origin request where the crossorigin attribute is ignored anyways.
+    if (
+      window.__streamlit?.BACKEND_BASE_URL &&
+      parsedUrl.origin === new URL(window.__streamlit?.BACKEND_BASE_URL).origin
+    ) {
+      return resourceCrossOriginMode
+    }
+
+    return undefined
+  } catch {
+    // If the URL is not a full URL, it likely is a relative URL.
+    // If window.__streamlit?.BACKEND_BASE_URL is set, return the resourceCrossOriginMode.
+    // If it is not set, the request would go against the window's origin and is a same-origin request.
+    // The browser would ignore the crossorigin attribute in this case, but to make it more explicit, we return undefined.
+    // Note that www.example.com/some-image.png would also return the resourceCrossOriginMode as it is not a valid URL without the scheme.
+    return window.__streamlit?.BACKEND_BASE_URL
+      ? resourceCrossOriginMode
+      : undefined
+  }
+}

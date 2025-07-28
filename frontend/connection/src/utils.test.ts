@@ -18,56 +18,69 @@ import { buildHttpUri } from "@streamlit/utils"
 
 import {
   buildWsUri,
+  getCrossOriginAttributeValue,
   getPossibleBaseUris,
   parseUriIntoBaseParts,
 } from "./utils"
 
-const location: Partial<Location> = {}
+describe("parseUriIntoBaseParts", () => {
+  const location: Partial<Location> = {}
+  const { location: originalLocation } = window
 
-global.window = Object.create(window)
-Object.defineProperty(window, "location", { value: location })
-
-test("gets all window URI parts", () => {
-  location.href = "https://the_host:9988/foo"
-
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/foo",
+  beforeEach(() => {
+    Object.defineProperty(window, "location", { value: location })
   })
-})
 
-test("gets window URI parts without basePath", () => {
-  location.href = "https://the_host:9988"
-
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/",
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    })
   })
-})
 
-test("gets window URI parts with long basePath", () => {
-  location.href = "https://the_host:9988/foo/bar"
+  test("gets all window URI parts", () => {
+    location.href = "https://the_host:9988/foo"
 
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/foo/bar",
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo",
+    })
   })
-})
 
-test("gets window URI parts with weird basePath", () => {
-  location.href = "https://the_host:9988///foo/bar//"
+  test("gets window URI parts without basePath", () => {
+    location.href = "https://the_host:9988"
 
-  expect(parseUriIntoBaseParts()).toMatchObject({
-    protocol: "https:",
-    hostname: "the_host",
-    port: "9988",
-    pathname: "/foo/bar",
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/",
+    })
+  })
+
+  test("gets window URI parts with long basePath", () => {
+    location.href = "https://the_host:9988/foo/bar"
+
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo/bar",
+    })
+  })
+
+  test("gets window URI parts with weird basePath", () => {
+    location.href = "https://the_host:9988///foo/bar//"
+
+    expect(parseUriIntoBaseParts()).toMatchObject({
+      protocol: "https:",
+      hostname: "the_host",
+      port: "9988",
+      pathname: "/foo/bar",
+    })
   })
 })
 
@@ -169,14 +182,27 @@ test("builds WS URI with no base path", () => {
 
 describe("getPossibleBaseUris", () => {
   let originalPathName = ""
+  const { location: originalLocation } = window
 
   beforeEach(() => {
     originalPathName = window.location.pathname
+    Object.defineProperty(window, "location", {
+      writable: true,
+      configurable: true,
+      value: {
+        ...originalLocation,
+        origin: "https://app.example.com:8080",
+      },
+    })
   })
 
   afterEach(() => {
-    window.location.pathname = originalPathName
     window.__streamlit = undefined
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, pathname: originalPathName },
+      writable: true,
+      configurable: true,
+    })
   })
 
   const testCases = [
@@ -227,6 +253,221 @@ describe("getPossibleBaseUris", () => {
       protocol: "https:",
       hostname: "used_host",
       pathname: "/foo",
+    })
+  })
+})
+
+describe("getCrossOriginAttributeValue", () => {
+  afterEach(() => {
+    window.__streamlit = undefined
+  })
+
+  it("returns undefined when url parameter is undefined", () => {
+    const result = getCrossOriginAttributeValue("anonymous", undefined)
+    expect(result).toBeUndefined()
+  })
+
+  describe("with relative URLs", () => {
+    it.each([
+      ["anonymous", "anonymous"],
+      ["use-credentials", "use-credentials"],
+      [undefined, undefined],
+    ] as const)(
+      "returns %s when resourceCrossOriginMode is %s for relative path",
+      (expected, resourceCrossOriginMode) => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "/some/relative/path"
+        )
+        expect(result).toBe(expected)
+      }
+    )
+
+    it.each([
+      ["anonymous", "anonymous"],
+      ["use-credentials", "use-credentials"],
+      [undefined, undefined],
+    ] as const)(
+      "returns %s when resourceCrossOriginMode is %s for relative filename",
+      (expected, resourceCrossOriginMode) => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "image.png"
+        )
+        expect(result).toBe(expected)
+      }
+    )
+
+    it.each([
+      ["anonymous", "anonymous"],
+      ["use-credentials", "use-credentials"],
+      [undefined, undefined],
+    ] as const)(
+      "returns %s when resourceCrossOriginMode is %s for domain-like string without protocol",
+      (expected, resourceCrossOriginMode) => {
+        // This should be treated as relative since it lacks protocol
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "www.example.com/some-image.png"
+        )
+        expect(result).toBe(expected)
+      }
+    )
+  })
+
+  describe("with absolute URLs matching backend origin", () => {
+    beforeEach(() => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
+      }
+    })
+
+    it.each([
+      ["anonymous", "anonymous"],
+      ["use-credentials", "use-credentials"],
+      [undefined, undefined],
+    ] as const)(
+      "returns %s when resourceCrossOriginMode is %s for same origin URL",
+      (expected, resourceCrossOriginMode) => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "https://backend.example.com:8080/some/path/image.png"
+        )
+        expect(result).toBe(expected)
+      }
+    )
+
+    it("returns resourceCrossOriginMode for exact backend base URL", () => {
+      const result = getCrossOriginAttributeValue(
+        "anonymous",
+        "https://backend.example.com:8080/app"
+      )
+      expect(result).toBe("anonymous")
+    })
+
+    it("returns resourceCrossOriginMode for same origin with different path", () => {
+      const result = getCrossOriginAttributeValue(
+        "use-credentials",
+        "https://backend.example.com:8080/different/path"
+      )
+      expect(result).toBe("use-credentials")
+    })
+  })
+
+  describe("with absolute URLs not matching backend origin", () => {
+    beforeEach(() => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
+      }
+    })
+
+    it.each(["anonymous", "use-credentials", undefined] as const)(
+      "returns undefined for different hostname regardless of resourceCrossOriginMode %s",
+      resourceCrossOriginMode => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "https://external.example.com:8080/image.png"
+        )
+        expect(result).toBeUndefined()
+      }
+    )
+
+    it.each(["anonymous", "use-credentials", undefined] as const)(
+      "returns undefined for different port regardless of resourceCrossOriginMode %s",
+      resourceCrossOriginMode => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "https://backend.example.com:9000/image.png"
+        )
+        expect(result).toBeUndefined()
+      }
+    )
+
+    it.each(["anonymous", "use-credentials", undefined] as const)(
+      "returns undefined for different protocol regardless of resourceCrossOriginMode %s",
+      resourceCrossOriginMode => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "http://backend.example.com:8080/image.png"
+        )
+        expect(result).toBeUndefined()
+      }
+    )
+  })
+
+  describe("without backend base URL configured", () => {
+    it.each(["anonymous", "use-credentials", undefined] as const)(
+      "returns undefined for absolute URLs not matching window.location.origin when no backend base URL is set regardless of resourceCrossOriginMode %s",
+      resourceCrossOriginMode => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "https://external.example.com/image.png"
+        )
+        expect(result).toBeUndefined()
+      }
+    )
+
+    it.each([
+      ["anonymous", "anonymous"],
+      ["use-credentials", "use-credentials"],
+      [undefined, undefined],
+    ] as const)(
+      "returns %s for relative URLs when no backend base URL is set with resourceCrossOriginMode %s",
+      (expected, resourceCrossOriginMode) => {
+        const result = getCrossOriginAttributeValue(
+          resourceCrossOriginMode,
+          "/relative/path"
+        )
+        expect(result).toBe(expected)
+      }
+    )
+  })
+
+  describe("with backend base URL having empty BACKEND_BASE_URL", () => {
+    it("returns undefined for absolute URLs not matching window.location.origin when backend base URL is empty string", () => {
+      const result = getCrossOriginAttributeValue(
+        "anonymous",
+        "https://external.example.com/image.png"
+      )
+      expect(result).toBeUndefined()
+    })
+  })
+
+  describe("edge cases", () => {
+    beforeEach(() => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "https://backend.example.com/app",
+      }
+    })
+
+    it("handles URLs with query parameters and fragments", () => {
+      const result = getCrossOriginAttributeValue(
+        "anonymous",
+        "https://backend.example.com/image.png?v=123#section"
+      )
+      expect(result).toBe("anonymous")
+    })
+
+    it("handles backend base URL with default HTTPS port", () => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "https://backend.example.com/app",
+      }
+      const result = getCrossOriginAttributeValue(
+        "anonymous",
+        "https://backend.example.com:443/image.png"
+      )
+      expect(result).toBe("anonymous")
+    })
+
+    it("handles backend base URL with default HTTP port", () => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "http://backend.example.com/app",
+      }
+      const result = getCrossOriginAttributeValue(
+        "anonymous",
+        "http://backend.example.com:80/image.png"
+      )
+      expect(result).toBe("anonymous")
     })
   })
 })

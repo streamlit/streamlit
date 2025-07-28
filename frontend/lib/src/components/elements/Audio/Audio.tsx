@@ -26,6 +26,7 @@ import React, {
 import { getLogger } from "loglevel"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
+import { getCrossOriginAttributeValue } from "@streamlit/connection"
 
 import { LibContext } from "~lib/components/core/LibContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -175,6 +176,10 @@ function Audio({
     )
   }
 
+  const crossOrigin = getCrossOriginAttributeValue(
+    libConfig.resourceCrossOriginMode,
+    element.url
+  )
   return (
     <StyledAudioContainer>
       <StyledAudio
@@ -185,7 +190,7 @@ function Audio({
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}
-        crossOrigin={libConfig.resourceCrossOriginMode}
+        crossOrigin={crossOrigin}
       />
     </StyledAudioContainer>
   )

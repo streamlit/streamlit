@@ -22,6 +22,7 @@ import {
   ImageList as ImageListProto,
   Image as ImageProto,
 } from "@streamlit/protobuf"
+import { getCrossOriginAttributeValue } from "@streamlit/connection"
 
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -156,6 +157,10 @@ function ImageList({
       <StyledImageList className="stImage" data-testid="stImage">
         {element.imgs.map((iimage, idx): ReactElement => {
           const image = iimage as ImageProto
+          const crossOrigin = getCrossOriginAttributeValue(
+            libConfig.resourceCrossOriginMode,
+            image.url
+          )
           return (
             // TODO: Update to match React best practices
             // eslint-disable-next-line @eslint-react/no-array-index-key
@@ -165,7 +170,7 @@ function ImageList({
                 src={endpoints.buildMediaURL(image.url)}
                 alt={idx.toString()}
                 onError={handleImageError}
-                crossOrigin={libConfig.resourceCrossOriginMode}
+                crossOrigin={crossOrigin}
               />
               {image.caption && (
                 <StyledCaption data-testid="stImageCaption" style={imgStyle}>
