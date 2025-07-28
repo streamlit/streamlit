@@ -51,6 +51,7 @@ from langchain.callbacks.base import (
 )
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 
 if TYPE_CHECKING:
     from langchain.schema import (
@@ -325,6 +326,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._expand_new_thoughts = expand_new_thoughts
         self._collapse_completed_thoughts = collapse_completed_thoughts
         self._thought_labeler = thought_labeler or LLMThoughtLabeler()
+        self._ctx = get_script_run_ctx()
 
     def _require_current_thought(self) -> LLMThought:
         """Return our current LLMThought. Raise an error if we have no current
@@ -352,6 +354,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
     def on_llm_start(
         self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any
     ) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         if self._current_thought is None:
             self._current_thought = LLMThought(
                 parent_container=self._parent_container,
@@ -366,17 +369,21 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         # be visible until it has a child.
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         self._require_current_thought().on_llm_new_token(token, **kwargs)
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         self._require_current_thought().on_llm_end(response, **kwargs)
 
     def on_llm_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         self._require_current_thought().on_llm_error(error, **kwargs)
 
     def on_tool_start(
         self, serialized: dict[str, Any], input_str: str, **kwargs: Any
     ) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         self._require_current_thought().on_tool_start(serialized, input_str, **kwargs)
 
     def on_tool_end(
@@ -387,22 +394,26 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         llm_prefix: str | None = None,
         **kwargs: Any,
     ) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         self._require_current_thought().on_tool_end(
             output, color, observation_prefix, llm_prefix, **kwargs
         )
         self._complete_current_thought()
 
     def on_tool_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         self._require_current_thought().on_tool_error(error, **kwargs)
 
     def on_agent_action(
         self, action: AgentAction, color: str | None = None, **kwargs: Any
     ) -> Any:
+        add_script_run_ctx(ctx=self._ctx)
         self._require_current_thought().on_agent_action(action, color, **kwargs)
 
     def on_agent_finish(
         self, finish: AgentFinish, color: str | None = None, **kwargs: Any
     ) -> None:
+        add_script_run_ctx(ctx=self._ctx)
         if self._current_thought is not None:
             self._current_thought.complete(
                 self._thought_labeler.get_final_agent_thought_label()
