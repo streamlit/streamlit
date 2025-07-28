@@ -105,10 +105,16 @@ export const StyledElementContainerLayoutWrapper: FC<
       // should try to remove these custom styles.
       // Currently, maps with use_container_width=False and a size layer
       // don't render correctly without the width override.
-      return {
-        width: "100%",
+      const styles: React.CSSProperties = {
         overflow: "visible",
       }
+      if (
+        !node.element.deckGlJsonChart?.useContainerWidth &&
+        !node.element.deckGlJsonChart?.width
+      ) {
+        styles.width = "100%"
+      }
+      return styles
     }
 
     return {}
