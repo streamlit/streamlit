@@ -16,13 +16,11 @@
 
 import React, { FC } from "react"
 
-import { act, renderHook } from "@testing-library/react-hooks"
-import { render, screen } from "@testing-library/react"
+import { act, render, renderHook, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { Form } from "~lib/components/widgets/Form"
-import { ScriptRunState } from "~lib/ScriptRunState"
+import Form from "~lib/components/widgets/Form"
 import { RootStyleProvider } from "~lib/RootStyleProvider"
 import { getDefaultTheme } from "~lib/theme"
 
@@ -107,11 +105,10 @@ describe("useWidgetManagerElementState hook", () => {
             formId={formId}
             clearOnSubmit={true}
             enterToSubmit={false}
-            width={0}
             hasSubmitButton={true}
             widgetMgr={widgetMgr}
             border={false}
-            scriptRunState={ScriptRunState.NOT_RUNNING}
+            scriptNotRunning={true}
           >
             <input
               aria-label={testInputAriaLabel}
@@ -127,9 +124,8 @@ describe("useWidgetManagerElementState hook", () => {
     render(<TestComponent />)
 
     // verify default value
-    const inputElement = screen.getByLabelText(
-      testInputAriaLabel
-    ) as HTMLInputElement
+    const inputElement: HTMLInputElement =
+      screen.getByLabelText(testInputAriaLabel)
     expect(inputElement.value).toBe(defaultValue)
 
     expect(widgetMgr.getElementState(elementId, stateKey)).toBe(defaultValue)
@@ -144,6 +140,7 @@ describe("useWidgetManagerElementState hook", () => {
 
     // submit the form
     // note: struggled using default html form submission, so manually triggering our submission logic here
+    // eslint-disable-next-line @typescript-eslint/await-thenable
     await act(() => {
       widgetMgr.submitForm(formId, undefined)
     })

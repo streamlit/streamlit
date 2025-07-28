@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react"
 
 import {
   AUTO_THEME_NAME,
@@ -33,8 +33,11 @@ const mockCustomThemeConfig = {
   backgroundColor: "#FFFFFF",
   secondaryBackgroundColor: "#F5F5F5",
   textColor: "#1A1D21",
+  // Option is deprecated, but we still test to ensure backwards compatibility:
   widgetBackgroundColor: "#FFFFFF",
+  // Option is deprecated, but we still test to ensure backwards compatibility:
   widgetBorderColor: "#D3DAE8",
+  // Option is deprecated, but we still test to ensure backwards compatibility:
   skeletonBackgroundColor: "#CCDDEE",
   fontFaces: [
     {

@@ -14,26 +14,39 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useMemo, useRef } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
+
+import { getLogger } from "loglevel"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
+import { LibContext } from "~lib/components/core/LibContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
+import { StyledAudio, StyledAudioContainer } from "./styled-components"
+
+const LOG = getLogger("Audio")
 export interface AudioProps {
   endpoints: StreamlitEndpoints
-  width: number
   element: AudioProto
   elementMgr: ElementStateManager
 }
 
-export default function Audio({
+function Audio({
   element,
-  width,
   endpoints,
   elementMgr,
 }: Readonly<AudioProps>): ReactElement {
+  const { libConfig } = useContext(LibContext)
+
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const { startTime, endTime, loop, autoplay } = element
@@ -46,17 +59,17 @@ export default function Audio({
 
     // Recover the state in case this component got unmounted
     // and mounted again for the same element.
-    const preventAutoplay = elementMgr.getElementState(
+    const preventAutoplayState = elementMgr.getElementState(
       element.id,
       "preventAutoplay"
     )
 
-    if (!preventAutoplay) {
+    if (!preventAutoplayState) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
     }
-    return preventAutoplay ?? false
+    return preventAutoplayState ?? false
   }, [element.id, elementMgr])
 
   // Handle startTime changes
@@ -102,6 +115,7 @@ export default function Audio({
         if (loop) {
           // If loop is true and we reached 'endTime', reset to 'startTime'
           audioNode.currentTime = startTime || 0
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
           audioNode.play()
         } else if (!stoppedByEndTime) {
           stoppedByEndTime = true
@@ -132,6 +146,7 @@ export default function Audio({
     const handleAudioEnd = (): void => {
       if (loop) {
         audioNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
         audioNode.play()
       }
     }
@@ -147,15 +162,33 @@ export default function Audio({
 
   const uri = endpoints.buildMediaURL(element.url)
 
+  const handleAudioError = (
+    e: React.SyntheticEvent<HTMLAudioElement>
+  ): void => {
+    const audioUrl = e.currentTarget.src
+    LOG.error(`Client Error: Audio source error - ${audioUrl}`)
+    endpoints.sendClientErrorToHost(
+      "Audio",
+      "Audio source failed to load",
+      "onerror triggered",
+      audioUrl
+    )
+  }
+
   return (
-    <audio
-      className="stAudio"
-      data-testid="stAudio"
-      ref={audioRef}
-      controls
-      autoPlay={autoplay && !preventAutoplay}
-      src={uri}
-      style={{ width }}
-    />
+    <StyledAudioContainer>
+      <StyledAudio
+        className="stAudio"
+        data-testid="stAudio"
+        ref={audioRef}
+        controls
+        autoPlay={autoplay && !preventAutoplay}
+        src={uri}
+        onError={handleAudioError}
+        crossOrigin={libConfig.resourceCrossOriginMode}
+      />
+    </StyledAudioContainer>
   )
 }
+
+export default memo(Audio)

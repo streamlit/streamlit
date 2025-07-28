@@ -70,10 +70,13 @@ class MockSessionManager(SessionManager):
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
-        with mock.patch(
-            "streamlit.runtime.scriptrunner.ScriptRunner", new=mock.MagicMock()
-        ), mock.patch.object(
-            PagesManager, "get_pages", mock.MagicMock(return_value={})
+        with (
+            mock.patch(
+                "streamlit.runtime.scriptrunner.ScriptRunner", new=mock.MagicMock()
+            ),
+            mock.patch.object(
+                PagesManager, "get_pages", mock.MagicMock(return_value={})
+            ),
         ):
             session = AppSession(
                 script_data=script_data,
@@ -84,9 +87,9 @@ class MockSessionManager(SessionManager):
                 session_id_override=session_id_override,
             )
 
-        assert (
-            session.id not in self._session_info_by_id
-        ), f"session.id '{session.id}' registered multiple times!"
+        assert session.id not in self._session_info_by_id, (
+            f"session.id '{session.id}' registered multiple times!"
+        )
 
         self._session_info_by_id[session.id] = SessionInfo(client, session)
         return session.id

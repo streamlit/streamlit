@@ -19,7 +19,7 @@ import streamlit as st
 from streamlit import runtime
 
 
-def format_option(option):
+def format_option(option: str) -> str:
     return f"Color: {option}"
 
 
@@ -37,7 +37,7 @@ st.write("Value 1:", w1)
 
 w2 = st.select_slider(
     "Label 2 (no default)",
-    options=np.array([1, 2, 3, 4, 5]),
+    options=[1, 2, 3, 4, 5],
 )
 st.write("Value 2:", w2)
 
@@ -110,22 +110,22 @@ with st.expander("Expander", expanded=True):
     st.write("Value 9:", w9)
 
 with st.form(key="my_form", clear_on_submit=True):
-    selection = st.select_slider(
+    w10 = st.select_slider(
         label="Label 10 (form)",
-        options=np.array([1, 2, 3, 4, 5]),
+        options=[1, 2, 3, 4, 5],
     )
     st.form_submit_button("Submit")
 
-st.write("select_slider-in-form selection:", str(selection))
+st.write("select_slider-in-form selection:", str(w10))
 
 
 @st.fragment
 def test_fragment():
-    selection = st.select_slider(
+    w11 = st.select_slider(
         label="Label 11 (fragment)",
-        options=np.array([1, 2, 3, 4, 5]),
+        options=[1, 2, 3, 4, 5],
     )
-    st.write("select_slider-in-fragment selection:", str(selection))
+    st.write("select_slider-in-fragment selection:", str(w11))
 
 
 test_fragment()
@@ -133,6 +133,18 @@ test_fragment()
 st.select_slider(
     "Label 12 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
     options=np.array([1, 2, 3, 4, 5]),
+)
+
+st.select_slider(
+    "Label 13 - Width 300px",
+    options=["red", "orange", "yellow", "green", "blue"],
+    width=300,
+)
+
+st.select_slider(
+    "Label 14 - Width Stretch",
+    options=["red", "orange", "yellow", "green", "blue"],
+    width="stretch",
 )
 
 if "runs" not in st.session_state:

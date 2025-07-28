@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import React, { Fragment, ReactElement } from "react"
+import React, { Fragment, ReactElement, useContext } from "react"
+
+import { Components } from "react-markdown"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 
 import {
@@ -33,18 +34,20 @@ import {
 } from "./StreamlitMarkdown"
 
 export interface HeadingProtoProps {
-  width: number
   element: HeadingProto
 }
 
 function makeMarkdownHeading(tag: string, markdown: string): string {
   switch (tag.toLowerCase()) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
     case Tags.H1: {
       return `# ${markdown}`
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
     case Tags.H2: {
       return `## ${markdown}`
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
     case Tags.H3: {
       return `### ${markdown}`
     }
@@ -54,21 +57,29 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
   }
 }
 
+const OVERRIDE_COMPONENTS: Components = {
+  p: Fragment,
+  h1: Fragment,
+  h2: Fragment,
+  h3: Fragment,
+  h4: Fragment,
+  h5: Fragment,
+  h6: Fragment,
+}
+
 function Heading(props: HeadingProtoProps): ReactElement {
-  const { width, element } = props
+  const { element } = props
   const { tag, anchor, body, help, hideAnchor, divider } = element
-  const isInSidebar = React.useContext(IsSidebarContext)
-  const isInDialog = React.useContext(IsDialogContext)
+  const isInDialog = useContext(IsDialogContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
 
   return (
-    <div style={{ width }} className="stHeading" data-testid="stHeading">
+    <div className="stHeading" data-testid="stHeading">
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
-        isInSidebarOrDialog={isInSidebar || isInDialog}
-        style={{ width }}
+        isInDialog={isInDialog}
         data-testid="stMarkdownContainer"
       >
         <HeadingWithActionElements
@@ -81,15 +92,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
             allowHTML={false}
             source={makeMarkdownHeading(tag, heading)}
             // this is purely an inline string
-            overrideComponents={{
-              p: Fragment,
-              h1: Fragment,
-              h2: Fragment,
-              h3: Fragment,
-              h4: Fragment,
-              h5: Fragment,
-              h6: Fragment,
-            }}
+            overrideComponents={OVERRIDE_COMPONENTS}
           />
         </HeadingWithActionElements>
         {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}

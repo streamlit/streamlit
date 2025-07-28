@@ -48,11 +48,12 @@ class CustomComponent(BaseCustomComponent):
 
     def __call__(
         self,
-        *args,
+        *args: Any,
         default: Any = None,
         key: str | None = None,
         on_change: WidgetCallback | None = None,
-        **kwargs,
+        tab_index: int | None = None,
+        **kwargs: Any,
     ) -> Any:
         """An alias for create_instance."""
         return self.create_instance(
@@ -60,17 +61,19 @@ class CustomComponent(BaseCustomComponent):
             default=default,
             key=key,
             on_change=on_change,
+            tab_index=tab_index,
             **kwargs,
         )
 
     @gather_metrics("create_instance")
     def create_instance(
         self,
-        *args,
+        *args: Any,
         default: Any = None,
         key: str | None = None,
         on_change: WidgetCallback | None = None,
-        **kwargs,
+        tab_index: int | None = None,
+        **kwargs: Any,
     ) -> Any:
         """Create a new instance of the component.
 
@@ -88,6 +91,12 @@ class CustomComponent(BaseCustomComponent):
             component's "widget ID".
         on_change: WidgetCallback or None
             An optional callback invoked when the widget's value changes. No arguments are passed to it.
+        tab_index : int, optional
+            Specifies the tab order of the iframe containing the component.
+            Possible values are:
+            - ``None`` (default): Browser default behavior.
+            - ``-1``: Removes the iframe from the natural tab order, but it can still be focused programmatically.
+            - ``0`` or positive integer: Includes the iframe in the natural tab order.
         **kwargs
             Keyword args to pass to the component.
 
@@ -100,8 +109,18 @@ class CustomComponent(BaseCustomComponent):
         if len(args) > 0:
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
+        # Validate tab_index according to web specifications
+        if tab_index is not None and not (
+            isinstance(tab_index, int)
+            and not isinstance(tab_index, bool)
+            and tab_index >= -1
+        ):
+            raise StreamlitAPIException(
+                "tab_index must be None, -1, or a non-negative integer."
+            )
+
         try:
-            import pyarrow  # noqa: F401
+            import pyarrow  # noqa: F401, ICN001
 
             from streamlit.components.v1 import component_arrow
         except ImportError:
@@ -118,7 +137,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         # In addition to the custom kwargs passed to the component, we also
         # send the special 'default' and 'key' params to the component
         # frontend.
-        all_args = dict(kwargs, **{"default": default, "key": key})
+        all_args = dict(kwargs, default=default, key=key)
 
         json_args = {}
         special_args = []
@@ -148,6 +167,8 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             element.component_instance.form_id = current_form_id(dg)
             if self.url is not None:
                 element.component_instance.url = self.url
+            if tab_index is not None:
+                element.component_instance.tab_index = tab_index
 
             # Normally, a widget's element_hash (which determines
             # its identity across multiple runs of an app) is computed
@@ -162,7 +183,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             # other arguments change, and the component's iframe won't be
             # remounted on the frontend.
 
-            def marshall_element_args():
+            def marshall_element_args() -> None:
                 element.component_instance.json_args = serialized_json_args
                 element.component_instance.special_args.extend(special_args)
 
@@ -189,7 +210,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 )
             element.component_instance.id = computed_id
 
-            def deserialize_component(ui_value, widget_id=""):
+            def deserialize_component(ui_value: Any) -> Any:
                 # ui_value is an object from json, an ArrowTable proto, or a bytearray
                 return ui_value
 
@@ -222,7 +243,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         dg._enqueue("component_instance", element.component_instance)
         return return_value
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Equality operator."""
         return (
             isinstance(other, CustomComponent)
@@ -232,7 +253,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             and self.module_name == other.module_name
         )
 
-    def __ne__(self, other) -> bool:
+    __hash__ = BaseCustomComponent.__hash__
+
+    def __ne__(self, other: object) -> bool:
         """Inequality operator."""
 
         # we have to use "not X == Y"" here because if we use "X != Y"

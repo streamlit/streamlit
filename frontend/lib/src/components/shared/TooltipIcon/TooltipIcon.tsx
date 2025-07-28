@@ -17,13 +17,13 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { HelpCircle as HelpCircleIcon } from "react-feather"
-import { useTheme } from "@emotion/react"
 
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import StreamlitMarkdown, {
   StreamlitMarkdownProps,
 } from "~lib/components/shared/StreamlitMarkdown"
-import { EmotionTheme } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledLabelHelpInline,
@@ -37,6 +37,7 @@ export interface TooltipIconProps {
   children?: ReactNode
   markdownProps?: Partial<StreamlitMarkdownProps>
   onMouseEnterDelay?: number
+  containerWidth?: boolean
 }
 
 function TooltipIcon({
@@ -46,8 +47,9 @@ function TooltipIcon({
   children,
   markdownProps,
   onMouseEnterDelay,
+  containerWidth = false,
 }: TooltipIconProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   return (
     <StyledTooltipIconWrapper
       className="stTooltipIcon"
@@ -66,9 +68,14 @@ function TooltipIcon({
         placement={placement}
         onMouseEnterDelay={onMouseEnterDelay}
         inline
+        containerWidth={containerWidth}
       >
         {children || (
-          <HelpCircleIcon className="icon" size={theme.iconSizes.base} />
+          <HelpCircleIcon
+            className="icon"
+            /* Convert size to px because using rem works but logs a console error (at least on webkit) */
+            size={convertRemToPx(theme.iconSizes.base)}
+          />
         )}
       </Tooltip>
     </StyledTooltipIconWrapper>

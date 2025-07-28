@@ -3,7 +3,7 @@ snowflake-snowpark-python[modin]>=1.17.0
 snowflake-connector-python>=3.3.0
 
 # Required for testing the langchain integration
-langchain>=0.2.0,<=0.3.14
+langchain>=0.2.0,<=0.3.21
 langchain-community>=0.2.0,<=0.3.14
 
 # Additional dataframe formats for testing:
@@ -14,7 +14,7 @@ ray
 duckdb
 
 # Used for testing of st.connection
-sqlalchemy[mypy]>=1.4.25, <2
+sqlalchemy[mypy]>=2.0.0
 
 # Used by audio test:
 scipy>=1.7.3
@@ -22,3 +22,10 @@ scipy>=1.7.3
 # Used to ensure pydantic is supported
 # We only guarantee full support for pydantic >= 2.0.0
 pydantic>=2.0.0
+
+# As of September 21, 2022, only the latest version of Bokeh (2.4.3) is supported.
+# NOTE: Python Bokeh and BokehJS versions must always match.
+bokeh==2.4.3
+# We still need numpy < 2 for our bokeh tests since
+# bokeh 2.4.3 is incompatible with numpy 2.x:
+numpy<2

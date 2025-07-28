@@ -17,6 +17,7 @@ import json
 import time
 import uuid
 from functools import partial
+from typing import Any, Callable
 from urllib.parse import parse_qs
 from wsgiref.simple_server import make_server
 
@@ -48,7 +49,7 @@ e = (
 NONCE_REGISTRY = {}
 
 
-def generate_token(payload):
+def generate_token(payload: dict[str, Any]) -> str:
     # Create JWT header
     header = {
         "typ": "JWT",
@@ -69,7 +70,11 @@ def generate_token(payload):
     return b".".join([header_b64, payload_b64, signature_b64]).decode()
 
 
-def oidc_app(environ, start_response, success=True):
+def oidc_app(
+    environ: dict[str, Any],
+    start_response: Callable[[str, list[tuple[str, str]]], Callable[[bytes], Any]],
+    success: bool = True,
+) -> list[bytes]:
     path = environ["PATH_INFO"]
     current_port = environ["SERVER_PORT"]
 
@@ -84,7 +89,7 @@ def oidc_app(environ, start_response, success=True):
         start_response(status, headers)
         return [json.dumps(response).encode()]
 
-    elif path == "/auth":
+    if path == "/auth":
         # Accept any authorization request and return code
         qs = parse_qs(environ.get("QUERY_STRING", ""))
 
@@ -105,7 +110,7 @@ def oidc_app(environ, start_response, success=True):
         start_response(status, headers)
         return []
 
-    elif path == "/token":
+    if path == "/token":
         length = int(environ.get("CONTENT_LENGTH", "0"))
 
         body = environ["wsgi.input"].read(length)
@@ -134,7 +139,7 @@ def oidc_app(environ, start_response, success=True):
         start_response(status, headers)
         return [json.dumps(response).encode()]
 
-    elif path == "/jwks":
+    if path == "/jwks":
         jwks = {
             "keys": [
                 {

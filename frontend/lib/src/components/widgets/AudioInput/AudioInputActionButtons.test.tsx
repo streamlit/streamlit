@@ -55,8 +55,10 @@ describe("AudioInputActionButton", () => {
       />
     )
 
-    expect(screen.getByLabelText("Record")).toBeInTheDocument()
-    await user.click(screen.getByLabelText("Record"))
+    const recordButton = screen.getByLabelText("Record")
+    expect(recordButton).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+
+    await user.click(recordButton)
     expect(startRecording).toHaveBeenCalled()
   })
 
@@ -71,8 +73,10 @@ describe("AudioInputActionButton", () => {
       />
     )
 
-    expect(screen.getByLabelText("Stop recording")).toBeInTheDocument()
-    await user.click(screen.getByLabelText("Stop recording"))
+    const stopRecordingButton = screen.getByLabelText("Stop recording")
+    expect(stopRecordingButton).toHaveStyle("color: rgb(255, 75, 75)")
+
+    await user.click(stopRecordingButton)
     expect(stopRecording).toHaveBeenCalled()
   })
 
@@ -88,8 +92,10 @@ describe("AudioInputActionButton", () => {
     )
 
     expect(screen.getByLabelText("Record")).toBeInTheDocument()
-    expect(screen.getByLabelText("Play")).toBeInTheDocument()
-    await user.click(screen.getByLabelText("Play"))
+    const playButton = screen.getByLabelText("Play")
+    expect(playButton).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+
+    await user.click(playButton)
     expect(onClickPlayPause).toHaveBeenCalled()
   })
 
@@ -106,8 +112,10 @@ describe("AudioInputActionButton", () => {
     )
 
     expect(screen.getByLabelText("Record")).toBeInTheDocument()
-    expect(screen.getByLabelText("Pause")).toBeInTheDocument()
-    await user.click(screen.getByLabelText("Pause"))
+    const pauseButton = screen.getByLabelText("Pause")
+    expect(pauseButton).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+
+    await user.click(pauseButton)
     expect(onClickPlayPause).toHaveBeenCalled()
   })
 
@@ -123,8 +131,10 @@ describe("AudioInputActionButton", () => {
         />
       )
 
-      expect(screen.getByLabelText("Record")).toBeInTheDocument()
-      await user.click(screen.getByLabelText("Record"))
+      const recordButton = screen.getByLabelText("Record")
+      expect(recordButton).toHaveStyle("color: rgba(49, 51, 63, 0.2)")
+
+      await user.click(recordButton)
       expect(startRecording).not.toHaveBeenCalled()
     })
   })

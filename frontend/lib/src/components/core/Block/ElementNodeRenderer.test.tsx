@@ -24,12 +24,11 @@ import {
   Snow as SnowProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { ElementNode } from "~lib/AppNode"
+import { renderWithContexts } from "~lib/test_util"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { createFormsData, WidgetStateManager } from "~lib/WidgetStateManager"
+import { ElementNode } from "~lib/AppNode"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 
 import ElementNodeRenderer, {
@@ -66,13 +65,12 @@ function createSnowNode(scriptRunId: string): ElementNode {
 
 function getProps(
   props: Partial<ElementNodeRendererProps> &
-    Pick<ElementNodeRendererProps, "node" | "scriptRunId">
+    Pick<ElementNodeRendererProps, "node">
 ): ElementNodeRendererProps {
   const sessionInfo = mockSessionInfo()
   const endpoints = mockEndpoints()
   return {
     endpoints: endpoints,
-    scriptRunState: ScriptRunState.RUNNING,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: vi.fn(),
       formsDataChanged: vi.fn(),
@@ -84,9 +82,6 @@ function getProps(
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: vi.fn(),
     }),
-    componentRegistry: new ComponentRegistry(endpoints),
-    formsData: createFormsData(),
-    width: 1000,
     ...props,
   }
 }
@@ -97,9 +92,11 @@ describe("ElementNodeRenderer Block Component", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createBalloonNode(scriptRunId),
+      })
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
+        scriptRunState: ScriptRunState.RUNNING,
         scriptRunId: "NEW_SCRIPT_ID",
       })
-      render(<ElementNodeRenderer {...props} />)
 
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
@@ -107,7 +104,6 @@ describe("ElementNodeRenderer Block Component", () => {
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       expect(elementNodeRenderer).toHaveClass("stElementContainer")
-      // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
@@ -115,16 +111,16 @@ describe("ElementNodeRenderer Block Component", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createBalloonNode(scriptRunId),
+      })
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
         scriptRunId,
       })
-      render(<ElementNodeRenderer {...props} />)
 
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
       expect(elementRendererChildren[0]).toHaveClass("stBalloons")
@@ -136,16 +132,17 @@ describe("ElementNodeRenderer Block Component", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createSnowNode(scriptRunId),
+      })
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
+        scriptRunState: ScriptRunState.RUNNING,
         scriptRunId: "NEW_SCRIPT_ID",
       })
-      render(<ElementNodeRenderer {...props} />)
 
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
@@ -153,16 +150,16 @@ describe("ElementNodeRenderer Block Component", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createSnowNode(scriptRunId),
+      })
+      renderWithContexts(<ElementNodeRenderer {...props} />, {
         scriptRunId,
       })
-      render(<ElementNodeRenderer {...props} />)
 
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
       const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
-      // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
       expect(elementRendererChildren[0]).toHaveClass("stSnow")

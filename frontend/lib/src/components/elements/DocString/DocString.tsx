@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { DocString as DocStringProto, IMember } from "@streamlit/protobuf"
 
@@ -33,22 +33,18 @@ import {
 } from "./styled-components"
 
 export interface DocStringProps {
-  width: number
   element: DocStringProto
 }
 
 /**
  * Functional element representing formatted text.
  */
-export default function DocString({
-  width,
-  element,
-}: DocStringProps): ReactElement {
+function DocString({ element }: DocStringProps): ReactElement {
   const { name, type, value, docString, members } = element
 
   // Put it all together into a nice little html view.
   return (
-    <StyledDocContainer className="stHelp" data-testid="stHelp" width={width}>
+    <StyledDocContainer className="stHelp" data-testid="stHelp">
       <StyledDocHeader>
         <StyledDocSummary>
           {name ? (
@@ -113,3 +109,5 @@ export function Member({ member }: MemberProps): ReactElement {
     </StyledMembersRow>
   )
 }
+
+export default memo(DocString)

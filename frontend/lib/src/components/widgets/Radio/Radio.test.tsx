@@ -38,7 +38,6 @@ const getProps = (
     captions: [],
     ...elementProps,
   }),
-  width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -84,13 +83,12 @@ describe("Radio widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<Radio {...props} />)
     const radioElement = screen.getByTestId("stRadio")
 
     expect(radioElement).toHaveClass("stRadio")
-    expect(radioElement).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {

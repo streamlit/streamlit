@@ -17,6 +17,7 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
@@ -33,8 +34,6 @@ const getProps = (
     url: "https://streamlit.io",
     ...elementProps,
   }),
-  width: 250,
-  disabled: false,
   ...widgetProps,
 })
 
@@ -47,14 +46,13 @@ describe("LinkButton widget", () => {
     expect(linkButton).toBeInTheDocument()
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<LinkButton {...props} />)
 
     const linkButton = screen.getByTestId("stLinkButton")
 
     expect(linkButton).toHaveClass("stLinkButton")
-    expect(linkButton).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label within the button", () => {
@@ -66,6 +64,25 @@ describe("LinkButton widget", () => {
     })
 
     expect(linkButton).toBeInTheDocument()
+  })
+
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    render(<LinkButton {...getProps({ help: "mockHelpText" })} />)
+
+    // Ensure both the button and the tooltip target have the correct width
+    // These will be 100% and the ElementContainer will have styles to determine
+    // the button width.
+    const linkButton = screen.getByRole("link")
+    expect(linkButton).toHaveStyle("width: 100%")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
   })
 
   describe("wrapped BaseLinkButton", () => {
@@ -80,43 +97,11 @@ describe("LinkButton widget", () => {
       })
 
       it(`renders disabled ${type} correctly`, () => {
-        render(<LinkButton {...getProps({ type }, { disabled: true })} />)
+        render(<LinkButton {...getProps({ type, disabled: true })} />)
 
         const linkButton = screen.getByRole("link")
         expect(linkButton).toHaveAttribute("disabled")
       })
-    })
-
-    it("does not use container width by default", () => {
-      const props = getProps()
-      render(<LinkButton {...props}>Hello</LinkButton>)
-
-      const linkButton = screen.getByRole("link")
-      expect(linkButton).toHaveStyle("width: auto")
-    })
-
-    it("passes useContainerWidth property with help correctly", () => {
-      render(
-        <LinkButton
-          {...getProps({ useContainerWidth: true, help: "mockHelpText" })}
-        >
-          Hello
-        </LinkButton>
-      )
-
-      const linkButton = screen.getByRole("link")
-      expect(linkButton).toHaveStyle(`width: ${250}px`)
-    })
-
-    it("passes useContainerWidth property without help correctly", () => {
-      render(
-        <LinkButton {...getProps({ useContainerWidth: true })}>
-          Hello
-        </LinkButton>
-      )
-
-      const linkButton = screen.getByRole("link")
-      expect(linkButton).toHaveStyle("width: 100%")
     })
   })
 })

@@ -16,18 +16,20 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import Video, { VideoProps } from "./Video"
 
 describe("Video Element", () => {
-  const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
+  let buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
+  const sendClientErrorToHost = vi.fn()
 
   const mockSetElementState = vi.fn()
   const mockGetElementState = vi.fn()
@@ -45,46 +47,60 @@ describe("Video Element", () => {
       startTime: 0,
       ...elementProps,
     }),
-    endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
-    width: 0,
+    endpoints: mockEndpoints({
+      buildMediaURL: buildMediaURL,
+      sendClientErrorToHost: sendClientErrorToHost,
+    }),
     elementMgr: elementMgrMock as unknown as ElementStateManager,
   })
 
   beforeEach(() => {
     vi.clearAllMocks()
+
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
   })
 
-  it("renders without crashing", () => {
+  it("renders without crashing", async () => {
     const props = getProps()
     render(<Video {...props} />)
 
-    const videoElement = screen.getByTestId("stVideo")
+    const videoElement = await screen.findByTestId("stVideo")
     expect(videoElement).toBeInTheDocument()
-    expect(videoElement).toHaveClass("stVideo")
+    expect(videoElement.classList).toContain("stVideo")
   })
 
-  it("has correct style", () => {
-    const props = getProps()
-    render(<Video {...props} />)
-    const video = screen.getByTestId("stVideo")
-
-    expect(video).toHaveAttribute("class", "stVideo")
-    expect(video).toHaveStyle("width: 0px; height: 528px;")
-  })
-
-  it("has controls", () => {
+  it("has controls", async () => {
     const props = getProps()
     render(<Video {...props} />)
 
-    expect(screen.getByTestId("stVideo")).toHaveAttribute("controls")
+    expect(await screen.findByTestId("stVideo")).toHaveAttribute("controls")
   })
 
-  it("creates its `src` attribute using buildMediaURL", () => {
+  it("creates its `src` attribute using buildMediaURL", async () => {
     render(<Video {...getProps({ url: "/media/mockVideoFile.mp4" })} />)
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockVideoFile.mp4")
-    expect(screen.getByTestId("stVideo")).toHaveAttribute(
+    expect(await screen.findByTestId("stVideo")).toHaveAttribute(
       "src",
       "https://mock.media.url"
+    )
+  })
+
+  it("sends an CLIENT_ERROR message when the video source fails to load", () => {
+    const props = getProps()
+    render(<Video {...props} />)
+    const videoElement = screen.getByTestId("stVideo")
+    expect(videoElement).toBeInTheDocument()
+
+    fireEvent.error(videoElement)
+
+    expect(sendClientErrorToHost).toHaveBeenCalledWith(
+      "Video",
+      "Video source failed to load",
+      "onerror triggered",
+      "https://mock.media.url/"
     )
   })
 
@@ -93,19 +109,19 @@ describe("Video Element", () => {
     mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
   })
 
-  it("does not autoplay if preventAutoplay is set", () => {
+  it("does not autoplay if preventAutoplay is set", async () => {
     mockGetElementState.mockReturnValueOnce(true) // Autoplay should be prevented
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
-    const audioElement = screen.getByTestId("stVideo")
+    const audioElement = await screen.findByTestId("stVideo")
     expect(audioElement).not.toHaveAttribute("autoPlay")
   })
 
-  it("autoplays if preventAutoplay is not set and autoplay is true", () => {
+  it("autoplays if preventAutoplay is not set and autoplay is true", async () => {
     mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
-    const audioElement = screen.getByTestId("stVideo")
+    const audioElement = await screen.findByTestId("stVideo")
     expect(audioElement).toHaveAttribute("autoPlay")
   })
 
@@ -130,12 +146,12 @@ describe("Video Element", () => {
   })
 
   describe("YouTube", () => {
-    it("renders a youtube iframe", () => {
+    it("renders a youtube iframe", async () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
       })
       render(<Video {...props} />)
-      const videoElement = screen.getByTestId("stVideo")
+      const videoElement = await screen.findByTestId("stVideo")
       expect(videoElement).toBeInstanceOf(HTMLIFrameElement)
       expect(videoElement).toHaveAttribute(
         "src",
@@ -143,13 +159,13 @@ describe("Video Element", () => {
       )
     })
 
-    it("renders a youtube iframe with an starting time", () => {
+    it("renders a youtube iframe with an starting time", async () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
         startTime: 10,
       })
       render(<Video {...props} />)
-      const videoElement = screen.getByTestId("stVideo")
+      const videoElement = await screen.findByTestId("stVideo")
       expect(videoElement).toBeInstanceOf(HTMLIFrameElement)
       expect(videoElement).toHaveAttribute(
         "src",
@@ -161,19 +177,134 @@ describe("Video Element", () => {
   describe("updateTime", () => {
     const props = getProps()
 
-    it("sets the current time to startTime on render", () => {
+    it("sets the current time to startTime on render", async () => {
       render(<Video {...props} />)
-      const videoElement = screen.getByTestId("stVideo") as HTMLMediaElement
+      const videoElement: HTMLMediaElement =
+        await screen.findByTestId("stVideo")
       expect(videoElement.currentTime).toBe(0)
     })
 
-    it("updates the current time when startTime is changed", () => {
+    it("updates the current time when startTime is changed", async () => {
       const { rerender } = render(<Video {...props} />)
-      const videoElement = screen.getByTestId("stVideo") as HTMLMediaElement
+      const videoElement: HTMLMediaElement =
+        await screen.findByTestId("stVideo")
       expect(videoElement.currentTime).toBe(0)
 
       rerender(<Video {...getProps({ startTime: 10 })} />)
       expect(videoElement.currentTime).toBe(10)
+    })
+  })
+
+  describe("subtitles", () => {
+    it("renders subtitles properly", () => {
+      const props = getProps({
+        subtitles: [
+          { url: "https://mock.subtitle.url" },
+          { url: "https://mock.subtitle.url2" },
+        ],
+      })
+      props.endpoints.buildMediaURL = vi.fn(url => url)
+      render(<Video {...props} />)
+
+      // check that track elements are rendered
+      const trackElements = screen.getAllByTestId("stVideoSubtitle")
+      expect(trackElements).toHaveLength(2)
+
+      // check that the track element has the correct src
+      expect(trackElements[0]).toHaveAttribute(
+        "src",
+        "https://mock.subtitle.url"
+      )
+      expect(trackElements[1]).toHaveAttribute(
+        "src",
+        "https://mock.subtitle.url2"
+      )
+    })
+
+    it("checks the subtitles src url(s) on mount", () => {
+      buildMediaURL = vi.fn(url => url)
+      const props = getProps({
+        subtitles: [
+          { url: "https://mock.subtitle.url" },
+          { url: "https://mock.subtitle.url2" },
+        ],
+      })
+      props.endpoints.buildMediaURL = buildMediaURL
+      render(<Video {...props} />)
+
+      expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledTimes(2)
+      expect(props.endpoints.checkSourceUrlResponse).toHaveBeenNthCalledWith(
+        1,
+        "https://mock.subtitle.url",
+        "Video Subtitle"
+      )
+      expect(props.endpoints.checkSourceUrlResponse).toHaveBeenNthCalledWith(
+        2,
+        "https://mock.subtitle.url2",
+        "Video Subtitle"
+      )
+    })
+
+    it("does not call checkSourceUrlResponse if there are no subtitles", () => {
+      const props = getProps()
+      render(<Video {...props} />)
+      expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("crossOrigin attribute", () => {
+    it("sets crossOrigin to 'anonymous' when resourceCrossOriginMode is 'anonymous'", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: "anonymous" },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
+    })
+
+    it("sets crossOrigin to 'use-credentials' when resourceCrossOriginMode is 'use-credentials'", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: "use-credentials" },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "use-credentials")
+    })
+
+    it("does not set crossOrigin attribute when resourceCrossOriginMode is undefined", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).not.toHaveAttribute("crossOrigin")
+    })
+
+    it("does not set crossOrigin attribute when libConfig is empty", async () => {
+      const props = getProps()
+      renderWithContexts(<Video {...props} />, {
+        libConfig: {},
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).not.toHaveAttribute("crossOrigin")
+    })
+
+    it("sets crossOrigin to 'anonymous' when in dev mode with subtitles regardless of resourceCrossOriginMode", async () => {
+      // Store original NODE_ENV
+      const originalNodeEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "development"
+
+      const props = getProps({
+        subtitles: [{ url: "https://mock.subtitle.url" }],
+      })
+      renderWithContexts(<Video {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const videoElement = await screen.findByTestId("stVideo")
+      expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
+
+      // Restore original NODE_ENV
+      process.env.NODE_ENV = originalNodeEnv
     })
   })
 })

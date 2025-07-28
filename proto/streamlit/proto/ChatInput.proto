@@ -43,4 +43,7 @@ message ChatInput {
 
   // Supported file types: For example: ["png","jpg","img"]
   repeated string file_type = 10;
+
+  // Max file size allowed by server config
+  int32 max_upload_size_mb = 11;
 }

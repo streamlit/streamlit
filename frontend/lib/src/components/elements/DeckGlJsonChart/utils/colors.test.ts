@@ -24,7 +24,7 @@ describe("#getContextualFillColor", () => {
   const testCases: [
     string,
     Parameters<typeof getContextualFillColor>[0],
-    ReturnType<typeof getContextualFillColor>
+    ReturnType<typeof getContextualFillColor>,
   ][] = [
     [
       "should return the original fill color when not selected",
@@ -162,7 +162,7 @@ describe("#getContextualFillColor", () => {
     ],
   ]
 
-  it.each(testCases)("%s", (description, args, expected) => {
+  it.each(testCases)("%s", (_description, args, expected) => {
     expect(getContextualFillColor(args)).toEqual(expected)
   })
 })

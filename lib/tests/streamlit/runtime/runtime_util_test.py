@@ -20,20 +20,12 @@ import unittest
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import runtime_util
-from streamlit.runtime.runtime_util import is_cacheable_msg, serialize_forward_msg
+from streamlit.runtime.runtime_util import serialize_forward_msg
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.testutil import patch_config_options
 
 
 class RuntimeUtilTest(unittest.TestCase):
-    def test_should_cache_msg(self):
-        """Test runtime_util.should_cache_msg"""
-        with patch_config_options({"global.minCachedMessageSize": 0}):
-            self.assertTrue(is_cacheable_msg(create_dataframe_msg([1, 2, 3])))
-
-        with patch_config_options({"global.minCachedMessageSize": 1000}):
-            self.assertFalse(is_cacheable_msg(create_dataframe_msg([1, 2, 3])))
-
     def test_should_limit_msg_size(self):
         max_message_size_mb = 50
 
@@ -51,9 +43,9 @@ class RuntimeUtilTest(unittest.TestCase):
             deserialized_msg.ParseFromString(serialize_forward_msg(large_msg_copy))
 
             # The metadata should be the same, but contents should be replaced
-            self.assertEqual(deserialized_msg.metadata, large_msg.metadata)
-            self.assertNotEqual(deserialized_msg, large_msg)
-            self.assertTrue(
+            assert deserialized_msg.metadata == large_msg.metadata
+            assert deserialized_msg != large_msg
+            assert (
                 "exceeds the message size limit"
                 in deserialized_msg.delta.new_element.exception.message
             )

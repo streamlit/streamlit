@@ -30,7 +30,6 @@ const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
     body: "some plain text",
     ...elementProps,
   }),
-  width: 100,
 })
 
 describe("TextElement element", () => {

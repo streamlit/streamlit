@@ -19,11 +19,14 @@ from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 
-def get_uuids(app: Page):
+def get_uuids(app: Page) -> tuple[str, str]:
     expect(app.get_by_test_id("stMarkdown")).to_have_count(2)
 
     text_in_fragment = app.get_by_test_id("stMarkdown").first.text_content()
     text_outside_fragment = app.get_by_test_id("stMarkdown").last.text_content()
+
+    assert text_in_fragment is not None
+    assert text_outside_fragment is not None
 
     return text_in_fragment, text_outside_fragment
 

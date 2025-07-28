@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit import logger
 from streamlit.connections import BaseConnection
@@ -40,6 +40,10 @@ if TYPE_CHECKING:
     from snowflake.connector import (  # type:ignore[import] # isort: skip
         SnowflakeConnection as InternalSnowflakeConnection,
     )
+
+# the ANSI-compliant SQL code for "connection was not established"
+# (see docs: https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#id6)
+SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED: Final = "08001"
 
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
@@ -64,10 +68,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
     .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
 
-    .. Tip::
+    .. Important::
         `snowflake-snowpark-python <https://pypi.org/project/snowflake-snowpark-python/>`_
         must be installed in your environment to use this connection. You can
-        install Snowflake extras along with Streamlit:
+        install it as an extra with Streamlit:
 
         >>> pip install streamlit[snowflake]
 
@@ -81,7 +85,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     Examples
     --------
-
     **Example 1: Configuration with Streamlit secrets**
 
     You can configure your Snowflake connection using Streamlit's
@@ -108,14 +111,26 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     **Example 2: Configuration with keyword arguments and external authentication**
 
-    You can configure your Snowflake connection with keyword arguments (with or
-    without ``secrets.toml``). For example, if your Snowflake account supports
-    SSO, you can set up a quick local connection for development using `browser-based SSO
+    You can configure your Snowflake connection with keyword arguments. The
+    keyword arguments are merged with (and take precedence over) the values in
+    ``secrets.toml``. However, if you name your connection ``"snowflake"`` and
+    don't have a ``[connections.snowflake]`` dictionary in your
+    ``secrets.toml`` file, Streamlit will ignore any keyword arguments and use
+    the default Snowflake connection as described in Example 5 and Example 6.
+    To configure your connection using only keyword arguments, declare a name
+    for the connection other than ``"snowflake"``.
+
+    For example, if your Snowflake account supports SSO, you can set up a quick
+    local connection for development using `browser-based SSO
     <https://docs.snowflake.com/en/user-guide/admin-security-fed-auth-use#how-browser-based-sso-works>`_.
+    Because there is nothing configured in ``secrets.toml``, the name is an
+    empty string and the type is set to ``"snowflake"``. This prevents
+    Streamlit from ignoring the keyword arguments and using a default
+    Snowflake connection.
 
     >>> import streamlit as st
     >>> conn = st.connection(
-    ...     connection_name,
+    ...     "",
     ...     type="snowflake",
     ...     account="xxx-xxx",
     ...     user="xxx",
@@ -164,12 +179,12 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     >>> conn = st.connection("snowflake")
     >>> df = conn.query("SELECT * FROM my_table")
 
-    **Snowflake Default Connection**
-    If you don't have Streamlit secret `[connections.snowflake]` and just use
-    `st.connection("snowflake")`, Streamlit will use the default connection behavior as documented in
-    https://docs.snowflake.cn/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
+    **Example 5: Default connection with an environment variable**
 
-    ***Example 5: Default connection with an environment variable***
+    If you don't have a ``[connections.snowflake]`` dictionary in your
+    ``secrets.toml`` file and use ``st.connection("snowflake")``, Streamlit
+    will use the default connection for the `Snowflake Python Connector
+    <https://docs.snowflake.cn/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection>`_.
 
     If you have a Snowflake configuration file with a connection named
     ``my_connection`` as in Example 3, you can set an environment variable to
@@ -183,7 +198,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     >>> conn = st.connection("snowflake")
     >>> df = conn.query("SELECT * FROM my_table")
 
-    ***Example 6: Default connection in Snowflake's connection configuration file***
+    **Example 6: Default connection in Snowflake's connection configuration file**
 
     If you have a Snowflake configuration file that defines your ``default``
     connection, Streamlit will automatically use it if no other connection is
@@ -207,7 +222,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     """
 
-    def _connect(self, **kwargs) -> InternalSnowflakeConnection:
+    def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
 
@@ -252,16 +267,17 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                 return snowflake.connector.connect()
 
             return snowflake.connector.connect(**kwargs)
-        except SnowflakeError as e:
-            if not len(st_secrets) and not len(kwargs):
+        except SnowflakeError:
+            if not len(st_secrets) and not kwargs:
                 raise StreamlitAPIException(
                     "Missing Snowflake connection configuration. "
                     "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "
                     "or as kwargs to `st.connection`? "
-                    "See the [SnowflakeConnection configuration documentation](https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
+                    "See the [SnowflakeConnection configuration documentation]"
+                    "(https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
                     "for more details and examples."
                 )
-            raise e
+            raise
 
     def query(
         self,
@@ -269,8 +285,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         *,  # keyword-only arguments:
         ttl: float | int | timedelta | None = None,
         show_spinner: bool | str = "Running `snowflake.query(...)`.",
-        params=None,
-        **kwargs,
+        params: Any = None,
+        **kwargs: Any,
     ) -> DataFrame:
         """Run a read-only SQL query.
 
@@ -323,9 +339,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """
         from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 
-        # the ANSI-compliant SQL code for "connection was not established" (see docs: https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#id6)
-        SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED = "08001"
-
         @retry(
             after=lambda _: self.reset(),
             stop=stop_after_attempt(3),
@@ -366,7 +379,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         database: str | None = None,
         schema: str | None = None,
         chunk_size: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[bool, int, int]:
         """Write a ``pandas.DataFrame`` to a table in a Snowflake database.
 
@@ -546,5 +559,5 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             return get_active_session()
 
         return cast(
-            Session, Session.builder.configs({"connection": self._instance}).create()
+            "Session", Session.builder.configs({"connection": self._instance}).create()
         )

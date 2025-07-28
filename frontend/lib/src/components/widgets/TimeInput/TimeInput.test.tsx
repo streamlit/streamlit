@@ -40,7 +40,6 @@ const getProps = (
     step: 900,
     ...elementProps,
   }),
-  width: 0,
   disabled: disabled,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -116,13 +115,12 @@ describe("TimeInput widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
     const timeInput = screen.getByTestId("stTimeInput")
     expect(timeInput).toHaveClass("stTimeInput")
-    expect(timeInput).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("can be disabled", () => {

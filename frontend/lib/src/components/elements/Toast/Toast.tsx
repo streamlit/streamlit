@@ -15,6 +15,7 @@
  */
 
 import React, {
+  memo,
   ReactElement,
   useCallback,
   useEffect,
@@ -22,14 +23,14 @@ import React, {
   useState,
 } from "react"
 
-import { withTheme } from "@emotion/react"
-import { toaster, ToastOverrides } from "baseui/toast"
+import { toaster, type ToastOverrides } from "baseui/toast"
 
 import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { Kind } from "~lib/components/shared/AlertContainer"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledMessageWrapper,
@@ -38,10 +39,8 @@ import {
 } from "./styled-components"
 
 export interface ToastProps {
-  theme: EmotionTheme
   body: string
   icon?: string
-  width: number
 }
 
 function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
@@ -112,12 +111,8 @@ export function shortenMessage(fullMessage: string): string {
   return fullMessage
 }
 
-export function Toast({
-  theme,
-  body,
-  icon,
-  width,
-}: Readonly<ToastProps>): ReactElement {
+function Toast({ body, icon }: Readonly<ToastProps>): ReactElement {
+  const theme = useEmotionTheme()
   const displayMessage = shortenMessage(body)
   const shortened = body !== displayMessage
 
@@ -177,7 +172,7 @@ export function Toast({
     return () => {
       // Disable transition so toast doesn't flicker on removal
       toaster.update(newKey, {
-        overrides: { Body: { style: { transitionDuration: 0 } } },
+        overrides: { Body: { style: { display: "none" } } },
       })
       // Remove toast on unmount
       toaster.clear(newKey)
@@ -185,7 +180,7 @@ export function Toast({
 
     // Array must be empty to run as mount/cleanup
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -202,7 +197,6 @@ export function Toast({
       kind={Kind.ERROR}
       body="Streamlit API Error: `st.toast` cannot be called directly on the sidebar with `st.sidebar.toast`.
         See our `st.toast` API [docs](https://docs.streamlit.io/develop/api-reference/status/st.toast) for more information."
-      width={width}
     />
   )
   return (
@@ -211,4 +205,4 @@ export function Toast({
   )
 }
 
-export default withTheme(Toast)
+export default memo(Toast)

@@ -19,7 +19,6 @@ from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
-    Iterable,
     Literal,
     Union,
     overload,
@@ -32,6 +31,7 @@ from streamlit import config
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
@@ -41,10 +41,12 @@ from streamlit.runtime.state.common import (
     TESTING_KEY,
     user_key_from_element_id,
 )
-from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from builtins import ellipsis
+    from collections.abc import Iterable
+
+    from streamlit.delta_generator import DeltaGenerator
 
 
 Key: TypeAlias = Union[str, int]
@@ -71,9 +73,9 @@ def get_label_visibility_proto_value(
 
     if label_visibility_string == "visible":
         return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
-    elif label_visibility_string == "hidden":
+    if label_visibility_string == "hidden":
         return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
-    elif label_visibility_string == "collapsed":
+    if label_visibility_string == "collapsed":
         return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
 
     raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
@@ -86,9 +88,9 @@ def get_chat_input_accept_file_proto_value(
 
     if accept_file_value is False:
         return ChatInput.AcceptFile.NONE
-    elif accept_file_value is True:
+    if accept_file_value is True:
         return ChatInput.AcceptFile.SINGLE
-    elif accept_file_value == "multiple":
+    if accept_file_value == "multiple":
         return ChatInput.AcceptFile.MULTIPLE
 
     raise ValueError(f"Unknown accept file value: {accept_file_value}")
@@ -115,7 +117,6 @@ def _register_element_id(
 
     Parameters
     ----------
-
     element_type : str
         The type of the element to register.
 
@@ -124,7 +125,6 @@ def _register_element_id(
 
     Raises
     ------
-
     StreamlitDuplicateElementKey
         If the element key is not unique.
 
@@ -164,7 +164,7 @@ def _compute_element_id(
     use it to be distinct. The element ID includes an easily identified prefix, and the
     user_key as a suffix, to make it easy to identify it and know if a key maps to it.
     """
-    h = hashlib.new("md5", **HASHLIB_KWARGS)
+    h = hashlib.new("md5", usedforsecurity=False)
     h.update(element_type.encode("utf-8"))
     if user_key:
         # Adding this to the hash isn't necessary for uniqueness since the
@@ -185,6 +185,8 @@ def compute_and_register_element_id(
     *,
     user_key: str | None,
     form_id: str | None,
+    dg: DeltaGenerator | None = None,
+    style: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -215,6 +217,14 @@ def compute_and_register_element_id(
         The ID of the form that the element belongs to. `None` or empty string
         if the element doesn't belong to a form or doesn't support forms.
 
+    dg : DeltaGenerator | None
+        The DeltaGenerator of each element. `None` if the element is not a widget.
+
+    style: str | None
+        The style of the element, to provide more context to the user in the
+        error message. This should be `None` if the element does not support
+        the style parameter.
+
     kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
         The arguments to use to compute the element ID.
         The arguments must be stable, deterministic values.
@@ -224,13 +234,35 @@ def compute_and_register_element_id(
     """
     ctx = get_script_run_ctx()
 
-    # If form_id is provided, add it to the kwargs.
-    kwargs_to_use = {"form_id": form_id, **kwargs} if form_id else kwargs
+    kwargs_to_use = {**kwargs}
+    if form_id:
+        kwargs_to_use["form_id"] = form_id
+    if style:
+        kwargs_to_use["style"] = style
+
+    # If style is provided, use it for the error message, to provide more
+    # context to the user.
+    if style == "borderless":
+        # The borderless style is used by st.feedback, but users expect to see
+        # "feedback" in errors
+        element_type_for_error = "feedback"
+    elif style:
+        element_type_for_error = style
+    else:
+        element_type_for_error = element_type
 
     if ctx:
         # Add the active script hash to give elements on different
         # pages unique IDs.
         kwargs_to_use["active_script_hash"] = ctx.active_script_hash
+
+    if dg:
+        # If no key is provided and the widget element is inside the sidebar area
+        # add it to the kwargs
+        # allowing the same widget to be both in main area and sidebar.
+        active_dg_root_container = dg._active_dg._root_container
+        if active_dg_root_container == RootContainer.SIDEBAR and user_key is None:
+            kwargs_to_use["active_dg_root_container"] = str(active_dg_root_container)
 
     element_id = _compute_element_id(
         element_type,
@@ -239,11 +271,11 @@ def compute_and_register_element_id(
     )
 
     if ctx:
-        _register_element_id(ctx, element_type, element_id)
+        _register_element_id(ctx, element_type_for_error, element_id)
     return element_id
 
 
-def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
+def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any) -> None:
     if config.get_option("global.appTest"):
         try:
             ctx.session_state[TESTING_KEY][k] = v

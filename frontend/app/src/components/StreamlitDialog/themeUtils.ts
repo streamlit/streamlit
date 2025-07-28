@@ -31,8 +31,11 @@ import { CustomThemeConfig } from "@streamlit/protobuf"
 interface ThemeOptionBuilder {
   help: string
   title: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   component: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   options?: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   getValue: (value: string, config: ThemeOptionBuilder) => any
 }
 
@@ -43,6 +46,7 @@ const changedColorConfig = (
   themeInput: Partial<CustomThemeConfig>,
   baseTheme: EmotionTheme
 ): Array<string> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   const toLowerCaseIfString = (x: any): any => {
     if (typeof x === "string") {
       return x.toLowerCase()

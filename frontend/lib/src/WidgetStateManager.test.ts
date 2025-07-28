@@ -15,7 +15,7 @@
  */
 
 import { Mock } from "vitest"
-import { enableAllPlugins } from "immer"
+import { enableMapSet, enablePatches } from "immer"
 
 import {
   ArrowTable as ArrowTableProto,
@@ -47,6 +47,11 @@ const MOCK_WIDGET = {
   formId: "",
 }
 
+const MOCK_CHAT_INPUT_VALUE = {
+  data: "mockChatInputValue",
+  fileUploaderState: null,
+}
+
 const MOCK_FORM_WIDGET = {
   id: "mockFormWidgetId",
   formId: "mockFormId",
@@ -70,7 +75,8 @@ const MOCK_FILE_UPLOADER_STATE = new FileUploaderStateProto({
 })
 
 // Required by ImmerJS
-enableAllPlugins()
+enablePatches()
+enableMapSet()
 
 describe("Widget State Manager", () => {
   let sendBackMsg: Mock
@@ -163,23 +169,6 @@ describe("Widget State Manager", () => {
     const widget = getWidget({ insideForm: false })
     await widgetMgr.setTriggerValue(widget, { fromUi: true }, undefined)
 
-    // @ts-expect-error
-    expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
-    assertCallbacks({ insideForm: false })
-  })
-
-  /**
-   * String Triggers can't be used within forms, so this test
-   * is not parameterized on insideForm.
-   */
-  it("sets string trigger value correctly", async () => {
-    const widget = getWidget({ insideForm: false })
-    await widgetMgr.setStringTriggerValue(
-      widget,
-      "sample string",
-      { fromUi: true },
-      undefined
-    )
     // @ts-expect-error
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
     assertCallbacks({ insideForm: false })
@@ -340,8 +329,8 @@ describe("Widget State Manager", () => {
   describe("can set fragmentId in setter methods", () => {
     it.each([
       {
-        setterMethod: "setStringTriggerValue",
-        value: "Hello world",
+        setterMethod: "setChatInputValue",
+        value: MOCK_CHAT_INPUT_VALUE,
       },
       {
         setterMethod: "setBoolValue",

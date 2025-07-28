@@ -26,7 +26,7 @@ random.seed(0)
 # Generate a random dataframe
 df = pd.DataFrame(
     np.random.randn(5, 5),
-    columns=("col_%d" % i for i in range(5)),
+    columns=(f"col_{i}" for i in range(5)),
 )
 
 # set fixed column with so our pixel-clicks in the test are stable
@@ -48,6 +48,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="single-row",
     column_config=column_config,
+    use_container_width=False,
 )
 st.write("Dataframe single-row selection:", str(selection))
 
@@ -58,6 +59,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="single-column",
     column_config=column_config,
+    use_container_width=False,
 )
 st.write("Dataframe single-column selection:", str(selection))
 
@@ -68,6 +70,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="multi-row",
     column_config=column_config,
+    use_container_width=False,
 )
 st.write("Dataframe multi-row selection:", str(selection))
 
@@ -78,6 +81,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode="multi-column",
     column_config=column_config,
+    use_container_width=False,
 )
 st.write("Dataframe multi-column selection:", str(selection))
 
@@ -95,8 +99,20 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["multi-row", "multi-column"],
     column_config=column_config,
+    use_container_width=False,
 )
 st.write("Dataframe multi-row-multi-column selection:", str(selection))
+
+st.subheader("single-row & single-column select")
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode=["single-row", "single-column"],
+    column_config=column_config,
+    use_container_width=False,
+)
+st.write("Dataframe single-row-single-column selection:", str(selection))
 
 st.header("Selections in form:")
 
@@ -108,6 +124,7 @@ with st.form(key="my_form", clear_on_submit=True):
         selection_mode=["multi-row", "multi-column"],
         key="df_selection_in_form",
         column_config=column_config,
+        use_container_width=False,
     )
     st.form_submit_button("Submit")
 
@@ -132,13 +149,14 @@ st.dataframe(
     selection_mode=["multi-row", "multi-column"],
     key="df_selection",
     column_config=column_config,
+    use_container_width=False,
 )
 
 st.header("Selections in fragment:")
 
 
 @st.fragment
-def test_fragment():
+def test_fragment() -> None:
     selection = st.dataframe(
         df,
         hide_index=True,
@@ -146,6 +164,7 @@ def test_fragment():
         selection_mode=["multi-row", "multi-column"],
         key="inside_fragment",
         column_config=column_config,
+        use_container_width=False,
     )
     st.write("Dataframe-in-fragment selection:", str(selection))
 
@@ -168,5 +187,6 @@ selection = st.dataframe(
     key="with_index",
     column_config=column_config,
     column_order=["col_1", "col_3"],
+    use_container_width=False,
 )
 st.write("No selection on index column:", str(selection))

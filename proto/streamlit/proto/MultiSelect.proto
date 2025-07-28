@@ -28,10 +28,18 @@ message MultiSelect {
   repeated string options = 4;
   string help = 5;
   string form_id = 6;
-  repeated int32 value = 7;
+
+  repeated int32 value = 7 [deprecated = true];
+  // after we introduced accept_new_options, we send the option as a string
+  // instead of an index to keep it simple.
+  repeated string raw_values = 14;
+
   bool set_value = 8;
   bool disabled = 9;
   LabelVisibilityMessage label_visibility = 10;
   int32 max_selections = 11;
   string placeholder = 12;
+  optional bool accept_new_options = 13;
+
+  // Next: 15
 }

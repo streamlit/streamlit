@@ -83,9 +83,9 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
     def test_is_srt(self):
         """Test is_srt function."""
 
-        self.assertTrue(_is_srt(SRT_DATA_EN))
-        self.assertTrue(_is_srt(SRT_DATA_FR))
-        self.assertFalse(_is_srt(SRT_DATA_INVALID))
+        assert _is_srt(SRT_DATA_EN)
+        assert _is_srt(SRT_DATA_FR)
+        assert not _is_srt(SRT_DATA_INVALID)
 
     @parameterized.expand(
         [
@@ -96,18 +96,14 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
     def test_srt_vtt(self, srt_string: str, expected: bytes):
         """Test srt to vtt format transition."""
 
-        self.assertEqual(
-            _srt_to_vtt(srt_string),
-            expected,
-            f"Expected {srt_string} to be transformed into {str(expected)}.",
+        assert _srt_to_vtt(srt_string) == expected, (
+            f"Expected {srt_string} to be transformed into {expected!s}."
         )
 
     def test_srt_vtt_bytes(self):
         """Test srt to vtt format transition with bytes."""
-        self.assertEqual(
-            _srt_to_vtt(SRT_DATA_EN.encode("utf-8")),
-            VTT_DATA_EN,
-            f"Expected {SRT_DATA_EN} to be transformed into {str(VTT_DATA_EN)}.",
+        assert _srt_to_vtt(SRT_DATA_EN.encode("utf-8")) == VTT_DATA_EN, (
+            f"Expected {SRT_DATA_EN} to be transformed into {VTT_DATA_EN!s}."
         )
 
     def test_process_subtitle_data(self):
@@ -115,6 +111,6 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
         url = process_subtitle_data("[0, 0]", SRT_DATA_EN, "English")
         file_id = url.split("/")[-1].split(".")[0]
         media_file = self.media_file_storage.get_file(file_id)
-        self.assertIsNotNone(media_file)
-        self.assertEqual(media_file.content, _srt_to_vtt(SRT_DATA_EN.strip()))
-        self.assertEqual(media_file.mimetype, "text/vtt")
+        assert media_file is not None
+        assert media_file.content == _srt_to_vtt(SRT_DATA_EN.strip())
+        assert media_file.mimetype == "text/vtt"

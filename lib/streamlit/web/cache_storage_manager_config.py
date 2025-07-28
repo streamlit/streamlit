@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 def create_default_cache_storage_manager() -> CacheStorageManager:
     """
     Get the cache storage manager.
-    It would be used both in server.py and in cli.py to have unified cache storage
+    It would be used both in server.py and in cli.py to have unified cache storage.
 
     Returns
     -------

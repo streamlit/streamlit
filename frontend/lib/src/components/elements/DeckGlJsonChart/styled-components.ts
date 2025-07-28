@@ -19,15 +19,14 @@ import styled from "@emotion/styled"
 import { hasLightBackgroundColor } from "~lib/theme"
 
 export interface StyledDeckGlChartProps {
-  width: number | string
   height: number | string
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ width, height }) => ({
+  ({ height }) => ({
     position: "relative",
     height,
-    width,
+    width: "100%",
   })
 )
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
@@ -40,9 +40,7 @@ export interface MetricProps {
   element: MetricProto
 }
 
-export default function Metric({
-  element,
-}: Readonly<MetricProps>): ReactElement {
+function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const { MetricDirection } = MetricProto
   const {
     body,
@@ -101,7 +99,7 @@ export default function Metric({
                   : "stMetricDeltaIcon-Down"
               }
               content={metricDirection}
-              size="lg"
+              size="md"
               margin={arrowMargin}
             />
           )}
@@ -111,3 +109,5 @@ export default function Metric({
     </StyledMetricContainer>
   )
 }
+
+export default memo(Metric)

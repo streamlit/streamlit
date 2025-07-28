@@ -21,11 +21,27 @@ components.html(html, width=200, height=500, scrolling=False)
 src = "http://not.a.real.url"
 components.iframe(src, width=200, height=500, scrolling=True)
 
-# Set a query parameter to ensure that it doesn't affect the path of the custom component,
-# since that would trigger a reload if the query param changes
-st.query_params["hello"] = "world"
+# Different tab_index examples for testing
+st.markdown("### IFrames with different tab_index values")
 
-url = "http://not.a.real.url"
-test_component = components.declare_component("test_component", url=url)
+# Default - no tab_index specified
+components.iframe(src, width=200, height=100, scrolling=True)
 
-test_component(key="component_1")
+# Positive tab_index
+components.iframe(src, width=200, height=100, scrolling=True, tab_index=5)
+
+# Negative tab_index
+components.iframe(src, width=200, height=100, scrolling=True, tab_index=-1)
+
+# Zero tab_index
+components.iframe(src, width=200, height=100, scrolling=True, tab_index=0)
+
+if st.toggle("Show custom component"):
+    # Set a query parameter to ensure that it doesn't affect the path of the custom component,
+    # since that would trigger a reload if the query param changes
+    st.query_params["hello"] = "world"
+
+    url = "http://not.a.real.url"
+    test_component = components.declare_component("test_component", url=url)
+
+    test_component(key="component_1")

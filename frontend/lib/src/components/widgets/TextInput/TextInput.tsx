@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useState } from "react"
+import React, { memo, ReactElement, useCallback, useState } from "react"
 
 import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
-import { useTheme } from "@emotion/react"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
@@ -35,9 +34,12 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
+import { DynamicIcon } from "~lib/components/shared/Icon"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledTextInput } from "./styled-components"
 
@@ -45,7 +47,6 @@ export interface Props {
   disabled: boolean
   element: TextInputProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -53,7 +54,6 @@ function TextInput({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }: Props): ReactElement {
   /**
@@ -61,8 +61,10 @@ function TextInput({
    * widget's UI, the default value is used.
    */
   const [uiValue, setUiValue] = useState<string | null>(
-    getStateFromWidgetMgr(widgetMgr, element) ?? null
+    () => getStateFromWidgetMgr(widgetMgr, element) ?? null
   )
+
+  const [width, elementRef] = useCalculatedWidth()
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -95,9 +97,9 @@ function TextInput({
    */
   const [focused, setFocused] = useState(false)
 
-  const theme = useTheme()
+  const theme = useEmotionTheme()
   const [id] = useState(() => uniqueId("text_input_"))
-  const { placeholder, formId } = element
+  const { placeholder, formId, icon, maxChars } = element
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
@@ -125,26 +127,31 @@ function TextInput({
   }, [])
 
   const onChange = useOnInputChange({
-    formId: element.formId,
-    maxChars: element.maxChars,
+    formId,
+    maxChars,
     setDirty,
     setUiValue,
     setValueWithSource,
   })
 
   const onKeyPress = useSubmitFormViaEnterKey(
-    element.formId,
+    formId,
     commitWidgetValue,
     dirty,
     widgetMgr,
     fragmentId
   )
 
+  // Material icons need to be larger to render similar size of emojis,
+  // and we change their text color
+  const isMaterialIcon = icon?.startsWith(":material")
+  const dynamicIconSize = isMaterialIcon ? "lg" : "base"
+
   return (
     <StyledTextInput
       className="stTextInput"
       data-testid="stTextInput"
-      width={width}
+      ref={elementRef}
     >
       <WidgetLabel
         label={element.label}
@@ -175,23 +182,33 @@ function TextInput({
         id={id}
         type={getTypeString(element)}
         autoComplete={element.autocomplete}
+        startEnhancer={
+          icon && (
+            <DynamicIcon
+              data-testid="stTextInputIcon"
+              iconValue={icon}
+              size={dynamicIconSize}
+            />
+          )
+        }
         overrides={{
           Input: {
             style: {
+              fontWeight: theme.fontWeights.normal,
               // Issue: https://github.com/streamlit/streamlit/issues/2495
               // The input won't shrink in Firefox,
               // unless the line below is provided.
               // See https://stackoverflow.com/a/33811151
               minWidth: 0,
-              "::placeholder": {
-                opacity: "0.7",
-              },
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.sm,
+              paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
+              "::placeholder": {
+                color: theme.colors.fadedText60,
+              },
             },
           },
           Root: {
@@ -205,6 +222,17 @@ function TextInput({
               borderRightWidth: theme.sizes.borderWidth,
               borderTopWidth: theme.sizes.borderWidth,
               borderBottomWidth: theme.sizes.borderWidth,
+              paddingLeft: icon ? theme.spacing.sm : 0,
+            },
+          },
+          StartEnhancer: {
+            style: {
+              paddingLeft: 0,
+              paddingRight: 0,
+              // Keeps emoji icons from being cut off on the right
+              minWidth: theme.iconSizes.lg,
+              // Material icons color changed as inactionable
+              color: isMaterialIcon ? theme.colors.fadedText60 : "inherit",
             },
           },
         }}
@@ -213,8 +241,8 @@ function TextInput({
         <InputInstructions
           dirty={dirty}
           value={uiValue ?? ""}
-          maxLength={element.maxChars}
-          inForm={isInForm({ formId: element.formId })}
+          maxLength={maxChars}
+          inForm={isInForm({ formId })}
           allowEnterToSubmit={allowEnterToSubmit}
         />
       )}
@@ -255,4 +283,4 @@ function getTypeString(element: TextInputProto): string {
   return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
 }
 
-export default TextInput
+export default memo(TextInput)

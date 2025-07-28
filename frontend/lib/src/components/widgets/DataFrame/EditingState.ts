@@ -30,8 +30,8 @@ export function getColumnName(column: BaseColumn): string {
   return column.isIndex
     ? INDEX_IDENTIFIER
     : isNullOrUndefined(column.name)
-    ? ""
-    : column.name
+      ? ""
+      : column.name
 }
 
 /**
@@ -71,7 +71,9 @@ class EditingState {
       // We use snake case here since this is the widget state
       // that is sent and used in the backend. Therefore, it should
       // conform with the Python naming conventions.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       edited_rows: {} as Record<number, Record<string, any>>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       added_rows: [] as Record<string, any>[],
       deleted_rows: [] as number[],
     }
@@ -81,8 +83,9 @@ class EditingState {
     // row position -> column name -> edited value
     this.editedCells.forEach(
       (row: Map<number, GridCell>, rowIndex: number, _map) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
         const editedRow: Record<string, any> = {}
-        row.forEach((cell: GridCell, colIndex: number, _map) => {
+        row.forEach((cell: GridCell, colIndex: number) => {
           const column = columnsByIndex.get(colIndex)
           if (column) {
             editedRow[getColumnName(column)] = column.getCellValue(cell)
@@ -96,6 +99,7 @@ class EditingState {
     // we use for the JSON-compatible widget state:
     // List of column name -> edited value
     this.addedRows.forEach((row: Map<number, GridCell>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       const addedRow: Record<string, any> = {}
       // This flags is used to check if the row is incomplete
       // (i.e. missing required values) and should therefore not be included in
@@ -186,6 +190,7 @@ class EditingState {
     // Loop through all added rows and transform into the format that
     // we use for the editing state:
     // List of column index -> edited value
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     editingState.added_rows.forEach((row: Record<string, any>) => {
       const addedRow: Map<number, GridCell> = new Map()
       // Initialize all columns with null (empty) values first

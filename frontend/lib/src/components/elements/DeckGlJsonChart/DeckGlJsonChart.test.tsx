@@ -85,7 +85,6 @@ const getProps = (
       json: JSON.stringify(json),
       ...elementProps,
     }),
-    mapboxToken: "mapboxToken",
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: vi.fn(),
       formsDataChanged: vi.fn(),
@@ -288,7 +287,11 @@ describe("#useDeckGl", () => {
         useDeckGl(props)
         const { expand } = useRequiredContext(ElementFullscreenContext)
 
-        return <button onClick={expand}>Expand</button>
+        return (
+          <button type="button" onClick={expand}>
+            Expand
+          </button>
+        )
       }
 
       render(<MyComponent {...getUseDeckGlProps()} />)
@@ -401,7 +404,7 @@ describe("#useDeckGl", () => {
         })
       })
 
-      rerender()
+      rerender(initialProps)
 
       expect(result.current.hasActiveSelection).toBe(true)
     })

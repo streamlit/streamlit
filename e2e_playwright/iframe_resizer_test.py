@@ -18,8 +18,7 @@ from typing import TYPE_CHECKING, Callable, Final
 
 from playwright.sync_api import FrameLocator, Locator, expect
 
-from e2e_playwright.conftest import IframedPageAttrs
-from e2e_playwright.shared.app_utils import wait_for_app_run
+from e2e_playwright.conftest import IframedPageAttrs, wait_for_app_run
 
 if TYPE_CHECKING:
     from e2e_playwright.conftest import IframedPage, ImageCompareFunction
@@ -113,7 +112,8 @@ def test_render_embedded_iframe_correctly(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
     """Test that the iframe is rendered correctly when embedded
-    (query param '?embed=true' added to the iframe src url)."""
+    (query param '?embed=true' added to the iframe src url).
+    """
     frame_locator = _open_with_resize_script(iframed_app, embed=True)
     _snapshot_iframe(
         frame_locator, None, assert_snapshot, "iframe_resizer-embedded_iframe"
@@ -125,7 +125,8 @@ def test_render_embedded_iframe_expanded(
 ):
     """Test that the iframe is rendered correctly when embedded
     (query param '?embed=true' added to the iframe src url) and
-    markdown elements rendered."""
+    markdown elements rendered.
+    """
     frame_locator = _open_with_resize_script(iframed_app, embed=True)
     _snapshot_expanded_iframe(
         frame_locator, assert_snapshot, "iframe_resizer-embedded_iframe_expanded"
@@ -136,7 +137,8 @@ def test_render_unembedded_iframe_correctly(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
     """Test that the iframe is rendered correctly when not embedded (no
-    query param added to the iframe src url)."""
+    query param added to the iframe src url).
+    """
     frame_locator = _open_with_resize_script(iframed_app)
     _snapshot_iframe(
         frame_locator, None, assert_snapshot, "iframe_resizer-unembedded_iframe"
@@ -147,7 +149,8 @@ def test_render_unembedded_iframe_expanded(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
     """Test that the iframe is rendered correctly when not embedded (no
-    query param added to the iframe src url) and markdown elements rendered."""
+    query param added to the iframe src url) and markdown elements rendered.
+    """
     frame_locator = _open_with_resize_script(iframed_app)
     _snapshot_expanded_iframe(
         frame_locator,
@@ -161,7 +164,8 @@ def test_render_unembedded_iframe_with_minheight(
 ):
     """Test that the iframe has a minimum height even if there are no markdown
     elements. This means that this screenshot should have a larger height than
-    the non-expanded, unembedded iframe screenshot without a min-height."""
+    the non-expanded, unembedded iframe screenshot without a min-height.
+    """
 
     frame_locator = _open_with_resize_script(iframed_app, with_min_height=True)
     _snapshot_iframe(

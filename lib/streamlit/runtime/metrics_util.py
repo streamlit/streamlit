@@ -25,7 +25,7 @@ from collections.abc import Sized
 from functools import wraps
 from typing import Any, Callable, Final, TypeVar, cast, overload
 
-from streamlit import config, util
+from streamlit import config, file_util, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -160,7 +160,7 @@ _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
 
 def _get_machine_id_v3() -> str:
-    """Get the machine ID
+    """Get the machine ID.
 
     This is a unique identifier for a user for tracking metrics,
     that is broken in different ways in some Linux distros and Docker images.
@@ -168,7 +168,6 @@ def _get_machine_id_v3() -> str:
     - at times a hash of the same string, when running in a Docker container
     """
 
-    machine_id = str(uuid.getnode())
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
         with open(_ETC_MACHINE_ID_PATH) as f:
             machine_id = f.read()
@@ -177,7 +176,40 @@ def _get_machine_id_v3() -> str:
         with open(_DBUS_MACHINE_ID_PATH) as f:
             machine_id = f.read()
 
+    else:
+        machine_id = str(uuid.getnode())
+
     return machine_id
+
+
+def _get_machine_id_v4() -> str:
+    """Get a random ID that is stable for each machine, generating if needed.
+
+    This is a unique identifier for a user for tracking metrics.
+    Instead of relying on a hardware address in the container or host we'll
+    generate a UUID and store it in the ~/.streamlit hidden folder.
+    """
+    # If gatherUsageStats is False skip this whole code.
+    # This is just for people who don't want the extra machine_id_v4 file
+    # in their file system.
+    if not config.get_option("browser.gatherUsageStats"):
+        # This value will never be sent to our telemetry. Just including it here
+        # to help debug.
+        return "no-machine-id-v4"
+
+    filepath = file_util.get_streamlit_file_path("machine_id_v4")
+    stable_id = None
+
+    if os.path.exists(filepath):
+        with file_util.streamlit_read(filepath) as file:
+            stable_id = file.read()
+
+    if not stable_id:
+        stable_id = str(uuid.uuid4())
+        with file_util.streamlit_write(filepath) as output:
+            output.write(stable_id)
+
+    return stable_id
 
 
 class Installation:
@@ -186,7 +218,7 @@ class Installation:
 
     @classmethod
     def instance(cls) -> Installation:
-        """Returns the singleton Installation"""
+        """Returns the singleton Installation."""
         # We use a double-checked locking optimization to avoid the overhead
         # of acquiring the lock in the common case:
         # https://en.wikipedia.org/wiki/Double-checked_locking
@@ -196,16 +228,18 @@ class Installation:
                     cls._instance = Installation()
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.installation_id_v3 = str(
             uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v3())
         )
+
+        self.installation_id_v4 = _get_machine_id_v4()
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
-    def installation_id(self):
+    def installation_id(self) -> str:
         return self.installation_id_v3
 
 
@@ -250,7 +284,7 @@ def _get_arg_metadata(arg: object) -> str | None:
 
 
 def _get_command_telemetry(
-    _command_func: Callable[..., Any], _command_name: str, *args, **kwargs
+    _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
     arg_keywords = inspect.getfullargspec(_command_func).args
@@ -263,7 +297,7 @@ def _get_command_telemetry(
         pos = i
         if is_method:
             # If func is a method, ignore the first argument (self)
-            i = i + 1
+            i = i + 1  # noqa: PLW2901
 
         keyword = arg_keywords[i] if len(arg_keywords) > i else f"{i}"
         if keyword == "self":
@@ -357,12 +391,11 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             )
 
         return wrapper
-    else:
-        # To make mypy type narrow F | None -> F
-        non_optional_func = func
+    # To make mypy type narrow F | None -> F
+    non_optional_func = func
 
     @wraps(non_optional_func)
-    def wrapped_func(*args, **kwargs):
+    def wrapped_func(*args: Any, **kwargs: Any) -> Any:
         from timeit import default_timer as timer
 
         exec_start = timer()
@@ -408,12 +441,12 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
                 _LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
         try:
             result = non_optional_func(*args, **kwargs)
-        except RerunException as ex:
+        except RerunException:
             # Duplicated from below, because static analysis tools get confused
             # by deferring the rethrow.
             if tracking_activated and command_telemetry:
                 command_telemetry.time = to_microseconds(timer() - exec_start)
-            raise ex
+            raise
         finally:
             # Activate tracking again if command executes without any exceptions
             # we only want to do that if this command has set the
@@ -432,7 +465,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         # attributes.
         wrapped_func.__dict__.update(non_optional_func.__dict__)
         wrapped_func.__signature__ = inspect.signature(non_optional_func)  # type: ignore
-    return cast(F, wrapped_func)
+    return cast("F", wrapped_func)
 
 
 def create_page_profile_message(
@@ -454,15 +487,15 @@ def create_page_profile_message(
     # Collect all config options that have been manually set
     config_options: set[str] = set()
     if config._config_options:
-        for option_name in config._config_options.keys():
+        for option_name in config._config_options:
             if not config.is_manually_set(option_name):
                 # We only care about manually defined options
                 continue
 
             config_option = config._config_options[option_name]
-            if config_option.is_default:
-                option_name = f"{option_name}:default"
-            config_options.add(option_name)
+            config_options.add(
+                f"{option_name}:default" if config_option.is_default else option_name
+            )
 
     page_profile.config.extend(config_options)
 

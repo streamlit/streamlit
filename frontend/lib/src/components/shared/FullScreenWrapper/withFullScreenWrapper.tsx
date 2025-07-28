@@ -20,13 +20,13 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 
 import ElementFullscreenWrapper from "~lib/components/shared/ElementFullscreen/ElementFullscreenWrapper"
 
-function withFullScreenWrapper<P extends { width: number }>(
+function withFullScreenWrapper<P extends object>(
   WrappedComponent: ComponentType<React.PropsWithChildren<P>>
 ): ComponentType<React.PropsWithChildren<P>> {
   const ComponentWithFullScreenWrapper = (props: P): ReactElement => {
     return (
-      <ElementFullscreenWrapper width={props.width}>
-        <WrappedComponent {...(props as P)}></WrappedComponent>
+      <ElementFullscreenWrapper>
+        <WrappedComponent {...props}></WrappedComponent>
       </ElementFullscreenWrapper>
     )
   }

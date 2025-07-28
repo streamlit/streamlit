@@ -29,7 +29,8 @@ def configure_arrow_truncation():
     del os.environ["STREAMLIT_SERVER_MAX_MESSAGE_SIZE"]
 
 
-def test_shows_limitation_message(app: Page, configure_arrow_truncation):
+@pytest.mark.usefixtures("configure_arrow_truncation")
+def test_shows_limitation_message(app: Page):
     caption_elements = app.get_by_test_id("stCaptionContainer")
     expect(caption_elements).to_have_count(1)
     expect(caption_elements.nth(0)).to_have_text(

@@ -17,22 +17,65 @@ import styled from "@emotion/styled"
 
 import { FileStatus } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 
-export const StyledFileUploadDropzone = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  margin: "auto",
-  height: "100%",
-  width: "100%",
-  color: theme.colors.primary,
-  fontWeight: theme.fontWeights.bold,
-}))
+export interface StyledChatFileUploadDropzoneProps {
+  height: string
+}
 
-export const StyledFileUploadArea = styled.div(({}) => ({
-  display: "flex",
-  alignItems: "top",
-  height: "100%",
-}))
+// A transparent dropzone with a minimum height if chat input is short.
+// If chat input grows taller under multi-line, the dropzone will grow with it.
+export const StyledChatFileUploadDropzone =
+  styled.div<StyledChatFileUploadDropzoneProps>(({ theme, height }) => ({
+    backgroundColor: theme.colors.transparent,
+    position: "absolute",
+    left: 0,
+    bottom: 0,
+    minHeight: `max(${theme.sizes.emptyDropdownHeight}, ${height})`,
+    width: "100%",
+    zIndex: theme.zIndices.priority,
+  }))
+
+export interface StyledChatFileUploadDropzoneLabelProps {
+  height: string
+}
+
+export const StyledChatFileUploadDropzoneLabel =
+  styled.div<StyledChatFileUploadDropzoneLabelProps>(({ theme, height }) => ({
+    border: `${theme.sizes.borderWidth} solid`,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.radii.chatInput,
+    backgroundColor: theme.colors.secondaryBg,
+    color: theme.colors.primary,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: height,
+    width: "100%",
+    fontWeight: theme.fontWeights.bold,
+  }))
+
+export interface StyledFileUploadButtonContainerProps {
+  disabled: boolean
+}
+
+export const StyledFileUploadButtonContainer =
+  styled.div<StyledFileUploadButtonContainerProps>(({ theme, disabled }) => ({
+    display: "flex",
+    alignItems: "top",
+    height: "100%",
+    // Negative margin to offset the parent border width when we align to top
+    marginTop: `-${theme.sizes.borderWidth}`,
+    cursor: disabled ? "not-allowed" : "auto",
+  }))
+
+export interface StyledFileUploadButtonProps {
+  disabled: boolean
+}
+
+export const StyledFileUploadButton = styled.div<StyledFileUploadButtonProps>(
+  ({ disabled }) => ({
+    pointerEvents: disabled ? "none" : "auto",
+  })
+)
 
 export const StyledVerticalDivider = styled.div(({ theme }) => ({
   // We need to use hard-coded in order to align the divider centered
@@ -47,21 +90,19 @@ export const StyledVerticalDivider = styled.div(({ theme }) => ({
 export const StyledChatUploadedFiles = styled.div(({ theme }) => ({
   left: 0,
   right: 0,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
-  minHeight: theme.sizes.minChatInputFileListHeight,
   lineHeight: theme.lineHeights.tight,
   paddingLeft: theme.spacing.sm,
   paddingRight: theme.spacing.sm,
   overflowX: "auto",
 }))
 
-export const StyledUploadedChatFileList = styled.div(({}) => ({
+export const StyledUploadedChatFileList = styled.div({
   display: "flex",
-}))
+})
 
-export const StyledUploadedChatFileListItem = styled.div(({}) => ({
+export const StyledUploadedChatFileListItem = styled.div({
   flex: "0 0 auto",
-}))
+})
 
 export const StyledChatUploadedFile = styled.div(({ theme }) => ({
   display: "flex",

@@ -39,21 +39,23 @@ if TYPE_CHECKING:
     # The next tests would indicate we will return a float instead of raising an error, because mypy considers
     # int to be a subclass of float. This is unavoidable, and not a real issue because we don't expect people
     # who care about type checking their code to use more than one positional numerical argument anyways.
-    # number_input("foo", 5, 5.0)
-    # number_input("foo", 5.0, 5.0, 5)
-    # number_input("foo", 5.0, 5.0, 5.0, 1)
+    # number_input("foo", 5, 5.0)  # noqa: ERA001
+    # number_input("foo", 5.0, 5.0, 5)  # noqa: ERA001
+    # number_input("foo", 5.0, 5.0, 5.0, 1)  # noqa: ERA001
 
     # Check keyword argument types
     assert_type(number_input("foo", min_value=1), int)
     assert_type(number_input("foo", max_value=1), int)
     assert_type(number_input("foo", value=1), int)
     assert_type(number_input("foo", step=1), int)
+    assert_type(number_input("foo", step=1, min_value=1), int)
     assert_type(number_input("foo", step=1, value=5), int)
     assert_type(number_input("foo", step=1, value="min"), int)
     assert_type(number_input("foo", max_value=1, value=0), int)
     assert_type(number_input("foo", max_value=1, value="min"), int)
     assert_type(number_input("foo", min_value=1, value=2), int)
     assert_type(number_input("foo", min_value=1, value="min"), int)
+    assert_type(number_input("foo", min_value=1, max_value=10), int)
     assert_type(number_input("foo", min_value=1.0), float)
     assert_type(number_input("foo", max_value=1.0), float)
     assert_type(number_input("foo", value=1.0), float)
@@ -66,9 +68,9 @@ if TYPE_CHECKING:
     assert_type(number_input("foo", min_value=1.0, value="min"), float)
     # The next tests would indicate we will return a float instead of raising an error,
     # because mypy considers int to be a subclass of float. This is unavoidable.
-    # number_input("foo", min_value=1, max_value=5.0)
-    # number_input("foo", step=1, min_value=5.0)
-    # number_input("foo", value="min", step=1, max_value=5.0)
+    # number_input("foo", min_value=1, max_value=5.0)  # noqa: ERA001
+    # number_input("foo", step=1, min_value=5.0)  # noqa: ERA001
+    # number_input("foo", value="min", step=1, max_value=5.0)  # noqa: ERA001
 
     # Check value=none
     assert_type(number_input("foo", step=5, value=None), Union[int, None])
@@ -76,7 +78,7 @@ if TYPE_CHECKING:
     assert_type(number_input("foo", max_value=5, value=None), Union[int, None])
     assert_type(number_input("foo", value=None), Union[float, None])
     # Same deal about mixing and matching ints and floats applies here too.
-    # number_input("foo", max_value=5, value=None, step=5.0)
+    # number_input("foo", max_value=5, value=None, step=5.0)  # noqa: ERA001
 
     # Check "min" value
     assert_type(number_input("foo", value="min"), float)

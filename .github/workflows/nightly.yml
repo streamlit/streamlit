@@ -39,8 +39,7 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: make develop
+
       - name: Create tag
         id: create_tag
         run: |
@@ -69,8 +68,9 @@ jobs:
   run-python-tests:
     needs: create-nightly-tag
     permissions:
-      # Pass additional permission needed to upload constraints
-      contents: write
+      # Additional permissions for py-coverage-report
+      actions: read
+      pull-requests: write
     uses: ./.github/workflows/python-tests.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
@@ -83,6 +83,10 @@ jobs:
     uses: ./.github/workflows/js-tests.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
+    permissions:
+      # Additional permissions for coverage-comment
+      actions: read
+      pull-requests: write
 
   run-playwright-tests:
     uses: ./.github/workflows/playwright.yml
@@ -158,8 +162,6 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: make develop
       - name: Verify git tag vs. version
         env:
           TAG: ${{ needs.create-nightly-tag.outputs.tag }}
@@ -200,7 +202,7 @@ jobs:
           echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
           packages-dir: lib/dist/
       - if: ${{ failure() }}

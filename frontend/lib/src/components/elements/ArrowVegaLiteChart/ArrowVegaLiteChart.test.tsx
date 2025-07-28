@@ -20,6 +20,7 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import ArrowVegaLiteChart, { Props } from "./ArrowVegaLiteChart"
 import { VegaLiteChartElement } from "./arrowUtils"
@@ -58,7 +59,6 @@ const getProps = (
     vegaLiteTheme: "streamlit",
     ...elementProps,
   },
-  width: 0,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
@@ -67,6 +67,13 @@ const getProps = (
 })
 
 describe("ArrowVegaLiteChart", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
   it("renders without crashing", () => {
     render(<ArrowVegaLiteChart {...getProps()} />)
     const vegaLiteChart = screen.getByTestId("stVegaLiteChart")

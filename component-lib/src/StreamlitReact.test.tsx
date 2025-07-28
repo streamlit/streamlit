@@ -141,7 +141,7 @@ describe("StreamlitReact", () => {
     expect(jest.mocked(console.error).mock.calls).toHaveLength(2);
   });
 
-  test("the component should update the frame height intiailly", async () => {
+  test("the component should update the frame height initially", async () => {
     jest.spyOn(Streamlit, "setFrameHeight");
 
     const Component = withStreamlitConnection(StaticComponent);

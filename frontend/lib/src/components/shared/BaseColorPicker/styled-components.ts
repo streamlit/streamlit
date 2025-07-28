@@ -18,17 +18,15 @@ import styled from "@emotion/styled"
 
 export interface StyledColorPickerProps {
   disabled: boolean
-  width: number | undefined
 }
 
 export const StyledColorPicker = styled.div<StyledColorPickerProps>(
-  ({ disabled, width, theme }) => ({
+  ({ disabled, theme }) => ({
     fontFamily: theme.genericFonts.bodyFont,
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
     cursor: disabled ? "not-allowed" : "default",
-    width,
   })
 )
 

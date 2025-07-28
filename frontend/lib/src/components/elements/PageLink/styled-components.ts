@@ -19,26 +19,24 @@ import styled from "@emotion/styled"
 export const StyledNavLinkContainer = styled.div({
   display: "flex",
   flexDirection: "column",
+  width: "100%",
 })
 
 export interface StyledNavLinkProps {
   disabled: boolean
   isCurrentPage: boolean
-  // If true or number, the button should take up container's full width
-  fluidWidth?: boolean | number
 }
 
 export const StyledNavLink = styled.a<StyledNavLinkProps>(
-  ({ disabled, isCurrentPage, fluidWidth, theme }) => ({
+  ({ disabled, isCurrentPage, theme }) => ({
     textDecoration: "none",
-    width: typeof fluidWidth == "number" ? `${fluidWidth}px` : "fit-content",
+    width: "100%",
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
     gap: theme.spacing.sm,
-    borderRadius: theme.radii.default,
-
+    borderRadius: theme.radii.button,
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
     marginTop: theme.spacing.threeXS,

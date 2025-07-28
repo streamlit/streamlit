@@ -62,6 +62,7 @@ MARKDOWN_FEATURES = {
     "Image": "![Image Text](app/static/cat.jpg)",
     "Colored Text": ":red[Colored] :rainbow[Text]",
     "Colored Background": ":blue-background[Colored] :red-background[Background]",
+    "Badge": ":blue-badge[Badge] :red-badge[Badge]",
     "Latex": "$ax^2 + bx + c = 0$",
     "Link": "[Link](https://streamlit.io)",
     "Blockquote": "> Testing Blockquote",
@@ -169,3 +170,16 @@ st.container(key="st_table").table(
         "Header": [selected_feature_markdown],
     }
 )
+
+
+@st.dialog(selected_feature_markdown)
+def test_dialog():
+    st.image(
+        np.repeat(0, 10000).reshape(100, 100)
+    )  # element that doesn't support markdown
+
+
+# Add dialog test - we need to create a button to trigger it
+# and the dialog will be tested when opened
+if st.container(key="st_dialog").button("Open Dialog"):
+    test_dialog()

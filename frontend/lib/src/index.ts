@@ -15,18 +15,22 @@
  */
 
 // We add some polyfills in order to support older browsers for the exports below
-import "./promiseWithResolversPolyfill"
+import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
 export { AppRoot, BlockNode, ElementNode } from "./AppNode"
-export { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "./baseconsts"
-export { default as VerticalBlock } from "./components/core/Block"
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
+export {
+  ContainerContentsWrapper,
+  VerticalBlock,
+} from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
 export { LibContext } from "./components/core/LibContext"
 export type { LibConfig, LibContextProps } from "./components/core/LibContext"
+export { FormsContext } from "./components/core/FormsContext"
+export type { FormsContextProps } from "./components/core/FormsContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { default as AlertElement } from "./components/elements/AlertElement"
@@ -43,6 +47,7 @@ export {
   DynamicIcon,
   EmojiIcon,
   default as Icon,
+  isMaterialIcon,
 } from "./components/shared/Icon"
 export {
   default as Modal,
@@ -55,10 +60,14 @@ export { CircularBuffer, Profiler } from "./components/shared/Profiler"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export { Placement, default as Tooltip } from "./components/shared/Tooltip"
 export { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
+export { useWindowDimensionsContext } from "./components/shared/WindowDimensions/useWindowDimensionsContext"
+export type { WindowDimensions } from "./components/shared/WindowDimensions/useWindowDimensions"
+export { WindowDimensionsContext } from "./components/shared/WindowDimensions"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
-export { ForwardMsgCache } from "./ForwardMessageCache"
+export { useRequiredContext } from "./hooks/useRequiredContext"
+export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
@@ -66,7 +75,6 @@ export type {
   AppConfig,
   DeployedAppMetadata,
   IGuestToHostMessage,
-  IHostConfigResponse,
   IMenuItem,
   IToolbarItem,
 } from "./hostComm/types"
@@ -79,22 +87,15 @@ export { mockTheme } from "./mocks/mockTheme"
 export { RootStyleProvider } from "./RootStyleProvider"
 export { ScriptRunState } from "./ScriptRunState"
 export { SessionInfo } from "./SessionInfo"
-export type {
-  FileUploadClientConfig,
-  StreamlitEndpoints,
-} from "./StreamlitEndpoints"
-export {
-  customRenderLibContext,
-  mockWindowLocation,
-  render,
-} from "./test_util"
+export { renderWithContexts, mockWindowLocation, render } from "./test_util"
 export {
   AUTO_THEME_NAME,
-  CUSTOM_THEME_NAME,
   baseTheme,
+  convertRemToPx,
   createAutoTheme,
   createPresetThemes,
   createTheme,
+  CUSTOM_THEME_NAME,
   darkTheme,
   getCachedTheme,
   getDefaultTheme,
@@ -113,42 +114,39 @@ export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export { fonts, spacing } from "./theme/primitives"
 export { ensureError } from "./util/ErrorHandling"
 export { useIsOverflowing } from "./util/Hooks"
-export { LocalStore, localStorageAvailable } from "./util/storageUtils"
-export { Timer } from "./util/Timer"
+export { isMobile } from "./util/isMobile"
 export {
-  buildHttpUri,
-  buildWsUri,
-  getPossibleBaseUris,
-  makePath,
-} from "./util/UriUtil"
+  mark,
+  measure,
+  type StPerformanceMark,
+  type StPerformanceMetric,
+} from "./util/performance"
+export { LocalStore } from "./util/storageUtils"
+export { Timer } from "./util/Timer"
 export {
   extractPageNameFromPathName,
   generateUID,
-  getCookie,
   getElementId,
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
+  getUrl,
+  getTimezone,
+  getTimezoneOffset,
+  getLocaleLanguage,
   hashString,
   isColoredLineDisplayed,
   isDarkThemeInQueryParams,
   isEmbed,
   isInChildFrame,
   isLightThemeInQueryParams,
-  isNullOrUndefined,
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
   makeElementWithInfoText,
-  notNullOrUndefined,
   notUndefined,
   preserveEmbedQueryParams,
   setCookie,
 } from "./util/utils"
-export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
+export { createFormsData, WidgetStateManager } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"
-export {
-  mark,
-  measure,
-  type StPerformanceMetric,
-  type StPerformanceMark,
-} from "./util/performance"
+export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"

@@ -135,7 +135,7 @@ export function getStyledCell(
     ].join(" ")
 
     return {
-      cssId: `${data.styler.cssId}level${columnIndex}_row${rowIndex}`,
+      cssId: `${data.styler.cssId}_level${columnIndex}_row${rowIndex}`,
       cssClass,
       displayContent: undefined,
     }
@@ -157,7 +157,7 @@ export function getStyledCell(
     : undefined
 
   return {
-    cssId: `${data.styler.cssId}row${rowIndex}_col${dataColumnIndex}`,
+    cssId: `${data.styler.cssId}_row${rowIndex}_col${dataColumnIndex}`,
     cssClass: cssClass,
     displayContent,
   }

@@ -30,7 +30,8 @@ i2 = st.checkbox("checkbox 2 (False)", False)
 st.write("checkbox 2 - value:", i2)
 
 i3 = st.checkbox(
-    "checkbox 3: This is a really really really really long label that should wrap eventually if we keep addding more text to it"
+    "checkbox 3: This is a really really really really long label that should wrap "
+    "eventually if we keep adding more text to it"
 )
 st.write("checkbox 3 - value:", i3)
 
@@ -64,3 +65,7 @@ with st.expander("Grouped checkboxes", expanded=True):
 st.checkbox(
     "checkbox 9 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_"
 )
+
+st.checkbox("checkbox with content width", width="content")
+st.checkbox("checkbox with stretch width", width="stretch")
+st.checkbox("checkbox with 200px width", width=200)

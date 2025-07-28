@@ -72,9 +72,9 @@ def save_block_message(
     )
 
 
-def save_media_data(image_data: bytes | str, mimetype: str, image_id: str) -> None:
-    CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
-    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
+def save_media_data(media_data: bytes | str, mimetype: str, media_id: str) -> None:
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data(media_data, mimetype, media_id)
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_media_data(media_data, mimetype, media_id)
 
 
 # Create and export public API singletons.
@@ -86,13 +86,13 @@ cache = _cache
 
 
 __all__ = [
-    "cache",
     "CACHE_DOCS_URL",
-    "save_element_message",
-    "save_block_message",
-    "save_media_data",
-    "get_data_cache_stats_provider",
-    "get_resource_cache_stats_provider",
+    "cache",
     "cache_data",
     "cache_resource",
+    "get_data_cache_stats_provider",
+    "get_resource_cache_stats_provider",
+    "save_block_message",
+    "save_element_message",
+    "save_media_data",
 ]

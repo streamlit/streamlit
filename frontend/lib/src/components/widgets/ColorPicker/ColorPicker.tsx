@@ -30,7 +30,6 @@ export interface Props {
   disabled: boolean
   element: ColorPickerProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -77,7 +76,6 @@ const ColorPicker: FC<Props> = ({
   element,
   disabled,
   widgetMgr,
-  width,
   fragmentId,
 }) => {
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -109,7 +107,6 @@ const ColorPicker: FC<Props> = ({
       help={element.help}
       onChange={handleColorClose}
       disabled={disabled}
-      width={width}
       value={value}
     />
   )

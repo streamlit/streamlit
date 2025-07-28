@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { ENABLE_PERIPHERALS_DOCS_URL } from "~lib/urls"
 
@@ -30,11 +30,15 @@ const NoMicPermissions = (): ReactElement => {
       <StyledErrorTextSpan>
         This app would like to use your microphone.
       </StyledErrorTextSpan>{" "}
-      <StyledNoMicInputLearnMoreLink href={ENABLE_PERIPHERALS_DOCS_URL}>
+      <StyledNoMicInputLearnMoreLink
+        href={ENABLE_PERIPHERALS_DOCS_URL}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
         Learn how to allow access.
       </StyledNoMicInputLearnMoreLink>
     </StyledErrorContainerDiv>
   )
 }
 
-export default NoMicPermissions
+export default memo(NoMicPermissions)

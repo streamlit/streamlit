@@ -105,3 +105,42 @@ st.selectbox(
     "selectbox 13 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
     options=options,
 )
+
+v14 = st.selectbox(
+    "selectbox 14 (test dismiss behavior)", options, index=0, key="selectbox_esc_test"
+)
+st.write("value 14:", v14)
+
+# Add a new selectbox with accept_new_options=True
+v15 = st.selectbox(
+    "selectbox 15 (accept new options)",
+    options,
+    index=0,
+    key="selectbox_15",
+    accept_new_options=True,
+)
+st.write("value 15:", v15)
+if "selectbox_15" in st.session_state:
+    st.write("value 15 (session_state):", st.session_state.selectbox_15)
+
+# Add a selectbox with session_state pre-set value
+if "selectbox16" not in st.session_state:
+    st.session_state.selectbox16 = "female"
+
+v16 = st.selectbox(
+    "selectbox 16 - session_state values",
+    options,
+    key="selectbox16",
+)
+st.write("value 16:", v16)
+
+# Add a selectbox with empty options but accept_new_options=True
+v17 = st.selectbox(
+    "selectbox 17 - empty options with accept_new_options",
+    options=[],
+    accept_new_options=True,
+)
+st.write("value 17:", v17)
+
+st.selectbox("selectbox 18 (width=200px)", options, index=0, width=200)
+st.selectbox("selectbox 19 (width='stretch')", options, index=0, width="stretch")

@@ -24,6 +24,7 @@ import { Arrow as ArrowProto } from "@streamlit/protobuf"
 import { TEN_BY_TEN } from "~lib/mocks/arrow"
 import { render } from "~lib/test_util"
 import { Quiver } from "~lib/dataframes/Quiver"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 vi.mock("@glideapps/glide-data-grid", async () => ({
   ...(await vi.importActual("@glideapps/glide-data-grid")),
@@ -50,10 +51,10 @@ const getProps = (
     editingMode,
   }),
   data,
-  width: 700,
   disabled: false,
   widgetMgr: {
     getStringValue: vi.fn(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   } as any,
 })
 
@@ -63,15 +64,10 @@ describe("DataFrame widget", () => {
   const props = getProps(new Quiver({ data: TEN_BY_TEN }))
 
   beforeEach(() => {
-    // Mocking ResizeObserver to prevent:
-    // TypeError: window.ResizeObserver is not a constructor
-    // @ts-expect-error
-    delete window.ResizeObserver
-    window.ResizeObserver = vi.fn().mockImplementation(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    }))
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
   })
 
   afterEach(() => {
@@ -90,24 +86,6 @@ describe("DataFrame widget", () => {
     const styledResizableContainer = screen.getByTestId("stDataFrame")
 
     expect(styledResizableContainer).toHaveClass("stDataFrame")
-  })
-
-  it("grid container should use full width when useContainerWidth is used", () => {
-    render(<DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />)
-    const dfStyle = getComputedStyle(
-      screen.getByTestId("stDataFrameResizable")
-    )
-    expect(dfStyle.width).toBe("700px")
-    expect(dfStyle.height).toBe("400px")
-  })
-
-  it("grid container should render with specific size", () => {
-    render(<DataFrame {...props} />)
-    const dfStyle = getComputedStyle(
-      screen.getByTestId("stDataFrameResizable")
-    )
-    expect(dfStyle.width).toBe("400px")
-    expect(dfStyle.height).toBe("400px")
   })
 
   it("should have a toolbar", () => {

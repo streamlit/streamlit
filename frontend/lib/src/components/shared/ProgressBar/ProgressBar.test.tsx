@@ -24,14 +24,14 @@ import ProgressBar from "./ProgressBar"
 
 describe("ProgressBar component", () => {
   it("renders without crashing", () => {
-    render(<ProgressBar value={50} width={100} />)
+    render(<ProgressBar value={50} />)
 
     const progressBarElement = screen.getByRole("progressbar")
     expect(progressBarElement).toBeInTheDocument()
   })
 
   it("sets the value correctly", () => {
-    render(<ProgressBar value={75} width={100} />)
+    render(<ProgressBar value={75} />)
     const progressBarElement = screen.getByRole("progressbar")
     expect(progressBarElement).toHaveAttribute("aria-valuenow", "75")
   })

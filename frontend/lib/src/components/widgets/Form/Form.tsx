@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useEffect, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  ReactNode,
+  useEffect,
+  useState,
+} from "react"
 
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledErrorContainer, StyledForm } from "./styled-components"
@@ -27,12 +32,15 @@ export interface Props {
   formId: string
   clearOnSubmit: boolean
   enterToSubmit: boolean
-  width: number
   hasSubmitButton: boolean
-  scriptRunState: ScriptRunState
+  scriptNotRunning: boolean
   children?: ReactNode
   widgetMgr: WidgetStateManager
   border: boolean
+  // TODO(lawilby): This prop drill-down can be removed once
+  // we are using a portal to render the toolbars. But we want to
+  // do a patch to reduce the impact on existing usages of st.form.
+  overflow?: React.CSSProperties["overflow"]
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
@@ -43,17 +51,17 @@ export const MISSING_SUBMIT_BUTTON_WARNING =
   "\n\nFor more information, refer to the " +
   "[documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)."
 
-export function Form(props: Props): ReactElement {
+function Form(props: Props): ReactElement {
   const {
     formId,
     widgetMgr,
     hasSubmitButton,
     children,
-    width,
-    scriptRunState,
+    scriptNotRunning,
     clearOnSubmit,
     enterToSubmit,
     border,
+    overflow,
   } = props
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
@@ -71,11 +79,7 @@ export function Form(props: Props): ReactElement {
 
   if (hasSubmitButton && showWarning) {
     setShowWarning(false)
-  } else if (
-    !hasSubmitButton &&
-    !showWarning &&
-    scriptRunState === ScriptRunState.NOT_RUNNING
-  ) {
+  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
     setShowWarning(true)
   }
 
@@ -83,19 +87,22 @@ export function Form(props: Props): ReactElement {
   if (showWarning) {
     submitWarning = (
       <StyledErrorContainer>
-        <AlertElement
-          body={MISSING_SUBMIT_BUTTON_WARNING}
-          kind={Kind.ERROR}
-          width={width}
-        />
+        <AlertElement body={MISSING_SUBMIT_BUTTON_WARNING} kind={Kind.ERROR} />
       </StyledErrorContainer>
     )
   }
 
   return (
-    <StyledForm className="stForm" data-testid="stForm" border={border}>
+    <StyledForm
+      className="stForm"
+      data-testid="stForm"
+      border={border}
+      overflow={overflow}
+    >
       {children}
       {submitWarning}
     </StyledForm>
   )
 }
+
+export default memo(Form)

@@ -16,16 +16,14 @@
 
 import React, { ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
 import {
-  ProgressBarOverrides,
+  type ProgressBarOverrides,
   ProgressBar as UIProgressBar,
 } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
 
-import { EmotionTheme, isPresetTheme } from "~lib/theme"
-import { LibContext } from "~lib/components/core/LibContext"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export enum Size {
   EXTRASMALL = "xs",
@@ -36,19 +34,18 @@ export enum Size {
 }
 
 export interface ProgressBarProps {
-  width?: number
   value: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   overrides?: Overrides<any>
   size?: Size
 }
 
 function ProgressBar({
   value,
-  width,
   size = Size.SMALL,
   overrides,
 }: ProgressBarProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme = useEmotionTheme()
   const heightMap = {
     xs: theme.spacing.twoXS,
     sm: theme.spacing.sm,
@@ -56,8 +53,6 @@ function ProgressBar({
     lg: theme.spacing.xl,
     xl: theme.spacing.twoXL,
   }
-  const { activeTheme } = React.useContext(LibContext)
-  const usingCustomTheme = !isPresetTheme(activeTheme)
   const defaultOverrides: Overrides<ProgressBarOverrides> = {
     BarContainer: {
       style: {
@@ -68,8 +63,8 @@ function ProgressBar({
       },
     },
     Bar: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
       style: ({ $theme }: { $theme: any }) => ({
-        width: width ? width.toString() : undefined,
         marginTop: theme.spacing.none,
         marginBottom: theme.spacing.none,
         marginRight: theme.spacing.none,
@@ -84,9 +79,7 @@ function ProgressBar({
     },
     BarProgress: {
       style: () => ({
-        backgroundColor: usingCustomTheme
-          ? theme.colors.primary
-          : theme.colors.blue70,
+        backgroundColor: theme.colors.secondary,
         borderTopLeftRadius: theme.spacing.twoXS,
         borderTopRightRadius: theme.spacing.twoXS,
         borderBottomLeftRadius: theme.spacing.twoXS,

@@ -26,7 +26,7 @@ from streamlit.source_util import open_python_file
 class ScriptCache:
     """Thread-safe cache of Python script bytecode."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Mapping of script_path: bytecode
         self._cache: dict[str, Any] = {}
         self._lock = threading.Lock()

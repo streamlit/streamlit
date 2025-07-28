@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
@@ -52,4 +52,4 @@ const SwitchFacingModeButton = ({
   )
 }
 
-export default SwitchFacingModeButton
+export default memo(SwitchFacingModeButton)

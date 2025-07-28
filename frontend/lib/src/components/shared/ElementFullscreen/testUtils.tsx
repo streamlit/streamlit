@@ -16,12 +16,12 @@
 
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
-/* eslint-disable import/no-extraneous-dependencies */
-import { RenderOptions, RenderResult } from "@testing-library/react"
 import {
   renderHook as reactTestingLibraryRenderHook,
   RenderHookOptions,
-} from "@testing-library/react-hooks"
+  RenderOptions,
+  RenderResult,
+} from "@testing-library/react"
 
 import ElementFullscreenWrapper from "~lib/components/shared/ElementFullscreen/ElementFullscreenWrapper"
 import { TestAppWrapper, render as testUtilRender } from "~lib/test_util"
@@ -55,7 +55,6 @@ export function renderHook<Props, Result>(
   options: Omit<RenderHookOptions<Props>, "wrapper"> | undefined
 ) {
   return reactTestingLibraryRenderHook(hook, {
-    // @ts-expect-error This works but TS is being weird about it
     wrapper: FullscreenHarness,
     ...options,
   })

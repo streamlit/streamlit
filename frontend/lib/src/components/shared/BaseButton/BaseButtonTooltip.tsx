@@ -23,6 +23,8 @@ import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 
 interface Props {
   children: ReactElement
+  // TODO(lawilby): Probably remove this once width is implemented on Popover.
+  containerWidth: boolean
   help?: string
   placement?: Placement
 }
@@ -31,6 +33,7 @@ export function BaseButtonTooltip({
   children,
   help,
   placement,
+  containerWidth,
 }: Props): ReactElement {
   if (!help) {
     return children
@@ -38,7 +41,11 @@ export function BaseButtonTooltip({
   return (
     <>
       <StyledTooltipNormal>
-        <TooltipIcon content={help} placement={placement || Placement.TOP}>
+        <TooltipIcon
+          content={help}
+          placement={placement || Placement.TOP}
+          containerWidth={containerWidth}
+        >
           {children}
         </TooltipIcon>
       </StyledTooltipNormal>

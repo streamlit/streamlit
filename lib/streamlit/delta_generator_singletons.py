@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class DeltaGeneratorSingleton:
     """Used to initialize the DeltaGenerator classes and store them as singletons.
     This module allows us to avoid circular imports between DeltaGenerator and elements,
-    because elemens can import this singleton module instead of DeltaGenerator directly.
+    because elements can import this singleton module instead of DeltaGenerator directly.
     """
 
     _instance: DeltaGeneratorSingleton | None = None
@@ -52,12 +52,11 @@ class DeltaGeneratorSingleton:
         delta_generator_cls: type[DeltaGenerator],
         status_container_cls: type[StatusContainer],
         dialog_container_cls: type[Dialog],
-    ):
+    ) -> None:
         """Registers and initializes all delta-generator classes.
 
         Parameters
         ----------
-
         delta_generator_cls : type[DeltaGenerator]
             The main DeltaGenerator class.
         status_container_cls : type[StatusContainer]
@@ -139,7 +138,7 @@ class ContextVarWithLazyDefault(Generic[_T]):
     the default dg (main_dg) might not exist yet when this module is imported.
     """
 
-    def __init__(self, name: str, *, default: Callable[[], _T]):
+    def __init__(self, name: str, *, default: Callable[[], _T]) -> None:
         self._name = name
         self._default = default
         self._context_var: ContextVar[_T] | None = None
@@ -179,7 +178,8 @@ context_dg_stack: ContextVarWithLazyDefault[tuple[DeltaGenerator, ...]] = (
 
 def get_default_dg_stack_value() -> tuple[DeltaGenerator, ...]:
     """Get the default dg_stack value with which the dg_stack should
-    be initialized and reset if needed."""
+    be initialized and reset if needed.
+    """
     instance = get_dg_singleton_instance()
     if instance._main_dg is None:
         raise RuntimeError("main_dg is not set")

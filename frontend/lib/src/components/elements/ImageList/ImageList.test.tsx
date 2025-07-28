@@ -16,17 +16,19 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { mockEndpoints } from "~lib/mocks/mocks"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import ImageList, { ImageListProps } from "./ImageList"
 
 describe("ImageList Element", () => {
   const buildMediaURL = vi.fn().mockReturnValue("https://mock.media.url")
+  const sendClientErrorToHost = vi.fn()
 
   const getProps = (
     elementProps: Partial<ImageListProto> = {}
@@ -39,8 +41,17 @@ describe("ImageList Element", () => {
       width: -1,
       ...elementProps,
     }),
-    endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
-    width: 0,
+    endpoints: mockEndpoints({
+      buildMediaURL: buildMediaURL,
+      sendClientErrorToHost: sendClientErrorToHost,
+    }),
+  })
+
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
   })
 
   it("renders without crashing", () => {
@@ -92,6 +103,74 @@ describe("ImageList Element", () => {
     expect(captions).toHaveLength(2)
     captions.forEach(caption => {
       expect(caption).toHaveStyle("width: 300px")
+    })
+  })
+
+  it("sends an CLIENT_ERROR message when the image source fails to load", () => {
+    const props = getProps()
+    render(<ImageList {...props} />)
+    const images = screen.getAllByRole("img")
+    expect(images).toHaveLength(2)
+
+    // Trigger the error event on the first image using fireEvent
+    fireEvent.error(images[0])
+
+    // Verify the error was sent with correct parameters
+    expect(sendClientErrorToHost).toHaveBeenCalledWith(
+      "Image",
+      "Image source failed to load",
+      "onerror triggered",
+      "https://mock.media.url/"
+    )
+  })
+
+  describe("crossOrigin attribute", () => {
+    it("sets crossOrigin to 'anonymous' when resourceCrossOriginMode is 'anonymous'", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { resourceCrossOriginMode: "anonymous" },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).toHaveAttribute("crossOrigin", "anonymous")
+      })
+    })
+
+    it("sets crossOrigin to 'use-credentials' when resourceCrossOriginMode is 'use-credentials'", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { resourceCrossOriginMode: "use-credentials" },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).toHaveAttribute("crossOrigin", "use-credentials")
+      })
+    })
+
+    it("does not set crossOrigin attribute when resourceCrossOriginMode is undefined", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: { resourceCrossOriginMode: undefined },
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).not.toHaveAttribute("crossOrigin")
+      })
+    })
+
+    it("does not set crossOrigin attribute when libConfig is empty", () => {
+      const props = getProps()
+      renderWithContexts(<ImageList {...props} />, {
+        libConfig: {},
+      })
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).not.toHaveAttribute("crossOrigin")
+      })
     })
   })
 })

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// eslint-disable-next-line no-restricted-imports, import/no-extraneous-dependencies
+// eslint-disable-next-line no-restricted-imports
 import timezoneMock from "timezone-mock"
 
 /**
@@ -34,7 +34,6 @@ export const withTimezones = (fn: (timezone: string) => void): void => {
     "US/Pacific",
   ] as const
 
-  // eslint-disable-next-line vitest/expect-expect
   describe.each(TIMEZONES)("with %s timezone", timezone => {
     beforeAll(() => {
       timezoneMock.register(timezone)

@@ -73,11 +73,4 @@ describe("CustomCodeTag Element", () => {
       baseElement.querySelector("pre code .token.string")?.innerHTML
     ).toBe('"Hello"')
   })
-
-  it("applies height style when height prop is provided", () => {
-    const props = getStreamlitSyntaxHighlighterProps({ height: 200 })
-    const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
-
-    expect(baseElement.querySelector("pre")).toHaveStyle({ height: "200px" })
-  })
 })

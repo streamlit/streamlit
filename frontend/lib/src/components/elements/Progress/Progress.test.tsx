@@ -30,7 +30,6 @@ const getProps = (
   element: ProgressProto.create({
     value: 50,
   }),
-  width: 0,
   ...propOverrides,
 })
 
@@ -44,7 +43,7 @@ describe("Progress component", () => {
   })
 
   it("sets the value correctly", () => {
-    render(<Progress {...getProps({ width: 100 })} />)
+    render(<Progress {...getProps()} />)
 
     expect(screen.getByTestId("stProgress")).toBeInTheDocument()
     expect(screen.getByRole("progressbar")).toHaveAttribute(

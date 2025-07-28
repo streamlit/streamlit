@@ -40,7 +40,6 @@ const getProps = (
     url: "/media/mockDownloadURL",
     ...elementProps,
   }),
-  width: 250,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -59,14 +58,13 @@ describe("DownloadButton widget", () => {
     expect(downloadButton).toBeInTheDocument()
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<DownloadButton {...props} />)
 
     const downloadButton = screen.getByTestId("stDownloadButton")
 
     expect(downloadButton).toHaveClass("stDownloadButton")
-    expect(downloadButton).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label within the button", () => {
@@ -78,6 +76,25 @@ describe("DownloadButton widget", () => {
     })
 
     expect(downloadButton).toBeInTheDocument()
+  })
+
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    render(<DownloadButton {...getProps({ help: "mockHelpText" })} />)
+
+    // Ensure both the button and the tooltip target have the correct width.
+    // These will be 100% and the ElementContainer will have styles to determine
+    // the button width.
+    const downloadButton = screen.getByRole("button")
+    expect(downloadButton).toHaveStyle("width: 100%")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
   })
 
   describe("wrapped BaseButton", () => {
@@ -139,37 +156,15 @@ describe("DownloadButton widget", () => {
       const downloadButton = screen.getByRole("button")
       expect(downloadButton).toBeDisabled()
     })
+  })
 
-    it("does not use container width by default", () => {
-      const props = getProps()
-      render(<DownloadButton {...props}>Hello</DownloadButton>)
+  it("triggers checkSourceUrlResponse to check download url", () => {
+    const props = getProps()
+    render(<DownloadButton {...props} />)
 
-      const downloadButton = screen.getByRole("button")
-      expect(downloadButton).toHaveStyle("width: auto")
-    })
-
-    it("passes useContainerWidth property with help correctly", () => {
-      render(
-        <DownloadButton
-          {...getProps({ useContainerWidth: true, help: "mockHelpText" })}
-        >
-          Hello
-        </DownloadButton>
-      )
-
-      const downloadButton = screen.getByRole("button")
-      expect(downloadButton).toHaveStyle(`width: ${250}px`)
-    })
-
-    it("passes useContainerWidth property without help correctly", () => {
-      render(
-        <DownloadButton {...getProps({ useContainerWidth: true })}>
-          Hello
-        </DownloadButton>
-      )
-
-      const downloadButton = screen.getByRole("button")
-      expect(downloadButton).toHaveStyle("width: 100%")
-    })
+    expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledWith(
+      props.element.url,
+      "Download Button"
+    )
   })
 })

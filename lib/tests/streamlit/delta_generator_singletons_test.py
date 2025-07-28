@@ -46,7 +46,7 @@ class DeltaGeneratorSingletonsTest(unittest.TestCase):
             root_container=RootContainer.MAIN,
             parent=get_dg_singleton_instance().main_dg,
         )
-        token = context_dg_stack.set(context_dg_stack.get() + (new_dg,))
+        token = context_dg_stack.set((*context_dg_stack.get(), new_dg))
 
         # get the updated dg_stack for current context
         dg_stack = context_dg_stack.get()

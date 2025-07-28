@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react-swc"
+import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
@@ -23,7 +23,7 @@ import path from "path"
 
 // We do not explicitly set the DEV_BUILD in any of our processes
 // This is a convenience for developers for debugging purposes
-const DEV_BUILD = Boolean(process.env.DEV_BUILD) || false
+const DEV_BUILD = Boolean(process.env.DEV_BUILD)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -77,11 +77,6 @@ export default defineConfig({
           include: ["vitest-canvas-mock"],
         },
       },
-    },
-    coverage: {
-      reporter: ["text", "json", "html"],
-      include: ["src/**/*"],
-      exclude: [],
     },
   },
 })

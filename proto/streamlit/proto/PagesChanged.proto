@@ -21,6 +21,7 @@ option java_outer_classname = "PagesChangedProto";
 
 import "streamlit/proto/AppPage.proto";
 
+// DEPRECATED - We don't use the proto anymore.
 // Message used to tell the client that the app's pages have changed.
 message PagesChanged {
   repeated AppPage app_pages = 1;

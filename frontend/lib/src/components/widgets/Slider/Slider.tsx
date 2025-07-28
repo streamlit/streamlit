@@ -15,6 +15,8 @@
  */
 
 import React, {
+  createRef,
+  forwardRef,
   memo,
   ReactElement,
   useCallback,
@@ -24,8 +26,7 @@ import React, {
 } from "react"
 
 import pick from "lodash/pick"
-import { StyleProps, Slider as UISlider } from "baseui/slider"
-import { useTheme } from "@emotion/react"
+import { type StyleProps, Slider as UISlider } from "baseui/slider"
 import { sprintf } from "sprintf-js"
 import moment from "moment"
 
@@ -43,13 +44,10 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { Placement } from "~lib/components/shared/Tooltip"
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import {
-  StyledThumb,
-  StyledThumbValue,
-  StyledTickBar,
-  StyledTickBarItem,
-} from "./styled-components"
+import { StyledThumb, StyledThumbValue } from "./styled-components"
 
 const DEBOUNCE_TIME_MS = 200
 
@@ -65,7 +63,6 @@ function Slider({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }: Props): ReactElement {
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -94,12 +91,9 @@ function Slider({
     React.MutableRefObject<HTMLDivElement | null>[]
   >([])
 
-  const { colors, fonts, fontSizes, spacing } = useTheme()
-  const style = { width }
+  const theme = useEmotionTheme()
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
-  const formattedMinValue = formatValue(element.min, element)
-  const formattedMaxValue = formatValue(element.max, element)
   const thumbAriaLabel = element.label
 
   // When resetting a form, `value` will change so we need to change `uiValue`
@@ -109,54 +103,36 @@ function Slider({
   }, [value])
 
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/react-compiler
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSetValueWithSource = useCallback(
-    debounce(DEBOUNCE_TIME_MS, (value: number[]): void => {
-      setValueWithSource({ value, fromUi: true })
+    debounce(DEBOUNCE_TIME_MS, (valueArg: number[]): void => {
+      setValueWithSource({ value: valueArg, fromUi: true })
     }) as (value: number[]) => void,
     []
   )
 
   const handleChange = useCallback(
-    ({ value }: { value: number[] }): void => {
-      setUiValue(value)
-      debouncedSetValueWithSource(value)
+    ({ value: valueArg }: { value: number[] }): void => {
+      setUiValue(valueArg)
+      debouncedSetValueWithSource(valueArg)
     },
     [debouncedSetValueWithSource]
   )
 
-  const renderTickBar = useCallback((): ReactElement => {
-    return (
-      <StyledTickBar data-testid="stSliderTickBar">
-        <StyledTickBarItem
-          disabled={disabled}
-          data-testid="stSliderTickBarMin"
-        >
-          {formattedMinValue}
-        </StyledTickBarItem>
-        <StyledTickBarItem
-          disabled={disabled}
-          data-testid="stSliderTickBarMax"
-        >
-          {formattedMaxValue}
-        </StyledTickBarItem>
-      </StyledTickBar>
-    )
-  }, [formattedMinValue, formattedMaxValue, disabled])
-
   // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/react-compiler
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const renderThumb = useCallback(
-    React.forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
+    forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
       props: StyleProps,
       ref
     ): ReactElement {
       const { $thumbIndex } = props
       const thumbIndex = $thumbIndex || 0
       thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
-      thumbValueRefs[thumbIndex] ||= React.createRef<HTMLDivElement>()
+      // eslint-disable-next-line @eslint-react/no-create-ref
+      thumbValueRefs[thumbIndex] ||= createRef<HTMLDivElement>()
 
       const passThrough = pick(props, [
         "role",
@@ -233,19 +209,14 @@ function Slider({
 
   const innerTrackStyle = useCallback(
     ({ $disabled }: StyleProps) => ({
-      height: spacing.twoXS,
-      ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
+      height: theme.spacing.twoXS,
+      ...($disabled ? { background: theme.colors.darkenedBgMix25 } : {}),
     }),
-    [colors, spacing]
+    [theme.colors.darkenedBgMix25, theme.spacing.twoXS]
   )
 
   return (
-    <div
-      ref={sliderRef}
-      className="stSlider"
-      data-testid="stSlider"
-      style={style}
-    >
+    <div ref={sliderRef} className="stSlider" data-testid="stSlider">
       <WidgetLabel
         label={element.label}
         disabled={disabled}
@@ -271,26 +242,22 @@ function Slider({
         disabled={disabled}
         overrides={{
           Thumb: renderThumb,
-          Tick: {
-            style: {
-              fontFamily: fonts.monospace,
-            },
-          },
           Track: {
             style: {
               backgroundColor: "none !important",
-              paddingBottom: spacing.none,
-              paddingLeft: spacing.none,
-              paddingRight: spacing.none,
-              // Add additional padding to fit the thumb value
-              // which uses a fontSizes.sm.
-              paddingTop: `calc(${fontSizes.sm} * 1.35)`,
+              paddingLeft: theme.spacing.none,
+              paddingRight: theme.spacing.none,
+              // Set padding so total height equals minElementHeight (40px)
+              // Total height = paddingTop + innerTrack height + paddingBottom
+              paddingTop: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
+              paddingBottom: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
             },
           },
           InnerTrack: {
             style: innerTrackStyle,
           },
-          TickBar: renderTickBar,
+          // Hide min and max tick values
+          TickBar: () => null,
         }}
       />
     </div>
@@ -342,6 +309,7 @@ function formatValue(value: number, element: SliderProto): string {
     // The timestamp is always set to the UTC timezone, even so, the actual timezone
     // for this timestamp in the backend could be different.
     // However, the frontend component does not need to know about the actual timezone.
+
     return moment.utc(value / 1000).format(format)
   }
 
@@ -412,8 +380,11 @@ function fixLabelOverflow(
   thumb: HTMLDivElement,
   thumbValue: HTMLDivElement
 ): void {
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const sliderRect = slider.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumbRect = thumb.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumbValueRect = thumbValue.getBoundingClientRect()
 
   const thumbMidpoint = thumbRect.left + thumbRect.width / 2
@@ -441,10 +412,15 @@ function fixLabelOverlap(
 ): void {
   const labelGap = 24
 
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const sliderRect = sliderDiv.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb1Rect = thumb1Div.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb2Rect = thumb2Div.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb1ValueRect = thumb1ValueDiv.getBoundingClientRect()
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumb2ValueRect = thumb2ValueDiv.getBoundingClientRect()
 
   const sliderMidpoint = sliderRect.left + sliderRect.width / 2
@@ -569,4 +545,9 @@ function fixLabelOverlap(
   }
 }
 
-export default memo(Slider)
+// Note: we shouldn't need `withCalculatedWidth` here, but there is some custom
+// ref measurement and style setting logic in this component used for fixing
+// overflows that is not properly within the React lifecycle. This leads to race
+// conditions in styles being applied outside of React's knowledge, which can
+// lead to visually incorrect labels in certain scenarios.
+export default withCalculatedWidth(memo(Slider))

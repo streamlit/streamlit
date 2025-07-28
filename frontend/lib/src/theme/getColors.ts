@@ -19,7 +19,6 @@ import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 import { EmotionTheme } from "./types"
 
 export type DerivedColors = {
-  linkText: string
   fadedText05: string
   fadedText10: string
   fadedText20: string
@@ -31,9 +30,6 @@ export type DerivedColors = {
   darkenedBgMix25: string
   darkenedBgMix15: string
   lightenedBg05: string
-
-  borderColor: string
-  borderColorLight: string
 }
 
 export const computeDerivedColors = (
@@ -43,20 +39,11 @@ export const computeDerivedColors = (
 
   const hasLightBg = getLuminance(bgColor) > 0.5
 
-  // Always keep links blue, but brighten them up a bit on dark backgrounds so
-  // they're easier to read.
-  const linkText = hasLightBg
-    ? genericColors.blue
-    : lighten(genericColors.blue, 0.2)
-
   const fadedText05 = transparentize(bodyText, 0.9) // Mostly used for very faint 1px lines.
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
-
-  const borderColor = fadedText10
-  const borderColorLight = fadedText05
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix100 = hasLightBg
@@ -69,7 +56,6 @@ export const computeDerivedColors = (
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
   return {
-    linkText,
     fadedText05,
     fadedText10,
     fadedText20,
@@ -81,42 +67,52 @@ export const computeDerivedColors = (
     darkenedBgMix25,
     darkenedBgMix15,
     lightenedBg05,
-
-    borderColor,
-    borderColorLight,
   }
 }
 
+function _isLightBackground(bgColor: string): boolean {
+  return getLuminance(bgColor) > 0.5
+}
+
 export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
-  return getLuminance(theme.colors.bgColor) > 0.5
+  return _isLightBackground(theme.colors.bgColor)
 }
 
 export const createEmotionColors = (genericColors: {
   [key: string]: string
 }): { [key: string]: string } => {
   const derivedColors = computeDerivedColors(genericColors)
+  const defaultCategoricalColors = defaultCategoricalColorsArray(genericColors)
+  const defaultSequentialColors = defaultSequentialColorsArray(genericColors)
+
   return {
     ...genericColors,
     ...derivedColors,
 
-    codeTextColor: genericColors.green80,
-    codeHighlightColor: derivedColors.bgMix,
+    codeTextColor: genericColors.green,
+    codeBackgroundColor: derivedColors.bgMix,
 
     metricPositiveDeltaColor: genericColors.green,
     metricNegativeDeltaColor: genericColors.red,
     metricNeutralDeltaColor: derivedColors.fadedText60,
 
-    docStringModuleText: genericColors.bodyText,
-    docStringTypeText: genericColors.green70,
-    docStringContainerBackground: transparentize(
-      genericColors.secondaryBg,
-      0.6
-    ),
+    borderColor: derivedColors.fadedText10,
+    borderColorLight: derivedColors.fadedText05,
+    // Used for borders around dataframes and tables
+    dataframeBorderColor: derivedColors.fadedText05,
+    // Used for dataframe header background
+    dataframeHeaderBackgroundColor: derivedColors.bgMix,
 
     headingColor: genericColors.bodyText,
+
+    // @ts-expect-error -- chart colors are a string[] vs. string
+    chartCategoricalColors: defaultCategoricalColors,
+    // @ts-expect-error
+    chartSequentialColors: defaultSequentialColors,
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function getDividerColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
   const blue = lightTheme ? theme.colors.blue60 : theme.colors.blue90
@@ -138,17 +134,18 @@ export function getDividerColors(theme: EmotionTheme): any {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function getMarkdownTextColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
-  const red = lightTheme ? theme.colors.red80 : theme.colors.red70
+  const primary = theme.colors.primary
+  const red = theme.colors.red
+  const yellow = theme.colors.yellow
+  const green = theme.colors.green
+  const blue = theme.colors.blue
   const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
-  const yellow = lightTheme ? theme.colors.yellow100 : theme.colors.yellow40
-  const green = lightTheme ? theme.colors.green90 : theme.colors.green60
-  const blue = lightTheme ? theme.colors.blue80 : theme.colors.blue50
   const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
   const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
   const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
-  const primary = theme.colors.primary
 
   return {
     red: red,
@@ -163,6 +160,7 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function getMarkdownBgColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
 
@@ -223,8 +221,7 @@ export function getBlue80(theme: EmotionTheme): string {
     ? theme.colors.blue80
     : theme.colors.blue40
 }
-function getBlueArrayAsc(theme: EmotionTheme): string[] {
-  const { colors } = theme
+function getBlueArrayAsc(colors: { [key: string]: string }): string[] {
   return [
     colors.blue10,
     colors.blue20,
@@ -238,8 +235,7 @@ function getBlueArrayAsc(theme: EmotionTheme): string[] {
     colors.blue100,
   ]
 }
-function getBlueArrayDesc(theme: EmotionTheme): string[] {
-  const { colors } = theme
+function getBlueArrayDesc(colors: { [key: string]: string }): string[] {
   return [
     colors.blue100,
     colors.blue90,
@@ -252,12 +248,6 @@ function getBlueArrayDesc(theme: EmotionTheme): string[] {
     colors.blue20,
     colors.blue10,
   ]
-}
-
-export function getSequentialColorsArray(theme: EmotionTheme): string[] {
-  return hasLightBackgroundColor(theme)
-    ? getBlueArrayAsc(theme)
-    : getBlueArrayDesc(theme)
 }
 
 export function getDivergingColorsArray(theme: EmotionTheme): string[] {
@@ -276,32 +266,41 @@ export function getDivergingColorsArray(theme: EmotionTheme): string[] {
   ]
 }
 
-export function getCategoricalColorsArray(theme: EmotionTheme): string[] {
-  const { colors } = theme
-  return hasLightBackgroundColor(theme)
+function defaultSequentialColorsArray(genericColors: {
+  [key: string]: string
+}): string[] {
+  return _isLightBackground(genericColors.bgColor)
+    ? getBlueArrayAsc(genericColors)
+    : getBlueArrayDesc(genericColors)
+}
+
+function defaultCategoricalColorsArray(genericColors: {
+  [key: string]: string
+}): string[] {
+  return _isLightBackground(genericColors.bgColor)
     ? [
-        colors.blue80,
-        colors.blue40,
-        colors.red80,
-        colors.red40,
-        colors.blueGreen80,
-        colors.green40,
-        colors.orange80,
-        colors.orange50,
-        colors.purple80,
-        colors.gray40,
+        genericColors.blue80,
+        genericColors.blue40,
+        genericColors.red80,
+        genericColors.red40,
+        genericColors.blueGreen80,
+        genericColors.green40,
+        genericColors.orange80,
+        genericColors.orange50,
+        genericColors.purple80,
+        genericColors.gray40,
       ]
     : [
-        colors.blue40,
-        colors.blue80,
-        colors.red40,
-        colors.red80,
-        colors.green40,
-        colors.blueGreen80,
-        colors.orange50,
-        colors.orange80,
-        colors.purple80,
-        colors.gray40,
+        genericColors.blue40,
+        genericColors.blue80,
+        genericColors.red40,
+        genericColors.red80,
+        genericColors.green40,
+        genericColors.blueGreen80,
+        genericColors.orange50,
+        genericColors.orange80,
+        genericColors.purple80,
+        genericColors.gray40,
       ]
 }
 

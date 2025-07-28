@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-
-import { useTheme } from "@emotion/react"
+import React, { memo, ReactElement, useContext } from "react"
 
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
@@ -24,9 +22,8 @@ import { DynamicIcon } from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LibContext } from "~lib/components/core/LibContext"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
 import {
   StyledNavLink,
@@ -37,34 +34,14 @@ import {
 export interface Props {
   disabled: boolean
   element: PageLinkProto
-  width: number
-}
-
-function shouldUseContainerWidth(
-  useContainerWidth: boolean | null | undefined,
-  isInSidebar: boolean
-): boolean {
-  if (useContainerWidth === null && isInSidebar) {
-    return true
-  } else if (useContainerWidth === null && !isInSidebar) {
-    return false
-  }
-  return useContainerWidth === true ? true : false
 }
 
 function PageLink(props: Readonly<Props>): ReactElement {
-  const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
-  const isInSidebar = React.useContext(IsSidebarContext)
+  const { onPageChange, currentPageScriptHash } = useContext(LibContext)
 
-  const { colors }: EmotionTheme = useTheme()
+  const { colors } = useEmotionTheme()
 
-  const { disabled, element, width } = props
-  const style = { width }
-
-  const useContainerWidth = shouldUseContainerWidth(
-    element.useContainerWidth,
-    isInSidebar
-  )
+  const { disabled, element } = props
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
@@ -84,14 +61,17 @@ function PageLink(props: Readonly<Props>): ReactElement {
   }
 
   return (
-    <div className="stPageLink" data-testid="stPageLink" style={style}>
-      <BaseButtonTooltip help={element.help} placement={Placement.TOP_RIGHT}>
+    <div className="stPageLink" data-testid="stPageLink">
+      <BaseButtonTooltip
+        help={element.help}
+        placement={Placement.TOP_RIGHT}
+        containerWidth={true}
+      >
         <StyledNavLinkContainer>
           <StyledNavLink
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            fluidWidth={useContainerWidth ? width : false}
             href={element.page}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"
@@ -100,7 +80,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             {element.icon && (
               <DynamicIcon
                 size="lg"
-                color={colors.bodyText}
+                color={disabled ? colors.fadedText40 : colors.bodyText}
                 iconValue={element.icon}
               />
             )}
@@ -121,4 +101,4 @@ function PageLink(props: Readonly<Props>): ReactElement {
   )
 }
 
-export default PageLink
+export default memo(PageLink)

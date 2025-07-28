@@ -16,7 +16,7 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 
-import { EmotionTheme } from "~lib/theme"
+import { convertRemToPx, EmotionTheme } from "~lib/theme"
 
 export interface StyledFileDropzone {
   isDisabled: boolean
@@ -32,13 +32,14 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     border: theme.colors.widgetBorderColor
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
       : undefined,
+    height: theme.sizes.largestElementHeight,
     ":focus": {
       outline: "none",
     },
     ":focus-visible": {
       boxShadow: `0 0 0 1px ${theme.colors.primary}`,
     },
-    color: isDisabled ? theme.colors.gray : theme.colors.bodyText,
+    cursor: isDisabled ? "not-allowed" : "pointer",
   })
 )
 
@@ -55,11 +56,18 @@ export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
   })
 )
 
-export const StyledFileDropzoneInstructionsStyledSpan = styled.span(
-  ({ theme }) => ({
-    marginBottom: theme.spacing.twoXS,
-  })
-)
+export const StyledFileDropzoneInstructionsText = styled.span<{
+  disabled?: boolean
+}>(({ theme, disabled }) => ({
+  color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+}))
+
+export const StyledFileDropzoneInstructionsSubtext = styled.span<{
+  disabled?: boolean
+}>(({ theme, disabled }) => ({
+  fontSize: theme.fontSizes.sm,
+  color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+}))
 
 export const StyledFileDropzoneInstructionsColumn = styled.div({
   display: "flex",
@@ -119,7 +127,7 @@ export const StyledFileIcon = styled.div(({ theme }) => ({
 }))
 
 export const StyledFileError = styled.small(({ theme }) => ({
-  color: theme.colors.danger,
+  color: theme.colors.red,
   fontSize: theme.fontSizes.sm,
   height: theme.fontSizes.sm,
   lineHeight: theme.fontSizes.sm,
@@ -131,52 +139,67 @@ export const StyledFileError = styled.small(({ theme }) => ({
 export const StyledFileErrorIcon = styled.span({})
 
 const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneSection as any]: {
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
+    height: "auto",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructions as any]: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileDropzoneInstructionsFileUploaderIcon as any]: {
     display: "none",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+  [StyledFileDropzoneInstructionsText as any]: {
+    marginBottom: theme.spacing.twoXS,
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFiles as any]: {
     paddingRight: theme.spacing.lg,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFile as any]: {
     maxWidth: "inherit",
     flex: 1,
     alignItems: "flex-start",
     marginBottom: theme.spacing.sm,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFileName as any]: {
     width: theme.sizes.full,
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFileData as any]: {
     flexDirection: "column",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileError as any]: {
     height: "auto",
     whiteSpace: "initial",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledFileErrorIcon as any]: {
     display: "none",
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   [StyledUploadedFilesListItem as any]: {
     margin: theme.spacing.none,
     padding: theme.spacing.none,
   },
 })
 
-export const StyledFileUploader = styled.div(({ theme }) => {
-  if (theme.inSidebar) {
-    return compactFileUploader(theme)
+interface StyledFileUploaderProps {
+  width: number
+}
+export const StyledFileUploader = styled.div<StyledFileUploaderProps>(
+  ({ theme, width }) => {
+    if (width < convertRemToPx("23rem")) {
+      return compactFileUploader(theme)
+    }
   }
-
-  return {
-    [`@media (max-width: ${theme.breakpoints.sm})`]:
-      compactFileUploader(theme),
-  }
-})
+)

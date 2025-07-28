@@ -16,13 +16,6 @@
 
 import styled from "@emotion/styled"
 
-export interface StyledTextInputProps {
-  width: number
-}
-
-export const StyledTextInput = styled.div<StyledTextInputProps>(
-  ({ width }) => ({
-    position: "relative",
-    width,
-  })
-)
+export const StyledTextInput = styled.div`
+  position: relative;
+`

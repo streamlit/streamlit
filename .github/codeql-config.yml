@@ -10,6 +10,8 @@ query-filters:
       id: py/cyclic-import
   - exclude:
       id: py/unsafe-cyclic-import
+  - exclude:
+      id: py/unused-import
 paths:
   - lib/streamlit
   - frontend/lib/src

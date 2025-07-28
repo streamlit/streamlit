@@ -21,8 +21,8 @@ import { userEvent } from "@testing-library/user-event"
 
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
-import { customRenderLibContext, render } from "~lib/test_util"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { render, renderWithContexts } from "~lib/test_util"
+import { lightTheme } from "~lib/theme"
 
 import PageLink, { Props } from "./PageLink"
 
@@ -37,7 +37,6 @@ const getProps = (
     useContainerWidth: null,
     ...elementProps,
   }),
-  width: 250,
   disabled: false,
   ...widgetProps,
 })
@@ -57,14 +56,13 @@ describe("PageLink", () => {
     expect(pageLink).toBeInTheDocument()
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<PageLink {...props} />)
 
     const pageLink = screen.getByTestId("stPageLink")
 
     expect(pageLink).toHaveClass("stPageLink")
-    expect(pageLink).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label within the button", () => {
@@ -86,47 +84,11 @@ describe("PageLink", () => {
     expect(pageLink).toHaveAttribute("disabled")
   })
 
-  it("follows useContainerWidth property if set to true", () => {
-    const props = getProps({ useContainerWidth: true })
-    render(<PageLink {...props} />)
-    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
-    expect(pageNavLink).toHaveStyle("width: 250px")
-  })
-
-  it("follows useContainerWidth property if set to false", () => {
-    const props = getProps({ useContainerWidth: false })
-    render(<PageLink {...props} />)
-    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
-    expect(pageNavLink).toHaveStyle("width: fit-content")
-  })
-
-  it("useContainerWidth true by default in the sidebar", () => {
-    const props = getProps()
-    render(
-      <IsSidebarContext.Provider value={true}>
-        <PageLink {...props} />
-      </IsSidebarContext.Provider>
-    )
-    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
-    expect(pageNavLink).toHaveStyle("width: 250px")
-  })
-
-  it("useContainerWidth false by default in the main page", () => {
-    const props = getProps()
-    render(
-      <IsSidebarContext.Provider value={false}>
-        <PageLink {...props} />
-      </IsSidebarContext.Provider>
-    )
-    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
-    expect(pageNavLink).toHaveStyle("width: fit-content")
-  })
-
   it("triggers onPageChange with pageScriptHash when clicked", async () => {
     const user = userEvent.setup()
     const props = getProps()
 
-    customRenderLibContext(<PageLink {...props} />, {
+    renderWithContexts(<PageLink {...props} />, {
       onPageChange: mockOnPageChange,
     })
 
@@ -139,7 +101,7 @@ describe("PageLink", () => {
     const user = userEvent.setup()
     const props = getProps({}, { disabled: true })
 
-    customRenderLibContext(<PageLink {...props} />, {
+    renderWithContexts(<PageLink {...props} />, {
       onPageChange: mockOnPageChange,
     })
 
@@ -152,12 +114,100 @@ describe("PageLink", () => {
     const user = userEvent.setup()
     const props = getProps({ page: "http://example.com", external: true })
 
-    customRenderLibContext(<PageLink {...props} />, {
+    renderWithContexts(<PageLink {...props} />, {
       onPageChange: mockOnPageChange,
     })
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
     expect(mockOnPageChange).not.toHaveBeenCalled()
+  })
+
+  it("renders an icon when provided", () => {
+    const props = getProps({ icon: ":material/home:" })
+    render(<PageLink {...props} />)
+
+    const pageLinkIcon = screen.getByTestId("stIconMaterial")
+    expect(pageLinkIcon).toHaveTextContent("home")
+  })
+
+  it("renders an emoji icon when provided", () => {
+    const props = getProps({ icon: "🏠" })
+    render(<PageLink {...props} />)
+
+    const pageLinkIcon = screen.getByTestId("stIconEmoji")
+    expect(pageLinkIcon).toHaveTextContent("🏠")
+  })
+
+  it("does not render an icon when empty string is provided", () => {
+    const props = getProps({ icon: "" })
+    render(<PageLink {...props} />)
+
+    // Icon should not be rendered when empty string is provided
+    const pageLinkIcon = screen.queryByTestId("stIconMaterial")
+    expect(pageLinkIcon).not.toBeInTheDocument()
+
+    // Also check for emoji icons
+    const emojiIcon = screen.queryByTestId("stIconEmoji")
+    expect(emojiIcon).not.toBeInTheDocument()
+  })
+
+  it("does not render an icon when icon is not provided", () => {
+    const props = getProps({}) // No icon provided
+    render(<PageLink {...props} />)
+
+    // Icon should not be rendered when no icon is provided
+    const pageLinkIcon = screen.queryByTestId("stIconMaterial")
+    expect(pageLinkIcon).not.toBeInTheDocument()
+
+    // Also check for emoji icons
+    const emojiIcon = screen.queryByTestId("stIconEmoji")
+    expect(emojiIcon).not.toBeInTheDocument()
+  })
+
+  it("renders a current page link properly", () => {
+    const props = getProps({ pageScriptHash: "main_page_hash" })
+    renderWithContexts(<PageLink {...props} />, {
+      currentPageScriptHash: "main_page_hash",
+    })
+
+    const currentPageBgColor = lightTheme.emotion.colors.darkenedBgMix15
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveStyle(`background-color: ${currentPageBgColor}`)
+    const pageLinkText = screen.getByText(props.element.label)
+    expect(pageLinkText).toHaveStyle(`font-weight: 600`)
+  })
+
+  it("renders an external page link properly", () => {
+    const props = getProps({ page: "http://example.com", external: true })
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute("target", "_blank")
+    expect(pageLink).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
+    const pageLinkText = screen.getByText(props.element.label)
+    expect(pageLinkText).not.toHaveStyle(`font-weight: 600`)
+  })
+
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    render(<PageLink {...getProps({ help: "mockHelpText" })} />)
+
+    // When the help param is used, page link renders twice (once for normal
+    // tooltip and once for mobile tooltip) so we need to get the first one
+    const pageLink = screen.getAllByTestId("stPageLink-NavLink")[0]
+    // Ensure both the page link and tooltip target have correct width.
+    // These will be 100% and the ElementContainer will have styles to determine
+    // the button width.
+    expect(pageLink).toHaveStyle("width: 100%")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
   })
 })

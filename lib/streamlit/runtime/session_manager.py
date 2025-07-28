@@ -53,32 +53,32 @@ class ActiveSessionInfo:
 
     client: SessionClient
     session: AppSession
+    # The number of times the script has been run for this session.
+    # At the moment, this is only used for testing and debugging purposes.
     script_run_count: int = 0
 
 
 @dataclass
 class SessionInfo:
-    """Type containing data related to an AppSession.
-
-    For each AppSession, the Runtime tracks that session's
-    script_run_count. This is used to track the age of messages in
-    the ForwardMsgCache.
-    """
+    """Type containing data related to an AppSession."""
 
     client: SessionClient | None
     session: AppSession
+    # The number of times the script has been run for this session.
+    # At the moment, this is only used for testing and debugging purposes.
     script_run_count: int = 0
 
     def is_active(self) -> bool:
         return self.client is not None
 
     def to_active(self) -> ActiveSessionInfo:
-        assert self.is_active(), "A SessionInfo with no client cannot be active!"
+        if not self.is_active():
+            raise RuntimeError("A SessionInfo with no client cannot be active!")
 
         # NOTE: The cast here (rather than copying this SessionInfo's fields into a new
         # ActiveSessionInfo) is important as the Runtime expects to be able to mutate
         # what's returned from get_active_session_info to increment script_run_count.
-        return cast(ActiveSessionInfo, self)
+        return cast("ActiveSessionInfo", self)
 
 
 class SessionStorageError(Exception):

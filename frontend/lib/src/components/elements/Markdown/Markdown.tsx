@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
@@ -25,7 +25,6 @@ import {
 } from "~lib/components/shared/TooltipIcon"
 
 export interface MarkdownProps {
-  width: number
   help?: string
   element: MarkdownProto
 }
@@ -33,14 +32,9 @@ export interface MarkdownProps {
 /**
  * Functional element representing Markdown formatted text.
  */
-export default function Markdown({
-  width,
-  element,
-}: Readonly<MarkdownProps>): ReactElement {
-  const styleProp = { width }
-
+function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   return (
-    <div className="stMarkdown" data-testid="stMarkdown" style={styleProp}>
+    <div className="stMarkdown" data-testid="stMarkdown">
       {element.help ? (
         <StyledLabelHelpWrapper
           isLatex={element.elementType === MarkdownProto.Type.LATEX}
@@ -65,3 +59,5 @@ export default function Markdown({
     </div>
   )
 }
+
+export default memo(Markdown)

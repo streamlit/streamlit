@@ -18,6 +18,8 @@ import React, { ReactElement, useEffect } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
+import { FormsContext } from "~lib/components/core/FormsContext"
+import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -25,27 +27,21 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
-  hasInProgressUpload: boolean
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const {
-    disabled,
-    element,
-    widgetMgr,
-    hasInProgressUpload,
-    width,
-    fragmentId,
-  } = props
+  const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
-  const style = { width }
+
+  const { formsData } = useRequiredContext(FormsContext)
+  const hasInProgressUpload = formsData.formsWithUploads.has(formId)
 
   let kind = BaseButtonKind.SECONDARY_FORM_SUBMIT
   if (element.type === "primary") {
@@ -59,21 +55,13 @@ export function FormSubmitButton(props: Props): ReactElement {
     return () => widgetMgr.removeSubmitButton(formId, element)
   }, [widgetMgr, formId, element])
 
-  // When useContainerWidth true & has help tooltip,
-  // we need to pass the container width down to the button
-  const fluidWidth = element.help ? width : true
-
   return (
-    <div
-      className="stFormSubmitButton"
-      data-testid="stFormSubmitButton"
-      style={style}
-    >
-      <BaseButtonTooltip help={element.help}>
+    <Box className="stFormSubmitButton" data-testid="stFormSubmitButton">
+      <BaseButtonTooltip help={element.help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          fluidWidth={element.useContainerWidth ? fluidWidth : false}
+          containerWidth={true}
           disabled={disabled || hasInProgressUpload}
           onClick={() => {
             widgetMgr.submitForm(element.formId, fragmentId, element)
@@ -82,6 +70,6 @@ export function FormSubmitButton(props: Props): ReactElement {
           <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>
       </BaseButtonTooltip>
-    </div>
+    </Box>
   )
 }

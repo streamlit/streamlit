@@ -22,6 +22,7 @@ import {
   useState,
 } from "react"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export const usePrevious = (value: any): any => {
   const ref = useRef()
 
@@ -29,8 +30,6 @@ export const usePrevious = (value: any): any => {
     ref.current = value
   }, [value])
 
-  // TODO: Update to match React best practices
-  // eslint-disable-next-line react-compiler/react-compiler
   return ref.current
 }
 
@@ -54,9 +53,9 @@ export const useIsOverflowing = (
   useEffect(() => {
     checkOverflowing()
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded, current?.clientHeight])
+  }, [expanded, current?.clientHeight]) // eslint-disable-line streamlit-custom/no-force-reflow-access -- Existing usage
 
   // Window resizing can also affect the overflow state
   // so we need to check it as well

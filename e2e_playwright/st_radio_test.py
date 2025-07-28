@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
@@ -27,7 +31,7 @@ def test_radio_widget_rendering(
 ):
     """Test that the radio widgets are correctly rendered via screenshot matching."""
     radio_widgets = themed_app.get_by_test_id("stRadio")
-    expect(radio_widgets).to_have_count(14)
+    expect(radio_widgets).to_have_count(17)
 
     assert_snapshot(radio_widgets.nth(0), name="st_radio-default")
     assert_snapshot(radio_widgets.nth(1), name="st_radio-formatted_options")
@@ -43,6 +47,16 @@ def test_radio_widget_rendering(
     assert_snapshot(radio_widgets.nth(11), name="st_radio-callback_help")
     assert_snapshot(radio_widgets.nth(12), name="st_radio-empty_selection")
     assert_snapshot(radio_widgets.nth(13), name="st_radio-markdown_label")
+
+
+def test_radio_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the radio width examples are correctly rendered."""
+    radio_widgets = app.get_by_test_id("stRadio")
+
+    # Test width examples (last 3 radio widgets)
+    assert_snapshot(radio_widgets.nth(14), name="st_radio-width_content")
+    assert_snapshot(radio_widgets.nth(15), name="st_radio-width_stretch")
+    assert_snapshot(radio_widgets.nth(16), name="st_radio-width_200px")
 
 
 def test_help_tooltip_works(app: Page):
@@ -76,12 +90,9 @@ def test_radio_has_correct_default_values(app: Page):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
 
 
+@pytest.mark.flaky(reruns=4)
 def test_set_value_correctly_when_click(app: Page):
     """Test that st.radio returns the correct values when the selection is changed."""
-    for index, element in enumerate(app.get_by_test_id("stRadio").all()):
-        if index not in [2, 3]:  # skip disabled and no-options widget
-            element.locator('label[data-baseweb="radio"]').nth(1).click(force=True)
-            wait_for_app_run(app)
 
     expected = [
         "value 1: male",
@@ -100,10 +111,22 @@ def test_set_value_correctly_when_click(app: Page):
         "value 13: male",
     ]
 
-    for markdown_element, expected_text in zip(
-        app.get_by_test_id("stMarkdown").all(), expected
-    ):
-        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+    for radio_index, expected_text in enumerate(expected):
+        if radio_index not in [2, 3]:  # skip disabled and no-options widget
+            element = app.get_by_test_id("stRadio").nth(radio_index)
+            expect(element).to_be_visible()
+            element.scroll_into_view_if_needed()
+
+            # Get the second radio option (index 1)
+            radio_option = element.locator('label[data-baseweb="radio"]').nth(1)
+            expect(radio_option).to_be_visible()
+
+            radio_option.click(delay=50)
+            wait_for_app_run(app)
+
+        expect(app.get_by_test_id("stMarkdown").nth(radio_index)).to_have_text(
+            expected_text, use_inner_text=True
+        )
 
 
 def test_calls_callback_on_change(app: Page):

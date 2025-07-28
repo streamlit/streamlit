@@ -250,7 +250,7 @@ describe("applyPandasStylerCss", () => {
     })
 
     styledCell = applyPandasStylerCss(MOCK_CELL, "invalid_key", CSS_STYLES)
-    expect(styledCell.themeOverride).toEqual({})
+    expect(styledCell.themeOverride).toEqual(undefined)
   })
 
   it("should use a grey color when background is yellow", () => {
@@ -684,7 +684,7 @@ describe("getCellFromArrow", () => {
       // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
       // Our default unit is seconds, so it needs to be adjusted internally
       content: BigInt(1632950000123000),
-      contentType: null,
+      contentType: MOCK_TIME_COLUMN.arrowType,
       field: {
         type: {
           unit: 2, // Microseconds
@@ -706,10 +706,11 @@ describe("getCellFromArrow", () => {
       styledCell,
       undefined
     )
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     expect((cell as any).data.displayDate).toEqual("FOOO")
   })
 
-  it("doesnt apply display content from styler if format is set", () => {
+  it("doesn't apply display content from styler if format is set", () => {
     const MOCK_TIME_COLUMN = {
       ...TimeColumn({
         id: "1",
@@ -747,7 +748,7 @@ describe("getCellFromArrow", () => {
       // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
       // Our default unit is seconds, so it needs to be adjusted internally
       content: BigInt(1632950000123000),
-      contentType: null,
+      contentType: MOCK_TIME_COLUMN.arrowType,
       field: {
         type: {
           unit: 2, // Microseconds
@@ -766,6 +767,7 @@ describe("getCellFromArrow", () => {
     const cell = getCellFromArrow(MOCK_TIME_COLUMN, arrowCell, styledCell)
     // Should use the formatted value from the cell and not the displayContent
     // from pandas styler
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     expect((cell as any).data.displayDate).toEqual("2021")
   })
 
@@ -805,7 +807,7 @@ describe("getCellFromArrow", () => {
       // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
       // Our default unit is seconds, so it needs to be adjusted internally
       content: BigInt(1632950000123000),
-      contentType: null,
+      contentType: MOCK_TIME_COLUMN.arrowType,
       field: {
         type: {
           unit: 2, // Microseconds
@@ -916,7 +918,7 @@ describe("getCellFromArrow", () => {
       styler: {
         uuid: "FAKE_UUID",
         styles:
-          "#T_FAKE_UUIDrow1_col1, #T_FAKE_UUIDrow0_col0 { color: white; background-color: pink }",
+          "#T_FAKE_UUID_row1_col1, #T_FAKE_UUID_row0_col0 { color: white; background-color: pink }",
         displayValues: DISPLAY_VALUES,
         caption: "FAKE_CAPTION",
       },
@@ -957,7 +959,7 @@ it("doesn't apply Pandas Styler CSS for editable columns", () => {
     styler: {
       uuid: "FAKE_UUID",
       styles:
-        "#T_FAKE_UUIDrow1_col1, #T_FAKE_UUIDrow0_col0 { color: white; background-color: pink }",
+        "#T_FAKE_UUID_row1_col1, #T_FAKE_UUID_row0_col0 { color: white; background-color: pink }",
       displayValues: DISPLAY_VALUES,
       caption: "FAKE_CAPTION",
     },
@@ -1161,4 +1163,54 @@ describe("getColumnTypeFromArrow", () => {
       expect(getColumnTypeFromArrow(arrowType)).toEqual(expectedType)
     }
   )
+})
+
+it("uses arrowCell.contentType instead of column.arrowType for object types", () => {
+  const MOCK_OBJECT_COLUMN = ObjectColumn({
+    id: "1",
+    name: "object_column",
+    title: "Object column",
+    indexNumber: 0,
+    isEditable: false,
+    isHidden: false,
+    isIndex: false,
+    isPinned: false,
+    isStretched: false,
+    arrowType: {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("object_column", new Float64(), true),
+      pandasType: undefined,
+    },
+  })
+
+  // Create a mock arrowCell with a string content type instead of number
+  const arrowCell = {
+    content: 0.12345678,
+    contentType: {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("object_column", new Utf8(), true),
+      pandasType: undefined,
+    },
+    type: "data",
+  } as object as DataFrameCell
+
+  const cell = getCellFromArrow(
+    MOCK_OBJECT_COLUMN,
+    arrowCell,
+    undefined,
+    undefined
+  )
+
+  // The cell should be formatted as a string since arrowCell.contentType is Utf8
+  expect(cell).toEqual({
+    allowOverlay: true,
+    contentAlignment: undefined,
+    // the float type would have formatted the number to 0.1235
+    data: "0.12345678",
+    displayData: "0.12345678",
+    isMissingValue: false,
+    kind: "text",
+    readonly: true,
+    style: "normal",
+  })
 })

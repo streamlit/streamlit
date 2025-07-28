@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import React, { memo, ReactElement, useCallback, useContext } from "react"
 
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { StyledClearIcon } from "baseui/input/styled-components"
 import { ChevronDown } from "baseui/icon"
-import { useTheme } from "@emotion/react"
 
 import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
@@ -28,6 +27,7 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
@@ -38,6 +38,7 @@ import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledClearIconContainer } from "./styled-components"
 
@@ -45,7 +46,6 @@ export interface Props {
   disabled: boolean
   element: TimeInputProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -53,7 +53,6 @@ function TimeInput({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }: Props): ReactElement {
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -68,10 +67,10 @@ function TimeInput({
     widgetMgr,
     fragmentId,
   })
+  const isInSidebar = useContext(IsSidebarContext)
 
   const clearable = isNullOrUndefined(element.default) && !disabled
-  const style = { width }
-  const theme = useTheme()
+  const theme = useEmotionTheme()
 
   const selectOverrides = {
     Select: {
@@ -101,13 +100,16 @@ function TimeInput({
               lineHeight: theme.lineHeights.inputWidget,
               // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
               paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.sm,
+              paddingLeft: theme.spacing.md,
               paddingBottom: theme.spacing.sm,
               paddingTop: theme.spacing.sm,
             }),
           },
 
           SingleValue: {
+            style: {
+              fontWeight: theme.fontWeights.normal,
+            },
             props: {
               "data-testid": "stTimeInputTimeDisplay",
             },
@@ -136,6 +138,7 @@ function TimeInput({
           // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
           Popover: {
             props: {
+              ignoreBoundary: isInSidebar,
               overrides: {
                 Body: {
                   style: () => ({
@@ -145,6 +148,13 @@ function TimeInput({
               },
             },
           },
+
+          Placeholder: {
+            style: () => ({
+              color: theme.colors.fadedText60,
+            }),
+          },
+
           SelectArrow: {
             component: ChevronDown,
 
@@ -179,7 +189,7 @@ function TimeInput({
   }, [handleChange])
 
   return (
-    <div className="stTimeInput" data-testid="stTimeInput" style={style}>
+    <div className="stTimeInput" data-testid="stTimeInput">
       <WidgetLabel
         label={element.label}
         disabled={disabled}

@@ -20,20 +20,20 @@ import json
 import os
 import sys
 import textwrap
-from datetime import datetime, timezone
-from typing import Final, NamedTuple, NoReturn
+from typing import Final, NamedTuple, NoReturn, cast
 from uuid import uuid4
 
-from streamlit import cli_util, env_util, file_util, util
+from streamlit import cli_util, config, env_util, file_util, util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
 
-if env_util.IS_WINDOWS:
-    _CONFIG_FILE_PATH = r"%userprofile%/.streamlit/config.toml"
-else:
-    _CONFIG_FILE_PATH = "~/.streamlit/config.toml"
+_CONFIG_FILE_PATH: Final = (
+    r"%userprofile%/.streamlit/config.toml"
+    if env_util.IS_WINDOWS
+    else "~/.streamlit/config.toml"
+)
 
 
 class _Activation(NamedTuple):
@@ -54,7 +54,7 @@ def email_prompt() -> str:
     return f"""
       {"👋 " if show_emoji else ""}{cli_util.style_for_cli("Welcome to Streamlit!", bold=True)}
 
-      If you’d like to receive helpful onboarding emails, news, offers, promotions,
+      If you'd like to receive helpful onboarding emails, news, offers, promotions,
       and the occasional swag, please enter your email address below. Otherwise,
       leave this field blank.
 
@@ -66,45 +66,46 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
 """
 
 
-def _send_email(email: str) -> None:
-    """Send the user's email to segment.io, if submitted"""
+def _send_email(email: str | None) -> None:
+    """Send the user's email for metrics, if submitted."""
     import requests
 
     if email is None or "@" not in email:
         return
 
+    metrics_url = ""
+    try:
+        response_json = requests.get(
+            "https://data.streamlit.io/metrics.json", timeout=2
+        ).json()
+        metrics_url = response_json.get("url", "")
+    except Exception:
+        _LOGGER.exception("Failed to fetch metrics URL")
+        return
+
     headers = {
-        "authority": "api.segment.io",
         "accept": "*/*",
         "accept-language": "en-US,en;q=0.9",
-        "content-type": "text/plain",
+        "content-type": "application/json",
         "origin": "localhost:8501",
         "referer": "localhost:8501/",
     }
 
-    dt = f"{datetime.now(timezone.utc).isoformat()}+00:00"
-
     data = {
         "anonymous_id": None,
-        "context": {
-            "library": {"name": "analytics-python", "version": "2.2.2"},
-        },
         "messageId": str(uuid4()),
-        "timestamp": dt,
         "event": "submittedEmail",
-        "traits": {
-            "authoremail": email,
-            "source": "provided_email",
-        },
+        "author_email": email,
+        "source": "provided_email",
         "type": "track",
         "userId": email,
-        "writeKey": "iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU",
     }
 
     response = requests.post(
-        "https://api.segment.io/v1/t",
+        metrics_url,
         headers=headers,
         data=json.dumps(data).encode(),
+        timeout=10,
     )
 
     response.raise_for_status()
@@ -116,22 +117,22 @@ class Credentials:
     _singleton: Credentials | None = None
 
     @classmethod
-    def get_current(cls):
+    def get_current(cls) -> Credentials:
         """Return the singleton instance."""
         if cls._singleton is None:
             Credentials()
 
-        return Credentials._singleton
+        return cast("Credentials", Credentials._singleton)
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize class."""
         if Credentials._singleton is not None:
             raise RuntimeError(
                 "Credentials already initialized. Use .get_current() instead"
             )
 
-        self.activation = None
-        self._conf_file = _get_credential_file_path()
+        self.activation: _Activation | None = None
+        self._conf_file: str = _get_credential_file_path()
 
         Credentials._singleton = self
 
@@ -150,7 +151,7 @@ class Credentials:
             with open(self._conf_file) as f:
                 data = toml.load(f).get("general")
             if data is None:
-                raise Exception
+                raise RuntimeError  # noqa: TRY301
             self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:
@@ -164,7 +165,7 @@ class Credentials:
                 self.reset()
                 self.activate(show_instructions=not auto_resolve)
                 return
-            raise Exception(
+            raise RuntimeError(
                 textwrap.dedent(
                     """
                 Unable to load credentials from %s.
@@ -246,6 +247,8 @@ class Credentials:
                     "`streamlit activate reset` then `streamlit activate`"
                 )
         else:
+            if not config.get_option("server.showEmailPrompt"):
+                return
             activated = False
 
             while not activated:
@@ -262,43 +265,30 @@ class Credentials:
                 if self.activation.is_valid:
                     self.save()
                     # IMPORTANT: Break the text below at 80 chars.
-                    TELEMETRY_TEXT = """
-  You can find our privacy policy at %(link)s
+                    telemetry_text = f"""
+  You can find our privacy policy at {cli_util.style_for_cli("https://streamlit.io/privacy-policy", underline=True)}
 
   Summary:
   - This open source library collects usage statistics.
   - We cannot see and do not store information contained inside Streamlit apps,
     such as text, charts, images, etc.
   - Telemetry data is stored in servers in the United States.
-  - If you'd like to opt out, add the following to %(config)s,
+  - If you'd like to opt out, add the following to {cli_util.style_for_cli(_CONFIG_FILE_PATH)},
     creating that file if necessary:
 
     [browser]
     gatherUsageStats = false
-""" % {
-                        "link": cli_util.style_for_cli(
-                            "https://streamlit.io/privacy-policy", underline=True
-                        ),
-                        "config": cli_util.style_for_cli(_CONFIG_FILE_PATH),
-                    }
+"""
 
-                    cli_util.print_to_cli(TELEMETRY_TEXT)
+                    cli_util.print_to_cli(telemetry_text)
                     if show_instructions:
                         # IMPORTANT: Break the text below at 80 chars.
-                        INSTRUCTIONS_TEXT = """
-  %(start)s
-  %(prompt)s %(hello)s
-""" % {
-                            "start": cli_util.style_for_cli(
-                                "Get started by typing:", fg="blue", bold=True
-                            ),
-                            "prompt": cli_util.style_for_cli("$", fg="blue"),
-                            "hello": cli_util.style_for_cli(
-                                "streamlit hello", bold=True
-                            ),
-                        }
+                        instructions_text = f"""
+  {cli_util.style_for_cli("Get started by typing:", fg="blue", bold=True)}
+  {cli_util.style_for_cli("$", fg="blue")} {cli_util.style_for_cli("streamlit hello", bold=True)}
+"""
 
-                        cli_util.print_to_cli(INSTRUCTIONS_TEXT)
+                        cli_util.print_to_cli(instructions_text)
                     activated = True
                 else:  # pragma: nocover
                     _LOGGER.error("Please try again.")

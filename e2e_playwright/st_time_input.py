@@ -77,3 +77,6 @@ st.time_input(
     "Time input 10 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
     time(8, 45),
 )
+
+st.time_input("Time input 11 (width=200px)", time(8, 45), width=200)
+st.time_input("Time input 12 (width='stretch')", time(8, 45), width="stretch")

@@ -155,7 +155,7 @@ export const StyledVegaLiteChartContainer =
             textDecoration: "none",
           },
           "a:hover, a:focus": {
-            backgroundColor: theme.colors.secondaryBg,
+            backgroundColor: theme.colors.darkenedBgMix15,
             color: theme.colors.bodyText,
           },
           ":before": {
@@ -211,7 +211,7 @@ export const StyledVegaLiteChartContainer =
             boxShadow: "none",
             color: theme.colors.bodyText,
             opacity: "1 !important",
-            background: theme.colors.darkenedBgMix25,
+            background: theme.colors.darkenedBgMix15,
           },
           svg: {
             width: theme.iconSizes.md,

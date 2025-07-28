@@ -44,7 +44,8 @@ st.text(f"value 4: {i4}")
 i5 = st.multiselect(
     "multiselect 5",
     [
-        f"{x} I am a ridiculously long string to have in a multiselect, so perhaps I should just not wrap and go to the next line."
+        f"{x} I am a ridiculously long string to have in a multiselect, "
+        "so perhaps I should just not wrap and go to the next line."
         for x in range(5)
     ],
 )
@@ -91,4 +92,83 @@ st.text(f"value 12: {i12}")
 st.multiselect(
     "multiselect 13 -> :material/check: :rainbow[Fancy] _**markdown** `label` _support_",
     options=options,
+)
+
+# Add new multiselect with accept_new_options=True and verify that the format_func
+# is applied to the original options but not to the new options
+i14 = st.multiselect(
+    "multiselect 14 - accept new options",
+    options=["apple", "banana", "orange", "kiwi"],
+    accept_new_options=True,
+    max_selections=3,
+    format_func=lambda x: x.upper(),
+)
+st.text(f"value 14: {i14}")
+
+# Add a multiselect with session_state pre-set value
+if "multiselect15" not in st.session_state:
+    st.session_state.multiselect15 = ["apple", "orange"]
+
+i15 = st.multiselect(
+    "multiselect 15 - session_state values",
+    options=["apple", "banana", "orange", "kiwi"],
+    key="multiselect15",
+)
+st.text(f"value 15: {i15}")
+
+# Add a multiselect with empty options but accept_new_options=True
+i16 = st.multiselect(
+    "multiselect 16 - empty options with accept_new_options",
+    options=[],
+    accept_new_options=True,
+)
+st.text(f"value 16: {i16}")
+
+many_options = (
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+    "twenty",
+    "twenty-one",
+    "twenty-two",
+    "twenty-three",
+    "twenty-four",
+    "twenty-five",
+    "twenty-six",
+    "twenty-seven",
+    "twenty-eight",
+    "twenty-nine",
+    "thirty",
+)
+
+st.multiselect(
+    "multiselect 17 - show maxHeight",
+    options=many_options,
+    default=many_options[0:28],
+)
+
+st.multiselect(
+    "multiselect 18 (width=300px)", many_options, default=many_options[0:28], width=300
+)
+st.multiselect(
+    "multiselect 19 (width='stretch')",
+    many_options,
+    default=many_options[0:28],
+    width="stretch",
 )

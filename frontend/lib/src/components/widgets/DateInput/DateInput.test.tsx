@@ -18,13 +18,14 @@ import React from "react"
 
 import { act, fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import moment from "moment"
 
 import {
   DateInput as DateInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/protobuf"
 
-import { customRenderLibContext, render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DateInput, { Props } from "./DateInput"
@@ -45,7 +46,6 @@ const getProps = (
     format: "YYYY/MM/DD",
     ...elementProps,
   }),
-  width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -128,13 +128,12 @@ describe("DateInput widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<DateInput {...props} />)
 
     const dateInput = screen.getByTestId("stDateInput")
     expect(dateInput).toHaveAttribute("class", "stDateInput")
-    expect(dateInput).toHaveStyle("width: 0px;")
   })
 
   it("renders a default value", () => {
@@ -152,15 +151,14 @@ describe("DateInput widget", () => {
     expect(screen.getByTestId("stDateInputField")).toBeDisabled()
   })
 
-  it("updates the widget value when it's changed", () => {
-    const props = getProps()
+  it("updates the widget value when it's changed", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: undefined })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
     const datePicker = screen.getByTestId("stDateInputField")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(datePicker, { target: { value: newDate } })
+    await user.type(datePicker, newDate)
 
     expect(screen.getByTestId("stDateInputField")).toHaveValue(newDate)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -171,6 +169,103 @@ describe("DateInput widget", () => {
       },
       undefined
     )
+  })
+
+  it("displays an error tooltip when the entered date for single date input outside range", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      min: "2020/01/05",
+      max: "2020/01/25",
+    })
+    render(<DateInput {...props} />)
+    const dateInput = screen.getByTestId("stDateInputField")
+    const currNewDate = "2020/01/30"
+
+    await user.type(dateInput, currNewDate)
+
+    const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
+    expect(errorIcon).toBeVisible()
+
+    // Hover over the error icon to trigger the tooltip
+    await user.hover(errorIcon)
+
+    const tooltip = await screen.findByTestId("stTooltipErrorContent")
+    expect(tooltip).toHaveTextContent(
+      "Error: Date set outside allowed range. Please select a date between 2020/01/05 and 2020/01/25."
+    )
+  })
+
+  it("displays correct error tooltip when the entered date for range input below min date", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: ["2020/02/01", "2020/02/07"],
+      min: "2020/01/01",
+      max: "2020/12/31",
+      isRange: true,
+    })
+    render(<DateInput {...props} />)
+    const dateInput = screen.getByTestId("stDateInputField")
+    const currNewDate = "2019/01/05 - 2020/02/07"
+
+    await user.clear(dateInput)
+    await user.type(dateInput, currNewDate)
+
+    const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
+    expect(errorIcon).toBeVisible()
+
+    // Hover over the error icon to trigger the tooltip
+    await user.hover(errorIcon)
+
+    const tooltip = await screen.findByTestId("stTooltipErrorContent")
+    expect(tooltip).toHaveTextContent(
+      "Error: Start date set outside allowed range. Please select a date after 2020/01/01."
+    )
+  })
+
+  it("displays correct error tooltip when the entered date for range input above max date", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: ["2020/02/01", "2020/02/07"],
+      min: "2020/01/01",
+      max: "2020/12/31",
+      isRange: true,
+    })
+    render(<DateInput {...props} />)
+    const dateInput = screen.getByTestId("stDateInputField")
+    const currNewDate = "2020/02/01 - 2021/02/07"
+
+    await user.clear(dateInput)
+    await user.type(dateInput, currNewDate)
+
+    const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
+    expect(errorIcon).toBeVisible()
+
+    // Hover over the error icon to trigger the tooltip
+    await user.hover(errorIcon)
+
+    const tooltip = await screen.findByTestId("stTooltipErrorContent")
+    expect(tooltip).toHaveTextContent(
+      "Error: End date set outside allowed range. Please select a date before 2020/12/31."
+    )
+  })
+
+  it("does not commit an invalid date", async () => {
+    const user = userEvent.setup()
+    const invalidDate = "2020/02/15"
+    const props = getProps({
+      default: undefined,
+      min: "2020/01/01",
+      max: "2020/01/31",
+    })
+    render(<DateInput {...props} />)
+    // Set up spy after initial setStringArrayValue call
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    const dateInput = screen.getByTestId("stDateInputField")
+    await user.type(dateInput, invalidDate)
+
+    expect(dateInput).toHaveValue(invalidDate)
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
   it("resets its value to default when it's closed with empty input", () => {
@@ -311,9 +406,8 @@ describe("DateInput widget", () => {
   describe("localization", () => {
     const getCalendarHeader = async (): Promise<HTMLElement> => {
       const calendar = await screen.findByLabelText("Calendar.")
-      const presentations = await within(calendar).findAllByRole(
-        "presentation"
-      )
+      const presentations =
+        await within(calendar).findAllByRole("presentation")
       return presentations[presentations.length - 1]
     }
 
@@ -323,7 +417,7 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        customRenderLibContext(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, { locale })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -337,7 +431,7 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        customRenderLibContext(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, { locale })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -351,7 +445,7 @@ describe("DateInput widget", () => {
       it("renders expected week day ordering", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        customRenderLibContext(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, { locale })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
@@ -365,12 +459,90 @@ describe("DateInput widget", () => {
       it("falls back to en-US locale", async () => {
         const user = userEvent.setup()
         const props = getProps()
-        customRenderLibContext(<DateInput {...props} />, { locale })
+        renderWithContexts(<DateInput {...props} />, { locale })
 
         await user.click(await screen.findByLabelText("Select a date."))
 
         expect(await getCalendarHeader()).toHaveTextContent("SuMoTuWeThFrSa")
       })
+    })
+  })
+
+  describe("quick select feature", () => {
+    it("hides quick select for range date inputs if minDate is within 2 years", async () => {
+      const user = userEvent.setup()
+      const recentMinDate = moment().subtract(1, "year").format("YYYY/MM/DD")
+      const props = getProps({
+        isRange: true,
+        min: recentMinDate,
+        default: [
+          recentMinDate,
+          moment(recentMinDate).add(1, "day").format("YYYY/MM/DD"),
+        ],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should not be visible
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    })
+
+    it("shows quick select for range date inputs if minDate is older than 2 years", async () => {
+      const user = userEvent.setup()
+      const oldMinDate = "2020/01/01"
+      const props = getProps({
+        isRange: true,
+        min: oldMinDate,
+        default: [
+          oldMinDate,
+          moment(oldMinDate).add(1, "day").format("YYYY/MM/DD"),
+        ],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should be visible
+      const quickSelect = screen.getByRole("combobox")
+      expect(quickSelect).toBeVisible()
+    })
+
+    it("shows quick select by default because minDate is 1970", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2020/01/01", "2020/01/31"],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should be visible for range inputs with old minDate
+      const quickSelect = screen.getByRole("combobox")
+      expect(quickSelect).toBeVisible()
+    })
+
+    it("does not show quick select for single date inputs", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: false,
+        default: ["2020/01/01"],
+      })
+
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInputField")
+      await user.click(dateInput)
+
+      // Quick select should not be visible for single date inputs
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     })
   })
 })

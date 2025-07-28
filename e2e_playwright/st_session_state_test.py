@@ -38,7 +38,7 @@ def test_has_correct_starting_values(app: Page):
     expect(app.get_by_test_id("stJson")).to_be_visible()
 
 
-def test_can_do_CRUD_for_session_state_items(app: Page):
+def test_can_do_crud_for_session_state_items(app: Page):
     expect(app.get_by_text("item_counter: 0")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
 
@@ -59,7 +59,7 @@ def test_can_do_CRUD_for_session_state_items(app: Page):
     expect(app.get_by_text("len(st.session_state): 4")).to_have_count(1)
 
 
-def test_can_do_CRUD_for_session_state_attributes(app: Page):
+def test_can_do_crud_for_session_state_attributes(app: Page):
     expect(app.get_by_text("item_counter: 0")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
 

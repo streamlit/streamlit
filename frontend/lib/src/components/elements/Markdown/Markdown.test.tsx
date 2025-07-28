@@ -36,7 +36,6 @@ const getProps = (
     allowHtml: false,
     ...elementProps,
   }),
-  width: 100,
 })
 
 describe("Markdown element", () => {
@@ -46,7 +45,6 @@ describe("Markdown element", () => {
     const markdown = screen.getByTestId("stMarkdown")
     expect(markdown).toBeInTheDocument()
     expect(markdown).toHaveClass("stMarkdown")
-    expect(markdown).toHaveStyle("width: 100px")
   })
 })
 

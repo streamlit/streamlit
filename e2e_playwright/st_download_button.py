@@ -27,6 +27,7 @@ st.download_button(
     "Download button label",
     data="Hello world!",
     file_name="hello.txt",
+    key="default_download_button",
 )
 
 st.download_button(
@@ -52,43 +53,32 @@ with open(CAT_IMAGE, "rb") as f:
     )
 
 st.download_button(
-    "Download button with use_container_width=True",
-    data="Hello world!",
-    file_name="hello.txt",
-    use_container_width=True,
-)
-
-st.download_button(
-    "Download button with help text and use_container_width=True",
-    data="Hello world!",
-    file_name="hello.txt",
-    use_container_width=True,
-    help="Example help text",
-)
-
-st.download_button(
     "Primary download button",
     data="Hello world!",
     file_name="hello.txt",
     type="primary",
+    key="primary_download_button",
 )
 
 st.download_button(
     "Button with emoji icon",
     data="Hello world!",
     icon="⬇️",
+    key="emoji_download_button",
 )
 
 st.download_button(
     "Button with material icon",
     data="Hello world!",
     icon=":material/download:",
+    key="material_icon_download_button",
 )
 
 st.download_button(
     "Tertiary download button",
     data="Hello world!",
     type="tertiary",
+    key="tertiary_download_button",
 )
 
 st.download_button(
@@ -96,6 +86,14 @@ st.download_button(
     data="Hello world!",
     type="tertiary",
     disabled=True,
+    key="disabled_tertiary_download_button",
+)
+
+st.download_button(
+    "Download button with help",
+    data="Hello world!",
+    help="help text",
+    key="help_download_button",
 )
 
 random_str = str(random())
@@ -103,10 +101,19 @@ clicked = st.download_button(label="Download random text", data=random_str)
 
 st.write(f"value: {clicked}")
 
+download_button_ignore_rerun = st.download_button(
+    "Download Button ignore rerun",
+    key="download_button_ignore_rerun",
+    data="do not ignore the data, ignore rerun :)",
+    file_name="ignore_click.txt",
+    on_click="ignore",
+)
+st.write("Ignore rerun download button value:", download_button_ignore_rerun)
+
 # st.session_state can only be used in streamlit
 if runtime.exists():
 
-    def on_click(x, y):
+    def on_click(x: int, y: int) -> None:
         if "click_count" not in st.session_state:
             st.session_state.click_count = 0
 
@@ -134,3 +141,8 @@ if runtime.exists():
         st.write("kwarg value:", st.session_state.y)
 
 i2 = st.checkbox("reset button return value")
+
+with st.expander("Download Button Width Examples", expanded=True):
+    st.download_button("Content Width (Default)", "data", width="content")
+    st.download_button("Stretch Width", "data", width="stretch")
+    st.download_button("300px Width", "data", width=300)

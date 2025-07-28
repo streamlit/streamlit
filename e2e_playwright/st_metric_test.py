@@ -143,3 +143,72 @@ def test_code_in_help_shows_up_properly(
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stMetric")
+
+
+def test_stretch_width(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that stretch width works correctly."""
+    metric_element = app.get_by_test_id("stMetric").nth(12)
+    expect(metric_element.get_by_test_id("stMetricLabel")).to_have_text("Stretch width")
+
+    assert_snapshot(
+        metric_element,
+        name="st_metric-stretch_width",
+    )
+
+
+def test_pixel_width(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that pixel width works correctly."""
+    metric_element = app.get_by_test_id("stMetric").nth(13)
+    expect(metric_element.get_by_test_id("stMetricLabel")).to_have_text(
+        "Pixel width (300px)"
+    )
+
+    assert_snapshot(
+        metric_element,
+        name="st_metric-pixel_width",
+    )
+
+
+def test_content_width(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that content width works correctly."""
+    metric_element = app.get_by_test_id("stMetric").nth(14)
+    expect(metric_element.get_by_test_id("stMetricLabel")).to_have_text("Content width")
+
+    assert_snapshot(
+        metric_element,
+        name="st_metric-content_width",
+    )
+
+
+def test_pixel_height(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that pixel height works correctly."""
+    metric_element = app.get_by_test_id("stMetric").nth(15)
+    expect(metric_element.get_by_test_id("stMetricLabel")).to_have_text(
+        "Pixel height (200px)"
+    )
+
+    assert_snapshot(
+        metric_element,
+        name="st_metric-pixel_height",
+    )
+
+
+def test_height_in_container(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that stretch and content height works correctly in a container."""
+    container = app.get_by_test_id("stVerticalBlock").last
+    expect(container).to_be_visible()
+
+    stretch_metric = container.get_by_test_id("stMetric").first
+    expect(stretch_metric.get_by_test_id("stMetricLabel")).to_have_text(
+        "Stretch height"
+    )
+
+    content_metric = container.get_by_test_id("stMetric").last
+    expect(content_metric.get_by_test_id("stMetricLabel")).to_have_text(
+        "Content height"
+    )
+
+    assert_snapshot(
+        container,
+        name="st_metric-height_in_container",
+    )

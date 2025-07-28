@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   DataEditorProps,
@@ -96,7 +96,7 @@ function useColumnSort(
   columns: BaseColumn[],
   getCellContent: ([col, row]: readonly [number, number]) => GridCell
 ): ColumnSortReturn {
-  const [sort, setSort] = React.useState<ColumnSortConfig>()
+  const [sort, setSort] = useState<ColumnSortConfig>()
 
   const { getCellContent: getCellContentSorted, getOriginalIndex } =
     useGlideColumnSort({
@@ -106,11 +106,11 @@ function useColumnSort(
       sort,
     })
 
-  const updatedColumns = React.useMemo(() => {
+  const updatedColumns = useMemo(() => {
     return updateSortingHeader(columns, sort)
   }, [columns, sort])
 
-  const sortColumn = React.useCallback(
+  const sortColumn = useCallback(
     (
       index: number,
       direction?: "asc" | "desc" | "auto",

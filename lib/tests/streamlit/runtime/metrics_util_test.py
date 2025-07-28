@@ -30,6 +30,7 @@ from streamlit.connections import SnowparkConnection, SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
+from streamlit.testing.v1.util import patch_config_options
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -51,15 +52,17 @@ class MetricsUtilTest(unittest.TestCase):
         """Test getting the machine id from /etc"""
         file_data = "etc"
 
-        with patch(
-            "streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC
-        ), patch(
-            "streamlit.runtime.metrics_util.open",
-            mock_open(read_data=file_data),
-            create=True,
-        ), patch(
-            "streamlit.runtime.metrics_util.os.path.isfile",
-            side_effect=lambda path: path == "/etc/machine-id",
+        with (
+            patch("streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC),
+            patch(
+                "streamlit.runtime.metrics_util.open",
+                mock_open(read_data=file_data),
+                create=True,
+            ),
+            patch(
+                "streamlit.runtime.metrics_util.os.path.isfile",
+                side_effect=lambda path: path == "/etc/machine-id",
+            ),
         ):
             machine_id = metrics_util._get_machine_id_v3()
         assert machine_id == file_data
@@ -68,15 +71,17 @@ class MetricsUtilTest(unittest.TestCase):
         """Test getting the machine id from /var/lib/dbus"""
         file_data = "dbus"
 
-        with patch(
-            "streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC
-        ), patch(
-            "streamlit.runtime.metrics_util.open",
-            mock_open(read_data=file_data),
-            create=True,
-        ), patch(
-            "streamlit.runtime.metrics_util.os.path.isfile",
-            side_effect=lambda path: path == "/var/lib/dbus/machine-id",
+        with (
+            patch("streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC),
+            patch(
+                "streamlit.runtime.metrics_util.open",
+                mock_open(read_data=file_data),
+                create=True,
+            ),
+            patch(
+                "streamlit.runtime.metrics_util.os.path.isfile",
+                side_effect=lambda path: path == "/var/lib/dbus/machine-id",
+            ),
         ):
             machine_id = metrics_util._get_machine_id_v3()
         assert machine_id == file_data
@@ -84,11 +89,65 @@ class MetricsUtilTest(unittest.TestCase):
     def test_machine_id_v3_from_node(self):
         """Test getting the machine id as the mac address"""
 
-        with patch(
-            "streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC
-        ), patch("streamlit.runtime.metrics_util.os.path.isfile", return_value=False):
+        with (
+            patch("streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC),
+            patch("streamlit.runtime.metrics_util.os.path.isfile", return_value=False),
+        ):
             machine_id = metrics_util._get_machine_id_v3()
         assert machine_id == MAC
+
+    @patch(
+        "streamlit.runtime.metrics_util.file_util.get_streamlit_file_path",
+        mock_get_path,
+    )
+    def test_stable_id_not_exists(self):
+        """Test creating a stable id"""
+
+        with (
+            patch("streamlit.runtime.metrics_util.os.path.exists", return_value=False),
+            patch("streamlit.runtime.metrics_util.uuid.uuid4", return_value=UUID),
+            patch("streamlit.file_util.open", mock_open()) as file_open,
+            patch("streamlit.file_util.os.makedirs"),
+            patch_config_options({"browser.gatherUsageStats": True}),
+        ):
+            machine_id = metrics_util._get_machine_id_v4()
+            file_open().write.assert_called_once_with(UUID)
+        assert machine_id == UUID
+
+    @patch(
+        "streamlit.runtime.metrics_util.file_util.get_streamlit_file_path",
+        mock_get_path,
+    )
+    def test_stable_id_exists_and_valid(self):
+        """Test getting a stable valid id"""
+
+        with (
+            patch("streamlit.runtime.metrics_util.os.path.exists", return_value=True),
+            patch("streamlit.file_util.open", mock_open(read_data=UUID)) as file_open,
+            patch_config_options({"browser.gatherUsageStats": True}),
+        ):
+            machine_id = metrics_util._get_machine_id_v4()
+            file_open().read.assert_called_once()
+        assert machine_id == UUID
+
+    @patch(
+        "streamlit.runtime.metrics_util.file_util.get_streamlit_file_path",
+        mock_get_path,
+    )
+    def test_stable_id_exists_and_invalid(self):
+        """Test getting a stable invalid id"""
+
+        with (
+            patch("streamlit.runtime.metrics_util.os.path.exists", return_value=True),
+            patch("streamlit.runtime.metrics_util.uuid.uuid4", return_value=UUID),
+            patch("streamlit.file_util.open", mock_open(read_data="")) as file_open,
+            patch("streamlit.file_util.os.makedirs"),
+            patch_config_options({"browser.gatherUsageStats": True}),
+        ):
+            machine_id = metrics_util._get_machine_id_v4()
+            file_open().read.assert_called_once()
+            file_open().write.assert_called_once_with(UUID)
+        assert machine_id == UUID
 
 
 class PageTelemetryTest(DeltaGeneratorTestCase):
@@ -112,7 +171,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (datetime.date.today(), "datetime.date"),
             (datetime.datetime.today().time(), "datetime.time"),
             (pd.DataFrame(), "DataFrame"),
-            (pd.Series(), "PandasSeries"),
+            (pd.Series(dtype="float64"), "PandasSeries"),
             # Also support classes as input
             (datetime.date, "datetime.date"),
             (pd.DataFrame, "DataFrame"),

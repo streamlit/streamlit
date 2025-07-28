@@ -29,7 +29,7 @@ from streamlit.connections import (
     SnowparkConnection,
     SQLConnection,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitSecretNotFoundError
 from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.connection_factory import (
     _create_connection,
@@ -102,7 +102,7 @@ class ConnectionFactoryTest(unittest.TestCase):
         [
             # No type is specified, and there's no config file to find one
             # in.
-            (None, FileNotFoundError, "No secrets found"),
+            (None, StreamlitSecretNotFoundError, "No secrets found"),
             # Nonexistent module.
             (
                 "nonexistent.module.SomeConnection",

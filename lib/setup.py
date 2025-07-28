@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: INP001
+
 import os
 import sys
 from pathlib import Path
@@ -21,7 +23,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.41.1"  # PEP-440
+VERSION = "1.47.1"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -30,24 +32,25 @@ VERSION = "1.41.1"  # PEP-440
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
 INSTALL_REQUIRES = [
     "altair>=4.0, <6",
-    "blinker>=1.0.0, <2",
-    "cachetools>=4.0, <6",
+    "blinker>=1.5.0, <2",
+    "cachetools>=4.0, <7",
     "click>=7.0, <9",
     "numpy>=1.23, <3",
-    "packaging>=20, <25",
+    "packaging>=20, <26",
     # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
     # the index dtype.
     "pandas>=1.4.0, <3",
     "pillow>=7.1.0, <12",
     # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
-    "protobuf>=3.20, <6",
+    "protobuf>=3.20, <7",
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
     "pyarrow>=7.0",
     "requests>=2.27, <3",
-    "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <10",
+    # Starting from Python 3.11, Python has built in support for reading TOML files.
+    # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
     "toml>=0.10.1, <2",
     "typing-extensions>=4.4.0, <5",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
@@ -63,22 +66,47 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython>=3.0.7, <4, !=3.1.19",
     "pydeck>=0.8.0b4, <1",
     # Tornado 6.0.3 was the current version when Python 3.8 was released (Oct 14, 2019).
-    "tornado>=6.0.3, <7",
+    # Tornado 6.5.0 is skipped due to a bug with Unicode characters in the filename.
+    # See https://github.com/tornadoweb/tornado/commit/62c276434dc5b13e10336666348408bf8c062391
+    "tornado>=6.0.3, <7, !=6.5.0",
 ]
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
 EXTRA_REQUIRES = {
+    # Optional dependency required for Snowflake connection:
     "snowflake": [
         "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=3.3.0; python_version<'3.12'",
-    ]
+    ],
+    # Optional dependency required for auth:
+    "auth": [
+        "Authlib>=1.3.2",
+    ],
+    # Optional charting dependencies:
+    "charts": [
+        "matplotlib>=3.0.0",
+        "graphviz>=0.19.0",
+        "plotly>=4.0.0",
+        # orjson speeds up large plotly figure processing by 5-10x:
+        "orjson>=3.5.0",
+    ],
+    # Optional SQL connection dependency:
+    "sql": [
+        "SQLAlchemy>=2.0.0",
+    ],
+    # Install all optional dependencies:
+    "all": [
+        "streamlit[auth,charts,snowflake,sql]",
+        # Improved exception traceback formatting:
+        "rich>=11.0.0",
+    ],
 }
 
 
 class VerifyVersionCommand(install):
-    """Custom command to verify that the git tag matches our version"""
+    """Custom command to verify that the git tag matches our version."""
 
     description = "verify that the git tag matches our version"
 

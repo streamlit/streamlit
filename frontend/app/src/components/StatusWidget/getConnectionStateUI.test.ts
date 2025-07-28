@@ -16,7 +16,7 @@
 
 import { Ellipses, Warning } from "@emotion-icons/open-iconic"
 
-import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
+import { ConnectionState } from "@streamlit/connection"
 
 import {
   CONNECTING_LABEL,

@@ -23,3 +23,9 @@ st.progress(
         "Please be patient :clock1:. **bold text**. $$ x = 1 + 2 $$, :blue[Blue text]"
     ),
 )
+
+st.markdown("Progress with stretch width")
+st.progress(75, width="stretch")
+
+st.markdown("Progress with pixel width")
+st.progress(25, width=200)

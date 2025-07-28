@@ -20,14 +20,16 @@ functions that use streamlit.config can go here to avoid a dependency cycle.
 
 from __future__ import annotations
 
-import hashlib
 import os
 import time
 from pathlib import Path
-from typing import Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
 
-from streamlit.errors import Error
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.errors import StreamlitMaxRetriesError
+from streamlit.util import calc_md5
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 # How many times to try to grab the MD5 hash.
 _MAX_RETRIES = 5
@@ -63,15 +65,11 @@ def calc_md5_with_blocking_retries(
         # So here we retry a few times using this loop. See issue #186.
         content = _do_with_retries(
             lambda: _get_file_content(path),
-            FileNotFoundError,
+            (FileNotFoundError, PermissionError),
             path,
         )
 
-    md5 = hashlib.md5(**HASHLIB_KWARGS)
-    md5.update(content)
-
-    # Use hexdigest() instead of digest(), so it's easier to debug.
-    return md5.hexdigest()
+    return calc_md5(content)
 
 
 def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
@@ -95,7 +93,7 @@ def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
     # modified.
     return _do_with_retries(
         lambda: os.stat(path).st_mtime,
-        FileNotFoundError,
+        (FileNotFoundError, PermissionError),
         path,
     )
 
@@ -153,12 +151,12 @@ T = TypeVar("T")
 
 def _do_with_retries(
     orig_fn: Callable[[], T],
-    exception: type[Exception],
+    exceptions: type[Exception] | tuple[type[Exception], ...],
     path: str | Path,
 ) -> T:
     """Helper for retrying a function.
 
-    Calls `orig_fn`. If `exception` is raised, retry.
+    Calls `orig_fn`. If any exception in `exceptions` is raised, retry.
 
     To use this, just replace things like this...
 
@@ -168,24 +166,25 @@ def _do_with_retries(
 
         result = _do_with_retries(
             lambda: thing_to_do(file_path, a, b, c),
-            exception: ExceptionThatWillCauseARetry,
+            exceptions=(ExceptionType1, ExceptionType2),
             file_path, # For pretty error message.
         )
     """
+
     for i in _retry_dance():
         try:
             return orig_fn()
-        except exception:
+        except exceptions as ex:  # noqa: PERF203
             if i >= _MAX_RETRIES - 1:
-                raise
-            else:
-                # Continue with loop to either retry or raise MaxRetriesError.
-                pass
+                raise StreamlitMaxRetriesError(
+                    f"Unable to access file or folder: {path}"
+                ) from ex
+            # Continue with loop to either retry or raise MaxRetriesError.
 
-    raise MaxRetriesError(f"Unable to access file or folder: {path}")
+    raise StreamlitMaxRetriesError(f"Unable to access file or folder: {path}")
 
 
-def _retry_dance():
+def _retry_dance() -> Generator[int, None, None]:
     """Helper for writing a retry loop.
 
     This is useful to make sure all our retry loops work the same way. For example,
@@ -206,7 +205,3 @@ def _retry_dance():
     for i in range(_MAX_RETRIES):
         yield i
         time.sleep(_RETRY_WAIT_SECS)
-
-
-class MaxRetriesError(Error):
-    pass

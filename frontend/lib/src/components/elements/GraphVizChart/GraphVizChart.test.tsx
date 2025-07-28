@@ -22,9 +22,10 @@ import { graphviz } from "d3-graphviz"
 
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 
-import GraphVizChart, { GraphVizChartProps, log } from "./GraphVizChart"
+import GraphVizChart, { GraphVizChartProps, LOG } from "./GraphVizChart"
 
 vi.mock("d3-graphviz", () => ({
   graphviz: vi.fn().mockReturnValue({
@@ -50,14 +51,18 @@ const getProps = (
     elementId: "1",
     ...elementProps,
   }),
-  width: 700,
 })
 
 describe("GraphVizChart Element", () => {
   let logErrorSpy: MockInstance
 
   beforeEach(() => {
-    logErrorSpy = vi.spyOn(log, "error").mockImplementation(() => {})
+    logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
   })
 
   afterEach(() => {
@@ -112,7 +117,7 @@ describe("GraphVizChart Element", () => {
     expect(graphviz).toHaveBeenCalledTimes(1)
   })
 
-  it("shoud render with height and width set to auto", () => {
+  it("should render with height and width set to auto", () => {
     const props = {
       ...getProps(),
     }

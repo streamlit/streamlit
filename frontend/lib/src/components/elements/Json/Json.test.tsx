@@ -33,7 +33,6 @@ const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
       '  "json": "structure" }',
     ...elementProps,
   }),
-  width: 100,
 })
 
 describe("JSON element", () => {

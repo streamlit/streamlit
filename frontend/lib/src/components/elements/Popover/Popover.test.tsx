@@ -31,13 +31,12 @@ const getProps = (
 ): PopoverProps => ({
   element: BlockProto.Popover.create({
     label: "label",
-    useContainerWidth: false,
     disabled: false,
     help: "",
     ...elementProps,
   }),
   empty: false,
-  width: 100,
+  stretchWidth: false,
   ...props,
 })
 
@@ -80,5 +79,58 @@ describe("Popover container", () => {
     await user.click(screen.getByText("label"))
     // Text should be visible now
     expect(screen.queryByText("test")).toBeVisible()
+  })
+
+  it("should render correctly with width=stretch and help", async () => {
+    const user = userEvent.setup()
+    // Hover to see tooltip content
+    render(
+      <Popover
+        {...getProps({ help: "mockHelpText" }, { stretchWidth: true })}
+      />
+    )
+
+    // Ensure both the button and the tooltip target have the correct width
+    const popoverButtonWidget = screen.getByRole("button")
+    expect(popoverButtonWidget).toHaveStyle("width: 100%")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
+  it("should render correctly with help", async () => {
+    const user = userEvent.setup()
+    // Hover to see tooltip content
+    render(
+      <Popover
+        {...getProps({ help: "mockHelpText", useContainerWidth: false })}
+      />
+    )
+
+    // Ensure both the button and the tooltip target have the correct width
+    const popoverButtonWidget = screen.getByRole("button")
+    // The button should stretch to the container and width will
+    // be set on the Element Container.
+    expect(popoverButtonWidget).toHaveStyle("width: 100%")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
+  it("passes width=stretch property without help correctly", () => {
+    render(<Popover {...getProps({}, { stretchWidth: true })} />)
+
+    const popoverButtonWidget = screen.getByRole("button")
+    expect(popoverButtonWidget).toHaveStyle("width: 100%")
   })
 })

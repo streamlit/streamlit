@@ -30,7 +30,6 @@ export interface Props {
   disabled: boolean
   element: RadioProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -40,7 +39,6 @@ function Radio({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }: Readonly<Props>): ReactElement {
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -72,7 +70,6 @@ function Radio({
       onChange={onChange}
       options={options}
       captions={captions}
-      width={width}
       disabled={disabled}
       horizontal={horizontal}
       labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}

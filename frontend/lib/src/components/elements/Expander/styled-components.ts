@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
 
 import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
 
@@ -23,7 +24,9 @@ export interface StyledExpandableContainerProps {
   disabled: boolean
 }
 
-export const StyledExpandableContainer = styled.div({})
+export const StyledExpandableContainer = styled.div({
+  width: "100%",
+})
 interface StyledDetailsProps {
   isStale: boolean
 }
@@ -47,53 +50,62 @@ export const StyledDetails = styled.details<StyledDetailsProps>(
   })
 )
 
-export const StyledSummaryHeading = styled.span(({ theme }) => ({
+export const StyledSummaryHeading = styled.span({
   display: "flex",
-  gap: theme.spacing.sm,
   alignItems: "center",
   flexGrow: 1,
-}))
+})
 
 interface StyledSummaryProps {
-  empty: boolean
   isStale: boolean
+  expanded: boolean
 }
 
 export const StyledSummary = styled.summary<StyledSummaryProps>(
-  ({ theme, empty, isStale }) => ({
+  ({ theme, isStale, expanded }) => ({
     position: "relative",
     display: "flex",
     width: "100%",
-    "&:focus-visible": {
-      outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-      outlineOffset: `-${theme.sizes.borderWidth}`,
-      borderRadius: theme.radii.default,
+    "&:focus": {
+      outline: "none",
     },
-    fontSize: theme.fontSizes.sm,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
+    "&:focus-visible": {
+      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+    },
+    fontSize: "inherit",
+    paddingLeft: theme.spacing.md,
+    paddingRight: theme.spacing.md,
+    paddingTop: theme.spacing.twoXS,
+    paddingBottom: theme.spacing.twoXS,
+    minHeight: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.sizes.borderWidth})`,
+    alignItems: "center",
     cursor: "pointer",
     listStyleType: "none",
     "&::-webkit-details-marker": {
       display: "none",
     },
-    "&:hover": {
-      color: empty ? undefined : theme.colors.primary,
+    backgroundColor: expanded ? theme.colors.bgMix : "transparent",
+    // When expanded, only round the top corners
+    borderRadius: expanded
+      ? `${theme.radii.default} ${theme.radii.default} 0 0`
+      : theme.radii.default,
+    // Animate border-radius changes when expanding/collapsing to match the animation of
+    // the expander content. Use a delay when collapsing because the content first needs
+    // to slide up.
+    transition: expanded
+      ? `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1), background-color 150ms ease`
+      : `border-radius 200ms cubic-bezier(0.23, 1, 0.32, 1) 300ms, background-color 150ms ease`,
+    "&:hover, &:focus-visible": {
+      backgroundColor: theme.colors.darkenedBgMix15,
     },
-    "&:hover svg": {
-      fill: empty ? undefined : theme.colors.primary,
+    "&:active": {
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
-    ...(empty && {
-      cursor: "default",
-    }),
     ...(isStale && STALE_STYLES),
   })
 )
 
 export const StyledDetailsPanel = styled.div(({ theme }) => ({
-  paddingBottom: theme.spacing.lg,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
+  padding: theme.spacing.lg,
+  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))

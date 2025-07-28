@@ -49,6 +49,7 @@ import {
   isTimeType,
 } from "~lib/dataframes/arrowTypeUtils"
 import { StyledCell } from "~lib/dataframes/pandasStylerUtils"
+import { fontSizes } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -85,6 +86,13 @@ export function extractCssProperty(
   property: string,
   cssStyle: string
 ): string | undefined {
+  // Check if the css even includes the property we are looking for.
+  // The html element ID already gets checked in applyPandasStylerCss
+  // we don't check it again for performance reasons.
+  if (!cssStyle.includes(property)) {
+    return undefined
+  }
+
   // This regex is supposed to extract the value of a CSS property
   // for a specified HTML element ID from a CSS style string:
   const regex = new RegExp(
@@ -116,11 +124,25 @@ export function applyPandasStylerCss(
   cssStyles: string
 ): GridCell {
   const themeOverride = {} as Partial<GlideTheme>
+  if (!cssStyles.includes(cssId)) {
+    // If the CSS styles don't contain the CSS ID, we can skip applying the styles.
+    // This is a performance optimization to avoid running a regex if the
+    // property or element is not even in the style string.
+    return cell
+  }
 
   // Extract and apply the font color
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
   if (fontColor) {
     themeOverride.textDark = fontColor
+
+    // Apply text color also for cells that don't use textDark:
+    if (cell.kind === GridCellKind.Bubble) {
+      themeOverride.textBubble = fontColor
+    }
+    if (cell.kind === GridCellKind.Uri) {
+      themeOverride.linkColor = fontColor
+    }
   }
 
   // Extract and apply the background color
@@ -139,6 +161,16 @@ export function applyPandasStylerCss(
     // Therefore, we are overriding the font color to our dark font color which
     // always works well with yellow background.
     themeOverride.textDark = "#31333F"
+  }
+
+  // Extract and apply the font weight:
+  const fontWeight = extractCssProperty(cssId, "font-weight", cssStyles)
+  if (fontWeight) {
+    // It's not recommended to directly use the theme primitives. However,
+    // we don't change our fontsize primitives (since they are already in rem)
+    // and we don't have access to the theme here (would be quite a big refactoring to
+    // get access to the theme)
+    themeOverride.baseFontStyle = `${fontWeight} ${fontSizes.sm}`
   }
 
   if (themeOverride) {
@@ -392,7 +424,7 @@ export function initAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
  * cell data from the Quiver (Arrow) object. Different types of data will
  * result in different cell types.
  *
- * @param column - The colum of the cell.
+ * @param column - The column of the cell.
  * @param arrowCell - The dataframe cell object from Arrow.
  * @param cssStyles - Optional css styles to apply on the cell.
  *
@@ -404,13 +436,14 @@ export function getCellFromArrow(
   styledCell: StyledCell | undefined,
   cssStyles: string | undefined = undefined
 ): GridCell {
+  // We use arrowCell.contentType instead of column.arrowType here because
+  // to allow a bit more flexibility when data is loaded in chunks or added with
+  // add data to still work somewhat correctly even if the column arrow type
+  // (from the initial chunk) and the actual arrow type from the cell are different.
   let cellTemplate
-  if (column.kind === "object") {
+  if (column.kind === "object" || column.kind === "json") {
     // Always use display value from Quiver for object types
     // these are special types that the dataframe only support in read-only mode.
-
-    // TODO(lukasmasuch): Move this to object column once the
-    // field information is available in the arrowType.
     cellTemplate = column.getCell(
       notNullOrUndefined(arrowCell.content)
         ? removeLineBreaks(
@@ -428,12 +461,9 @@ export function getCellFromArrow(
     // to a date object based on the arrow field metadata.
     // Our implementation only supports unix timestamps in seconds, so we need to
     // do some custom conversion here.
-
-    // TODO(lukasmasuch): Move this to time/date/datetime column once the
-    // field information is available in the arrowType.
     let parsedDate
     if (
-      isTimeType(column.arrowType) &&
+      isTimeType(arrowCell.contentType) &&
       notNullOrUndefined(arrowCell.field?.type?.unit)
     ) {
       // Time values needs to be adjusted to seconds based on the unit
@@ -444,13 +474,10 @@ export function getCellFromArrow(
     }
 
     cellTemplate = column.getCell(parsedDate)
-  } else if (isDecimalType(column.arrowType)) {
+  } else if (isDecimalType(arrowCell.contentType)) {
     // This is a special case where we want to already prepare a decimal value
     // to a number string based on the arrow field metadata. This is required
     // because we don't have access to the required scale in the number column.
-
-    // TODO(lukasmasuch): Move this to number column once the
-    // field information is available in the arrowType.
     const decimalStr = isNullOrUndefined(arrowCell.content)
       ? null
       : formatArrowCell(arrowCell.content, arrowCell.contentType)

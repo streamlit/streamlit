@@ -34,13 +34,14 @@ export interface BaseLinkButtonProps {
     | BaseButtonKind.TERTIARY
   size?: BaseButtonSize
   disabled?: boolean
-  // If true or number, the button should take up container's full width
-  fluidWidth?: boolean | number
+  // If true, the button should take up container's full width
+  containerWidth?: boolean
   children: ReactNode
   autoFocus?: boolean
   href: string
   target: string
   rel: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onClick: (event: MouseEvent<HTMLAnchorElement>) => any
 }
 
@@ -69,23 +70,20 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
 }
 
 export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
-  ({ fluidWidth, size, theme }) => {
-    const buttonWidth =
-      typeof fluidWidth == "number" ? `${fluidWidth}px` : "100%"
-
+  ({ containerWidth, size, theme }) => {
     return {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       fontWeight: theme.fontWeights.normal,
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-      borderRadius: theme.radii.default,
+      borderRadius: theme.radii.button,
       minHeight: theme.sizes.minElementHeight,
       margin: 0,
       lineHeight: theme.lineHeights.base,
       color: theme.colors.primary,
       textDecoration: "none",
-      width: fluidWidth ? buttonWidth : "auto",
+      width: containerWidth ? "100%" : "auto",
       userSelect: "none",
       "&:visited": {
         color: theme.colors.primary,
@@ -94,6 +92,9 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
         outline: "none",
       },
       "&:focus-visible": {
+        // When focus-visible (e.g. if the button was focused via keyboard navigation)
+        // we use the hover style of the respective button type (see below) and
+        // additionally show a colored focus ring
         boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       },
       "&:hover": {
@@ -113,13 +114,14 @@ export const StyledPrimaryLinkButton = styled(
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
   border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-  "&:hover": {
-    backgroundColor: darken(theme.colors.primary, 0.05),
-    color: theme.colors.white,
+  "&:hover, &:focus-visible": {
+    backgroundColor: darken(theme.colors.primary, 0.15),
+    borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:active": {
-    backgroundColor: "transparent",
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+    // Keep the border darker when clicked so that the button looks "pressed"
+    borderColor: darken(theme.colors.primary, 0.15),
   },
   "&:visited:not(:active)": {
     color: theme.colors.white,
@@ -141,18 +143,11 @@ export const StyledSecondaryLinkButton = styled(
   "&:visited": {
     color: theme.colors.bodyText,
   },
-  "&:hover": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+  "&:hover, &:focus-visible": {
+    backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&:active": {
-    color: theme.colors.white,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary,
-  },
-  "&:focus:not(:active)": {
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: theme.colors.darkenedBgMix25,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
     borderColor: theme.colors.borderColor,
@@ -169,22 +164,23 @@ export const StyledTertiaryLinkButton = styled(
   backgroundColor: theme.colors.transparent,
   color: theme.colors.bodyText,
   border: "none",
-
   "&:visited": {
     color: theme.colors.bodyText,
   },
-  "&:hover": {
+  "&:hover, &:focus-visible": {
     color: theme.colors.primary,
+  },
+  "&:hover:not([disabled]), &:focus-visible:not([disabled])": {
+    // Also make colored text have the primary color on hover. Since text color is
+    // applied as an inline style we need to use !important to override it.
+    // Note that we're not doing this when disabled. We should probably do that as
+    // well but we don't do it anywhere else.
+    "span.stMarkdownColoredText": {
+      color: "inherit !important",
+    },
   },
   "&:active": {
-    color: theme.colors.primary,
-  },
-  "&:focus": {
-    outline: "none",
-  },
-  "&:focus-visible": {
-    color: theme.colors.primary,
-    boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+    color: darken(theme.colors.primary, 0.25),
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
     backgroundColor: theme.colors.transparent,

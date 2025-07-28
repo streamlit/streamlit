@@ -21,11 +21,12 @@ import { screen } from "@testing-library/react"
 
 import {
   createPresetThemes,
-  customRenderLibContext,
   darkTheme,
   LibContextProps,
   lightTheme,
   mockSessionInfo,
+  renderWithContexts,
+  SessionInfo,
 } from "@streamlit/lib"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
@@ -54,6 +55,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   animateModal: true,
   openThemeCreator: vi.fn(),
   metricsMgr: new MetricsManager(mockSessionInfo()),
+  sessionInfo: mockSessionInfo(),
   ...extend,
 })
 
@@ -63,7 +65,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.getByText("Settings")).toBeVisible()
   })
@@ -74,7 +76,7 @@ describe("SettingsDialog", () => {
       allowRunOnSave: true,
     })
     const context = getContext()
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     await user.click(screen.getByText("Run on save"))
 
@@ -88,7 +90,7 @@ describe("SettingsDialog", () => {
     const user = userEvent.setup()
     const props = getProps()
     const context = getContext()
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
     expect(screen.getByText("Wide mode")).toBeVisible()
 
     await user.click(screen.getByText("Wide mode"))
@@ -104,7 +106,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(
       screen.getByText("Choose app theme, colors and fonts")
@@ -120,7 +122,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length + 1)
@@ -133,7 +135,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     await user.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
@@ -144,7 +146,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.getByTestId("edit-theme")).toBeVisible()
     expect(screen.getByText("Edit active theme")).toBeVisible()
@@ -156,7 +158,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.getByTestId("edit-theme")).toBeVisible()
     await user.click(screen.getByText("Edit active theme"))
@@ -168,8 +170,35 @@ describe("SettingsDialog", () => {
     const props = getProps({ developerMode: false })
     const context = getContext({ availableThemes })
 
-    customRenderLibContext(<SettingsDialog {...props} />, context)
+    renderWithContexts(<SettingsDialog {...props} />, context)
 
     expect(screen.queryByTestId("edit-theme")).not.toBeInTheDocument()
+  })
+
+  it("shows version string if SessionInfo is initialized", () => {
+    const props = getProps({
+      sessionInfo: mockSessionInfo({ streamlitVersion: "42.42.42" }),
+    })
+    const context = getContext()
+
+    renderWithContexts(<SettingsDialog {...props} />, context)
+
+    const versionRegex = /Made with Streamlit\s*42\.42\.42/
+    const versionText = screen.getByText(versionRegex)
+    expect(versionText).toBeDefined()
+  })
+
+  it("shows no version string if SessionInfo is not initialized", () => {
+    const sessionInfo = new SessionInfo()
+    expect(sessionInfo.isSet).toBe(false)
+
+    const props = getProps({ sessionInfo })
+    const context = getContext()
+
+    renderWithContexts(<SettingsDialog {...props} />, context)
+
+    const versionRegex = /^Made with Streamlit.*/
+    const nonExistentText = screen.queryByText(versionRegex)
+    expect(nonExistentText).not.toBeInTheDocument()
   })
 })

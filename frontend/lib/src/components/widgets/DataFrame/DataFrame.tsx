@@ -14,8 +14,18 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
+import { createPortal } from "react-dom"
 import {
   CompactSelection,
   DataEditorRef,
@@ -34,6 +44,7 @@ import {
   Delete,
   FileDownload,
   Search,
+  Visibility,
 } from "@emotion-icons/material-outlined"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
@@ -49,14 +60,18 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 
-import ColumnMenu from "./ColumnMenu"
+import ColumnMenu from "./menus/ColumnMenu"
+import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import EditingState, { getColumnName } from "./EditingState"
 import {
+  useColumnFormatting,
   useColumnLoader,
   useColumnPinning,
   useColumnReordering,
   useColumnSizer,
   useColumnSort,
+  useColumnVisibility,
+  useCustomEditors,
   useCustomRenderer,
   useCustomTheme,
   useDataEditor,
@@ -103,7 +118,6 @@ export interface DataFrameProps {
   widgetMgr: WidgetStateManager
   disableFullscreenMode?: boolean
   fragmentId?: string
-  width: number
   height?: number
   customToolbarActions?: React.ReactNode[]
 }
@@ -133,9 +147,9 @@ function DataFrame({
     height: containerHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const resizableRef = React.useRef<Resizable>(null)
-  const dataEditorRef = React.useRef<DataEditorRef>(null)
-  const resizableContainerRef = React.useRef<HTMLDivElement>(null)
+  const resizableRef = useRef<Resizable>(null)
+  const dataEditorRef = useRef<DataEditorRef>(null)
+  const resizableContainerRef = useRef<HTMLDivElement>(null)
 
   const gridTheme = useCustomTheme()
 
@@ -144,30 +158,41 @@ function DataFrame({
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
-  } = React.useContext(LibContext)
+  } = useContext(LibContext)
 
-  const [isFocused, setIsFocused] = React.useState<boolean>(true)
-  const [showSearch, setShowSearch] = React.useState(false)
-  const [hasVerticalScroll, setHasVerticalScroll] =
-    React.useState<boolean>(false)
+  const [isFocused, setIsFocused] = useState<boolean>(true)
+  const [showSearch, setShowSearch] = useState(false)
+  const [hasVerticalScroll, setHasVerticalScroll] = useState<boolean>(false)
   const [hasHorizontalScroll, setHasHorizontalScroll] =
-    React.useState<boolean>(false)
-  const [showMenu, setShowMenu] = React.useState<{
+    useState<boolean>(false)
+  const [showMenu, setShowMenu] = useState<{
     // The index number of the column that the menu is shown for:
     columnIdx: number
     // The bounds of the column header:
     headerBounds: Rectangle
   }>()
+  const [showColumnVisibilityMenu, setShowColumnVisibilityMenu] =
+    useState(false)
+
+  const handleToggleColumnVisibilityMenu = useCallback(
+    (): void => setShowColumnVisibilityMenu(show => !show),
+    []
+  )
+
+  const handleCloseColumnVisibilityMenu = useCallback(
+    () => setShowColumnVisibilityMenu(false),
+    []
+  )
 
   // Determine if the device is primary using touch as input:
-  const isTouchDevice = React.useMemo<boolean>(
+  const isTouchDevice = useMemo<boolean>(
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
     []
   )
 
   // Determine if it uses customized scrollbars (webkit browsers):
   // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
-  const hasCustomizedScrollbars = React.useMemo<boolean>(
+  const hasCustomizedScrollbars = useMemo<boolean>(
     () =>
       (window.navigator.userAgent.includes("Mac OS") &&
         window.navigator.userAgent.includes("Safari")) ||
@@ -202,32 +227,39 @@ function DataFrame({
   const isSortingEnabled =
     !isLargeTable && !isEmptyTable && element.editingMode !== DYNAMIC
 
-  const editingState = React.useRef<EditingState>(
-    new EditingState(originalNumRows)
-  )
+  const isDynamicAndEditable =
+    !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
-  const [numRows, setNumRows] = React.useState(
-    editingState.current.getNumRows()
-  )
+  const editingState = useRef<EditingState>(new EditingState(originalNumRows))
 
-  React.useEffect(() => {
+  const [numRows, setNumRows] = useState(editingState.current.getNumRows())
+
+  useEffect(() => {
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
-  const resetEditingState = React.useCallback(() => {
+  const resetEditingState = useCallback(() => {
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
-  const [columnOrder, setColumnOrder] = React.useState(element.columnOrder)
+  const [columnOrder, setColumnOrder] = useState(element.columnOrder)
 
-  const { columns: originalColumns, setColumnConfigMapping } = useColumnLoader(
-    element,
-    data,
-    disabled,
-    columnOrder
-  )
+  // Update the column order if the element.columnOrder value changes
+  // e.g. if the user has applied changes to the column order in the code.
+  useEffect(() => {
+    setColumnOrder(element.columnOrder)
+
+    // eslint-disable-next-line react-hooks/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [element.columnOrder.join(",")])
+
+  const {
+    columns: originalColumns,
+    allColumns,
+    setColumnConfigMapping,
+  } = useColumnLoader(element, data, disabled, columnOrder)
 
   /**
    * On the first rendering, try to load initial widget state if
@@ -237,7 +269,7 @@ function DataFrame({
    * its state. Once the same element is rendered again, we try to
    * reconstruct the state from the widget manager values.
    */
-  React.useEffect(
+  useEffect(
     () => {
       if (element.editingMode === READ_ONLY) {
         // We don't need to load the initial widget state
@@ -262,7 +294,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
@@ -286,7 +318,7 @@ function DataFrame({
    *
    * @param newSelection - The new selection state
    */
-  const innerSyncSelectionState = React.useCallback(
+  const innerSyncSelectionState = useCallback(
     (newSelection: GridSelection) => {
       // If we want to support selections also with the editable mode,
       // we would need to integrate the `syncEditState` and `syncSelections` functions
@@ -367,7 +399,7 @@ function DataFrame({
     syncSelectionState
   )
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Clear cell selections if fullscreen mode changes
     // but keep row & column selections.
     // In the past we saw some weird side-effects, so we decided to clean
@@ -376,12 +408,12 @@ function DataFrame({
     clearSelection(true, true)
     // Only run this on changes to the fullscreen mode:
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen])
 
   // This callback is used to refresh the rendering of specified cells
-  const refreshCells = React.useCallback(
+  const refreshCells = useCallback(
     (
       cells: {
         cell: GridCellPosition
@@ -400,7 +432,7 @@ function DataFrame({
    * This effect needs to run after the fullscreen effect that
    * clears cell selections, since both modify the same state object.
    */
-  React.useEffect(
+  useEffect(
     () => {
       if (!isRowSelectionActivated && !isColumnSelectionActivated) {
         // Only run this if selections are activated.
@@ -444,7 +476,7 @@ function DataFrame({
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
@@ -454,7 +486,7 @@ function DataFrame({
    * on the latest editing state. This is required to keep the
    * component state in sync with the editing state.
    */
-  const updateNumRows = React.useCallback(() => {
+  const updateNumRows = useCallback(() => {
     if (numRows !== editingState.current.getNumRows()) {
       // Reset the number of rows if it has been changed in the editing state
       setNumRows(editingState.current.getNumRows())
@@ -469,7 +501,7 @@ function DataFrame({
    * This is the inner version to be used by the debounce callback below.
    * Its split out to allow better dependency inspection.
    */
-  const innerSyncEditState = React.useCallback(() => {
+  const innerSyncEditState = useCallback(() => {
     const currentEditingState = editingState.current.toJson(columns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
@@ -523,14 +555,29 @@ function DataFrame({
       clearSelection
     )
 
+  const ignoredRowIndices = useMemo(() => {
+    // If empty table, ignore row index 0 which is just a visual gimmick
+    // If dynamic editing is enabled, we need to ignore the last row (trailing row)
+    // because it would result in some undesired errors in the tooltips.
+    // The index are 0-based -> therefore, numRows will point to the trailing row
+    // (which is not part of the actual data).
+    if (isEmptyTable) {
+      return [0]
+    }
+    if (isDynamicAndEditable) {
+      return [numRows]
+    }
+    return []
+  }, [isEmptyTable, isDynamicAndEditable, numRows])
+
   const {
     tooltip,
     clearTooltip,
     onItemHovered: handleTooltips,
-  } = useTooltips(columns, getCellContent)
+  } = useTooltips(columns, getCellContent, ignoredRowIndices)
 
   const { drawCell, customRenderers } = useCustomRenderer(columns)
-
+  const { provideEditor } = useCustomEditors()
   // Callback that can be used to configure the column menu for the columns
   const configureColumnMenu = useCallback(
     (column: GridColumn): GridColumn => {
@@ -543,7 +590,7 @@ function DataFrame({
   )
 
   // Convert columns from our structure into the glide-data-grid compatible structure
-  const transformedColumns = React.useMemo(
+  const transformedColumns = useMemo(
     () => columns.map(column => configureColumnMenu(toGlideColumn(column))),
     [columns, configureColumnMenu]
   )
@@ -566,13 +613,13 @@ function DataFrame({
     gridTheme,
     numRows,
     usesGroupRow,
-    containerWidth,
+    containerWidth || 0,
     containerHeight,
     isFullScreen
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
-  const getEmptyStateContent = React.useCallback(
+  const getEmptyStateContent = useCallback(
     ([_col, _row]: readonly [number, number]): GridCell => {
       return {
         ...getTextCell(true, false),
@@ -588,7 +635,7 @@ function DataFrame({
     [columns, gridTheme.glideTheme.textLight]
   )
 
-  const onFormCleared = React.useCallback(() => {
+  const onFormCleared = useCallback(() => {
     // Clear the editing state and the selection state
     resetEditingState()
     clearSelection()
@@ -596,18 +643,19 @@ function DataFrame({
 
   useFormClearHelper({ element, widgetMgr, onFormCleared })
 
-  const isDynamicAndEditable =
-    !isEmptyTable && element.editingMode === DYNAMIC && !disabled
-
   const { pinColumn, unpinColumn, freezeColumns } = useColumnPinning(
     columns,
     isEmptyTable,
-    containerWidth,
+    containerWidth || 0,
     gridTheme.minColumnWidth,
     clearSelection,
     setColumnConfigMapping
   )
-
+  const { changeColumnFormat } = useColumnFormatting(setColumnConfigMapping)
+  const { hideColumn, showColumn } = useColumnVisibility(
+    clearSelection,
+    setColumnConfigMapping
+  )
   const { onColumnMoved } = useColumnReordering(
     columns,
     freezeColumns,
@@ -617,13 +665,15 @@ function DataFrame({
   )
 
   // Determine if the table requires horizontal or vertical scrolling:
-  React.useEffect(() => {
+  useEffect(() => {
     // The setTimeout is a workaround to get the scroll area bounding box
     // after the grid has been rendered. Otherwise, the scroll area div
     // (dvn-stack) might not have been created yet.
+    // eslint-disable-next-line @eslint-react/web-api/no-leaked-timeout
     setTimeout(() => {
       if (resizableContainerRef.current && dataEditorRef.current) {
         // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         const scrollAreaBounds = resizableContainerRef.current
           ?.querySelector(".dvn-stack")
           ?.getBoundingClientRect()
@@ -636,15 +686,24 @@ function DataFrame({
         if (scrollAreaBounds) {
           setHasVerticalScroll(
             scrollAreaBounds.height >
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
               resizableContainerRef.current.clientHeight
           )
           setHasHorizontalScroll(
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             scrollAreaBounds.width > resizableContainerRef.current.clientWidth
           )
         }
       }
     }, 1)
   }, [resizableSize, numRows, glideColumns])
+
+  // Hide the column visibility menu if all columns are visible:
+  useEffect(() => {
+    if (allColumns.length == columns.length) {
+      setShowColumnVisibilityMenu(false)
+    }
+  }, [allColumns.length, columns.length])
 
   return (
     <StyledResizableContainer
@@ -656,6 +715,7 @@ function DataFrame({
         if (resizableContainerRef.current && hasCustomizedScrollbars) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
 
           if (
@@ -703,7 +763,8 @@ function DataFrame({
         locked={
           (isRowSelected && !isRowSelectionActivated) ||
           isCellSelected ||
-          (isTouchDevice && isFocused)
+          (isTouchDevice && isFocused) ||
+          showColumnVisibilityMenu
         }
         onExpand={expand}
         onCollapse={collapse}
@@ -744,17 +805,37 @@ function DataFrame({
             onClick={() => {
               if (onRowAppended) {
                 setIsFocused(true)
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
                 onRowAppended()
                 clearTooltip()
+                // Automatically scroll to the new row on the vertical axis:
+                dataEditorRef.current?.scrollTo(0, numRows, "vertical")
               }
             }}
           />
+        )}
+        {!isEmptyTable && allColumns.length > columns.length && (
+          <ColumnVisibilityMenu
+            columns={allColumns}
+            columnOrder={columnOrder}
+            setColumnOrder={setColumnOrder}
+            hideColumn={hideColumn}
+            showColumn={showColumn}
+            isOpen={showColumnVisibilityMenu}
+            onClose={handleCloseColumnVisibilityMenu}
+          >
+            <ToolbarAction
+              label="Show/hide columns"
+              icon={Visibility}
+              onClick={handleToggleColumnVisibilityMenu}
+            />
+          </ColumnVisibilityMenu>
         )}
         {!isLargeTable && !isEmptyTable && (
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
-            onClick={() => exportToCsv()}
+            onClick={exportToCsv}
           />
         )}
         {!isEmptyTable && (
@@ -866,6 +947,7 @@ function DataFrame({
             }
           }}
           showSearch={showSearch}
+          searchResults={!showSearch ? [] : undefined}
           onSearchClose={() => {
             setShowSearch(false)
             clearTooltip()
@@ -876,6 +958,11 @@ function DataFrame({
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
               return
+            }
+
+            // Hide search before sorting to clear search results
+            if (showSearch) {
+              setShowSearch(false)
             }
 
             if (isRowSelectionActivated && isRowSelected) {
@@ -890,6 +977,7 @@ function DataFrame({
               // which can be confusing. So we clear all cell selections before sorting.
               clearSelection(true, true)
             }
+
             sortColumn(columnIdx, "auto")
           }}
           gridSelection={gridSelection}
@@ -939,6 +1027,7 @@ function DataFrame({
                 : undefined,
             }),
           }}
+          provideEditor={provideEditor}
           // Apply custom rendering (e.g. for missing or required cells):
           drawCell={drawCell}
           // Add support for additional cells:
@@ -962,19 +1051,22 @@ function DataFrame({
           {...(isRowSelectionActivated && {
             rowMarkers: {
               // Apply style settings for the row markers column:
-              kind: "checkbox",
+              kind: "checkbox-visible",
               checkboxStyle: "square",
               theme: {
                 bgCell: gridTheme.glideTheme.bgHeader,
                 bgCellMedium: gridTheme.glideTheme.bgHeader,
+                // Use a lighter color for the checkboxes in the row markers column,
+                // otherwise its a bit too prominent:
+                textMedium: gridTheme.glideTheme.textLight,
               },
             },
             rowSelectionMode: isMultiRowSelectionActivated ? "multi" : "auto",
             rowSelect: disabled
               ? "none"
               : isMultiRowSelectionActivated
-              ? "multi"
-              : "single",
+                ? "multi"
+                : "single",
             rowSelectionBlending: "mixed",
             // Deactivate the combination of row selections
             // and cell selections. This will automatically clear
@@ -988,8 +1080,8 @@ function DataFrame({
             columnSelect: disabled
               ? "none"
               : isMultiColumnSelectionActivated
-              ? "multi"
-              : "single",
+                ? "multi"
+                : "single",
             columnSelectionBlending: "mixed",
             // Deactivate the combination of column selections
             // and cell selections. This will automatically clear
@@ -1044,34 +1136,81 @@ function DataFrame({
           clearTooltip={clearTooltip}
         ></Tooltip>
       )}
-      {showMenu && (
-        // A context menu that provides interactive features (sorting, pinning, show/hide)
-        // for a grid column.
-        <ColumnMenu
-          top={showMenu.headerBounds.y + showMenu.headerBounds.height}
-          left={showMenu.headerBounds.x + showMenu.headerBounds.width}
-          onCloseMenu={() => setShowMenu(undefined)}
-          onSortColumn={
-            isSortingEnabled
-              ? (direction: "asc" | "desc" | undefined) => {
-                  // Cell selection are kept on the old position,
-                  // which can be confusing. So we clear all cell selections before sorting.
-                  clearSelection(true, true)
-                  sortColumn(showMenu.columnIdx, direction, true)
-                }
-              : undefined
-          }
-          isColumnPinned={originalColumns[showMenu.columnIdx].isPinned}
-          onUnpinColumn={() => {
-            unpinColumn(originalColumns[showMenu.columnIdx].id)
-          }}
-          onPinColumn={() => {
-            pinColumn(originalColumns[showMenu.columnIdx].id)
-          }}
-        ></ColumnMenu>
-      )}
+      {showMenu &&
+        createPortal(
+          // A context menu that provides interactive features (sorting, pinning, show/hide)
+          // for a grid column.
+          <ColumnMenu
+            top={showMenu.headerBounds.y + showMenu.headerBounds.height}
+            left={showMenu.headerBounds.x + showMenu.headerBounds.width}
+            column={originalColumns[showMenu.columnIdx]}
+            onCloseMenu={() => setShowMenu(undefined)}
+            onSortColumn={
+              isSortingEnabled
+                ? (direction: "asc" | "desc" | undefined) => {
+                    // Hide search before sorting to clear search results
+                    if (showSearch) {
+                      setShowSearch(false)
+                    }
+
+                    if (isRowSelectionActivated && isRowSelected) {
+                      // Keeping row selections when sorting columns is not supported at the moment.
+                      // So we need to clear the selected rows before we do the sorting (Issue #11345).
+                      // Maintain column selections as these are not impacted.
+                      clearSelection(false, true)
+                    } else {
+                      // Cell selection are kept on the old position,
+                      // which can be confusing. So we clear all cell selections before sorting.
+                      clearSelection(true, true)
+                    }
+
+                    sortColumn(showMenu.columnIdx, direction, true)
+                  }
+                : undefined
+            }
+            isColumnPinned={originalColumns[showMenu.columnIdx].isPinned}
+            onUnpinColumn={() => {
+              unpinColumn(originalColumns[showMenu.columnIdx].id)
+            }}
+            onPinColumn={() => {
+              pinColumn(originalColumns[showMenu.columnIdx].id)
+            }}
+            onHideColumn={() => {
+              hideColumn(originalColumns[showMenu.columnIdx].id)
+            }}
+            onChangeFormat={(format: string) => {
+              changeColumnFormat(
+                originalColumns[showMenu.columnIdx].id,
+                format
+              )
+              // After changing the format, remeasure the column to ensure that
+              // the column width is updated to the new format.
+              // We need to apply a short timeout here to ensure that
+              // the column format already has been fully applied to all cells
+              // before we remeasure the column.
+              setTimeout(() => {
+                dataEditorRef.current?.remeasureColumns(
+                  CompactSelection.fromSingleSelection(showMenu.columnIdx)
+                )
+              }, 100)
+            }}
+            onAutosize={() => {
+              dataEditorRef.current?.remeasureColumns(
+                CompactSelection.fromSingleSelection(showMenu.columnIdx)
+              )
+            }}
+          />,
+          // We put the column menu into the portal element which is also
+          // used for the cell overlays. This allows us to correctly position
+          // the column menu also when the grid is used in a dialog, popover,
+          // or anything else that apply a transform (position fixed is influenced
+          // by the transform property of the parent element).
+          // The portal element is expected to always exist (-> PortalProvider).
+          document.querySelector("#portal") as HTMLElement
+        )}
     </StyledResizableContainer>
   )
 }
 
-export default withFullScreenWrapper(DataFrame)
+const DataFrameWithFullscreen = withFullScreenWrapper(DataFrame)
+export default memo(DataFrameWithFullscreen)

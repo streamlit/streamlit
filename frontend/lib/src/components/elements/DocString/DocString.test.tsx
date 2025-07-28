@@ -34,21 +34,20 @@ const getProps = (
     type: "method",
     ...elementProps,
   }),
-  width: 0,
 })
 
 describe("DocString Element", () => {
-  const props = getProps()
+  const defaultProps = getProps()
 
   it("renders without crashing", () => {
-    render(<DocString {...props} />)
+    render(<DocString {...defaultProps} />)
     expect(screen.getByTestId("stHelp")).toBeInTheDocument()
   })
 
   it("should render a doc-string", () => {
-    render(<DocString {...props} />)
+    render(<DocString {...defaultProps} />)
     expect(screen.getByTestId("stHelpDoc")).toHaveTextContent(
-      props.element.docString
+      defaultProps.element.docString
     )
   })
 
@@ -65,19 +64,19 @@ describe("DocString Element", () => {
 
   describe("doc-header", () => {
     it("should render a name", () => {
-      render(<DocString {...props} />)
+      render(<DocString {...defaultProps} />)
       expect(screen.getByTestId("stHelpName")).toHaveTextContent("st.balloons")
     })
 
     it("should render value", () => {
-      render(<DocString {...props} />)
+      render(<DocString {...defaultProps} />)
       expect(screen.getByTestId("stHelpValue")).toHaveTextContent(
         "streamlit.balloons()"
       )
     })
 
     it("should render a type", () => {
-      render(<DocString {...props} />)
+      render(<DocString {...defaultProps} />)
       expect(screen.getByTestId("stHelpType")).toHaveTextContent("method")
     })
 
@@ -135,7 +134,7 @@ describe("DocString Element", () => {
 
   describe("members table", () => {
     it("should render no members when there are none", () => {
-      render(<DocString {...props} />)
+      render(<DocString {...defaultProps} />)
       expect(
         screen.queryByTestId("stHelpMembersTable")
       ).not.toBeInTheDocument()

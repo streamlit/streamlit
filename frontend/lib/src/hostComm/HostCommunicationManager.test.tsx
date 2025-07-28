@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import "../../../utils/src/polyfills/index"
+
 import { MockInstance } from "vitest"
 
 import HostCommunicationManager, {
@@ -22,9 +24,11 @@ import HostCommunicationManager, {
 
 // Mocking "message" event listeners on the window;
 // returns function to establish a listener
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 function mockEventListeners(): (type: string, event: any) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   window.addEventListener = vi.fn((event: string, cb: any) => {
     listeners[event] = listeners[event] || []
     listeners[event].push(cb)
@@ -413,14 +417,17 @@ describe("HostCommunicationManager messaging", () => {
     expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalled()
   })
 
-  it("can process a received SET_CUSTOM_THEME_CONFIG message", async () => {
+  it("can process a received SET_CUSTOM_THEME_CONFIG message", () => {
     const mockCustomThemeConfig = {
       primaryColor: "#1A6CE7",
       backgroundColor: "#FFFFFF",
       secondaryBackgroundColor: "#F5F5F5",
       textColor: "#1A1D21",
-      widgetBackgroundColor: "#FFFFFF",
+      // Option is deprecated, but we still test to ensure backwards compatibility:
       widgetBorderColor: "#D3DAE8",
+      // Option is deprecated, but we still test to ensure backwards compatibility:
+      widgetBackgroundColor: "#FFFFFF",
+      // Option is deprecated, but we still test to ensure backwards compatibility:
       skeletonBackgroundColor: "#CCDDEE",
     }
     dispatchEvent(
@@ -441,7 +448,7 @@ describe("HostCommunicationManager messaging", () => {
     ).toHaveBeenCalledWith(undefined, mockCustomThemeConfig)
   })
 
-  it("can process a received SET_CUSTOM_THEME_CONFIG message with a dark theme name", async () => {
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a dark theme name", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -460,7 +467,7 @@ describe("HostCommunicationManager messaging", () => {
     ).toHaveBeenCalledWith("Dark", undefined)
   })
 
-  it("can process a received SET_CUSTOM_THEME_CONFIG message with a light theme name", async () => {
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a light theme name", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -541,6 +548,7 @@ describe("HostCommunicationManager messaging", () => {
 
 describe("Test different origins", () => {
   let hostCommunicationMgr: HostCommunicationManager
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let dispatchEvent: any
 
   beforeEach(() => {

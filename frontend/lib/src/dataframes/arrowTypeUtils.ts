@@ -55,6 +55,7 @@ export interface PandasColumnType {
   numpy_type: string
 
   /** Type metadata. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   meta?: Record<string, any> | null
 }
 
@@ -85,6 +86,7 @@ export interface PandasColumnMetadata {
    * Column-specific metadata. Only used by certain column types
    * (e.g. CategoricalIndex has `num_categories`.)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   metadata: Record<string, any> | null
 
   /** The name of the column. */
@@ -166,6 +168,7 @@ export interface ArrowType {
  * @param vector The Arrow vector to convert.
  * @returns The list of strings.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
 export function convertVectorToList(vector: Vector<any>): string[] {
   const values = []
 

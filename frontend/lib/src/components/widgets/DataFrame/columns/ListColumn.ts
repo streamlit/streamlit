@@ -30,19 +30,21 @@ import {
  * A column type that supports optimized rendering values of array/list types.
  */
 function ListColumn(props: BaseColumnProps): BaseColumn {
-  const cellTemplate = {
+  const cellTemplate: BubbleCell = {
     kind: GridCellKind.Bubble,
     data: [],
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: "normal",
-  } as BubbleCell
+  }
 
   return {
     ...props,
     kind: "list",
     sortMode: "default",
+    typeIcon: ":material/list:",
     isEditable: false, // List column is always readonly
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any): GridCell {
       const cellData = isNullOrUndefined(data) ? [] : toSafeArray(data)
 
@@ -53,6 +55,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
         copyData: isNullOrUndefined(data)
           ? ""
           : toSafeString(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
               cellData.map((x: any) =>
                 // Replace commas with spaces since commas are used to
                 // separate the list items.

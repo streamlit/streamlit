@@ -13,15 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { EmotionTheme, getDividerColors } from "~lib/theme"
 import { isValidElementId } from "~lib/util/utils"
-import { FormsData, WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { Direction } from "~lib/components/core/Layout/utils"
+
+export function getClassnamePrefix(direction: Direction): string {
+  return direction === Direction.HORIZONTAL
+    ? "stHorizontalBlock"
+    : "stVerticalBlock"
+}
 
 export function shouldComponentBeEnabled(
   elementType: string,
@@ -124,40 +131,10 @@ export interface BaseBlockProps {
   uploadClient: FileUploadClient
 
   /**
-   * The app's ComponentRegistry instance. Dispatches "Custom Component"
-   * iframe messages to ComponentInstances.
-   */
-  componentRegistry: ComponentRegistry
-
-  /**
-   * The ID of the current "script run". When a Streamlit script is re-run
-   * (usually as a result of the user interacting with a widget), the Streamlit
-   * backend sends a new scriptRunId to the frontend. When the script run ends,
-   * the frontend discards "stale" elements (that is, elements with a non-current
-   * scriptRunId).
-   */
-  scriptRunId: string
-
-  /**
-   * The app's current ScriptRunState. This is used in combination with
-   * scriptRunId to prune stale elements. It's also used by the app to
-   * display the "running man" indicator when the app's script is being re-run.
-   */
-  scriptRunState: ScriptRunState
-
-  /**
    * If true, all widgets will be disabled and the app will be non-interactive.
    * This is generally set when the frontend is disconnected from the backend.
    */
   widgetsDisabled: boolean
-
-  /**
-   * Data about all forms in the app. The WidgetStateManager creates its own
-   * internal FormsData instance, and calls a callback (`formsDataChanged`)
-   * when forms are updated. This FormsData instance should be updated
-   * from that callback.
-   */
-  formsData: FormsData
 
   /**
    * If true , the element should not allow going into fullscreen. Right now we plan
@@ -196,4 +173,62 @@ export function getKeyFromId(
   // Extract all parts after the second hyphen
   const userKey = parts.slice(2).join("-")
   return userKey === "None" ? undefined : userKey
+}
+
+export function backwardsCompatibleColumnGapSize(
+  columnProto: BlockProto.IColumn
+): streamlit.GapSize {
+  if (columnProto.gapConfig?.gapSize) {
+    return columnProto.gapConfig.gapSize
+  } else if (columnProto.gap) {
+    if (columnProto.gap === "small") {
+      return streamlit.GapSize.SMALL
+    } else if (columnProto.gap === "medium") {
+      return streamlit.GapSize.MEDIUM
+    } else if (columnProto.gap === "large") {
+      return streamlit.GapSize.LARGE
+    }
+  }
+  return streamlit.GapSize.SMALL
+}
+
+export function checkFlexContainerBackwardsCompatibile(
+  blockProto: BlockProto
+): boolean {
+  if (
+    blockProto.flexContainer ||
+    blockProto.vertical ||
+    blockProto.horizontal
+  ) {
+    return true
+  }
+  return false
+}
+
+export function getActivateScrollToBottomBackwardsCompatible(
+  blockNode: BlockNode
+): boolean {
+  const hasHeight =
+    blockNode.deltaBlock.heightConfig?.pixelHeight ||
+    // This is deprecated, but we have some integrations that
+    // cache messages so we are keeping this here to make sure the
+    // frontend is backwards compatible with the old messages.
+    blockNode.deltaBlock.vertical?.height
+  if (
+    hasHeight &&
+    blockNode.children.some(node => {
+      return (
+        node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
+      )
+    })
+  ) {
+    return true
+  }
+  return false
+}
+
+export function getBorderBackwardsCompatible(blockProto: BlockProto): boolean {
+  return (
+    blockProto.flexContainer?.border || blockProto.vertical?.border || false
+  )
 }

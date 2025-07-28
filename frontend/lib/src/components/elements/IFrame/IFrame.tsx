@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { IFrame as IFrameProto } from "@streamlit/protobuf"
 
@@ -25,17 +25,21 @@ import {
 
 import { StyledIframe } from "./styled-components"
 
-export interface IFrameProps {
-  element: IFrameProto
-  width: number
+/**
+ * Return a string property from an element. If the string is
+ * null or empty, return undefined instead.
+ */
+function getNonEmptyString(
+  value: string | null | undefined
+): string | undefined {
+  return isNullOrUndefined(value) || value === "" ? undefined : value
 }
 
-export default function IFrame({
-  element,
-  width: propWidth,
-}: Readonly<IFrameProps>): ReactElement {
-  const width = element.hasWidth ? element.width : propWidth
+export interface IFrameProps {
+  element: IFrameProto
+}
 
+function IFrame({ element }: Readonly<IFrameProps>): ReactElement {
   // Either 'src' or 'srcDoc' will be set in our element. If 'src'
   // is set, we're loading a remote URL in the iframe.
   const src = getNonEmptyString(element.src)
@@ -51,21 +55,13 @@ export default function IFrame({
       disableScrolling={!element.scrolling}
       src={src}
       srcDoc={srcDoc}
-      width={width}
       height={element.height}
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
       title="st.iframe"
+      tabIndex={element.tabIndex ?? undefined}
     />
   )
 }
 
-/**
- * Return a string property from an element. If the string is
- * null or empty, return undefined instead.
- */
-function getNonEmptyString(
-  value: string | null | undefined
-): string | undefined {
-  return isNullOrUndefined(value) || value === "" ? undefined : value
-}
+export default memo(IFrame)

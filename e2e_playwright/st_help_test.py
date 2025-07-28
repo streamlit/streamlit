@@ -30,7 +30,7 @@ def _get_keyed_help_element(app: Page, key: str) -> Locator:
 def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.header renders correctly with dividers."""
     help_elements = app.get_by_test_id("stHelp")
-    expect(help_elements).to_have_count(4)
+    expect(help_elements).to_have_count(6)
     assert_snapshot(
         _get_keyed_help_element(app, "help_no_docs"),
         name="st_help-class_no_docs",
@@ -46,6 +46,22 @@ def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         _get_keyed_help_element(app, "help_mixed_docs"),
         name="st_help-mixed_docs",
+    )
+
+
+def test_help_width_variations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that help() renders correctly with different width settings."""
+    help_elements = app.get_by_test_id("stHelp")
+    expect(help_elements).to_have_count(6)
+
+    assert_snapshot(
+        help_elements.nth(4),
+        name="st_help-fixed_width",
+    )
+
+    assert_snapshot(
+        help_elements.nth(5),
+        name="st_help-stretch_width_explicit",
     )
 
 

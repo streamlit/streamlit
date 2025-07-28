@@ -40,7 +40,6 @@ const getProps = (
     type: CheckboxProto.StyleType.DEFAULT,
     ...elementProps,
   }),
-  width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -71,13 +70,12 @@ describe("Checkbox widget", () => {
     )
   })
 
-  it("has correct className and style", () => {
+  it("has correct className", () => {
     const props = getProps()
     render(<Checkbox {...props} />)
     const checkboxElement = screen.getByTestId("stCheckbox")
 
     expect(checkboxElement).toHaveClass("stCheckbox")
-    expect(checkboxElement).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {

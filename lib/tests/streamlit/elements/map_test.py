@@ -16,17 +16,19 @@
 
 import itertools
 import json
+import re
 from unittest import mock
 
 import numpy as np
 import pandas as pd
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 from streamlit.errors import StreamlitAPIException
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.testutil import patch_config_options
 
 mock_df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -39,7 +41,7 @@ class StMapTest(DeltaGeneratorTestCase):
         st.map()
 
         c = self.get_delta_from_queue().new_element.deck_gl_json_chart
-        self.assertEqual(json.loads(c.json), _DEFAULT_MAP)
+        assert json.loads(c.json) == _DEFAULT_MAP
 
     def test_basic(self):
         """Test that it can be called with lat/lon."""
@@ -47,15 +49,15 @@ class StMapTest(DeltaGeneratorTestCase):
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
-        self.assertIsNotNone(c.get("initialViewState"))
-        self.assertIsNotNone(c.get("layers"))
-        self.assertIsNone(c.get("mapStyle"))
-        self.assertEqual(len(c.get("layers")), 1)
-        self.assertEqual(c.get("initialViewState").get("latitude"), 2.5)
-        self.assertEqual(c.get("initialViewState").get("longitude"), 25)
-        self.assertEqual(c.get("initialViewState").get("zoom"), 3)
-        self.assertEqual(c.get("initialViewState").get("pitch"), 0)
-        self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
+        assert c.get("initialViewState") is not None
+        assert c.get("layers") is not None
+        assert c.get("mapStyle") is None
+        assert len(c.get("layers")) == 1
+        assert c.get("initialViewState").get("latitude") == 2.5
+        assert c.get("initialViewState").get("longitude") == 25
+        assert c.get("initialViewState").get("zoom") == 3
+        assert c.get("initialViewState").get("pitch") == 0
+        assert c.get("layers")[0].get("@@type") == "ScatterplotLayer"
 
     def test_alternative_names_columns(self):
         """Test that it can be called with alternative names of lat/lon columns."""
@@ -73,7 +75,7 @@ class StMapTest(DeltaGeneratorTestCase):
             c = json.loads(
                 self.get_delta_from_queue().new_element.deck_gl_json_chart.json
             )
-            self.assertEqual(len(c.get("layers")[0].get("data")), 4)
+            assert len(c.get("layers")[0].get("data")) == 4
 
     def test_map_uses_convert_anything_to_df(self):
         """Test that st.map uses convert_anything_to_df to convert input data."""
@@ -101,12 +103,12 @@ class StMapTest(DeltaGeneratorTestCase):
         st.map(df, latitude="xlat", longitude="xlon", color="color", size="size")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
-        self.assertEqual(c.get("layers")[0].get("getPosition"), "@@=[xlon, xlat]")
-        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
-        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+        assert c.get("layers")[0].get("getPosition") == "@@=[xlon, xlat]"
+        assert c.get("layers")[0].get("getFillColor") == "@@=color"
+        assert c.get("layers")[0].get("getRadius") == "@@=size"
 
         # Also test that the radius property is set up correctly.
-        self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
+        assert c.get("layers")[0].get("radiusMinPixels") == 3
 
     @parameterized.expand(
         [
@@ -129,8 +131,8 @@ class StMapTest(DeltaGeneratorTestCase):
         st.map(df, size="size", color="color")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
-        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
-        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+        assert c.get("layers")[0].get("getFillColor") == "@@=color"
+        assert c.get("layers")[0].get("getRadius") == "@@=size"
 
     def test_named_dataframe_index(self):
         """Test that the map method does not error with a dataframe with a named index"""
@@ -147,11 +149,11 @@ class StMapTest(DeltaGeneratorTestCase):
         st.map(df, color="color", size="size")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
-        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
-        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+        assert c.get("layers")[0].get("getFillColor") == "@@=color"
+        assert c.get("layers")[0].get("getRadius") == "@@=size"
 
         # Also test that the radius property is set up correctly.
-        self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
+        assert c.get("layers")[0].get("radiusMinPixels") == 3
 
     def test_common_color_formats(self):
         """Test that users can pass colors in different formats."""
@@ -207,12 +209,13 @@ class StMapTest(DeltaGeneratorTestCase):
             for prefix, expected_color_values in expected_values.items():
                 if col_name.startswith(prefix):
                     return expected_color_values
+            return None
 
         for color_column in color_columns:
             expected_color_values = get_expected_color_values(color_column)
 
             if expected_color_values is None:
-                with self.assertRaises(StreamlitAPIException):
+                with pytest.raises(StreamlitAPIException):
                     st.map(df, color=color_column)
 
             else:
@@ -224,7 +227,7 @@ class StMapTest(DeltaGeneratorTestCase):
                 rows = c.get("layers")[0].get("data")
 
                 for i, row in enumerate(rows):
-                    self.assertEqual(row[color_column], expected_color_values[i])
+                    assert row[color_column] == expected_color_values[i]
 
     def test_unused_columns_get_dropped(self):
         """Test that unused columns don't get transmitted."""
@@ -241,23 +244,23 @@ class StMapTest(DeltaGeneratorTestCase):
 
         st.map(df)
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 2)
+        assert len(c.get("layers")[0].get("data")[0]) == 2
 
         st.map(df, latitude="xlat", longitude="xlon")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 2)
+        assert len(c.get("layers")[0].get("data")[0]) == 2
 
         st.map(df, latitude="xlat", longitude="xlon", color="int_color")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 3)
+        assert len(c.get("layers")[0].get("data")[0]) == 3
 
         st.map(df, latitude="xlat", longitude="xlon", size="size")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 3)
+        assert len(c.get("layers")[0].get("data")[0]) == 3
 
         st.map(df, latitude="xlat", longitude="xlon", color="int_color", size="size")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 4)
+        assert len(c.get("layers")[0].get("data")[0]) == 4
 
     def test_original_df_is_untouched(self):
         """Test that when we modify the outgoing DF we don't mutate the input DF."""
@@ -271,29 +274,15 @@ class StMapTest(DeltaGeneratorTestCase):
 
         st.map(df)
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 2)
-        self.assertEqual(len(df.columns), 3)
-
-    # This test was turned off while we investigate issues with the feature.
-    def turnedoff_test_map_style_raises_error(self):
-        """Test that map_style raises error when no Mapbox token is present."""
-        with self.assertRaises(StreamlitAPIException):
-            st.map(mock_df, map_style="MY_MAP_STYLE")
-
-    # This test was turned off while we investigate issues with the feature.
-    @patch_config_options({"mapbox.token": "MY_TOKEN"})
-    def turnedoff_test_map_style(self):
-        """Test that map_style works when a Mapbox token is present."""
-        st.map(mock_df, map_style="MY_MAP_STYLE")
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(c.get("mapStyle"), "MY_MAP_STYLE")
+        assert len(c.get("layers")[0].get("data")[0]) == 2
+        assert len(df.columns) == 3
 
     def test_default_map_copy(self):
         """Test that _DEFAULT_MAP is not modified as other work occurs."""
-        self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
+        assert _DEFAULT_MAP["initialViewState"]["latitude"] == 0
 
         st.map(mock_df)
-        self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
+        assert _DEFAULT_MAP["initialViewState"]["latitude"] == 0
 
     def test_default_zoom_level(self):
         """Test that _DEFAULT_ZOOM_LEVEL is set if zoom is not provided and distance is too small."""
@@ -301,7 +290,7 @@ class StMapTest(DeltaGeneratorTestCase):
         st.map(df)
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(c.get("initialViewState").get("zoom"), _DEFAULT_ZOOM_LEVEL)
+        assert c.get("initialViewState").get("zoom") == _DEFAULT_ZOOM_LEVEL
 
     def test_map_leak(self):
         """Test that maps don't stay in memory when you create a new blank one.
@@ -312,7 +301,7 @@ class StMapTest(DeltaGeneratorTestCase):
         st.map()
 
         c = self.get_delta_from_queue().new_element.deck_gl_json_chart
-        self.assertEqual(json.loads(c.json), _DEFAULT_MAP)
+        assert json.loads(c.json) == _DEFAULT_MAP
 
     @parameterized.expand(
         [
@@ -331,30 +320,33 @@ class StMapTest(DeltaGeneratorTestCase):
     def test_missing_column(self, column_name, exception_message):
         """Test st.map with wrong lat column label."""
         df = mock_df.drop(columns=[column_name])
-        with self.assertRaises(Exception) as ctx:
+        with pytest.raises(StreamlitAPIException, match=re.escape(exception_message)):
             st.map(df)
-
-        self.assertEqual(
-            exception_message,
-            str(ctx.exception),
-        )
 
     def test_nan_exception(self):
         """Test st.map with NaN in data."""
         df = pd.DataFrame({"lat": [1, 2, np.nan], "lon": [11, 12, 13]})
-        with self.assertRaises(Exception) as ctx:
+        with pytest.raises(
+            StreamlitAPIException, match="not allowed to contain null values"
+        ):
             st.map(df)
-
-        self.assertIn("not allowed to contain null values", str(ctx.exception))
 
     def test_map_with_height(self):
         """Test st.map with height."""
         st.map(mock_df, height=500)
         c = self.get_delta_from_queue().new_element.deck_gl_json_chart
-        self.assertEqual(c.height, 500)
+        assert c.height == 500
 
     def test_map_with_width(self):
         """Test st.map with width."""
         st.map(mock_df, width=240)
         c = self.get_delta_from_queue().new_element.deck_gl_json_chart
-        self.assertEqual(c.width, 240)
+        assert c.width == 240
+
+    def test_mapbox_token_is_set_in_proto(self):
+        """Test that mapbox token is set in proto if configured."""
+
+        with patch_config_options({"mapbox.token": "test_mapbox_token"}):
+            st.map(mock_df)
+            c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+            assert c.mapbox_token == "test_mapbox_token"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import withPagination, { PaginationProps } from "./withPagination"
 import UploadedFile from "./UploadedFile"
@@ -49,4 +49,4 @@ const UploadedFiles = (props: Props & PaginationProps): ReactElement => (
     <PaginatedFiles {...props} />
   </StyledUploadedFiles>
 )
-export default UploadedFiles
+export default memo(UploadedFiles)

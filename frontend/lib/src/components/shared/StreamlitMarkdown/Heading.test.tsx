@@ -29,7 +29,6 @@ import Heading, { HeadingProtoProps } from "./Heading"
 const getHeadingProps = (
   elementProps: Partial<HeadingProto> = {}
 ): HeadingProtoProps => ({
-  width: 300,
   element: HeadingProto.create({
     anchor: "some-anchor",
     tag: "h1",
@@ -173,7 +172,7 @@ describe("Heading", () => {
     render(<Heading {...props} />)
 
     expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
-      "| Syntax | Description || ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+      "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
     )
     expect(screen.getByRole("heading")).toHaveTextContent(
       `| Syntax | Description |`

@@ -32,11 +32,15 @@ export interface Props {
   readonly sessionId: string
   readonly streamlitVersion: string
   readonly pythonVersion: string
+  readonly serverOS: string
+  readonly hasDisplay: boolean
   readonly installationId: string
   readonly installationIdV3: string
+  readonly installationIdV4: string
   readonly maxCachedMessageAge: number
   readonly commandLine?: string // Unused, but kept around for compatibility
   readonly isHello: boolean
+  readonly isConnected: boolean
 }
 
 export class SessionInfo {
@@ -73,9 +77,14 @@ export class SessionInfo {
     this._current = notNullOrUndefined(props) ? { ...props } : undefined
   }
 
-  /** Clear `SessionInfo.current` and copy its previous props to `SessionInfo.last`. */
-  public clearCurrent(): void {
-    this.setCurrent(undefined)
+  /** Marks `SessionInfo.current` as not connected and copy its previous props to `SessionInfo.last`. */
+  public disconnect(): void {
+    if (this._current) {
+      this.setCurrent({
+        ...this._current,
+        isConnected: false,
+      })
+    }
   }
 
   /** True if `SessionInfo.current` exists. */
@@ -99,10 +108,15 @@ export class SessionInfo {
       sessionId: initialize.sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
+      serverOS: environmentInfo.serverOs,
+      hasDisplay: environmentInfo.hasDisplay,
       installationId: userInfo.installationId,
       installationIdV3: userInfo.installationIdV3,
+      installationIdV4: userInfo.installationIdV4,
       maxCachedMessageAge: config.maxCachedMessageAge,
       isHello: initialize.isHello,
+      // We assume we are always connected because the message came directly from the server.
+      isConnected: true,
     }
   }
 }

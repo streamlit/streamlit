@@ -45,6 +45,7 @@ export class LighthouseOrchestrator {
   constructor() {
     this.chrome = null
     this.streamlit = null
+    this._initialized = false
   }
 
   /**
@@ -53,7 +54,38 @@ export class LighthouseOrchestrator {
    * @returns {Promise<void>}
    */
   async initialize() {
-    this.chrome = await chromeLauncher.launch({ chromeFlags: ["--headless"] })
+    const MAX_RETRIES = 3
+    let retryCount = 0
+
+    while (retryCount <= MAX_RETRIES) {
+      try {
+        console.log(
+          `Launching Chrome in headless mode (attempt ${retryCount + 1}/${
+            MAX_RETRIES + 1
+          })...`
+        )
+        this.chrome = await chromeLauncher.launch({
+          chromeFlags: ["--headless"],
+        })
+        console.log(`Chrome launched successfully on port ${this.chrome.port}`)
+        this._initialized = true
+        return
+      } catch (error) {
+        retryCount++
+        if (retryCount > MAX_RETRIES) {
+          console.error(
+            `Failed to launch Chrome after ${MAX_RETRIES + 1} attempts:`,
+            error
+          )
+          throw new Error(`Chrome launch failed: ${error.message}`)
+        }
+        console.log(
+          `Chrome launch failed, retrying... (${retryCount}/${MAX_RETRIES})`
+        )
+        // Wait for 1 second before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
   }
 
   /**
@@ -181,52 +213,64 @@ export class LighthouseOrchestrator {
     console.log(`Running Lighthouse for ${appBaseName} in ${mode} mode`)
 
     if (!this.chrome) {
-      throw new Error("Chrome is not running")
+      console.error(`Initialization status: ${this._initialized}`)
+      throw new Error(
+        "Chrome instance is not available. Did initialize() succeed?"
+      )
     }
 
     const REPORT_NAME = [sanitizedRunId, appBaseName, mode, "lhreport"].join(
       "_-_"
     )
 
-    const runnerResult = await lighthouse(
-      "http://localhost:3001/",
-      {
-        logLevel: "info",
-        output: "html",
-        onlyCategories: ["performance"],
-        port: this.chrome.port,
-      },
-      MODES[mode]
-    )
+    try {
+      const runnerResult = await lighthouse(
+        "http://localhost:3001/",
+        {
+          logLevel: "info",
+          output: "html",
+          onlyCategories: ["performance"],
+          port: this.chrome.port,
+          maxWaitForLoad: 60 * 1000, // Wait up to 60 seconds for page load
+        },
+        MODES[mode]
+      )
 
-    if (!runnerResult) {
-      throw new Error("No runner result")
+      if (!runnerResult) {
+        throw new Error("No runner result")
+      }
+
+      // `.report` is the HTML report as a string
+      const reportHtml = runnerResult.report
+      if (Array.isArray(reportHtml)) {
+        throw new Error("Report is an array")
+      }
+
+      if (!fs.existsSync(REPORTS_DIRECTORY)) {
+        fs.mkdirSync(REPORTS_DIRECTORY)
+      }
+
+      fs.writeFileSync(
+        path.join(REPORTS_DIRECTORY, `${REPORT_NAME}.html`),
+        reportHtml
+      )
+      fs.writeFileSync(
+        path.join(REPORTS_DIRECTORY, `${REPORT_NAME}.json`),
+        JSON.stringify(runnerResult.lhr)
+      )
+
+      // `.lhr` is the Lighthouse Result as a JS object
+      console.log("Report is done for", runnerResult.lhr.finalDisplayedUrl)
+      console.log(
+        "Performance score was",
+        (runnerResult.lhr.categories.performance.score || 0) * 100
+      )
+    } catch (error) {
+      console.error(
+        `Lighthouse run failed for ${appBaseName} in ${mode} mode:`,
+        error
+      )
+      throw error
     }
-
-    // `.report` is the HTML report as a string
-    const reportHtml = runnerResult.report
-    if (Array.isArray(reportHtml)) {
-      throw new Error("Report is an array")
-    }
-
-    if (!fs.existsSync(REPORTS_DIRECTORY)) {
-      fs.mkdirSync(REPORTS_DIRECTORY)
-    }
-
-    fs.writeFileSync(
-      path.join(REPORTS_DIRECTORY, `${REPORT_NAME}.html`),
-      reportHtml
-    )
-    fs.writeFileSync(
-      path.join(REPORTS_DIRECTORY, `${REPORT_NAME}.json`),
-      JSON.stringify(runnerResult.lhr)
-    )
-
-    // `.lhr` is the Lighthouse Result as a JS object
-    console.log("Report is done for", runnerResult.lhr.finalDisplayedUrl)
-    console.log(
-      "Performance score was",
-      (runnerResult.lhr.categories.performance.score || 0) * 100
-    )
   }
 }

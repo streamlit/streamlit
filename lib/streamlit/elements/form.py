@@ -17,6 +17,14 @@ import textwrap
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    Width,
+    get_height_config,
+    get_width_config,
+    validate_height,
+    validate_width,
+)
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_session_state_rules,
@@ -67,6 +75,8 @@ class FormMixin:
         *,
         enter_to_submit: bool = True,
         border: bool = True,
+        width: Width = "stretch",
+        height: Height = "content",
     ) -> DeltaGenerator:
         """Create a form that batches elements together with a "Submit" button.
 
@@ -121,6 +131,38 @@ class FormMixin:
                 widget in the form will do nothing. You should only remove the border if
                 there's another border (e.g. because of an expander) or the form is small
                 (e.g. just a text input and a submit button).
+
+        width : "stretch", "content", or int
+            The width of the form container. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - ``"content"``: The width of the container matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the form container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container matches the height of
+              its content or the height of the parent container, whichever is
+              larger. If the container is not in a parent container, the height
+              of the container matches the height of its content.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+            .. note::
+                Use scrolling containers sparingly. If you use scrolling
+                containers, avoid heights that exceed 500 pixels. Otherwise,
+                the scroll surface of the container might cover the majority of
+                the screen on mobile devices, which makes it hard to scroll the
+                rest of the app.
 
         Examples
         --------
@@ -181,6 +223,10 @@ class FormMixin:
         block_proto.form.clear_on_submit = clear_on_submit
         block_proto.form.enter_to_submit = enter_to_submit
         block_proto.form.border = border
+        validate_width(width, allow_content=True)
+        block_proto.width_config.CopyFrom(get_width_config(width))
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
         block_dg = self.dg._block(block_proto)
 
         # Attach the form's button info to the newly-created block's
@@ -200,9 +246,10 @@ class FormMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> bool:
-        """Display a form submit button.
+        r"""Display a form submit button.
 
         When this button is clicked, all widget values inside the form will be
         sent from the user's browser to your Streamlit server in a batch.
@@ -216,11 +263,29 @@ class FormMixin:
         Parameters
         ----------
         label : str
-            A short label explaining to the user what this button is for.
-            Defaults to "Submit".
+            A short label explaining to the user what this button is for. This
+            defaults to ``"Submit"``. The label can optionally contain
+            GitHub-flavored Markdown of the following types: Bold, Italics,
+            Strikethroughs, Inline Code, Links, and Images. Images display like
+            icons, with a max height equal to the font height.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
         help : str or None
-            A tooltip that gets displayed when the button is hovered over.
-            Defaults to None.
+            A tooltip that gets displayed when the button is hovered over. If
+            this is ``None`` (default), no tooltip is displayed.
+
+            The tooltip can optionally contain GitHub-flavored Markdown,
+            including the Markdown directives described in the ``body``
+            parameter of ``st.markdown``.
         on_click : callable
             An optional callback invoked when this button is clicked.
         args : tuple
@@ -251,7 +316,7 @@ class FormMixin:
               of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
-              Thumb Up icon. Find additional icons in the `Material Symbols \
+              Thumb Up icon. Find additional icons in the `Material Symbols
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
         disabled : bool
@@ -264,6 +329,11 @@ class FormMixin:
             ``enter_to_submit=False``.
 
         use_container_width : bool
+                This parameter will be removed in a future version. Use the
+                ``width`` parameter instead. For ``use_container_width=True``,
+                use ``width="stretch"``. For ``use_container_width=False``,
+                use ``width="content"``.
+
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -272,12 +342,26 @@ class FormMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
+        width : int, "stretch", or "content"
+            An optional width for the submit button. This can be one of the
+            following:
+
+            - An integer which corresponds to the desired button width in
+              pixels.
+            - ``"stretch"``: The button's width expands to fill its parent
+              container.
+            - ``"content"`` (default): The button's width is set to fit its
+              contents.
+
         Returns
         -------
         bool
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
+
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
         if type not in ["primary", "secondary", "tertiary"]:
@@ -295,8 +379,8 @@ class FormMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     def _form_submit_button(
@@ -310,8 +394,8 @@ class FormMixin:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
+        width: Width = "content",
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = f"FormSubmitter:{form_id}-{label}"
@@ -326,8 +410,8 @@ class FormMixin:
             type=type,
             icon=icon,
             disabled=disabled,
-            use_container_width=use_container_width,
             ctx=ctx,
+            width=width,
         )
 
     @property

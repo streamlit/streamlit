@@ -20,10 +20,6 @@ import { colors } from "~lib/theme/primitives/colors"
 
 export default {
   ...colors,
-  navTextColor: colors.gray80,
-  navActiveTextColor: colors.gray90,
-  navIconColor: colors.gray60,
-  sidebarControlColor: colors.gray70,
   // For this one, we use a specific color,
   // outside our standard color palette,
   // to ensure contrast is good enough for accessibility

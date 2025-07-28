@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -25,18 +25,17 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { Box } from "~lib/components/shared/Base/styled-components"
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
 function Button(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width, fragmentId } = props
-  const style = { width }
+  const { disabled, element, widgetMgr, fragmentId } = props
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -45,18 +44,19 @@ function Button(props: Props): ReactElement {
     kind = BaseButtonKind.TERTIARY
   }
 
-  // When useContainerWidth true & has help tooltip,
-  // we need to pass the container width down to the button
-  const fluidWidth = element.help ? width : true
-
   return (
-    <div className="stButton" data-testid="stButton" style={style}>
-      <BaseButtonTooltip help={element.help}>
+    <Box className="stButton" data-testid="stButton">
+      <BaseButtonTooltip
+        help={element.help}
+        // The element wrapper determines the width so
+        // we should always expand to fill the wrapper.
+        containerWidth={true}
+      >
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
-          fluidWidth={element.useContainerWidth ? fluidWidth : false}
+          containerWidth={true}
           onClick={() =>
             widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
           }
@@ -64,8 +64,8 @@ function Button(props: Props): ReactElement {
           <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>
       </BaseButtonTooltip>
-    </div>
+    </Box>
   )
 }
 
-export default Button
+export default memo(Button)

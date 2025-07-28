@@ -39,7 +39,6 @@ const getProps = (
     label: "Label",
     ...elementProps,
   }),
-  width: 250,
   disabled: false,
   // @ts-expect-error
   widgetMgr: new WidgetStateManager(sendBackMsg),
@@ -62,7 +61,6 @@ describe("Button widget", () => {
     const stButtonDiv = screen.getByTestId("stButton")
 
     expect(stButtonDiv).toHaveClass("stButton")
-    expect(stButtonDiv).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("should render a label within the button", () => {
@@ -119,11 +117,24 @@ describe("Button widget", () => {
     })
   })
 
-  it("does not use container width by default", () => {
-    render(<Button {...getProps()}>Hello</Button>)
+  it("renders with help properly", async () => {
+    const user = userEvent.setup()
+    // Hover to see tooltip content
+    render(<Button {...getProps({ help: "mockHelpText" })} />)
 
+    // Ensure both the button and the tooltip target have the correct width.
+    // These will be 100% and the ElementContainer will have styles to determine
+    // the button width.
     const buttonWidget = screen.getByRole("button")
-    expect(buttonWidget).toHaveStyle("width: auto")
+    expect(buttonWidget).toHaveStyle("width: 100%")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
+
+    // Ensure the tooltip content is visible and has the correct text
+    await user.hover(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("mockHelpText")
   })
 
   it("passes useContainerWidth property without help correctly", () => {
@@ -131,16 +142,5 @@ describe("Button widget", () => {
 
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle("width: 100%")
-  })
-
-  it("passes useContainerWidth property with help correctly", () => {
-    render(
-      <Button {...getProps({ useContainerWidth: true, help: "mockHelpText" })}>
-        Hello
-      </Button>
-    )
-
-    const buttonWidget = screen.getByRole("button")
-    expect(buttonWidget).toHaveStyle(`width: ${250}px`)
   })
 })

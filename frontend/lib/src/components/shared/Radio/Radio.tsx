@@ -22,7 +22,6 @@ import React, {
   useState,
 } from "react"
 
-import { useTheme } from "@emotion/react"
 import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
 import {
@@ -33,24 +32,51 @@ import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 import { Placement } from "~lib/components/shared/Tooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { addCssUnit, convertRemToPx, EmotionTheme } from "~lib/theme"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 export interface Props {
   disabled: boolean
   horizontal: boolean
-  width?: number
   value: number | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   onChange: (selectedIndex: number) => any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   options: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   captions: any[]
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string
 }
 
+function getRadioInnerSizes(theme: EmotionTheme): [string, string] {
+  // If checked, the radio inner circle should fill 37.5% of the total radio size.
+  // If not checked, it should show a border of spacing.threeXS.
+
+  // However, fractional pixels could cause the radio border to look uneven. This happens
+  // when (checkbox - threeXS) in rem is not an integer number of pixels. To avoid this,
+  // we round the number converted from rem to pixels then add back the unit.
+  const checkboxSize = parseFloat(theme.sizes.checkbox)
+  const threeXSSpacing = parseFloat(theme.spacing.threeXS)
+
+  const outerSize = convertRemToPx(checkboxSize.toString())
+  const checkedInnerSize = Math.round(outerSize * 0.375)
+
+  let innerSize = Math.round(
+    convertRemToPx((checkboxSize - threeXSSpacing).toString())
+  )
+  // If rounding makes the inner size larger than the checkbox, reduce it by 1px
+  if (innerSize >= outerSize) {
+    innerSize -= 1
+  }
+
+  return [addCssUnit(checkedInnerSize, "px"), addCssUnit(innerSize, "px")]
+}
+
 function Radio({
   disabled,
   horizontal,
-  width,
   value: defaultValue,
   onChange,
   options,
@@ -70,7 +96,7 @@ function Radio({
 
     // Exclude value from the dependency list on purpose to avoid a loop.
     // TODO: Update to match React best practices
-    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/react-compiler
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [defaultValue])
 
@@ -83,9 +109,7 @@ function Radio({
     [onChange]
   )
 
-  const theme = useTheme()
-  const { colors, radii } = theme
-  const style = { width }
+  const theme = useEmotionTheme()
   const hasCaptions = captions.length > 0
   const hasOptions = options.length > 0
   const cleanedOptions = hasOptions ? options : ["No options to select."]
@@ -100,8 +124,10 @@ function Radio({
     return spacer ? "&nbsp;" : caption
   }
 
+  const [checkedRadioInnerSize, radioInnerSize] = getRadioInnerSizes(theme)
+
   return (
-    <div className="stRadio" data-testid="stRadio" style={style}>
+    <div className="stRadio" data-testid="stRadio">
       <WidgetLabel
         label={label}
         disabled={shouldDisable}
@@ -131,6 +157,8 @@ function Radio({
       >
         {cleanedOptions.map((option: string, index: number) => (
           <UIRadio
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             key={index}
             value={index.toString()}
             overrides={{
@@ -150,12 +178,8 @@ function Radio({
                   alignItems: "start",
                   paddingRight: theme.spacing.threeXS,
                   backgroundColor: $isFocusVisible
-                    ? colors.darkenedBgMix25
+                    ? theme.colors.darkenedBgMix25
                     : "",
-                  borderTopLeftRadius: radii.md,
-                  borderTopRightRadius: radii.md,
-                  borderBottomLeftRadius: radii.md,
-                  borderBottomRightRadius: radii.md,
                 }),
               },
               RadioMarkOuter: {
@@ -173,25 +197,21 @@ function Radio({
                   marginLeft: theme.spacing.none,
                   backgroundColor:
                     $checked && !shouldDisable
-                      ? colors.primary
-                      : colors.fadedText40,
+                      ? theme.colors.primary
+                      : theme.colors.fadedText40,
                 }),
               },
               RadioMarkInner: {
                 style: ({ $checked }: { $checked: boolean }) => ({
-                  // If checked, it should fill 37.5% of the total radio size.
-                  // if not checked, show a border of spacing.threeXS.
-                  height: $checked
-                    ? "37.5%"
-                    : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
-                  width: $checked
-                    ? "37.5%"
-                    : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
+                  height: $checked ? checkedRadioInnerSize : radioInnerSize,
+                  width: $checked ? checkedRadioInnerSize : radioInnerSize,
                 }),
               },
               Label: {
                 style: {
-                  color: shouldDisable ? colors.fadedText40 : colors.bodyText,
+                  color: shouldDisable
+                    ? theme.colors.fadedText40
+                    : theme.colors.bodyText,
                   position: "relative",
                   top: theme.spacing.px,
                 },

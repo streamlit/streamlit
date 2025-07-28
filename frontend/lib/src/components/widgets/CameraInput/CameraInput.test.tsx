@@ -25,6 +25,7 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/protobuf"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -75,6 +76,14 @@ const getProps = (
 
 describe("CameraInput widget", () => {
   fetchMocker.enableMocks()
+
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")

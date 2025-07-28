@@ -33,7 +33,6 @@ export interface Props {
   disabled: boolean
   element: SelectboxProto
   widgetMgr: WidgetStateManager
-  width: number
   fragmentId?: string
 }
 
@@ -41,21 +40,24 @@ export interface Props {
  * The value specified by the user via the UI. If the user didn't touch this
  * widget's UI, the default value is used.
  */
-type SelectboxValue = number | null
+type SelectboxValue = string | null
 
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: SelectboxProto
 ): SelectboxValue | undefined => {
-  return widgetMgr.getIntValue(element)
+  return widgetMgr.getStringValue(element)
 }
 
 const getDefaultStateFromProto = (element: SelectboxProto): SelectboxValue => {
-  return element.default ?? null
+  if (element.options.length === 0 || isNullOrUndefined(element.default)) {
+    return null
+  }
+  return element.options[element.default]
 }
 
 const getCurrStateFromProto = (element: SelectboxProto): SelectboxValue => {
-  return element.value ?? null
+  return element.rawValue ?? null
 }
 
 const updateWidgetMgrState = (
@@ -64,7 +66,7 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<SelectboxValue>,
   fragmentId?: string
 ): void => {
-  widgetMgr.setIntValue(
+  widgetMgr.setStringValue(
     element,
     valueWithSource.value,
     { fromUi: valueWithSource.fromUi },
@@ -76,11 +78,16 @@ const Selectbox: FC<Props> = ({
   disabled,
   element,
   widgetMgr,
-  width,
   fragmentId,
 }) => {
-  const { options, help, label, labelVisibility, placeholder } = element
-
+  const {
+    options,
+    help,
+    label,
+    labelVisibility,
+    placeholder,
+    acceptNewOptions,
+  } = element
   const [value, setValueWithSource] = useBasicWidgetState<
     SelectboxValue,
     SelectboxProto
@@ -95,8 +102,8 @@ const Selectbox: FC<Props> = ({
   })
 
   const onChange = useCallback(
-    (value: SelectboxValue) => {
-      setValueWithSource({ value, fromUi: true })
+    (valueArg: SelectboxValue) => {
+      setValueWithSource({ value: valueArg, fromUi: true })
     },
     [setValueWithSource]
   )
@@ -109,12 +116,12 @@ const Selectbox: FC<Props> = ({
       labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
       options={options}
       disabled={disabled}
-      width={width}
       onChange={onChange}
       value={value}
       help={help}
       placeholder={placeholder}
       clearable={clearable}
+      acceptNewOptions={acceptNewOptions ?? false}
     />
   )
 }

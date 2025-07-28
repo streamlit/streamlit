@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -20,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     expand_sidebar,
     expect_help_tooltip,
     get_element_by_key,
+    get_expander,
     get_markdown,
     wait_for_all_images_to_be_loaded,
 )
@@ -29,7 +31,8 @@ def test_different_markdown_elements_in_one_block_displayed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the block containing a mixture of different markdown elements is
-    displayed correctly."""
+    displayed correctly.
+    """
 
     mixed_markdown_element = (
         get_element_by_key(themed_app, "mixed_markdown")
@@ -57,7 +60,7 @@ def test_displays_individual_markdowns(app: Page):
     text = [
         "This markdown is awesome! 😎",
         "This <b>HTML tag</b> is escaped!",
-        "This HTML tag is not escaped!",
+        "info This HTML tag is not escaped!",
         "[text]",
         "link",
         "[][]",
@@ -81,7 +84,9 @@ def test_displays_individual_markdowns(app: Page):
     expect(red_background).to_have_css("background-color", "rgba(255, 43, 43, 0.1)")
     expect(rainbow_background).to_have_css(
         "background-image",
-        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 227, 18, 0.1), rgba(255, 227, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), rgba(128, 61, 245, 0.1), rgba(88, 63, 132, 0.1))",
+        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 227, 18, 0.1), "
+        "rgba(255, 227, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), "
+        "rgba(128, 61, 245, 0.1), rgba(88, 63, 132, 0.1))",
     )
     expect(green_background).to_have_css("background-color", "rgba(33, 195, 84, 0.1)")
 
@@ -96,7 +101,7 @@ def test_displays_individual_markdowns(app: Page):
 def test_markdown_displays_long_headers_above_other_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Displays long headers above other elements in the markdown block"""
+    """Displays long headers above other elements in the markdown block."""
 
     long_header = (
         app.get_by_test_id("stVerticalBlock").get_by_test_id("stVerticalBlock").nth(0)
@@ -148,7 +153,8 @@ def test_match_snapshot_for_headers_in_single_markdown_command(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that snapshot of headers joined in a single string and written in a single
-    st.markdown command is correct."""
+    st.markdown command is correct.
+    """
     container = _get_container_of_text(app, "Headers in single st.markdown command")
     assert_snapshot(container, name="st_markdown-headers_joined_in_single_command")
 
@@ -156,7 +162,7 @@ def test_match_snapshot_for_headers_in_single_markdown_command(
 def test_match_snapshot_for_headers_in_multiple_markdown_commands(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that snapshot of headers written in multiple st.markdown commands is correct"""
+    """Test that snapshot of headers written in multiple st.markdown commands is correct."""
     container = _get_container_of_text(app, "Headers in multiple st.markdown command")
     assert_snapshot(container, name="st_markdown-headers_via_multiple_commands")
 
@@ -181,6 +187,9 @@ def test_match_snapshot_for_column_beside_widget(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the st.markdown columns beside widget snapshot is correct."""
+    # Wait for the labels to be visible, or else the snapshot tests will flake
+    expect(app.get_by_text("This is a label")).to_have_count(2)
+
     container = _get_container_of_text(app, "Headers in column beside widget")
     assert_snapshot(container, name="st_markdown-headers_beside_widget")
 
@@ -221,15 +230,42 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     latex_elements = get_element_by_key(themed_app, "latex_elements").get_by_test_id(
         "stMarkdown"
     )
-    expect(latex_elements).to_have_count(3)
+    expect(latex_elements).to_have_count(8)
 
     assert_snapshot(latex_elements.nth(0), name="st_latex-latex")
-    expect(latex_elements.nth(0)).to_contain_text("LATE​X")
+    expect(latex_elements.nth(0)).to_contain_text("LATEX")
 
     assert_snapshot(latex_elements.nth(1), name="st_latex-formula")
 
     expect(latex_elements.nth(2)).to_contain_text("a + b")
     assert_snapshot(latex_elements.nth(2), name="st_latex-sympy")
+
+    expect(latex_elements.nth(3)).to_contain_text("this is a very long formula")
+    assert_snapshot(latex_elements.nth(3), name="st_latex-long")
+
+    expect(latex_elements.nth(4)).to_contain_text("this is a very long formula")
+    assert_snapshot(latex_elements.nth(4), name="st_latex-long-help")
+
+    assert_snapshot(latex_elements.nth(5), name="st_latex-width_pixels")
+    assert_snapshot(latex_elements.nth(6), name="st_latex-width_stretch")
+    assert_snapshot(latex_elements.nth(7), name="st_latex-width_content")
+
+
+def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that badge elements are displayed correctly."""
+    badge_container = get_element_by_key(themed_app, "badge_elements")
+
+    # Check that the badge texts are displayed correctly
+    expect(badge_container).to_contain_text("Simple badge")
+    expect(badge_container).to_contain_text("Green badge with emoji")
+    expect(badge_container).to_contain_text("Red badge with material icon")
+    expect(badge_container).to_contain_text("🚀")
+    expect(badge_container).to_contain_text("This is a very long badge")
+    expect(badge_container).to_contain_text("Blue markdown badge")
+    expect(badge_container).to_contain_text("🌱 Green markdown badge")
+
+    # Take a snapshot of all badges together
+    assert_snapshot(badge_container, name="st_badge-examples")
 
 
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
@@ -250,3 +286,122 @@ def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunctio
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stMarkdown")
+
+
+@pytest.mark.app_hash("bold-header1")
+def test_anchor_scrolling(app: Page):
+    """Test that anchor scrolling works correctly."""
+    # The app fixture navigates to http://localhost:{app_port}/#bold-header1
+    # which should scroll to the header.
+    expect(app.get_by_text("Bold header1")).to_be_in_viewport()
+
+
+@pytest.mark.performance
+def test_markdown_rendering_performance(app: Page):
+    """Test that the performance of st.markdown and st.text."""
+    app.get_by_text("Run element").click()
+    # This is currently very slow, hence the need for a performance test
+    expect(app.get_by_text("DONE")).to_be_attached(timeout=15000)
+
+    app.get_by_text("st.text").click()
+    expect(app.get_by_text("DONE")).not_to_be_attached()
+
+    app.get_by_text("Run element").click()
+    expect(app.get_by_text("DONE")).to_be_attached()
+
+
+def test_markdown_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that markdown elements with different width configurations are displayed correctly."""
+    markdown_expander = get_expander(themed_app, "Markdown Width Examples")
+
+    expect(markdown_expander).to_be_visible()
+    markdown_expander.scroll_into_view_if_needed()
+
+    # Get all markdown elements within the expander
+    markdown_elements = markdown_expander.get_by_test_id("stMarkdown")
+    expect(markdown_elements).to_have_count(3)
+
+    # Test each markdown element individually
+    assert_snapshot(
+        markdown_elements.nth(0),
+        name="st_markdown-width_content",
+    )
+
+    assert_snapshot(
+        markdown_elements.nth(1),
+        name="st_markdown-width_200px",
+    )
+
+    assert_snapshot(
+        markdown_elements.nth(2),
+        name="st_markdown-width_stretch",
+    )
+
+
+def test_caption_width_examples(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that caption elements with different width configurations are displayed correctly."""
+    caption_expander = get_expander(themed_app, "Caption Width Examples")
+
+    expect(caption_expander).to_be_visible()
+    caption_expander.scroll_into_view_if_needed()
+
+    # Get all caption elements (which use stMarkdown test id) within the expander
+    caption_elements = caption_expander.get_by_test_id("stMarkdown")
+    expect(caption_elements).to_have_count(3)
+
+    # Test each caption element individually
+    assert_snapshot(
+        caption_elements.nth(0),
+        name="st_caption-width_content",
+    )
+
+    assert_snapshot(
+        caption_elements.nth(1),
+        name="st_caption-width_300px",
+    )
+
+    assert_snapshot(
+        caption_elements.nth(2),
+        name="st_caption-width_stretch",
+    )
+
+
+def test_badge_width_examples(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that badge elements with different width configurations are displayed correctly."""
+    badge_expander = get_expander(themed_app, "Badge Width Examples")
+
+    expect(badge_expander).to_be_visible()
+    badge_expander.scroll_into_view_if_needed()
+
+    # Get all badge elements (which use stMarkdown test id) within the expander
+    badge_elements = badge_expander.get_by_test_id("stMarkdown")
+    expect(badge_elements).to_have_count(3)
+
+    # Test each badge element individually
+    assert_snapshot(
+        badge_elements.nth(0),
+        name="st_badge-width_content",
+    )
+
+    assert_snapshot(
+        badge_elements.nth(1),
+        name="st_badge-width_100px",
+    )
+
+    assert_snapshot(
+        badge_elements.nth(2),
+        name="st_badge-width_stretch",
+    )
+
+
+def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that unsafe allow html works correctly."""
+    markdown_element = app.get_by_test_id("stMarkdown").get_by_text(
+        "info This HTML tag is not escaped!"
+    )
+    expect(markdown_element).to_be_visible()
+    assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")

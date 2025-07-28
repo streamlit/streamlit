@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { DataEditorProps, GridColumn } from "@glideapps/glide-data-grid"
 
@@ -35,7 +35,7 @@ function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
     () => new Map()
   )
 
-  const onColumnResize = React.useCallback(
+  const onColumnResize = useCallback(
     (
       column: GridColumn,
       _newSize: number,
@@ -49,7 +49,7 @@ function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
     [columnSizes]
   )
 
-  const sizedColumns = React.useMemo(() => {
+  const sizedColumns = useMemo(() => {
     return columns.map(column => {
       if (
         column.id &&

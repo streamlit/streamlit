@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { memo, ReactElement } from "react"
 
 import {
   StyledErrorContainerDiv,
@@ -31,4 +31,4 @@ const AudioInputErrorState = (): ReactElement => {
   )
 }
 
-export default AudioInputErrorState
+export default memo(AudioInputErrorState)

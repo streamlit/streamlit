@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import React, { CSSProperties, ReactElement } from "react"
+import React, { CSSProperties, memo, ReactElement, useContext } from "react"
+
+import { getLogger } from "loglevel"
 
 import {
   ImageList as ImageListProto,
@@ -22,13 +24,14 @@ import {
 } from "@streamlit/protobuf"
 
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Toolbar, {
   StyledToolbarElementContainer,
 } from "~lib/components/shared/Toolbar"
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { LibContext } from "~lib/components/core/LibContext"
 
 import {
   StyledCaption,
@@ -36,9 +39,10 @@ import {
   StyledImageList,
 } from "./styled-components"
 
+const LOG = getLogger("ImageList")
+
 export interface ImageListProps {
   endpoints: StreamlitEndpoints
-  width: number
   element: ImageListProto
   disableFullscreenMode?: boolean
 }
@@ -62,20 +66,20 @@ enum WidthBehavior {
  */
 function ImageList({
   element,
-  width,
   endpoints,
   disableFullscreenMode,
 }: Readonly<ImageListProps>): ReactElement {
   const {
     expanded: isFullScreen,
-    width: fullScreenWidth,
+    width,
     height,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
+  const { libConfig } = useContext(LibContext)
 
   // The width of the element is the width of the container, not necessarily the image.
-  const elementWidth: number = isFullScreen ? fullScreenWidth : width
+  const elementWidth = width || 0
   // The width field in the proto sets the image width, but has special
   // cases the values in the WidthBehavior enum.
   let imageWidth: number | undefined
@@ -109,10 +113,30 @@ function ImageList({
   if (height && isFullScreen) {
     imgStyle.maxHeight = height
     imgStyle.objectFit = "contain"
+    // @see issue https://github.com/streamlit/streamlit/issues/10904
+    // Ensure the image tries to fill the width to prevent sizeless SVGs from
+    // not rendering. Let object-fit handle aspect ratio.
+    imgStyle.width = "100%"
   } else {
-    imgStyle.width = imageWidth
+    // @see issue https://github.com/streamlit/streamlit/issues/10904
+    // Use imageWidth if defined, otherwise fallback to 100% to prevent sizeless
+    // SVGs from not rendering.
+    imgStyle.width = imageWidth ?? "100%"
     // Cap the image width, so it doesn't exceed its parent container width
     imgStyle.maxWidth = "100%"
+  }
+
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>
+  ): void => {
+    const imageUrl = e.currentTarget.src
+    LOG.error(`Client Error: Image source error - ${imageUrl}`)
+    endpoints.sendClientErrorToHost(
+      "Image",
+      "Image source failed to load",
+      "onerror triggered",
+      imageUrl
+    )
   }
 
   return (
@@ -133,11 +157,15 @@ function ImageList({
         {element.imgs.map((iimage, idx): ReactElement => {
           const image = iimage as ImageProto
           return (
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
             <StyledImageContainer data-testid="stImageContainer" key={idx}>
               <img
                 style={imgStyle}
                 src={endpoints.buildMediaURL(image.url)}
                 alt={idx.toString()}
+                onError={handleImageError}
+                crossOrigin={libConfig.resourceCrossOriginMode}
               />
               {image.caption && (
                 <StyledCaption data-testid="stImageCaption" style={imgStyle}>
@@ -159,4 +187,5 @@ function ImageList({
   )
 }
 
-export default withFullScreenWrapper(ImageList)
+const ImageListWithFullScreen = withFullScreenWrapper(ImageList)
+export default memo(ImageListWithFullScreen)

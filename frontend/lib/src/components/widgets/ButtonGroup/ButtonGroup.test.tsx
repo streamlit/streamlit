@@ -41,7 +41,7 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect
+  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   let expectCheck: any = expect(element)
   if (!should_exist) {
     expectCheck = expect.not
@@ -103,6 +103,9 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
+  widthConfig: {
+    useContent: true,
+  },
   ...widgetProps,
 })
 const EXPECTED_BUTTONS_LENGTH = materialIconOnlyOptions.length + options.length
@@ -575,6 +578,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: "bar",
       iconSize: "lg",
+      useSmallerFont: false,
     })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
@@ -592,6 +596,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: undefined,
       iconSize: "lg",
+      useSmallerFont: false,
     })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
@@ -609,6 +614,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "",
       icon: "foo",
       iconSize: "lg",
+      useSmallerFont: false,
     })
     expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
     expect(size).toBe(BaseButtonSize.XSMALL)
@@ -626,6 +632,7 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: "bar",
       iconSize: "base",
+      useSmallerFont: true,
     })
     expect(kind).toBe(BaseButtonKind.PILLS)
     expect(size).toBe(BaseButtonSize.MEDIUM)

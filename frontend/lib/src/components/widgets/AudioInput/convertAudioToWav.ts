@@ -17,7 +17,7 @@
 
 import { getLogger } from "loglevel"
 
-const log = getLogger("convertAudioToWav")
+const LOG = getLogger("convertAudioToWav")
 
 /**
  * Converts a file Blob (audio/video) to a WAV Blob.
@@ -32,7 +32,7 @@ async function convertFileToWav(fileBlob: Blob): Promise<Blob | undefined> {
   try {
     audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
   } catch (error) {
-    log.error(error)
+    LOG.error(error)
     return undefined // Return undefined if decoding fails
   }
 

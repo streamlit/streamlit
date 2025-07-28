@@ -30,6 +30,7 @@ import {
 
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import FileUploader, { Props } from "./FileUploader"
 
@@ -66,7 +67,7 @@ const getProps = (
       maxUploadSizeMb: 50,
       ...elementProps,
     }),
-    width: 0,
+    width: 250,
     disabled: false,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: vi.fn(),
@@ -95,6 +96,13 @@ const getProps = (
 }
 
 describe("FileUploader widget tests", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<FileUploader {...props} />)
@@ -166,9 +174,9 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
+    const fileDropZoneInput: HTMLInputElement = screen.getByTestId(
       "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    )
 
     const fileToUpload = createFile()
 
@@ -200,9 +208,9 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
+    const fileDropZoneInput: HTMLInputElement = screen.getByTestId(
       "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    )
 
     const fileToUpload = createFile()
     await user.upload(fileDropZoneInput, fileToUpload)
@@ -228,9 +236,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId(
-      "stFileUploaderDropzone"
-    ) as HTMLElement
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
 
     const filesToUpload = [
       new File(["Text in a file!"], "filename1.txt", {
@@ -291,9 +297,9 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
+    const fileDropZoneInput: HTMLInputElement = screen.getByTestId(
       "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    )
 
     const firstFile = createFile()
 
@@ -331,9 +337,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId(
-      "stFileUploaderDropzone"
-    ) as HTMLElement
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
 
     const filesToUpload = [
       new File(["Text in a file!"], "filename1.txt", {
@@ -401,9 +405,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
-      "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     // Upload two files
     await user.upload(fileDropZoneInput, createFile("filename1.txt"))
@@ -478,9 +480,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
-      "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     await user.upload(fileDropZoneInput, createFile())
 
@@ -512,9 +512,7 @@ describe("FileUploader widget tests", () => {
     const props = getProps({ multipleFiles: false, type: [".txt"] })
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId(
-      "stFileUploaderDropzone"
-    ) as HTMLElement
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
 
     const filesToUpload = [
       new File(["Another PDF file"], "anotherpdffile.pdf", {
@@ -561,9 +559,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
-      "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     // Upload a file that will be rejected by the server
     props.uploadClient.uploadFile = vi
@@ -581,9 +577,7 @@ describe("FileUploader widget tests", () => {
     const props = getProps({ multipleFiles: false, type: [".png"] })
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId(
-      "stFileUploaderDropzone"
-    ) as HTMLElement
+    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
 
     const filesToUpload = [
       new File(["TXT file"], "txtfile.txt", {
@@ -620,9 +614,7 @@ describe("FileUploader widget tests", () => {
     const props = getProps({ maxUploadSizeMb: 0 })
     render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
-      "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     await user.upload(fileDropZoneInput, createFile())
 
@@ -644,9 +636,7 @@ describe("FileUploader widget tests", () => {
 
     const { rerender } = render(<FileUploader {...props} />)
 
-    const fileDropZoneInput = screen.getByTestId(
-      "stFileUploaderDropzoneInput"
-    ) as HTMLInputElement
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     // Upload a single file
     await user.upload(fileDropZoneInput, createFile())
