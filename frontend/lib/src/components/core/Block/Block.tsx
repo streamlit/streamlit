@@ -275,6 +275,8 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
       <Dialog
         element={node.deltaBlock.dialog as BlockProto.Dialog}
         deltaMsgReceivedAt={node.deltaMsgReceivedAt}
+        widgetMgr={props.widgetMgr}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Dialog>

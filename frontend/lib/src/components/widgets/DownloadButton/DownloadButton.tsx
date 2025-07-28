@@ -86,16 +86,13 @@ function DownloadButton(props: Props): ReactElement {
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
-      <BaseButtonTooltip
-        help={element.help}
-        containerWidth={element.useContainerWidth}
-      >
+      <BaseButtonTooltip help={element.help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
-          containerWidth={element.useContainerWidth}
+          containerWidth={true}
         >
           <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>
