@@ -70,7 +70,7 @@ if runtime.exists():
         1,
         key="selectbox8",
         on_change=on_change,
-        args=[1, "2"],
+        args=[1, 2],
         kwargs={"y": 3},
         help="Help text",
     )
