@@ -16,8 +16,14 @@
 
 import React, { ReactElement } from "react"
 
-import { RenderResult, screen, waitFor, within } from "@testing-library/react"
-import { PLACEMENT, ToasterContainer } from "baseui/toast"
+import {
+  act,
+  RenderResult,
+  screen,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react"
+import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
 import { userEvent } from "@testing-library/user-event"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
@@ -60,6 +66,18 @@ const renderComponent = (props: ToastProps): RenderResult =>
   )
 
 describe("Toast Component", () => {
+  afterEach(async () => {
+    // Clear all toasts to prevent timeouts from running after test completion
+    // eslint-disable-next-line @typescript-eslint/require-await
+    await act(async () => {
+      toaster.clear()
+    })
+    // Small delay to ensure cleanup completes
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+  })
+
   test("renders default toast", () => {
     const props = getProps()
     renderComponent(props)
@@ -142,8 +160,7 @@ describe("Toast Component", () => {
     expect(closeButton).toBeInTheDocument()
     // Click close button
     await user.click(closeButton)
-    // Wait for toast to be removed from DOM
-    await waitFor(() => expect(toast).not.toBeInTheDocument())
+    await waitForElementToBeRemoved(toast)
   })
 
   test("throws an error when called via st.sidebar.toast", () => {
