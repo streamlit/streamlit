@@ -187,7 +187,7 @@ def test_handles_callback_on_change_correctly(app: Page):
         "selectbox changed: True", use_inner_text=True
     )
     expect(
-        app.get_by_text("Selectbox widget callback triggered: args=1, kwargs=2")
+        app.get_by_text("Selectbox widget callback triggered: x=1, y=2, z=3")
     ).to_be_visible()
 
     # Change different input to trigger delta path change
