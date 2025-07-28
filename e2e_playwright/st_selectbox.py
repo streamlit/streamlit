@@ -71,7 +71,7 @@ if runtime.exists():
         key="selectbox8",
         on_change=on_change,
         args=[1, 2],
-        kwargs={"y": 3},
+        kwargs={"z": 3},
         help="Help text",
     )
     st.write("value 8:", st.session_state.selectbox8)
