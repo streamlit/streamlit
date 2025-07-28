@@ -127,6 +127,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.deckGlJsonChart?.width,
     isContentWidthDataframe,
     isInHorizontalLayout,
+    node.element.arrowDataFrame?.useContainerWidth,
   ])
 
   const styles = useLayoutStyles({
