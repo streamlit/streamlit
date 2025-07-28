@@ -150,7 +150,6 @@ class PdfMixin:
         else:
             component_height = str(height)
 
-        # Call the custom component with correct parameter names
         result = pdf_component(
             file=file_param,
             height=component_height,
