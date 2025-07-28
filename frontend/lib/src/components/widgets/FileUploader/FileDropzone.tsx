@@ -21,9 +21,13 @@ import Dropzone, { FileRejection } from "react-dropzone"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
+  DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 
-import { StyledFileDropzoneSection } from "./styled-components"
+import {
+  StyledFileDropzoneButtonWrapper,
+  StyledFileDropzoneSection,
+} from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
 import { getAccept } from "./utils"
 
@@ -34,6 +38,8 @@ export interface Props {
   acceptedExtensions: string[]
   maxSizeBytes: number
   label: string
+  width: number
+  fileDragged: boolean
 }
 
 const FileDropzone = ({
@@ -43,6 +49,8 @@ const FileDropzone = ({
   maxSizeBytes,
   disabled,
   label,
+  width,
+  fileDragged,
 }: Props): React.ReactElement => (
   <Dropzone
     onDrop={onDrop}
@@ -59,25 +67,37 @@ const FileDropzone = ({
         {...getRootProps()}
         data-testid="stFileUploaderDropzone"
         isDisabled={disabled}
+        isDragActive={fileDragged}
         aria-label={label}
       >
         <input
           data-testid="stFileUploaderDropzoneInput"
           {...getInputProps()}
         />
-        <FileDropzoneInstructions
-          multiple={multiple}
-          acceptedExtensions={acceptedExtensions}
-          maxSizeBytes={maxSizeBytes}
-          disabled={disabled}
-        />
-        <BaseButton
-          kind={BaseButtonKind.SECONDARY}
-          disabled={disabled}
-          size={BaseButtonSize.SMALL}
-        >
-          Browse files
-        </BaseButton>
+        {fileDragged ? (
+          `Drag and drop ${multiple ? "files" : "file"} here`
+        ) : (
+          <>
+            <StyledFileDropzoneButtonWrapper>
+              <BaseButton
+                kind={BaseButtonKind.SECONDARY}
+                disabled={disabled}
+                size={BaseButtonSize.SMALL}
+              >
+                <DynamicButtonLabel
+                  icon=":material/upload:"
+                  label={multiple ? "Upload files" : "Upload a file"}
+                />
+              </BaseButton>
+            </StyledFileDropzoneButtonWrapper>
+            <FileDropzoneInstructions
+              acceptedExtensions={acceptedExtensions}
+              maxSizeBytes={maxSizeBytes}
+              disabled={disabled}
+              width={width}
+            />
+          </>
+        )}
       </StyledFileDropzoneSection>
     )}
   </Dropzone>

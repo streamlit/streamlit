@@ -16,14 +16,10 @@
 
 import React, { memo } from "react"
 
-import {
-  Clear,
-  Error,
-  InsertDriveFile,
-} from "@emotion-icons/material-outlined"
+import { Clear, Error } from "@emotion-icons/material-outlined"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import ProgressBar, { Size } from "~lib/components/shared/ProgressBar"
 import { Small } from "~lib/components/shared/TextElements"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
@@ -32,7 +28,6 @@ import {
   StyledErrorMessage,
   StyledFileError,
   StyledFileErrorIcon,
-  StyledFileIcon,
   StyledUploadedFile,
   StyledUploadedFileData,
   StyledUploadedFileName,
@@ -81,9 +76,12 @@ const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
       className="stFileUploaderFile"
       data-testid="stFileUploaderFile"
     >
-      <StyledFileIcon>
-        <Icon content={InsertDriveFile} size="twoXL" />
-      </StyledFileIcon>
+      <DynamicIcon
+        iconValue=":material/draft:"
+        size="lg"
+        color="inherit"
+        margin="0 sm 0 0"
+      />
       <StyledUploadedFileData className="stFileUploaderFileData">
         <StyledUploadedFileName
           className="stFileUploaderFileName"

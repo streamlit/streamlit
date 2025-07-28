@@ -16,50 +16,80 @@
 
 import React, { memo } from "react"
 
-import { CloudUpload } from "@emotion-icons/material-outlined"
-
-import Icon from "~lib/components/shared/Icon"
 import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
+import { convertRemToPx } from "~lib/theme"
 
 import {
   StyledFileDropzoneInstructions,
-  StyledFileDropzoneInstructionsColumn,
-  StyledFileDropzoneInstructionsFileUploaderIcon,
-  StyledFileDropzoneInstructionsSubtext,
   StyledFileDropzoneInstructionsText,
 } from "./styled-components"
 
 export interface Props {
-  multiple: boolean
   acceptedExtensions: string[]
   maxSizeBytes: number
   disabled?: boolean
+  width: number
 }
 
 const FileDropzoneInstructions = ({
-  multiple,
   acceptedExtensions,
   maxSizeBytes,
   disabled,
-}: Props): React.ReactElement => (
-  <StyledFileDropzoneInstructions data-testid="stFileUploaderDropzoneInstructions">
-    <StyledFileDropzoneInstructionsFileUploaderIcon>
-      <Icon content={CloudUpload} size="threeXL" />
-    </StyledFileDropzoneInstructionsFileUploaderIcon>
-    <StyledFileDropzoneInstructionsColumn>
+  width,
+}: Props): React.ReactElement => {
+  // Define breakpoints for different modes
+  const MEDIUM_BREAKPOINT = convertRemToPx("30rem")
+  const SMALL_BREAKPOINT = convertRemToPx("23rem")
+
+  // Extensions that are redundant and should be hidden in UI
+  const REDUNDANT_EXTENSIONS = ["jpeg", "mpeg", "mpeg4", "tiff", "html"]
+
+  // Filter out only the redundant extensions
+  const displayExtensions = acceptedExtensions.filter(ext => {
+    const normalized = ext.replace(/^\./, "").toLowerCase()
+    return !REDUNDANT_EXTENSIONS.includes(normalized)
+  })
+
+  // Format extensions once
+  const extensionsText = displayExtensions.length
+    ? displayExtensions
+        .map(ext => ext.replace(/^\./, "").toUpperCase())
+        .join(", ")
+    : ""
+
+  // Build the instruction text based on width
+  let text = ""
+
+  if (width < SMALL_BREAKPOINT) {
+    // Small mode (<23rem): show extensions, or size limit if no extensions
+    if (extensionsText) {
+      text = extensionsText
+    } else {
+      text = `${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`
+    }
+  } else if (width < MEDIUM_BREAKPOINT) {
+    // Medium mode (23-30rem): show size limit and extensions
+    text = `${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`
+
+    if (extensionsText) {
+      text += ` • ${extensionsText}`
+    }
+  } else {
+    // Full mode (≥30rem): show everything
+    text = `Or drag and drop • ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`
+
+    if (extensionsText) {
+      text += ` • ${extensionsText}`
+    }
+  }
+
+  return (
+    <StyledFileDropzoneInstructions data-testid="stFileUploaderDropzoneInstructions">
       <StyledFileDropzoneInstructionsText disabled={disabled}>
-        Drag and drop file{multiple ? "s" : ""} here
+        {text}
       </StyledFileDropzoneInstructionsText>
-      <StyledFileDropzoneInstructionsSubtext disabled={disabled}>
-        {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
-        {acceptedExtensions.length
-          ? ` • ${acceptedExtensions
-              .map(ext => ext.replace(/^\./, "").toUpperCase())
-              .join(", ")}`
-          : null}
-      </StyledFileDropzoneInstructionsSubtext>
-    </StyledFileDropzoneInstructionsColumn>
-  </StyledFileDropzoneInstructions>
-)
+    </StyledFileDropzoneInstructions>
+  )
+}
 
 export default memo(FileDropzoneInstructions)

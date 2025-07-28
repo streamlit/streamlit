@@ -23,9 +23,9 @@ import { render } from "~lib/test_util"
 import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  multiple: true,
   acceptedExtensions: [],
   maxSizeBytes: 2000,
+  width: 400,
   ...props,
 })
 

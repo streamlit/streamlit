@@ -14,25 +14,29 @@
  * limitations under the License.
  */
 
-import styled, { CSSObject } from "@emotion/styled"
-
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import styled from "@emotion/styled"
 
 export interface StyledFileDropzone {
   isDisabled: boolean
+  isDragActive?: boolean
 }
 
 export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
-  ({ isDisabled, theme }) => ({
+  ({ isDisabled, isDragActive, theme }) => ({
     display: "flex",
     alignItems: "center",
+    justifyContent: isDragActive ? "center" : "flex-start",
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
-    border: theme.colors.widgetBorderColor
-      ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
-      : undefined,
+    border: isDragActive
+      ? `${theme.sizes.borderWidth} solid ${theme.colors.primary}`
+      : theme.colors.widgetBorderColor
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
+        : undefined,
     height: theme.sizes.largestElementHeight,
+    color: isDragActive ? theme.colors.primary : "inherit",
+    fontWeight: isDragActive ? theme.fontWeights.bold : "inherit",
     ":focus": {
       outline: "none",
     },
@@ -43,35 +47,27 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   })
 )
 
-export const StyledFileDropzoneInstructions = styled.div({
-  marginRight: "auto",
+export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
   alignItems: "center",
   display: "flex",
-})
-
-export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
-  ({ theme }) => ({
-    color: theme.colors.darkenedBgMix100,
-    marginRight: theme.spacing.lg,
-  })
-)
+  paddingLeft: theme.spacing.md,
+  flex: "1 1 auto",
+  minWidth: 0, // This is crucial for text-overflow: ellipsis to work in flex containers
+}))
 
 export const StyledFileDropzoneInstructionsText = styled.span<{
   disabled?: boolean
 }>(({ theme, disabled }) => ({
-  color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-}))
-
-export const StyledFileDropzoneInstructionsSubtext = styled.span<{
-  disabled?: boolean
-}>(({ theme, disabled }) => ({
   fontSize: theme.fontSizes.sm,
   color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 }))
 
-export const StyledFileDropzoneInstructionsColumn = styled.div({
-  display: "flex",
-  flexDirection: "column",
+export const StyledFileDropzoneButtonWrapper = styled.div({
+  flexShrink: 0,
+  whiteSpace: "nowrap",
 })
 
 export const StyledUploadedFiles = styled.div(({ theme }) => ({
@@ -94,17 +90,15 @@ export const StyledUploadedFilesListItem = styled.li(({ theme }) => ({
   padding: theme.spacing.none,
 }))
 
-export const StyledUploadedFileData = styled.div(({ theme }) => ({
+export const StyledUploadedFileData = styled.div({
   display: "flex",
   alignItems: "baseline",
   flex: 1,
-  paddingLeft: theme.spacing.lg,
   overflow: "hidden",
-}))
+})
 
 export const StyledUploadedFileName = styled.div(({ theme }) => ({
   marginRight: theme.spacing.sm,
-  marginBottom: theme.spacing.twoXS,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -120,12 +114,6 @@ export const StyledErrorMessage = styled.span(({ theme }) => ({
   marginRight: theme.spacing.twoXS,
 }))
 
-export const StyledFileIcon = styled.div(({ theme }) => ({
-  display: "flex",
-  padding: theme.spacing.twoXS,
-  color: theme.colors.darkenedBgMix100,
-}))
-
 export const StyledFileError = styled.small(({ theme }) => ({
   color: theme.colors.red,
   fontSize: theme.fontSizes.sm,
@@ -138,68 +126,4 @@ export const StyledFileError = styled.small(({ theme }) => ({
 
 export const StyledFileErrorIcon = styled.span({})
 
-const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneSection as any]: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    height: "auto",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneInstructions as any]: {
-    marginBottom: theme.spacing.sm,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneInstructionsFileUploaderIcon as any]: {
-    display: "none",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileDropzoneInstructionsText as any]: {
-    marginBottom: theme.spacing.twoXS,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFiles as any]: {
-    paddingRight: theme.spacing.lg,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFile as any]: {
-    maxWidth: "inherit",
-    flex: 1,
-    alignItems: "flex-start",
-    marginBottom: theme.spacing.sm,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFileName as any]: {
-    width: theme.sizes.full,
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFileData as any]: {
-    flexDirection: "column",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileError as any]: {
-    height: "auto",
-    whiteSpace: "initial",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledFileErrorIcon as any]: {
-    display: "none",
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledUploadedFilesListItem as any]: {
-    margin: theme.spacing.none,
-    padding: theme.spacing.none,
-  },
-})
-
-interface StyledFileUploaderProps {
-  width: number
-}
-export const StyledFileUploader = styled.div<StyledFileUploaderProps>(
-  ({ theme, width }) => {
-    if (width < convertRemToPx("23rem")) {
-      return compactFileUploader(theme)
-    }
-  }
-)
+export const StyledFileUploader = styled.div({})

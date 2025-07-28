@@ -30,6 +30,8 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   multiple: true,
   acceptedExtensions: [],
   maxSizeBytes: 200,
+  width: 400,
+  fileDragged: false,
   ...props,
 })
 
