@@ -16,6 +16,33 @@
 
 import { useMemo } from "react"
 
+export const measureScrollbarGutterSize = (): number => {
+  // Create a temporary div to measure scrollbar gutter size
+  const outer = document.createElement("div")
+  outer.style.position = "absolute"
+  outer.style.top = "-9999px" // Move it off-screen
+  outer.style.left = "-9999px"
+  outer.style.visibility = "hidden"
+  outer.style.overflow = "scroll" // Triggers scrollbar
+  outer.style.width = "50px" // Give it a fixed size to ensure overflow
+  outer.style.height = "50px" // Give it a fixed size to ensure overflow
+  document.body.appendChild(outer)
+
+  // Create an inner div to measure content width
+  const inner = document.createElement("div")
+  inner.style.width = "100%" // Inner div takes full width of outer's content area
+  inner.style.height = "100%"
+  outer.appendChild(inner)
+
+  // Calculate the scrollbar gutter size
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+  const calculatedWidth = outer.offsetWidth - inner.offsetWidth
+
+  // Remove the temporary divs
+  outer.remove()
+
+  return calculatedWidth
+}
 /**
  * React hook to measure the scrollbar gutter size (in pixels).
  *
@@ -25,31 +52,7 @@ export const useScrollbarGutterSize = (): number => {
   const devicePixelRatio = window.devicePixelRatio
 
   const scrollbarGutterWidth = useMemo(() => {
-    // Create a temporary div to measure scrollbar gutter size
-    const outer = document.createElement("div")
-    outer.style.position = "absolute"
-    outer.style.top = "-9999px" // Move it off-screen
-    outer.style.left = "-9999px"
-    outer.style.visibility = "hidden"
-    outer.style.overflow = "scroll" // Triggers scrollbar
-    outer.style.width = "50px" // Give it a fixed size to ensure overflow
-    outer.style.height = "50px" // Give it a fixed size to ensure overflow
-    document.body.appendChild(outer)
-
-    // Create an inner div to measure content width
-    const inner = document.createElement("div")
-    inner.style.width = "100%" // Inner div takes full width of outer's content area
-    inner.style.height = "100%"
-    outer.appendChild(inner)
-
-    // Calculate the scrollbar gutter size
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const calculatedWidth = outer.offsetWidth - inner.offsetWidth
-
-    // Remove the temporary divs
-    outer.remove()
-
-    return calculatedWidth
+    return measureScrollbarGutterSize()
     // We want this to recalculate when the devicePixelRatio has changed.
     // This doesn't ensure that its recalculated whenever window.devicePixelRatio
     // changes, but that seems like good enough for now.

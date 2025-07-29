@@ -36,7 +36,7 @@ export const getSidebarHorizontalSpacing = (
   // Chrome bug: https://issues.chromium.org/issues/40064879
   return `max(
     ${scrollbarGutterSize}px,
-    calc(${theme.spacing.xl} - ${scrollbarGutterSize}px)
+    calc(${theme.spacing.twoXL} - ${scrollbarGutterSize}px)
   )`
 }
 

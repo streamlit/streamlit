@@ -69,7 +69,10 @@ export { FileUploadClient } from "./FileUploadClient"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"
 export { useExecuteWhenChanged } from "./hooks/useExecuteWhenChanged"
 export { useRequiredContext } from "./hooks/useRequiredContext"
-export { useScrollbarGutterSize } from "./hooks/useScrollbarGutterSize"
+export {
+  measureScrollbarGutterSize,
+  useScrollbarGutterSize,
+} from "./hooks/useScrollbarGutterSize"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"

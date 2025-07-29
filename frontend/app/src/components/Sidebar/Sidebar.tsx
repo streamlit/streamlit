@@ -39,9 +39,9 @@ import {
   BaseButtonKind,
   DynamicIcon,
   IsSidebarContext,
+  measureScrollbarGutterSize,
   useEmotionTheme,
   useExecuteWhenChanged,
-  useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
 import { IAppPage, Logo } from "@streamlit/protobuf"
@@ -98,7 +98,29 @@ const Sidebar: React.FC<SidebarProps> = ({
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const { innerWidth } = useWindowDimensionsContext()
-  const scrollbarGutterSize = useScrollbarGutterSize()
+  const [scrollbarGutterSize, setScrollbarGutterSize] = useState<number>(() =>
+    measureScrollbarGutterSize()
+  )
+
+  useEffect(() => {
+    // Use requestAnimationFrame + setTimeout to ensure the DOM is fully rendered
+    // before measuring. This is more reliable than setTimeout alone.
+    // requestAnimationFrame ensures the browser has calculated layout,
+    // and setTimeout pushes the callback to the next event loop tick.
+    const rafId = requestAnimationFrame(() => {
+      const timeoutId = setTimeout(() => {
+        setScrollbarGutterSize(measureScrollbarGutterSize())
+      }, 0)
+
+      // Cleanup on unmount
+      return () => clearTimeout(timeoutId)
+    })
+
+    // Cleanup on unmount
+    return () => cancelAnimationFrame(rafId)
+    // eslint-disable-next-line react-hooks/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [window.devicePixelRatio])
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
