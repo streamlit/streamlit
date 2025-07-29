@@ -202,11 +202,13 @@ export const StyledCollapseSidebarButton =
         lineHeight: "0",
 
         [`@media print`]: {
-          display: "none",
+          // Always hide the collapse button on print:
+          visibility: "hidden",
         },
 
         [`@media (max-width: ${theme.breakpoints.sm})`]: {
-          display: "inline",
+          // Always show the collapse button on small screens:
+          visibility: "visible",
         },
       }
     }
