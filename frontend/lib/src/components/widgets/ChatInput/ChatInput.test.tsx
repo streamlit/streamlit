@@ -25,11 +25,11 @@ import {
   IChatInputValue,
 } from "@streamlit/protobuf"
 
+import ChatInput, { Props } from "./ChatInput"
+
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
-
-import ChatInput, { Props } from "./ChatInput"
 
 const getProps = (
   elementProps: Partial<ChatInputProto> = {},
@@ -431,11 +431,8 @@ describe("ChatInput widget", () => {
 
   it("renders directory upload UI correctly", () => {
     const props = getProps({
-      element: {
-        ...getProps().element,
-        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-        fileType: ["txt", "py", "md"],
-      },
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      fileType: ["txt", "py", "md"],
     })
 
     render(<ChatInput {...props} />)
@@ -458,14 +455,15 @@ describe("ChatInput widget", () => {
     })
     mockWidgetMgr.setChatInputValue = mockSetChatInputValue
 
-    const props = getProps({
-      element: {
-        ...getProps().element,
+    const props = getProps(
+      {
         acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
         fileType: ["txt", "py", "md"],
       },
-      widgetMgr: mockWidgetMgr,
-    })
+      {
+        widgetMgr: mockWidgetMgr,
+      }
+    )
 
     render(<ChatInput {...props} />)
 
@@ -493,7 +491,7 @@ describe("ChatInput widget", () => {
 
     if (fileInput) {
       // Upload files using userEvent
-      await user.upload(fileInput, directoryFiles)
+      await user.upload(fileInput as HTMLElement, directoryFiles)
     }
 
     await waitFor(() => {
@@ -534,11 +532,8 @@ describe("ChatInput widget", () => {
     const consoleSpy = vi.spyOn(console, "log")
 
     const props = getProps({
-      element: {
-        ...getProps().element,
-        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-        fileType: ["txt"], // Only allow .txt files
-      },
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      fileType: ["txt"], // Only allow .txt files
     })
 
     render(<ChatInput {...props} />)
@@ -569,7 +564,7 @@ describe("ChatInput widget", () => {
 
     if (fileInput) {
       // Upload files using userEvent
-      await user.upload(fileInput, mixedFiles)
+      await user.upload(fileInput as HTMLElement, mixedFiles)
     }
 
     await waitFor(() => {
@@ -590,10 +585,7 @@ describe("ChatInput widget", () => {
   it("handles empty directory upload", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      element: {
-        ...getProps().element,
-        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-      },
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
     })
 
     render(<ChatInput {...props} />)
@@ -604,7 +596,7 @@ describe("ChatInput widget", () => {
 
     if (fileInput) {
       // Simulate empty directory upload
-      await user.upload(fileInput, [])
+      await user.upload(fileInput as HTMLElement, [])
     }
 
     await waitFor(() => {
@@ -622,10 +614,7 @@ describe("ChatInput widget", () => {
 
   it("displays directory upload instructions correctly", () => {
     const props = getProps({
-      element: {
-        ...getProps().element,
-        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-      },
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
     })
 
     render(<ChatInput {...props} />)
@@ -645,10 +634,7 @@ describe("ChatInput widget", () => {
   it("removes directory files when deleted individually", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      element: {
-        ...getProps().element,
-        acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
-      },
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
     })
 
     render(<ChatInput {...props} />)
@@ -665,7 +651,7 @@ describe("ChatInput widget", () => {
 
     if (fileInput) {
       // Upload directory files
-      await user.upload(fileInput, directoryFiles)
+      await user.upload(fileInput as HTMLElement, directoryFiles)
     }
 
     await waitFor(() => {

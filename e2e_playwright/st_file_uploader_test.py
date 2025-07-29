@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import FilePayload, Page, Route, expect
+from playwright.sync_api import ConsoleMessage, FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -322,8 +322,15 @@ def test_directory_upload_with_file_type_filtering(
     uploader_index = 13  # Restricted directory uploader index
 
     # Capture console messages to verify filtering feedback
-    messages = []
-    app.on("console", lambda msg: messages.append(msg.text))
+    message_detected = False
+
+    def check_console_message(msg: ConsoleMessage) -> None:
+        nonlocal message_detected
+        text = msg.text
+        if "Directory upload:" in text and "files rejected" in text:
+            message_detected = True
+
+    app.on("console", check_console_message)
 
     with app.expect_file_chooser() as fc_info:
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
@@ -343,14 +350,11 @@ def test_directory_upload_with_file_type_filtering(
     expect(uploader_text).not_to_contain_text("rejected.jpg")
     expect(uploader_text).not_to_contain_text("rejected.pdf")
 
-    # Verify console message about filtering
+    # Wait for the message to be detected
     wait_until(
         app,
-        lambda: any(
-            "Directory upload:" in message and "files rejected" in message
-            for message in messages
-        ),
-        timeout=3000,
+        lambda: message_detected,
+        timeout=1500,  # Reduced timeout since filtering is likely synchronous
     )
 
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
