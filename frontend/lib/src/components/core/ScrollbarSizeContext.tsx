@@ -16,5 +16,5 @@
 
 import { createContext } from "react"
 
-export const ScrollbarWidthContext = createContext<number>(0)
-ScrollbarWidthContext.displayName = "ScrollbarWidthContext"
+export const ScrollbarSizeContext = createContext<number>(0)
+ScrollbarSizeContext.displayName = "ScrollbarSizeContext"

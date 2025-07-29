@@ -56,7 +56,7 @@ import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 import { isNullOrUndefined } from "~lib/util/utils"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { LibContext } from "~lib/components/core/LibContext"
-import { ScrollbarWidthContext } from "~lib/components/core/ScrollbarWidthContext"
+import { ScrollbarSizeContext } from "~lib/components/core/ScrollbarSizeContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -149,15 +149,8 @@ function DataFrame({
   const dataEditorRef = useRef<DataEditorRef>(null)
   const resizableContainerRef = useRef<HTMLDivElement>(null)
 
-  const scrollbarGutterSize = useContext(ScrollbarWidthContext)
-  const scrollbarSize = useMemo(
-    // If the scrollbar gutter size is 0, it means that we the system is using
-    // overlay scrollbars that don't take any space. In this case, we assume
-    // a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
-    // in the data grid.
-    () => scrollbarGutterSize || Math.round(convertRemToPx("0.5rem")),
-    [scrollbarGutterSize]
-  )
+  const scrollbarGutterSize = useContext(ScrollbarSizeContext)
+
   const gridTheme = useCustomTheme()
 
   const { getRowThemeOverride, onItemHovered: handleRowHover } =
@@ -196,10 +189,6 @@ function DataFrame({
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
     []
   )
-
-  // Determine if it uses customized scrollbars (webkit browsers):
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
-  const hasCustomizedScrollbars = useMemo<boolean>(() => true, [])
 
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
@@ -711,21 +700,27 @@ function DataFrame({
     <StyledResizableContainer
       className="stDataFrame"
       data-testid="stDataFrame"
-      hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
       onPointerDown={e => {
-        if (resizableContainerRef.current && hasCustomizedScrollbars) {
+        if (resizableContainerRef.current) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
             // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
 
+          // If the scrollbar gutter size is 0, it means that we the system is using
+          // overlay scrollbars that don't take any space. In this case, we assume
+          // a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
+          // in the data grid.
+          // For whatever reason, we are still able to use the scrollbars even
+          // if the mouse is one pixel outside of the scrollbar. Therefore, we add
+          // an additional pixel.
+          const scrollbarSize =
+            (scrollbarGutterSize || Math.round(convertRemToPx("0.5rem"))) + 1
+
           if (
             hasHorizontalScroll &&
-            // For whatever reason, we are still able to use the scrollbars even
-            // if the mouse is one pixel outside of the scrollbar. Therefore, we add
-            // an additional pixel.
-            boundingClient.height - scrollbarSize + 1 <
+            boundingClient.height - scrollbarSize <
               e.clientY - boundingClient.top
           ) {
             e.stopPropagation()
@@ -1014,23 +1009,15 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            // We use overflow scrollbars, so we need to deactivate the native
-            // scrollbar override:
+            // Deactivate the native scrollbar override to optimize our
+            // scrollbars to always behave like overlay scrollbars.
             scrollbarWidthOverride: 0,
+            // Add negative padding to the right and bottom to allow the scrollbars
+            // to overlay the table:
             paddingBottom: hasHorizontalScroll
               ? -scrollbarGutterSize
               : undefined,
             paddingRight: hasVerticalScroll ? -scrollbarGutterSize : undefined,
-            ...(hasCustomizedScrollbars && {
-              // Add negative padding to the right and bottom to allow the scrollbars in
-              // webkit to overlay the table:
-              paddingBottom: hasHorizontalScroll
-                ? -scrollbarGutterSize
-                : undefined,
-              paddingRight: hasVerticalScroll
-                ? -scrollbarGutterSize
-                : undefined,
-            }),
           }}
           provideEditor={provideEditor}
           // Apply custom rendering (e.g. for missing or required cells):

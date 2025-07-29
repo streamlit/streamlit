@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState } from "react"
+import React, { ReactElement, useCallback, useEffect, useState } from "react"
 
 import { BaseProvider } from "baseui"
 import createCache from "@emotion/cache"
@@ -25,7 +25,7 @@ import {
 } from "@emotion/react"
 
 import { globalStyles, ThemeConfig } from "./theme"
-import { ScrollbarWidthContext } from "./components/core/ScrollbarWidthContext"
+import { ScrollbarSizeContext } from "./components/core/ScrollbarSizeContext"
 
 export interface RootStyleProviderProps {
   theme: ThemeConfig
@@ -45,49 +45,61 @@ const cache = createCache({
  * React hook to detect the scrollbar width and set it as a CSS custom property (--scrollbar-width).
  */
 const useScrollbarWidth = (): number => {
-  const [scrollbarWidth, setScrollbarWidth] = useState(0)
+  const [scrollbarGutterWidth, setScrollbarGutterWidth] = useState(0)
+
+  const measureAndSetScrollbarWidth = useCallback(() => {
+    // Create a temporary div to measure scrollbar width
+    const outer = document.createElement("div")
+    outer.style.position = "absolute"
+    outer.style.top = "-9999px" // Move it off-screen
+    outer.style.left = "-9999px"
+    outer.style.visibility = "hidden"
+    outer.style.overflow = "scroll" // Triggers scrollbar
+    outer.style.width = "50px" // Give it a fixed size to ensure overflow
+    outer.style.height = "50px" // Give it a fixed size to ensure overflow
+    document.body.appendChild(outer)
+
+    // Create an inner div to measure content width
+    const inner = document.createElement("div")
+    inner.style.width = "100%" // Inner div takes full width of outer's content area
+    outer.appendChild(inner)
+
+    // Calculate the scrollbar width
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+    const calculatedWidth = outer.offsetWidth - inner.offsetWidth
+
+    // Remove the temporary divs
+    outer.parentNode?.removeChild(outer)
+
+    // Store the scrollbar width in a CSS custom property(variable)
+    document.documentElement.style.setProperty(
+      "--scrollbar-width",
+      `${calculatedWidth}px`
+    )
+
+    setScrollbarGutterWidth(calculatedWidth)
+  }, [])
+
   useEffect(() => {
-    const measureScrollbarWidth = (): void => {
-      // Create a temporary div to measure scrollbar width
-      const outer = document.createElement("div")
-      outer.style.position = "absolute"
-      outer.style.top = "-9999px" // Move it off-screen
-      outer.style.left = "-9999px"
-      outer.style.visibility = "hidden"
-      outer.style.overflow = "scroll" // Triggers scrollbar
-      outer.style.width = "50px" // Give it a fixed size to ensure overflow
-      outer.style.height = "50px" // Give it a fixed size to ensure overflow
-      document.body.appendChild(outer)
+    let lastDevicePixelRatio = window.devicePixelRatio
 
-      // Create an inner div to measure content width
-      const inner = document.createElement("div")
-      inner.style.width = "100%" // Inner div takes full width of outer's content area
-      outer.appendChild(inner)
-
-      // Calculate the scrollbar width
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-      const calculatedWidth = outer.offsetWidth - inner.offsetWidth
-
-      // Remove the temporary divs
-      outer.parentNode?.removeChild(outer)
-
-      // Store the scrollbar width in a CSS custom property(variable)
-      document.documentElement.style.setProperty(
-        "--scrollbar-width",
-        `${calculatedWidth}px`
-      )
-
-      setScrollbarWidth(calculatedWidth)
+    const handleResize = (): void => {
+      if (window.devicePixelRatio !== lastDevicePixelRatio) {
+        lastDevicePixelRatio = window.devicePixelRatio
+        measureAndSetScrollbarWidth()
+      }
     }
 
-    const animationFrameId = requestAnimationFrame(measureScrollbarWidth)
+    const animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
+    window.addEventListener("resize", handleResize)
 
     return () => {
       cancelAnimationFrame(animationFrameId)
+      window.removeEventListener("resize", handleResize)
     }
-  }, []) // Run this only once.
+  }, [measureAndSetScrollbarWidth])
 
-  return scrollbarWidth
+  return scrollbarGutterWidth
 }
 
 export function RootStyleProvider(
@@ -99,7 +111,7 @@ export function RootStyleProvider(
   const scrollbarWidth = useScrollbarWidth()
 
   return (
-    <ScrollbarWidthContext.Provider value={scrollbarWidth}>
+    <ScrollbarSizeContext.Provider value={scrollbarWidth}>
       <BaseProvider
         theme={theme.basewebTheme}
         // This zIndex is required for modals/dialog. However,
@@ -115,6 +127,6 @@ export function RootStyleProvider(
           </EmotionThemeProvider>
         </CacheProvider>
       </BaseProvider>
-    </ScrollbarWidthContext.Provider>
+    </ScrollbarSizeContext.Provider>
   )
 }
