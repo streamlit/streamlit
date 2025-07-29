@@ -656,50 +656,59 @@ function DataFrame({
 
   // Determine if the table requires horizontal or vertical scrolling:
   useEffect(() => {
-    // The setTimeout is a workaround to get the scroll area bounding box
-    // after the grid has been rendered. Otherwise, the scroll area div
-    // (dvn-stack) might not have been created yet.
-    // eslint-disable-next-line @eslint-react/web-api/no-leaked-timeout
-    setTimeout(() => {
-      if (resizableContainerRef.current && dataEditorRef.current) {
-        // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-        const scrollAreaBounds = resizableContainerRef.current
-          ?.querySelector(".dvn-stack")
-          ?.getBoundingClientRect()
+    // Use requestAnimationFrame + setTimeout to ensure the DOM is fully rendered
+    // before measuring. This is more reliable than setTimeout alone.
+    // requestAnimationFrame ensures the browser has calculated layout,
+    // and setTimeout pushes the callback to the next event loop tick.
+    const rafId = requestAnimationFrame(() => {
+      const timeoutId = setTimeout(() => {
+        if (resizableContainerRef.current && dataEditorRef.current) {
+          // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+          const scrollAreaBounds = resizableContainerRef.current
+            ?.querySelector(".dvn-stack")
+            ?.getBoundingClientRect()
 
-        // We might also be able to use the following as an alternative,
-        // but it seems to cause "Maximum update depth exceeded" when scrollbars
-        // are activated or deactivated.
-        // const scrollAreaBounds = dataEditorRef.current?.getBounds()
-        // Also see: https://github.com/glideapps/glide-data-grid/issues/784
-        if (scrollAreaBounds) {
-          setHasVerticalScroll(
-            scrollAreaBounds.height >
-              // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-              resizableContainerRef.current.clientHeight
-          )
-          setHasHorizontalScroll(
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-            scrollAreaBounds.width > resizableContainerRef.current.clientWidth
-          )
+          // We might also be able to use the following as an alternative,
+          // but it seems to cause "Maximum update depth exceeded" when scrollbars
+          // are activated or deactivated.
+          // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+          // Also see: https://github.com/glideapps/glide-data-grid/issues/784
+          if (scrollAreaBounds) {
+            setHasVerticalScroll(
+              scrollAreaBounds.height >
+                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+                resizableContainerRef.current.clientHeight
+            )
+            setHasHorizontalScroll(
+              scrollAreaBounds.width >
+                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+                resizableContainerRef.current.clientWidth
+            )
 
-          // eslint-disable-next-line no-console
-          console.log(
-            scrollAreaBounds.width,
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-            resizableContainerRef.current.clientWidth,
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-            resizableContainerRef.current.offsetWidth,
-            scrollAreaBounds.height,
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-            resizableContainerRef.current.clientHeight,
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-            resizableContainerRef.current.offsetHeight
-          )
+            // eslint-disable-next-line no-console
+            console.log(
+              scrollAreaBounds.width,
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+              resizableContainerRef.current.clientWidth,
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+              resizableContainerRef.current.offsetWidth,
+              scrollAreaBounds.height,
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+              resizableContainerRef.current.clientHeight,
+              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+              resizableContainerRef.current.offsetHeight
+            )
+          }
         }
-      }
-    }, 1)
+      }, 1)
+
+      // Cleanup on unmount
+      return () => clearTimeout(timeoutId)
+    })
+
+    // Cleanup on unmount
+    return () => cancelAnimationFrame(rafId)
   }, [resizableSize, numRows, glideColumns])
 
   // Hide the column visibility menu if all columns are visible:
