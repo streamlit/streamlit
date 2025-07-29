@@ -94,7 +94,9 @@ const useScrollbarSize = (): number => {
     // Ensure the document is fully loaded before measuring scrollbar size
     // This fixes issues in iframes where initial measurements return 0
     if (document.readyState !== "complete") {
-      window.addEventListener("load", measureAndSetScrollbarWidth)
+      window.addEventListener("load", measureAndSetScrollbarWidth, {
+        once: true,
+      })
     } else {
       // Document already loaded, measure immediately
       animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
