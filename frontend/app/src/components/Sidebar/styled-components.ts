@@ -193,6 +193,7 @@ export const StyledCollapseSidebarButton =
       return {
         display: "inline",
         visibility: showSidebarCollapse ? "visible" : "hidden",
+        marginLeft: theme.spacing.sm,
         transition: "left 300ms",
         transitionDelay: "left 300ms",
         color: hasLightBackgroundColor(theme)
