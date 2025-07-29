@@ -42,9 +42,9 @@ const cache = createCache({
 })
 
 /**
- * React hook to detect the scrollbar width and set it as a CSS custom property (--scrollbar-gutter-size).
+ * React hook to detect the scrollbar gutter size and set it as a CSS custom property (--scrollbar-gutter-size).
  */
-const useScrollbarWidth = (): number => {
+const useScrollbarSize = (): number => {
   const [scrollbarGutterWidth, setScrollbarGutterWidth] = useState(0)
 
   const measureAndSetScrollbarWidth = useCallback(() => {
@@ -108,7 +108,7 @@ export function RootStyleProvider(
   const { children, theme } = props
 
   // Inject the --scrollbar-gutter-size variable into :root
-  const scrollbarGutterSize = useScrollbarWidth()
+  const scrollbarGutterSize = useScrollbarSize()
 
   return (
     <ScrollbarSizeContext.Provider value={scrollbarGutterSize}>
