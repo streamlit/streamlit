@@ -182,27 +182,20 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   // Tell browser to render a thin scrollbar that only appears when the
   // container is hovered. (This is ignored in OSes that render overlay
   // scrollbars, which is exactly what we want.)
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-  }
+  @supports (scrollbar-color: transparent transparent) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
 
-  *:hover {
-    scrollbar-color: ${theme.colors.fadedText40} transparent;
+    *:hover {
+      scrollbar-color: ${theme.colors.fadedText40} transparent;
+    }
   }
 
   // Safari doesn't support scrollbar colors so we style the scrollbar
   // using the old webkit-only properties.
   @supports not (scrollbar-color: transparent transparent) {
-    * {
-      scrollbar-width: unset;
-      scrollbar-color: unset;
-    }
-
-    *:hover {
-      scrollbar-color: unset;
-    }
-
     ::-webkit-scrollbar {
       background: transparent;
       border-radius: ${theme.radii.full};
