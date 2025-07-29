@@ -42,7 +42,7 @@ const cache = createCache({
 })
 
 /**
- * React hook to detect the scrollbar width and set it as a CSS custom property (--scrollbar-width).
+ * React hook to detect the scrollbar width and set it as a CSS custom property (--scrollbar-gutter-size).
  */
 const useScrollbarWidth = (): number => {
   const [scrollbarGutterWidth, setScrollbarGutterWidth] = useState(0)
@@ -71,9 +71,9 @@ const useScrollbarWidth = (): number => {
     // Remove the temporary divs
     outer.parentNode?.removeChild(outer)
 
-    // Store the scrollbar width in a CSS custom property(variable)
+    // Store the scrollbar gutter size in a CSS custom property(variable)
     document.documentElement.style.setProperty(
-      "--scrollbar-width",
+      "--scrollbar-gutter-size",
       `${calculatedWidth}px`
     )
 
@@ -107,11 +107,11 @@ export function RootStyleProvider(
 ): ReactElement {
   const { children, theme } = props
 
-  // Inject the --scrollbar-width variable into :root
-  const scrollbarWidth = useScrollbarWidth()
+  // Inject the --scrollbar-gutter-size variable into :root
+  const scrollbarGutterSize = useScrollbarWidth()
 
   return (
-    <ScrollbarSizeContext.Provider value={scrollbarWidth}>
+    <ScrollbarSizeContext.Provider value={scrollbarGutterSize}>
       <BaseProvider
         theme={theme.basewebTheme}
         // This zIndex is required for modals/dialog. However,

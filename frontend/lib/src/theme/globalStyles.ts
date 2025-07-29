@@ -195,7 +195,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   // using the old webkit-only properties.
   @supports not (scrollbar-color: transparent transparent) {
     .hideScrollbar {
-      clip-path: inset(0px var(--scrollbar-width) 0px 0px);
+      clip-path: inset(0px var(--scrollbar-gutter-size) 0px 0px);
     }
 
     .hideScrollbar:hover {

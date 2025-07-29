@@ -29,11 +29,11 @@ import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 export const getSidebarHorizontalSpacing = (theme: EmotionTheme): string => {
   // This should be max(0px, ...), but there's a Chrome bug that
   // causes content to clip when scrollbar-gutter is set to "stable both-edges".
-  // So we change the min from 0px to --scrollbar-width to account for that.
+  // So we change the min from 0px to --scrollbar-gutter-size to account for that.
   // Chrome bug: https://issues.chromium.org/issues/40064879
   return `max(
-    calc(var(--scrollbar-width)),
-    calc(${theme.spacing.lg} - var(--scrollbar-width))
+    calc(var(--scrollbar-gutter-size)),
+    calc(${theme.spacing.lg} - var(--scrollbar-gutter-size))
   )`
 }
 
@@ -182,7 +182,7 @@ export const StyledLogo = styled.img<StyledLogoProps>(
       // L & R padding (lg) + scrollbarGutter on both sides (2 * 8px) + R margin (sm) + collapse button (2.25rem)
       maxWidth: `calc(${sidebarWidth}px - 2 * ${getSidebarHorizontalSpacing(
         theme
-      )} - (2 * var(--scrollbar-width)) - ${theme.spacing.sm} - 2.25rem)`,
+      )} - (2 * var(--scrollbar-gutter-size)) - ${theme.spacing.sm} - 2.25rem)`,
     }),
   })
 )
