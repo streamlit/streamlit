@@ -259,8 +259,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       <StyledSidebarContent
         data-testid="stSidebarContent"
         ref={sidebarRef}
-        // Safari fix: hide scrollbars when not hovered. See globalStyles.ts
-        className={"hideScrollbar"}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
       >

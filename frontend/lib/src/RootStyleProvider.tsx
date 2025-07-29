@@ -25,9 +25,6 @@ import {
 } from "@emotion/react"
 
 import { globalStyles, ThemeConfig } from "./theme"
-import { ScrollbarSizeContext } from "./components/core/ScrollbarSizeContext"
-import { isInChildFrame } from "./util/utils"
-
 export interface RootStyleProviderProps {
   theme: ThemeConfig
   children: React.ReactNode
@@ -42,124 +39,26 @@ const cache = createCache({
   ...(nonce && { nonce }),
 })
 
-/**
- * React hook to detect the scrollbar gutter size and set it as a CSS custom property (--scrollbar-gutter-size).
- */
-const useScrollbarSize = (): number => {
-  const [scrollbarGutterWidth, setScrollbarGutterWidth] = useState(0)
-
-  const measureAndSetScrollbarWidth = useCallback(() => {
-    // Create a temporary div to measure scrollbar gutter size
-    const outer = document.createElement("div")
-    outer.style.position = "absolute"
-    outer.style.top = "-9999px" // Move it off-screen
-    outer.style.left = "-9999px"
-    outer.style.visibility = "hidden"
-    outer.style.overflow = "scroll" // Triggers scrollbar
-    outer.style.width = "50px" // Give it a fixed size to ensure overflow
-    outer.style.height = "50px" // Give it a fixed size to ensure overflow
-    document.body.appendChild(outer)
-
-    // Create an inner div to measure content width
-    const inner = document.createElement("div")
-    inner.style.width = "100%" // Inner div takes full width of outer's content area
-    outer.appendChild(inner)
-
-    // Calculate the scrollbar gutter size
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const calculatedWidth = outer.offsetWidth - inner.offsetWidth
-
-    // Remove the temporary divs
-    outer.parentNode?.removeChild(outer)
-
-    // Store the scrollbar gutter size in a CSS custom property(variable)
-    document.documentElement.style.setProperty(
-      "--scrollbar-gutter-size",
-      `${calculatedWidth}px`
-    )
-
-    setScrollbarGutterWidth(calculatedWidth)
-  }, [])
-
-  useEffect(() => {
-    let lastDevicePixelRatio = window.devicePixelRatio
-    let animationFrameId: number | undefined
-    let timeoutId: NodeJS.Timeout | undefined
-
-    const handleResize = (): void => {
-      if (window.devicePixelRatio !== lastDevicePixelRatio) {
-        lastDevicePixelRatio = window.devicePixelRatio
-        measureAndSetScrollbarWidth()
-      }
-    }
-
-    const measureWithDelay = (): void => {
-      // In iframe contexts, add an additional delay to ensure the rendering
-      // context is fully established before measuring
-      if (isInChildFrame()) {
-        // Use a small timeout to allow the browser more time to establish
-        // the iframe's layout and inherited styles
-        timeoutId = setTimeout(() => {
-          animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
-        }, 100)
-      } else {
-        animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
-      }
-    }
-
-    // Ensure the document is fully loaded before measuring scrollbar size
-    // This fixes issues in iframes where initial measurements return 0
-    if (document.readyState !== "complete") {
-      window.addEventListener("load", measureWithDelay, {
-        once: true,
-      })
-    } else {
-      // Document already loaded, measure with appropriate delay
-      measureWithDelay()
-    }
-
-    window.addEventListener("resize", handleResize)
-
-    return () => {
-      if (animationFrameId !== undefined) {
-        cancelAnimationFrame(animationFrameId)
-      }
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId)
-      }
-      window.removeEventListener("load", measureWithDelay)
-      window.removeEventListener("resize", handleResize)
-    }
-  }, [measureAndSetScrollbarWidth])
-
-  return scrollbarGutterWidth
-}
-
 export function RootStyleProvider(
   props: RootStyleProviderProps
 ): ReactElement {
   const { children, theme } = props
 
-  // Inject the --scrollbar-gutter-size variable into :root
-  const scrollbarGutterSize = useScrollbarSize()
-
   return (
-    <ScrollbarSizeContext.Provider value={scrollbarGutterSize}>
-      <BaseProvider
-        theme={theme.basewebTheme}
-        // This zIndex is required for modals/dialog. However,
-        // it would be good to do some investigation
-        // and find a better way to configure the zIndex
-        // for the modals/dialogs.
-        zIndex={theme.emotion.zIndices.popup}
-      >
-        <CacheProvider value={cache}>
-          <EmotionThemeProvider theme={theme.emotion}>
-            <Global styles={globalStyles} />
-            {children}
-          </EmotionThemeProvider>
-        </CacheProvider>
-      </BaseProvider>
-    </ScrollbarSizeContext.Provider>
+    <BaseProvider
+      theme={theme.basewebTheme}
+      // This zIndex is required for modals/dialog. However,
+      // it would be good to do some investigation
+      // and find a better way to configure the zIndex
+      // for the modals/dialogs.
+      zIndex={theme.emotion.zIndices.popup}
+    >
+      <CacheProvider value={cache}>
+        <EmotionThemeProvider theme={theme.emotion}>
+          <Global styles={globalStyles} />
+          {children}
+        </EmotionThemeProvider>
+      </CacheProvider>
+    </BaseProvider>
   )
 }
