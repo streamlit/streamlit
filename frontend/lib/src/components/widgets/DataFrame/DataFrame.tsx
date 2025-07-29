@@ -701,7 +701,7 @@ function DataFrame({
             )
           }
         }
-      }, 1)
+      }, 0)
 
       // Cleanup on unmount
       return () => clearTimeout(timeoutId)
