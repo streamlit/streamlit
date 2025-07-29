@@ -10,6 +10,11 @@ updates:
     # to keep the number of parallel dependency updates manageable.
     open-pull-requests-limit: 3
 
+    # Use cooldown to avoid updating dependencies too frequently
+    # and minimize risk of supply chain attacks.
+    cooldown:
+      default-days: 5
+
     labels:
       - "change:chore"
       - "impact:internal"
@@ -67,19 +72,13 @@ updates:
           - "unified"
       eslint:
         patterns:
-          - "eslint"
-          - "eslint-*"
-          - "@typescript-eslint/*"
-          - "@eslint-react/*"
+          - "*eslint*"
       emotion:
         patterns:
-          - "@emotion/*"
-          - "@emotion-icons/*"
+          - "*emotion*"
       vitest:
         patterns:
-          - "vitest"
-          - "vitest-*"
-          - "@vitest/*"
+          - "*vitest*"
       vite:
         patterns:
           - "vite"
@@ -97,6 +96,11 @@ updates:
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
     open-pull-requests-limit: 3
+
+    # Use cooldown to avoid updating dependencies too frequently
+    # and minimize risk of supply chain attacks.
+    cooldown:
+      default-days: 5
 
     labels:
       - "change:chore"
