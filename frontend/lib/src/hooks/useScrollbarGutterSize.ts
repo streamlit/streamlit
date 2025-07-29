@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useMemo } from "react"
 
 /**
  * React hook to detect the scrollbar gutter size and set it as a CSS custom property (--scrollbar-gutter-size).
  */
 export const useScrollbarGutterSize = (): number => {
-  const [scrollbarGutterWidth, setScrollbarGutterWidth] = useState(0)
   const devicePixelRatio = window.devicePixelRatio
 
-  const measureAndSetScrollbarWidth = useCallback(() => {
+  const scrollbarGutterWidth = useMemo(() => {
     // Create a temporary div to measure scrollbar gutter size
     const outer = document.createElement("div")
     outer.style.position = "absolute"
@@ -49,16 +48,9 @@ export const useScrollbarGutterSize = (): number => {
     // TODO: outer.remove()
     outer.parentNode?.removeChild(outer)
 
-    setScrollbarGutterWidth(calculatedWidth)
-  }, [])
-
-  useEffect(() => {
-    const animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
-
-    return () => {
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, [measureAndSetScrollbarWidth, devicePixelRatio])
-
+    return calculatedWidth
+    // eslint-disable-next-line react-hooks/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devicePixelRatio])
   return scrollbarGutterWidth
 }

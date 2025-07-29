@@ -695,6 +695,9 @@ function DataFrame({
     }
   }, [allColumns.length, columns.length])
 
+  // eslint-disable-next-line no-console
+  console.log(hasHorizontalScroll, hasVerticalScroll, scrollbarGutterSize)
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
