@@ -82,6 +82,7 @@ const useScrollbarSize = (): number => {
 
   useEffect(() => {
     let lastDevicePixelRatio = window.devicePixelRatio
+    let animationFrameId: number | undefined
 
     const handleResize = (): void => {
       if (window.devicePixelRatio !== lastDevicePixelRatio) {
@@ -96,12 +97,15 @@ const useScrollbarSize = (): number => {
       window.addEventListener("load", measureAndSetScrollbarWidth)
     } else {
       // Document already loaded, measure immediately
-      requestAnimationFrame(measureAndSetScrollbarWidth)
+      animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
     }
 
     window.addEventListener("resize", handleResize)
 
     return () => {
+      if (animationFrameId !== undefined) {
+        cancelAnimationFrame(animationFrameId)
+      }
       window.removeEventListener("load", measureAndSetScrollbarWidth)
       window.removeEventListener("resize", handleResize)
     }
