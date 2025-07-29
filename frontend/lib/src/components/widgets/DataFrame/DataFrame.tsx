@@ -89,6 +89,7 @@ import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
+import { convertRemToPx } from "~lib/theme/utils"
 
 // Debounce time for triggering a widget state update
 // This prevents rapid updates to the widget state.
@@ -148,7 +149,15 @@ function DataFrame({
   const dataEditorRef = useRef<DataEditorRef>(null)
   const resizableContainerRef = useRef<HTMLDivElement>(null)
 
-  const scrollbarWidth = useContext(ScrollbarWidthContext)
+  const scrollbarGutterSize = useContext(ScrollbarWidthContext)
+  const scrollbarSize = useMemo(
+    // If the scrollbar gutter size is 0, it means that we the system is using
+    // overlay scrollbars that don't take any space. In this case, we assume
+    // a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
+    // in the data grid.
+    () => scrollbarGutterSize || Math.round(convertRemToPx("0.5rem")),
+    [scrollbarGutterSize]
+  )
   const gridTheme = useCustomTheme()
 
   const { getRowThemeOverride, onItemHovered: handleRowHover } =
@@ -710,19 +719,20 @@ function DataFrame({
           const boundingClient =
             // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
+
           if (
+            hasHorizontalScroll &&
             // For whatever reason, we are still able to use the scrollbars even
             // if the mouse is one pixel outside of the scrollbar. Therefore, we add
             // an additional pixel.
-            hasHorizontalScroll &&
-            boundingClient.height - (scrollbarWidth + 1) <
+            boundingClient.height - scrollbarSize + 1 <
               e.clientY - boundingClient.top
           ) {
             e.stopPropagation()
           }
           if (
             hasVerticalScroll &&
-            boundingClient.width - (scrollbarWidth + 1) <
+            boundingClient.width - scrollbarSize <
               e.clientX - boundingClient.left
           ) {
             e.stopPropagation()
@@ -1007,13 +1017,19 @@ function DataFrame({
             // We use overflow scrollbars, so we need to deactivate the native
             // scrollbar override:
             scrollbarWidthOverride: 0,
-            paddingBottom: hasHorizontalScroll ? -scrollbarWidth : undefined,
-            paddingRight: hasVerticalScroll ? -scrollbarWidth : undefined,
+            paddingBottom: hasHorizontalScroll
+              ? -scrollbarGutterSize
+              : undefined,
+            paddingRight: hasVerticalScroll ? -scrollbarGutterSize : undefined,
             ...(hasCustomizedScrollbars && {
               // Add negative padding to the right and bottom to allow the scrollbars in
               // webkit to overlay the table:
-              paddingBottom: hasHorizontalScroll ? -scrollbarWidth : undefined,
-              paddingRight: hasVerticalScroll ? -scrollbarWidth : undefined,
+              paddingBottom: hasHorizontalScroll
+                ? -scrollbarGutterSize
+                : undefined,
+              paddingRight: hasVerticalScroll
+                ? -scrollbarGutterSize
+                : undefined,
             }),
           }}
           provideEditor={provideEditor}
