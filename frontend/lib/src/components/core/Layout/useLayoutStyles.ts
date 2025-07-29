@@ -40,6 +40,7 @@ export type UseLayoutStylesArgs = {
   // level element.
   subElement?: SubElement
   styleOverrides?: StyleOverrides
+  minStretchBehavior?: "fit-content" | "12.5rem" | "6.5rem"
 }
 
 const isNonZeroPositiveNumber = (value: unknown): value is number => {
@@ -61,7 +62,8 @@ const getWidth = (
   element: Element | BlockProto,
   // subElement supports older config where the width is set on the lower
   // level element.
-  subElement?: SubElement
+  subElement?: SubElement,
+  minStretchBehavior?: "fit-content" | "12.5rem" | "6.5rem"
 ): LayoutDimensionConfig => {
   // We need to support old width configurations for backwards compatibility,
   // since some integrations cache the messages and we want to ensure that the FE
@@ -149,7 +151,8 @@ const getFlex = (
   widthPixels: number | undefined,
   heightType: DimensionType | undefined,
   heightPixels: number | undefined,
-  direction: Direction | undefined
+  direction: Direction | undefined,
+  minStretchBehavior?: "fit-content" | "12.5rem"
 ): string | undefined => {
   if (
     widthType === DimensionType.PIXEL &&
@@ -170,8 +173,7 @@ const getFlex = (
     widthType === DimensionType.STRETCH &&
     direction === Direction.HORIZONTAL
   ) {
-    // TODO: This interferes with return from full screen.
-    return "1 1 fit-content"
+    return `1 1 ${minStretchBehavior}`
   }
 }
 
@@ -195,6 +197,7 @@ export const useLayoutStyles = ({
   element,
   subElement,
   styleOverrides,
+  minStretchBehavior,
 }: UseLayoutStylesArgs): UseLayoutStylesShape => {
   const flexContext = useContext(FlexContext)
   const layoutStyles = useMemo((): UseLayoutStylesShape => {
@@ -240,7 +243,8 @@ export const useLayoutStyles = ({
       commandWidth,
       heightType,
       commandHeight,
-      getDirection(flexContext)
+      getDirection(flexContext),
+      minStretchBehavior
     )
 
     const calculatedStyles = {

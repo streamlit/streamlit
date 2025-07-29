@@ -56,7 +56,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.
-    minWidth: "1%",
+    minWidth: "1rem",
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
