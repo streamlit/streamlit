@@ -29,7 +29,10 @@ import {
   ResizeDirection,
 } from "re-resizable"
 
-import { SidebarNav } from "@streamlit/app/src/components/Navigation"
+import {
+  shouldShowNavigation,
+  SidebarNav,
+} from "@streamlit/app/src/components/Navigation"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
@@ -37,6 +40,8 @@ import {
   DynamicIcon,
   IsSidebarContext,
   useEmotionTheme,
+  useExecuteWhenChanged,
+  useWindowDimensionsContext,
 } from "@streamlit/lib"
 import { IAppPage, Logo } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
@@ -65,7 +70,7 @@ export interface SidebarProps {
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   isCollapsed: boolean
-  onToggleCollapse: (collapsed: boolean) => void
+  onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
 }
 
 const DEFAULT_WIDTH = "256"
@@ -91,6 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
+  const { innerWidth } = useWindowDimensionsContext()
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -102,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     cachedSidebarWidth || DEFAULT_WIDTH
   )
   const [lastInnerWidth, setLastInnerWidth] = useState<number>(
-    window ? window.innerWidth : Infinity
+    innerWidth ?? Infinity
   )
 
   // When hovering sidebar header
@@ -136,6 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     ) => {
       // Use the actual ref width, not the delta, to avoid stale delta values
       if (ref) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         const newWidth = ref.clientWidth || ref.offsetWidth
         initializeSidebarWidth(newWidth)
       }
@@ -143,27 +150,20 @@ const Sidebar: React.FC<SidebarProps> = ({
     [initializeSidebarWidth]
   )
 
-  useEffect(() => {
-    const checkMobileOnResize = (): boolean => {
-      if (!window) return false
-
-      const { innerWidth } = window
-
-      // Collapse the sidebar if the window was narrowed and is now mobile-sized
-      if (innerWidth < lastInnerWidth && innerWidth <= mediumBreakpointPx) {
-        if (!isCollapsed) {
-          onToggleCollapse(true)
-        }
+  useExecuteWhenChanged(() => {
+    // Collapse the sidebar if the window was narrowed and is now mobile-sized
+    if (innerWidth < lastInnerWidth && innerWidth <= mediumBreakpointPx) {
+      if (!isCollapsed) {
+        onToggleCollapse(true, false)
       }
-      setLastInnerWidth(innerWidth)
-
-      return true
     }
+    setLastInnerWidth(innerWidth)
+  }, [innerWidth])
 
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
       if (sidebarRef && window) {
         const { current } = sidebarRef
-        const { innerWidth } = window
 
         if (
           current &&
@@ -177,14 +177,18 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
     }
 
-    window.addEventListener("resize", checkMobileOnResize)
     document.addEventListener("mousedown", handleClickOutside)
 
     return () => {
-      window.removeEventListener("resize", checkMobileOnResize)
       document.removeEventListener("mousedown", handleClickOutside)
     }
-  }, [lastInnerWidth, mediumBreakpointPx, isCollapsed, onToggleCollapse])
+  }, [
+    lastInnerWidth,
+    mediumBreakpointPx,
+    isCollapsed,
+    onToggleCollapse,
+    innerWidth,
+  ])
 
   function resetSidebarWidth(): void {
     // Double clicking on the resize handle resets sidebar to default width
@@ -216,7 +220,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     )
   }
 
-  const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
+  const hasPageNavAbove =
+    shouldShowNavigation(appPages, navSections) && !hideSidebarNav
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -249,6 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       // @ts-expect-error
       isCollapsed={isCollapsed}
       sidebarWidth={sidebarWidth}
+      windowInnerWidth={innerWidth}
     >
       <StyledSidebarContent
         data-testid="stSidebarContent"

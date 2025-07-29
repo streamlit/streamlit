@@ -22,11 +22,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-import tornado.concurrent
-import tornado.locks
-import tornado.netutil
 import tornado.web
-import tornado.websocket
 from tornado.httpserver import HTTPServer
 
 from streamlit import cli_util, config, file_util, util
@@ -54,6 +50,7 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import (
     get_cookie_secret,
+    is_tornado_version_less_than,
     is_xsrf_enabled,
     make_url_path_regex,
 )
@@ -61,6 +58,7 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import Awaitable
     from ssl import SSLContext
 
@@ -73,7 +71,8 @@ TORNADO_SETTINGS = {
     # With recent versions of Tornado, this value must be greater than or
     # equal to websocket_ping_timeout.
     # For details, see https://github.com/tornadoweb/tornado/pull/3376
-    "websocket_ping_interval": 30,
+    # For compatibility with older versions of Tornado, we set the value to 1.
+    "websocket_ping_interval": 1 if is_tornado_version_less_than("6.5.0") else 30,
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
@@ -189,8 +188,16 @@ def start_listening_unix_socket(http_server: HTTPServer) -> None:
     address = config.get_option("server.address")
     file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
 
-    unix_socket = tornado.netutil.bind_unix_socket(file_name)
-    http_server.add_socket(unix_socket)
+    import tornado.netutil
+
+    if hasattr(tornado.netutil, "bind_unix_socket"):
+        unix_socket = tornado.netutil.bind_unix_socket(file_name)
+        http_server.add_socket(unix_socket)
+    else:
+        _LOGGER.error(
+            "Unix socket support is not available in this version of Tornado."
+        )
+        sys.exit(1)
 
 
 def start_listening_tcp_socket(http_server: HTTPServer) -> None:
@@ -237,6 +244,11 @@ class Server:
         self.initialize_mimetypes()
 
         self._main_script_path = main_script_path
+
+        # The task that runs the server if an event loop is already running.
+        # We need to save a reference to it so that it doesn't get
+        # garbage collected while running.
+        self._bootstrap_task: asyncio.Task[None] | None = None
 
         # Initialize MediaFileStorage and its associated endpoint
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)

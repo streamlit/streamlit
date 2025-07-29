@@ -20,6 +20,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
     click_toggle,
+    get_element_by_key,
 )
 
 
@@ -319,6 +320,36 @@ def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
 def test_forms_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that forms render correctly within containers with fixed height."""
     # Get the container with height and snapshot the entire container
-    height_container = app.get_by_test_id("stVerticalBlock").nth(20)
+    height_container = app.get_by_test_id("stVerticalBlock").nth(24)
     height_container.scroll_into_view_if_needed()
     assert_snapshot(height_container, name="st_form-height_container")
+
+
+def test_form_with_dataframe(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that a form with a dataframe renders correctly with the toolbar."""
+    form_container = app.get_by_test_id("stVerticalBlock").nth(27)
+    dataframe = form_container.get_by_test_id("stDataFrame")
+    dataframe.hover()
+
+    dataframe_toolbar = dataframe.get_by_test_id("stElementToolbar")
+    expect(dataframe_toolbar).to_be_visible()
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    # Take a snapshot of the container that contains the form and the dataframe so
+    # that we can see the toolbar.
+    assert_snapshot(
+        form_container,
+        name="st_form-with_dataframe_toolbar",
+    )
+
+
+def test_form_submit_button_width_examples(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test form submit button width examples via screenshot matching."""
+    form = get_element_by_key(app, "width_tests")
+    submit_elements = form.get_by_test_id("stFormSubmitButton")
+
+    assert_snapshot(submit_elements.nth(0), name="st_form_submit_button-width_content")
+    assert_snapshot(submit_elements.nth(1), name="st_form_submit_button-width_stretch")
+    assert_snapshot(submit_elements.nth(2), name="st_form_submit_button-width_250px")

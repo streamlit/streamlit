@@ -183,6 +183,27 @@ export default tseslint.config([
             "Please use window.localStorage instead since localStorage is not " +
             "supported in some browsers (e.g. Android WebView).",
         },
+        {
+          name: "innerWidth",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          name: "innerHeight",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "window",
+          property: "innerWidth",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
+        {
+          object: "window",
+          property: "innerHeight",
+          message: "Please use the `useWindowDimensionsContext` hook instead.",
+        },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
@@ -254,6 +275,7 @@ export default tseslint.config([
       "streamlit-custom/use-strict-null-equality-checks": "error",
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
+      "streamlit-custom/no-force-reflow-access": "error",
       "no-restricted-imports": [
         "error",
         {
@@ -308,6 +330,8 @@ export default tseslint.config([
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
+      // Allow force reflow access in test files
+      "streamlit-custom/no-force-reflow-access": "off",
 
       // Testing library rules
       "testing-library/prefer-user-event": "error",

@@ -53,7 +53,8 @@ function LinkButton(props: Readonly<Props>): ReactElement {
     <Box className="stLinkButton" data-testid="stLinkButton">
       <BaseButtonTooltip
         help={element.help}
-        containerWidth={element.useContainerWidth}
+        // TODO(lawilby): Probably remove this once width is implemented on Popover.
+        containerWidth={true}
       >
         {/* We use separate BaseLinkButton instead of BaseButton here, because
         link behavior requires tag <a> instead of <button>.*/}
@@ -62,7 +63,6 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           size={BaseButtonSize.SMALL}
           disabled={element.disabled}
           onClick={handleClick}
-          containerWidth={element.useContainerWidth}
           href={element.url}
           target="_blank"
           rel="noreferrer"

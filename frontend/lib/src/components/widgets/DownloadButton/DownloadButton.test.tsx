@@ -82,11 +82,13 @@ describe("DownloadButton widget", () => {
     const user = userEvent.setup()
     render(<DownloadButton {...getProps({ help: "mockHelpText" })} />)
 
-    // Ensure both the button and the tooltip target have the correct width
+    // Ensure both the button and the tooltip target have the correct width.
+    // These will be 100% and the ElementContainer will have styles to determine
+    // the button width.
     const downloadButton = screen.getByRole("button")
-    expect(downloadButton).toHaveStyle("width: auto")
+    expect(downloadButton).toHaveStyle("width: 100%")
     const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
-    expect(tooltipTarget).toHaveStyle("width: auto")
+    expect(tooltipTarget).toHaveStyle("width: 100%")
 
     // Ensure the tooltip content is visible and has the correct text
     await user.hover(tooltipTarget)

@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Final
 
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -93,24 +94,35 @@ class PollingPathWatcher:
             # Don't call self._schedule()
             return
 
-        modification_time = util.path_modification_time(
-            str(self._path), self._allow_nonexistent
-        )
-        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-        # modification_time is always 0.0 because of file system limitations.
-        if modification_time != 0.0 and modification_time <= self._modification_time:
-            self._schedule()
-            return
+        try:
+            modification_time = util.path_modification_time(
+                str(self._path), self._allow_nonexistent
+            )
+            # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+            # modification_time is always 0.0 because of file system limitations.
+            if (
+                modification_time != 0.0
+                and modification_time <= self._modification_time
+            ):
+                self._schedule()
+                return
 
-        self._modification_time = modification_time
+            self._modification_time = modification_time
 
-        md5 = util.calc_md5_with_blocking_retries(
-            str(self._path),
-            glob_pattern=self._glob_pattern,
-            allow_nonexistent=self._allow_nonexistent,
-        )
-        if md5 == self._md5:
-            self._schedule()
+            md5 = util.calc_md5_with_blocking_retries(
+                str(self._path),
+                glob_pattern=self._glob_pattern,
+                allow_nonexistent=self._allow_nonexistent,
+            )
+            if md5 == self._md5:
+                self._schedule()
+                return
+        except StreamlitMaxRetriesError as ex:
+            _LOGGER.debug(
+                "Ignoring file change. Failed to calculate MD5 for path %s",
+                self._path,
+                exc_info=ex,
+            )
             return
 
         self._md5 = md5

@@ -49,7 +49,6 @@ import {
   getActivateScrollToBottomBackwardsCompatible,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getHeightBackwardsCompatible,
   getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
@@ -173,12 +172,16 @@ export const FlexBoxContainer = (
   )
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
 
-  const height = getHeightBackwardsCompatible(props.node.deltaBlock)
-  const flex = height ? `0 0 ${height}px` : undefined
+  const layout_styles = useLayoutStyles({
+    element: props.node.deltaBlock,
+    subElement:
+      (props.node.deltaBlock.type &&
+        props.node.deltaBlock[props.node.deltaBlock.type]) ||
+      undefined,
+  })
 
-  // TODO(lawilby): as advanced layouts is rolled out, we will add useLayoutStyles
-  // here to get the correct styles for the flexbox container based on user
-  // settings.
+  // TODO: as advanced layouts is rolled out, more of these styles will
+  // be provided by useLayoutStyles
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
@@ -186,12 +189,15 @@ export const FlexBoxContainer = (
       props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
       streamlit.GapSize.SMALL,
     direction: direction,
-    // This is also backwards capatible since previously wrap was not added
+    // This is also backwards compatible since previously wrap was not added
     // to the flex container.
-    wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
-    height,
-    flex,
+    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    overflow: layout_styles.overflow,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
+    // We need the height on the container for scrolling.
+    height: layout_styles.height,
+    // Flex properties are set on the LayoutWrapper.
+    flex: "1",
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
@@ -251,10 +257,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
 
-  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    return <FlexBoxContainer {...childProps} />
-  }
-
+  let containerElement: ReactElement | undefined
   const child: ReactElement = (
     <ContainerContentsWrapper
       {...childProps}
@@ -263,13 +266,17 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     />
   )
 
-  let containerElement: ReactElement | undefined
+  if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
+    containerElement = <FlexBoxContainer {...childProps} />
+  }
 
   if (node.deltaBlock.dialog) {
     return (
       <Dialog
         element={node.deltaBlock.dialog as BlockProto.Dialog}
         deltaMsgReceivedAt={node.deltaMsgReceivedAt}
+        widgetMgr={props.widgetMgr}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Dialog>
@@ -288,10 +295,18 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   }
 
   if (node.deltaBlock.popover) {
-    return (
+    containerElement = (
       <Popover
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
+        stretchWidth={
+          // TODO (lawilby): This can be replaced by children
+          // should stretch util added in buttons PR.
+          node.deltaBlock.widthConfig?.useStretch ||
+          node.deltaBlock.widthConfig?.pixelWidth
+            ? true
+            : false
+        }
       >
         {child}
       </Popover>
@@ -314,6 +329,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
         scriptNotRunning={scriptNotRunning}
         widgetMgr={props.widgetMgr}
         border={border}
+        overflow={styles.overflow}
       >
         {child}
       </Form>

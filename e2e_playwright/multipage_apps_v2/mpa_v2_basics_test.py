@@ -203,6 +203,48 @@ def test_show_not_found_dialog(app: Page, app_port: int):
     expect(app.locator('[role="dialog"]')).to_contain_text("Page not found")
 
 
+def test_section_headers_can_be_collapsed_and_expanded(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that section headers can be collapsed and expanded, and chevron shows on hover."""
+    section_headers = themed_app.get_by_test_id("stNavSectionHeader")
+    section_1_header = section_headers.nth(0)
+    expect(section_1_header).to_contain_text("Section 1")
+
+    # Screenshot test for chevron on hover
+    section_1_header.hover()
+    assert_snapshot(section_1_header, name="mpa-section-header-hover")
+    # move mouse away to avoid flakiness
+    themed_app.mouse.move(0, 0)
+
+    page_links = themed_app.get_by_test_id("stSidebarNav").locator("a")
+    expect(page_links).to_have_count(13)
+
+    # Collapse Section 1
+    section_1_header.click()
+    expect(page_links).to_have_count(11)
+    expect(
+        themed_app.get_by_test_id("stSidebarNav").get_by_text("page 2", exact=True)
+    ).not_to_be_visible()
+    expect(
+        themed_app.get_by_test_id("stSidebarNav").get_by_text(
+            "Different Title", exact=True
+        )
+    ).not_to_be_visible()
+
+    # Expand Section 1
+    section_1_header.click()
+    expect(page_links).to_have_count(13)
+    expect(
+        themed_app.get_by_test_id("stSidebarNav").get_by_text("page 2", exact=True)
+    ).to_be_visible()
+    expect(
+        themed_app.get_by_test_id("stSidebarNav").get_by_text(
+            "Different Title", exact=True
+        )
+    ).to_be_visible()
+
+
 def test_handles_expand_collapse_of_mpa_nav_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):

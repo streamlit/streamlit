@@ -178,6 +178,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
     def _connect(self, autocommit: bool = False, **kwargs: Any) -> Engine:
         import sqlalchemy
+        from sqlalchemy.engine import URL, make_url
 
         kwargs = deepcopy(kwargs)
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
@@ -190,7 +191,7 @@ class SQLConnection(BaseConnection["Engine"]):
             )
 
         if "url" in conn_params:
-            url = sqlalchemy.engine.make_url(conn_params["url"])
+            url = make_url(conn_params["url"])
         else:
             for p in _REQUIRED_CONNECTION_PARAMS:
                 if p not in conn_params:
@@ -200,7 +201,7 @@ class SQLConnection(BaseConnection["Engine"]):
                 f"+{conn_params['driver']}" if "driver" in conn_params else ""
             )
 
-            url = sqlalchemy.engine.URL.create(
+            url = URL.create(
                 drivername=drivername,
                 username=conn_params["username"],
                 password=conn_params.get("password"),
@@ -217,7 +218,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
         if autocommit:
             return cast("Engine", eng.execution_options(isolation_level="AUTOCOMMIT"))
-        return cast("Engine", eng)
+        return cast("Engine", eng)  # ty: ignore[redundant-cast]
 
     def query(
         self,

@@ -69,6 +69,7 @@ const FileDropzone = ({
           multiple={multiple}
           acceptedExtensions={acceptedExtensions}
           maxSizeBytes={maxSizeBytes}
+          disabled={disabled}
         />
         <BaseButton
           kind={BaseButtonKind.SECONDARY}

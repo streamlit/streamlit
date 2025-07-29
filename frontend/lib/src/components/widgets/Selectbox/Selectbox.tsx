@@ -121,7 +121,7 @@ const Selectbox: FC<Props> = ({
       help={help}
       placeholder={placeholder}
       clearable={clearable}
-      acceptNewOptions={acceptNewOptions}
+      acceptNewOptions={acceptNewOptions ?? false}
     />
   )
 }

@@ -21,11 +21,9 @@ import {
   convertRemToPx,
   EmotionTheme,
   getBlue80,
-  getCategoricalColorsArray,
   getDivergingColorsArray,
   getGray30,
   getGray70,
-  getSequentialColorsArray,
 } from "~lib/theme"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
@@ -103,10 +101,10 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       symbolStrokeWidth: convertRemToPx(theme.spacing.twoXS),
     },
     range: {
-      category: getCategoricalColorsArray(theme),
+      category: theme.colors.chartCategoricalColors,
       diverging: getDivergingColorsArray(theme),
-      ramp: getSequentialColorsArray(theme),
-      heatmap: getSequentialColorsArray(theme),
+      ramp: theme.colors.chartSequentialColors,
+      heatmap: theme.colors.chartSequentialColors,
     },
     view: {
       columns: 1,

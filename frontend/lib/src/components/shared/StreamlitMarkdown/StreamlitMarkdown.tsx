@@ -47,6 +47,7 @@ import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { findAndReplace } from "mdast-util-find-and-replace"
 
+import { LibContext } from "~lib/components/core/LibContext"
 import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -116,6 +117,11 @@ export interface Props {
    * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
+
+  /**
+   * Inherit font family, size, and weight from parent
+   */
+  inheritFont?: boolean
 }
 
 /**
@@ -368,6 +374,20 @@ export const CustomPreTag: FC<ReactMarkdownProps> = ({ children }) => {
   )
 }
 
+export const CustomMediaTag: FC<
+  JSX.IntrinsicElements["img" | "video" | "audio"] &
+    ReactMarkdownProps & { node: Element }
+> = ({ node, ...props }) => {
+  const { libConfig } = useContext(LibContext)
+
+  const Tag = node.tagName
+  const attributes = {
+    ...props,
+    crossOrigin: libConfig.resourceCrossOriginMode,
+  }
+  return <Tag {...attributes} />
+}
+
 // These are common renderers that don't depend on props or context
 const BASE_RENDERERS = {
   pre: CustomPreTag,
@@ -378,6 +398,9 @@ const BASE_RENDERERS = {
   h4: CustomHeading,
   h5: CustomHeading,
   h6: CustomHeading,
+  img: CustomMediaTag,
+  video: CustomMediaTag,
+  audio: CustomMediaTag,
 }
 
 /**
@@ -722,11 +745,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = [rehypeSetCodeInlineProperty, rehypeKatex]
+    const plugins: PluggableList = [rehypeKatex]
 
     if (allowHTML) {
       plugins.push(rehypeRaw)
     }
+
+    // This plugin must run last to ensure the inline property is set correctly
+    // and not overwritten by other plugins like rehypeRaw
+    plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
   }, [allowHTML])
@@ -782,15 +809,16 @@ const StreamlitMarkdown: FC<Props> = ({
   largerLabel,
   disableLinks,
   isToast,
+  inheritFont,
 }) => {
-  const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
 
   return (
     <StyledStreamlitMarkdown
       isCaption={Boolean(isCaption)}
-      isInSidebarOrDialog={isInSidebar || isInDialog}
+      isInDialog={isInDialog}
       isLabel={isLabel}
+      inheritFont={inheritFont}
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}

@@ -206,6 +206,7 @@ interface State {
   appConfig: AppConfig
   autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
+  scriptChangedOnDisk: boolean
 }
 
 const INITIAL_SCRIPT_RUN_ID = "<null>"
@@ -330,6 +331,7 @@ export class App extends PureComponent<Props, State> {
       autoReruns: [],
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
+      scriptChangedOnDisk: false,
     }
 
     this.connectionManager = null
@@ -476,6 +478,8 @@ export class App extends PureComponent<Props, State> {
           enforceDownloadInNewTab,
           metricsUrl,
           blockErrorDialogs,
+          setAnonymousCrossOriginPropertyOnMediaElements,
+          resourceCrossOriginMode,
         } = response
 
         const appConfig: AppConfig = {
@@ -488,6 +492,11 @@ export class App extends PureComponent<Props, State> {
           mapboxToken,
           disableFullscreenMode,
           enforceDownloadInNewTab,
+          resourceCrossOriginMode:
+            (resourceCrossOriginMode ??
+            setAnonymousCrossOriginPropertyOnMediaElements)
+              ? "anonymous"
+              : undefined,
         }
 
         // Set the metrics configuration:
@@ -528,6 +537,7 @@ export class App extends PureComponent<Props, State> {
           const taggedEls = document.querySelectorAll("[data-iframe-height]")
           // Use ceil to avoid fractional pixels creating scrollbars.
           const lowestBounds = Array.from(taggedEls).map(el =>
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             Math.ceil(el.getBoundingClientRect().bottom)
           )
 
@@ -580,12 +590,6 @@ export class App extends PureComponent<Props, State> {
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState: this.state.scriptRunState,
       })
-    }
-    // Rerun script if the theme changed
-    if (
-      _prevProps.theme.activeTheme.name !== this.props.theme.activeTheme.name
-    ) {
-      this.sendRerunBackMsg()
     }
   }
 
@@ -699,12 +703,16 @@ export class App extends PureComponent<Props, State> {
     return false
   }
 
+  /**
+   * Handles theme changes from host communication.
+   */
   handleThemeMessage = (
     themeName?: PresetThemeName,
     theme?: ICustomThemeConfig
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+
     if (themeName === lightTheme.name && isUsingPresetTheme) {
       this.props.theme.setTheme(lightTheme)
     } else if (themeName === darkTheme.name && isUsingPresetTheme) {
@@ -713,7 +721,6 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.setImportedTheme(theme)
     }
   }
-
   /**
    * Called by ConnectionManager when our connection state changes
    */
@@ -730,6 +737,9 @@ export class App extends PureComponent<Props, State> {
       //   2. our last script run attempt was interrupted by the websocket
       //      connection dropping, or
       //   3. the host explicitly requested a reconnect (we trigger scriptRunState to be RERUN_REQUESTED)
+      //   4. there is an indication that the script is using fragments (fragments in last run or auto-rerun),
+      //      which might need a rerun to be reinitialized if a new app session got created.
+
       const lastRunWasInterrupted =
         this.state.scriptRunState === ScriptRunState.RUNNING
       const wasRerunRequested =
@@ -738,7 +748,11 @@ export class App extends PureComponent<Props, State> {
       if (
         !this.sessionInfo.last ||
         lastRunWasInterrupted ||
-        wasRerunRequested
+        wasRerunRequested ||
+        // Script is using fragments (fragments in last run or
+        // fragment auto-reruns configured):
+        this.state.fragmentIdsThisRun.length > 0 ||
+        this.state.autoReruns.length > 0
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1053,6 +1067,10 @@ export class App extends PureComponent<Props, State> {
         },
         dialog,
         scriptRunState,
+        // Reset scriptChangedOnDisk when script starts running
+        scriptChangedOnDisk: statusChangeProto.scriptIsRunning
+          ? false
+          : prevState.scriptChangedOnDisk,
       }
     })
   }
@@ -1074,6 +1092,8 @@ export class App extends PureComponent<Props, State> {
         newDialog,
         sessionEvent.scriptCompilationException?.message ?? "No message"
       )
+    } else if (sessionEvent.type === "scriptChangedOnDisk") {
+      this.setState({ scriptChangedOnDisk: true })
     }
   }
 
@@ -2044,6 +2064,26 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  /**
+   * Determines whether the toolbar should be visible based on embed mode,
+   * toolbar mode settings, and availability of host menu/toolbar items.
+   */
+  private shouldShowToolbar = (
+    hostMenuItems: IMenuItem[],
+    hostToolbarItems: IToolbarItem[]
+  ): boolean => {
+    // Show toolbar if not embedded or if specifically configured to display in embed mode
+    const isToolbarAllowedInEmbed = !isEmbed() || isToolbarDisplayed()
+
+    // Show toolbar if not in minimal mode or if there are host items to display
+    const hasContentToShow =
+      this.state.toolbarMode !== Config.ToolbarMode.MINIMAL ||
+      hostMenuItems.length > 0 ||
+      hostToolbarItems.length > 0
+
+    return isToolbarAllowedInEmbed && hasContentToShow
+  }
+
   override render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -2071,6 +2111,7 @@ export class App extends PureComponent<Props, State> {
       appPages,
       navSections,
       navigationPosition,
+      scriptChangedOnDisk,
     } = this.state
 
     // Always use sidebar navigation on mobile, regardless of the server setting
@@ -2099,7 +2140,8 @@ export class App extends PureComponent<Props, State> {
         })
       : null
 
-    const showToolbar = !isEmbed() || isToolbarDisplayed()
+    // Determine toolbar visibility using helper method
+    const showToolbar = this.shouldShowToolbar(hostMenuItems, hostToolbarItems)
     const showColoredLine =
       (!hideColoredLine && !isEmbed()) || isColoredLineDisplayed()
     const showPadding = !isEmbed() || isPaddingDisplayed()
@@ -2180,11 +2222,11 @@ export class App extends PureComponent<Props, State> {
                   {!hideTopBar && (
                     <StatusWidget
                       connectionState={connectionState}
-                      sessionEventDispatcher={this.sessionEventDispatcher}
                       scriptRunState={scriptRunState}
                       rerunScript={this.rerunScript}
                       stopScript={this.stopScript}
                       allowRunOnSave={allowRunOnSave}
+                      showScriptChangedActions={scriptChangedOnDisk}
                     />
                   )}
                   {!hideTopBar && (
@@ -2196,7 +2238,7 @@ export class App extends PureComponent<Props, State> {
                       metricsMgr={this.metricsMgr}
                     />
                   )}
-                  {this.showDeployButton() && (
+                  {this.showDeployButton() && !scriptChangedOnDisk && (
                     <DeployButton onClick={this.deployButtonClicked} />
                   )}
                   {!hideTopBar && (

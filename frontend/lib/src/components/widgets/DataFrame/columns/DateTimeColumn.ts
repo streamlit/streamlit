@@ -51,17 +51,29 @@ function applyTimezone(momentDate: Moment, timezone: string): Moment {
 }
 
 export interface DateTimeColumnParams {
-  // A momentJS formatting syntax to format the display value.
+  /**
+   * A momentJS formatting syntax to format the display value.
+   */
   readonly format?: string
-  // Specifies the granularity that the value must adhere.
-  // For time and datetime, this is the number of seconds between each allowed value.
-  // For date, this is the number of days between each allowed value.
+  /**
+   * Specifies the granularity that the value must adhere.
+   * For time and datetime, this is the number of seconds between each allowed value.
+   * For date, this is the number of days between each allowed value.
+   */
   readonly step?: number
-  // A timezone identifier, e.g. "America/New_York", "+05:00", or "UTC"
+  /**
+   * A timezone identifier, e.g. "America/New_York", "+05:00", or "UTC"
+   */
   readonly timezone?: string
-  // The minimum allowed value for editing. This needs to be an ISO formatted datetime/date/time string (UTC).
+  /**
+   * The minimum allowed value for editing. This needs to be an ISO formatted
+   * datetime/date/time string (UTC).
+   */
   readonly min_value?: string
-  // The maximum allowed value for editing. This needs to be an ISO formatted datetime/date/time string (UTC).
+  /**
+   * The maximum allowed value for editing. This needs to be an ISO formatted
+   * datetime/date/time string (UTC).
+   */
   readonly max_value?: string
 }
 
@@ -183,6 +195,12 @@ function BaseDateTimeColumn(
   return {
     ...props,
     kind,
+    typeIcon:
+      kind === "date"
+        ? ":material/calendar_month:"
+        : kind === "time"
+          ? ":material/access_time:"
+          : ":material/calendar_today:",
     sortMode: "default",
     validateInput,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
