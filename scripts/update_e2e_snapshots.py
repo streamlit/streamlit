@@ -32,7 +32,7 @@ import requests
 SNAPSHOT_UPDATE_FOLDER = "snapshot-updates"
 GITHUB_OWNER = "streamlit"
 GITHUB_REPO = "streamlit"
-GITHUB_WORKFLOW_FILE_NAME = "playwright-custom-components.yml"
+GITHUB_WORKFLOW_FILE_NAME = "playwright.yml"
 GITHUB_WORKFLOW_FILE_NAME_CHANGED_FILES = "playwright-changed-files.yml"
 PLAYWRIGHT_RESULT_ARTIFACT_NAME = "playwright_test_results"
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
