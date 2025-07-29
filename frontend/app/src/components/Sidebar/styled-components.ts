@@ -32,7 +32,7 @@ export const getSidebarHorizontalSpacing = (
 ): string => {
   // This should be max(0px, ...), but there's a Chrome bug that
   // causes content to clip when scrollbar-gutter is set to "stable both-edges".
-  // So we change the min from 0px to --scrollbar-gutter-size to account for that.
+  // So we change the min from 0px to scrollbarGutterSize to account for that.
   // Chrome bug: https://issues.chromium.org/issues/40064879
   return `max(
     ${scrollbarGutterSize}px,

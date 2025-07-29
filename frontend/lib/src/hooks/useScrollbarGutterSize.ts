@@ -17,7 +17,9 @@
 import { useMemo } from "react"
 
 /**
- * React hook to detect the scrollbar gutter size and set it as a CSS custom property (--scrollbar-gutter-size).
+ * React hook to measure the scrollbar gutter size (in pixels).
+ *
+ * This will return 0 if the OS/browser has activated overlay scrollbars.
  */
 export const useScrollbarGutterSize = (): number => {
   const devicePixelRatio = window.devicePixelRatio
@@ -45,10 +47,12 @@ export const useScrollbarGutterSize = (): number => {
     const calculatedWidth = outer.offsetWidth - inner.offsetWidth
 
     // Remove the temporary divs
-    // TODO: outer.remove()
-    outer.parentNode?.removeChild(outer)
+    outer.remove()
 
     return calculatedWidth
+    // We want this to recalculate when the devicePixelRatio has changed.
+    // This doesn't ensure that its recalculated whenever window.devicePixelRatio
+    // changes, but that seems like good enough for now.
     // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devicePixelRatio])
