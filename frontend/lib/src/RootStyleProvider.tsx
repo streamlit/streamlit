@@ -48,7 +48,7 @@ const useScrollbarSize = (): number => {
   const [scrollbarGutterWidth, setScrollbarGutterWidth] = useState(0)
 
   const measureAndSetScrollbarWidth = useCallback(() => {
-    // Create a temporary div to measure scrollbar width
+    // Create a temporary div to measure scrollbar gutter size
     const outer = document.createElement("div")
     outer.style.position = "absolute"
     outer.style.top = "-9999px" // Move it off-screen
@@ -64,7 +64,7 @@ const useScrollbarSize = (): number => {
     inner.style.width = "100%" // Inner div takes full width of outer's content area
     outer.appendChild(inner)
 
-    // Calculate the scrollbar width
+    // Calculate the scrollbar gutter size
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     const calculatedWidth = outer.offsetWidth - inner.offsetWidth
 
