@@ -25,11 +25,11 @@ import {
   IChatInputValue,
 } from "@streamlit/protobuf"
 
-import ChatInput, { Props } from "./ChatInput"
-
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+
+import ChatInput, { Props } from "./ChatInput"
 
 const getProps = (
   elementProps: Partial<ChatInputProto> = {},
