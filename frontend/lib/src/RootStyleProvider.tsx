@@ -47,33 +47,44 @@ const cache = createCache({
 const useScrollbarWidth = (): number => {
   const [scrollbarWidth, setScrollbarWidth] = useState(0)
   useEffect(() => {
-    // Create a temporary div to measure scrollbar width
-    const outer = document.createElement("div")
-    outer.style.position = "absolute"
-    outer.style.visibility = "hidden"
-    outer.style.overflow = "scroll" // Triggers scrollbar
-    outer.style.width = "50px" // Give it a fixed size to ensure overflow
-    outer.style.height = "50px" // Give it a fixed size to ensure overflow
-    document.body.appendChild(outer)
+    const measureScrollbarWidth = (): void => {
+      // Create a temporary div to measure scrollbar width
+      const outer = document.createElement("div")
+      outer.style.position = "absolute"
+      outer.style.top = "-9999px" // Move it off-screen
+      outer.style.left = "-9999px"
+      outer.style.visibility = "hidden"
+      outer.style.overflow = "scroll" // Triggers scrollbar
+      outer.style.width = "50px" // Give it a fixed size to ensure overflow
+      outer.style.height = "50px" // Give it a fixed size to ensure overflow
+      document.body.appendChild(outer)
 
-    // Create an inner div to measure content width
-    const inner = document.createElement("div")
-    inner.style.width = "100%" // Inner div takes full width of outer's content area
-    outer.appendChild(inner)
+      // Create an inner div to measure content width
+      const inner = document.createElement("div")
+      inner.style.width = "100%" // Inner div takes full width of outer's content area
+      outer.appendChild(inner)
 
-    // Calculate the scrollbar width
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const calculatedWidth = outer.offsetWidth - inner.offsetWidth
+      // Calculate the scrollbar width
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const calculatedWidth = outer.offsetWidth - inner.offsetWidth
 
-    // Remove the temporary divs
-    outer.parentNode?.removeChild(outer)
+      // Remove the temporary divs
+      outer.parentNode?.removeChild(outer)
 
-    // Store the scrollbar width in a CSS custom property(variable)
-    document.documentElement.style.setProperty(
-      "--scrollbar-width",
-      `${calculatedWidth}px`
-    )
-    setScrollbarWidth(calculatedWidth)
+      // Store the scrollbar width in a CSS custom property(variable)
+      document.documentElement.style.setProperty(
+        "--scrollbar-width",
+        `${calculatedWidth}px`
+      )
+
+      setScrollbarWidth(calculatedWidth)
+    }
+
+    const animationFrameId = requestAnimationFrame(measureScrollbarWidth)
+
+    return () => {
+      cancelAnimationFrame(animationFrameId)
+    }
   }, []) // Run this only once.
 
   return scrollbarWidth
