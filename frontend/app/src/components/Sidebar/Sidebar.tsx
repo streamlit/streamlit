@@ -41,6 +41,7 @@ import {
   IsSidebarContext,
   useEmotionTheme,
   useExecuteWhenChanged,
+  useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
 import { IAppPage, Logo } from "@streamlit/protobuf"
@@ -97,6 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const { innerWidth } = useWindowDimensionsContext()
+  const scrollbarGutterSize = useScrollbarGutterSize()
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -260,6 +262,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ref={sidebarRef}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
+        scrollbarGutterSize={scrollbarGutterSize}
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}

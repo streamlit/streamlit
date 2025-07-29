@@ -26,14 +26,17 @@ import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
  * @param theme The theme to use.
  * @returns The horizontal spacing for the sidebar.
  */
-export const getSidebarHorizontalSpacing = (theme: EmotionTheme): string => {
+export const getSidebarHorizontalSpacing = (
+  theme: EmotionTheme,
+  scrollbarGutterSize: number
+): string => {
   // This should be max(0px, ...), but there's a Chrome bug that
   // causes content to clip when scrollbar-gutter is set to "stable both-edges".
   // So we change the min from 0px to --scrollbar-gutter-size to account for that.
   // Chrome bug: https://issues.chromium.org/issues/40064879
   return `max(
-    calc(var(--scrollbar-gutter-size, 0px)),
-    calc(${theme.spacing.lg} - var(--scrollbar-gutter-size, 0px))
+    ${scrollbarGutterSize}px,
+    calc(${theme.spacing.twoXL} - ${scrollbarGutterSize}px)
   )`
 }
 
@@ -97,26 +100,32 @@ export const StyledSidebarUserContent =
   styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
     paddingTop: hasPageNavAbove ? theme.spacing.twoXL : 0,
     paddingBottom: theme.sizes.sidebarTopSpace,
-    paddingLeft: getSidebarHorizontalSpacing(theme),
-    paddingRight: getSidebarHorizontalSpacing(theme),
   }))
 
-export const StyledSidebarContent = styled.div({
-  position: "relative",
-  height: "100%",
-  width: "100%",
-  overflow: "auto",
-  /**
-   * Ensure that space is reserved for scrollbars, even when they are not
-   * visible. This is necessary to prevent layout shifts when the scrollbars
-   * appear and disappear.
-   *
-   * We utilize both-edges so that things look visually centered and aligned.
-   *
-   * @see https://github.com/streamlit/streamlit/issues/10310
-   */
-  scrollbarGutter: "stable both-edges",
-})
+export interface StyledSidebarContentProps {
+  scrollbarGutterSize: number
+}
+
+export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
+  ({ theme, scrollbarGutterSize }) => ({
+    position: "relative",
+    height: "100%",
+    width: "100%",
+    overflow: "auto",
+    /**
+     * Ensure that space is reserved for scrollbars, even when they are not
+     * visible. This is necessary to prevent layout shifts when the scrollbars
+     * appear and disappear.
+     *
+     * We utilize both-edges so that things look visually centered and aligned.
+     *
+     * @see https://github.com/streamlit/streamlit/issues/10310
+     */
+    scrollbarGutter: "stable both-edges",
+    paddingLeft: getSidebarHorizontalSpacing(theme, scrollbarGutterSize),
+    paddingRight: getSidebarHorizontalSpacing(theme, scrollbarGutterSize),
+  })
+)
 
 export const RESIZE_HANDLE_WIDTH = "8px"
 
@@ -139,8 +148,6 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  paddingLeft: getSidebarHorizontalSpacing(theme),
-  paddingRight: getSidebarHorizontalSpacing(theme),
   marginBottom: theme.spacing.lg,
   height: theme.sizes.headerHeight,
 }))

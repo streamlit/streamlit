@@ -56,10 +56,11 @@ import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 import { isNullOrUndefined } from "~lib/util/utils"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { LibContext } from "~lib/components/core/LibContext"
-import { ScrollbarSizeContext } from "~lib/components/core/ScrollbarSizeContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { convertRemToPx } from "~lib/theme/utils"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
@@ -89,7 +90,6 @@ import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
-import { convertRemToPx } from "~lib/theme/utils"
 
 // Debounce time for triggering a widget state update
 // This prevents rapid updates to the widget state.
@@ -148,8 +148,7 @@ function DataFrame({
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
   const resizableContainerRef = useRef<HTMLDivElement>(null)
-
-  const scrollbarGutterSize = useContext(ScrollbarSizeContext)
+  const scrollbarGutterSize = useScrollbarGutterSize()
 
   const gridTheme = useCustomTheme()
 
