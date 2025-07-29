@@ -14,23 +14,15 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react"
+import React, { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
 import { ISubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
-import { getCrossOriginAttributeValue } from "@streamlit/connection"
 
-import { LibContext } from "~lib/components/core/LibContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import { StyledVideoIframe } from "./styled-components"
 
@@ -53,13 +45,13 @@ function Video({
   endpoints,
   elementMgr,
 }: Readonly<VideoProps>): ReactElement {
-  const { libConfig } = useContext(LibContext)
-
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
   const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
     element
+
+  let crossOrigin = useCrossOriginAttribute(url)
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -253,12 +245,11 @@ function Video({
     )
   }
 
-  // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
+  // When in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
   // when streamlit frontend and backend are running on different ports
-  const crossOrigin =
-    process.env.NODE_ENV === "development" && subtitles.length > 0
-      ? "anonymous"
-      : getCrossOriginAttributeValue(libConfig.resourceCrossOriginMode, url)
+  if (process.env.NODE_ENV === "development" && subtitles.length > 0) {
+    crossOrigin = "anonymous"
+  }
 
   return (
     // eslint-disable-next-line jsx-a11y/media-has-caption

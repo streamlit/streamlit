@@ -47,9 +47,6 @@ import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { findAndReplace } from "mdast-util-find-and-replace"
 
-import { getCrossOriginAttributeValue } from "@streamlit/connection"
-
-import { LibContext } from "~lib/components/core/LibContext"
 import StreamlitSyntaxHighlighter from "~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -64,6 +61,7 @@ import {
 } from "~lib/theme"
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import {
   StyledHeadingActionElements,
@@ -380,16 +378,12 @@ export const CustomMediaTag: FC<
   JSX.IntrinsicElements["img" | "video" | "audio"] &
     ReactMarkdownProps & { node: Element }
 > = ({ node, ...props }) => {
-  const { libConfig } = useContext(LibContext)
-
+  const crossOrigin = useCrossOriginAttribute(props.src)
   const Tag = node.tagName
 
   const attributes = {
     ...props,
-    crossOrigin: getCrossOriginAttributeValue(
-      libConfig.resourceCrossOriginMode,
-      props.src
-    ),
+    crossOrigin,
   }
   return <Tag {...attributes} />
 }
