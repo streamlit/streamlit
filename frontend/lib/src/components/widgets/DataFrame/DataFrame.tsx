@@ -685,20 +685,6 @@ function DataFrame({
                 // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
                 resizableContainerRef.current.clientWidth
             )
-
-            // eslint-disable-next-line no-console
-            console.log(
-              scrollAreaBounds.width,
-              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-              resizableContainerRef.current.clientWidth,
-              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-              resizableContainerRef.current.offsetWidth,
-              scrollAreaBounds.height,
-              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-              resizableContainerRef.current.clientHeight,
-              // eslint-disable-next-line streamlit-custom/no-force-reflow-access
-              resizableContainerRef.current.offsetHeight
-            )
           }
         }
       }, 0)
@@ -717,9 +703,6 @@ function DataFrame({
       setShowColumnVisibilityMenu(false)
     }
   }, [allColumns.length, columns.length])
-
-  // eslint-disable-next-line no-console
-  console.log(hasHorizontalScroll, hasVerticalScroll, scrollbarGutterSize)
 
   return (
     <StyledResizableContainer
