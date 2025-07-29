@@ -167,25 +167,17 @@ function translateLogoHeight(theme: any, size: string): string {
   return theme.sizes.defaultLogoHeight
 }
 
-export const StyledLogo = styled.img<StyledLogoProps>(
-  ({ theme, size, sidebarWidth }) => ({
-    height: translateLogoHeight(theme, size),
-    // Extra margin to align small logo with sidebar collapse arrow
-    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginLeft: theme.spacing.none,
-    zIndex: theme.zIndices.header,
-    objectFit: "contain",
-    verticalAlign: "middle",
-    ...(sidebarWidth && {
-      // Control max width of logo so sidebar collapse button always shows (issue #8707)
-      // L & R padding (lg) + scrollbarGutter on both sides (2 * 8px) + R margin (sm) + collapse button (2.25rem)
-      maxWidth: `calc(${sidebarWidth}px - 2 * ${getSidebarHorizontalSpacing(
-        theme
-      )} - (2 * var(--scrollbar-gutter-size, 0px)) - ${theme.spacing.sm} - 2.25rem)`,
-    }),
-  })
-)
+export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
+  height: translateLogoHeight(theme, size),
+  // Extra margin to align small logo with sidebar collapse arrow
+  marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginLeft: theme.spacing.none,
+  zIndex: theme.zIndices.header,
+  objectFit: "contain",
+  verticalAlign: "middle",
+  maxWidth: `100%`,
+}))
 
 export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
   height: theme.sizes.largeLogoHeight,
@@ -199,7 +191,8 @@ export const StyledCollapseSidebarButton =
   styled.div<StyledCollapseSidebarButtonProps>(
     ({ showSidebarCollapse, theme }) => {
       return {
-        display: showSidebarCollapse ? "inline" : "none",
+        display: "inline",
+        visibility: showSidebarCollapse ? "visible" : "hidden",
         transition: "left 300ms",
         transitionDelay: "left 300ms",
         color: hasLightBackgroundColor(theme)

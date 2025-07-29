@@ -213,7 +213,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         appLogo={appLogo}
         endpoints={endpoints}
         collapsed={isCollapsed}
-        sidebarWidth={sidebarWidth}
         componentName="Sidebar Logo"
         dataTestId="stSidebarLogo"
       />
