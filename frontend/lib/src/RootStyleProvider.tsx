@@ -26,7 +26,6 @@ import {
 
 import { globalStyles, ThemeConfig } from "./theme"
 import { ScrollbarSizeContext } from "./components/core/ScrollbarSizeContext"
-import { isInChildFrame } from "./util/utils"
 
 export interface RootStyleProviderProps {
   theme: ThemeConfig
@@ -83,8 +82,6 @@ const useScrollbarSize = (): number => {
 
   useEffect(() => {
     let lastDevicePixelRatio = window.devicePixelRatio
-    let animationFrameId: number | undefined
-    let loadEventAttached = false
 
     const handleResize = (): void => {
       if (window.devicePixelRatio !== lastDevicePixelRatio) {
@@ -93,26 +90,19 @@ const useScrollbarSize = (): number => {
       }
     }
 
-    // In iframe contexts, we need to ensure the document is fully loaded
-    // before measuring scrollbar size to avoid getting 0
-    if (isInChildFrame() && document.readyState !== "complete") {
-      // Wait for load event before measuring
+    // Ensure the document is fully loaded before measuring scrollbar size
+    // This fixes issues in iframes where initial measurements return 0
+    if (document.readyState !== "complete") {
       window.addEventListener("load", measureAndSetScrollbarWidth)
-      loadEventAttached = true
     } else {
-      // Measure immediately if not in iframe or document already loaded
-      animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
+      // Document already loaded, measure immediately
+      requestAnimationFrame(measureAndSetScrollbarWidth)
     }
 
     window.addEventListener("resize", handleResize)
 
     return () => {
-      if (animationFrameId !== undefined) {
-        cancelAnimationFrame(animationFrameId)
-      }
-      if (loadEventAttached) {
-        window.removeEventListener("load", measureAndSetScrollbarWidth)
-      }
+      window.removeEventListener("load", measureAndSetScrollbarWidth)
       window.removeEventListener("resize", handleResize)
     }
   }, [measureAndSetScrollbarWidth])
