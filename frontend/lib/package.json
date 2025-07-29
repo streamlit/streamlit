@@ -140,7 +140,7 @@
     "@types/d3": "^7.4.3",
     "@types/d3-graphviz": "^2.6.10",
     "@types/eslint": "^9.6.1",
-    "@types/hoist-non-react-statics": "~3.3.6",
+    "@types/hoist-non-react-statics": "~3.3.7",
     "@types/katex": "~0.16.7",
     "@types/lodash": "~4.17.20",
     "@types/mapbox-gl": "~1.13.10",
