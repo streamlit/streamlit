@@ -40,7 +40,7 @@ export type UseLayoutStylesArgs = {
   // level element.
   subElement?: SubElement
   styleOverrides?: StyleOverrides
-  minStretchBehavior?: "fit-content" | "12.5rem" | "6.5rem"
+  minStretchBehavior?: "fit-content" | "12.5rem" | undefined
 }
 
 const isNonZeroPositiveNumber = (value: unknown): value is number => {
@@ -63,7 +63,7 @@ const getWidth = (
   // subElement supports older config where the width is set on the lower
   // level element.
   subElement?: SubElement,
-  minStretchBehavior?: "fit-content" | "12.5rem" | "6.5rem"
+  minStretchBehavior?: "fit-content" | "12.5rem" | undefined
 ): LayoutDimensionConfig => {
   // We need to support old width configurations for backwards compatibility,
   // since some integrations cache the messages and we want to ensure that the FE
@@ -152,7 +152,7 @@ const getFlex = (
   heightType: DimensionType | undefined,
   heightPixels: number | undefined,
   direction: Direction | undefined,
-  minStretchBehavior?: "fit-content" | "12.5rem"
+  minStretchBehavior?: "fit-content" | "12.5rem" | undefined
 ): string | undefined => {
   if (
     widthType === DimensionType.PIXEL &&
@@ -173,7 +173,7 @@ const getFlex = (
     widthType === DimensionType.STRETCH &&
     direction === Direction.HORIZONTAL
   ) {
-    return `1 1 ${minStretchBehavior}`
+    return `1 1 ${minStretchBehavior ?? "fit-content"}`
   }
 }
 

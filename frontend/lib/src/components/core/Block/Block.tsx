@@ -387,6 +387,7 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
       isStale,
       renderTabContent,
       width: styles.width,
+      flex: styles.flex,
     }
     return <Tabs {...tabsProps} />
   }
