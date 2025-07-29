@@ -91,7 +91,7 @@ const useScrollbarSize = (): number => {
         // the iframe's layout and inherited styles
         timeoutId = setTimeout(() => {
           animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
-        }, 100)
+        }, 1000)
       } else {
         animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
       }
