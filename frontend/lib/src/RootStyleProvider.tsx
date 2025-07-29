@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useEffect, useState } from "react"
+import React, { ReactElement } from "react"
 
 import { BaseProvider } from "baseui"
 import createCache from "@emotion/cache"
@@ -25,6 +25,7 @@ import {
 } from "@emotion/react"
 
 import { globalStyles, ThemeConfig } from "./theme"
+
 export interface RootStyleProviderProps {
   theme: ThemeConfig
   children: React.ReactNode
