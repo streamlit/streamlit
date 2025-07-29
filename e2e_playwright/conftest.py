@@ -890,20 +890,31 @@ def playwright_profiling(
 def wait_for_app_run(
     page_or_locator: Page | Locator | FrameLocator,
     wait_delay: int = 100,
+    initial_wait: int = 210,
 ) -> None:
-    """Wait for the given page to finish running."""
-    # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
+    """Wait for the given page to finish running.
 
-    page = None
-    if isinstance(page_or_locator, Page):
-        page = page_or_locator
-    elif isinstance(page_or_locator, Locator):
+    Parameters
+    ----------
+    page_or_locator : Page | Locator | FrameLocator
+        The page or locator to wait for.
+    wait_delay : int, optional
+        The delay to wait for the rerun to finish.
+    initial_wait : int, optional
+        The initial wait before checking for the rerun to finish.
+        This is needed for some widgets that have a debounce timeout.
+        For example, pydeck charts have a debounce timeout of 200ms.
+    """
+
+    page: Page
+    if isinstance(page_or_locator, Locator):
         page = page_or_locator.page
     elif isinstance(page_or_locator, FrameLocator):
         page = page_or_locator.owner.page
+    else:
+        page = page_or_locator
 
-    # if isinstance(page, Page):
-    page.wait_for_timeout(155)
+    page.wait_for_timeout(initial_wait)
 
     if isinstance(page_or_locator, StaticPage):
         # Check that static connection established.

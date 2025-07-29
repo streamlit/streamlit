@@ -205,7 +205,7 @@ def main() -> None:
         help="Only update snapshots for changed files",
     )
     args = parser.parse_args()
-    token = args.token
+    token: str | None = args.token
 
     if not token:
         print(
@@ -228,6 +228,7 @@ def main() -> None:
                 sys.exit(1)
         else:
             print("Token retrieved from git credential manager.")
+    token = str(token)
 
     print("Retrieving latest workflow run...")
 
@@ -262,23 +263,24 @@ def main() -> None:
                 f"Artifact '{PLAYWRIGHT_RESULT_ARTIFACT_NAME}' not found in workflow run with ID {run_id}"
             )
             sys.exit(1)
-        artifact_id = artifact["id"]
-        print(f"Found artifact ID: {artifact_id}")
+        else:
+            artifact_id = artifact["id"]
+            print(f"Found artifact ID: {artifact_id}")
 
-        # Download the artifact
-        download_url = artifact["archive_download_url"]
-        with tempfile.TemporaryDirectory() as temp_dir:
-            zip_path = os.path.join(temp_dir, "artifact.zip")
-            print(f"Downloading artifact to {zip_path}")
-            download_artifact(download_url, token, zip_path)
+            # Download the artifact
+            download_url = artifact["archive_download_url"]
+            with tempfile.TemporaryDirectory() as temp_dir:
+                zip_path = os.path.join(temp_dir, "artifact.zip")
+                print(f"Downloading artifact to {zip_path}")
+                download_artifact(download_url, token, zip_path)
 
-            # Extract and merge 'snapshot-updates' folder
-            print(
-                f"Extracting '{SNAPSHOT_UPDATE_FOLDER}' and merging into {E2E_SNAPSHOTS_DIR}"
-            )
-            extract_and_merge_snapshots(zip_path, E2E_SNAPSHOTS_DIR)
+                # Extract and merge 'snapshot-updates' folder
+                print(
+                    f"Extracting '{SNAPSHOT_UPDATE_FOLDER}' and merging into {E2E_SNAPSHOTS_DIR}"
+                )
+                extract_and_merge_snapshots(zip_path, E2E_SNAPSHOTS_DIR)
 
-        print("Artifact downloaded and snapshots merged successfully.")
+            print("Artifact downloaded and snapshots merged successfully.")
 
     except Exception as e:
         print(f"Error: {e}")

@@ -43,7 +43,7 @@ def run_theme_tester_app():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("Open Dialog", use_container_width=True):
+        if st.button("Open Dialog", width="stretch"):
             my_dialog()
         st.segmented_control(
             "Segmented Control",

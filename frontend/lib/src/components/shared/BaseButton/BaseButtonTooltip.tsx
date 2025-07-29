@@ -23,6 +23,7 @@ import { StyledTooltipMobile, StyledTooltipNormal } from "./styled-components"
 
 interface Props {
   children: ReactElement
+  // TODO(lawilby): Probably remove this once width is implemented on Popover.
   containerWidth: boolean
   help?: string
   placement?: Placement

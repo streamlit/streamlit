@@ -114,13 +114,14 @@ def configurator_options(func: F) -> F:
 def _download_remote(main_script_path: str, url_path: str) -> None:
     """Fetch remote file at url_path to main_script_path."""
     import requests
+    from requests.exceptions import RequestException
 
     with open(main_script_path, "wb") as fp:
         try:
             resp = requests.get(url_path, timeout=30)
             resp.raise_for_status()
             fp.write(resp.content)
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
 
 

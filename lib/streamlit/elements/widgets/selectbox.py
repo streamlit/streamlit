@@ -14,7 +14,16 @@
 from __future__ import annotations
 
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import Never
 
@@ -54,7 +63,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import (
-    T,
     check_python_comparable,
 )
 
@@ -62,6 +70,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+
+T = TypeVar("T")
 
 
 class SelectboxSerde(Generic[T]):
@@ -308,7 +318,7 @@ class SelectboxMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
-        index : int
+        index : int or None
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.
             Defaults to 0 (the first option).
@@ -336,16 +346,16 @@ class SelectboxMixin:
         on_change : callable
             An optional callback invoked when this selectbox's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
         placeholder : str or None
             A string to display when no options are selected.
-            If this is ``None`` (default), the widget displays appropriate
-            default placeholder text based on the widget's configuration:
+            If this is ``None`` (default), the widget displays placeholder text
+            based on the widget's configuration:
 
             - "Choose an option" is displayed when options are available and
               ``accept_new_options=False``.
@@ -354,8 +364,8 @@ class SelectboxMixin:
             - "Add an option" is displayed when no options are available and
               ``accept_new_options=True``.
             - "No options to select" is displayed when no options are available
-              and ``accept_new_options=False`` (the widget is also disabled in
-              this case).
+              and ``accept_new_options=False``. The widget is also disabled in
+              this case.
 
         disabled : bool
             An optional boolean that disables the selectbox if set to ``True``.
