@@ -26,6 +26,7 @@ import {
 
 import { globalStyles, ThemeConfig } from "./theme"
 import { ScrollbarSizeContext } from "./components/core/ScrollbarSizeContext"
+import { isInChildFrame } from "./util/utils"
 
 export interface RootStyleProviderProps {
   theme: ThemeConfig
@@ -83,6 +84,7 @@ const useScrollbarSize = (): number => {
   useEffect(() => {
     let lastDevicePixelRatio = window.devicePixelRatio
     let animationFrameId: number | undefined
+    let timeoutId: NodeJS.Timeout | undefined
 
     const handleResize = (): void => {
       if (window.devicePixelRatio !== lastDevicePixelRatio) {
@@ -91,15 +93,29 @@ const useScrollbarSize = (): number => {
       }
     }
 
+    const measureWithDelay = (): void => {
+      // In iframe contexts, add an additional delay to ensure the rendering
+      // context is fully established before measuring
+      if (isInChildFrame()) {
+        // Use a small timeout to allow the browser more time to establish
+        // the iframe's layout and inherited styles
+        timeoutId = setTimeout(() => {
+          animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
+        }, 100)
+      } else {
+        animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
+      }
+    }
+
     // Ensure the document is fully loaded before measuring scrollbar size
     // This fixes issues in iframes where initial measurements return 0
     if (document.readyState !== "complete") {
-      window.addEventListener("load", measureAndSetScrollbarWidth, {
+      window.addEventListener("load", measureWithDelay, {
         once: true,
       })
     } else {
-      // Document already loaded, measure immediately
-      animationFrameId = requestAnimationFrame(measureAndSetScrollbarWidth)
+      // Document already loaded, measure with appropriate delay
+      measureWithDelay()
     }
 
     window.addEventListener("resize", handleResize)
@@ -108,7 +124,10 @@ const useScrollbarSize = (): number => {
       if (animationFrameId !== undefined) {
         cancelAnimationFrame(animationFrameId)
       }
-      window.removeEventListener("load", measureAndSetScrollbarWidth)
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId)
+      }
+      window.removeEventListener("load", measureWithDelay)
       window.removeEventListener("resize", handleResize)
     }
   }, [measureAndSetScrollbarWidth])
