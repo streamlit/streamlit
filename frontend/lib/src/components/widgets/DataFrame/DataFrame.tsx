@@ -666,8 +666,10 @@ function DataFrame({
     // before measuring. This is more reliable than setTimeout alone.
     // requestAnimationFrame ensures the browser has calculated layout,
     // and setTimeout pushes the callback to the next event loop tick.
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
     const rafId = requestAnimationFrame(() => {
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (resizableContainerRef.current && dataEditorRef.current) {
           // Get the bounds of the glide-data-grid scroll area (dvn-stack):
           // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
@@ -694,13 +696,15 @@ function DataFrame({
           }
         }
       }, 0)
-
-      // Cleanup on unmount
-      return () => clearTimeout(timeoutId)
     })
 
     // Cleanup on unmount
-    return () => cancelAnimationFrame(rafId)
+    return () => {
+      cancelAnimationFrame(rafId)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
   }, [resizableSize, numRows, glideColumns])
 
   // Hide the column visibility menu if all columns are visible:
