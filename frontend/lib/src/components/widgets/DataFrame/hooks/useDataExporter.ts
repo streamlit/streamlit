@@ -19,11 +19,11 @@ import { useCallback } from "react"
 import { DataEditorProps } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
 
-import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import {
   BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
+import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 // Delimiter between cells
