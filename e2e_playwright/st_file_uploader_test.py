@@ -325,14 +325,6 @@ def test_directory_upload_with_file_type_filtering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that directory upload correctly filters files by type."""
-    # Create directory with mixed file types, only .txt should be accepted
-    mixed_data = [
-        {"path": "folder/allowed.txt", "content": b"allowed content"},
-        {"path": "folder/rejected.jpg", "content": b"fake jpeg content"},
-        {"path": "folder/also_allowed.txt", "content": b"also allowed"},
-        {"path": "folder/rejected.pdf", "content": b"fake pdf content"},
-    ]
-
     uploader_index = 12  # Restricted directory uploader index
 
     # Capture console messages to verify filtering feedback
@@ -545,8 +537,6 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     # default value 0. We increment counter inside file_uploader callback
     # Since callback did not called at this moment, counter value should
     # be equal 0
-    # TODO: Fix callback counter element index
-    # expect(app.get_by_test_id("stText").nth(12)).to_have_text("0", use_inner_text=True)
 
     with app.expect_file_chooser() as fc_info:
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
