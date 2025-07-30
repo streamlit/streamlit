@@ -326,8 +326,8 @@ class FileUploaderMixin:
             An optional callback invoked when this file_uploader's value
             changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.

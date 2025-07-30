@@ -15,8 +15,8 @@
  */
 import { getLogger } from "loglevel"
 
-import { isNullOrUndefined } from "~lib/util/utils"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import { ComponentMessageType } from "./enums"
 
