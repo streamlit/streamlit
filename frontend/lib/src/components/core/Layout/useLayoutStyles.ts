@@ -257,7 +257,7 @@ export const useLayoutStyles = ({
       ...calculatedStyles,
       ...styleOverrides,
     }
-  }, [element, subElement, styleOverrides, flexContext])
+  }, [element, subElement, styleOverrides, flexContext, minStretchBehavior])
 
   return layoutStyles
 }
