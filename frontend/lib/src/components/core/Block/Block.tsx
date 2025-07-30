@@ -253,6 +253,13 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     } else {
       minStretchBehavior = "fit-content"
     }
+  } else if (
+    node.deltaBlock.type === "flexContainer" ||
+    node.deltaBlock.column
+  ) {
+    if (!node.isEmpty) {
+      minStretchBehavior = "8rem"
+    }
   }
 
   const styles = useLayoutStyles({

@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 import streamlit as st
+
+img: npt.NDArray[np.int_] = np.repeat(0, 75000).reshape(300, 250)
 
 with st.container(
     border=False,
@@ -56,7 +60,7 @@ with st.container(
 
     with st.container(border=False, direction="vertical"):
         st.info("Please fill out the form to continue. We value your input!", width=250)
-        st.image("https://placehold.co/250x300")
+        st.image(img)
 
 with st.container(
     border=True,
@@ -126,9 +130,9 @@ with st.container(
     horizontal_alignment="center",
     key="layout-horizontal-images-center",
 ):
-    st.image("https://images.unsplash.com/photo-1506744038136-46273834b3fb", width=100)
-    st.image("https://images.unsplash.com/photo-1519125323398-675f0ddb6308", width=100)
-    st.image("https://images.unsplash.com/photo-1506744038136-46273834b3fb", width=100)
+    st.image(img, width=100)
+    st.image(img, width=100)
+    st.image(img, width=100)
 
 with st.container(
     border=True,
@@ -137,9 +141,9 @@ with st.container(
     vertical_alignment="center",
     key="layout-horizontal-images-distribute",
 ):
-    st.image("https://images.unsplash.com/photo-1506744038136-46273834b3fb", width=200)
-    st.image("https://images.unsplash.com/photo-1519125323398-675f0ddb6308", width=50)
-    st.image("https://images.unsplash.com/photo-1506744038136-46273834b3fb", width=300)
+    st.image(img, width=200)
+    st.image(img, width=50)
+    st.image(img)
 
 with st.container(border=True, direction="vertical", key="layout-horizontal-columns"):
     st.title("Columns")
@@ -156,16 +160,16 @@ with st.container(border=True, direction="vertical", key="layout-horizontal-colu
                 border=False,
                 direction="horizontal",
             ):
-                st.info("Very important information")
+                st.info("Very important information", width=150)
                 st.dataframe(df, use_container_width=False)
 
         with col2:
-            st.dataframe(df, use_container_width=False)
+            st.dataframe(df, use_container_width=True)
 
 with st.container(border=True, direction="horizontal", key="layout-horizontal-tabs"):
     import altair as alt
 
-    st.title("Tabs")
+    st.title("Tabs", width=150)
     df = pd.DataFrame(
         {
             "x": list(range(5)),

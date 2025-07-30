@@ -124,7 +124,12 @@ export const StyledElementContainerLayoutWrapper: FC<
         // st.image doesn't have the same proto style as other elements.
         // this can be consolidated with handling of other elements after width
         // changes are implemented for st.image.
-        styles.flex = "1 1 14rem"
+        if (node.element.imgs?.width) {
+          styles.width = `${node.element.imgs.width}px`
+          styles.flex = "0 0 ${node.element.imgs.width}px"
+        } else {
+          styles.flex = "1 1 fit-content"
+        }
       }
       return styles
     } else if (node.element.type === "textArea") {
@@ -133,10 +138,9 @@ export const StyledElementContainerLayoutWrapper: FC<
       // and the container must be allowed to expand. Additionally, we don't want the
       // flex with height to be set on the element container.
       if (node.element.heightConfig?.useStretch) {
-        // TODO what should we do here? Should this be only vertical layouts?
         return {
           height: "100%",
-          flex: "1 1",
+          flex: "1 1 8rem",
         }
       } else if (isInHorizontalLayout) {
         return {
@@ -166,6 +170,11 @@ export const StyledElementContainerLayoutWrapper: FC<
         !node.element.deckGlJsonChart?.width
       ) {
         styles.width = "100%"
+      }
+      return styles
+    } else if (node.element.type === "arrowVegaLiteChart") {
+      if (isInHorizontalLayout) {
+        styles.flex = "1 1 14rem"
       }
       return styles
     }
