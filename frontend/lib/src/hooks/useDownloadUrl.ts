@@ -26,7 +26,7 @@ const useDownloadUrl = (
   const {
     libConfig: {
       enforceDownloadInNewTab = false, // Default to false, if no libConfig, e.g. for tests
-      setDownloadAttributeOnLinkElements = true, // Default to true to retain existing behavior
+      preventDownloadAttribute = false, // Default to true to retain existing behavior
     },
   } = useContext(LibContext)
 
@@ -37,14 +37,14 @@ const useDownloadUrl = (
       enforceDownloadInNewTab,
       url,
       filename,
-      setDownloadAttribute: setDownloadAttributeOnLinkElements,
+      setDownloadAttribute: !preventDownloadAttribute,
     })
 
     link.style.display = "none"
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-  }, [url, enforceDownloadInNewTab, filename])
+  }, [url, enforceDownloadInNewTab, filename, preventDownloadAttribute])
 
   return downloadUrl
 }

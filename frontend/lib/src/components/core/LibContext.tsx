@@ -40,12 +40,12 @@ export type LibConfig = {
 
   enforceDownloadInNewTab?: boolean
 
-  /** When set to false, the download attribute will not be set on the link element. This is mainly for scenarios
+  /** When set to true, the download attribute will not be set on the link element. This is mainly for scenarios
    * where a service worker is in the play, as the service worker will not intercept the download request otherwise
    * (see https://issues.chromium.org/issues/40410035). The browser will still set the file name based on the server's
    * Content-Disposition header.
    */
-  setDownloadAttributeOnLinkElements?: boolean
+  preventDownloadAttribute?: boolean
 
   /**
    * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).

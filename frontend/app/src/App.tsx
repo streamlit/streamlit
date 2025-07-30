@@ -480,7 +480,7 @@ export class App extends PureComponent<Props, State> {
           blockErrorDialogs,
           setAnonymousCrossOriginPropertyOnMediaElements,
           resourceCrossOriginMode,
-          setDownloadAttributeOnLinkElements,
+          preventDownloadAttribute,
         } = response
 
         const appConfig: AppConfig = {
@@ -498,7 +498,7 @@ export class App extends PureComponent<Props, State> {
             setAnonymousCrossOriginPropertyOnMediaElements)
               ? "anonymous"
               : undefined,
-          setDownloadAttributeOnLinkElements,
+          preventDownloadAttribute,
         }
 
         // Set the metrics configuration:

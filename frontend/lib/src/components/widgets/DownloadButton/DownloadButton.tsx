@@ -23,8 +23,6 @@ import React, {
 } from "react"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
-import { parseUriIntoBaseParts } from "@streamlit/connection"
-import { buildHttpUri } from "@streamlit/utils"
 
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import BaseButton, {
@@ -45,17 +43,6 @@ export interface Props {
   fragmentId?: string
 }
 
-export function getDownloadUrl(
-  endpoints: StreamlitEndpoints,
-  url: string
-): string {
-  const downloadAssetBaseUrl = window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL
-  const downloadAssetsUriParts = downloadAssetBaseUrl
-    ? buildHttpUri(parseUriIntoBaseParts(downloadAssetBaseUrl), url)
-    : url
-  return endpoints.buildMediaURL(downloadAssetsUriParts)
-}
-
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
   const { help, label, icon, ignoreRerun, type, url, useContainerWidth } =
@@ -64,7 +51,7 @@ function DownloadButton(props: Props): ReactElement {
   const {
     libConfig: {
       enforceDownloadInNewTab = false, // Default to false, if no libConfig, e.g. for tests
-      setDownloadAttributeOnLinkElements = true,
+      preventDownloadAttribute = false,
     },
   } = useContext(LibContext)
 
@@ -76,7 +63,7 @@ function DownloadButton(props: Props): ReactElement {
   }
 
   const downloadUrl = useMemo(
-    () => getDownloadUrl(endpoints, url),
+    () => endpoints.buildDownloadUrl(url),
     [endpoints, url]
   )
 
@@ -84,7 +71,7 @@ function DownloadButton(props: Props): ReactElement {
     // Since we use a hidden link to download, we can't use the onerror event
     // to catch src url load errors. Catch with direct check instead.
     void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
-  }, [downloadUrl])
+  }, [downloadUrl, endpoints])
 
   const handleDownloadClick: () => void = () => {
     if (!ignoreRerun) {
@@ -97,7 +84,7 @@ function DownloadButton(props: Props): ReactElement {
       filename: "",
       url: downloadUrl,
       enforceDownloadInNewTab,
-      setDownloadAttribute: setDownloadAttributeOnLinkElements,
+      setDownloadAttribute: !preventDownloadAttribute,
     })
     link.click()
   }
