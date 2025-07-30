@@ -626,115 +626,150 @@ describe("CustomMediaTag", () => {
     }
   }
 
-  it("should render img element with crossOrigin='anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
-    const mockContextValue = createMockLibContextValue("anonymous")
-    render(
-      <LibContext.Provider value={mockContextValue}>
-        <CustomMediaTag node={mockNode} {...mockProps} />
-      </LibContext.Provider>
-    )
+  it.each([
+    { resourceCrossOriginMode: "anonymous" },
+    { resourceCrossOriginMode: "use-credentials" },
+    { resourceCrossOriginMode: undefined },
+  ] as const)(
+    "should render img element without crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+    ({ resourceCrossOriginMode }) => {
+      const mockContextValue = createMockLibContextValue(
+        resourceCrossOriginMode
+      )
+      render(
+        <LibContext.Provider value={mockContextValue}>
+          <CustomMediaTag node={mockNode} {...mockProps} />
+        </LibContext.Provider>
+      )
 
-    const imgElement = screen.getByRole("img")
-    expect(imgElement).toHaveAttribute("crossOrigin", "anonymous")
-    expect(imgElement).toHaveAttribute("src", "test-image.jpg")
-    expect(imgElement).toHaveAttribute("alt", "Test image")
-  })
+      const imgElement = screen.getByRole("img")
 
-  it("should render img element without crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
-    const mockContextValue = createMockLibContextValue(undefined)
-    render(
-      <LibContext.Provider value={mockContextValue}>
-        <CustomMediaTag node={mockNode} {...mockProps} />
-      </LibContext.Provider>
-    )
-
-    const imgElement = screen.getByRole("img")
-    expect(imgElement).not.toHaveAttribute("crossOrigin")
-    expect(imgElement).toHaveAttribute("src", "test-image.jpg")
-    expect(imgElement).toHaveAttribute("alt", "Test image")
-  })
-
-  it("should render video element with crossOrigin='anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const videoNode = { tagName: "video" } as any
-    const videoProps = {
-      src: "test-video.mp4",
-      controls: true,
+      expect(imgElement).not.toHaveAttribute("crossOrigin")
+      expect(imgElement).toHaveAttribute("src", "test-image.jpg")
+      expect(imgElement).toHaveAttribute("alt", "Test image")
     }
+  )
 
-    const mockContextValue = createMockLibContextValue("anonymous")
-    const { container } = render(
-      <LibContext.Provider value={mockContextValue}>
-        <CustomMediaTag node={videoNode} {...videoProps} />
-      </LibContext.Provider>
+  describe("with BACKEND_BASE_URL set", () => {
+    const originalStreamlit = window.__streamlit
+
+    beforeEach(() => {
+      window.__streamlit = {
+        BACKEND_BASE_URL: "https://backend.example.com:8080/app",
+      }
+    })
+
+    afterEach(() => {
+      window.__streamlit = originalStreamlit
+    })
+
+    it.each([
+      {
+        tagName: "img",
+        expected: "anonymous",
+        resourceCrossOriginMode: "anonymous",
+        src: "/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario: "img with relative URL and anonymous mode",
+      },
+      {
+        tagName: "video",
+        expected: "use-credentials",
+        resourceCrossOriginMode: "use-credentials",
+        src: "/media/video.mp4",
+        extraProps: { controls: true },
+        scenario: "video with relative URL and use-credentials mode",
+      },
+      {
+        tagName: "audio",
+        expected: undefined,
+        resourceCrossOriginMode: undefined,
+        src: "/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario: "audio with relative URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        expected: "anonymous",
+        resourceCrossOriginMode: "anonymous",
+        src: "https://backend.example.com:8080/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario:
+          "img with same origin as BACKEND_BASE_URL and anonymous mode",
+      },
+      {
+        tagName: "img",
+        expected: undefined,
+        resourceCrossOriginMode: undefined,
+        src: "https://backend.example.com:8080/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario:
+          "img with same origin as BACKEND_BASE_URL and undefined mode",
+      },
+      {
+        tagName: "img",
+        expected: undefined,
+        resourceCrossOriginMode: "anonymous",
+        src: "https://external.example.com/media/image.jpg",
+        extraProps: { alt: "Test image" },
+        scenario: "img with different hostname than BACKEND_BASE_URL",
+      },
+      {
+        tagName: "video",
+        expected: "use-credentials",
+        resourceCrossOriginMode: "use-credentials",
+        src: "https://backend.example.com:8080/media/video.mp4",
+        extraProps: { controls: true },
+        scenario:
+          "video with same origin as BACKEND_BASE_URL and use-credentials mode",
+      },
+      {
+        tagName: "video",
+        expected: undefined,
+        resourceCrossOriginMode: "anonymous",
+        src: "https://backend.example.com:9000/media/video.mp4",
+        extraProps: { controls: true },
+        scenario:
+          "video with same origin as BACKEND_BASE_URL and different port",
+      },
+      {
+        tagName: "audio",
+        expected: undefined,
+        resourceCrossOriginMode: "anonymous",
+        src: "http://backend.example.com:8080/media/audio.mp3",
+        extraProps: { controls: true },
+        scenario:
+          "audio with same origin as BACKEND_BASE_URL and different protocol",
+      },
+    ] as const)(
+      "should render $tagName element with crossOrigin='$expected' when $scenario",
+      ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const node = { tagName } as any
+        const props = { src, ...extraProps }
+
+        const mockContextValue = createMockLibContextValue(
+          resourceCrossOriginMode
+        )
+        const { container } = render(
+          <LibContext.Provider value={mockContextValue}>
+            <CustomMediaTag node={node} {...props} />
+          </LibContext.Provider>
+        )
+
+        const element =
+          tagName === "img"
+            ? screen.getByRole("img")
+            : container.querySelector(tagName)
+
+        expect(element).toBeTruthy()
+        if (expected) {
+          expect(element).toHaveAttribute("crossOrigin", expected)
+        } else {
+          expect(element).not.toHaveAttribute("crossOrigin")
+        }
+        expect(element).toHaveAttribute("src", src)
+      }
     )
-
-    const videoElement = container.querySelector("video")
-    expect(videoElement).toBeTruthy()
-    expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
-    expect(videoElement).toHaveAttribute("src", "test-video.mp4")
-  })
-
-  it("should render video element without crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const videoNode = { tagName: "video" } as any
-    const videoProps = {
-      src: "test-video.mp4",
-      controls: true,
-    }
-
-    const mockContextValue = createMockLibContextValue(undefined)
-    const { container } = render(
-      <LibContext.Provider value={mockContextValue}>
-        <CustomMediaTag node={videoNode} {...videoProps} />
-      </LibContext.Provider>
-    )
-
-    const videoElement = container.querySelector("video")
-    expect(videoElement).toBeTruthy()
-    expect(videoElement).not.toHaveAttribute("crossOrigin")
-    expect(videoElement).toHaveAttribute("src", "test-video.mp4")
-  })
-
-  it("should render audio element with crossOrigin='anonymous' when setAnonymousCrossOriginPropertyOnMediaElements is true", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const audioNode = { tagName: "audio" } as any
-    const audioProps = {
-      src: "test-audio.mp3",
-      controls: true,
-    }
-
-    const mockContextValue = createMockLibContextValue("anonymous")
-    const { container } = render(
-      <LibContext.Provider value={mockContextValue}>
-        <CustomMediaTag node={audioNode} {...audioProps} />
-      </LibContext.Provider>
-    )
-
-    const audioElement = container.querySelector("audio")
-    expect(audioElement).toBeTruthy()
-    expect(audioElement).toHaveAttribute("crossOrigin", "anonymous")
-    expect(audioElement).toHaveAttribute("src", "test-audio.mp3")
-  })
-
-  it("should render audio element without crossOrigin attribute when setAnonymousCrossOriginPropertyOnMediaElements is false", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const audioNode = { tagName: "audio" } as any
-    const audioProps = {
-      src: "test-audio.mp3",
-      controls: true,
-    }
-
-    const mockContextValue = createMockLibContextValue(undefined)
-    const { container } = render(
-      <LibContext.Provider value={mockContextValue}>
-        <CustomMediaTag node={audioNode} {...audioProps} />
-      </LibContext.Provider>
-    )
-
-    const audioElement = container.querySelector("audio")
-    expect(audioElement).toBeTruthy()
-    expect(audioElement).not.toHaveAttribute("crossOrigin")
-    expect(audioElement).toHaveAttribute("src", "test-audio.mp3")
   })
 })
