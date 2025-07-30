@@ -33,7 +33,7 @@ def assert_fullscreen_toolbar_button_interactions(
     filename_prefix: str = "",
     nth: int = 0,
     pixel_threshold: float = 0.05,
-    fullscreen_wrapper_nth: int | None = None,
+    fullscreen_wrapper_nth: Optional[int] = None,
 ) -> None:
     """
     Shared test function to assert that clicking on fullscreen toolbar button
