@@ -118,6 +118,14 @@ def run_chart_colors_test_app():
             use_container_width=True,
         )
 
+        st.sidebar.area_chart(
+            pd.DataFrame(stacked_data),
+            x="time",
+            y="value",
+            color="category_num",
+            use_container_width=True,
+        )
+
         st.write("**Sequential: `st.plotly_chart`**")
         sequential_data = pd.DataFrame(
             {

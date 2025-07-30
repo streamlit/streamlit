@@ -79,6 +79,7 @@ def test_custom_chart_colors(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(app, name="custom_chart_colors", image_threshold=0.0003)
 
 
+@pytest.mark.usefixtures("configure_custom_chart_colors")
 def test_custom_chart_colors_sidebar(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that custom chart colors are correctly applied to charts in sidebar."""
     # Set bigger viewport to better show the charts
@@ -92,8 +93,6 @@ def test_custom_chart_colors_sidebar(app: Page, assert_snapshot: ImageCompareFun
     app.wait_for_timeout(10000)
 
     expand_sidebar(app)
-    sidebar_chart = app.get_by_test_id("stSidebarContent").get_by_test_id(
-        "stVegaLiteChart"
-    )
-    expect(sidebar_chart).to_be_visible()
-    assert_snapshot(sidebar_chart, name="custom_chart_colors-sidebar")
+    sidebar_content = app.get_by_test_id("stSidebarContent")
+    expect(sidebar_content).to_be_visible()
+    assert_snapshot(sidebar_content, name="custom_chart_colors-sidebar")
