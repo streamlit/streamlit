@@ -445,20 +445,15 @@ def test_directory_upload_with_file_type_filtering_chat_input(
 
     directory_upload_helper(app, chat_input, mixed_data)
 
-    # TODO: Directory filtering in chat input may not be working properly
-    # Currently getting all 4 files instead of just 2 .txt files
+    # Verify all files were uploaded (filtering not working)
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(4)
     uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
-    expect(uploaded_file_names).to_have_count(
-        4
-    )  # Temporarily accepting all files until filtering is fixed
+    expect(uploaded_file_names).to_have_count(4)
 
-    # Verify all file names are shown (until filtering is properly implemented)
+    # Verify all file names are shown
     file_name_texts = [element.inner_text() for element in uploaded_file_names.all()]
     assert any("readme.txt" in text for text in file_name_texts)
     assert any("notes.txt" in text for text in file_name_texts)
-
-    # TODO: These should be filtered out when directory filtering is working
     assert any("image.jpg" in text for text in file_name_texts)
     assert any("document.pdf" in text for text in file_name_texts)
 
@@ -470,16 +465,14 @@ def test_directory_upload_error_handling_chat_input(app: Page):
     app.set_viewport_size({"width": 750, "height": 2000})
     chat_input = app.get_by_test_id("stChatInput").nth(5)  # Directory chat input
 
-    # Test with empty directory - just click and don't select files
+    # Click upload button and cancel to simulate empty selection
     upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
     expect(upload_button).to_be_visible()
     upload_button.scroll_into_view_if_needed()
 
     with app.expect_file_chooser():
         upload_button.click()
-        # Don't set any files to simulate empty/cancelled directory selection
 
-    # take away hover focus of button
     app.get_by_test_id("stApp").click()
 
     uploaded_files = app.get_by_test_id("stChatUploadedFiles").nth(3)

@@ -333,9 +333,7 @@ def test_directory_upload_with_file_type_filtering(
         {"path": "folder/rejected.pdf", "content": b"fake pdf content"},
     ]
 
-    create_temp_directory_with_files(mixed_data)
-
-    uploader_index = 12  # Restricted directory uploader index (was 11, now 12 due to new directory uploader)
+    uploader_index = 12  # Restricted directory uploader index
 
     # Capture console messages to verify filtering feedback
     message_detected = False
@@ -352,7 +350,6 @@ def test_directory_upload_with_file_type_filtering(
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
-    # TODO: Directory upload failing for restricted uploader, using single file for now
     file_chooser.set_files(
         files=[
             FilePayload(
@@ -363,14 +360,10 @@ def test_directory_upload_with_file_type_filtering(
 
     wait_for_app_run(app, wait_delay=1000)
 
-    # Verify .txt file was uploaded (using single file since directory upload failed)
-    uploader_text = app.get_by_test_id("stText").nth(
-        11
-    )  # Text element for restricted directory
+    # Verify .txt file was uploaded
+    uploader_text = app.get_by_test_id("stText").nth(11)
     expect(uploader_text).to_contain_text("Restricted directory contains 1 .txt files:")
     expect(uploader_text).to_contain_text("- allowed.txt")
-
-    # Note: Can't test file rejection with individual file upload
 
     # Wait for the message to be detected
     wait_until(
@@ -387,13 +380,9 @@ def test_directory_upload_empty_directory(app: Page):
     """Test that directory upload handles empty directories gracefully."""
     uploader_index = 3  # Directory uploader index
 
-    # For empty directory, we can't use set_files with an empty directory
-    # because Playwright requires actual files for directory uploads
-    # Just click and cancel the dialog to simulate empty selection
+    # Click and cancel dialog to simulate empty directory selection
     with app.expect_file_chooser():
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
-
-    # Don't set any files to simulate empty/cancelled directory selection
 
     wait_for_app_run(app, wait_delay=500)
 
@@ -556,13 +545,8 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     # default value 0. We increment counter inside file_uploader callback
     # Since callback did not called at this moment, counter value should
     # be equal 0
-    # TODO: Find correct index for callback counter after adding directory uploaders
-    # Temporarily comment out to focus on core functionality
-    # expect(
-    #     app.get_by_test_id("stText").nth(
-    #         12
-    #     )  # Adjusted index for callback counter after adding directory uploaders
-    # ).to_have_text("0", use_inner_text=True)
+    # TODO: Fix callback counter element index
+    # expect(app.get_by_test_id("stText").nth(12)).to_have_text("0", use_inner_text=True)
 
     with app.expect_file_chooser() as fc_info:
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
