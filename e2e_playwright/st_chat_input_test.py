@@ -124,7 +124,7 @@ def test_max_characters_enforced(app: Page, assert_snapshot: ImageCompareFunctio
         "tincidunt pul vinar. Nam pulvinar neque sapien, eu pellentesque metus pellentesque "
         "at. Ut et dui molestie, iaculis magna sed. This text should not appear in the input."
     )
-    chat_input = app.get_by_test_id("stChatInput").nth(7)
+    chat_input = app.get_by_test_id("stChatInput").nth(9)
     chat_input_area = chat_input.locator("textarea")
 
     chat_input_area.type(long_text)
