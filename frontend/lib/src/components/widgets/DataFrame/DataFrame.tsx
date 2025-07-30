@@ -881,6 +881,10 @@ function DataFrame({
         minHeight={minHeight}
         maxHeight={maxHeight}
         minWidth={minWidth}
+        // The maxWidth is not calculated correctly for content width
+        // dataframes in horizontal layouts, so it is disabled. The
+        // resize handles are also disabled so that the dataframe cannot be
+        // stretched beyond the container width.
         maxWidth={isInHorizontalLayout ? undefined : maxWidth}
         size={resizableSize}
         enable={{
