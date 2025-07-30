@@ -31,6 +31,7 @@ const mockEndpoints = {
     (componentName: string, path: string) => `${componentName}/${path}`
   ),
   buildMediaURL: vi.fn((url: string) => url),
+  buildDownloadUrl: vi.fn((url: string) => url),
   buildAppPageURL: vi.fn((_baseUrl, page) => page.pageName || ""),
   uploadFileUploaderFile: vi.fn(),
 }
