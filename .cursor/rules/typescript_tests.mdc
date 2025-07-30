@@ -3,6 +3,7 @@ description:
 globs: *.ts,*.tsx
 alwaysApply: false
 ---
+
 # TypeScript Test Guide
 
 - Test Framework: Vitest
@@ -23,3 +24,36 @@ alwaysApply: false
 - Run All Tests: `yarn test`
 - Run Specific File: `yarn test lib/src/components/path/component.test.tsx`
 - Run Specific Test: `yarn test -t "the test name" lib/src/components/path/component.test.tsx`
+
+## React Testing Library best practices
+
+Cheat sheet for queries from RTL:
+
+|            | No Match | 1 Match | 1+ Match | Await? |
+| ---------- | -------- | ------- | -------- | ------ |
+| getBy      | throw    | return  | throw    | No     |
+| findBy     | throw    | return  | throw    | Yes    |
+| queryBy    | null     | return  | throw    | No     |
+| getAllBy   | throw    | array   | array    | No     |
+| findAllBy  | throw    | array   | array    | Yes    |
+| queryAllBy | []       | array   | array    | No     |
+
+- Utilizing any query that throws if not found AND asserting using `toBeInTheDocument` is redundant and must be avoided. Prefer `toBeVisible` instead.
+- User interactions should utilize the `userEvent` library.
+- Tests should be written in a way that asserts user behavior, not implementation details.
+
+### Query Priority Order
+
+Based on the Guiding Principles, your test should resemble how users interact with your code (component, page, etc.) as much as possible. With this in mind, we recommend this order of priority:
+
+1. Queries Accessible to Everyone Queries that reflect the experience of visual/mouse users as well as those that use assistive technology.
+
+   - getByRole, getByLabelText, getByPlaceholderText, getByText, getByDisplayValue
+
+2. Semantic Queries HTML5 and ARIA compliant selectors. Note that the user experience of interacting with these attributes varies greatly across browsers and assistive technology.
+
+   - getByAltText, getByTitle
+
+3. Test IDs
+
+   - getByTestId - The user cannot see (or hear) these, so this is only recommended for cases where you can't match by role or text or it doesn't make sense (e.g. the text is dynamic).
