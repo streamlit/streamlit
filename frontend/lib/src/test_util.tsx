@@ -40,14 +40,6 @@ import { baseTheme } from "./theme"
 import { createFormsData } from "./WidgetStateManager"
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
-  const flexContextValue = useMemo(
-    () => ({
-      direction: Direction.VERTICAL,
-      isInHorizontalLayout: false,
-    }),
-    []
-  )
-
   return (
     <ThemeProvider theme={mockTheme.emotion}>
       <WindowDimensionsProvider>
@@ -86,6 +78,34 @@ export function mockWindowLocation(hostname: string): void {
   }
 }
 
+const flexContextValue = {
+  direction: Direction.VERTICAL,
+  isInHorizontalLayout: false,
+}
+
+const defaultLibContextProps = {
+  isFullScreen: false,
+  setFullScreen: vi.fn(),
+  addScriptFinishedHandler: vi.fn(),
+  removeScriptFinishedHandler: vi.fn(),
+  activeTheme: baseTheme,
+  setTheme: vi.fn(),
+  availableThemes: [],
+  addThemes: vi.fn(),
+  onPageChange: vi.fn(),
+  currentPageScriptHash: "",
+  libConfig: {},
+  fragmentIdsThisRun: [],
+  locale: "en-US",
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "script run 123",
+  componentRegistry: new ComponentRegistry(mockEndpoints()),
+}
+
+const defaultFormsContextProps = {
+  formsData: createFormsData(),
+}
+
 /**
  * Use react-testing-library to render a ReactElement. The element will be
  * wrapped in our LibContext.Provider and FormsContext.Provider.
@@ -95,55 +115,35 @@ export const renderWithContexts = (
   overrideLibContextProps: Partial<LibContextProps>,
   overrideFormsContextProps?: Partial<FormsContextProps>
 ): RenderResult => {
-  const defaultLibContextProps = {
-    isFullScreen: false,
-    setFullScreen: vi.fn(),
-    addScriptFinishedHandler: vi.fn(),
-    removeScriptFinishedHandler: vi.fn(),
-    activeTheme: baseTheme,
-    setTheme: vi.fn(),
-    availableThemes: [],
-    addThemes: vi.fn(),
-    onPageChange: vi.fn(),
-    currentPageScriptHash: "",
-    libConfig: {},
-    fragmentIdsThisRun: [],
-    locale: "en-US",
-    scriptRunState: ScriptRunState.NOT_RUNNING,
-    scriptRunId: "script run 123",
-    componentRegistry: new ComponentRegistry(mockEndpoints()),
-  }
-
-  const defaultFormsContextProps = {
-    formsData: createFormsData(),
-  }
-
   return reactTestingLibraryRender(component, {
-    wrapper: ({ children }) => (
-      <ThemeProvider theme={baseTheme.emotion}>
-        <WindowDimensionsProvider>
-          <FlexContext.Provider
-            value={{
-              direction: Direction.VERTICAL,
-              isInHorizontalLayout: false,
-            }}
-          >
-            <LibContext.Provider
-              value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
-            >
-              <FormsContext.Provider
-                value={{
-                  ...defaultFormsContextProps,
-                  ...overrideFormsContextProps,
-                }}
-              >
-                {children}
-              </FormsContext.Provider>
-            </LibContext.Provider>
-          </FlexContext.Provider>
-        </WindowDimensionsProvider>
-      </ThemeProvider>
-    ),
+    wrapper: ({ children }) => {
+      const libContextValue = useMemo(
+        () => ({ ...defaultLibContextProps, ...overrideLibContextProps }),
+        [overrideLibContextProps]
+      )
+
+      const formsContextValue = useMemo(
+        () => ({
+          ...defaultFormsContextProps,
+          ...overrideFormsContextProps,
+        }),
+        [overrideFormsContextProps]
+      )
+
+      return (
+        <ThemeProvider theme={baseTheme.emotion}>
+          <WindowDimensionsProvider>
+            <FlexContext.Provider value={flexContextValue}>
+              <LibContext.Provider value={libContextValue}>
+                <FormsContext.Provider value={formsContextValue}>
+                  {children}
+                </FormsContext.Provider>
+              </LibContext.Provider>
+            </FlexContext.Provider>
+          </WindowDimensionsProvider>
+        </ThemeProvider>
+      )
+    },
   })
 }
 
