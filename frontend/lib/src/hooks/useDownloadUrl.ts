@@ -26,7 +26,7 @@ const useDownloadUrl = (
   const {
     libConfig: {
       enforceDownloadInNewTab = false, // Default to false, if no libConfig, e.g. for tests
-      preventDownloadAttribute = false, // Default to true to retain existing behavior
+      preventDownloadAttribute = false, // Default to false to retain existing behavior
     },
   } = useContext(LibContext)
 

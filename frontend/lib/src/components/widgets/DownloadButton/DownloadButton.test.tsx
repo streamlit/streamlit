@@ -26,7 +26,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 
-import DownloadButton, { getDownloadUrl, Props } from "./DownloadButton"
+import DownloadButton, { Props } from "./DownloadButton"
 
 vi.mock("~lib/WidgetStateManager")
 vi.mock("~lib/StreamlitEndpoints")
@@ -113,7 +113,7 @@ describe("DownloadButton widget", () => {
         undefined
       )
 
-      expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
+      expect(props.endpoints.buildDownloadUrl).toHaveBeenCalledWith(
         "/media/mockDownloadURL"
       )
     })
@@ -164,41 +164,6 @@ describe("DownloadButton widget", () => {
       expect(linkWithoutDownload.getAttribute("download")).toBeNull()
     })
 
-    describe("getDownloadUrl", () => {
-      beforeEach(() => {
-        // Reset window.__streamlit before each test
-        window.__streamlit = undefined
-      })
-
-      it("returns buildMediaURL result when no DOWNLOAD_ASSETS_BASE_URL is set", () => {
-        const props = getProps()
-        const url = "/test/file.pdf"
-        getDownloadUrl(props.endpoints, url)
-        expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(url)
-      })
-
-      it("uses DOWNLOAD_ASSETS_BASE_URL when available", () => {
-        const props = getProps()
-
-        window.__streamlit = {
-          DOWNLOAD_ASSETS_BASE_URL: "https://assets.example.com",
-        }
-        const url = "/test/file.pdf"
-        getDownloadUrl(props.endpoints, url)
-        expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
-          "https://assets.example.com:/test/file.pdf"
-        )
-      })
-
-      it("handles empty url", () => {
-        const props = getProps()
-
-        const url = ""
-        getDownloadUrl(props.endpoints, url)
-        expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith("")
-      })
-    })
-
     it("can set fragmentId on click", async () => {
       const user = userEvent.setup()
       const props = getProps(undefined, { fragmentId: "myFragmentId" })
@@ -225,7 +190,7 @@ describe("DownloadButton widget", () => {
 
   it("triggers checkSourceUrlResponse to check download url", () => {
     const props = getProps()
-    props.endpoints.buildMediaURL = vi.fn(url => url)
+    props.endpoints.buildDownloadUrl = vi.fn(url => url)
     render(<DownloadButton {...props} />)
 
     expect(props.endpoints.checkSourceUrlResponse).toHaveBeenCalledWith(

@@ -159,6 +159,7 @@ const noOpEndpoints: StreamlitEndpoints = {
   checkSourceUrlResponse: () => Promise.resolve(),
   buildComponentURL: () => "",
   buildMediaURL: () => "",
+  buildDownloadUrl: () => "",
   buildFileUploadURL: () => "",
   buildAppPageURL: () => "",
   uploadFileUploaderFile: () =>

@@ -45,8 +45,7 @@ export interface Props {
 
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
-  const { help, label, icon, ignoreRerun, type, url, useContainerWidth } =
-    element
+  const { help, label, icon, ignoreRerun, type, url } = element
 
   const {
     libConfig: {
@@ -91,13 +90,13 @@ function DownloadButton(props: Props): ReactElement {
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
-      <BaseButtonTooltip help={help} containerWidth={useContainerWidth}>
+      <BaseButtonTooltip help={help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
-          containerWidth={useContainerWidth}
+          containerWidth={true}
         >
           <DynamicButtonLabel icon={icon} label={label} />
         </BaseButton>
