@@ -46,7 +46,7 @@ def run_chart_colors_test_app():
 
     col1, col2 = st.columns(2)
 
-    # Charts testing categorical colors
+    # Charts testing categorical colors.
     with col1:
         st.write("**Categorical: `st.line_chart`**")
         # Set seed for reproducible data in E2E testing
@@ -84,7 +84,7 @@ def run_chart_colors_test_app():
         )
         st.plotly_chart(fig_categorical)
 
-    # Charts testing sequential colors
+    # Charts testing sequential colors.
     with col2:
         st.write("**Sequential: `st.area_chart`**")
         stacked_data = []
