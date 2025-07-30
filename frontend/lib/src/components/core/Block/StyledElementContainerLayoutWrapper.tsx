@@ -22,6 +22,7 @@ import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
+import { ButtonGroup } from "@streamlit/protobuf"
 
 const LARGE_STRETCH_BEHAVIOR = [
   "graphvizChart",
@@ -106,7 +107,12 @@ export const StyledElementContainerLayoutWrapper: FC<
     minStretchBehavior = "8rem"
   }
 
-  // TODO (lawilby): Add override for st.feedback
+  if (
+    node.element.type === "buttonGroup" &&
+    node.element.buttonGroup?.style === ButtonGroup.Style.BORDERLESS
+  ) {
+    minStretchBehavior = "fit-content"
+  }
 
   const styleOverrides = useMemo(() => {
     const styles: React.CSSProperties = {}
@@ -126,7 +132,7 @@ export const StyledElementContainerLayoutWrapper: FC<
         // changes are implemented for st.image.
         if (node.element.imgs?.width) {
           styles.width = `${node.element.imgs.width}px`
-          styles.flex = "0 0 ${node.element.imgs.width}px"
+          styles.flex = `0 0 ${node.element.imgs.width}px`
         } else {
           styles.flex = "1 1 fit-content"
         }
@@ -187,6 +193,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     node.element.deckGlJsonChart?.width,
     isContentWidthDataframe,
     isInHorizontalLayout,
+    node.element.imgs?.width,
   ])
 
   const styles = useLayoutStyles({
