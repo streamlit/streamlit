@@ -467,31 +467,6 @@ describe("ChatInput widget", () => {
 
     render(<ChatInput {...props} />)
 
-    // Simulate directory file upload
-    const directoryFiles = [
-      Object.assign(
-        new File(["print('hello')"], "main.py", {
-          type: "text/plain",
-          lastModified: 0,
-        }),
-        { webkitRelativePath: "project/main.py" }
-      ),
-      Object.assign(
-        new File(["def test(): pass"], "test_main.py", {
-          type: "text/plain",
-          lastModified: 0,
-        }),
-        { webkitRelativePath: "project/tests/test_main.py" }
-      ),
-      Object.assign(
-        new File(["# Project"], "README.md", {
-          type: "text/plain",
-          lastModified: 0,
-        }),
-        { webkitRelativePath: "project/README.md" }
-      ),
-    ]
-
     // Since we can't easily simulate file upload in unit tests,
     // let's verify the component is set up correctly for directory uploads
     const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
@@ -526,7 +501,7 @@ describe("ChatInput widget", () => {
     expect(textarea).toHaveTextContent("")
   })
 
-  it("filters directory files by allowed types", async () => {
+  it("filters directory files by allowed types", () => {
     const consoleSpy = vi.spyOn(console, "log")
 
     const props = getProps({
@@ -535,38 +510,6 @@ describe("ChatInput widget", () => {
     })
 
     render(<ChatInput {...props} />)
-
-    // Mix of valid and invalid files
-    const mixedFiles = [
-      Object.assign(
-        new File(["Valid content"], "valid.txt", {
-          type: "text/plain",
-          lastModified: 0,
-        }),
-        { webkitRelativePath: "docs/valid.txt" }
-      ),
-      Object.assign(
-        new File(["Another valid"], "another.txt", {
-          type: "text/plain",
-          lastModified: 0,
-        }),
-        { webkitRelativePath: "docs/another.txt" }
-      ),
-      Object.assign(
-        new File(["Invalid"], "image.jpg", {
-          type: "image/jpeg",
-          lastModified: 0,
-        }),
-        { webkitRelativePath: "docs/image.jpg" }
-      ),
-      Object.assign(
-        new File(["Also invalid"], "script.py", {
-          type: "text/plain",
-          lastModified: 0,
-        }),
-        { webkitRelativePath: "docs/script.py" }
-      ),
-    ]
 
     // Verify the component is set up correctly for directory uploads with file type filtering
     const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
@@ -620,29 +563,12 @@ describe("ChatInput widget", () => {
     expect(fileInput).toHaveAttribute("multiple")
   })
 
-  it("removes directory files when deleted individually", async () => {
-    const user = userEvent.setup()
+  it("removes directory files when deleted individually", () => {
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
     })
 
     render(<ChatInput {...props} />)
-
-    // Upload directory files
-    const directoryFiles = [
-      Object.assign(
-        new File(["File 1"], "file1.txt", { type: "text/plain" }),
-        {
-          webkitRelativePath: "dir/file1.txt",
-        }
-      ),
-      Object.assign(
-        new File(["File 2"], "file2.txt", { type: "text/plain" }),
-        {
-          webkitRelativePath: "dir/file2.txt",
-        }
-      ),
-    ]
 
     // Verify the component is set up correctly for directory uploads
     const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
