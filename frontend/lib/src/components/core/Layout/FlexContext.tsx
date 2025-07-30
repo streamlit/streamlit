@@ -42,6 +42,8 @@ FlexContext.displayName = "FlexContext"
  * nearest `st.container` ancestor.
  *
  * @returns direction: The direction of the nearest `st.container` ancestor.
+ * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
+ *   a horizontal layout.
  *
  * Search the codebase for `<FlexContextProvider` to see where this is used.
  *
