@@ -43,9 +43,8 @@ export type UseLayoutStylesArgs = {
   minStretchBehavior?: MinFlexElementWidth
 }
 
-const isNonZeroPositiveNumber = (value: unknown): value is number => {
-  return typeof value === "number" && value > 0 && !isNaN(value)
-}
+const isNonZeroPositiveNumber = (value: unknown): value is number =>
+  typeof value === "number" && value > 0 && !isNaN(value)
 
 enum DimensionType {
   PIXEL = "pixel",
