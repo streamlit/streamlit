@@ -201,13 +201,6 @@ export type LibConfig = {
 
   /** Deprecated. Use resourceCrossOriginMode instead. If set to true, the value of resourceCrossOriginMode will be "anonymous". */
   setAnonymousCrossOriginPropertyOnMediaElements?: boolean
-
-  /** When set to true, the download attribute will not be set on the link element. This is mainly for scenarios
-   * where a service worker is in the play, as the service worker will not intercept the download request otherwise
-   * (see https://issues.chromium.org/issues/40410035). The browser will still set the file name based on the server's
-   * Content-Disposition header.
-   */
-  preventDownloadAttribute?: boolean
 }
 
 /**

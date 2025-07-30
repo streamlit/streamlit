@@ -246,7 +246,6 @@ class HostConfigHandler(_SpecialRequestHandler):
                 # Determines whether the crossOrigin attribute is set on some elements, e.g. img, video, audio, and if
                 #   so with which value. One of None, "anonymous", "use-credentials".
                 "resourceCrossOriginMode": None,
-                "preventDownloadAttribute": False,
             }
         )
         self.set_status(200)

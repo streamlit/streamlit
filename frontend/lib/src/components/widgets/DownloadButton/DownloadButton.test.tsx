@@ -124,7 +124,6 @@ describe("DownloadButton widget", () => {
         enforceDownloadInNewTab: false,
         url: props.element.url,
         filename: "",
-        setDownloadAttribute: true,
       })
       expect(sameTabLink.getAttribute("target")).toBe("_self")
 
@@ -132,51 +131,144 @@ describe("DownloadButton widget", () => {
         enforceDownloadInNewTab: true,
         url: props.element.url,
         filename: "",
-        setDownloadAttribute: true,
       })
       expect(newTabLink.getAttribute("target")).toBe("_blank")
     })
 
-    it("sets download attribute correctly", () => {
-      const props = getProps()
-      const linkWithoutFilename = createDownloadLinkElement({
-        enforceDownloadInNewTab: false,
-        url: props.element.url,
-        filename: "",
-        setDownloadAttribute: true,
+    describe("download attribute", () => {
+      it("sets download attribute with empty filename", () => {
+        const props = getProps()
+        const link = createDownloadLinkElement({
+          enforceDownloadInNewTab: false,
+          url: props.element.url,
+          filename: "",
+        })
+        expect(link.getAttribute("download")).toBe("")
       })
-      expect(linkWithoutFilename.getAttribute("download")).toBe("")
 
-      const linkWithFilename = createDownloadLinkElement({
-        enforceDownloadInNewTab: false,
-        url: props.element.url,
-        filename: "test.pdf",
-        setDownloadAttribute: true,
+      it("sets download attribute with filename", () => {
+        const props = getProps()
+        const link = createDownloadLinkElement({
+          enforceDownloadInNewTab: false,
+          url: props.element.url,
+          filename: "test.pdf",
+        })
+        expect(link.getAttribute("download")).toBe("test.pdf")
       })
-      expect(linkWithFilename.getAttribute("download")).toBe("test.pdf")
 
-      const linkWithoutDownload = createDownloadLinkElement({
-        enforceDownloadInNewTab: false,
-        url: props.element.url,
-        filename: "test.pdf",
-        setDownloadAttribute: false,
+      it("omits download attribute for service worker compatibility in Chromium browsers", () => {
+        // Mock the global streamlit object with DOWNLOAD_ASSETS_BASE_URL
+        const originalStreamlit = window.__streamlit
+        window.__streamlit = {
+          ...window.__streamlit,
+          DOWNLOAD_ASSETS_BASE_URL: "https://download.streamlit.app",
+        }
+
+        // Mock user agent to be a Chromium-based browser (not Firefox)
+        const originalUserAgent = Object.getOwnPropertyDescriptor(
+          window.navigator,
+          "userAgent"
+        )
+        Object.defineProperty(window.navigator, "userAgent", {
+          value:
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          configurable: true,
+        })
+
+        try {
+          const link = createDownloadLinkElement({
+            enforceDownloadInNewTab: false,
+            url: "https://download.streamlit.app/file.pdf",
+            filename: "test.pdf",
+          })
+          expect(link.getAttribute("download")).toBeNull()
+        } finally {
+          // Cleanup
+          window.__streamlit = originalStreamlit
+          if (originalUserAgent) {
+            Object.defineProperty(
+              window.navigator,
+              "userAgent",
+              originalUserAgent
+            )
+          }
+        }
       })
-      expect(linkWithoutDownload.getAttribute("download")).toBeNull()
-    })
 
-    it("can set fragmentId on click", async () => {
-      const user = userEvent.setup()
-      const props = getProps(undefined, { fragmentId: "myFragmentId" })
-      render(<DownloadButton {...props} />)
+      it("sets download attribute in Firefox even with DOWNLOAD_ASSETS_BASE_URL", () => {
+        // Mock the global streamlit object with DOWNLOAD_ASSETS_BASE_URL
+        const originalStreamlit = window.__streamlit
+        window.__streamlit = {
+          ...window.__streamlit,
+          DOWNLOAD_ASSETS_BASE_URL: "https://download.streamlit.app",
+        }
 
-      const downloadButton = screen.getByRole("button")
-      await user.click(downloadButton)
+        // Mock user agent to be Firefox
+        const originalUserAgent = Object.getOwnPropertyDescriptor(
+          window.navigator,
+          "userAgent"
+        )
+        Object.defineProperty(window.navigator, "userAgent", {
+          value:
+            "Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0",
+          configurable: true,
+        })
 
-      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        "myFragmentId"
-      )
+        try {
+          const link = createDownloadLinkElement({
+            enforceDownloadInNewTab: false,
+            url: "https://download.streamlit.app/file.pdf",
+            filename: "test.pdf",
+          })
+          expect(link.getAttribute("download")).toBe("test.pdf")
+        } finally {
+          // Cleanup
+          window.__streamlit = originalStreamlit
+          if (originalUserAgent) {
+            Object.defineProperty(
+              window.navigator,
+              "userAgent",
+              originalUserAgent
+            )
+          }
+        }
+      })
+
+      it("sets download attribute when URL does not match DOWNLOAD_ASSETS_BASE_URL", () => {
+        // Mock the global streamlit object with DOWNLOAD_ASSETS_BASE_URL
+        const originalStreamlit = window.__streamlit
+        window.__streamlit = {
+          ...window.__streamlit,
+          DOWNLOAD_ASSETS_BASE_URL: "https://download.streamlit.app",
+        }
+
+        try {
+          const link = createDownloadLinkElement({
+            enforceDownloadInNewTab: false,
+            url: "https://different-domain.com/file.pdf",
+            filename: "test.pdf",
+          })
+          expect(link.getAttribute("download")).toBe("test.pdf")
+        } finally {
+          // Cleanup
+          window.__streamlit = originalStreamlit
+        }
+      })
+
+      it("can set fragmentId on click", async () => {
+        const user = userEvent.setup()
+        const props = getProps(undefined, { fragmentId: "myFragmentId" })
+        render(<DownloadButton {...props} />)
+
+        const downloadButton = screen.getByRole("button")
+        await user.click(downloadButton)
+
+        expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+          props.element,
+          { fromUi: true },
+          "myFragmentId"
+        )
+      })
     })
 
     it("handles the disabled prop", () => {

@@ -480,7 +480,6 @@ export class App extends PureComponent<Props, State> {
           blockErrorDialogs,
           setAnonymousCrossOriginPropertyOnMediaElements,
           resourceCrossOriginMode,
-          preventDownloadAttribute,
         } = response
 
         const appConfig: AppConfig = {
@@ -489,6 +488,7 @@ export class App extends PureComponent<Props, State> {
           enableCustomParentMessages,
           blockErrorDialogs,
         }
+
         const libConfig: LibConfig = {
           mapboxToken,
           disableFullscreenMode,
@@ -498,7 +498,6 @@ export class App extends PureComponent<Props, State> {
             setAnonymousCrossOriginPropertyOnMediaElements)
               ? "anonymous"
               : undefined,
-          preventDownloadAttribute,
         }
 
         // Set the metrics configuration:

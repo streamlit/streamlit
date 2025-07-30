@@ -50,7 +50,6 @@ function DownloadButton(props: Props): ReactElement {
   const {
     libConfig: {
       enforceDownloadInNewTab = false, // Default to false, if no libConfig, e.g. for tests
-      preventDownloadAttribute = false,
     },
   } = useContext(LibContext)
 
@@ -83,7 +82,6 @@ function DownloadButton(props: Props): ReactElement {
       filename: "",
       url: downloadUrl,
       enforceDownloadInNewTab,
-      setDownloadAttribute: !preventDownloadAttribute,
     })
     link.click()
   }

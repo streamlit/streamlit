@@ -194,9 +194,6 @@ function useDataExporter(
           enforceDownloadInNewTab,
           url,
           filename: suggestedName,
-          // The download attribute can be set here because the file is created in the browser,
-          // and does not need to go through a service worker.
-          setDownloadAttribute: true,
         })
 
         link.style.display = "none"

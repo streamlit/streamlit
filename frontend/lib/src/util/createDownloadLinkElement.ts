@@ -18,14 +18,12 @@ interface DownloadLinkElementParameters {
   enforceDownloadInNewTab: boolean
   url: string
   filename: string
-  setDownloadAttribute: boolean
 }
 
 const createDownloadLinkElement = ({
   enforceDownloadInNewTab,
   url,
   filename,
-  setDownloadAttribute,
 }: DownloadLinkElementParameters): HTMLAnchorElement => {
   const link = document.createElement("a")
   link.setAttribute("href", url)
@@ -35,7 +33,15 @@ const createDownloadLinkElement = ({
     link.setAttribute("target", "_self")
   }
 
-  if (setDownloadAttribute) {
+  // We don't set the download attribute when the window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL variable is set
+  // and the passed url is a request to that origin. The reason is that there is a bug for service workers where they
+  // don't intercept the download request otherwise (see https://issues.chromium.org/issues/40410035). Firefox does not have
+  // the same problem.
+  if (
+    !window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL ||
+    !url.startsWith(window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL) ||
+    window.navigator.userAgent.includes("Firefox")
+  ) {
     link.setAttribute("download", filename)
   }
 
