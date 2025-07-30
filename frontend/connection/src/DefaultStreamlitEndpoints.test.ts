@@ -119,6 +119,41 @@ describe("DefaultStreamlitEndpoints", () => {
     })
   })
 
+  describe("buildDownloadUrl", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+      sendClientError: vi.fn(),
+    })
+
+    beforeEach(() => {
+      // Reset window.__streamlit before each test
+      window.__streamlit = undefined
+    })
+
+    it("builds URL correctly for streamlit-served media when DOWNLOAD_ASSETS_BASE_URL is not set", () => {
+      const url = endpoints.buildDownloadUrl("/media/1234567890.pdf")
+      expect(url).toBe(
+        "http://streamlit.mock:80/mock/base/path/media/1234567890.pdf"
+      )
+    })
+
+    it("builds URL correctly when DOWNLOAD_ASSETS_BASE_URL is set", () => {
+      window.__streamlit = {
+        DOWNLOAD_ASSETS_BASE_URL: "https://downloads.example.com/assets",
+      }
+      const url = endpoints.buildDownloadUrl("/media/1234567890.pdf")
+      expect(url).toBe(
+        "https://downloads.example.com/assets/media/1234567890.pdf"
+      )
+    })
+
+    it("passes through non-media URLs unchanged", () => {
+      const url = endpoints.buildDownloadUrl("https://example.com/file.pdf")
+      expect(url).toBe("https://example.com/file.pdf")
+    })
+  })
+
   describe("buildFileUploadURL", () => {
     const endpoints = new DefaultStreamlitEndpoints({
       getServerUri: () => MOCK_SERVER_URI,
