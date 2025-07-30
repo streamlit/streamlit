@@ -97,6 +97,12 @@ const DEBOUNCE_TIME_MS = 150
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
+// Fallback size for the scrollbar gutter size in rem.
+// If the scrollbar gutter size is 0, it means that we the system is using
+// overlay scrollbars that don't take any space. In this case, we assume
+// a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
+// in the data grid.
+const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
@@ -716,15 +722,12 @@ function DataFrame({
             // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
             resizableContainerRef.current.getBoundingClientRect()
 
-          // If the scrollbar gutter size is 0, it means that we the system is using
-          // overlay scrollbars that don't take any space. In this case, we assume
-          // a scrollbar size of ~8px to prevent clicks on the scrollbar to be applied
-          // in the data grid.
           // For whatever reason, we are still able to use the scrollbars even
           // if the mouse is one pixel outside of the scrollbar. Therefore, we add
           // an additional pixel.
           const scrollbarSize =
-            (scrollbarGutterSize || Math.round(convertRemToPx("0.5rem"))) + 1
+            (scrollbarGutterSize ||
+              Math.round(convertRemToPx(SCROLLBAR_FALLBACK_SIZE_REM))) + 1
 
           if (
             hasHorizontalScroll &&
