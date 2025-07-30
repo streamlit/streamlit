@@ -21,20 +21,15 @@ import { describe, expect, it } from "vitest"
 import { Element, IAlert, streamlit } from "@streamlit/protobuf"
 
 import { useLayoutStyles, UseLayoutStylesShape } from "./useLayoutStyles"
-import { Direction } from "./utils"
-import { FlexContext } from "./FlexContext"
+import { Direction, MinFlexElementWidth } from "./utils"
+import { FlexContextProvider } from "./FlexContext"
 
 function withFlexContextProvider(direction: Direction) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    const value = React.useMemo(
-      () => ({
-        direction,
-        isInHorizontalLayout: direction === Direction.HORIZONTAL,
-      }),
-      []
-    )
     return (
-      <FlexContext.Provider value={value}>{children}</FlexContext.Provider>
+      <FlexContextProvider direction={direction}>
+        {children}
+      </FlexContextProvider>
     )
   }
 }
@@ -684,7 +679,7 @@ describe("#useLayoutStyles", () => {
         const { result } = renderHook(() => useLayoutStyles({ element }), {
           wrapper: withFlexContextProvider(Direction.HORIZONTAL),
         })
-        expect(result.current.flex).toBe("1 1")
+        expect(result.current.flex).toBe("1 1 fit-content")
       })
 
       it("should not include flex for vertical direction with content height", () => {
@@ -705,6 +700,78 @@ describe("#useLayoutStyles", () => {
           wrapper: withFlexContextProvider(Direction.HORIZONTAL),
         })
         expect(result.current.flex).toBe("0 0 fit-content")
+      })
+    })
+
+    describe("minStretchBehavior behavior", () => {
+      it("should use provided minStretchBehavior value", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useStretch: true }),
+        })
+        const minStretchBehavior: MinFlexElementWidth = "14rem"
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, minStretchBehavior }),
+          {
+            wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+          }
+        )
+        expect(result.current.flex).toBe("1 1 14rem")
+      })
+
+      it("should use default fit-content when minStretchBehavior is undefined", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useStretch: true }),
+        })
+        const minStretchBehavior: MinFlexElementWidth = undefined
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, minStretchBehavior }),
+          {
+            wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+          }
+        )
+        expect(result.current.flex).toBe("1 1 fit-content")
+      })
+
+      it("should not affect non-stretch width configurations", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useContent: true }),
+        })
+        const minStretchBehavior: MinFlexElementWidth = "14rem"
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, minStretchBehavior }),
+          {
+            wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+          }
+        )
+        expect(result.current.flex).toBe("0 0 fit-content")
+      })
+
+      it("should not affect vertical direction even with stretch width", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useStretch: true }),
+        })
+        const minStretchBehavior: MinFlexElementWidth = "14rem"
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, minStretchBehavior }),
+          {
+            wrapper: withFlexContextProvider(Direction.VERTICAL),
+          }
+        )
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it("should not affect pixel width configurations", () => {
+        const element = new MockElement({
+          widthConfig: new streamlit.WidthConfig({ pixelWidth: 200 }),
+        })
+        const minStretchBehavior: MinFlexElementWidth = "14rem"
+        const { result } = renderHook(
+          () => useLayoutStyles({ element, minStretchBehavior }),
+          {
+            wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+          }
+        )
+        expect(result.current.flex).toBe("0 0 200px")
       })
     })
 
