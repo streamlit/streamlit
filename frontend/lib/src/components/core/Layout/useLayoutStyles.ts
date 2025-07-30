@@ -19,7 +19,7 @@ import { useContext, useMemo } from "react"
 import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext, IFlexContext } from "./FlexContext"
-import { Direction } from "./utils"
+import { Direction, MinFlexElementWidth } from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -40,7 +40,7 @@ export type UseLayoutStylesArgs = {
   // level element.
   subElement?: SubElement
   styleOverrides?: StyleOverrides
-  minStretchBehavior?: "fit-content" | "12.5rem" | undefined
+  minStretchBehavior?: MinFlexElementWidth
 }
 
 const isNonZeroPositiveNumber = (value: unknown): value is number => {
@@ -62,8 +62,7 @@ const getWidth = (
   element: Element | BlockProto,
   // subElement supports older config where the width is set on the lower
   // level element.
-  subElement?: SubElement,
-  minStretchBehavior?: "fit-content" | "12.5rem" | undefined
+  subElement?: SubElement
 ): LayoutDimensionConfig => {
   // We need to support old width configurations for backwards compatibility,
   // since some integrations cache the messages and we want to ensure that the FE
@@ -152,7 +151,7 @@ const getFlex = (
   heightType: DimensionType | undefined,
   heightPixels: number | undefined,
   direction: Direction | undefined,
-  minStretchBehavior?: "fit-content" | "12.5rem" | undefined
+  minStretchBehavior?: MinFlexElementWidth
 ): string | undefined => {
   if (
     widthType === DimensionType.PIXEL &&

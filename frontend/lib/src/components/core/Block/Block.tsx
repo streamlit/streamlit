@@ -30,6 +30,7 @@ import {
 import {
   Direction,
   getDirectionOfBlock,
+  MinFlexElementWidth,
 } from "~lib/components/core/Layout/utils"
 import { LibContext } from "~lib/components/core/LibContext"
 import ChatMessage from "~lib/components/elements/ChatMessage"
@@ -232,17 +233,34 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
 
+const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
+const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
+
 const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { node } = props
   const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
     useContext(LibContext)
   const { formsData } = useRequiredContext(FormsContext)
 
+  let minStretchBehavior: MinFlexElementWidth
+  if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+    minStretchBehavior = "14rem"
+  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+    minStretchBehavior = "8rem"
+  } else if (node.deltaBlock.type === "chatMessage") {
+    if (node.isEmpty) {
+      minStretchBehavior = "8rem"
+    } else {
+      minStretchBehavior = "fit-content"
+    }
+  }
+
   const styles = useLayoutStyles({
     element: node.deltaBlock,
     subElement:
       (node.deltaBlock.type && node.deltaBlock[node.deltaBlock.type]) ||
       undefined,
+    minStretchBehavior,
   })
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {

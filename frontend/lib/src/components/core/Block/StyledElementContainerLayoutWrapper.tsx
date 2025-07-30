@@ -19,6 +19,7 @@ import React, { FC, useMemo } from "react"
 import type { ElementNode } from "~lib/AppNode"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 
@@ -35,6 +36,17 @@ const LARGE_STRETCH_BEHAVIOR = [
   "cameraInput",
   "audio",
   "video",
+  "code", // also includes st.echo
+  "buttonGroup",
+  "iframe",
+]
+
+const MEDIUM_STRETCH_BEHAVIOR = [
+  "dateInput",
+  "radio",
+  "slider", // also includes st.select_slider
+  "textArea",
+  "progress",
 ]
 
 const WIDTH_STRETCH_OVERRIDE = [
@@ -76,13 +88,20 @@ export const StyledElementContainerLayoutWrapper: FC<
     !node.element["arrowDataFrame"]?.width &&
     !node.element["arrowDataFrame"]?.useContainerWidth
 
-  let minStretchBehavior: "fit-content" | "12.5rem" | "6.5rem" = "fit-content"
+  let minStretchBehavior: MinFlexElementWidth = "fit-content"
   if (
     isInHorizontalLayout &&
     LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
   ) {
-    minStretchBehavior = "12.5rem"
+    minStretchBehavior = "14rem"
+  } else if (
+    isInHorizontalLayout &&
+    MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
+  ) {
+    minStretchBehavior = "8rem"
   }
+
+  // TODO (lawilby): Add override for st.feedback
 
   const styleOverrides = useMemo(() => {
     const styles: React.CSSProperties = {}
@@ -100,7 +119,7 @@ export const StyledElementContainerLayoutWrapper: FC<
         // st.image doesn't have the same proto style as other elements.
         // this can be consolidated with handling of other elements after width
         // changes are implemented for st.image.
-        styles.flex = "1 1 12.5rem"
+        styles.flex = "1 1 14rem"
       }
       return styles
     } else if (node.element.type === "textArea") {
@@ -109,6 +128,7 @@ export const StyledElementContainerLayoutWrapper: FC<
       // and the container must be allowed to expand. Additionally, we don't want the
       // flex with height to be set on the element container.
       if (node.element.heightConfig?.useStretch) {
+        // TODO what should we do here? Should this be only vertical layouts?
         return {
           height: "100%",
           flex: "1 1",
