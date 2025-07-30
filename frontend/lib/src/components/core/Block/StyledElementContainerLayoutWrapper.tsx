@@ -47,6 +47,11 @@ const MEDIUM_STRETCH_BEHAVIOR = [
   "slider", // also includes st.select_slider
   "textArea",
   "progress",
+  "multiselect",
+  "selectbox",
+  "timeInput",
+  "numberInput",
+  "textInput",
 ]
 
 const WIDTH_STRETCH_OVERRIDE = [
