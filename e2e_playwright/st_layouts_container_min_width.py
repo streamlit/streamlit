@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
+import pandas as pd
+
 import streamlit as st
 
-with st.container(direction="horizontal", border=True):
+with st.container(
+    direction="horizontal", border=True, key="layout-horizontal-markdown"
+):
     st.markdown("Hello", width="stretch")
     st.markdown("Hello", width="stretch")
     st.markdown(
@@ -35,40 +40,124 @@ with st.container(direction="horizontal", border=True):
     st.markdown("Hello", width="stretch")
     st.markdown("Hello", width="stretch")
 
-st.subheader("Buttons with various label lengths")
-
-with st.container(direction="horizontal", border=True):
-    # Very short button
+with st.container(direction="horizontal", border=True, key="layout-horizontal-buttons"):
     st.button("A", width="stretch")
-
-    # Short button
     st.button("OK", width="stretch")
-
-    # Medium button
     st.button("Submit", width="stretch")
-
-    # Longer button
     st.button("Download File", width="stretch")
-
-    # Very long button
     st.button(
         "This is a really long button label that should test wrapping", width="stretch"
     )
-
-    # Single character
     st.button("X", width="stretch")
 
-with st.container(direction="horizontal", border=True):
-    st.divider()
+with st.container(direction="horizontal", key="layout-horizontal-inputs"):
+    st.date_input("Date Range")
+    st.selectbox("Group by", ["Foo"])
+    st.multiselect("Deployment", ["All"], default=["All"])
 
-with st.container(direction="horizontal", border=True):
-    st.markdown("---")
-    st.markdown("---")
-    st.markdown("---")
-    st.markdown("---")
+    st.multiselect(
+        "Organization type",
+        ["Customer", "Partner"],
+        default=["Customer", "Partner"],
+    )
+    st.multiselect("Account", ["All"], default=["All"])
 
-with st.container(direction="horizontal", border=True):
+with st.container(direction="horizontal", border=True, key="layout-horizontal-maps"):
+    west_coast_data = pd.DataFrame(
+        {
+            "latitude": [37.7749, 34.0522],
+            "longitude": [-122.4194, -118.2437],
+            "name": ["San Francisco", "Los Angeles"],
+        }
+    )
+
+    # East Coast map data
+    east_coast_data = pd.DataFrame(
+        {
+            "latitude": [40.7128, 25.7617],
+            "longitude": [-74.0060, -80.1918],
+            "name": ["New York", "Miami"],
+        }
+    )
+
+    st.map(west_coast_data, use_container_width=True)
+    st.map(east_coast_data, use_container_width=True)
+
+with st.container(
+    direction="horizontal", border=True, key="layout-horizontal-checkboxes"
+):
+    st.checkbox("", width="stretch", key="checkbox1")
+    st.checkbox("", width="stretch", key="checkbox2")
+    st.checkbox("", width="stretch", key="checkbox3")
+    st.checkbox("", width="stretch", key="checkbox4")
+    st.checkbox("", width="stretch", key="checkbox5")
+    st.checkbox("", width="stretch", key="checkbox6")
+    st.checkbox("", width="stretch", key="checkbox7")
+    st.checkbox("", width="stretch", key="checkbox8")
+    st.checkbox("", width="stretch", key="checkbox9")
+    st.checkbox("", width="stretch", key="checkbox10")
+
+with st.container(
+    direction="horizontal", border=True, key="layout-horizontal-text-area-info"
+):
     st.info("Info")
-    st.warning("Warning")
-    st.error("Error")
-    st.success("Success")
+    st.text_area("Notes", height=80, width="stretch")
+
+small_data = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6], "C": [7, 8, 9]})
+
+medium_data = pd.DataFrame(
+    {
+        "Name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
+        "Age": [25, 30, 35, 28, 32],
+        "City": ["New York", "London", "Tokyo", "Paris", "Sydney"],
+        "Salary": [50000, 60000, 70000, 55000, 65000],
+        "Department": ["Engineering", "Marketing", "Sales", "HR", "Finance"],
+    }
+)
+
+with st.container(
+    direction="horizontal", border=True, key="layout-horizontal-dataframes"
+):
+    st.dataframe(small_data, use_container_width=False)
+    st.dataframe(medium_data, use_container_width=False)
+    st.dataframe(small_data, use_container_width=True)
+
+
+with st.container(
+    direction="horizontal", border=True, key="layout-horizontal-nested-containers"
+):
+    with st.container(direction="horizontal", border=True):
+        st.markdown("Hello, how are you? Do you like ice cream?")
+    with st.container(direction="horizontal", border=True):
+        st.markdown("Hello. Goodbye. So long.")
+    with st.container(direction="horizontal", border=True):
+        st.markdown("Hello")
+    st.info("(I like ice cream)")
+
+with st.container(direction="horizontal", border=True, key="layout-horizontal-columns"):
+    col1, col2, col3 = st.columns(3)
+    col1.markdown("Hello, how are you? Do you like ice cream?")
+    col2.markdown("Hello. Goodbye. So long.")
+    col3.markdown("Hello")
+    st.info("(I like ice cream)")
+
+chart_data = pd.DataFrame(
+    {
+        "x": range(10),
+        "y1": np.random.randn(10).cumsum(),
+        "y2": np.random.randn(10).cumsum(),
+        "y3": np.random.randn(10).cumsum(),
+    }
+)
+
+with st.container(direction="horizontal", border=True, key="layout-horizontal-charts"):
+    st.line_chart(chart_data[["y1"]], use_container_width=True)
+    st.bar_chart(chart_data[["y2"]], use_container_width=True)
+    st.area_chart(chart_data[["y3"]], use_container_width=True)
+
+with st.container(
+    direction="horizontal", border=True, key="layout-horizontal-button-groups"
+):
+    st.segmented_control("Segmented Control", ["Option 1", "Option 2", "Option 3"])
+    st.feedback("thumbs", width="stretch")
+    st.pills("Priority", ["Low", "Medium", "High"], width="stretch")
