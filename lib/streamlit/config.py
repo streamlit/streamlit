@@ -1364,7 +1364,7 @@ _create_theme_options(
 
 _create_theme_options(
     "codeFontWeight",
-    categories=["theme"],
+    categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         The font weight for code blocks and code text.
 

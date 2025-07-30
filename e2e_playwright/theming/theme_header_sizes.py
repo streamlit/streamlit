@@ -13,6 +13,6 @@
 # limitations under the License.
 
 
-from theme_weight_test_app import run_theme_weight_tester_app  # type: ignore
+from size_and_weight_test_app import run_size_and_weight_test_app  # type: ignore
 
-run_theme_weight_tester_app()
+run_size_and_weight_test_app()
