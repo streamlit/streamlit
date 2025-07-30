@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import pandas as pd
 
 import streamlit as st
@@ -61,27 +60,6 @@ with st.container(direction="horizontal", key="layout-horizontal-inputs"):
         default=["Customer", "Partner"],
     )
     st.multiselect("Account", ["All"], default=["All"])
-
-with st.container(direction="horizontal", border=True, key="layout-horizontal-maps"):
-    west_coast_data = pd.DataFrame(
-        {
-            "latitude": [37.7749, 34.0522],
-            "longitude": [-122.4194, -118.2437],
-            "name": ["San Francisco", "Los Angeles"],
-        }
-    )
-
-    # East Coast map data
-    east_coast_data = pd.DataFrame(
-        {
-            "latitude": [40.7128, 25.7617],
-            "longitude": [-74.0060, -80.1918],
-            "name": ["New York", "Miami"],
-        }
-    )
-
-    st.map(west_coast_data, use_container_width=True)
-    st.map(east_coast_data, use_container_width=True)
 
 with st.container(
     direction="horizontal", border=True, key="layout-horizontal-checkboxes"
@@ -141,19 +119,6 @@ with st.container(direction="horizontal", border=True, key="layout-horizontal-co
     col3.markdown("Hello")
     st.info("(I like ice cream)")
 
-chart_data = pd.DataFrame(
-    {
-        "x": range(10),
-        "y1": np.random.randn(10).cumsum(),
-        "y2": np.random.randn(10).cumsum(),
-        "y3": np.random.randn(10).cumsum(),
-    }
-)
-
-with st.container(direction="horizontal", border=True, key="layout-horizontal-charts"):
-    st.line_chart(chart_data[["y1"]], use_container_width=True)
-    st.bar_chart(chart_data[["y2"]], use_container_width=True)
-    st.area_chart(chart_data[["y3"]], use_container_width=True)
 
 with st.container(
     direction="horizontal", border=True, key="layout-horizontal-button-groups"

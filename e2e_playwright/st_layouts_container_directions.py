@@ -45,8 +45,8 @@ with st.container(
     key="container-horizontal-fixed-width-and-stretch-element",
 ):
     st.html(
-        '<div style="background:lightyellow">Fixed width element (500px)</div>',
-        width=500,
+        '<div style="background:lightyellow">Fixed width element (400px)</div>',
+        width=400,
     )
     st.html(
         '<div style="background:lightblue">Stretch width element</div>',

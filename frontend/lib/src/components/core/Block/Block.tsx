@@ -255,7 +255,8 @@ const BlockNodeRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     }
   } else if (
     node.deltaBlock.type === "flexContainer" ||
-    node.deltaBlock.column
+    node.deltaBlock.column ||
+    node.deltaBlock.expandable
   ) {
     if (!node.isEmpty) {
       minStretchBehavior = "8rem"

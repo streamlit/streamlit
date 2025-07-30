@@ -22,13 +22,11 @@ CONTAINER_KEYS = [
     "layout-horizontal-markdown",
     "layout-horizontal-buttons",
     "layout-horizontal-inputs",
-    "layout-horizontal-maps",
     "layout-horizontal-checkboxes",
     "layout-horizontal-text-area-info",
     "layout-horizontal-dataframes",
     "layout-horizontal-nested-containers",
     "layout-horizontal-columns",
-    "layout-horizontal-charts",
     "layout-horizontal-button-groups",
 ]
 
