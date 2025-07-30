@@ -1435,8 +1435,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField("show_widget_border")
         assert not new_session_msg.custom_theme.sidebar.HasField("link_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("link_underline")
-        assert not new_session_msg.custom_theme.HasField("base_font_size")
-        assert not new_session_msg.custom_theme.HasField("base_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
         assert not new_session_msg.custom_theme.sidebar.HasField("code_font_size")
         assert not new_session_msg.custom_theme.sidebar.HasField("code_font_weight")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
@@ -1448,10 +1448,10 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         # Fields that are marked as repeated in proto:
-        assert not new_session_msg.custom_theme.heading_font_sizes
-        assert not new_session_msg.custom_theme.heading_font_weights
-        assert not new_session_msg.custom_theme.chart_categorical_colors
-        assert not new_session_msg.custom_theme.chart_sequential_colors
+        assert not new_session_msg.custom_theme.sidebar.heading_font_sizes
+        assert not new_session_msg.custom_theme.sidebar.heading_font_weights
+        assert not new_session_msg.custom_theme.sidebar.chart_categorical_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_sequential_colors
 
     @patch("streamlit.runtime.app_session.config")
     def test_can_specify_all_options(self, patched_config):
