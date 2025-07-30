@@ -32,7 +32,7 @@ def configure_custom_theme_font_weights():
         [800, 700, 500, 400, 300, 200]
     )
     # Configurable separately in sidebar
-    os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT_WEIGHT"] = "100"
+    os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT_WEIGHT"] = "200"
     os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT_WEIGHTS"] = json.dumps(
         [200, 300, 400, 500, 700, 800]
     )
