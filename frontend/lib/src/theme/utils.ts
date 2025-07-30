@@ -22,8 +22,8 @@ import once from "lodash/once"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import { localStorageAvailable } from "@streamlit/utils"
 import type { StreamlitWindowObject } from "@streamlit/utils"
+import { localStorageAvailable } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -361,12 +361,6 @@ const setHeadingFontSizes = (
         baseFontSize,
         inSidebar
       )
-
-      console.log("=====================")
-      console.log("=== headingFontSizeKey", headingFontSizeKey)
-      console.log("=== size", size)
-      console.log("=== convertedSize", convertedSize)
-      console.log("=====================")
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
