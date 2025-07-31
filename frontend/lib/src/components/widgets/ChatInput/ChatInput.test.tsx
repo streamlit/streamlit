@@ -641,11 +641,11 @@ describe("ChatInput widget", () => {
     expect(chatInputValue.data).toBe("Here are the project files")
 
     // Check that files were uploaded
-    expect(chatInputValue.fileUploaderState.uploadedFileInfo).toHaveLength(2)
-    expect(chatInputValue.fileUploaderState.uploadedFileInfo[0].name).toBe(
+    expect(chatInputValue.fileUploaderState!.uploadedFileInfo).toHaveLength(2)
+    expect(chatInputValue.fileUploaderState!.uploadedFileInfo![0].name).toBe(
       "project/main.py"
     )
-    expect(chatInputValue.fileUploaderState.uploadedFileInfo[1].name).toBe(
+    expect(chatInputValue.fileUploaderState!.uploadedFileInfo![1].name).toBe(
       "project/tests/test.py"
     )
   })
