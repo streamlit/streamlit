@@ -55,7 +55,12 @@ jobs:
           pytest ./custom_components --browser webkit --browser chromium --browser firefox -n auto --reruns 1
       - name: Get short SHA
         id: short_sha
-        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "sha_short=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          else
+            echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          fi
       - name: Upload failed test results
         uses: actions/upload-artifact@v4
         if: always()

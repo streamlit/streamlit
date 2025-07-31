@@ -49,7 +49,12 @@ jobs:
         run: make frontend-with-profiler
       - name: Get short SHA
         id: short_sha
-        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "sha_short=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          else
+            echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
+          fi
       - name: Run playwright tests
         run: |
           cd e2e_playwright
