@@ -28,7 +28,7 @@ with st.container(
         width=300,
     )
 
-with st.container(direction="vertical", border=True, key="container-vertical-basic"):
+with st.container(horizontal=False, border=True, key="container-vertical-basic"):
     st.html(
         '<div style="background:lightblue">Hello</div>',
         width="stretch",
@@ -66,7 +66,7 @@ with st.container(
 
 # Vertical layout with a fixed-width element
 with st.container(
-    direction="vertical",
+    horizontal=False,
     key="container-vertical-fixed-width-and-stretch-element",
     border=True,
 ):
@@ -81,7 +81,7 @@ with st.container(
 
 # Vertical layout with a fixed-height element
 with st.container(
-    direction="vertical", border=True, key="container-vertical-fixed-height-element"
+    horizontal=False, border=True, key="container-vertical-fixed-height-element"
 ):
     with st.container(height=500, border=True):
         st.write("Fixed 500px height container")

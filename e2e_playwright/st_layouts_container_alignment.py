@@ -85,7 +85,7 @@ with st.container(
     st.container(border=True, height=25)
 
 with st.container(
-    direction="vertical",
+    horizontal=False,
     border=True,
     vertical_alignment="top",
     height=300,
@@ -96,7 +96,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>')
 
 with st.container(
-    direction="vertical",
+    horizontal=False,
     border=True,
     vertical_alignment="center",
     height=300,
@@ -107,7 +107,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>')
 
 with st.container(
-    direction="vertical",
+    horizontal=False,
     border=True,
     vertical_alignment="bottom",
     height=300,
@@ -118,7 +118,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>')
 
 with st.container(
-    direction="vertical",
+    horizontal=False,
     border=True,
     vertical_alignment="distribute",
     height=300,
@@ -129,7 +129,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>')
 
 with st.container(
-    direction="vertical",
+    horizontal=False,
     border=True,
     horizontal_alignment="left",
     key="container-vertical-horizontal-align-left",
@@ -139,7 +139,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>', width="content")
 
 with st.container(
-    direction="vertical",
+    horizontal=False,
     border=True,
     horizontal_alignment="center",
     key="container-vertical-horizontal-align-center",
@@ -149,7 +149,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>', width="content")
 
 with st.container(
-    direction="vertical",
+    horizontal=False,
     border=True,
     horizontal_alignment="right",
     key="container-vertical-horizontal-align-right",

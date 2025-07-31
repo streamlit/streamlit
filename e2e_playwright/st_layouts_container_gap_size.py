@@ -107,7 +107,7 @@ with st.container(
     )
 
 with st.container(
-    border=True, gap="small", direction="vertical", key="container-vertical-gap-small"
+    border=True, gap="small", horizontal=False, key="container-vertical-gap-small"
 ):
     st.html(
         '<div style="background:lightblue">One</div>',
@@ -123,7 +123,7 @@ with st.container(
     )
 
 with st.container(
-    border=True, gap="medium", direction="vertical", key="container-vertical-gap-medium"
+    border=True, gap="medium", horizontal=False, key="container-vertical-gap-medium"
 ):
     st.html(
         '<div style="background:lightblue">One</div>',
@@ -139,7 +139,7 @@ with st.container(
     )
 
 with st.container(
-    border=True, gap="large", direction="vertical", key="container-vertical-gap-large"
+    border=True, gap="large", horizontal=False, key="container-vertical-gap-large"
 ):
     st.html(
         '<div style="background:lightblue">One</div>',
@@ -155,7 +155,7 @@ with st.container(
     )
 
 with st.container(
-    border=True, gap=None, direction="vertical", key="container-vertical-gap-none"
+    border=True, gap=None, horizontal=False, key="container-vertical-gap-none"
 ):
     st.html(
         '<div style="background:lightblue">One</div>',

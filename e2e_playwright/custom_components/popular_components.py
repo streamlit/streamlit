@@ -96,7 +96,7 @@ def use_antd():
         index=0,
         format_func="title",
         align="center",
-        horizontal=True,
+        direction="horizontal",
         radius="lg",
         return_index=False,
     )

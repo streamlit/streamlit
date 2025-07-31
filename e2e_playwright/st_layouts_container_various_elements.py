@@ -22,7 +22,7 @@ img: npt.NDArray[np.int_] = np.repeat(0, 75000).reshape(300, 250)
 
 with st.container(
     border=False,
-    direction="vertical",
+    horizontal=False,
     key="layout-dashboard-example",
 ):
     st.title("Q3 Results")
@@ -41,7 +41,7 @@ with st.container(
 
         with st.container(
             border=False,
-            direction="vertical",
+            horizontal=False,
         ):
             st.metric(label="Metric", value=156, delta=10, height=100, width=70)
             st.dataframe(df)
@@ -58,7 +58,7 @@ with st.container(
         st.text_area("Message")
         st.form_submit_button("Submit")
 
-    with st.container(border=False, direction="vertical"):
+    with st.container(border=False, horizontal=False):
         st.info("Please fill out the form to continue. We value your input!", width=250)
         st.image(img)
 
@@ -145,7 +145,7 @@ with st.container(
     st.image(img, width=50)
     st.image(img)
 
-with st.container(border=True, direction="vertical", key="layout-horizontal-columns"):
+with st.container(border=True, horizontal=False, key="layout-horizontal-columns"):
     st.title("Columns")
     df = pd.DataFrame(
         {
@@ -187,7 +187,7 @@ with st.container(border=True, horizontal=True, key="layout-horizontal-tabs"):
     with tab2:
         with st.container(
             border=False,
-            direction="vertical",
+            horizontal=False,
         ):
             st.altair_chart(alt.Chart(df).mark_bar().encode(x="x", y="y"))
             st.warning("This is a warning")
