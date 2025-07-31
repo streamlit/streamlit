@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo } from "react"
+import React, { FC, memo, useMemo } from "react"
 
 import range from "lodash/range"
 
@@ -37,16 +37,30 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   numParticles,
   numParticleTypes,
   ParticleComponent,
-}: Props) => (
-  // Keys should be unique each time, so React replaces the images in the DOM and their animations
-  // actually rerun.
-  <StyledParticles className={className} data-testid={className}>
-    {range(numParticles).map(i => {
-      const randNum = Math.floor(Math.random() * numParticleTypes)
+}: Props) => {
+  // Prepare a random selection of particle types, but only update the selection
+  // if the scriptRunId changes.
+  const particleTypes = useMemo(
+    () =>
+      range(numParticles).map(() =>
+        Math.floor(Math.random() * numParticleTypes)
+      ),
+    // Update the random selection of particle types if the scriptRunId changes.
+    // eslint-disable-next-line react-hooks/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scriptRunId, numParticles, numParticleTypes]
+  )
 
-      return <ParticleComponent key={scriptRunId + i} particleType={randNum} />
-    })}
-  </StyledParticles>
-)
+  return (
+    // Keys should be unique each time, so React replaces the images in the DOM and their animations
+    // actually rerun.
+    <StyledParticles className={className} data-testid={className}>
+      {particleTypes.map((particleType, i) => (
+        // eslint-disable-next-line @eslint-react/no-array-index-key
+        <ParticleComponent key={scriptRunId + i} particleType={particleType} />
+      ))}
+    </StyledParticles>
+  )
+}
 
 export default memo(Particles)
