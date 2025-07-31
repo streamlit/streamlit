@@ -504,13 +504,15 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("vertical", BlockProto.FlexContainer.Direction.VERTICAL),
-            ("horizontal", BlockProto.FlexContainer.Direction.HORIZONTAL),
+            (False, BlockProto.FlexContainer.Direction.VERTICAL),
+            (True, BlockProto.FlexContainer.Direction.HORIZONTAL),
         ],
     )
-    def test_container_direction(self, direction: str, expected_direction: int) -> None:
+    def test_container_direction(
+        self, direction: bool, expected_direction: int
+    ) -> None:
         """Test that st.container sets the correct direction."""
-        st.container(direction=direction)
+        st.container(horizontal=direction)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.direction == expected_direction
 
@@ -558,7 +560,7 @@ class ContainerTest(DeltaGeneratorTestCase):
         self, vertical_alignment: str, expected_justify: int
     ) -> None:
         """Test that st.container with direction='vertical' sets the correct justify value for vertical_alignment."""
-        st.container(direction="vertical", vertical_alignment=vertical_alignment)
+        st.container(horizontal=False, vertical_alignment=vertical_alignment)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.justify == expected_justify
 
@@ -574,19 +576,19 @@ class ContainerTest(DeltaGeneratorTestCase):
         self, horizontal_alignment: str, expected_align: int
     ) -> None:
         """Test that st.container with direction='vertical' sets the correct align value for horizontal_alignment."""
-        st.container(direction="vertical", horizontal_alignment=horizontal_alignment)
+        st.container(horizontal=False, horizontal_alignment=horizontal_alignment)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.align == expected_align
 
     @parameterized.expand(
         [
-            ("horizontal", True),
-            ("vertical", False),
+            (True, True),
+            (False, False),
         ],
     )
-    def test_container_wrap(self, direction: str, wrap: bool) -> None:
+    def test_container_wrap(self, direction: bool, wrap: bool) -> None:
         """Test that st.container sets the wrap property correctly."""
-        st.container(direction=direction)
+        st.container(horizontal=direction)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.wrap == wrap
 
