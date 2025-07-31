@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useContext, useMemo } from "react"
+import React, { FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -27,7 +27,6 @@ import Particles from "~lib/components/elements/Particles"
 import { ParticleProps } from "~lib/components/elements/Particles/Particles"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
 import { getCrossOriginAttribute } from "~lib/util/UriUtil"
-import { LibContext } from "~lib/components/core/LibContext"
 
 import { StyledFlake } from "./styled-components"
 
