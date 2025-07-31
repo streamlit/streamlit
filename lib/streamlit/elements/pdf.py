@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 PdfData: TypeAlias = Union[str, Path, bytes, io.BytesIO]
 
 
-
 def _get_pdf_component() -> Any | None:
     """Get the PDF custom component if available.
 
@@ -48,7 +47,6 @@ def _get_pdf_component() -> Any | None:
         return streamlit_pdf.pdf_viewer
     except ImportError:
         return None
-
 
 
 class PdfMixin:
