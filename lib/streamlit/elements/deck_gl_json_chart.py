@@ -330,6 +330,14 @@ class PydeckMixin:
         made available by Carto or Mapbox. The use of Carto or Mapbox is governed by
         their respective Terms of Use.
 
+        .. note::
+            Pydeck uses two WebGL contexts per chart, and different browsers
+            have different limits on the number of WebGL contexts per page.
+            If you exceed this limit, the oldest contexts will be dropped to
+            make room for the new ones. To avoid this limitation in most
+            browsers, don't display more than eight Pydeck charts on a single
+            page.
+
         Parameters
         ----------
         pydeck_obj : pydeck.Deck or None

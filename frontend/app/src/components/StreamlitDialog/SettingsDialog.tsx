@@ -25,6 +25,7 @@ import React, {
   useState,
 } from "react"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   BaseButton,
   BaseButtonKind,
@@ -37,7 +38,6 @@ import {
   ThemeConfig,
   UISelectbox,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
   StyledButtonContainer,
@@ -193,6 +193,8 @@ export const SettingsDialog: FC<Props> = memo(function SettingsDialog({
                 disabled={false}
                 onChange={handleThemeChange}
                 value={libContext.activeTheme.name}
+                placeholder=""
+                acceptNewOptions={false}
               />
               {developerMode && (
                 <ThemeCreatorButton openThemeCreator={openThemeCreator} />

@@ -22,12 +22,12 @@ import { getLogger } from "loglevel"
 
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
   StyledToolbarElementContainer,
 } from "~lib/components/shared/Toolbar"
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 
 import { StyledGraphVizChart } from "./styled-components"
 

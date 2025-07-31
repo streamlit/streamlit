@@ -31,7 +31,8 @@ import {
 } from "./utils"
 
 export interface SelectboxColumnParams {
-  /** A list of options available in the selectbox.
+  /**
+   * A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
   readonly options: (string | number | boolean)[]
@@ -92,6 +93,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "selectbox",
     sortMode: "default",
+    typeIcon: ":material/arrow_drop_down_circle:",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {
       // Empty string refers to a missing value

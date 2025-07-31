@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from typing import Any, Final, cast
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import tornado.web
 
@@ -130,7 +130,63 @@ class AuthLoginHandler(AuthHandlerMixin, tornado.web.RequestHandler):
 class AuthLogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
     def get(self) -> None:
         self.clear_auth_cookie()
-        self.redirect_to_base()
+
+        provider_logout_url = self._get_provider_logout_url()
+        if provider_logout_url:
+            self.redirect(provider_logout_url)
+        else:
+            self.redirect_to_base()
+
+    def _get_redirect_root(self) -> str | None:
+        auth_section = get_secrets_auth_section()
+        if not auth_section or not auth_section.get("redirect_uri"):
+            return None
+
+        redirect_uri: str = auth_section["redirect_uri"]
+        if not redirect_uri.endswith("/oauth2callback"):
+            _LOGGER.warning("Redirect URI does not end with /oauth2callback")
+            return None
+
+        return redirect_uri.removesuffix("oauth2callback")
+
+    def _get_provider_logout_url(self) -> str | None:
+        """Get the OAuth provider's logout URL from OIDC metadata."""
+        try:
+            cookie_value = self.get_signed_cookie(AUTH_COOKIE_NAME)
+        except AttributeError:  # Backward compatibility with Tornado < 6.3.0
+            cookie_value = self.get_secure_cookie(AUTH_COOKIE_NAME)
+
+        if not cookie_value:
+            return None
+
+        try:
+            user_info = json.loads(cookie_value)
+            provider = user_info.get("provider")
+            if not provider:
+                return None
+
+            client, _ = create_oauth_client(provider)
+
+            metadata = client.load_server_metadata()
+            end_session_endpoint = metadata.get("end_session_endpoint")
+
+            if not end_session_endpoint:
+                _LOGGER.info("No end_session_endpoint found for provider %s", provider)
+                return None
+
+            redirect_root = self._get_redirect_root()
+            if redirect_root is None:
+                _LOGGER.info("Redirect url could not be determined")
+                return None
+
+            logout_params = {"post_logout_redirect_uri": redirect_root}
+
+            # Not using id_token_hint as we don't store the id token
+            return f"{end_session_endpoint}?{urlencode(logout_params)}"
+
+        except Exception as e:
+            _LOGGER.warning("Failed to get provider logout URL: %s", e)
+            return None
 
 
 class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
@@ -172,7 +228,7 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         token = client.authorize_access_token(self)
         user = cast("dict[str, Any]", token.get("userinfo"))
 
-        cookie_value = dict(user, origin=origin, is_logged_in=True)
+        cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
         if user:
             self.set_auth_cookie(cookie_value)
         else:

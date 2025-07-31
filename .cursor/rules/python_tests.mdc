@@ -20,7 +20,7 @@ We aim for high unit test coverage (90% or higher) of our Python code in `lib/st
 - Run all with:
 
 ```bash
-make pytest
+make python-tests
 ```
 
 - Run a specific test file with:

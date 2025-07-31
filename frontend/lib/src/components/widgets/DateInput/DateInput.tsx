@@ -24,34 +24,34 @@ import React, {
 } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
-import { format } from "date-fns"
-import moment from "moment"
 import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
+import { format } from "date-fns"
+import moment from "moment"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import { LibContext } from "~lib/components/core/LibContext"
+import Icon from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import {
+  StyledWidgetLabelHelp,
+  WidgetLabel,
+} from "~lib/components/widgets/BaseWidget"
+import {
+  useBasicWidgetState,
+  ValueWithSource,
+} from "~lib/hooks/useBasicWidgetState"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import {
-  useBasicWidgetState,
-  ValueWithSource,
-} from "~lib/hooks/useBasicWidgetState"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
-import Icon from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { LibContext } from "~lib/components/core/LibContext"
-import { hasLightBackgroundColor } from "~lib/theme"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { useIntlLocale } from "./useIntlLocale"
 
@@ -124,6 +124,17 @@ function DateInput({
   )
 
   const maxDate = useMemo(() => getMaxDate(element), [element])
+
+  const enableQuickSelect = useMemo(() => {
+    if (!element.isRange) {
+      return false
+    }
+
+    // Since quick select allows to select ranges up to the past 2 years,
+    // we should only enable it if the min date is older than 2 years ago.
+    const twoYearsAgo = moment().subtract(2, "years").toDate()
+    return minDate < twoYearsAgo
+  }, [element.isRange, minDate])
 
   const clearable = element.default.length === 0 && !disabled
 
@@ -243,6 +254,7 @@ function DateInput({
         disabled={disabled}
         onChange={handleChange}
         onClose={handleClose}
+        quickSelect={enableQuickSelect}
         overrides={{
           Popover: {
             props: {
@@ -414,6 +426,7 @@ function DateInput({
                 },
                 Input: {
                   style: {
+                    fontWeight: theme.fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
                     paddingLeft: spacing.md,
@@ -434,6 +447,22 @@ function DateInput({
                   },
                   props: {
                     "data-testid": "stDateInputField",
+                  },
+                },
+              },
+            },
+          },
+          QuickSelect: {
+            props: {
+              overrides: {
+                ControlContainer: {
+                  style: {
+                    height: theme.sizes.minElementHeight,
+                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                    borderLeftWidth: theme.sizes.borderWidth,
+                    borderRightWidth: theme.sizes.borderWidth,
+                    borderTopWidth: theme.sizes.borderWidth,
+                    borderBottomWidth: theme.sizes.borderWidth,
                   },
                 },
               },

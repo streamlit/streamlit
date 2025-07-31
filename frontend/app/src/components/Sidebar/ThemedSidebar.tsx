@@ -24,16 +24,58 @@ import {
   ThemeConfig,
   ThemeProvider,
 } from "@streamlit/lib"
-import { notNullOrUndefined } from "@streamlit/utils"
 import { CustomThemeConfig } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 
-export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
-  let sidebarOverride = {}
-  if (notNullOrUndefined(theme.themeInput?.sidebar)) {
-    sidebarOverride = theme.themeInput.sidebar
+const setSidebarHeadingFontSizes = (
+  configHeadingFontSizes: string[] | null | undefined
+): string[] => {
+  // Default sidebar heading font sizes
+  const sidebarHeadingFontSizes = [
+    "1.5rem",
+    "1.25rem",
+    "1.125rem",
+    "1rem",
+    "0.875rem",
+    "0.75rem",
+  ]
+
+  if (configHeadingFontSizes) {
+    // If specifically set in sidebar config, override default
+    configHeadingFontSizes.forEach((size: string, index: number) => {
+      sidebarHeadingFontSizes[index] = size
+    })
   }
+
+  return sidebarHeadingFontSizes
+}
+
+export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sidebarOverride: Record<string, any> = {}
+  if (notNullOrUndefined(theme.themeInput?.sidebar)) {
+    // Create a mutable copy
+    sidebarOverride = { ...theme.themeInput.sidebar }
+
+    // Remove empty array fields to prevent them from being applied
+    // on top of the main theme.
+    // This is needed since the optional protobuf keyword is not allowed
+    // for repeated fields. Therefore, we are treating empty
+    // arrays as non-existent.
+    Object.keys(sidebarOverride).forEach(prop => {
+      const value = sidebarOverride[prop]
+      if (Array.isArray(value) && value.length === 0) {
+        delete sidebarOverride[prop]
+      }
+    })
+  }
+
+  // Handle configured vs. default header font sizes for sidebar
+  const headingFontSizes = setSidebarHeadingFontSizes(
+    theme.themeInput?.sidebar?.headingFontSizes
+  )
 
   // Either use the configured background color or secondary background from main theme:
   const sidebarBackground =
@@ -50,6 +92,7 @@ export const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
     ...sidebarOverride,
     backgroundColor: sidebarBackground,
     secondaryBackgroundColor: secondaryBackgroundColor,
+    headingFontSizes: headingFontSizes,
   }
 
   const baseTheme =

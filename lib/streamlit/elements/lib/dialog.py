@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from typing_extensions import Self, TypeAlias
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -26,11 +27,13 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
+from streamlit.runtime.state import register_widget
 
 if TYPE_CHECKING:
     from types import TracebackType
 
     from streamlit.cursor import Cursor
+    from streamlit.runtime.state import WidgetCallback
 
 DialogWidth: TypeAlias = Literal["small", "large"]
 
@@ -81,11 +84,50 @@ class Dialog(DeltaGenerator):
         *,
         dismissible: bool = True,
         width: DialogWidth = "small",
+        on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
+        # Validation for on_dismiss parameter
+        if on_dismiss not in ["ignore", "rerun"] and not callable(on_dismiss):
+            raise StreamlitAPIException(
+                f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
+                "'rerun', or a callable is supported."
+            )
+
         block_proto = BlockProto()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
+
+        # Handle on_dismiss functionality
+        is_dismiss_activated = on_dismiss != "ignore"
+        element_id = None
+
+        if is_dismiss_activated:
+            # Register as widget when on_dismiss is activated
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "dialog",
+                user_key=None,
+                # Dialogs within forms still trigger a normal rerun:
+                form_id="",
+                dg=parent,
+                title=title,
+                dismissible=dismissible,
+                width=width,
+                on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
+            )
+            block_proto.dialog.id = element_id
+
+            register_widget(
+                element_id,
+                on_change_handler=on_dismiss if callable(on_dismiss) else None,
+                deserializer=lambda x: x,  # Simple passthrough for trigger values
+                serializer=lambda x: x,  # Simple passthrough for trigger values
+                ctx=ctx,
+                value_type="trigger_value",
+            )
 
         # We store the delta path here, because in _update we enqueue a new proto
         # message to update the open status. Without this, the dialog content is gone
@@ -97,6 +139,7 @@ class Dialog(DeltaGenerator):
 
         dialog._delta_path = delta_path
         dialog._current_proto = block_proto
+
         return dialog
 
     def __init__(

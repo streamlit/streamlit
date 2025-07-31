@@ -32,7 +32,7 @@ df = pd.DataFrame(
 )
 
 
-st.header("Hide index parameter:")
+st.header(":material/visibility_off: Hide index parameter:")
 st.dataframe(df, hide_index=True, use_container_width=False)
 st.dataframe(df, hide_index=False, use_container_width=False)
 
@@ -136,7 +136,7 @@ st.dataframe(
     column_config={
         "col_0": st.column_config.NumberColumn(
             "Number column",
-            width="medium",
+            width=200,
             help="This is a number column",
             required=True,  # Should be ignored
             disabled=False,  # Should be ignored
@@ -225,6 +225,12 @@ st.dataframe(
                 "",
                 None,
             ],
+            "col_4": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
+                None,
+            ],
         }
     ),
     column_config={
@@ -246,6 +252,10 @@ st.dataframe(
         "col_3": st.column_config.LinkColumn(
             "Static display text",
             display_text="Open link",
+        ),
+        "col_4": st.column_config.LinkColumn(
+            "Static display icon",
+            display_text=":material/open_in_new:",
         ),
     },
     use_container_width=False,
@@ -394,8 +404,9 @@ st.header("Progress column:")
 st.dataframe(
     pd.DataFrame(
         {
-            "col_0": [0.1, 0.4, 1.1, None],
+            "col_0": [0.1, 0.4872, 10.1, None],
             "col_1": ["200", "550", "1000", None],
+            "col_2": [0.1, 0.4872, 1.1, None],
         }
     ),
     column_config={
@@ -406,6 +417,9 @@ st.dataframe(
         ),
         "col_1": st.column_config.ProgressColumn(
             format="$%f", min_value=0, max_value=1000
+        ),
+        "col_2": st.column_config.ProgressColumn(
+            step=0.0001,
         ),
     },
     use_container_width=False,
@@ -418,7 +432,16 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [[1, 2], [2, 3, 4], [], None],
-            "col_1": ["a,b", "c,d,e", "", None],
+            "col_1": [
+                [
+                    "Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo Foo",
+                    "Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar Bar",
+                ],
+                [],
+                [],
+                None,
+            ],
+            "col_2": ["a,b", "c,d,e", "", None],
         }
     ),
     column_config={
@@ -427,7 +450,8 @@ st.dataframe(
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.ListColumn(),
+        "col_1": st.column_config.ListColumn(width="medium"),
+        "col_2": st.column_config.ListColumn(),
     },
     use_container_width=False,
     hide_index=True,
@@ -579,9 +603,10 @@ st.dataframe(
 )
 
 df = pd.DataFrame(
-    np.random.randn(5, 25),
+    np.random.randn(15, 25),
     columns=(f"col_{i}" for i in range(25)),
 )
+
 st.header("Pinned columns:")
 st.dataframe(
     df,
@@ -615,7 +640,7 @@ st.dataframe(
         },
     ),
     column_config={
-        "col_0": st.column_config.TextColumn("Text", width="large"),
+        "col_0": st.column_config.TextColumn("Text", width=400),
         "col_1": st.column_config.ImageColumn("Logo", width="medium"),
     },
     row_height=100,
@@ -638,6 +663,7 @@ st.dataframe(
             "yen": [0.0123123, -1234.567, 12, 0],
             "localized": [0.0123123, -1234.567, 12, 0],
             "accounting": [0.0123123, -1234.567, 12, 0],
+            "bytes": [0.0123123, -1234.567, 12, 0],
             "custom format": [0.0123123, -1234.567, 12, 0],
         }
     ),
@@ -647,11 +673,12 @@ st.dataframe(
         "scientific": st.column_config.NumberColumn(format="scientific"),
         "engineering": st.column_config.NumberColumn(format="engineering"),
         "plain": st.column_config.NumberColumn(format="plain"),
-        "dollar": st.column_config.NumberColumn(format="dollar"),
+        "dollar": st.column_config.NumberColumn(format="dollar", step=0.1),
         "euro": st.column_config.NumberColumn(format="euro"),
         "yen": st.column_config.NumberColumn(format="yen"),
         "localized": st.column_config.NumberColumn(format="localized"),
         "accounting": st.column_config.NumberColumn(format="accounting"),
+        "bytes": st.column_config.NumberColumn(format="bytes"),
         "custom format": st.column_config.NumberColumn(format="%.2f"),
     },
     hide_index=True,

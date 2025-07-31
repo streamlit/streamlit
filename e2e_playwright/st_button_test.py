@@ -20,9 +20,10 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     get_element_by_key,
+    get_expander,
 )
 
-TOTAL_BUTTONS = 25
+TOTAL_BUTTONS = 26
 
 
 def test_button_widget_rendering(
@@ -36,22 +37,20 @@ def test_button_widget_rendering(
     assert_snapshot(button_elements.nth(1), name="st_button-disabled")
     assert_snapshot(button_elements.nth(2), name="st_button-primary")
     assert_snapshot(button_elements.nth(3), name="st_button-disabled_primary")
-    assert_snapshot(button_elements.nth(4), name="st_button-use_container_width")
-    assert_snapshot(button_elements.nth(5), name="st_button-use_container_width_help")
-    assert_snapshot(button_elements.nth(6), name="st_button-styled_label")
-    assert_snapshot(button_elements.nth(7), name="st_button-just_help")
-    assert_snapshot(button_elements.nth(8), name="st_button-material_icon")
-    assert_snapshot(button_elements.nth(9), name="st_button-emoji_icon")
-    assert_snapshot(button_elements.nth(10), name="st_button-tertiary")
-    assert_snapshot(button_elements.nth(11), name="st_button-disabled_tertiary")
-    assert_snapshot(button_elements.nth(12), name="st_button-material_icon_1k_icon")
-    assert_snapshot(button_elements.nth(13), name="st_button-material_icon_1k_markdown")
+    assert_snapshot(button_elements.nth(4), name="st_button-styled_label")
+    assert_snapshot(button_elements.nth(5), name="st_button-just_help")
+    assert_snapshot(button_elements.nth(6), name="st_button-material_icon")
+    assert_snapshot(button_elements.nth(7), name="st_button-emoji_icon")
+    assert_snapshot(button_elements.nth(8), name="st_button-tertiary")
+    assert_snapshot(button_elements.nth(9), name="st_button-disabled_tertiary")
+    assert_snapshot(button_elements.nth(10), name="st_button-material_icon_1k_icon")
+    assert_snapshot(button_elements.nth(11), name="st_button-material_icon_1k_markdown")
 
     # The rest is tested in one screenshot in the following test
 
 
 def test_material_icon_hover(app: Page, assert_snapshot: ImageCompareFunction):
-    material_icon_button = app.get_by_test_id("stButton").nth(8)
+    material_icon_button = app.get_by_test_id("stButton").nth(6)
     app.get_by_text("Like Button").hover()
     assert_snapshot(material_icon_button, name="st_button-material_icon_hover")
 
@@ -119,13 +118,6 @@ def test_reset_on_other_widget_change(app: Page):
     )
 
 
-def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction):
-    button_element = app.get_by_test_id("stButton").nth(5)
-    button_element.hover()
-    assert_snapshot(button_element, name="st_button-on_hover")
-    expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
-
-
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stButton")
@@ -145,7 +137,7 @@ def test_shows_cursor_pointer(app: Page):
 def test_colored_text_hover(app: Page):
     """Test that the colored text is correctly rendered and changes color on hover."""
     # Check hover behavior for colored text in primary button
-    primary_button_element = app.get_by_test_id("stButton").nth(22)
+    primary_button_element = app.get_by_test_id("stButton").nth(20)
     expect(primary_button_element.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
@@ -153,13 +145,13 @@ def test_colored_text_hover(app: Page):
         "color", "rgb(0, 104, 201)"
     )
     primary_button_element.locator("button").hover()
-    # For primary buttons, the colored text should be white on hover to match the rest of the text
+    # For primary buttons, the colored text should stay blue on hover (no color inheritance)
     expect(primary_button_element.locator("span")).to_have_css(
-        "color", "rgb(255, 255, 255)"
+        "color", "rgb(0, 104, 201)"
     )
 
     # Check hover behavior for colored text in secondary button
-    secondary_button_element = app.get_by_test_id("stButton").nth(23)
+    secondary_button_element = app.get_by_test_id("stButton").nth(21)
     expect(secondary_button_element.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
@@ -167,13 +159,13 @@ def test_colored_text_hover(app: Page):
         "color", "rgb(0, 104, 201)"
     )
     secondary_button_element.locator("button").hover()
-    # For secondary buttons, the colored text should be red on hover to match the rest of the text
+    # For secondary buttons, the colored text should stay blue on hover (no color inheritance)
     expect(secondary_button_element.locator("span")).to_have_css(
-        "color", "rgb(255, 75, 75)"
+        "color", "rgb(0, 104, 201)"
     )
 
     # Check hover behavior for colored text in tertiary button
-    tertiary_button_element = app.get_by_test_id("stButton").nth(24)
+    tertiary_button_element = app.get_by_test_id("stButton").nth(22)
     expect(tertiary_button_element.locator("span")).to_have_class(
         "stMarkdownColoredText"
     )
@@ -185,3 +177,22 @@ def test_colored_text_hover(app: Page):
     expect(tertiary_button_element.locator("span")).to_have_css(
         "color", "rgb(255, 75, 75)"
     )
+
+
+def test_button_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    help_button_container = get_element_by_key(themed_app, "help_button_container")
+    help_button = get_element_by_key(help_button_container, "help_button_key")
+    help_button.hover()
+    expect(themed_app.get_by_text("help text")).to_be_visible()
+    assert_snapshot(help_button_container, name="st_button-help_button")
+
+
+def test_button_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test button width examples via screenshot matching."""
+    # Button width examples
+    button_expander = get_expander(app, "Button Width Examples")
+    button_elements = button_expander.get_by_test_id("stButton")
+
+    assert_snapshot(button_elements.nth(0), name="st_button-width_content")
+    assert_snapshot(button_elements.nth(1), name="st_button-width_stretch")
+    assert_snapshot(button_elements.nth(2), name="st_button-width_200px")

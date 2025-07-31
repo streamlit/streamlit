@@ -18,14 +18,14 @@ import React, { FC, memo, useEffect, useLayoutEffect } from "react"
 
 import { Global } from "@emotion/react"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import Toolbar, {
   StyledToolbarElementContainer,
 } from "~lib/components/shared/Toolbar"
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import {
@@ -35,6 +35,23 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
+function isFacetChart(spec: string | object): boolean {
+  try {
+    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+
+    return !!(
+      parsedSpec.facet ||
+      // TODO (lawilby): do some tests for row/column
+      // shorthand facet charts to confirm they work with
+      // sizing in the same way.
+      parsedSpec.encoding?.row ||
+      parsedSpec.encoding?.column ||
+      parsedSpec.encoding?.facet
+    )
+  } catch {
+    return false
+  }
+}
 export interface Props {
   element: VegaLiteChartElement
   widgetMgr: WidgetStateManager
@@ -51,10 +68,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const {
     expanded: isFullScreen,
     height,
+    width: fullScreenWidth,
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
   const [width, containerRef] = useCalculatedWidth()
+
+  // Facet charts need the container element to have a width and also
+  // do not work well with stretch/container width
+  // so they cannot use the width from the StyledVegaLiteChartContainer.
+  const isFacet = isFacetChart(inputElement.spec)
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -65,7 +88,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const element = useVegaElementPreprocessor(
     inputElement,
     isFullScreen,
-    width,
+    // Facet charts enter a loop when using the width from the StyledVegaLiteChartContainer.
+    isFacet ? (fullScreenWidth ?? 0) : width,
     height ?? 0
   )
 
@@ -90,7 +114,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
 
     return finalizeView
-  }, [createView, finalizeView, spec, width, height, containerRef])
+    // We can't use width in this dependency array because it causes facet charts to enter a loop.
+    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
+    // Are the changes in the spec enough?
+  }, [createView, finalizeView, spec, fullScreenWidth, height, containerRef])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
@@ -105,7 +132,6 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // the tooltip element is drawn outside of this component.
   return (
     <StyledToolbarElementContainer
-      width={width}
       height={height}
       useContainerWidth={element.useContainerWidth}
     >

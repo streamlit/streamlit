@@ -16,15 +16,15 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
 import * as glideDataGridModule from "@glideapps/glide-data-grid"
+import { screen } from "@testing-library/react"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
-import { TEN_BY_TEN } from "~lib/mocks/arrow"
-import { render } from "~lib/test_util"
 import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { TEN_BY_TEN } from "~lib/mocks/arrow"
+import { render } from "~lib/test_util"
 
 vi.mock("@glideapps/glide-data-grid", async () => ({
   ...(await vi.importActual("@glideapps/glide-data-grid")),

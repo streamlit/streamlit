@@ -20,6 +20,7 @@ import { getLogger } from "loglevel"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
@@ -150,6 +151,7 @@ function Audio({
     }
   }, [loop, startTime])
 
+  const crossOrigin = useCrossOriginAttribute(element.url)
   const uri = endpoints.buildMediaURL(element.url)
 
   const handleAudioError = (
@@ -175,6 +177,7 @@ function Audio({
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}
+        crossOrigin={crossOrigin}
       />
     </StyledAudioContainer>
   )

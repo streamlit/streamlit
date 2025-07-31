@@ -27,7 +27,6 @@ import without from "lodash/without"
 
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
-import { isMobile } from "~lib/util/isMobile"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { VirtualDropdown } from "~lib/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "~lib/components/shared/Dropdown/Selectbox"
@@ -38,13 +37,17 @@ import {
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { isMobile } from "~lib/util/isMobile"
+import {
+  getSelectPlaceholder,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -200,17 +203,16 @@ const Multiselect: FC<Props> = props => {
   )
 
   const { options } = element
-  let disabled = props.disabled
-  let placeholder = element.placeholder
-  if (options.length === 0) {
-    if (!element.acceptNewOptions) {
-      placeholder = "No options to select"
-      // When a user cannot add new options and there are no options to select from, we disable the selectbox
-      disabled = true
-    } else {
-      placeholder = "Add options"
-    }
-  }
+
+  // Get placeholder and disabled state using utility function
+  const { placeholder, shouldDisable } = getSelectPlaceholder(
+    element.placeholder,
+    options,
+    element.acceptNewOptions ?? false,
+    true // isMultiSelect = true for multi-select
+  )
+
+  const disabled = props.disabled || shouldDisable
   const selectOptions: MultiselectOption[] = options.map(
     (option: string, index: number) => {
       return {
@@ -367,6 +369,7 @@ const Multiselect: FC<Props> = props => {
                 overrides: {
                   Root: {
                     style: {
+                      fontWeight: theme.fontWeights.normal,
                       borderTopLeftRadius: theme.radii.md,
                       borderTopRightRadius: theme.radii.md,
                       borderBottomRightRadius: theme.radii.md,

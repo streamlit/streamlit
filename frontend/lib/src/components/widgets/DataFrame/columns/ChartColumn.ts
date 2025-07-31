@@ -40,9 +40,13 @@ export const AREA_CHART_TYPE = "area_chart"
 export const BAR_CHART_TYPE = "bar_chart"
 
 export interface ChartColumnParams {
-  // The minimum value used for plotting the chart. Defaults to 0.
+  /**
+   * The minimum value used for plotting the chart. Defaults to 0.
+   */
   readonly y_min?: number
-  // The maximum value used for plotting the chart. Defaults to 1.
+  /**
+   * The maximum value used for plotting the chart. Defaults to 1.
+   */
   readonly y_max?: number
 }
 
@@ -82,6 +86,12 @@ function BaseChartColumn(
   return {
     ...props,
     kind,
+    typeIcon:
+      kind === LINE_CHART_TYPE
+        ? ":material/show_chart:"
+        : kind === BAR_CHART_TYPE
+          ? ":material/bar_chart:"
+          : ":material/area_chart:",
     sortMode: "default",
     isEditable: false, // Chart column is always read-only
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

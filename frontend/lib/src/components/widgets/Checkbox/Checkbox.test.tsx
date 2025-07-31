@@ -24,8 +24,8 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/protobuf"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Checkbox, { Props } from "./Checkbox"
 

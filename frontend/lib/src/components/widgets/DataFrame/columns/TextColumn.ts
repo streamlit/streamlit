@@ -27,9 +27,13 @@ import {
 } from "./utils"
 
 export interface TextColumnParams {
-  // The maximum number of characters the user can enter into the text input.
+  /**
+   * The maximum number of characters the user can enter into the text input.
+   */
   readonly max_chars?: number
-  // Regular expression that the input's value must match for the value to pass
+  /**
+   * Regular expression that the input's value must match for the value to pass.
+   */
   readonly validate?: string
 }
 
@@ -100,6 +104,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "text",
     sortMode: "default",
+    typeIcon: ":material/notes:",
     validateInput,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {

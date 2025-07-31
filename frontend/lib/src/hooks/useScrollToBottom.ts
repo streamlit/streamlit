@@ -16,8 +16,8 @@
 
 import { RefObject, useCallback, useEffect, useRef } from "react"
 
-import useScrollSpy from "./useScrollSpy"
 import useScrollAnimation from "./useScrollAnimation"
+import useScrollSpy from "./useScrollSpy"
 import useStateRef from "./useStateRef"
 
 export interface ScrollToBottomOptions {
@@ -200,6 +200,7 @@ export function useScrollToBottom<T extends HTMLElement>(
           }
         } else if (
           target &&
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
           target.scrollHeight <= target.offsetHeight &&
           !isStickyRef.current
         ) {
@@ -234,6 +235,7 @@ export function useScrollToBottom<T extends HTMLElement>(
     const target = scrollableRef.current
     if (target && active) {
       const handleFocus = (): void => {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         scrollHeightRef.current = target.scrollHeight
       }
 

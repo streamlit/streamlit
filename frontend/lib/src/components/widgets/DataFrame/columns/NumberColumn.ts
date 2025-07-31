@@ -38,17 +38,27 @@ import {
 } from "./utils"
 
 export interface NumberColumnParams {
-  // The minimum allowed value for editing. Is set to 0 for unsigned values.
+  /**
+   * The minimum allowed value for editing. Is set to 0 for unsigned values.
+   */
   readonly min_value?: number
-  // The maximum allowed value for editing.
+  /**
+   * The maximum allowed value for editing.
+   */
   readonly max_value?: number
-  // A formatting syntax (e.g. sprintf) to format the display value.
-  // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
+  /**
+   * A formatting syntax (e.g. sprintf) to format the display value.
+   * This can be used for adding prefix or suffix, or changing the number of
+   * decimals of the display value.
+   */
   readonly format?: string
-  // Specifies the granularity that the value must adhere.
-  // This will also influence the maximum precision. This will impact the number of decimals
-  // allowed to be entered as well as the number of decimals displayed (if format is not specified).
-  // This is set to 1 for integer types.
+  /**
+   * Specifies the granularity that the value must adhere.
+   * This will also influence the maximum precision. This will impact the
+   * number of decimals allowed to be entered as well as the number of
+   * decimals displayed (if format is not specified).
+   * This is set to 1 for integer types.
+   */
   readonly step?: number
 }
 
@@ -149,6 +159,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "number",
     sortMode: "smart",
+    typeIcon: ":material/tag:",
     validateInput,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
     getCell(data?: any, validate?: boolean): GridCell {

@@ -19,10 +19,10 @@ import React from "react"
 import { fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "~lib/test_util"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Selectbox, { fuzzyFilterSelectOptions, Props } from "./Selectbox"
 
@@ -35,6 +35,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
   onChange: vi.fn(),
   placeholder: "Select...",
+  acceptNewOptions: false,
   ...props,
 })
 
@@ -86,6 +87,7 @@ describe("Selectbox widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
+  // Placeholder tests
   it("pass placeholder prop correctly", () => {
     props = getProps({
       value: undefined,
@@ -95,27 +97,17 @@ describe("Selectbox widget", () => {
     expect(screen.getByText("Please select")).toBeInTheDocument()
   })
 
-  it("renders a placeholder with empty options", () => {
+  it("integrates with placeholder utility - disabled state when no options", () => {
     props = getProps({
       options: [],
       value: undefined,
+      placeholder: "", // Empty string triggers default logic
     })
     render(<Selectbox {...props} />)
 
+    // Verifies integration with getSelectPlaceholder utility works
     expect(screen.getByText("No options to select")).toBeInTheDocument()
     expect(screen.getByRole("combobox")).toBeDisabled()
-  })
-
-  it("renders a placeholder with empty options when acceptNewOptions is true", () => {
-    props = getProps({
-      options: [],
-      acceptNewOptions: true,
-      value: undefined,
-    })
-    render(<Selectbox {...props} />)
-
-    expect(screen.getByText("Add an option")).toBeInTheDocument()
-    expect(screen.getByRole("combobox")).not.toBeDisabled()
   })
 
   it("renders options", async () => {

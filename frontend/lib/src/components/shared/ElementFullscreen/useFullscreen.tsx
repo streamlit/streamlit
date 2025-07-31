@@ -17,8 +17,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
 import { LibContext } from "~lib/components/core/LibContext"
-import { WindowDimensionsContext } from "~lib/components/shared/WindowDimensions"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 
 export type UseEscapeToCollapseArgs = {
   expanded: boolean
@@ -36,7 +35,7 @@ export type UseFullscreenShape = {
 export const useFullscreen = (): UseFullscreenShape => {
   const { setFullScreen } = useContext(LibContext)
   const [expanded, setExpanded] = useState(false)
-  const { fullHeight, fullWidth } = useRequiredContext(WindowDimensionsContext)
+  const { fullHeight, fullWidth } = useWindowDimensionsContext()
 
   const setExpandedState = useCallback(
     (isExpanded: boolean) => {

@@ -16,6 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_expander
 
 
 def test_status_container_rendering(
@@ -25,12 +26,12 @@ def test_status_container_rendering(
     status_containers = themed_app.get_by_test_id("stExpander")
     expect(status_containers).to_have_count(11)
 
-    # Don't check screenshot for first element,
-    # since we cannot reliably screenshot test the spinner icon.
-
+    # Note that animations are disabled in snapshots, so we can reliably screenshot the
+    # spinner
+    assert_snapshot(status_containers.nth(0), name="st_status-running_state")
     assert_snapshot(status_containers.nth(1), name="st_status-complete_state")
     assert_snapshot(status_containers.nth(2), name="st_status-error_state")
-    assert_snapshot(status_containers.nth(3), name="st_status-collapsed")
+    assert_snapshot(status_containers.nth(3), name="st_status-expanded")
     assert_snapshot(status_containers.nth(4), name="st_status-changed_label")
     assert_snapshot(status_containers.nth(5), name="st_status-without_cm")
     assert_snapshot(status_containers.nth(6), name="st_status-collapsed_via_update")
@@ -42,7 +43,7 @@ def test_status_container_rendering(
 
 def test_running_state(app: Page):
     """Test that st.status renders a spinner when in running state."""
-    running_status = app.get_by_test_id("stExpander").nth(0)
+    running_status = get_expander(app, "Running status")
     # Check if it has a spinner icon:
     expect(running_status.get_by_test_id("stExpanderIconSpinner")).to_be_visible()
 
@@ -50,14 +51,15 @@ def test_running_state(app: Page):
 def test_status_collapses_and_expands(app: Page):
     """Test that a status collapses and expands."""
     expander_content = "Doing some work..."
-    running_status = app.get_by_test_id("stExpander").nth(0)
-    # Starts expanded:
+    running_status = get_expander(app, "Running status")
+    # Starts collapsed:
+    expect(running_status.get_by_text(expander_content)).not_to_be_visible()
+
+    # Expand:
+    expander_header = running_status.locator("summary")
+    expander_header.click()
     expect(running_status.get_by_text(expander_content)).to_be_visible()
 
-    expander_header = running_status.locator("summary")
     # Collapse:
     expander_header.click()
     expect(running_status.get_by_text(expander_content)).not_to_be_visible()
-    # Expand:
-    expander_header.click()
-    expect(running_status.get_by_text(expander_content)).to_be_visible()
