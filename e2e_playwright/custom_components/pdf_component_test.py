@@ -383,16 +383,14 @@ def test_st_pdf_different_heights_snapshots(
     slider_element.hover()
     app.mouse.down()
 
-    # Use arrow keys to reach maximum value - more reliable than mouse movement
-    for _ in range(100):  # Press right arrow many times to ensure we reach maximum
-        app.keyboard.press("ArrowRight")
+    # Move mouse far to the right to reach maximum value
+    app.mouse.move(1000, 0)  # Move to far right of screen
 
     app.mouse.up()
     wait_for_app_run(app)
 
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
-
     # Verify we actually reached a high height value (should be much larger than minimum)
     current_height = iframe.get_attribute("height")
     assert current_height is not None, "Height attribute should be present"
