@@ -26,6 +26,7 @@ import Flake2 from "~lib/assets/img/snow/flake-2.png"
 import Particles from "~lib/components/elements/Particles"
 import { ParticleProps } from "~lib/components/elements/Particles/Particles"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import { StyledFlake } from "./styled-components"
 
@@ -41,7 +42,11 @@ export interface Props {
 
 const Flake: FC<React.PropsWithChildren<ParticleProps>> = ({
   particleType,
-}) => <StyledFlake src={FLAKE_IMAGES[particleType]} />
+}) => {
+  const src = FLAKE_IMAGES[particleType]
+  const crossOrigin = useCrossOriginAttribute(src)
+  return <StyledFlake src={src} crossOrigin={crossOrigin} />
+}
 
 const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   scriptRunId,
