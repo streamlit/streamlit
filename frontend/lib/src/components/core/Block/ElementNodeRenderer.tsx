@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { lazy, ReactElement, Suspense, useContext } from "react"
+import React, {
+  lazy,
+  ReactElement,
+  Suspense,
+  useCallback,
+  useContext,
+} from "react"
 
 import debounceRender from "react-debounce-render"
 import classNames from "classnames"
@@ -87,6 +93,7 @@ import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "~lib/components/core/LibContext"
 import { getElementId } from "~lib/util/utils"
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 
 import {
   BaseBlockProps,
@@ -167,6 +174,9 @@ export interface ElementNodeRendererProps extends BaseBlockProps {
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
   isStale: boolean
+  getCrossOriginAttribute: (
+    url?: string
+  ) => undefined | "anonymous" | "use-credentials"
 }
 
 function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
@@ -177,7 +187,7 @@ function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
 const RawElementNodeRenderer = (
   props: RawElementNodeRendererProps
 ): ReactElement => {
-  const { node } = props
+  const { node, getCrossOriginAttribute } = props
 
   if (!node) {
     throw new Error("ElementNode not found.")
@@ -226,7 +236,10 @@ const RawElementNodeRenderer = (
       // See issue #10961: https://github.com/streamlit/streamlit/issues/10961
       return hideIfStale(
         props.isStale,
-        <Balloons scriptRunId={node.scriptRunId} />
+        <Balloons
+          scriptRunId={node.scriptRunId}
+          getCrossOriginAttribute={getCrossOriginAttribute}
+        />
       )
 
     case "bokehChart":
@@ -360,7 +373,10 @@ const RawElementNodeRenderer = (
       // See issue #10961: https://github.com/streamlit/streamlit/issues/10961
       return hideIfStale(
         props.isStale,
-        <Snow scriptRunId={node.scriptRunId} />
+        <Snow
+          scriptRunId={node.scriptRunId}
+          getCrossOriginAttribute={getCrossOriginAttribute}
+        />
       )
 
     case "spinner":
@@ -684,8 +700,13 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen, fragmentIdsThisRun, scriptRunState, scriptRunId } =
-    useContext(LibContext)
+  const {
+    isFullScreen,
+    fragmentIdsThisRun,
+    scriptRunState,
+    scriptRunId,
+    libConfig,
+  } = useContext(LibContext)
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -702,6 +723,11 @@ const ElementNodeRenderer = (
   // Get the user key - if it was specified - and use it as CSS class name:
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
+
+  const _getCrossOriginAttribute = useCallback(
+    (url?: string) => getCrossOriginAttribute(libConfig, url),
+    [libConfig]
+  )
 
   // TODO: It would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
@@ -733,7 +759,11 @@ const ElementNodeRenderer = (
               />
             }
           >
-            <RawElementNodeRenderer {...props} isStale={isStale} />
+            <RawElementNodeRenderer
+              {...props}
+              isStale={isStale}
+              getCrossOriginAttribute={_getCrossOriginAttribute}
+            />
           </Suspense>
         </ErrorBoundary>
       </StyledElementContainerLayoutWrapper>

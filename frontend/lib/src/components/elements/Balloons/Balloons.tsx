@@ -29,7 +29,6 @@ import Balloon5 from "~lib/assets/img/balloons/balloon-5.png"
 import Particles from "~lib/components/elements/Particles"
 import { ParticleProps } from "~lib/components/elements/Particles/Particles"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
-import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import { StyledBalloon } from "./styled-components"
 
@@ -48,17 +47,23 @@ const NUM_BALLOON_TYPES = BALLOON_IMAGES.length
 
 export interface Props {
   scriptRunId: string
+  getCrossOriginAttribute: (
+    url?: string
+  ) => undefined | "anonymous" | "use-credentials"
 }
 
 const Balloon: FC<React.PropsWithChildren<ParticleProps>> = ({
   particleType,
+  getCrossOriginAttribute,
 }) => {
   const src = BALLOON_IMAGES[particleType]
-  const crossOrigin = useCrossOriginAttribute(src)
-  return <StyledBalloon src={src} crossOrigin={crossOrigin} />
+  return <StyledBalloon src={src} crossOrigin={getCrossOriginAttribute(src)} />
 }
 
-const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => (
+const Balloons: FC<React.PropsWithChildren<Props>> = ({
+  scriptRunId,
+  getCrossOriginAttribute,
+}) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   <RenderInPortalIfExists>
@@ -69,6 +74,7 @@ const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => (
       numParticleTypes={NUM_BALLOON_TYPES}
       numParticles={NUM_BALLOONS}
       ParticleComponent={Balloon}
+      getCrossOriginAttribute={getCrossOriginAttribute}
     />
   </RenderInPortalIfExists>
 )
