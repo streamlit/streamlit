@@ -49,6 +49,7 @@ import { createPortal } from "react-dom"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibContext } from "~lib/components/core/LibContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
@@ -150,6 +151,8 @@ function DataFrame({
     width: containerWidth,
     height: containerHeight,
   } = useRequiredContext(ElementFullscreenContext)
+
+  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
@@ -719,6 +722,7 @@ function DataFrame({
       className="stDataFrame"
       data-testid="stDataFrame"
       ref={resizableContainerRef}
+      isInHorizontalLayout={isInHorizontalLayout}
       onPointerDown={e => {
         if (resizableContainerRef.current) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
@@ -876,7 +880,11 @@ function DataFrame({
         minHeight={minHeight}
         maxHeight={maxHeight}
         minWidth={minWidth}
-        maxWidth={maxWidth}
+        // The maxWidth is not calculated correctly for content width
+        // dataframes in horizontal layouts, so it is disabled. The
+        // resize handles are also disabled so that the dataframe cannot be
+        // stretched beyond the container width.
+        maxWidth={isInHorizontalLayout ? undefined : maxWidth}
         size={resizableSize}
         enable={{
           top: false,
@@ -884,7 +892,7 @@ function DataFrame({
           bottom: false,
           left: false,
           topRight: false,
-          bottomRight: true,
+          bottomRight: isInHorizontalLayout ? false : true,
           bottomLeft: false,
           topLeft: false,
         }}
