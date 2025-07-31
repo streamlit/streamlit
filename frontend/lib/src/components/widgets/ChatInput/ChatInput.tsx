@@ -268,31 +268,36 @@ function ChatInput({
     maxSize: maxFileSize,
   })
 
-  const handleSubmit = (): void => {
-    // We want the chat input to always be in focus
-    // even if the user clicks the submit button
-    if (chatInputRef.current) {
-      chatInputRef.current.focus()
-    }
-
-    if (!dirty || disabled) {
-      return
-    }
-
-    const composedValue: IChatInputValue = {
-      data: value,
-      fileUploaderState: createChatInputWidgetFilesValue(),
-    }
-
-    widgetMgr.setChatInputValue(
-      element,
-      composedValue,
-      { fromUi: true },
-      fragmentId
-    )
-    setFiles([])
-    setValue("")
+   const handleSubmit = (): void => {
+  // Always refocus the chat input
+  if (chatInputRef.current) {
+    chatInputRef.current.focus()
   }
+
+  if (!dirty || disabled) {
+    return
+  }
+
+  const composedValue: IChatInputValue = {
+    data: value,
+    fileUploaderState: createChatInputWidgetFilesValue(),
+  }
+
+  widgetMgr.setChatInputValue(
+    element,
+    composedValue,
+    { fromUi: true },
+    fragmentId
+  )
+
+  setFiles([])
+  setValue("")
+
+  // 🔥 Reset the height of the textarea so it collapses
+  if (chatInputRef.current) {
+    chatInputRef.current.style.height = "auto"
+  }
+}
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
     const { metaKey, ctrlKey, shiftKey } = e
