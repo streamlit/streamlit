@@ -22,8 +22,8 @@ import once from "lodash/once"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import { localStorageAvailable } from "@streamlit/utils"
 import type { StreamlitWindowObject } from "@streamlit/utils"
+import { localStorageAvailable } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
@@ -412,15 +412,22 @@ const setFontWeights = (
     // The extrabold weight is set to the baseFontWeight + 300
     fontWeightOverrides.extrabold = baseFontWeight + 300
 
-    // Set fallback for code's font weight based on configured baseFontWeight
+    // Set fallback for code font weights based on configured baseFontWeight
     fontWeightOverrides.code = baseFontWeight
+    fontWeightOverrides.codeBold = baseFontWeight + 200
+    fontWeightOverrides.codeExtraBold = baseFontWeight + 300
   }
 
   if (
     codeFontWeight &&
-    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 900)
+    isValidFontWeight("codeFontWeight", codeFontWeight, 100, 600)
   ) {
+    // Set each of the code weights based on the base code font weight provided
     fontWeightOverrides.code = codeFontWeight
+    // The bold weight is set to the codeFontWeight + 200
+    fontWeightOverrides.codeBold = codeFontWeight + 200
+    // The extrabold weight is set to the codeFontWeight + 300
+    fontWeightOverrides.codeExtraBold = codeFontWeight + 300
   }
 
   if (headingFontWeights) {

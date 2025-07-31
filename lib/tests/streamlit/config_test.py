@@ -820,7 +820,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.sidebar.headingFont", "Inter", "test")
         config._set_option("theme.sidebar.codeFont", "Monaspace Argon", "test")
         config._set_option("theme.sidebar.codeFontSize", "12px", "test")
-        config._set_option("theme.sidebar.codeFontWeight", 700, "test")
+        config._set_option("theme.sidebar.codeFontWeight", 600, "test")
         config._set_option(
             "theme.sidebar.headingFontSizes", ["2.875rem", "2.75rem"], "test"
         )
@@ -846,7 +846,7 @@ class ConfigTest(unittest.TestCase):
             "headingFont": "Inter",
             "codeFont": "Monaspace Argon",
             "codeFontSize": "12px",
-            "codeFontWeight": 700,
+            "codeFontWeight": 600,
             "headingFontSizes": ["2.875rem", "2.75rem"],
             "headingFontWeights": [600, 500, 500],
             "codeBackgroundColor": "#29361e",

@@ -23,7 +23,7 @@ export const StyledDocSummary = styled.span(({ theme }) => ({
 }))
 
 export const StyledDocName = styled.span(({ theme }) => ({
-  fontWeight: theme.fontWeights.bold,
+  fontWeight: theme.fontWeights.codeBold,
 }))
 
 export const StyledDocType = styled.span(({ theme }) => ({

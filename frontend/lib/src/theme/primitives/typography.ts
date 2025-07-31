@@ -62,6 +62,8 @@ export const fontWeights = {
   extrabold: 700,
   // codeFontWeight separately configurable
   code: 400,
+  codeBold: 600,
+  codeExtraBold: 700,
   // baseFontWeight config does not affect headers
   // defaults set here for h1-h6
   h1FontWeight: 700,

@@ -165,12 +165,12 @@ export const StyledPre = styled.pre<StyledCodeProps>(
 
     ".token.function, .token.class-name, .token.selector": {
       color: theme.colors.blue70,
-      fontWeight: theme.fontWeights.extrabold,
+      fontWeight: theme.fontWeights.codeExtraBold,
     },
 
     ".token.important": {
       color: theme.colors.red70,
-      fontWeight: theme.fontWeights.extrabold,
+      fontWeight: theme.fontWeights.codeExtraBold,
     },
 
     ".token.comment": {

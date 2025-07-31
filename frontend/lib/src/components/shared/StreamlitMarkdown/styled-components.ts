@@ -237,6 +237,11 @@ export const StyledStreamlitMarkdown =
           fontWeight: theme.fontWeights.bold,
         },
 
+        // Issue #11976: Handle bolded inline code
+        "b code, strong code": {
+          fontWeight: theme.fontWeights.codeBold,
+        },
+
         // Handles the horizontal divider:
         hr: {
           margin: "2em 0",
