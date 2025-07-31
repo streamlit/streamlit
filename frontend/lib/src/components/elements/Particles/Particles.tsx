@@ -32,10 +32,6 @@ export interface Props {
   numParticles: number
   numParticleTypes: number
   ParticleComponent: FC<React.PropsWithChildren<ParticleProps>>
-  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
-  getCrossOriginAttribute?: (
-    url?: string
-  ) => undefined | "anonymous" | "use-credentials"
 }
 
 const Particles: FC<React.PropsWithChildren<Props>> = ({
@@ -47,14 +43,12 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
 }: Props) => {
   const { libConfig } = useContext(LibContext)
 
-  // Prepare a random selection of particle types, but only update the selection
-  // if the scriptRunId changes.
+  // Prepare a random selection of particle types:
   const particleTypes = useMemo(
     () =>
       range(numParticles).map(() =>
         Math.floor(Math.random() * numParticleTypes)
       ),
-    // Update the random selection of particle types if the scriptRunId changes.
     [numParticles, numParticleTypes]
   )
 
