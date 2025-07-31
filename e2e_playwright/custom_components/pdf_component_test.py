@@ -417,29 +417,44 @@ def test_st_pdf_different_heights_snapshots(
     slider_element = height_slider.get_by_role("slider")
     expect(slider_element).to_be_visible()
 
-    # Move slider to minimum by pressing Left arrow multiple times
-    slider_element.click()
-    for _ in range(10):  # Move towards minimum
-        slider_element.press("ArrowLeft")
+    # Move slider to minimum (200px) using proper e2e slider interaction
+    slider_element.hover()
+    app.mouse.down()
+
+    # Move mouse far to the left to reach minimum value
+    app.mouse.move(0, 0)  # Move to far left of screen
+    app.mouse.up()
     wait_for_app_run(app)
 
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
 
-    # Verify the height attribute is set correctly
-    expect(iframe).to_have_attribute("height", re.compile(r"[0-9]+"))
+    # Verify we actually reached a low height value (around 200px)
+    current_height = iframe.get_attribute("height")
+    assert current_height is not None, "Height attribute should be present"
+    assert int(current_height) <= 250, f"Expected height <= 250, got {current_height}"
 
     assert_snapshot(iframe, name="st_pdf-height_minimum")
 
-    # Move slider to maximum by pressing Right arrow multiple times
-    for _ in range(20):  # Move towards maximum
-        slider_element.press("ArrowRight")
+    # Move slider to maximum (800px) using proper e2e slider interaction
+    slider_element.hover()
+    app.mouse.down()
+
+    # Use arrow keys to reach maximum value - more reliable than mouse movement
+    for _ in range(100):  # Press right arrow many times to ensure we reach maximum
+        app.keyboard.press("ArrowRight")
+
+    app.mouse.up()
     wait_for_app_run(app)
 
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
 
-    # Verify the height attribute is set correctly
-    expect(iframe).to_have_attribute("height", re.compile(r"[0-9]+"))
+    # Verify we actually reached a high height value (should be much larger than minimum)
+    current_height = iframe.get_attribute("height")
+    assert current_height is not None, "Height attribute should be present"
+    # Expect at least 280px (significantly higher than minimum of ~200px)
+    # The important thing is that min and max are visually different, not the exact values
+    assert int(current_height) >= 280, f"Expected height >= 280, got {current_height}"
 
     assert_snapshot(iframe, name="st_pdf-height_maximum")
