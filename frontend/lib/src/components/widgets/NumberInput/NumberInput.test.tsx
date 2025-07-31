@@ -855,7 +855,6 @@ describe("NumberInput widget", () => {
         await user.type(input, "25.1")
         await user.keyboard("{enter}")
 
-        // Note: The format might not be applied immediately in onChange
         expect(input).toHaveDisplayValue("25.1")
       })
 
