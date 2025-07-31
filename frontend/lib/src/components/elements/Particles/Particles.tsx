@@ -21,6 +21,9 @@ import range from "lodash/range"
 import { StyledParticles } from "./styled-components"
 export interface ParticleProps {
   particleType: number
+  getCrossOriginAttribute: (
+    url?: string
+  ) => undefined | "anonymous" | "use-credentials"
 }
 
 export interface Props {
@@ -29,6 +32,9 @@ export interface Props {
   numParticles: number
   numParticleTypes: number
   ParticleComponent: FC<React.PropsWithChildren<ParticleProps>>
+  getCrossOriginAttribute: (
+    url?: string
+  ) => undefined | "anonymous" | "use-credentials"
 }
 
 const Particles: FC<React.PropsWithChildren<Props>> = ({
@@ -37,6 +43,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   numParticles,
   numParticleTypes,
   ParticleComponent,
+  getCrossOriginAttribute,
 }: Props) => {
   // Prepare a random selection of particle types, but only update the selection
   // if the scriptRunId changes.
@@ -46,9 +53,8 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
         Math.floor(Math.random() * numParticleTypes)
       ),
     // Update the random selection of particle types if the scriptRunId changes.
-    // eslint-disable-next-line react-hooks/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scriptRunId, numParticles, numParticleTypes]
+
+    [numParticles, numParticleTypes]
   )
 
   return (
@@ -56,8 +62,11 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
     // actually rerun.
     <StyledParticles className={className} data-testid={className}>
       {particleTypes.map((particleType, i) => (
-        // eslint-disable-next-line @eslint-react/no-array-index-key
-        <ParticleComponent key={scriptRunId + i} particleType={particleType} />
+        <ParticleComponent
+          key={scriptRunId + i}
+          particleType={particleType}
+          getCrossOriginAttribute={getCrossOriginAttribute}
+        />
       ))}
     </StyledParticles>
   )

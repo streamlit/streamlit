@@ -26,7 +26,6 @@ import Flake2 from "~lib/assets/img/snow/flake-2.png"
 import Particles from "~lib/components/elements/Particles"
 import { ParticleProps } from "~lib/components/elements/Particles/Particles"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
-import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import { StyledFlake } from "./styled-components"
 
@@ -38,18 +37,22 @@ const NUM_FLAKE_TYPES = FLAKE_IMAGES.length
 
 export interface Props {
   scriptRunId: string
+  getCrossOriginAttribute: (
+    url?: string
+  ) => undefined | "anonymous" | "use-credentials"
 }
 
 const Flake: FC<React.PropsWithChildren<ParticleProps>> = ({
   particleType,
+  getCrossOriginAttribute,
 }) => {
   const src = FLAKE_IMAGES[particleType]
-  const crossOrigin = useCrossOriginAttribute(src)
-  return <StyledFlake src={src} crossOrigin={crossOrigin} />
+  return <StyledFlake src={src} crossOrigin={getCrossOriginAttribute(src)} />
 }
 
 const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   scriptRunId,
+  getCrossOriginAttribute,
 }) {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
@@ -62,6 +65,7 @@ const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
         numParticleTypes={NUM_FLAKE_TYPES}
         numParticles={NUM_FLAKES}
         ParticleComponent={Flake}
+        getCrossOriginAttribute={getCrossOriginAttribute}
       />
     </RenderInPortalIfExists>
   )
