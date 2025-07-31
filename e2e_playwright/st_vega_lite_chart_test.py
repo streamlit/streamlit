@@ -30,7 +30,7 @@ def test_vega_lite_chart(app: Page):
         chart = vega_lite_charts.nth(idx)
         canvas = chart.locator("[role='graphics-document']").nth(0)
         expect(canvas).to_be_visible()
-        expect(canvas).to_have_class("marks")
+        expect(canvas.locator("svg")).to_have_class("marks")
 
 
 def test_vega_lite_chart_sets_chart_width(themed_app: Page):
