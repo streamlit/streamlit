@@ -1024,7 +1024,14 @@ function DataFrame({
             handleTooltips?.(args)
           }}
           // Activate keybindings:
-          keybindings={{ downFill: true }}
+          keybindings={{
+            downFill: true,
+            ...(isCellSelectionActivated || isLargeTable
+              ? {
+                  selectAll: false,
+                }
+              : {}),
+          }}
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
