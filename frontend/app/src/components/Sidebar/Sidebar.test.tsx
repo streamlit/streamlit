@@ -24,10 +24,10 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { mockEndpoints, render } from "@streamlit/lib"
-import { Logo, PageConfig } from "@streamlit/protobuf"
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import { mockEndpoints, render } from "@streamlit/lib"
+import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 

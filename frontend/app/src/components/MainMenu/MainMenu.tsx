@@ -16,10 +16,12 @@
 
 import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 
+import { MoreVert } from "@emotion-icons/material-rounded"
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
-import { MoreVert } from "@emotion-icons/material-rounded"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
   BaseButtonKind,
@@ -32,8 +34,6 @@ import {
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
-import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import {
   StyledCoreItem,

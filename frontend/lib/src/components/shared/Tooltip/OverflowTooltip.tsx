@@ -16,8 +16,8 @@
 
 import React, { ReactElement, ReactNode, useState } from "react"
 
-import Tooltip, { Placement } from "./Tooltip"
 import { StyledEllipsizedDiv, StyledWrapper } from "./styled-components"
+import Tooltip, { Placement } from "./Tooltip"
 
 export interface OverflowTooltipProps {
   content: ReactNode

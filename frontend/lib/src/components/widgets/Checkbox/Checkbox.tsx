@@ -25,18 +25,18 @@ import { transparentize } from "color2k"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
 
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { hasLightBackgroundColor } from "~lib/theme"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledCheckbox, StyledContent } from "./styled-components"
 

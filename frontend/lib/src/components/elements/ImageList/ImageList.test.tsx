@@ -20,9 +20,9 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto } from "@streamlit/protobuf"
 
-import { render, renderWithContexts } from "~lib/test_util"
-import { mockEndpoints } from "~lib/mocks/mocks"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { mockEndpoints } from "~lib/mocks/mocks"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import ImageList, { ImageListProps } from "./ImageList"
 
