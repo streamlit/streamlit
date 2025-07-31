@@ -178,9 +178,9 @@ def test_st_pdf_file_upload_no_file(app: Page, assert_snapshot: ImageCompareFunc
     # Should not display any PDF when no file is uploaded
     expect(app.locator("iframe")).not_to_be_attached()
 
-    # Take snapshot of the file uploader state
-    main_area = app.get_by_test_id("stMain")
-    assert_snapshot(main_area, name="st_pdf-file_upload_no_file")
+    # Take snapshot of just the file uploader state
+    file_uploader = app.get_by_test_id("stFileUploader")
+    assert_snapshot(file_uploader, name="st_pdf-file_upload_no_file")
 
 
 def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
@@ -195,9 +195,9 @@ def test_st_pdf_custom_size(app: Page, assert_snapshot: ImageCompareFunction):
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
 
-    # Capture the slider and PDF together
-    main_area = app.get_by_test_id("stMain")
-    assert_snapshot(main_area, name="st_pdf-custom_size")
+    # Capture just the PDF iframe to focus on the height setting
+    iframe = app.locator("iframe").first
+    assert_snapshot(iframe, name="st_pdf-custom_size")
 
 
 def test_st_pdf_base64_encoding(app: Page, assert_snapshot: ImageCompareFunction):
@@ -215,9 +215,9 @@ def test_st_pdf_base64_encoding(app: Page, assert_snapshot: ImageCompareFunction
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
 
-    # Take snapshot of the entire scenario including info text, code block, and PDF
-    main_area = app.get_by_test_id("stMain")
-    assert_snapshot(main_area, name="st_pdf-base64_encoding")
+    # Take snapshot of just the PDF iframe, following the good example from bytes_io test
+    iframe = app.locator("iframe").first
+    assert_snapshot(iframe, name="st_pdf-base64_encoding")
 
 
 def test_st_pdf_bytes_io(app: Page, assert_snapshot: ImageCompareFunction):
@@ -270,9 +270,9 @@ def test_st_pdf_error_handling(app: Page, assert_snapshot: ImageCompareFunction)
         timeout=3000,
     )
 
-    # Capture both the warning and the PDF component
-    main_area = app.get_by_test_id("stMain")
-    assert_snapshot(main_area, name="st_pdf-error_handling")
+    # Capture just the warning message - the error state in the iframe isn't visually meaningful
+    warning_message = app.get_by_test_id("stAlert")
+    assert_snapshot(warning_message, name="st_pdf-error_handling")
 
 
 def test_st_pdf_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
@@ -301,9 +301,9 @@ def test_st_pdf_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
     # Wait for both PDFs to load
     _wait_for_pdf_to_load(app)
 
-    # Take snapshot of the columns layout
-    main_area = app.get_by_test_id("stMain")
-    assert_snapshot(main_area, name="st_pdf-in_columns")
+    # Take snapshot focusing on the column layout with PDFs
+    columns_container = app.get_by_test_id("stHorizontalBlock")
+    assert_snapshot(columns_container, name="st_pdf-in_columns")
 
 
 def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
@@ -324,9 +324,9 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
     # Wait for PDF to be fully loaded
     _wait_for_pdf_to_load(app)
 
-    # Take snapshot of initial state
-    main_area = app.get_by_test_id("stMain")
-    assert_snapshot(main_area, name="st_pdf-interactive_initial")
+    # Take snapshot of just the PDF iframe in initial state
+    iframe = app.locator("iframe").first
+    assert_snapshot(iframe, name="st_pdf-interactive_initial")
 
     # Test that the reset button actually works
     reset_button.click()
@@ -339,7 +339,7 @@ def test_st_pdf_interactive(app: Page, assert_snapshot: ImageCompareFunction):
     _wait_for_pdf_to_load(app)
 
     # Take snapshot after reset to verify state
-    assert_snapshot(main_area, name="st_pdf-interactive_after_reset")
+    assert_snapshot(iframe, name="st_pdf-interactive_after_reset")
 
 
 def test_st_pdf_app_title_and_selection(app: Page):
@@ -425,6 +425,10 @@ def test_st_pdf_different_heights_snapshots(
 
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
+
+    # Verify the height attribute is set correctly
+    expect(iframe).to_have_attribute("height", re.compile(r"[0-9]+"))
+
     assert_snapshot(iframe, name="st_pdf-height_minimum")
 
     # Move slider to maximum by pressing Right arrow multiple times
@@ -434,4 +438,8 @@ def test_st_pdf_different_heights_snapshots(
 
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
+
+    # Verify the height attribute is set correctly
+    expect(iframe).to_have_attribute("height", re.compile(r"[0-9]+"))
+
     assert_snapshot(iframe, name="st_pdf-height_maximum")
