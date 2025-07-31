@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import React, { FC, memo } from "react"
+import React, { FC, memo, useContext, useMemo } from "react"
 
 import range from "lodash/range"
+
+import { LibContext } from "~lib/components/core/LibContext"
 
 import { StyledParticles } from "./styled-components"
 export interface ParticleProps {
   particleType: number
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
 export interface Props {
@@ -37,16 +40,32 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   numParticles,
   numParticleTypes,
   ParticleComponent,
-}: Props) => (
-  // Keys should be unique each time, so React replaces the images in the DOM and their animations
-  // actually rerun.
-  <StyledParticles className={className} data-testid={className}>
-    {range(numParticles).map(i => {
-      const randNum = Math.floor(Math.random() * numParticleTypes)
+}: Props) => {
+  const { libConfig } = useContext(LibContext)
 
-      return <ParticleComponent key={scriptRunId + i} particleType={randNum} />
-    })}
-  </StyledParticles>
-)
+  // Prepare a random selection of particle types:
+  const particleTypes = useMemo(
+    () =>
+      range(numParticles).map(() =>
+        Math.floor(Math.random() * numParticleTypes)
+      ),
+    [numParticles, numParticleTypes]
+  )
+
+  return (
+    // Keys should be unique each time, so React replaces the images in the DOM and their animations
+    // actually rerun.
+    <StyledParticles className={className} data-testid={className}>
+      {particleTypes.map((particleType, i) => (
+        <ParticleComponent
+          // eslint-disable-next-line @eslint-react/no-array-index-key
+          key={scriptRunId + i}
+          particleType={particleType}
+          resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
+        />
+      ))}
+    </StyledParticles>
+  )
+}
 
 export default memo(Particles)

@@ -23,6 +23,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import {
   StyledAvatarBackground,
@@ -44,6 +45,7 @@ function ChatMessageAvatar(
 ): ReactElement {
   const { avatar, avatarType, name, endpoints } = props
   const theme = useEmotionTheme()
+  const crossOrigin = useCrossOriginAttribute(avatar)
 
   if (avatar) {
     switch (avatarType) {
@@ -52,6 +54,7 @@ function ChatMessageAvatar(
           <StyledAvatarImage
             src={endpoints.buildMediaURL(avatar)}
             alt={`${name} avatar`}
+            crossOrigin={crossOrigin}
           />
         )
       case BlockProto.ChatMessage.AvatarType.EMOJI:
