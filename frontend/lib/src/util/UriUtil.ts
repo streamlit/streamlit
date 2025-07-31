@@ -59,6 +59,9 @@ export function isValidOrigin(
   return allowedUrlPattern.test(testUrl)
 }
 
+/**
+ * Return the crossorigin attribute value for the given resourceCrossOriginMode and given url.
+ */
 export function getCrossOriginAttribute(
   resourceCrossOriginMode: undefined | "anonymous" | "use-credentials",
   url?: string
