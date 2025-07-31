@@ -1551,15 +1551,12 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test valid font weights
-    [100, 400, 600, 700, 100],
-    [200, 400, 600, 700, 200],
-    [300, 400, 600, 700, 300],
-    [400, 400, 600, 700, 400],
-    [500, 400, 600, 700, 500],
-    [600, 400, 600, 700, 600],
-    [700, 400, 600, 700, 700],
-    [800, 400, 600, 700, 800],
-    [900, 400, 600, 700, 900],
+    [100, 400, 600, 700, 100, 300, 400],
+    [200, 400, 600, 700, 200, 400, 500],
+    [300, 400, 600, 700, 300, 500, 600],
+    [400, 400, 600, 700, 400, 600, 700],
+    [500, 400, 600, 700, 500, 700, 800],
+    [600, 400, 600, 700, 600, 800, 900],
   ])(
     "sets the font weights based on the codeFontWeight config '%s'",
     (
@@ -1567,7 +1564,9 @@ describe("createEmotionTheme", () => {
       expectedNormal,
       expectedBold,
       expectedExtrabold,
-      expectedCode
+      expectedCode,
+      expectedCodeBold,
+      expectedCodeExtraBold
     ) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -1583,11 +1582,16 @@ describe("createEmotionTheme", () => {
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
       // codeFontWeight is set, so it overrides the default code font weight
       expect(theme.fontWeights.code).toBe(expectedCode)
+      expect(theme.fontWeights.codeBold).toBe(expectedCodeBold)
+      expect(theme.fontWeights.codeExtraBold).toBe(expectedCodeExtraBold)
     }
   )
 
   it.each([
     // Test invalid font weights
+    [700, 400, 600, 700, 400], // Not between 100 and 600
+    [800, 400, 600, 700, 400], // Not between 100 and 600
+    [900, 400, 600, 700, 400], // Not between 100 and 600
     [150, 400, 600, 700, 400], // Not an increment of 100
     [1000, 400, 600, 700, 400], // Not between 100 and 900
     [400.5, 400, 600, 700, 400], // Not an integer
@@ -1608,13 +1612,15 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-900, and an increment of 100. Falling back to default font weight.`
+        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
       expect(theme.fontWeights.bold).toBe(expectedBold)
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
       expect(theme.fontWeights.code).toBe(expectedCode)
+      expect(theme.fontWeights.codeBold).toBe(expectedBold)
+      expect(theme.fontWeights.codeExtraBold).toBe(expectedExtrabold)
     }
   )
 
@@ -1865,7 +1871,11 @@ describe("Font weight configuration coverage", () => {
 
     // Filter out special cases
     const fontWeightsToCheck = allFontWeightKeys.filter(
-      key => !UNAFFECTED_BY_BASE_WEIGHT.includes(key) && key !== "code" // code is handled separately
+      key =>
+        !UNAFFECTED_BY_BASE_WEIGHT.includes(key) &&
+        key !== "code" && // code font weights are handled separately
+        key !== "codeBold" &&
+        key !== "codeExtraBold"
     )
 
     // Verify our expected list matches reality
