@@ -18,11 +18,11 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
 import Snow, {
   NUM_FLAKES,
   SnowProps,
 } from "~lib/components/elements/Snow/index"
+import { render } from "~lib/test_util"
 
 const getProps = (): SnowProps => ({
   scriptRunId: "51522269",

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
-import { transparentize } from "color2k"
 
 import { CustomThemeConfig } from "@streamlit/protobuf"
 

@@ -16,8 +16,8 @@
 
 import React from "react"
 
-import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 
 import { StyledWidgetLabel } from "./styled-components"
 
