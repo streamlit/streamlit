@@ -16,8 +16,8 @@
 
 import { RefObject, useCallback, useEffect, useRef } from "react"
 
-import useScrollSpy from "./useScrollSpy"
 import useScrollAnimation from "./useScrollAnimation"
+import useScrollSpy from "./useScrollSpy"
 import useStateRef from "./useStateRef"
 
 export interface ScrollToBottomOptions {

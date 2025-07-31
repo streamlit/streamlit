@@ -29,6 +29,7 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import Icon from "~lib/components/shared/Icon"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
@@ -36,28 +37,27 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import { FormClearHelper } from "~lib/components/widgets/Form"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import {
-  isNullOrUndefined,
-  labelVisibilityProtoValueToEnum,
-} from "~lib/util/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
 } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { FormClearHelper } from "~lib/components/widgets/Form"
+import { FileUploadClient } from "~lib/FileUploadClient"
+import {
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import CameraInputButton from "./CameraInputButton"
-import { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
   StyledImg,
   StyledSpan,
 } from "./styled-components"
+import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 
 export interface Props {

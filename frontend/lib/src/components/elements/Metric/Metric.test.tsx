@@ -23,8 +23,8 @@ import {
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
 import Metric, { MetricProps } from "./Metric"
 

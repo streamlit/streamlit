@@ -16,12 +16,12 @@
 
 import { useMemo } from "react"
 
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { EmotionTheme } from "~lib/theme"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { VegaLiteChartElement } from "./arrowUtils"
+import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.

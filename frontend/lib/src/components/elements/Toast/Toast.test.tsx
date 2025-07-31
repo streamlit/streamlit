@@ -23,14 +23,14 @@ import {
   waitForElementToBeRemoved,
   within,
 } from "@testing-library/react"
-import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
 import { userEvent } from "@testing-library/user-event"
+import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
 
 import { Toast as ToastProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { mockTheme } from "~lib/mocks/mockTheme"
 import ThemeProvider from "~lib/components/core/ThemeProvider"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
 import Toast, { shortenMessage, ToastProps } from "./Toast"
 

@@ -16,16 +16,16 @@
 
 import React, { ReactElement } from "react"
 
-import ReactMarkdown from "react-markdown"
 import { cleanup, screen } from "@testing-library/react"
 import { transparentize } from "color2k"
+import ReactMarkdown from "react-markdown"
 
-import { render } from "~lib/test_util"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { colors } from "~lib/theme/primitives/colors"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
-import { mockTheme } from "~lib/mocks/mockTheme"
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibContext } from "~lib/components/core/LibContext"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
+import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
   createAnchorFromText,

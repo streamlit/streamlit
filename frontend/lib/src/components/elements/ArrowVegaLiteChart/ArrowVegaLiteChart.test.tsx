@@ -18,12 +18,12 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
-import ArrowVegaLiteChart, { Props } from "./ArrowVegaLiteChart"
 import { VegaLiteChartElement } from "./arrowUtils"
+import ArrowVegaLiteChart, { Props } from "./ArrowVegaLiteChart"
 
 const getProps = (
   elementProps: Partial<VegaLiteChartElement> = {},

@@ -16,8 +16,8 @@
 
 import React from "react"
 
-import { BaseProvider, LightTheme } from "baseui"
 import { screen } from "@testing-library/react"
+import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "@streamlit/lib"
 

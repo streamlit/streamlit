@@ -34,22 +34,22 @@ import {
   Skeleton as SkeletonProto,
 } from "@streamlit/protobuf"
 
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import { LibContext } from "~lib/components/core/LibContext"
 import AlertElement from "~lib/components/elements/AlertElement"
 import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorElement from "~lib/components/shared/ErrorElement"
 import { Kind } from "~lib/components/shared/AlertContainer"
-import useTimeout from "~lib/hooks/useTimeout"
+import ErrorElement from "~lib/components/shared/ErrorElement"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useTimeout from "~lib/hooks/useTimeout"
+import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
+import { ensureError } from "~lib/util/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
-import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentRegistry } from "./ComponentRegistry"
 import {

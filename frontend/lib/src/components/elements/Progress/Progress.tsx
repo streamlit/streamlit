@@ -18,8 +18,8 @@ import React, { memo, ReactElement } from "react"
 
 import { Progress as ProgressProto } from "@streamlit/protobuf"
 
-import ProgressBar from "~lib/components/shared/ProgressBar"
 import { StyledProgressLabelContainer } from "~lib/components/elements/Progress/styled-components"
+import ProgressBar from "~lib/components/shared/ProgressBar"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 
 export interface ProgressProps {

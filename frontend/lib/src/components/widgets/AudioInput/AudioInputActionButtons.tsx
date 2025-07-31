@@ -16,6 +16,7 @@
 
 import React, { memo } from "react"
 
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Mic } from "@emotion-icons/material-outlined"
 import {
   Pause,
@@ -23,7 +24,6 @@ import {
   Refresh,
   StopCircle,
 } from "@emotion-icons/material-rounded"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"

@@ -33,12 +33,6 @@ import sortBy from "lodash/sortBy"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
-import {
-  getSelectPlaceholder,
-  isNullOrUndefined,
-  LabelVisibilityOptions,
-} from "~lib/util/utils"
-import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 import { Placement } from "~lib/components/shared/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
@@ -47,6 +41,12 @@ import {
 } from "~lib/components/widgets/BaseWidget"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { isMobile } from "~lib/util/isMobile"
+import {
+  getSelectPlaceholder,
+  isNullOrUndefined,
+  LabelVisibilityOptions,
+} from "~lib/util/utils"
+import { hasMatch, score } from "~lib/vendor/fzy.js/fuzzySearch"
 
 export interface Props {
   value: string | null

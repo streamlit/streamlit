@@ -21,10 +21,10 @@ import { userEvent } from "@testing-library/user-event"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { mockEndpoints } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DownloadButton, { Props } from "./DownloadButton"
 

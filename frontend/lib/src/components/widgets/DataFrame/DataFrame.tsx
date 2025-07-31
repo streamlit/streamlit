@@ -25,7 +25,14 @@ import React, {
   useState,
 } from "react"
 
-import { createPortal } from "react-dom"
+import {
+  Add,
+  Close,
+  Delete,
+  FileDownload,
+  Search,
+  Visibility,
+} from "@emotion-icons/material-outlined"
 import {
   CompactSelection,
   DataEditorRef,
@@ -38,32 +45,24 @@ import {
   Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
-import {
-  Add,
-  Close,
-  Delete,
-  FileDownload,
-  Search,
-  Visibility,
-} from "@emotion-icons/material-outlined"
+import { createPortal } from "react-dom"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
-import { useFormClearHelper } from "~lib/components/widgets/Form"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import { Quiver } from "~lib/dataframes/Quiver"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
-import { isNullOrUndefined } from "~lib/util/utils"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
 import { LibContext } from "~lib/components/core/LibContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { Quiver } from "~lib/dataframes/Quiver"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
-import { convertRemToPx } from "~lib/theme/utils"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import { convertRemToPx } from "~lib/theme/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
+import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ColumnMenu from "./menus/ColumnMenu"
-import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
+import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
 import EditingState, { getColumnName } from "./EditingState"
 import {
   useColumnFormatting,
@@ -84,9 +83,10 @@ import {
   useTableSizer,
   useTooltips,
 } from "./hooks"
-import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
-import Tooltip from "./Tooltip"
+import ColumnMenu from "./menus/ColumnMenu"
+import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
+import Tooltip from "./Tooltip"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"

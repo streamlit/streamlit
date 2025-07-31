@@ -20,8 +20,8 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { DynamicIcon, StyledSpinnerIcon } from "~lib/components/shared/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { notNullOrUndefined } from "~lib/util/utils"
 import { IconSize } from "~lib/theme"
+import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
   BORDER_SIZE,

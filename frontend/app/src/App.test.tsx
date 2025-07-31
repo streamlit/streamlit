@@ -27,6 +27,16 @@ import {
 import cloneDeep from "lodash/cloneDeep"
 
 import {
+  getMenuStructure,
+  openMenu,
+} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import {
+  ConnectionManager,
+  ConnectionState,
+  mockEndpoints,
+} from "@streamlit/connection"
+import {
   CUSTOM_THEME_NAME,
   FileUploadClient,
   getDefaultTheme,
@@ -70,19 +80,9 @@ import {
   SessionStatus,
   TextInput,
 } from "@streamlit/protobuf"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import {
-  ConnectionManager,
-  ConnectionState,
-  mockEndpoints,
-} from "@streamlit/connection"
-import {
-  getMenuStructure,
-  openMenu,
-} from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 
-import { showDevelopmentOptions } from "./showDevelopmentOptions"
 import { App, LOG, Props } from "./App"
+import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
 vi.mock("~lib/baseconsts", async () => {
   return {

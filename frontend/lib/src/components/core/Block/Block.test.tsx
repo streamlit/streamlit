@@ -20,9 +20,9 @@ import { screen } from "@testing-library/react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { renderWithContexts } from "~lib/test_util"
 import { BlockNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
+import { renderWithContexts } from "~lib/test_util"
 
 import { FlexBoxContainer, VerticalBlock } from "./Block"
 

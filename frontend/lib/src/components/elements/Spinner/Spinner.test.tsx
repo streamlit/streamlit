@@ -16,8 +16,8 @@
 
 import React from "react"
 
-import { BaseProvider, LightTheme } from "baseui"
 import { act, screen, waitFor } from "@testing-library/react"
+import { BaseProvider, LightTheme } from "baseui"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 

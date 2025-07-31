@@ -16,15 +16,15 @@
 
 import React, { memo, ReactElement, useRef } from "react"
 
-import JSON5 from "json5"
 import Clipboard from "clipboard"
+import JSON5 from "json5"
 import ReactJson from "react-json-view"
 
 import { Json as JsonProto } from "@streamlit/protobuf"
 
 import ErrorElement from "~lib/components/shared/ErrorElement"
-import { hasLightBackgroundColor } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 import { ensureError } from "~lib/util/ErrorHandling"
 
 import { StyledJsonWrapper } from "./styled-components"

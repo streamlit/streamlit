@@ -19,8 +19,8 @@ import React, { memo, PureComponent } from "react"
 import axios from "axios"
 import isEqual from "lodash/isEqual"
 import zip from "lodash/zip"
-import { FileRejection } from "react-dropzone"
 import { flushSync } from "react-dom"
+import { FileRejection } from "react-dropzone"
 
 import {
   FileUploader as FileUploaderProto,
@@ -30,25 +30,25 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
-  isNullOrUndefined,
-  labelVisibilityProtoValueToEnum,
-} from "~lib/util/utils"
+  StyledWidgetLabelHelp,
+  WidgetLabel,
+} from "~lib/components/widgets/BaseWidget"
 import { FormClearHelper } from "~lib/components/widgets/Form"
+import { FileUploadClient } from "~lib/FileUploadClient"
 import {
   FileSize,
   getRejectedFileInfo,
   sizeConverter,
 } from "~lib/util/FileHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+} from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"

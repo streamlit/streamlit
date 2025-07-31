@@ -26,7 +26,6 @@ import { getLogger } from "loglevel"
 // Note we expect the polyfill to load from this import
 import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
 
-import { parseUriIntoBaseParts } from "./utils"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   HOST_CONFIG_PATH,
@@ -35,6 +34,7 @@ import {
   SERVER_PING_PATH,
 } from "./constants"
 import { IHostConfigResponse, OnRetry } from "./types"
+import { parseUriIntoBaseParts } from "./utils"
 
 const LOG = getLogger("DoInitPings")
 

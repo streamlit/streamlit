@@ -16,9 +16,9 @@
 
 import { createContext } from "react"
 
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { baseTheme, ThemeConfig } from "~lib/theme"
 
 /**

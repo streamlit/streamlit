@@ -29,6 +29,7 @@ import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
+import { useWindowDimensionsContext } from "@streamlit/lib"
 import {
   ChatInput as ChatInputProto,
   FileUploaderState as FileUploaderStateProto,
@@ -36,28 +37,32 @@ import {
   IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
-import { useWindowDimensionsContext } from "@streamlit/lib"
 
+import Icon from "~lib/components/shared/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import {
+  UploadedStatus,
+  UploadFileInfo,
+} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { getAccept } from "~lib/components/widgets/FileUploader/utils"
+import { FileUploadClient } from "~lib/FileUploadClient"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
+import { FileSize, sizeConverter } from "~lib/util/FileHelper"
+import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
   AcceptFileValue,
   chatInputAcceptFileProtoValueToEnum,
   isNullOrUndefined,
 } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import Icon from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import { isEnterKeyPressed } from "~lib/util/inputUtils"
-import {
-  UploadedStatus,
-  UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { getAccept } from "~lib/components/widgets/FileUploader/utils"
-import { FileSize, sizeConverter } from "~lib/util/FileHelper"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 
+import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
+import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
+import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
+import { createDropHandler } from "./fileUpload/createDropHandler"
+import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
   StyledChatInput,
   StyledChatInputContainer,
@@ -65,11 +70,6 @@ import {
   StyledSendIconButton,
   StyledSendIconButtonContainer,
 } from "./styled-components"
-import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
-import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
-import { createDropHandler } from "./fileUpload/createDropHandler"
-import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
-import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
 
 export interface Props {
   disabled: boolean

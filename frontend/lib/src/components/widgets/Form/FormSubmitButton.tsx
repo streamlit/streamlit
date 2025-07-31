@@ -26,8 +26,8 @@ import BaseButton, {
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean

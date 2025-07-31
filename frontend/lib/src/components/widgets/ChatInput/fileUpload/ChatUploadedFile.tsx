@@ -24,11 +24,12 @@ import {
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
 import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
-import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { assertNever } from "~lib/util/assertNever"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { assertNever } from "~lib/util/assertNever"
+import { FileSize, getSizeDisplay } from "~lib/util/FileHelper"
 
+import { ChatUploadedFileIconTooltip } from "./ChatUploadedFileIconTooltip"
 import {
   StyledChatUploadedFile,
   StyledChatUploadedFileDeleteButton,
@@ -36,7 +37,6 @@ import {
   StyledChatUploadedFileName,
   StyledChatUploadedFileSize,
 } from "./styled-components"
-import { ChatUploadedFileIconTooltip } from "./ChatUploadedFileIconTooltip"
 
 export interface Props {
   fileInfo: UploadFileInfo

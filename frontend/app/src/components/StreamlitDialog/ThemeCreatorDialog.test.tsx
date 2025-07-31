@@ -19,6 +19,7 @@ import React from "react"
 import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   darkTheme,
   LibContextProps,
@@ -26,7 +27,6 @@ import {
   mockSessionInfo,
   renderWithContexts,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,

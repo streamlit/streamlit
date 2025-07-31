@@ -16,17 +16,17 @@
 
 import React, { useState } from "react"
 
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+import { useTheme } from "@emotion/react"
 import {
   KeyboardArrowDown,
   KeyboardArrowUp,
 } from "@emotion-icons/material-outlined"
-import { useTheme } from "@emotion/react"
+import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
-import { hasLightBackgroundColor, Icon } from "@streamlit/lib"
-import { isNullOrUndefined } from "@streamlit/utils"
-import { IAppPage } from "@streamlit/protobuf"
 import { StreamlitEndpoints } from "@streamlit/connection"
+import { hasLightBackgroundColor, Icon } from "@streamlit/lib"
+import { IAppPage } from "@streamlit/protobuf"
+import { isNullOrUndefined } from "@streamlit/utils"
 
 import {
   StyledIconContainer,

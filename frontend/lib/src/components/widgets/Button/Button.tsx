@@ -18,6 +18,7 @@ import React, { memo, ReactElement } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
+import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -25,7 +26,6 @@ import BaseButton, {
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { Box } from "~lib/components/shared/Base/styled-components"
 
 export interface Props {
   disabled: boolean

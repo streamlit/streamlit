@@ -29,6 +29,7 @@ import {
   ResizeDirection,
 } from "re-resizable"
 
+import { LogoComponent } from "@streamlit/app/src/components/Logo"
 import {
   shouldShowNavigation,
   SidebarNav,
@@ -46,7 +47,6 @@ import {
 } from "@streamlit/lib"
 import { IAppPage, Logo } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
 
 import {
   RESIZE_HANDLE_WIDTH,

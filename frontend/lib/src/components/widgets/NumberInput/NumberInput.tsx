@@ -29,26 +29,32 @@ import uniqueId from "lodash/uniqueId"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
+import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import {
+  StyledWidgetLabelHelp,
+  WidgetLabel,
+} from "~lib/components/widgets/BaseWidget"
+import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 import {
   isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
-import { convertRemToPx } from "~lib/theme"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 
+import {
+  StyledInputContainer,
+  StyledInputControl,
+  StyledInputControls,
+  StyledInstructionsContainer,
+} from "./styled-components"
 import {
   canDecrement,
   canIncrement,
@@ -56,12 +62,6 @@ import {
   getInitialValue,
   getStep,
 } from "./utils"
-import {
-  StyledInputContainer,
-  StyledInputControl,
-  StyledInputControls,
-  StyledInstructionsContainer,
-} from "./styled-components"
 
 export interface Props {
   disabled: boolean

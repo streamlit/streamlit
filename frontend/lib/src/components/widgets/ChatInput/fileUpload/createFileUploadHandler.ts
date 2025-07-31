@@ -18,9 +18,9 @@ import axios from "axios"
 
 import { IFileURLs } from "@streamlit/protobuf"
 
+import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { WidgetInfo } from "~lib/WidgetStateManager"
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 
 interface CreateUploadFileParams {
   getNextLocalFileId: () => number

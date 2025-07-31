@@ -31,27 +31,27 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { EmotionTheme } from "~lib/theme"
-import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
-import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean

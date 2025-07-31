@@ -19,11 +19,11 @@ import { getLogger } from "loglevel"
 import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
+import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
 import { IHostConfigResponse, StreamlitEndpoints } from "./types"
 import { getPossibleBaseUris } from "./utils"
 import { WebsocketConnection } from "./WebsocketConnection"
-import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 
 const LOG = getLogger("ConnectionManager")
 

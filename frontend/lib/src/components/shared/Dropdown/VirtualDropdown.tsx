@@ -24,8 +24,8 @@ import {
 import { FixedSizeList } from "react-window"
 
 import { OverflowTooltip, Placement } from "~lib/components/shared/Tooltip"
-import { convertRemToPx } from "~lib/theme/utils"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
 

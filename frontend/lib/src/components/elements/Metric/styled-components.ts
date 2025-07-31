@@ -20,9 +20,9 @@ import { transparentize } from "color2k"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { EmotionTheme } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface StyledMetricContainerProps {
   showBorder: boolean

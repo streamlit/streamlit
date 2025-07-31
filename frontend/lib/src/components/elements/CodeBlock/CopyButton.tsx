@@ -19,8 +19,8 @@ import React, { memo, useEffect, useRef } from "react"
 import Clipboard from "clipboard"
 import { Copy as CopyIcon } from "react-feather"
 
-import { convertRemToPx } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx } from "~lib/theme"
 
 import { StyledCopyButton } from "./styled-components"
 

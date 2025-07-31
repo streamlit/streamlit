@@ -20,8 +20,8 @@ import { screen, within } from "@testing-library/react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
 import { BlockNode } from "~lib/AppNode"
+import { render } from "~lib/test_util"
 
 import Tabs, { TabProps } from "./Tabs"
 

@@ -17,8 +17,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 /**
  * Think of useState, but the state is also persisted in the widget manager.

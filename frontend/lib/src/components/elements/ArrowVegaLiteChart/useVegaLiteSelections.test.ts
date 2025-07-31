@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { Mock, Mocked } from "vitest"
-import { View as VegaView } from "vega"
 import { act, renderHook } from "@testing-library/react"
+import { View as VegaView } from "vega"
+import { Mock, Mocked } from "vitest"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { debounce } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { useVegaLiteSelections } from "./useVegaLiteSelections"
 import { VegaLiteChartElement } from "./arrowUtils"
+import { useVegaLiteSelections } from "./useVegaLiteSelections"
 
 // Mock the debounce so we can control how/when it is invoked.
 vi.mock("~lib/util/utils", async () => ({

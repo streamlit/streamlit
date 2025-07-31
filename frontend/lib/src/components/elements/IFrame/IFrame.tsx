@@ -17,11 +17,11 @@ import React, { memo, ReactElement } from "react"
 
 import { IFrame as IFrameProto } from "@streamlit/protobuf"
 
-import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import { StyledIframe } from "./styled-components"
 

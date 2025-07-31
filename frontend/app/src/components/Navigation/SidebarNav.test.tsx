@@ -19,11 +19,11 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import { AppContextProps } from "@streamlit/app/src/components/AppContext"
+import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 import * as isMobile from "@streamlit/lib"
 import { mockEndpoints, render } from "@streamlit/lib"
 import { IAppPage, PageConfig } from "@streamlit/protobuf"
-import { AppContextProps } from "@streamlit/app/src/components/AppContext"
-import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
 
 import SidebarNav, { Props } from "./SidebarNav"
 

@@ -16,17 +16,17 @@
 
 import React, { memo, ReactElement } from "react"
 
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import {
   LABEL_PLACEMENT,
   STYLE_TYPE,
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
+import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { transparentize } from "color2k"
 
-import { hasLightBackgroundColor } from "~lib/theme"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { hasLightBackgroundColor } from "~lib/theme"
 
 const NAMELESS_INDEX_NAME = "(index)"
 

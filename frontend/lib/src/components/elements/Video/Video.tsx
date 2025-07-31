@@ -20,9 +20,9 @@ import { getLogger } from "loglevel"
 
 import { ISubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
 
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
-import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import { StyledVideoIframe } from "./styled-components"
 

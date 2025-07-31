@@ -23,8 +23,8 @@ import BaseButton, {
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton"
 
-import { StyledFileDropzoneSection } from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"
+import { StyledFileDropzoneSection } from "./styled-components"
 import { getAccept } from "./utils"
 
 export interface Props {

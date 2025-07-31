@@ -20,9 +20,9 @@ import { getLogger } from "loglevel"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
-import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import { StyledAudio, StyledAudioContainer } from "./styled-components"
 

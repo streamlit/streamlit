@@ -16,8 +16,8 @@
 
 import React, { FC, useMemo } from "react"
 
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import type { ElementNode } from "~lib/AppNode"
+import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 
 import { StyledElementContainer } from "./styled-components"
 

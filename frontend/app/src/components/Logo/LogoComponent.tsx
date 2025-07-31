@@ -18,12 +18,12 @@ import React, { ReactElement } from "react"
 
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
-import { Logo } from "@streamlit/protobuf"
 import {
   StyledLogo,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
+import { StreamlitEndpoints } from "@streamlit/connection"
+import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
 

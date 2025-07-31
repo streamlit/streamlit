@@ -21,11 +21,11 @@ import { getLogger } from "loglevel"
 import { Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
-import { notNullOrUndefined } from "~lib/util/utils"
-import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
+import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledExceptionCopyButton,

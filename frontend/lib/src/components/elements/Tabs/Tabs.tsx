@@ -30,8 +30,8 @@ import { BlockPropsWithoutWidth } from "~lib/components/core/Block"
 import { isElementStale } from "~lib/components/core/Block/utils"
 import { LibContext } from "~lib/components/core/LibContext"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { STALE_STYLES } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { STALE_STYLES } from "~lib/theme"
 
 import { StyledTabContainer } from "./styled-components"
 

@@ -18,8 +18,8 @@ import React, { PureComponent, ReactNode } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { render } from "~lib/test_util"
 
 import withFullScreenWrapper from "./withFullScreenWrapper"
 
