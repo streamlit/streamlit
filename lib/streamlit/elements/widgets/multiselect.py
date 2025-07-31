@@ -16,7 +16,16 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
@@ -51,7 +60,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.type_util import (
-    T,
     is_iterable,
 )
 
@@ -65,6 +73,8 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+
+T = TypeVar("T")
 
 
 class MultiSelectSerde(Generic[T]):
@@ -245,7 +255,7 @@ class MultiSelectMixin:
 
         Parameters
         ----------
-        label: str
+        label : str
             A short label explaining to the user what this select widget is for.
             The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, Links,
@@ -267,27 +277,27 @@ class MultiSelectMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        options: Iterable
+        options : Iterable
             Labels for the select options in an ``Iterable``. This can be a
             ``list``, ``set``, or anything supported by ``st.dataframe``. If
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
-        default: Iterable of V, V, or None
+        default : Iterable of V, V, or None
             List of default values. Can also be a single value.
 
-        format_func: function
+        format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
             the command.
 
-        key: str or int
+        key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. No two widgets may have the same key.
 
-        help: str or None
+        help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
             only displays the tooltip when ``label_visibility="visible"``. If
             this is ``None`` (default), no tooltip is displayed.
@@ -296,19 +306,19 @@ class MultiSelectMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change: callable
+        on_change : callable
             An optional callback invoked when this widget's value changes.
 
-        args: tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
-        kwargs: dict
+        kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        max_selections: int
+        max_selections : int
             The max selections that can be selected at a time.
 
-        placeholder: str or  None
+        placeholder : str or  None
             A string to display when no options are selected.
             If this is ``None`` (default), the widget displays placeholder text
             based on the widget's configuration:
@@ -323,17 +333,17 @@ class MultiSelectMixin:
               and ``accept_new_options=False``. The widget is also disabled in
               this case.
 
-        disabled: bool
+        disabled : bool
             An optional boolean that disables the multiselect widget if set
             to ``True``. The default is ``False``.
 
-        label_visibility: "visible", "hidden", or "collapsed"
+        label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
 
-        accept_new_options: bool
+        accept_new_options : bool
             Whether the user can add selections that aren't included in ``options``.
             If this is ``False`` (default), the user can only select from the
             items in ``options``. If this is ``True``, the user can enter new

@@ -24,7 +24,6 @@ import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LibContext } from "~lib/components/core/LibContext"
-import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 
 import {
   StyledNavLink,
@@ -37,30 +36,12 @@ export interface Props {
   element: PageLinkProto
 }
 
-function shouldUseContainerWidth(
-  useContainerWidth: boolean | null | undefined,
-  isInSidebar: boolean
-): boolean {
-  if (useContainerWidth === null && isInSidebar) {
-    return true
-  } else if (useContainerWidth === null && !isInSidebar) {
-    return false
-  }
-  return useContainerWidth === true ? true : false
-}
-
 function PageLink(props: Readonly<Props>): ReactElement {
   const { onPageChange, currentPageScriptHash } = useContext(LibContext)
-  const isInSidebar = useContext(IsSidebarContext)
 
   const { colors } = useEmotionTheme()
 
   const { disabled, element } = props
-
-  const useContainerWidth = shouldUseContainerWidth(
-    element.useContainerWidth,
-    isInSidebar
-  )
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
@@ -84,14 +65,13 @@ function PageLink(props: Readonly<Props>): ReactElement {
       <BaseButtonTooltip
         help={element.help}
         placement={Placement.TOP_RIGHT}
-        containerWidth={useContainerWidth}
+        containerWidth={true}
       >
-        <StyledNavLinkContainer containerWidth={useContainerWidth}>
+        <StyledNavLinkContainer>
           <StyledNavLink
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            containerWidth={useContainerWidth}
             href={element.page}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"

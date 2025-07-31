@@ -23,6 +23,7 @@ from streamlit.logger import get_logger
 from streamlit.watcher.folder_black_list import FolderBlackList
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
+    PathWatcherType,
     get_default_path_watcher_class,
 )
 
@@ -36,12 +37,12 @@ _LOGGER: Final = get_logger(__name__)
 
 class WatchedModule(NamedTuple):
     watcher: Any
-    module_name: Any
+    module_name: str | None
 
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
-PathWatcher = None
+PathWatcher: PathWatcherType | None = None
 
 
 class LocalSourcesWatcher:
@@ -169,7 +170,7 @@ class LocalSourcesWatcher:
             glob_pattern = "**/*" if is_directory else None
 
             wm = WatchedModule(
-                watcher=PathWatcher(
+                watcher=PathWatcher(  # ty: ignore
                     filepath,
                     self.on_path_changed,
                     glob_pattern=glob_pattern,  # Pass as named parameter

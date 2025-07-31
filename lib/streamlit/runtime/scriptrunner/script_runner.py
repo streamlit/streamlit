@@ -21,7 +21,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import TYPE_CHECKING, Callable, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast
 
 from blinker import Signal
 
@@ -762,7 +762,7 @@ def _clean_problem_modules() -> None:
     if "keras" in sys.modules:
         try:
             keras = sys.modules["keras"]
-            keras.backend.clear_session()
+            cast("Any", keras).backend.clear_session()
         except Exception:  # noqa: S110
             # We don't want to crash the app if we can't clear the Keras session.
             pass
@@ -770,7 +770,7 @@ def _clean_problem_modules() -> None:
     if "matplotlib.pyplot" in sys.modules:
         try:
             plt = sys.modules["matplotlib.pyplot"]
-            plt.close("all")
+            cast("Any", plt).close("all")
         except Exception:  # noqa: S110
             # We don't want to crash the app if we can't close matplotlib
             pass
