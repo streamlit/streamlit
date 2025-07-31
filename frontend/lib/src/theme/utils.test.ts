@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
-import { transparentize } from "color2k"
 
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
@@ -701,15 +701,19 @@ describe("createEmotionTheme", () => {
     ],
     [
       ["50px", "45px"],
-      ["3.125rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
     ],
     [
       ["50PX", "45PX"],
-      ["3.125rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
     ],
     [
       ["50", "45"],
-      ["3.125rem", "2.875rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+      ["3.125rem", "2.8125rem", "1.75rem", "1.5rem", "1.25rem", "1rem"],
+    ],
+    [
+      ["39.5px", "32.8px", "24.2px"],
+      ["2.46875rem", "2.05rem", "1.5125rem", "1.5rem", "1.25rem", "1rem"],
     ],
   ])(
     "correctly applies headingFontSizes '%s'",

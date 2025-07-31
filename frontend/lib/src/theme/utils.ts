@@ -137,7 +137,8 @@ export const isColor = (strColor: string): boolean => {
 
 /**
  * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
- * This is generally used to keep configured font sizes to round values.
+ * This is used to keep configured font sizes to (generally) round values for dialogs.
+ * See `convertFontSizes` in `StreamlitMarkdown/styled-components.ts`
  * (ex: 0.78 -> 0.75)
  */
 export const roundFontSizeToNearestEighth = (remFontSize: number): number => {
@@ -325,8 +326,7 @@ const convertHeadingFontSizeToRem = (
   } else if (validatedSize && validatedSize.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = parseFloat(validatedSize) / baseFontSize
-    const roundedRemValue = roundFontSizeToNearestEighth(remValue)
-    return `${roundedRemValue}rem`
+    return `${remValue}rem`
   }
 
   // If invalid, return undefined
