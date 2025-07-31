@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { PickingInfo, ViewStateChangeParameters } from "@deck.gl/core"
+// eslint-disable-next-line import/no-unresolved
 import { TooltipContent } from "@deck.gl/core/dist/lib/tooltip"
 import { parseToRgba } from "color2k"
 import JSON5 from "json5"
