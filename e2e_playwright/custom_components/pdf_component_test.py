@@ -373,9 +373,12 @@ def test_st_pdf_different_heights_snapshots(
     _wait_for_pdf_to_load(app)
 
     # Verify we actually reached a low height value (around 200px)
-    current_height = iframe.get_attribute("height")
-    assert current_height is not None, "Height attribute should be present"
-    assert int(current_height) <= 250, f"Expected height <= 250, got {current_height}"
+    wait_until(
+        app,
+        lambda: (height := iframe.get_attribute("height")) is not None
+        and int(height) <= 250,
+        timeout=7000,
+    )
 
     assert_snapshot(iframe, name="st_pdf-height_minimum")
 
@@ -392,10 +395,11 @@ def test_st_pdf_different_heights_snapshots(
     # Wait for PDF to adjust to new height and fully load
     _wait_for_pdf_to_load(app)
     # Verify we actually reached a high height value (should be much larger than minimum)
-    current_height = iframe.get_attribute("height")
-    assert current_height is not None, "Height attribute should be present"
-    # Expect at least 280px (significantly higher than minimum of ~200px)
-    # The important thing is that min and max are visually different, not the exact values
-    assert int(current_height) >= 280, f"Expected height >= 280, got {current_height}"
+    wait_until(
+        app,
+        lambda: (height := iframe.get_attribute("height")) is not None
+        and int(height) >= 280,
+        timeout=7000,
+    )
 
     assert_snapshot(iframe, name="st_pdf-height_maximum")
