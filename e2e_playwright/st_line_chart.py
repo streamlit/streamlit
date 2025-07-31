@@ -89,3 +89,13 @@ if st.button("Add data to Line Chart"):
     )
 
     empty_line.add_rows(new_data)
+
+# Test column ordering with explicit y and color parameters (Issue #12071)
+st.header("Column Order Test")
+# Create data with non-alphabetical column names
+column_order_data = {"c_one": [1, 1, 1], "b_two": [2, 2, 2], "a_three": [3, 3, 3]}
+st.line_chart(
+    column_order_data,
+    y=["c_one", "b_two", "a_three"],
+    color=[(255, 0, 0), (0, 255, 0), (0, 0, 255)],
+)

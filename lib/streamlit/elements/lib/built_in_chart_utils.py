@@ -994,7 +994,9 @@ def _get_color_encoding(
                 return alt.ColorValue(to_css_color(cast("Any", color_value[0])))
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
-                scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
+                scale=alt.Scale(
+                    domain=y_column_list, range=[to_css_color(c) for c in color_values]
+                ),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",

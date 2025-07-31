@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
-TOTAL_LINE_CHARTS = 12
+TOTAL_LINE_CHARTS = 13
 
 
 def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -113,3 +113,23 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     expect(chart_canvas).to_have_attribute("height", "300")
 
     assert_snapshot(add_rows_chart, name="st_line_chart-add_rows_preserves_styling")
+
+
+def test_column_order_with_colors(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that column order is preserved when using y and color parameters.
+
+    This is a regression test for issue #12071 where columns were being
+    reordered alphabetically instead of preserving the order specified in y parameter.
+    """
+    column_order_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
+    expect(column_order_chart).to_be_visible()
+
+    # The chart should have 3 lines in the specified order
+    chart_canvas = column_order_chart.locator("canvas")
+    expect(chart_canvas).to_be_visible()
+
+    # Hover to show tooltip and verify the order
+    chart_canvas.hover(position={"x": 50, "y": 100}, force=True)
+
+    # Snapshot the chart to verify colors are applied in correct order
+    assert_snapshot(column_order_chart, name="st_line_chart-column_order_preserved")
