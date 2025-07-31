@@ -68,7 +68,10 @@ def test_check_top_level_class(app: Page):
 @pytest.mark.flaky(reruns=4)
 def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction):
     """Check that the chart tooltip styling is correct."""
-    pie_chart = app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(0)
+    charts = app.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(NUM_CHARTS)
+
+    pie_chart = charts.nth(0)
     expect(pie_chart).to_be_visible()
     wait_for_react_stability(app)
     pie_chart.scroll_into_view_if_needed()
