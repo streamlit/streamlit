@@ -15,6 +15,10 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.vega_utils import (
+    assert_vega_chart_height,
+    assert_vega_chart_width,
+)
 
 TOTAL_LINE_CHARTS = 13
 
@@ -118,8 +122,8 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     expect(chart_canvas).to_be_visible()
 
     # Check that the chart has the correct styling params
-    expect(chart_canvas).to_have_attribute("width", "600")
-    expect(chart_canvas).to_have_attribute("height", "300")
+    assert_vega_chart_width(add_rows_chart, 600)
+    assert_vega_chart_height(add_rows_chart, 300)
 
     assert_snapshot(add_rows_chart, name="st_line_chart-add_rows_preserves_styling")
 

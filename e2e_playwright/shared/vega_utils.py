@@ -21,3 +21,11 @@ def assert_vega_chart_height(vega_chart: Locator, expected_height: int):
 
     assert bbox is not None
     assert bbox["height"] == expected_height
+
+
+def assert_vega_chart_width(vega_chart: Locator, expected_width: int):
+    vega_graphics_doc = vega_chart.locator("[role='graphics-document']")
+    bbox = vega_graphics_doc.bounding_box()
+
+    assert bbox is not None
+    assert bbox["width"] == expected_width
