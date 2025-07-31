@@ -24,8 +24,8 @@ import React, {
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import Modal, { ModalBody, ModalHeader } from "~lib/components/shared/Modal"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"

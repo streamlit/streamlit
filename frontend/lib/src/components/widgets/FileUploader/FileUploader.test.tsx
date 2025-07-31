@@ -28,9 +28,9 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 
 import FileUploader, { Props } from "./FileUploader"
 

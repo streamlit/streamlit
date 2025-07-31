@@ -24,16 +24,16 @@ import React, {
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
-import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
+import { LibContext } from "~lib/components/core/LibContext"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { LibContext } from "~lib/components/core/LibContext"
+import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   endpoints: StreamlitEndpoints

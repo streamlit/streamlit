@@ -20,10 +20,10 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
 
-import { render, renderWithContexts } from "~lib/test_util"
-import { mockEndpoints } from "~lib/mocks/mocks"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { mockEndpoints } from "~lib/mocks/mocks"
+import { render, renderWithContexts } from "~lib/test_util"
+import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import Video, { VideoProps } from "./Video"
 

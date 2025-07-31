@@ -20,8 +20,8 @@ import {
   MetricsEvent,
 } from "@streamlit/protobuf"
 
-import { ExportedTheme } from "~lib/theme"
 import { ScriptRunState } from "~lib/ScriptRunState"
+import { ExportedTheme } from "~lib/theme"
 import { PresetThemeName } from "~lib/theme/types"
 
 /**

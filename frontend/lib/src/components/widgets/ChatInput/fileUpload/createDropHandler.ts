@@ -23,8 +23,8 @@ import {
   IFileURLs,
 } from "@streamlit/protobuf"
 
-import { FileUploadClient } from "~lib/FileUploadClient"
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { FileUploadClient } from "~lib/FileUploadClient"
 import { getRejectedFileInfo } from "~lib/util/FileHelper"
 
 interface CreateDropHandlerParams {

@@ -22,6 +22,21 @@ import React, {
   useState,
 } from "react"
 
+import EventContainer from "@streamlit/app/src/components/EventContainer"
+import Header from "@streamlit/app/src/components/Header"
+import HeaderColoredLine from "@streamlit/app/src/components/HeaderColoredLine"
+import { LogoComponent } from "@streamlit/app/src/components/Logo"
+import {
+  shouldShowNavigation,
+  TopNav,
+} from "@streamlit/app/src/components/Navigation"
+import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
+import {
+  getSavedSidebarState,
+  saveSidebarState,
+  shouldCollapse,
+} from "@streamlit/app/src/components/Sidebar/utils"
+import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   AppRoot,
@@ -36,22 +51,8 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib"
 import { IAppPage, Logo, Navigation } from "@streamlit/protobuf"
-import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
-import {
-  getSavedSidebarState,
-  saveSidebarState,
-  shouldCollapse,
-} from "@streamlit/app/src/components/Sidebar/utils"
-import EventContainer from "@streamlit/app/src/components/EventContainer"
-import Header from "@streamlit/app/src/components/Header"
-import {
-  shouldShowNavigation,
-  TopNav,
-} from "@streamlit/app/src/components/Navigation"
-import { useAppContext } from "@streamlit/app/src/components/StreamlitContextProvider"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
-import HeaderColoredLine from "@streamlit/app/src/components/HeaderColoredLine"
 
+import ScrollToBottomContainer from "./ScrollToBottomContainer"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
@@ -65,7 +66,6 @@ import {
   StyledSidebarBlockContainer,
   StyledStickyBottomContainer,
 } from "./styled-components"
-import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
 export interface AppViewProps {
   elements: AppRoot

@@ -23,8 +23,8 @@ import {
 } from "@streamlit/protobuf"
 
 import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 import { ensureError } from "~lib/util/ErrorHandling"
+import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 type SuccessfulUpload = {
   fileUrl: IFileURLs

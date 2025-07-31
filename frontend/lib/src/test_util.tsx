@@ -16,26 +16,26 @@
 
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
-import { Vector } from "apache-arrow"
 import {
   render as reactTestingLibraryRender,
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
+import { Vector } from "apache-arrow"
 
-import ThemeProvider from "./components/core/ThemeProvider"
-import { baseTheme } from "./theme"
-import { mockTheme } from "./mocks/mockTheme"
 import {
   FormsContext,
   FormsContextProps,
 } from "./components/core/FormsContext"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
-import { ScriptRunState } from "./ScriptRunState"
+import ThemeProvider from "./components/core/ThemeProvider"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
-import { createFormsData } from "./WidgetStateManager"
 import { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
 import { mockEndpoints } from "./mocks/mocks"
+import { mockTheme } from "./mocks/mockTheme"
+import { ScriptRunState } from "./ScriptRunState"
+import { baseTheme } from "./theme"
+import { createFormsData } from "./WidgetStateManager"
 
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
   return (

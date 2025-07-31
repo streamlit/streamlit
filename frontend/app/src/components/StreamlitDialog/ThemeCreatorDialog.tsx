@@ -19,6 +19,11 @@ import React, { ReactElement, useCallback, useContext, useState } from "react"
 import { Check } from "@emotion-icons/material-outlined"
 
 import {
+  themeBuilder,
+  toMinimalToml,
+} from "@streamlit/app/src/components/StreamlitDialog/themeUtils"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import {
   BaseButton,
   BaseButtonKind,
   BaseColorPicker,
@@ -33,11 +38,6 @@ import {
   ThemeConfig,
   toThemeInput,
 } from "@streamlit/lib"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import {
-  themeBuilder,
-  toMinimalToml,
-} from "@streamlit/app/src/components/StreamlitDialog/themeUtils"
 
 import {
   StyledBackButton,

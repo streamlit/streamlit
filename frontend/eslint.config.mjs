@@ -245,7 +245,7 @@ export default tseslint.config([
         },
       ],
       "import/order": [
-        1,
+        "error",
         {
           pathGroups: [
             {
@@ -255,6 +255,11 @@ export default tseslint.config([
             },
             {
               pattern: "@streamlit/**",
+              group: "internal",
+              position: "before",
+            },
+            {
+              pattern: "~lib/**",
               group: "internal",
               position: "before",
             },
@@ -269,6 +274,10 @@ export default tseslint.config([
             "index",
           ],
           "newlines-between": "always",
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
         },
       ],
       "streamlit-custom/no-hardcoded-theme-values": "error",
