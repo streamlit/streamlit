@@ -60,7 +60,7 @@ def test_balloons_visibility_with_fragment_interactions(app: Page):
     selection_dropdown.locator("li").nth(1).click()
 
     # Wait briefly to be sure that the animations aren't running
-    app.wait_for_timeout(750)
+    app.wait_for_timeout(500)
 
     # Assert that all balloon images are not visible
     assert_animation_is_hidden(app, animation_images)
@@ -113,7 +113,7 @@ def test_snow_visibility_with_fragment_interactions(app: Page):
     selection_dropdown.locator("li").nth(1).click()
 
     # Wait briefly to be sure that the animations aren't running
-    app.wait_for_timeout(750)
+    app.wait_for_timeout(500)
 
     # Assert that all snow images are not visible
     assert_animation_is_hidden(app, animation_images)
