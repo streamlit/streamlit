@@ -20,9 +20,9 @@ import { describe, expect, it } from "vitest"
 
 import { Element, IAlert, streamlit } from "@streamlit/protobuf"
 
+import { FlexContextProvider } from "./FlexContext"
 import { useLayoutStyles, UseLayoutStylesShape } from "./useLayoutStyles"
 import { Direction, MinFlexElementWidth } from "./utils"
-import { FlexContextProvider } from "./FlexContext"
 
 function withFlexContextProvider(direction: Direction) {
   return function Wrapper({ children }: { children: ReactNode }) {

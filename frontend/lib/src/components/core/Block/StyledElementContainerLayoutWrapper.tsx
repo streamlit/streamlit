@@ -18,12 +18,12 @@ import React, { FC, useMemo } from "react"
 
 import { ButtonGroup } from "@streamlit/protobuf"
 
+import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 import type { ElementNode } from "~lib/AppNode"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 
 const LARGE_STRETCH_BEHAVIOR = [
   "graphvizChart",

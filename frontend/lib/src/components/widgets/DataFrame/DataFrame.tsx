@@ -49,8 +49,8 @@ import { createPortal } from "react-dom"
 
 import { Arrow as ArrowProto } from "@streamlit/protobuf"
 
-import { LibContext } from "~lib/components/core/LibContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { LibContext } from "~lib/components/core/LibContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"

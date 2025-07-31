@@ -22,11 +22,11 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { FormsContext } from "~lib/components/core/FormsContext"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
+import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import {
   Direction,
   getDirectionOfBlock,
