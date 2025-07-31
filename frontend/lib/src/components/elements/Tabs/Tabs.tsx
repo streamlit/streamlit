@@ -42,10 +42,11 @@ export interface TabProps extends BlockPropsWithoutWidth {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
   renderTabContent: (childProps: any) => ReactElement
   width: React.CSSProperties["width"]
+  flex: React.CSSProperties["flex"]
 }
 
 function Tabs(props: Readonly<TabProps>): ReactElement {
-  const { widgetsDisabled, node, isStale, width } = props
+  const { widgetsDisabled, node, isStale, width, flex } = props
   const { fragmentIdsThisRun, scriptRunState, scriptRunId } =
     useContext(LibContext)
 
@@ -103,6 +104,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       isOverflowing={isOverflowing}
       tabHeight={TAB_HEIGHT}
       width={width}
+      flex={flex}
     >
       <UITabs
         activateOnFocus

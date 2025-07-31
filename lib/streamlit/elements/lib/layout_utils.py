@@ -14,11 +14,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import StreamlitInvalidHeightError, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitInvalidColumnGapError,
+    StreamlitInvalidHeightError,
+    StreamlitInvalidHorizontalAlignmentError,
+    StreamlitInvalidVerticalAlignmentError,
+    StreamlitInvalidWidthError,
+)
+from streamlit.proto.Block_pb2 import Block
+from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 
@@ -26,6 +34,9 @@ WidthWithoutContent: TypeAlias = Union[int, Literal["stretch"]]
 Width: TypeAlias = Union[int, Literal["stretch", "content"]]
 HeightWithoutContent: TypeAlias = Union[int, Literal["stretch"]]
 Height: TypeAlias = Union[int, Literal["stretch", "content"]]
+Gap: TypeAlias = Literal["small", "medium", "large"]
+HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
+VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 
 
 @dataclass
@@ -113,3 +124,78 @@ def get_height_config(height: Height) -> HeightConfig:
     else:
         height_config.use_stretch = True
     return height_config
+
+
+def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
+    """Convert a gap string or None to a GapSize proto value."""
+    gap_mapping = {
+        "small": GapSize.SMALL,
+        "medium": GapSize.MEDIUM,
+        "large": GapSize.LARGE,
+    }
+
+    if isinstance(gap, str):
+        gap_size = gap.lower()
+        valid_sizes = gap_mapping.keys()
+
+        if gap_size in valid_sizes:
+            return gap_mapping[gap_size]
+    elif gap is None:
+        return GapSize.NONE
+
+    raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+
+
+def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:
+    valid_horizontal_alignments = ["left", "center", "right", "distribute"]
+    if horizontal_alignment not in valid_horizontal_alignments:
+        raise StreamlitInvalidHorizontalAlignmentError(
+            horizontal_alignment, "st.container"
+        )
+
+
+def validate_vertical_alignment(vertical_alignment: VerticalAlignment) -> None:
+    valid_vertical_alignments = ["top", "center", "bottom", "distribute"]
+    if vertical_alignment not in valid_vertical_alignments:
+        raise StreamlitInvalidVerticalAlignmentError(vertical_alignment, "st.container")
+
+
+map_to_flex_terminology = {
+    "left": "start",
+    "center": "center",
+    "right": "end",
+    "top": "start",
+    "bottom": "end",
+    "distribute": "space_between",
+}
+
+
+def get_justify(
+    alignment: HorizontalAlignment | VerticalAlignment,
+) -> Block.FlexContainer.Justify.ValueType:
+    valid_justify = ["start", "center", "end", "space_between"]
+    justify = map_to_flex_terminology[alignment]
+    if justify not in valid_justify:
+        return Block.FlexContainer.Justify.JUSTIFY_UNDEFINED
+    if justify in ["start", "end", "center"]:
+        return cast(
+            "Block.FlexContainer.Justify.ValueType",
+            getattr(Block.FlexContainer.Justify, f"JUSTIFY_{justify.upper()}"),
+        )
+    return cast(
+        "Block.FlexContainer.Justify.ValueType",
+        getattr(Block.FlexContainer.Justify, f"{justify.upper()}"),
+    )
+
+
+def get_align(
+    alignment: HorizontalAlignment | VerticalAlignment,
+) -> Block.FlexContainer.Align.ValueType:
+    valid_align = ["start", "end", "center"]
+    align = map_to_flex_terminology[alignment]
+    if align not in valid_align:
+        return Block.FlexContainer.Align.ALIGN_UNDEFINED
+    return cast(
+        "Block.FlexContainer.Align.ValueType",
+        getattr(Block.FlexContainer.Align, f"ALIGN_{align.upper()}"),
+    )
