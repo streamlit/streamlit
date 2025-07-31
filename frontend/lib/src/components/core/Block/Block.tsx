@@ -20,26 +20,33 @@ import classNames from "classnames"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { FormsContext } from "~lib/components/core/FormsContext"
-import { LibContext } from "~lib/components/core/LibContext"
 import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
-import { getElementId, notNullOrUndefined } from "~lib/util/utils"
-import { ScriptRunState } from "~lib/ScriptRunState"
+import { FormsContext } from "~lib/components/core/FormsContext"
+import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
 import {
   Direction,
   getDirectionOfBlock,
 } from "~lib/components/core/Layout/utils"
-import Form from "~lib/components/widgets/Form"
-import Tabs, { TabProps } from "~lib/components/elements/Tabs"
-import Popover from "~lib/components/elements/Popover"
+import { LibContext } from "~lib/components/core/LibContext"
 import ChatMessage from "~lib/components/elements/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog"
 import Expander from "~lib/components/elements/Expander"
+import Popover from "~lib/components/elements/Popover"
+import Tabs, { TabProps } from "~lib/components/elements/Tabs"
+import Form from "~lib/components/widgets/Form"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { ScriptRunState } from "~lib/ScriptRunState"
+import { getElementId, notNullOrUndefined } from "~lib/util/utils"
 
+import ElementNodeRenderer from "./ElementNodeRenderer"
+import {
+  StyledColumn,
+  StyledFlexContainerBlock,
+  StyledFlexContainerBlockProps,
+  StyledLayoutWrapper,
+} from "./styled-components"
 import {
   assignDividerColor,
   backwardsCompatibleColumnGapSize,
@@ -53,13 +60,6 @@ import {
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
-import ElementNodeRenderer from "./ElementNodeRenderer"
-import {
-  StyledColumn,
-  StyledFlexContainerBlock,
-  StyledFlexContainerBlockProps,
-  StyledLayoutWrapper,
-} from "./styled-components"
 
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   const { libConfig } = useContext(LibContext)

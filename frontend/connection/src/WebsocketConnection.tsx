@@ -23,14 +23,19 @@ import {
   notNullOrUndefined,
 } from "@streamlit/utils"
 
-import { ForwardMsgCache } from "./ForwardMessageCache"
-import { buildWsUri } from "./utils"
+import { ConnectionState } from "./ConnectionState"
 import {
   PING_MAXIMUM_RETRY_PERIOD_MS,
   PING_MINIMUM_RETRY_PERIOD_MS,
   WEBSOCKET_STREAM_PATH,
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
+import {
+  AsyncPingRequest,
+  doInitPings,
+  PingCancelledError,
+} from "./DoInitPings"
+import { ForwardMsgCache } from "./ForwardMessageCache"
 import {
   Event,
   IHostConfigResponse,
@@ -39,12 +44,7 @@ import {
   OnRetry,
   StreamlitEndpoints,
 } from "./types"
-import { ConnectionState } from "./ConnectionState"
-import {
-  AsyncPingRequest,
-  doInitPings,
-  PingCancelledError,
-} from "./DoInitPings"
+import { buildWsUri } from "./utils"
 
 export interface Args {
   /** The application's SessionInfo instance */

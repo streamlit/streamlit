@@ -18,12 +18,12 @@ import React, { memo, ReactElement, useContext } from "react"
 
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LibContext } from "~lib/components/core/LibContext"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
+import { DynamicIcon } from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
   StyledNavLink,

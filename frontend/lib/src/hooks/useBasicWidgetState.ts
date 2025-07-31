@@ -22,9 +22,9 @@ import {
   useState,
 } from "react"
 
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 import { useFormClearHelper } from "~lib/components/widgets/Form"
 import { isNullOrUndefined } from "~lib/util/utils"
+import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 export type ValueWithSource<T> = {
   value: T

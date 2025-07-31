@@ -16,8 +16,8 @@
 
 import { renderHook } from "@testing-library/react"
 
-import * as useResizeObserver from "./useResizeObserver"
 import { useCalculatedWidth } from "./useCalculatedWidth"
+import * as useResizeObserver from "./useResizeObserver"
 
 describe("useCalculatedWidth", () => {
   afterEach(() => {

@@ -20,8 +20,8 @@ import classNames from "classnames"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { StyledSpinnerIcon } from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 
 import {
   StyledSpinner,

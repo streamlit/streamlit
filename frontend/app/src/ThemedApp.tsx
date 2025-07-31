@@ -16,12 +16,12 @@
 
 import React from "react"
 
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import {
   PortalProvider,
   RootStyleProvider,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 
 import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
