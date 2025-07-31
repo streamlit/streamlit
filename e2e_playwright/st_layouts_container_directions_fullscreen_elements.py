@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-with st.container(direction="horizontal", border=True):
+with st.container(horizontal=True, border=True):
     st.html('<div style="background:lightblue; padding:8px;">Left text</div>')
     st.vega_lite_chart(
         {
@@ -25,6 +25,6 @@ with st.container(direction="horizontal", border=True):
     )
     st.html('<div style="background:lightblue; padding:8px;">Right text</div>')
 
-with st.container(direction="horizontal", border=True):
+with st.container(horizontal=True, border=True):
     st.html('<div style="background:lightgreen;">Left panel</div>')
     st.dataframe({"A": [1, 2, 3], "B": [4, 5, 6]})

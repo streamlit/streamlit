@@ -32,7 +32,6 @@ from streamlit.elements.lib.layout_utils import (
     get_height_config,
     get_justify,
     get_width_config,
-    validate_direction,
     validate_height,
     validate_horizontal_alignment,
     validate_vertical_alignment,
@@ -67,7 +66,7 @@ class LayoutsMixin:
         key: Key | None = None,
         width: WidthWithoutContent = "stretch",
         height: Height = "content",
-        direction: Literal["horizontal", "vertical"] = "vertical",
+        horizontal: bool = False,
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
@@ -114,6 +113,30 @@ class LayoutsMixin:
             ``"stretch"`` (default), Streamlit sets the width of the container to
             match the width of the parent container. If an integer is provided,
             the container will be set to the specified width.
+
+        horizontal : bool
+            Make this a container with a horizontal layout. If this is ``True``,
+            the elements inside the container will be laid out horizontally.
+            If this is ``False`` (default), the elements inside the container will
+            be laid out vertically.
+
+        horizontal_alignment : "left", "center", "right", or "distribute"
+            The horizontal alignment of the content inside the container. The
+            default is ``"left"``.
+
+        vertical_alignment : "top", "center", "bottom", or "distribute"
+            The vertical alignment of the content inside the container. The
+            default is ``"top"``.
+
+        gap : "small", "medium", "large", or None
+            The size of the gap between the elements inside the container. This can be one of the following:
+
+            - ``"small"`` (default): 1rem gap between the elements.
+            - ``"medium"``: 2rem gap between the elements.
+            - ``"large"``: 4rem gap between the elements.
+            - ``None``: No gap between the elements.
+
+            The rem unit is relative to the ``theme.baseFontSize`` configuration option.
 
         Examples
         --------
@@ -185,17 +208,16 @@ class LayoutsMixin:
             gap, "st.container"
         )
 
-        validate_direction(direction)
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
-        if direction == "horizontal":
+        if horizontal:
             block_proto.flex_container.wrap = True
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.HORIZONTAL
             )
             block_proto.flex_container.justify = get_justify(horizontal_alignment)
             block_proto.flex_container.align = get_align(vertical_alignment)
-        elif direction == "vertical":
+        else:
             block_proto.flex_container.wrap = False
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.VERTICAL

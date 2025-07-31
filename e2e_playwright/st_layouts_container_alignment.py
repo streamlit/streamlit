@@ -15,7 +15,7 @@
 import streamlit as st
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     horizontal_alignment="left",
     key="container-horizontal-align-left",
@@ -25,7 +25,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>', width="content")
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     horizontal_alignment="center",
     key="container-horizontal-align-center",
@@ -35,7 +35,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>', width="content")
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     horizontal_alignment="right",
     key="container-horizontal-align-right",
@@ -45,7 +45,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>', width="content")
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     horizontal_alignment="distribute",
     key="container-horizontal-align-distribute",
@@ -55,7 +55,7 @@ with st.container(
     st.html('<div style="background:lightblue;">Three</div>', width="content")
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     vertical_alignment="top",
     key="container-horizontal-vertical-align-top",
@@ -65,7 +65,7 @@ with st.container(
     st.container(border=True, height=25)
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     vertical_alignment="center",
     key="container-horizontal-vertical-align-center",
@@ -75,7 +75,7 @@ with st.container(
     st.container(border=True, height=25)
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     vertical_alignment="bottom",
     key="container-horizontal-vertical-align-bottom",

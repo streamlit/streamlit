@@ -20,7 +20,6 @@ from typing_extensions import TypeAlias
 
 from streamlit.errors import (
     StreamlitInvalidColumnGapError,
-    StreamlitInvalidDirectionError,
     StreamlitInvalidHeightError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
@@ -145,12 +144,6 @@ def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
         return GapSize.NONE
 
     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
-
-
-def validate_direction(direction: str) -> None:
-    valid_directions = ["horizontal", "vertical"]
-    if direction not in valid_directions:
-        raise StreamlitInvalidDirectionError(direction)
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:

@@ -15,7 +15,7 @@
 import streamlit as st
 
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     key="container-horizontal-basic",
 ):
@@ -40,7 +40,7 @@ with st.container(direction="vertical", border=True, key="container-vertical-bas
 
 # # Horizontal layout with a fixed-width element
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     key="container-horizontal-fixed-width-and-stretch-element",
 ):
@@ -55,7 +55,7 @@ with st.container(
 
 # Horizontal layout with a fixed-height element
 with st.container(
-    direction="horizontal",
+    horizontal=True,
     border=True,
     key="container-horizontal-fixed-height-element",
 ):

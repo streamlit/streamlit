@@ -274,17 +274,6 @@ class StreamlitInvalidHorizontalAlignmentError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidDirectionError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for direction."""
-
-    def __init__(self, direction: str) -> None:
-        super().__init__(
-            'The `direction` argument to `st.container` must be `"horizontal"` or `"vertical"`. \n'
-            "The argument passed was {direction}.",
-            direction=direction,
-        )
-
-
 # st.multiselect
 class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""

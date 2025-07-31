@@ -24,7 +24,6 @@ from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
     StreamlitInvalidColumnGapError,
-    StreamlitInvalidDirectionError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
 )
@@ -527,7 +526,7 @@ class ContainerTest(DeltaGeneratorTestCase):
         self, horizontal_alignment: str, expected_justify: int
     ) -> None:
         """Test that st.container sets the correct horizontal alignment (justify)."""
-        st.container(direction="horizontal", horizontal_alignment=horizontal_alignment)
+        st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.justify == expected_justify
 
@@ -543,7 +542,7 @@ class ContainerTest(DeltaGeneratorTestCase):
         self, vertical_alignment: str, expected_align: int
     ) -> None:
         """Test that st.container sets the correct vertical alignment (align)."""
-        st.container(direction="horizontal", vertical_alignment=vertical_alignment)
+        st.container(horizontal=True, vertical_alignment=vertical_alignment)
         container_block = self.get_delta_from_queue()
         assert container_block.add_block.flex_container.align == expected_align
 
@@ -613,27 +612,12 @@ class ContainerTest(DeltaGeneratorTestCase):
             None,
         ],
     )
-    def test_container_invalid_direction(self, direction) -> None:
-        """Test that st.container raises on invalid direction."""
-        import streamlit as st
-
-        with pytest.raises(StreamlitInvalidDirectionError):
-            st.container(direction=direction)
-
-    @parameterized.expand(
-        [
-            "invalid",
-            None,
-        ],
-    )
     def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
         """Test that st.container raises on invalid horizontal_alignment."""
         import streamlit as st
 
         with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
-            st.container(
-                direction="horizontal", horizontal_alignment=horizontal_alignment
-            )
+            st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
 
     @parameterized.expand(
         [
@@ -646,7 +630,7 @@ class ContainerTest(DeltaGeneratorTestCase):
         import streamlit as st
 
         with pytest.raises(StreamlitInvalidVerticalAlignmentError):
-            st.container(direction="horizontal", vertical_alignment=vertical_alignment)
+            st.container(horizontal=True, vertical_alignment=vertical_alignment)
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):

@@ -29,7 +29,7 @@ with st.container(
     st.subheader("Sales Performance")
     with st.container(
         border=True,
-        direction="horizontal",
+        horizontal=True,
     ):
         df = pd.DataFrame(
             {
@@ -48,7 +48,7 @@ with st.container(
 
 with st.container(
     border=True,
-    direction="horizontal",
+    horizontal=True,
     key="layout-horizontal-form",
 ):
     with st.form("Form", width=400):
@@ -64,7 +64,7 @@ with st.container(
 
 with st.container(
     border=True,
-    direction="horizontal",
+    horizontal=True,
     key="layout-horizontal-expander-dataframe",
 ):
     df = pd.DataFrame(
@@ -81,7 +81,7 @@ with st.container(
 
 with st.container(
     border=True,
-    direction="horizontal",
+    horizontal=True,
     key="layout-horizontal-expander-dataframe-content-width",
 ):
     df = pd.DataFrame(
@@ -98,7 +98,7 @@ with st.container(
 
 with st.container(
     border=True,
-    direction="horizontal",
+    horizontal=True,
     key="layout-horizontal-expander-dataframe-content-width-large",
 ):
     df = pd.DataFrame(
@@ -125,7 +125,7 @@ with st.container(
 
 with st.container(
     border=True,
-    direction="horizontal",
+    horizontal=True,
     gap=None,
     horizontal_alignment="center",
     key="layout-horizontal-images-center",
@@ -136,7 +136,7 @@ with st.container(
 
 with st.container(
     border=True,
-    direction="horizontal",
+    horizontal=True,
     horizontal_alignment="distribute",
     vertical_alignment="center",
     key="layout-horizontal-images-distribute",
@@ -153,12 +153,12 @@ with st.container(border=True, direction="vertical", key="layout-horizontal-colu
             "y": [i * i for i in range(5)],
         }
     )
-    with st.container(border=False, direction="horizontal"):
+    with st.container(border=False, horizontal=True):
         col1, col2 = st.columns(2)
         with col1:
             with st.container(
                 border=False,
-                direction="horizontal",
+                horizontal=True,
             ):
                 st.info("Very important information", width=150)
                 st.dataframe(df, use_container_width=False)
@@ -166,7 +166,7 @@ with st.container(border=True, direction="vertical", key="layout-horizontal-colu
         with col2:
             st.dataframe(df, use_container_width=True)
 
-with st.container(border=True, direction="horizontal", key="layout-horizontal-tabs"):
+with st.container(border=True, horizontal=True, key="layout-horizontal-tabs"):
     import altair as alt
 
     st.title("Tabs", width=150)
@@ -180,7 +180,7 @@ with st.container(border=True, direction="horizontal", key="layout-horizontal-ta
     with tab1:
         with st.container(
             border=False,
-            direction="horizontal",
+            horizontal=True,
         ):
             st.info("This is a tab")
             st.dataframe(df)
@@ -194,7 +194,7 @@ with st.container(border=True, direction="horizontal", key="layout-horizontal-ta
 
 with st.container(
     border=True,
-    direction="horizontal",
+    horizontal=True,
     key="layout-horizontal-map",
 ):
     st.map(pd.DataFrame({"lat": [37.76, 37.77], "lon": [-122.4, -122.41]}))
@@ -210,9 +210,7 @@ with st.container(
         width="content",
     )
 
-with st.container(
-    border=True, direction="horizontal", key="layout-horizontal-content-width"
-):
+with st.container(border=True, horizontal=True, key="layout-horizontal-content-width"):
     st.markdown(
         """
     # Hello beautiful
@@ -235,9 +233,7 @@ with st.container(
         width="content",
     )
 
-with st.container(
-    direction="horizontal", height=300, key="layout-horizontal-text-area"
-):
+with st.container(horizontal=True, height=300, key="layout-horizontal-text-area"):
     st.text_area("Hello", width="stretch", height="stretch")
     st.text_area("Hello", width="stretch")
     st.container(border=True, width="stretch")

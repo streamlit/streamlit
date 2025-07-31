@@ -16,9 +16,7 @@ import pandas as pd
 
 import streamlit as st
 
-with st.container(
-    direction="horizontal", border=True, key="layout-horizontal-markdown"
-):
+with st.container(horizontal=True, border=True, key="layout-horizontal-markdown"):
     st.markdown("Hello", width="stretch")
     st.markdown("Hello", width="stretch")
     st.markdown(
@@ -39,7 +37,7 @@ with st.container(
     st.markdown("Hello", width="stretch")
     st.markdown("Hello", width="stretch")
 
-with st.container(direction="horizontal", border=True, key="layout-horizontal-buttons"):
+with st.container(horizontal=True, border=True, key="layout-horizontal-buttons"):
     st.button("A", width="stretch")
     st.button("OK", width="stretch")
     st.button("Submit", width="stretch")
@@ -49,7 +47,7 @@ with st.container(direction="horizontal", border=True, key="layout-horizontal-bu
     )
     st.button("X", width="stretch")
 
-with st.container(direction="horizontal", key="layout-horizontal-inputs"):
+with st.container(horizontal=True, key="layout-horizontal-inputs"):
     st.date_input("Date Range")
     st.selectbox("Group by", ["Foo"])
     st.multiselect("Deployment", ["All"], default=["All"])
@@ -61,9 +59,7 @@ with st.container(direction="horizontal", key="layout-horizontal-inputs"):
     )
     st.multiselect("Account", ["All"], default=["All"])
 
-with st.container(
-    direction="horizontal", border=True, key="layout-horizontal-checkboxes"
-):
+with st.container(horizontal=True, border=True, key="layout-horizontal-checkboxes"):
     st.checkbox("", width="stretch", key="checkbox1")
     st.checkbox("", width="stretch", key="checkbox2")
     st.checkbox("", width="stretch", key="checkbox3")
@@ -75,9 +71,7 @@ with st.container(
     st.checkbox("", width="stretch", key="checkbox9")
     st.checkbox("", width="stretch", key="checkbox10")
 
-with st.container(
-    direction="horizontal", border=True, key="layout-horizontal-text-area-info"
-):
+with st.container(horizontal=True, border=True, key="layout-horizontal-text-area-info"):
     st.info("Info")
     st.text_area("Notes", height=80, width="stretch")
 
@@ -93,26 +87,24 @@ medium_data = pd.DataFrame(
     }
 )
 
-with st.container(
-    direction="horizontal", border=True, key="layout-horizontal-dataframes"
-):
+with st.container(horizontal=True, border=True, key="layout-horizontal-dataframes"):
     st.dataframe(small_data, use_container_width=False)
     st.dataframe(medium_data, use_container_width=False)
     st.dataframe(small_data, use_container_width=True)
 
 
 with st.container(
-    direction="horizontal", border=True, key="layout-horizontal-nested-containers"
+    horizontal=True, border=True, key="layout-horizontal-nested-containers"
 ):
-    with st.container(direction="horizontal", border=True):
+    with st.container(horizontal=True, border=True):
         st.markdown("Hello, how are you? Do you like ice cream?")
-    with st.container(direction="horizontal", border=True):
+    with st.container(horizontal=True, border=True):
         st.markdown("Hello. Goodbye. So long.")
-    with st.container(direction="horizontal", border=True):
+    with st.container(horizontal=True, border=True):
         st.markdown("Hello")
     st.info("(I like ice cream)")
 
-with st.container(direction="horizontal", border=True, key="layout-horizontal-columns"):
+with st.container(horizontal=True, border=True, key="layout-horizontal-columns"):
     col1, col2, col3 = st.columns(3)
     col1.markdown("Hello, how are you? Do you like ice cream?")
     col2.markdown("Hello. Goodbye. So long.")
@@ -120,9 +112,7 @@ with st.container(direction="horizontal", border=True, key="layout-horizontal-co
     st.info("(I like ice cream)")
 
 
-with st.container(
-    direction="horizontal", border=True, key="layout-horizontal-button-groups"
-):
+with st.container(horizontal=True, border=True, key="layout-horizontal-button-groups"):
     st.segmented_control("Segmented Control", ["Option 1", "Option 2", "Option 3"])
     st.feedback("thumbs", width="stretch")
     st.pills("Priority", ["Low", "Medium", "High"], width="stretch")
