@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useMemo } from "react"
+import React, { FC, memo, useContext, useMemo } from "react"
 
 import range from "lodash/range"
+
+import { LibContext } from "~lib/components/core/LibContext"
 
 import { StyledParticles } from "./styled-components"
 export interface ParticleProps {
   particleType: number
-  getCrossOriginAttribute: (
-    url?: string
-  ) => undefined | "anonymous" | "use-credentials"
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
 }
 
 export interface Props {
@@ -32,7 +32,8 @@ export interface Props {
   numParticles: number
   numParticleTypes: number
   ParticleComponent: FC<React.PropsWithChildren<ParticleProps>>
-  getCrossOriginAttribute: (
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+  getCrossOriginAttribute?: (
     url?: string
   ) => undefined | "anonymous" | "use-credentials"
 }
@@ -43,8 +44,9 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
   numParticles,
   numParticleTypes,
   ParticleComponent,
-  getCrossOriginAttribute,
 }: Props) => {
+  const { libConfig } = useContext(LibContext)
+
   // Prepare a random selection of particle types, but only update the selection
   // if the scriptRunId changes.
   const particleTypes = useMemo(
@@ -53,7 +55,6 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
         Math.floor(Math.random() * numParticleTypes)
       ),
     // Update the random selection of particle types if the scriptRunId changes.
-
     [numParticles, numParticleTypes]
   )
 
@@ -65,7 +66,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
         <ParticleComponent
           key={scriptRunId + i}
           particleType={particleType}
-          getCrossOriginAttribute={getCrossOriginAttribute}
+          resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
         />
       ))}
     </StyledParticles>

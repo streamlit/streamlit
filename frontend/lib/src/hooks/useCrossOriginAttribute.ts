@@ -39,5 +39,5 @@ export const useCrossOriginAttribute = (
   url?: string
 ): undefined | "anonymous" | "use-credentials" => {
   const { libConfig } = useContext(LibContext)
-  return getCrossOriginAttribute(libConfig, url)
+  return getCrossOriginAttribute(libConfig.resourceCrossOriginMode, url)
 }

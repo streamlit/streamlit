@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo } from "react"
+import React, { FC, memo, useContext, useMemo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -26,6 +26,8 @@ import Flake2 from "~lib/assets/img/snow/flake-2.png"
 import Particles from "~lib/components/elements/Particles"
 import { ParticleProps } from "~lib/components/elements/Particles/Particles"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
+import { getCrossOriginAttribute } from "~lib/util/UriUtil"
+import { LibContext } from "~lib/components/core/LibContext"
 
 import { StyledFlake } from "./styled-components"
 
@@ -42,17 +44,20 @@ export interface Props {
   ) => undefined | "anonymous" | "use-credentials"
 }
 
-const Flake: FC<React.PropsWithChildren<ParticleProps>> = ({
-  particleType,
-  getCrossOriginAttribute,
-}) => {
-  const src = FLAKE_IMAGES[particleType]
-  return <StyledFlake src={src} crossOrigin={getCrossOriginAttribute(src)} />
-}
+const Flake: FC<React.PropsWithChildren<ParticleProps>> = memo(
+  ({ particleType, resourceCrossOriginMode }) => {
+    const src = FLAKE_IMAGES[particleType]
+    return (
+      <StyledFlake
+        src={src}
+        crossOrigin={getCrossOriginAttribute(resourceCrossOriginMode, src)}
+      />
+    )
+  }
+)
 
 const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   scriptRunId,
-  getCrossOriginAttribute,
 }) {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
@@ -65,7 +70,6 @@ const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
         numParticleTypes={NUM_FLAKE_TYPES}
         numParticles={NUM_FLAKES}
         ParticleComponent={Flake}
-        getCrossOriginAttribute={getCrossOriginAttribute}
       />
     </RenderInPortalIfExists>
   )

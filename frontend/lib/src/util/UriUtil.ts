@@ -18,8 +18,6 @@
 // https://caniuse.com/mdn-api_urlpattern
 import "urlpattern-polyfill"
 
-import type { LibConfig } from "@streamlit/connection"
-
 /**
  * Check if the given origin follows the allowed origin pattern, which could
  * include wildcards.
@@ -62,7 +60,7 @@ export function isValidOrigin(
 }
 
 export function getCrossOriginAttribute(
-  libConfig: LibConfig,
+  resourceCrossOriginMode: undefined | "anonymous" | "use-credentials",
   url?: string
 ): undefined | "anonymous" | "use-credentials" {
   if (!url) {
@@ -79,7 +77,7 @@ export function getCrossOriginAttribute(
       window.__streamlit?.BACKEND_BASE_URL &&
       parsedUrl.origin === new URL(window.__streamlit?.BACKEND_BASE_URL).origin
     ) {
-      return libConfig.resourceCrossOriginMode
+      return resourceCrossOriginMode
     }
 
     return undefined
@@ -90,7 +88,7 @@ export function getCrossOriginAttribute(
     // The browser would ignore the crossorigin attribute in this case, but to make it more explicit, we return undefined.
     // Note that www.example.com/some-image.png would also return the resourceCrossOriginMode as it is not a valid URL without the scheme.
     return window.__streamlit?.BACKEND_BASE_URL
-      ? libConfig.resourceCrossOriginMode
+      ? resourceCrossOriginMode
       : undefined
   }
 }
