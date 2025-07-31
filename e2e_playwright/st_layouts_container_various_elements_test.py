@@ -87,6 +87,10 @@ def test_layouts_container_expanders(app: Page, assert_snapshot: ImageCompareFun
         expander = container_expanders.first
         expander.click()
 
+        # Wait for charts to load.
+        wait_for_app_run(app)
+        app.wait_for_timeout(500)
+
         assert_snapshot(
             container,
             name=f"st_layouts_container_various_elements-{container_key}-expander-opened",
