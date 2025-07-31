@@ -209,11 +209,11 @@ describe("Sidebar Component", () => {
       const collapseButton = screen.getByTestId("stSidebarCollapseButton")
 
       // Hidden when not hovering
-      expect(collapseButton).toHaveStyle("display: none")
+      expect(collapseButton).toHaveStyle("visibility: hidden")
 
       // Visible when hovering over header
       await user.hover(screen.getByTestId("stSidebarHeader"))
-      expect(collapseButton).toHaveStyle("display: inline")
+      expect(collapseButton).toHaveStyle("visibility: visible")
     })
   })
 

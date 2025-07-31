@@ -18,10 +18,19 @@ import pandas as pd
 import streamlit as st
 
 
-def run_theme_weight_tester_app():
+def run_size_and_weight_test_app():
+    # Better show the charts by minimizing the dead space
+    st.html("""
+        <style>
+            .stMainBlockContainer {
+                padding-top: 4rem;
+            }
+        </style>
+    """)
+
     st.set_page_config(initial_sidebar_state="expanded", layout="wide")
 
-    st.header("Custom Theme Weights :green[App]")
+    st.header("Custom Theme Size & Weights :green[App]")
 
     def page1():
         pass
@@ -135,6 +144,7 @@ def run_theme_weight_tester_app():
             "`is` [Streamlit](https://streamlit.io).",
             help="Tooltip",
         )
+        st.code("# st.code\na = 1234")
         st.success("Wohooo!")
         st.divider()
         st.text_input(

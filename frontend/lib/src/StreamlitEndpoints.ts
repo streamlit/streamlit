@@ -77,6 +77,14 @@ export interface StreamlitEndpoints {
   buildMediaURL(url: string): string
 
   /**
+   * Construct a URL for a download file.
+   * @param url a relative or absolute URL. If `url` is absolute, it will be
+   * returned unchanged. Otherwise, the return value will be a URL for fetching
+   * the media file from the connected Streamlit instance.
+   */
+  buildDownloadUrl(url: string): string
+
+  /**
    * Construct a URL for uploading a file.
    * @param url a relative or absolute URL. If `url` is absolute, it will be
    * returned unchanged. Otherwise, the return value will be a URL for fetching
