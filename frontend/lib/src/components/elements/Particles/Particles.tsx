@@ -58,6 +58,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
     <StyledParticles className={className} data-testid={className}>
       {particleTypes.map((particleType, i) => (
         <ParticleComponent
+          // eslint-disable-next-line @eslint-react/no-array-index-key
           key={scriptRunId + i}
           particleType={particleType}
           resourceCrossOriginMode={libConfig.resourceCrossOriginMode}
