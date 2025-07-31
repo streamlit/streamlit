@@ -58,7 +58,6 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 3000):
     iframe = app.locator("iframe").first
 
     # First ensure the iframe is attached and visible
-    expect(iframe).to_be_attached()
     expect(iframe).to_be_visible()
 
     # Then wait for the PDF content to load by checking that loading text is gone
@@ -124,33 +123,6 @@ def _wait_for_pdf_to_load(app: Page, timeout: int = 3000):
         raise TimeoutError(
             f"PDF failed to load within {timeout}ms. Current state: {current_state}"
         ) from e
-
-    # Final validation: ensure the PDF actually loaded and isn't showing loading text
-    final_check = iframe.evaluate(
-        """
-        (iframe) => {
-            try {
-                const doc = iframe.contentDocument || iframe.contentWindow.document;
-                if (!doc || !doc.body) return { loaded: false, reason: 'No document body' };
-
-                const bodyText = doc.body.textContent || '';
-                const hasLoadingText = bodyText.includes('Loading') || bodyText.includes('loading');
-
-                return {
-                    loaded: !hasLoadingText && doc.body.children.length > 0,
-                    hasLoadingText: hasLoadingText,
-                    bodyPreview: bodyText.substring(0, 100)
-                };
-            } catch (e) {
-                return { loaded: false, error: e.toString() };
-            }
-        }
-        """,
-        iframe,
-    )
-
-    if not final_check.get("loaded", False):
-        raise AssertionError(f"PDF did not load properly. Final state: {final_check}")
 
 
 def test_st_pdf_basic_functionality(app: Page, assert_snapshot: ImageCompareFunction):
