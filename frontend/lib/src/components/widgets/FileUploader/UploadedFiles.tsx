@@ -16,14 +16,14 @@
 
 import React, { memo, ReactElement } from "react"
 
-import withPagination, { PaginationProps } from "./withPagination"
-import UploadedFile from "./UploadedFile"
 import {
   StyledUploadedFiles,
   StyledUploadedFilesList,
   StyledUploadedFilesListItem,
 } from "./styled-components"
+import UploadedFile from "./UploadedFile"
 import { UploadFileInfo } from "./UploadFileInfo"
+import withPagination, { PaginationProps } from "./withPagination"
 
 export interface Props {
   items: UploadFileInfo[]

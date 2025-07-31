@@ -21,9 +21,9 @@ import { Face, SmartToy } from "@emotion-icons/material-outlined"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 
 import {
   StyledAvatarBackground,

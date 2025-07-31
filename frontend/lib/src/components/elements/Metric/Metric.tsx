@@ -21,12 +21,12 @@ import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import Icon from "~lib/components/shared/Icon"
-import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import {
   StyledMetricContainer,

@@ -16,9 +16,9 @@
 
 import React from "react"
 
-import { CancelTokenSource } from "axios"
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { CancelTokenSource } from "axios"
 
 import { render } from "~lib/test_util"
 

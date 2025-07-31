@@ -19,8 +19,8 @@ import React, { useCallback, useMemo } from "react"
 import groupBy from "lodash/groupBy"
 import Overflow from "rc-overflow"
 
-import { IAppPage } from "@streamlit/protobuf"
 import { StreamlitEndpoints } from "@streamlit/connection"
+import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import {

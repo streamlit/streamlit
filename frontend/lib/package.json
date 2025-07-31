@@ -27,6 +27,7 @@
     "test": "vitest run",
     "testWatch": "vitest",
     "lint": "eslint --max-warnings 0 src",
+    "lint:fix": "eslint --max-warnings 0 --fix src",
     "format": "prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "formatCheck": "prettier --check --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
