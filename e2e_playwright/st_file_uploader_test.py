@@ -297,14 +297,21 @@ def test_uploads_directory_with_multiple_files(
     uploader_text = app.get_by_test_id("stText").nth(uploader_index)
     expect(uploader_text).to_contain_text("Directory contains 3 files:")
 
-    # Verify individual files are shown in subsequent text elements
-    file1_text = app.get_by_test_id("stText").nth(uploader_index + 1)
-    file2_text = app.get_by_test_id("stText").nth(uploader_index + 2)
-    file3_text = app.get_by_test_id("stText").nth(uploader_index + 3)
+    # Verify individual files are shown (order may vary)
+    # Get all text elements that might contain file info
+    all_texts = []
+    for i in range(1, 4):
+        text_elem = app.get_by_test_id("stText").nth(uploader_index + i)
+        all_texts.append(text_elem.inner_text())
 
-    expect(file1_text).to_contain_text("folder/file1.txt: 8 bytes")
-    expect(file2_text).to_contain_text("folder/file2.py: 14 bytes")
-    expect(file3_text).to_contain_text("folder/subfolder/file3.md: 10 bytes")
+    # Check that all expected files are present somewhere in the output
+    combined_text = " ".join(all_texts)
+    assert "folder/file1.txt" in combined_text
+    assert "8 bytes" in combined_text
+    assert "folder/file2.py" in combined_text
+    assert "14 bytes" in combined_text
+    assert "folder/subfolder/file3.md" in combined_text
+    assert "10 bytes" in combined_text
 
     # Take snapshot of directory upload state
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
@@ -325,7 +332,7 @@ def test_directory_upload_with_file_type_filtering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that directory upload correctly filters files by type."""
-    uploader_index = 12  # Restricted directory uploader index
+    uploader_index = 13  # Restricted directory uploader index
 
     # Capture console messages to verify filtering feedback
     message_detected = False
@@ -353,9 +360,20 @@ def test_directory_upload_with_file_type_filtering(
     wait_for_app_run(app, wait_delay=1000)
 
     # Verify .txt file was uploaded
-    uploader_text = app.get_by_test_id("stText").nth(11)
-    expect(uploader_text).to_contain_text("Restricted directory contains 1 .txt files:")
-    expect(uploader_text).to_contain_text("- allowed.txt")
+    # Find the text element that contains the restricted directory output
+    text_elements = app.get_by_test_id("stText").all()
+    found = False
+    for i, elem in enumerate(text_elements):
+        text = elem.inner_text()
+        if "Restricted directory contains" in text:
+            expect(elem).to_contain_text("Restricted directory contains 1 .txt files:")
+            # Check the next element for the file name
+            if i + 1 < len(text_elements):
+                expect(text_elements[i + 1]).to_contain_text("allowed.txt")
+            found = True
+            break
+
+    assert found, "Could not find restricted directory output"
 
     # Wait for the message to be detected
     wait_until(
@@ -762,8 +780,8 @@ def test_file_uploader_widths(
 
     expect(file_uploaders).to_have_count(14)  # Updated for 2 new directory uploaders
 
-    stretch_uploader = file_uploaders.nth(10)
-    pixel_width_uploader = file_uploaders.nth(11)
+    stretch_uploader = file_uploaders.nth(11)
+    pixel_width_uploader = file_uploaders.nth(12)
 
     assert_snapshot(stretch_uploader, name="st_file_uploader-width_stretch")
     assert_snapshot(pixel_width_uploader, name="st_file_uploader-width_300px")

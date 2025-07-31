@@ -526,6 +526,71 @@ describe("FileUploader widget tests", () => {
     consoleSpy.mockRestore()
   })
 
+  it("renders directory upload button text correctly", () => {
+    const props = getProps({
+      multipleFiles: true,
+      acceptDirectory: true,
+    })
+    render(<FileUploader {...props} />)
+
+    const browseButton = screen.getByRole("button", {
+      name: "Browse directories",
+    })
+    expect(browseButton).toBeInTheDocument()
+  })
+
+  it("sets webkitdirectory attribute for directory uploads", () => {
+    const props = getProps({
+      multipleFiles: true,
+      acceptDirectory: true,
+    })
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput: HTMLInputElement = screen.getByTestId(
+      "stFileUploaderDropzoneInput"
+    )
+    expect(fileDropZoneInput).toHaveAttribute("webkitdirectory", "")
+  })
+
+  it("preserves directory structure in file names", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      multipleFiles: true,
+      acceptDirectory: true,
+    })
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput: HTMLInputElement = screen.getByTestId(
+      "stFileUploaderDropzoneInput"
+    )
+
+    // Create files with webkitRelativePath to simulate directory structure
+    const directoryFiles = [
+      Object.assign(createFile("project/src/main.py"), {
+        webkitRelativePath: "project/src/main.py",
+      }),
+      Object.assign(createFile("project/tests/test_main.py"), {
+        webkitRelativePath: "project/tests/test_main.py",
+      }),
+    ]
+
+    await user.upload(fileDropZoneInput, directoryFiles)
+
+    // Files should show with their relative paths
+    const fileElements = screen.getAllByTestId("stFileUploaderFile")
+    expect(fileElements).toHaveLength(2)
+
+    // Check that both files are present (order may vary)
+    const fileTexts = fileElements.map(el => el.textContent)
+    expect(fileTexts).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("project/src/main.py"),
+        expect.stringContaining("project/tests/test_main.py"),
+      ])
+    )
+  })
+
   it("handles empty directory upload gracefully", async () => {
     const props = getProps({
       multipleFiles: true,

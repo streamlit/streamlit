@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -578,5 +578,138 @@ describe("ChatInput widget", () => {
 
     // Verify the component accepts directories
     expect(props.element.acceptFile).toBe(ChatInputProto.AcceptFile.DIRECTORY)
+  })
+
+  it("handles directory upload with multiple files", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      maxUploadSizeMb: 50,
+    })
+
+    const spy = vi.spyOn(props.widgetMgr, "setChatInputValue")
+
+    render(<ChatInput {...props} />)
+
+    // Add some text
+    const chatInput = screen.getByTestId("stChatInputTextArea")
+    await user.type(chatInput, "Here are the project files")
+
+    // Mock directory files with relative paths
+    const directoryFiles = [
+      Object.assign(
+        new File(["main content"], "main.py", { type: "text/plain" }),
+        {
+          webkitRelativePath: "project/main.py",
+        }
+      ),
+      Object.assign(
+        new File(["test content"], "test.py", { type: "text/plain" }),
+        {
+          webkitRelativePath: "project/tests/test.py",
+        }
+      ),
+    ]
+
+    const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
+    const fileUploadInput = fileUploadButton.querySelector(
+      "input"
+    ) as HTMLInputElement
+
+    // Simulate file selection
+    await waitFor(() => {
+      fireEvent.change(fileUploadInput, {
+        target: { files: directoryFiles },
+      })
+    })
+
+    // Wait for file processing
+    await waitFor(() => {
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    })
+
+    // Submit the chat
+    const submitButton = screen.getByTestId("stChatInputSubmitButton")
+    await user.click(submitButton)
+
+    // Verify the widget value was set with text and files
+    expect(spy).toHaveBeenCalled()
+    const callArgs = spy.mock.calls[0]
+    const chatInputValue = callArgs[1]
+
+    // Check the text content
+    expect(chatInputValue.data).toBe("Here are the project files")
+
+    // Check that files were uploaded
+    expect(chatInputValue.fileUploaderState.uploadedFileInfo).toHaveLength(2)
+    expect(chatInputValue.fileUploaderState.uploadedFileInfo[0].name).toBe(
+      "project/main.py"
+    )
+    expect(chatInputValue.fileUploaderState.uploadedFileInfo[1].name).toBe(
+      "project/tests/test.py"
+    )
+  })
+
+  it("shows directory structure preservation in file names", async () => {
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      maxUploadSizeMb: 50,
+    })
+
+    render(<ChatInput {...props} />)
+
+    // Files with webkitRelativePath to simulate directory structure
+    const directoryFile = Object.assign(
+      new File(["content"], "readme.md", { type: "text/plain" }),
+      { webkitRelativePath: "docs/readme.md" }
+    )
+
+    const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
+    const fileUploadInput = fileUploadButton.querySelector(
+      "input"
+    ) as HTMLInputElement
+
+    await waitFor(() => {
+      fireEvent.change(fileUploadInput, {
+        target: { files: [directoryFile] },
+      })
+    })
+
+    // Wait for file to be displayed
+    await waitFor(() => {
+      const fileName = screen.getByTestId("stChatInputFileName")
+      expect(fileName).toHaveTextContent("docs/readme.md")
+    })
+  })
+
+  it("enables submit button when directory files are uploaded", async () => {
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
+      maxUploadSizeMb: 50,
+    })
+
+    render(<ChatInput {...props} />)
+
+    // Initially submit button should be disabled (no text, no files)
+    const submitButton = screen.getByTestId("stChatInputSubmitButton")
+    expect(submitButton).toBeDisabled()
+
+    // Upload a file
+    const file = new File(["content"], "file.txt", { type: "text/plain" })
+    const fileUploadButton = screen.getByTestId("stChatInputFileUploadButton")
+    const fileUploadInput = fileUploadButton.querySelector(
+      "input"
+    ) as HTMLInputElement
+
+    await waitFor(() => {
+      fireEvent.change(fileUploadInput, {
+        target: { files: [file] },
+      })
+    })
+
+    // Wait for upload to complete
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled()
+    })
   })
 })
