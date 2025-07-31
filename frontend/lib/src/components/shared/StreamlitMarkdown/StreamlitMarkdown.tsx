@@ -37,12 +37,12 @@ import ReactMarkdown, {
   Components,
   Options as ReactMarkdownProps,
 } from "react-markdown"
-import remarkDirective from "remark-directive"
-import remarkMathPlugin from "remark-math"
-import rehypeRaw from "rehype-raw"
 import rehypeKatex from "rehype-katex"
+import rehypeRaw from "rehype-raw"
+import remarkDirective from "remark-directive"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
+import remarkMathPlugin from "remark-math"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
