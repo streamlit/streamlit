@@ -22,8 +22,8 @@ import once from "lodash/once"
 import { getLogger } from "loglevel"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
-import type { StreamlitWindowObject } from "@streamlit/utils"
 import { localStorageAvailable } from "@streamlit/utils"
+import type { StreamlitWindowObject } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import {
