@@ -39,9 +39,6 @@ const NUM_FLAKE_TYPES = FLAKE_IMAGES.length
 
 export interface Props {
   scriptRunId: string
-  getCrossOriginAttribute: (
-    url?: string
-  ) => undefined | "anonymous" | "use-credentials"
 }
 
 const Flake: FC<React.PropsWithChildren<ParticleProps>> = memo(
