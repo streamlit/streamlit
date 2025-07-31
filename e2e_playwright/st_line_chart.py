@@ -70,6 +70,16 @@ st.line_chart(utc_df)
 st.line_chart(color_df, x="a", y="b", color="e")
 st.line_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
 
+# Test column ordering with explicit y and color parameters (Issue #12071)
+st.header("Column Order Test")
+# Create data with non-alphabetical column names
+column_order_data = {"c_one": [1, 1, 1], "b_two": [2, 2, 2], "a_three": [3, 3, 3]}
+st.line_chart(
+    column_order_data,
+    y=["c_one", "b_two", "a_three"],
+    color=[(255, 0, 0), (0, 255, 0), (0, 0, 255)],
+)
+
 # Test that add_rows maintains original styling params:
 # color, width, height, use_container_width
 line_data = pd.DataFrame({"Line 1": [], "Line 2": []})
