@@ -21,8 +21,8 @@ import { userEvent } from "@testing-library/user-event"
 import { Field, Int64 } from "apache-arrow"
 
 import { render } from "~lib/test_util"
-import { NumberColumn } from "src/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { NumberColumn } from "~lib/components/widgets/DataFrame/columns"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
 
