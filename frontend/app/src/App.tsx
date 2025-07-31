@@ -2066,6 +2066,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Checks if there are any app-defined menu items configured via st.set_page_config
+   */
+  private hasAppDefinedMenuItems = (): boolean => {
+    const { menuItems } = this.state
+    return Boolean(
+      menuItems?.aboutSectionMd ||
+        (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
+        (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
+    )
+  }
+
+  /**
    * Determines whether the toolbar should be visible based on embed mode,
    * toolbar mode settings, and availability of host menu/toolbar items.
    */
@@ -2076,11 +2088,18 @@ export class App extends PureComponent<Props, State> {
     // Show toolbar if not embedded or if specifically configured to display in embed mode
     const isToolbarAllowedInEmbed = !isEmbed() || isToolbarDisplayed()
 
-    // Show toolbar if not in minimal mode or if there are host items to display
-    const hasContentToShow =
-      this.state.toolbarMode !== Config.ToolbarMode.MINIMAL ||
-      hostMenuItems.length > 0 ||
-      hostToolbarItems.length > 0
+    // Determine if toolbar has content to show based on toolbar mode
+    let hasContentToShow: boolean
+    if (this.state.toolbarMode === Config.ToolbarMode.MINIMAL) {
+      // In minimal mode, only show toolbar if there are menu items to display
+      hasContentToShow =
+        hostMenuItems.length > 0 ||
+        hostToolbarItems.length > 0 ||
+        this.hasAppDefinedMenuItems()
+    } else {
+      // In non-minimal modes, always show the toolbar
+      hasContentToShow = true
+    }
 
     return isToolbarAllowedInEmbed && hasContentToShow
   }
