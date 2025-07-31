@@ -4287,4 +4287,140 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       connectionManager.incrementMessageCacheRunCount
     ).not.toHaveBeenCalled()
   })
+
+  describe("Toolbar visibility in minimal mode", () => {
+    beforeEach(() => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      vi.mocked(isToolbarDisplayed).mockReturnValue(false)
+    })
+
+    it("shows toolbar in minimal mode when app-defined About menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set About menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          aboutSectionMd: "Version X",
+        },
+      })
+
+      // The toolbar should be visible because there's an About menu item
+      expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
+    })
+
+    it("shows toolbar in minimal mode when app-defined Get Help menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set Get Help menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          getHelpUrl: "https://example.com/help",
+          hideGetHelp: false,
+        },
+      })
+
+      // The toolbar should be visible because there's a Get Help menu item
+      expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
+    })
+
+    it("shows toolbar in minimal mode when app-defined Report a Bug menu item exists", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set Report a Bug menu item via pageConfigChanged
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          reportABugUrl: "https://example.com/bug",
+          hideReportABug: false,
+        },
+      })
+
+      // The toolbar should be visible because there's a Report a Bug menu item
+      expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
+    })
+
+    it("hides toolbar in minimal mode when no menu items exist", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal with no menu items
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // The toolbar should not be visible because there are no menu items
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+    })
+
+    it("hides toolbar in minimal mode when menu items are hidden", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to minimal
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.MINIMAL,
+        },
+      })
+
+      // Set menu items but hide them
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: {
+          getHelpUrl: "https://example.com/help",
+          hideGetHelp: true,
+          reportABugUrl: "https://example.com/bug",
+          hideReportABug: true,
+        },
+      })
+
+      // The toolbar should not be visible because all menu items are hidden
+      expect(screen.queryByTestId("stMainMenu")).not.toBeInTheDocument()
+    })
+
+    it("shows toolbar in non-minimal modes regardless of menu items", () => {
+      renderApp(getProps())
+
+      // Set toolbar mode to VIEWER (non-minimal)
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.VIEWER,
+        },
+      })
+
+      // The toolbar should be visible even without menu items
+      expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
+    })
+  })
 })
