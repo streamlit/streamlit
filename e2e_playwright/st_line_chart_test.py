@@ -46,7 +46,8 @@ def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         line_chart_elements.nth(10), name="st_line_chart-custom_axis_labels"
     )
-    # The add_rows chart (index 11) is tested separately in test_add_rows_preserves_styling
+    # The column_order chart (index 11) is tested separately in test_column_order_with_colors
+    # The add_rows chart (index 12) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_line_chart_rendering(
@@ -97,7 +98,7 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     """Test that add_rows preserves the original styling params (color, width, height,
     use_container_width).
     """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(11)
+    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
     expect(add_rows_chart).to_be_visible()
 
     # Click the button to add data to the chart
@@ -121,7 +122,7 @@ def test_column_order_with_colors(app: Page, assert_snapshot: ImageCompareFuncti
     This is a regression test for issue #12071 where columns were being
     reordered alphabetically instead of preserving the order specified in y parameter.
     """
-    column_order_chart = app.get_by_test_id("stVegaLiteChart").nth(12)
+    column_order_chart = app.get_by_test_id("stVegaLiteChart").nth(11)
     expect(column_order_chart).to_be_visible()
 
     # The chart should have 3 lines in the specified order
