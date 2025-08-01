@@ -659,7 +659,8 @@ def test_multi_row_and_single_cell_select(app: Page):
         exact_match=True,
     )
 
-    # Click on another cell should replace the cell selection but keep rows (row 4, col 2 with row marker = row 3, col_1)
+    # Click on another cell should replace the cell selection but keep rows
+    # (row 4, col 2 with row marker = row 3, col_1)
     click_on_cell(canvas, 4, 2, column_width="small", has_row_marker_col=True)
     wait_for_app_run(app)
 
@@ -686,7 +687,7 @@ def test_multi_row_column_and_cell_select(
     # Select some columns (with command key)
     app.keyboard.down(COMMAND_KEY)
     select_column(canvas, 2, has_row_marker_col=True)
-    select_column(canvas, 4, has_row_marker_col=True)
+    select_column(canvas, 3, has_row_marker_col=True)
     app.keyboard.up(COMMAND_KEY)
 
     # Select some individual cells
@@ -709,7 +710,7 @@ def test_multi_row_column_and_cell_select(
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row, multi-column & multi-cell selection:",
-        "{'selection': {'rows': [0, 1], 'columns': ['col_1', 'col_3'], 'cells': [{'row': 0, 'column': 'col_1'}, "
+        "{'selection': {'rows': [0, 1], 'columns': ['col_1', 'col_2'], 'cells': [{'row': 0, 'column': 'col_1'}, "
         "{'row': 0, 'column': 'col_2'}, {'row': 0, 'column': 'col_3'}, {'row': 1, 'column': 'col_1'}, "
         "{'row': 1, 'column': 'col_2'}, {'row': 1, 'column': 'col_3'}, {'row': 2, 'column': 'col_1'}, "
         "{'row': 2, 'column': 'col_2'}, {'row': 2, 'column': 'col_3'}]}}",
