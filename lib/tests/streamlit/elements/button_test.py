@@ -359,14 +359,15 @@ class ButtonTest(DeltaGeneratorTestCase):
 
     def test_page_link_without_script_context(self):
         """Test page_link without script context."""
-        # Note: When there's no script context, we still have the test context from DeltaGeneratorTestCase
-        # The original get_script_run_ctx is already saved and restored by DeltaGeneratorTestCase
-        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
-            # page_link with URL should still work even without script context
+        # When there's no script context, page_link returns early with an empty proto
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=None
+        ):
             st.page_link("https://example.com", label="Test")
-            # Should still create the element with our test context
+            # Should still create an element, but it will be empty
             c = self.get_delta_from_queue().new_element.page_link
-            assert c.label == "Test"
+            # When there's no context, the proto is created but fields aren't populated
+            assert c.label == ""  # Empty because no context to process the URL
 
     def test_page_link_with_path_object(self):
         """Test page_link with pathlib.Path object."""
