@@ -45,8 +45,14 @@ export const createUploadFileHandler =
   (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
+
+    // For directory uploads, use the relative path to preserve directory structure
+    const fileName =
+      (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
+      file.name
+
     const uploadingFileInfo = new UploadFileInfo(
-      file.name,
+      fileName,
       file.size,
       getNextLocalFileId(),
       {

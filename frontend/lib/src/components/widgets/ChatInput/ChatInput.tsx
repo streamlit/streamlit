@@ -193,7 +193,10 @@ function ChatInput({
   }
 
   const dropHandler = createDropHandler({
-    acceptMultipleFiles: acceptFile === AcceptFileValue.Multiple,
+    acceptMultipleFiles:
+      acceptFile === AcceptFileValue.Multiple ||
+      acceptFile === AcceptFileValue.Directory,
+    acceptDirectoryFiles: acceptFile === AcceptFileValue.Directory,
     maxFileSize: maxFileSize,
     uploadClient: uploadClient,
     uploadFile: createUploadFileHandler({
@@ -259,11 +262,14 @@ function ChatInput({
         chatInputRef.current.focus()
       }
     },
+    element,
   })
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
-    multiple: acceptFile === AcceptFileValue.Multiple,
+    multiple:
+      acceptFile === AcceptFileValue.Multiple ||
+      acceptFile === AcceptFileValue.Directory,
     accept: getAccept(element.fileType),
     maxSize: maxFileSize,
   })
