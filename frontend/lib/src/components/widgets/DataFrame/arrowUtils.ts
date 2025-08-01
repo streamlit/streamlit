@@ -26,7 +26,6 @@ import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { Field, Null } from "apache-arrow"
 import moment from "moment"
 
-import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import {
   convertTimeToDate,
   format as formatArrowCell,
@@ -49,6 +48,7 @@ import {
   isTimeType,
 } from "~lib/dataframes/arrowTypeUtils"
 import { StyledCell } from "~lib/dataframes/pandasStylerUtils"
+import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import { fontSizes } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 

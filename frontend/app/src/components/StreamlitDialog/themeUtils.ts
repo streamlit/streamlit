@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
-import { toHex } from "color2k"
 
 import {
   BaseColorPicker,

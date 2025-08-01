@@ -20,13 +20,13 @@ import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {

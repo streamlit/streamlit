@@ -23,15 +23,15 @@ import {
   Image as ImageProto,
 } from "@streamlit/protobuf"
 
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Toolbar, {
   StyledToolbarElementContainer,
 } from "~lib/components/shared/Toolbar"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 import {
   StyledCaption,

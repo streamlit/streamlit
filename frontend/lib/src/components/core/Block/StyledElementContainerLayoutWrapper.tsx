@@ -16,10 +16,70 @@
 
 import React, { FC, useMemo } from "react"
 
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
-import type { ElementNode } from "~lib/AppNode"
+import { ButtonGroup } from "@streamlit/protobuf"
 
-import { StyledElementContainer } from "./styled-components"
+import type { ElementNode } from "~lib/AppNode"
+import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+
+const LARGE_STRETCH_BEHAVIOR = [
+  "graphvizChart",
+  "arrowVegaLiteChart",
+  "deckGlJsonChart",
+  "plotlyChart",
+  "docString",
+  "arrowDataFrame",
+  "json",
+  "audioInput",
+  "fileUploader",
+  "cameraInput",
+  "audio",
+  "video",
+  "code", // also includes st.echo
+  "buttonGroup",
+  "iframe",
+]
+
+const MEDIUM_STRETCH_BEHAVIOR = [
+  "dateInput",
+  "radio",
+  "slider", // also includes st.select_slider
+  "textArea",
+  "progress",
+  "multiselect",
+  "selectbox",
+  "timeInput",
+  "numberInput",
+  "textInput",
+]
+
+const WIDTH_STRETCH_OVERRIDE = [
+  // Because of how width is handled for custom components, we need the
+  // element wrapper to be full width.
+  "componentInstance",
+  "arrowDataFrame",
+  // TODO (lawilby): This can probably be removed once width is
+  // implemented for plotly charts. But currently, it seems like when
+  // we have use_container_width=False and the minWidth change the image
+  // doesn't render large enough.
+  "plotlyChart",
+  // The st.image element is potentially a list of images, so we always want
+  // the enclosing container to be full width. The size of individual
+  // images is managed in the ImageList component.
+  // This also covers st.pyplot() which is a special case of st.image.
+  "imgs",
+]
+
+const VISIBLE_OVERFLOW_OVERRIDE = [
+  // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
+  // if we can remove this custom handling in future layouts work.
+  "iframe",
+  "arrowDataFrame",
+  "deckGlJsonChart",
+]
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
@@ -29,51 +89,120 @@ export const StyledElementContainerLayoutWrapper: FC<
     node: ElementNode
   }
 > = ({ node, ...rest }) => {
+  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+  const isContentWidthDataframe =
+    node.element.type === "arrowDataFrame" &&
+    !node.element["arrowDataFrame"]?.width &&
+    !node.element["arrowDataFrame"]?.useContainerWidth
+
+  let minStretchBehavior: MinFlexElementWidth = "fit-content"
+  if (
+    isInHorizontalLayout &&
+    LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
+  ) {
+    minStretchBehavior = "14rem"
+  } else if (
+    isInHorizontalLayout &&
+    MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")
+  ) {
+    minStretchBehavior = "8rem"
+  }
+
+  if (
+    node.element.type === "buttonGroup" &&
+    node.element.buttonGroup?.style === ButtonGroup.Style.BORDERLESS
+  ) {
+    minStretchBehavior = "fit-content"
+  }
+
   const styleOverrides = useMemo(() => {
+    const styles: React.CSSProperties = {}
+
+    if (WIDTH_STRETCH_OVERRIDE.includes(node.element.type ?? "")) {
+      styles.width = "100%"
+    }
+
+    if (VISIBLE_OVERFLOW_OVERRIDE.includes(node.element.type ?? "")) {
+      styles.overflow = "visible"
+    }
+
     if (node.element.type === "imgs") {
-      // The st.image element is potentially a list of images, so we always want
-      // the enclosing container to be full width. The size of individual
-      // images is managed in the ImageList component.
-      return {
-        width: "100%",
+      if (isInHorizontalLayout) {
+        // st.image doesn't have the same proto style as other elements.
+        // this can be consolidated with handling of other elements after width
+        // changes are implemented for st.image.
+        if (node.element.imgs?.width) {
+          styles.width = `${node.element.imgs.width}px`
+          styles.flex = `0 0 ${node.element.imgs.width}px`
+        } else {
+          styles.flex = "1 1 fit-content"
+        }
       }
+      return styles
     } else if (node.element.type === "textArea") {
       // The st.text_area element has a legacy implementation where the height
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
       // flex with height to be set on the element container.
-      // TODO(lawilby): The PR expanding the height of text_area elements will
-      // make st.text_area consistent with the other elements and we can remove this.
       if (node.element.heightConfig?.useStretch) {
         return {
+          height: "100%",
+          flex: "1 1 8rem",
+        }
+      } else if (isInHorizontalLayout) {
+        return {
           height: "auto",
-          flex: "1 1 auto",
         }
       }
       return {
         height: "auto",
+        // Content height text area in vertical layout cannot have flex.
         flex: "",
       }
-    } else if (
-      node.element.type === "iframe" ||
-      node.element.type === "deckGlJsonChart" ||
-      node.element.type === "arrowDataFrame"
-    ) {
-      // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
-      // if we can remove this custom handling in future layouts work.
-      return {
-        overflow: "visible",
+    } else if (node.element.type === "arrowDataFrame") {
+      // TODO (lawilby): Some of this can be removed once the width changes
+      // are implemented for dataframe.
+      if (isContentWidthDataframe && isInHorizontalLayout) {
+        styles.width = "fit-content"
+        styles.flex = "0 0 auto"
       }
+      return styles
+    } else if (node.element.type === "deckGlJsonChart") {
+      // TODO (lawilby): When width is implemented for deckGlJsonChart, we
+      // should try to remove these custom styles.
+      // Currently, maps with use_container_width=False and a size layer
+      // don't render correctly without the width override.
+      if (
+        !node.element.deckGlJsonChart?.useContainerWidth &&
+        !node.element.deckGlJsonChart?.width
+      ) {
+        styles.width = "100%"
+      }
+      return styles
+    } else if (node.element.type === "arrowVegaLiteChart") {
+      if (isInHorizontalLayout) {
+        styles.flex = "1 1 14rem"
+      }
+      return styles
     }
 
-    return {}
-  }, [node.element.type, node.element.heightConfig?.useStretch])
+    return styles
+  }, [
+    node.element.type,
+    node.element.heightConfig?.useStretch,
+    node.element.deckGlJsonChart?.useContainerWidth,
+    node.element.deckGlJsonChart?.width,
+    isContentWidthDataframe,
+    isInHorizontalLayout,
+    node.element.imgs?.width,
+  ])
 
   const styles = useLayoutStyles({
     element: node.element,
     subElement:
       (node.element?.type && node.element[node.element.type]) || undefined,
     styleOverrides,
+    minStretchBehavior,
   })
 
   return <StyledElementContainer {...rest} {...styles} />
