@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import io
+import os
 import tempfile
 from pathlib import Path
 from typing import Any, Callable
@@ -470,8 +471,6 @@ class ButtonTest(DeltaGeneratorTestCase):
                 assert proto.url.startswith("/media/")
                 assert proto.url.endswith(".bin")
         finally:
-            import os
-
             os.unlink(tmp_path)
 
     def test_marshall_file_with_raw_io(self):
