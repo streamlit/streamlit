@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useContext, useEffect } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
-import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
+import { LibContext } from "~lib/components/core/LibContext"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { LibContext } from "~lib/components/core/LibContext"
+import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -37,67 +43,60 @@ export interface Props {
   fragmentId?: string
 }
 
-export function createDownloadLink(
-  endpoints: StreamlitEndpoints,
-  url: string,
-  enforceDownloadInNewTab: boolean
-): HTMLAnchorElement {
-  return createDownloadLinkElement({
-    enforceDownloadInNewTab,
-    url: endpoints.buildMediaURL(url),
-    filename: "",
-  })
-}
-
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, endpoints, fragmentId } = props
+  const { help, label, icon, ignoreRerun, type, url } = element
 
   const {
-    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
+    libConfig: {
+      enforceDownloadInNewTab = false, // Default to false, if no libConfig, e.g. for tests
+    },
   } = useContext(LibContext)
 
   let kind = BaseButtonKind.SECONDARY
-  if (element.type === "primary") {
+  if (type === "primary") {
     kind = BaseButtonKind.PRIMARY
-  } else if (element.type === "tertiary") {
+  } else if (type === "tertiary") {
     kind = BaseButtonKind.TERTIARY
   }
+
+  const downloadUrl = useMemo(
+    () => endpoints.buildDownloadUrl(url),
+    [endpoints, url]
+  )
 
   useEffect(() => {
     // Since we use a hidden link to download, we can't use the onerror event
     // to catch src url load errors. Catch with direct check instead.
-    void endpoints.checkSourceUrlResponse(element.url, "Download Button")
-  }, [element.url, endpoints])
+    void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
+  }, [downloadUrl, endpoints])
 
   const handleDownloadClick: () => void = () => {
-    if (!element.ignoreRerun) {
+    if (!ignoreRerun) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
     }
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
-    const link = createDownloadLink(
-      endpoints,
-      element.url,
-      enforceDownloadInNewTab
-    )
+    const link = createDownloadLinkElement({
+      filename: "",
+      url: downloadUrl,
+      enforceDownloadInNewTab,
+    })
     link.click()
   }
 
   return (
     <div className="stDownloadButton" data-testid="stDownloadButton">
-      <BaseButtonTooltip
-        help={element.help}
-        containerWidth={element.useContainerWidth}
-      >
+      <BaseButtonTooltip help={help} containerWidth={true}>
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
-          containerWidth={element.useContainerWidth}
+          containerWidth={true}
         >
-          <DynamicButtonLabel icon={element.icon} label={element.label} />
+          <DynamicButtonLabel icon={icon} label={label} />
         </BaseButton>
       </BaseButtonTooltip>
     </div>

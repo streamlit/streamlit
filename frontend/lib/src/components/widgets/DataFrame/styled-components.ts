@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 
 export interface StyledResizableContainerProps {
-  hasCustomizedScrollbars: boolean
+  isInHorizontalLayout: boolean
 }
 
 /**
@@ -25,9 +25,9 @@ export interface StyledResizableContainerProps {
  */
 export const StyledResizableContainer =
   styled.div<StyledResizableContainerProps>(
-    ({ hasCustomizedScrollbars, theme }) => ({
+    ({ theme, isInHorizontalLayout }) => ({
       position: "relative",
-      display: "inline-block",
+      display: isInHorizontalLayout ? "flex" : "inline-block",
 
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
@@ -36,10 +36,6 @@ export const StyledResizableContainer =
       },
 
       "& .dvn-scroller": {
-        // We only want to configure scrollbar aspects for browsers that
-        // don't support custom scrollbars (e.g. Firefox). Also, applying this
-        // in Chrome causes the scrollbar to change to the default scrollbar style.
-        ...(!hasCustomizedScrollbars && { scrollbarWidth: "thin" }),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
         ["overflowX" as any]: "auto !important",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.

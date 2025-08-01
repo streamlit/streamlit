@@ -1364,13 +1364,13 @@ _create_theme_options(
 
 _create_theme_options(
     "codeFontWeight",
-    categories=["theme"],
+    categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
         The font weight for code blocks and code text.
 
         This applies to font in inline code, code blocks, `st.json`, and
         `st.help`. This is an integer multiple of 100. Values can be between
-        100 and 900, inclusive.
+        100 and 600, inclusive.
 
         If this isn't set, the code font weight will be 400 (normal weight).
     """,

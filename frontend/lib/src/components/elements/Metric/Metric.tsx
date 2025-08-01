@@ -16,27 +16,27 @@
 
 import React, { memo, ReactElement, useEffect, useRef } from "react"
 
+import { Global } from "@emotion/react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
-import { expressionInterpreter } from "vega-interpreter"
 import embed from "vega-embed"
-import { Global } from "@emotion/react"
+import { expressionInterpreter } from "vega-interpreter"
 import { TopLevelSpec } from "vega-lite"
 
-import { Metric as MetricProto } from "@streamlit/protobuf"
 import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
+import { Metric as MetricProto } from "@streamlit/protobuf"
 
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import Icon from "~lib/components/shared/Icon"
-import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
 import {
   applyStreamlitTheme,
   StyledVegaLiteChartTooltips,
 } from "~lib/components/elements/ArrowVegaLiteChart"
+import Icon from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
+import { StyledWidgetLabelHelpInline } from "~lib/components/widgets/BaseWidget"
+import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import {
   getMetricColor,

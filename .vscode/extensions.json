@@ -9,6 +9,7 @@
     "charliermarsh.ruff",
     "EditorConfig.EditorConfig",
     "vitest.explorer",
-    "tamasfe.even-better-toml"
+    "tamasfe.even-better-toml",
+    "anysphere.cursorpyright"
   ]
 }

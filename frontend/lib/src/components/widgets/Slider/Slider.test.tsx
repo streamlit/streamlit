@@ -25,8 +25,8 @@ import {
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { withTimezones } from "~lib/util/withTimezones"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Slider, { Props } from "./Slider"
 

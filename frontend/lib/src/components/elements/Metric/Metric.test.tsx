@@ -17,17 +17,17 @@
 import React from "react"
 
 import { screen, waitFor } from "@testing-library/react"
-import { TopLevelSpec } from "vega-lite"
 import embed from "vega-embed"
+import { TopLevelSpec } from "vega-lite"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { mockTheme } from "~lib/mocks/mockTheme"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
 import Metric, { getMetricChartSpec, MetricProps } from "./Metric"
 
