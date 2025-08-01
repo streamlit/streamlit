@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -580,7 +580,7 @@ describe("ChatInput widget", () => {
     expect(props.element.acceptFile).toBe(ChatInputProto.AcceptFile.DIRECTORY)
   })
 
-  it("handles directory upload with multiple files", async () => {
+  it("handles directory upload with multiple files and preserves paths", async () => {
     const user = userEvent.setup()
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
@@ -617,11 +617,7 @@ describe("ChatInput widget", () => {
     ) as HTMLInputElement
 
     // Simulate file selection
-    await waitFor(() => {
-      fireEvent.change(fileUploadInput, {
-        target: { files: directoryFiles },
-      })
-    })
+    await user.upload(fileUploadInput, directoryFiles)
 
     // Wait for file processing
     await waitFor(() => {
@@ -641,16 +637,17 @@ describe("ChatInput widget", () => {
     expect(chatInputValue.data).toBe("Here are the project files")
 
     // Check that files were uploaded
-    expect(chatInputValue.fileUploaderState!.uploadedFileInfo).toHaveLength(2)
-    expect(chatInputValue.fileUploaderState!.uploadedFileInfo![0].name).toBe(
+    expect(chatInputValue.fileUploaderState?.uploadedFileInfo).toHaveLength(2)
+    expect(chatInputValue.fileUploaderState?.uploadedFileInfo?.[0].name).toBe(
       "project/main.py"
     )
-    expect(chatInputValue.fileUploaderState!.uploadedFileInfo![1].name).toBe(
+    expect(chatInputValue.fileUploaderState?.uploadedFileInfo?.[1].name).toBe(
       "project/tests/test.py"
     )
   })
 
   it("shows directory structure preservation in file names", async () => {
+    const user = userEvent.setup()
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
       maxUploadSizeMb: 50,
@@ -669,11 +666,7 @@ describe("ChatInput widget", () => {
       "input"
     ) as HTMLInputElement
 
-    await waitFor(() => {
-      fireEvent.change(fileUploadInput, {
-        target: { files: [directoryFile] },
-      })
-    })
+    await user.upload(fileUploadInput, directoryFile)
 
     // Wait for file to be displayed
     await waitFor(() => {
@@ -683,6 +676,7 @@ describe("ChatInput widget", () => {
   })
 
   it("enables submit button when directory files are uploaded", async () => {
+    const user = userEvent.setup()
     const props = getProps({
       acceptFile: ChatInputProto.AcceptFile.DIRECTORY,
       maxUploadSizeMb: 50,
@@ -701,11 +695,7 @@ describe("ChatInput widget", () => {
       "input"
     ) as HTMLInputElement
 
-    await waitFor(() => {
-      fireEvent.change(fileUploadInput, {
-        target: { files: [file] },
-      })
-    })
+    await user.upload(fileUploadInput, file)
 
     // Wait for upload to complete
     await waitFor(() => {
