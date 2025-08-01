@@ -27,6 +27,8 @@ import {
   FormsContext,
   FormsContextProps,
 } from "./components/core/FormsContext"
+import { FlexContext } from "./components/core/Layout/FlexContext"
+import { Direction } from "./components/core/Layout/utils"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
 import ThemeProvider from "./components/core/ThemeProvider"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
@@ -37,10 +39,19 @@ import { ScriptRunState } from "./ScriptRunState"
 import { baseTheme } from "./theme"
 import { createFormsData } from "./WidgetStateManager"
 
+const flexContextValue = {
+  direction: Direction.VERTICAL,
+  isInHorizontalLayout: false,
+}
+
 export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
   return (
     <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
+      <WindowDimensionsProvider>
+        <FlexContext.Provider value={flexContextValue}>
+          {children}
+        </FlexContext.Provider>
+      </WindowDimensionsProvider>
     </ThemeProvider>
   )
 }
@@ -108,18 +119,20 @@ export const renderWithContexts = (
     wrapper: ({ children }) => (
       <ThemeProvider theme={baseTheme.emotion}>
         <WindowDimensionsProvider>
-          <LibContext.Provider
-            value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
-          >
-            <FormsContext.Provider
-              value={{
-                ...defaultFormsContextProps,
-                ...overrideFormsContextProps,
-              }}
+          <FlexContext.Provider value={flexContextValue}>
+            <LibContext.Provider
+              value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
             >
-              {children}
-            </FormsContext.Provider>
-          </LibContext.Provider>
+              <FormsContext.Provider
+                value={{
+                  ...defaultFormsContextProps,
+                  ...overrideFormsContextProps,
+                }}
+              >
+                {children}
+              </FormsContext.Provider>
+            </LibContext.Provider>
+          </FlexContext.Provider>
         </WindowDimensionsProvider>
       </ThemeProvider>
     ),
