@@ -403,7 +403,7 @@ def _convert_altair_to_vega_lite_spec(
     # The default altair theme has some width/height defaults defined
     # which are not useful for Streamlit. Therefore, we change the theme to
     # "none" to avoid those defaults.
-    with alt_theme.enable("none") if alt_theme.active == "default" else nullcontext():  # type: ignore
+    with alt_theme.enable("none") if alt_theme.active == "default" else nullcontext():  # ty: ignore
         with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
