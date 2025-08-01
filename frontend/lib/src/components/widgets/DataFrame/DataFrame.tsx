@@ -1036,6 +1036,8 @@ function DataFrame({
             downFill: true,
             ...(isCellSelectionActivated || isLargeTable
               ? {
+                  // Deactivate select all to prevent potential performance issues
+                  // with too many selected cells being processed for cell selection:
                   selectAll: false,
                 }
               : {}),
@@ -1095,6 +1097,7 @@ function DataFrame({
             // But for touch devices, preventing this can cause issues to select cells.
             // So we allow selection changes for touch devices even when it is not focused.
             if (isFocused || isTouchDevice) {
+              console.log("newSelection", newSelection)
               processSelectionChange(newSelection)
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
@@ -1167,12 +1170,7 @@ function DataFrame({
                 ? "multi"
                 : "single",
             rowSelectionBlending: "mixed",
-            // Deactivate the combination of row selections
-            // and cell selections. This will automatically clear
-            // selected cells when a row is selected.
-            // We are doing this to prevent some issues with drag
-            // and drop selection.
-            rangeSelectionBlending: "exclusive",
+            rangeSelectionBlending: "mixed",
           })}
           // Activate features required for column selection:
           {...(isColumnSelectionActivated && {
@@ -1182,12 +1180,7 @@ function DataFrame({
                 ? "multi"
                 : "single",
             columnSelectionBlending: "mixed",
-            // Deactivate the combination of column selections
-            // and cell selections. This will automatically clear
-            // selected cells when a column is selected.
-            // We are doing this to prevent some issues with drag
-            // and drop selection.
-            rangeSelectionBlending: "exclusive",
+            rangeSelectionBlending: "mixed",
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&

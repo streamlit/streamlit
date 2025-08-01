@@ -125,37 +125,85 @@ function useSelectionHandler(
         gridSelection.current
       )
 
-      const shouldSync =
+      let syncSelection =
         (isRowSelectionActivated && rowSelectionChanged) ||
         (isColumnSelectionActivated && columnSelectionChanged) ||
         (isCellSelectionActivated && cellSelectionChanged)
 
-      let finalSelection = newSelection // Start with what the grid gave us
+      let updatedSelection = newSelection
 
-      // Ensure index columns are not part of a column selection sent to Python
       if (
-        isColumnSelectionActivated &&
-        columnSelectionChanged &&
-        finalSelection.columns.length >= 0
+        (isRowSelectionActivated || isColumnSelectionActivated) &&
+        newSelection.current !== undefined &&
+        cellSelectionChanged
       ) {
-        let cleanedColumns = finalSelection.columns
+        // The default behavior is that row selections are cleared when a cell is selected.
+        // This is not desired when row selection is activated. Instead, we want to keep the
+        // row selection and only update the cell selection.
+        updatedSelection = {
+          ...newSelection,
+          rows: gridSelection.rows,
+          columns: gridSelection.columns,
+        }
+        // It should not sync the selection
+        // when only the cell selection changes
+        // and cell selection is not activated.
+        syncSelection = isCellSelectionActivated
+      }
+
+      if (
+        rowSelectionChanged &&
+        newSelection.rows.length > 0 &&
+        columnSelectionChanged &&
+        newSelection.columns.length === 0
+      ) {
+        // Keep the column selection if row selection was changed
+        updatedSelection = {
+          ...updatedSelection,
+          columns: gridSelection.columns,
+        }
+        syncSelection = true
+      }
+
+      if (
+        columnSelectionChanged &&
+        newSelection.columns.length > 0 &&
+        rowSelectionChanged &&
+        newSelection.rows.length === 0
+      ) {
+        // Keep the row and cell selection if column selection was changed
+        updatedSelection = {
+          ...updatedSelection,
+          rows: gridSelection.rows,
+          current: gridSelection.current,
+        }
+
+        syncSelection = true
+      }
+
+      if (columnSelectionChanged && updatedSelection.columns.length >= 0) {
+        // Remove all index columns from the column selection
+        // We don't want to allow selection of index columns.
+        let cleanedColumns = updatedSelection.columns
         columns.forEach((column, idx) => {
           if (column.isIndex) {
             cleanedColumns = cleanedColumns.remove(idx)
           }
         })
-        if (cleanedColumns.length < finalSelection.columns.length) {
-          finalSelection = {
-            ...finalSelection,
+        if (cleanedColumns.length < updatedSelection.columns.length) {
+          updatedSelection = {
+            ...updatedSelection,
             columns: cleanedColumns,
           }
         }
       }
 
-      setGridSelection(finalSelection) // Update UI with the (potentially column-cleaned) selection from grid
+      // Update the UI with the final selection state
+      setGridSelection(updatedSelection)
 
-      if (shouldSync) {
-        syncSelectionState(finalSelection) // Sync this selection
+      if (syncSelection) {
+        // Sync this selection with the widget state / backend
+        syncSelectionState(updatedSelection)
       }
     },
     [
