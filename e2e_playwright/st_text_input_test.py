@@ -79,9 +79,7 @@ def test_text_input_widget_rendering(
         name="st_text_input-type_password",
     )
     assert_snapshot(
-        get_element_by_key(themed_app, "text_input_14_container").get_by_test_id(
-            "stTextInput"
-        ),
+        get_element_by_key(themed_app, "text_input_14"),
         name="st_text_input-markdown_label",
     )
     assert_snapshot(
