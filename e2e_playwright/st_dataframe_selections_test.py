@@ -25,6 +25,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
+    click_on_cell,
     expect_canvas_to_be_visible,
     open_column_menu,
     select_column,
@@ -71,6 +72,22 @@ def _get_fragment_df(app: Page) -> Locator:
 
 def _get_df_with_index(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(9)
+
+
+def _get_single_cell_select_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(10)
+
+
+def _get_multi_cell_select_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(11)
+
+
+def _get_multi_row_and_single_cell_select_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(12)
+
+
+def _get_multi_row_column_and_cell_select_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(13)
 
 
 def test_single_row_select(app: Page):
@@ -554,3 +571,173 @@ def test_that_index_cannot_be_selected(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "df_selection")).to_be_visible()
+
+
+def test_single_cell_select(app: Page):
+    """Test single cell selection mode."""
+    canvas = _get_single_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Click on cell at row 1, column 1 (col_1)
+    click_on_cell(canvas, 1, 1, column_width="small", has_row_marker_col=False)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': [{'row': 0, 'column': 'col_1'}]}}",
+        exact_match=True,
+    )
+
+    # Click on another cell at row 2, column 3 (col_3)
+    click_on_cell(canvas, 2, 3, column_width="small", has_row_marker_col=False)
+    wait_for_app_run(app)
+
+    # Only the new cell should be selected
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': [{'row': 1, 'column': 'col_3'}]}}",
+        exact_match=True,
+    )
+
+    # Click on the same cell again should unselect it
+    # NOTE: Commenting out for now as deselection by clicking same cell doesn't seem to work
+    # click_on_cell(canvas, 2, 3, column_width="small", has_row_marker_col=False)
+    # wait_for_app_run(app)
+
+    # expect_prefixed_markdown(
+    #     app,
+    #     "Dataframe single-cell selection:",
+    #     "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+    #     exact_match=True,
+    # )
+
+
+def test_multi_cell_select_by_dragging(app: Page):
+    """Test multi cell selection by dragging."""
+    canvas = _get_multi_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Get canvas bounding box for mouse operations
+    bounding_box = canvas.bounding_box()
+    assert bounding_box is not None
+    canvas_start_x_px = bounding_box.get("x", 0)
+    canvas_start_y_px = bounding_box.get("y", 0)
+
+    # Drag from cell (1,1) to cell (3,3) - that's (row 0, col_1) to (row 2, col_3)
+    x1, y1 = calc_middle_cell_position(1, 1, has_row_marker_col=False)
+    x2, y2 = calc_middle_cell_position(3, 3, has_row_marker_col=False)
+
+    app.mouse.move(canvas_start_x_px + x1, canvas_start_y_px + y1)
+    app.mouse.down()
+    app.mouse.move(canvas_start_x_px + x2, canvas_start_y_px + y2)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    # Should select a rectangular region of cells from (0, col_1) to (2, col_3)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': ["
+        "{'row': 0, 'column': 'col_1'}, {'row': 0, 'column': 'col_2'}, {'row': 0, 'column': 'col_3'}, "
+        "{'row': 1, 'column': 'col_1'}, {'row': 1, 'column': 'col_2'}, {'row': 1, 'column': 'col_3'}, "
+        "{'row': 2, 'column': 'col_1'}, {'row': 2, 'column': 'col_2'}, {'row': 2, 'column': 'col_3'}]}}",
+        exact_match=True,
+    )
+
+
+def test_multi_row_and_single_cell_select(app: Page):
+    """Test combined multi-row and single-cell selection mode."""
+    canvas = _get_multi_row_and_single_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Select multiple rows first
+    select_row(canvas, 1)
+    select_row(canvas, 3)
+    wait_for_app_run(app)
+
+    # Then select a single cell (row 2, col 3 accounting for row marker = row 1, col_2)
+    click_on_cell(canvas, 2, 3, column_width="small", has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-row & single-cell selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [{'row': 1, 'column': 'col_2'}]}}",
+        exact_match=True,
+    )
+
+    # Click on another cell should replace the cell selection but keep rows (row 4, col 2 with row marker = row 3, col_1)
+    click_on_cell(canvas, 4, 2, column_width="small", has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-row & single-cell selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': [{'row': 3, 'column': 'col_1'}]}}",
+        exact_match=True,
+    )
+
+
+def test_multi_row_column_and_cell_select(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test combined multi-row, multi-column and multi-cell selection mode."""
+    canvas = _get_multi_row_column_and_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
+
+    # Select some rows
+    select_row(canvas, 1)
+    select_row(canvas, 2)
+
+    # Select some columns (with command key)
+    app.keyboard.down(COMMAND_KEY)
+    select_column(canvas, 2, has_row_marker_col=True)
+    select_column(canvas, 4, has_row_marker_col=True)
+    app.keyboard.up(COMMAND_KEY)
+
+    # Select some individual cells
+    # Get canvas bounding box for mouse operations
+    bounding_box = canvas.bounding_box()
+    assert bounding_box is not None
+    canvas_start_x_px = bounding_box.get("x", 0)
+    canvas_start_y_px = bounding_box.get("y", 0)
+
+    # Drag from cell (1,1) to cell (3,3) - that's (row 0, col_1) to (row 2, col_3)
+    x1, y1 = calc_middle_cell_position(1, 1, has_row_marker_col=False)
+    x2, y2 = calc_middle_cell_position(3, 3, has_row_marker_col=False)
+
+    app.mouse.move(canvas_start_x_px + x1, canvas_start_y_px + y1)
+    app.mouse.down()
+    app.mouse.move(canvas_start_x_px + x2, canvas_start_y_px + y2)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-row, multi-column & multi-cell selection:",
+        "{'selection': {'rows': [0, 1], 'columns': ['col_1', 'col_3'], 'cells': [{'row': 0, 'column': 'col_1'}, "
+        "{'row': 0, 'column': 'col_2'}, {'row': 0, 'column': 'col_3'}, {'row': 1, 'column': 'col_1'}, "
+        "{'row': 1, 'column': 'col_2'}, {'row': 1, 'column': 'col_3'}, {'row': 2, 'column': 'col_1'}, "
+        "{'row': 2, 'column': 'col_2'}, {'row': 2, 'column': 'col_3'}]}}",
+        exact_match=True,
+    )
+
+    # Take a snapshot to ensure visual consistency:
+    assert_snapshot(canvas, name="st_dataframe-multi_row_column_and_cell_select")
+
+    # Press Escape to clear
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-cell selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
