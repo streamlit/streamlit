@@ -48,6 +48,7 @@ selection = st.dataframe(
     selection_mode="single-row",
     column_config=column_config,
     use_container_width=False,
+    key="single_row_select",
 )
 st.write("Dataframe single-row selection:", str(selection))
 
@@ -59,6 +60,7 @@ selection = st.dataframe(
     selection_mode="single-column",
     column_config=column_config,
     use_container_width=False,
+    key="single_column_select",
 )
 st.write("Dataframe single-column selection:", str(selection))
 
@@ -70,6 +72,7 @@ selection = st.dataframe(
     selection_mode="multi-row",
     column_config=column_config,
     use_container_width=False,
+    key="multi_row_select",
 )
 st.write("Dataframe multi-row selection:", str(selection))
 
@@ -81,6 +84,7 @@ selection = st.dataframe(
     selection_mode="multi-column",
     column_config=column_config,
     use_container_width=False,
+    key="multi_column_select",
 )
 st.write("Dataframe multi-column selection:", str(selection))
 
@@ -99,6 +103,7 @@ selection = st.dataframe(
     selection_mode=["multi-row", "multi-column"],
     column_config=column_config,
     use_container_width=False,
+    key="multi_row_multi_column_select",
 )
 st.write("Dataframe multi-row-multi-column selection:", str(selection))
 
@@ -110,6 +115,7 @@ selection = st.dataframe(
     selection_mode=["single-row", "single-column"],
     column_config=column_config,
     use_container_width=False,
+    key="single_row_single_column_select",
 )
 st.write("Dataframe single-row-single-column selection:", str(selection))
 
