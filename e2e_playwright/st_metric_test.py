@@ -193,6 +193,23 @@ def test_pixel_height(app: Page, assert_snapshot: ImageCompareFunction):
     )
 
 
+def test_metric_chart_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that hovering over a metric chart shows correctly."""
+    # Get the first metric which has a line chart
+    metric_element = themed_app.get_by_test_id("stMetric").nth(0)
+    chart_element = metric_element.get_by_test_id("stMetricChart")
+
+    # Ensure the chart is visible and hover over it
+    expect(chart_element).to_be_visible()
+    chart_element.hover()
+
+    # Take a screenshot of the chart while hovering
+    assert_snapshot(
+        chart_element,
+        name="st_metric-chart_hover",
+    )
+
+
 def test_height_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that stretch and content height works correctly in a container."""
     container = app.get_by_test_id("stVerticalBlock").last
