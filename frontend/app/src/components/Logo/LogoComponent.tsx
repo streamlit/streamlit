@@ -18,12 +18,12 @@ import React, { ReactElement } from "react"
 
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
-import { Logo } from "@streamlit/protobuf"
 import {
   StyledLogo,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
+import { StreamlitEndpoints } from "@streamlit/connection"
+import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
 
@@ -31,7 +31,6 @@ export interface LogoComponentProps {
   appLogo: Logo | null
   endpoints: StreamlitEndpoints
   collapsed?: boolean
-  sidebarWidth?: string
   componentName?: string
   dataTestId?: string
 }
@@ -43,7 +42,6 @@ const LogoComponent = ({
   appLogo,
   endpoints,
   collapsed = false,
-  sidebarWidth,
   componentName = "Logo",
   dataTestId = "stLogo",
 }: LogoComponentProps): ReactElement | null => {
@@ -72,7 +70,6 @@ const LogoComponent = ({
     <StyledLogo
       src={source}
       size={appLogo.size}
-      sidebarWidth={sidebarWidth}
       alt="Logo"
       className="stLogo"
       data-testid={dataTestId}

@@ -20,6 +20,7 @@ with st.container(key="thumbs_container"):
     st.feedback()
     st.session_state.thumbs_feedback_disabled = 1
     st.feedback(key="thumbs_feedback_disabled", disabled=True)
+    st.feedback(key="thumbs_feedback_hover_test")
 
 
 with st.container(key="faces_container"):
@@ -36,6 +37,7 @@ with st.container(key="faces_container"):
         key="faces_feedback_disabled",
         disabled=True,
     )
+    st.feedback("faces", key="faces_feedback_hover_test")
 
 with st.container(key="stars_container"):
     sentiment = st.feedback("stars")
@@ -43,6 +45,7 @@ with st.container(key="stars_container"):
     st.session_state.star_feedback_disabled = 3
     sentiment = st.feedback("stars", disabled=True, key="star_feedback_disabled")
     st.write("feedback-disabled:", str(sentiment))
+    st.feedback("stars", key="stars_feedback_hover_test")
 
 
 with st.form(key="my_form", clear_on_submit=True):

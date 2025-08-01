@@ -14,7 +14,16 @@
 from __future__ import annotations
 
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import Never
 
@@ -54,7 +63,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import (
-    T,
     check_python_comparable,
 )
 
@@ -62,6 +70,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+
+T = TypeVar("T")
 
 
 class SelectboxSerde(Generic[T]):
@@ -336,8 +346,8 @@ class SelectboxMixin:
         on_change : callable
             An optional callback invoked when this selectbox's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.

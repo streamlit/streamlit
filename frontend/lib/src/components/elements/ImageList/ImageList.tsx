@@ -23,14 +23,15 @@ import {
   Image as ImageProto,
 } from "@streamlit/protobuf"
 
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import Toolbar, {
   StyledToolbarElementContainer,
 } from "~lib/components/shared/Toolbar"
+import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 import {
   StyledCaption,
@@ -60,6 +61,45 @@ enum WidthBehavior {
   MaxImageOrContainer = -5,
 }
 
+const Image = ({
+  itemKey,
+  image,
+  imgStyle,
+  buildMediaURL,
+  handleImageError,
+}: {
+  itemKey: string
+  image: ImageProto
+  imgStyle: CSSProperties
+  buildMediaURL: (url: string) => string
+  handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
+}): ReactElement => {
+  const crossOrigin = useCrossOriginAttribute(image.url)
+  return (
+    <StyledImageContainer data-testid="stImageContainer">
+      <img
+        style={imgStyle}
+        src={buildMediaURL(image.url)}
+        alt={itemKey}
+        onError={handleImageError}
+        crossOrigin={crossOrigin}
+      />
+      {image.caption && (
+        <StyledCaption data-testid="stImageCaption" style={imgStyle}>
+          <StreamlitMarkdown
+            source={image.caption}
+            allowHTML={false}
+            isCaption
+            // This is technically not a label but we want the same restrictions
+            // as for labels (e.g. no Markdown tables or horizontal rule).
+            isLabel
+          />
+        </StyledCaption>
+      )}
+    </StyledImageContainer>
+  )
+}
+
 /**
  * Functional element for a horizontal list of images.
  */
@@ -75,7 +115,6 @@ function ImageList({
     expand,
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
-
   // The width of the element is the width of the container, not necessarily the image.
   const elementWidth = width || 0
   // The width field in the proto sets the image width, but has special
@@ -152,33 +191,20 @@ function ImageList({
         disableFullscreenMode={disableFullscreenMode}
       ></Toolbar>
       <StyledImageList className="stImage" data-testid="stImage">
-        {element.imgs.map((iimage, idx): ReactElement => {
-          const image = iimage as ImageProto
-          return (
-            // TODO: Update to match React best practices
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            <StyledImageContainer data-testid="stImageContainer" key={idx}>
-              <img
-                style={imgStyle}
-                src={endpoints.buildMediaURL(image.url)}
-                alt={idx.toString()}
-                onError={handleImageError}
-              />
-              {image.caption && (
-                <StyledCaption data-testid="stImageCaption" style={imgStyle}>
-                  <StreamlitMarkdown
-                    source={image.caption}
-                    allowHTML={false}
-                    isCaption
-                    // This is technically not a label but we want the same restrictions
-                    // as for labels (e.g. no Markdown tables or horizontal rule).
-                    isLabel
-                  />
-                </StyledCaption>
-              )}
-            </StyledImageContainer>
+        {element.imgs.map(
+          (iimage, idx): ReactElement => (
+            <Image
+              // TODO: Update to match React best practices
+              // eslint-disable-next-line @eslint-react/no-array-index-key
+              key={idx}
+              itemKey={idx.toString()}
+              image={iimage as ImageProto}
+              imgStyle={imgStyle}
+              buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
+              handleImageError={handleImageError}
+            />
           )
-        })}
+        )}
       </StyledImageList>
     </StyledToolbarElementContainer>
   )

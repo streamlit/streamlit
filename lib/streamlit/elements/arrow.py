@@ -38,6 +38,9 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+)
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -728,9 +731,16 @@ class ArrowMixin:
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
+        # Tables dimensions are not configurable, this ensures that
+        # styles are applied correctly on the element container in the frontend.
+        layout_config = LayoutConfig(
+            width="stretch",
+            height="content",
+        )
+
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        return self.dg._enqueue("arrow_table", proto)
+        return self.dg._enqueue("arrow_table", proto, layout_config=layout_config)
 
     @gather_metrics("add_rows")
     def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:

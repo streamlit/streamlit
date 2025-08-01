@@ -16,6 +16,7 @@
 
 import React, { memo } from "react"
 
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Mic } from "@emotion-icons/material-outlined"
 import {
   Pause,
@@ -23,17 +24,15 @@ import {
   Refresh,
   StopCircle,
 } from "@emotion-icons/material-rounded"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
+import Icon, { StyledSpinnerIcon } from "~lib/components/shared/Icon"
 
 import {
   StyledActionButtonContainerDiv,
   StyledActionButtonPlayPauseDiv,
   StyledActionButtonStartRecordingDiv,
   StyledActionButtonStopRecordingDiv,
-  StyledSpinner,
 } from "./styled-components"
 
 interface BaseActionButtonProps {
@@ -180,7 +179,12 @@ const AudioInputActionButtons: React.FC<AudioInputActionButtonProps> = ({
   if (isUploading) {
     return (
       <StyledActionButtonContainerDiv>
-        <StyledSpinner aria-label="Uploading" />
+        <StyledSpinnerIcon
+          aria-label="Uploading"
+          size="base"
+          margin="0"
+          padding="0"
+        />
       </StyledActionButtonContainerDiv>
     )
   }

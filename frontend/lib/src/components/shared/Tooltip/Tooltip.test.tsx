@@ -17,8 +17,8 @@
 import React from "react"
 
 import { screen } from "@testing-library/react"
-import { BaseProvider, LightTheme } from "baseui"
 import { userEvent } from "@testing-library/user-event"
+import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "~lib/test_util"
 

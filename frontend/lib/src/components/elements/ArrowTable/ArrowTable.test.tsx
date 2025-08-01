@@ -18,9 +18,9 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
-import { EMPTY, UNICODE } from "~lib/mocks/arrow"
 import { Quiver } from "~lib/dataframes/Quiver"
+import { EMPTY, UNICODE } from "~lib/mocks/arrow"
+import { render } from "~lib/test_util"
 
 import { ArrowTable, TableProps } from "./ArrowTable"
 

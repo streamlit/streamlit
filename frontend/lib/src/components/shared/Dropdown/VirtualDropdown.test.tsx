@@ -18,9 +18,9 @@ import React, { ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 
+import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
 import * as Utils from "~lib/theme/utils"
-import { mockConvertRemToPx } from "~lib/mocks/mocks"
 
 import VirtualDropdown from "./VirtualDropdown"
 

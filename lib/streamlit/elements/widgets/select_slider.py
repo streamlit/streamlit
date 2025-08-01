@@ -21,6 +21,7 @@ from typing import (
     Any,
     Callable,
     Generic,
+    TypeVar,
     cast,
     overload,
 )
@@ -57,7 +58,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import T, check_python_comparable
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -65,6 +66,8 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.runtime.state.common import RegisterWidgetResult
+
+T = TypeVar("T")
 
 
 def _is_range_value(value: T | Sequence[T]) -> TypeGuard[Sequence[T]]:
@@ -94,7 +97,7 @@ class SelectSliderSerde(Generic[T]):
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return return_value if self.is_range_value else return_value[0]
 
-    def _as_index_list(self, v: object) -> list[int]:
+    def _as_index_list(self, v: Any) -> list[int]:
         if _is_range_value(v):
             slider_value = [index_(self.options, val) for val in v]
             start, end = slider_value
@@ -228,8 +231,8 @@ class SelectSliderMixin:
         on_change : callable
             An optional callback invoked when this select_slider's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -352,7 +355,7 @@ class SelectSliderMixin:
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
-        def as_index_list(v: object) -> list[int]:
+        def as_index_list(v: Any) -> list[int]:
             if _is_range_value(v):
                 slider_value = [index_(opt, val) for val in v]
                 start, end = slider_value

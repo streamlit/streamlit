@@ -59,7 +59,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.string_util import is_emoji, validate_material_icon
-from streamlit.type_util import T
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -75,7 +74,7 @@ if TYPE_CHECKING:
         WidgetSerializer,
     )
 
-
+T = TypeVar("T")
 V = TypeVar("V")
 
 _THUMB_ICONS: Final = (":material/thumb_up:", ":material/thumb_down:")
@@ -340,8 +339,8 @@ class ButtonGroupMixin:
             An optional callback invoked when this feedback widget's value
             changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -562,8 +561,8 @@ class ButtonGroupMixin:
         on_change : callable
             An optional callback invoked when this widget's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -788,8 +787,8 @@ class ButtonGroupMixin:
         on_change : callable
             An optional callback invoked when this widget's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
@@ -1053,6 +1052,8 @@ class ButtonGroupMixin:
             click_mode=parsed_selection_mode,
             style=style,
             width=width,
+            label=label,
+            help=help,
         )
 
         proto = _build_proto(

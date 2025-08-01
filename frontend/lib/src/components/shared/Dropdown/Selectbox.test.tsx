@@ -19,10 +19,10 @@ import React from "react"
 import { fireEvent, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { render } from "~lib/test_util"
-import { LabelVisibilityOptions } from "~lib/util/utils"
-import * as Utils from "~lib/theme/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
+import { render } from "~lib/test_util"
+import * as Utils from "~lib/theme/utils"
+import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Selectbox, { fuzzyFilterSelectOptions, Props } from "./Selectbox"
 
