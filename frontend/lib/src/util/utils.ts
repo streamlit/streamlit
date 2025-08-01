@@ -27,6 +27,8 @@ import {
 } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
+import { assertNever } from "./assertNever"
+
 // This prefix should be in sync with the value on the python side:
 const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
 
