@@ -25,6 +25,7 @@ import React, {
 import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
 
+import { ConnectionState } from "@streamlit/connection"
 import {
   BaseButton,
   BaseButtonKind,
@@ -37,8 +38,8 @@ import {
   useEmotionTheme,
 } from "@streamlit/lib"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
-import { ConnectionState } from "@streamlit/connection"
 
+import { getConnectionStateUI } from "./getConnectionStateUI"
 import IconRunning from "./IconRunning"
 import {
   StyledAppButtonContainer,
@@ -49,7 +50,6 @@ import {
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
-import { getConnectionStateUI } from "./getConnectionStateUI"
 
 /** Component props */
 export interface StatusWidgetProps {

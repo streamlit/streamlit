@@ -27,12 +27,12 @@ from e2e_playwright.shared.app_utils import expect_no_skeletons
 def configure_custom_theme_font_weights():
     """Configure custom theme."""
     os.environ["STREAMLIT_THEME_BASE_FONT_WEIGHT"] = "200"
-    os.environ["STREAMLIT_THEME_CODE_FONT_WEIGHT"] = "500"
+    os.environ["STREAMLIT_THEME_CODE_FONT_WEIGHT"] = "600"
     os.environ["STREAMLIT_THEME_HEADING_FONT_WEIGHTS"] = json.dumps(
         [800, 700, 500, 400, 300, 200]
     )
     # Configurable separately in sidebar
-    os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT_WEIGHT"] = "700"
+    os.environ["STREAMLIT_THEME_SIDEBAR_CODE_FONT_WEIGHT"] = "200"
     os.environ["STREAMLIT_THEME_SIDEBAR_HEADING_FONT_WEIGHTS"] = json.dumps(
         [200, 300, 400, 500, 700, 800]
     )

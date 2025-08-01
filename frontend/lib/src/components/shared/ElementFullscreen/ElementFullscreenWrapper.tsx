@@ -16,10 +16,10 @@
 
 import React, { FC, PropsWithChildren, useMemo } from "react"
 
-import { StyledFullScreenFrame } from "~lib/components/shared/FullScreenWrapper/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { StyledFullScreenFrame } from "~lib/components/shared/FullScreenWrapper/styled-components"
 import { useCalculatedWidth } from "~lib/hooks/useCalculatedWidth"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { useFullscreen } from "./useFullscreen"
 

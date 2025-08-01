@@ -16,13 +16,13 @@
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { EmotionTheme, getDividerColors } from "~lib/theme"
 import { isValidElementId } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
-import { Direction } from "~lib/components/core/Layout/utils"
 
 export function getClassnamePrefix(direction: Direction): string {
   return direction === Direction.HORIZONTAL

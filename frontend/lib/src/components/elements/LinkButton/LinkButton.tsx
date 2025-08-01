@@ -18,13 +18,13 @@ import React, { memo, MouseEvent, ReactElement } from "react"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
+import { Box } from "~lib/components/shared/Base/styled-components"
 import {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { Box } from "~lib/components/shared/Base/styled-components"
 
 import BaseLinkButton from "./BaseLinkButton"
 
