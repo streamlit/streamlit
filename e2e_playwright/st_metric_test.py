@@ -19,6 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expect_help_tooltip,
+    get_element_by_key,
     get_metric,
 )
 
@@ -226,7 +227,7 @@ def test_metric_chart_hover(themed_app: Page, assert_snapshot: ImageCompareFunct
 
 def test_height_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that stretch and content height works correctly in a container."""
-    container = app.get_by_test_id("stVerticalBlock").last
+    container = get_element_by_key(app, "height_test")
     expect(container).to_be_visible()
 
     stretch_metric = get_metric(container, "Stretch height")

@@ -100,6 +100,6 @@ st.metric("Content width", 123, 123, width="content")
 
 st.metric("Pixel height (200px)", 123, 123, border=True, height=200)
 
-with st.container(height=400):
+with st.container(height=400, key="height_test"):
     st.metric("Stretch height", 123, 123, height="stretch")
     st.metric("Content height", 123, 123, height="content")
