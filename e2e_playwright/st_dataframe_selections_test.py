@@ -727,7 +727,7 @@ def test_multi_row_column_and_cell_select(
 
     expect_prefixed_markdown(
         app,
-        "Dataframe multi-cell selection:",
+        "Dataframe multi-row, multi-column & multi-cell selection:",
         "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
         exact_match=True,
     )

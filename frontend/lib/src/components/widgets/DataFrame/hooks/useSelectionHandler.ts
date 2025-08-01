@@ -207,7 +207,7 @@ function useSelectionHandler(
       }
     },
     [
-      gridSelection, // Need old gridSelection for changed checks
+      gridSelection,
       isRowSelectionActivated,
       isColumnSelectionActivated,
       isCellSelectionActivated,

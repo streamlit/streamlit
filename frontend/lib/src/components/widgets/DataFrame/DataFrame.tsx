@@ -501,7 +501,7 @@ function DataFrame({
 
         let rowSelection = CompactSelection.empty()
         let columnSelection = CompactSelection.empty()
-        // Initialize current for cell selection from state if needed
+
         const currentSelection: GridSelection["current"] = undefined
 
         selectionState.selection?.rows?.forEach(row => {
@@ -1097,7 +1097,6 @@ function DataFrame({
             // But for touch devices, preventing this can cause issues to select cells.
             // So we allow selection changes for touch devices even when it is not focused.
             if (isFocused || isTouchDevice) {
-              console.log("newSelection", newSelection)
               processSelectionChange(newSelection)
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
@@ -1170,7 +1169,9 @@ function DataFrame({
                 ? "multi"
                 : "single",
             rowSelectionBlending: "mixed",
-            rangeSelectionBlending: "mixed",
+            rangeSelectionBlending: isCellSelectionActivated
+              ? "mixed"
+              : "exclusive",
           })}
           // Activate features required for column selection:
           {...(isColumnSelectionActivated && {
@@ -1180,7 +1181,9 @@ function DataFrame({
                 ? "multi"
                 : "single",
             columnSelectionBlending: "mixed",
-            rangeSelectionBlending: "mixed",
+            rangeSelectionBlending: isCellSelectionActivated
+              ? "mixed"
+              : "exclusive",
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
