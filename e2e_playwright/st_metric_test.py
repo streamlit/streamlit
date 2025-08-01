@@ -211,7 +211,7 @@ def test_metric_chart_hover(themed_app: Page, assert_snapshot: ImageCompareFunct
     """Test that hovering over a metric chart shows correctly."""
     # Get the first metric which has a line chart
     metric_element = get_metric(themed_app, "User growth")
-    chart_element = metric_element.get_by_test_id("stMetricChart")
+    chart_element = metric_element.get_by_test_id("stMetricChart").locator("svg")
 
     # Ensure the chart is visible and hover over it
     expect(chart_element).to_be_visible()
