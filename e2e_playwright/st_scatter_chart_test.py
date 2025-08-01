@@ -29,7 +29,7 @@ def test_scatter_chart_rendering(app: Page, assert_snapshot: ImageCompareFunctio
     scatter_chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(scatter_chart_elements).to_have_count(TOTAL_SCATTER_CHARTS)
 
-    # Also make sure that all canvas objects are rendered:
+    # Also make sure that all Vega display objects are rendered:
     expect(scatter_chart_elements.locator("[role='graphics-document']")).to_have_count(
         TOTAL_SCATTER_CHARTS
     )
@@ -81,7 +81,7 @@ def test_themed_scatter_chart_rendering(
     scatter_chart_elements = themed_app.get_by_test_id("stVegaLiteChart")
     expect(scatter_chart_elements).to_have_count(TOTAL_SCATTER_CHARTS)
 
-    # Also make sure that all canvas objects are rendered:
+    # Also make sure that all Vega display objects are rendered:
     expect(scatter_chart_elements.locator("[role='graphics-document']")).to_have_count(
         TOTAL_SCATTER_CHARTS
     )
@@ -108,8 +108,8 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     wait_for_app_run(app)
 
     # Wait for the chart to update
-    chart_canvas = add_rows_chart.locator("[role='graphics-document']")
-    expect(chart_canvas).to_be_visible()
+    vega_display = add_rows_chart.locator("[role='graphics-document']")
+    expect(vega_display).to_be_visible()
 
     # Check that the chart has the correct styling params
     assert_vega_chart_width(add_rows_chart, 600)
