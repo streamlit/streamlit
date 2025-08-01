@@ -68,9 +68,7 @@ with col2:
 with col3:
     st.metric("Test 5", -4.56, 1.23, label_visibility="collapsed")
 
-st.metric(
-    "User growth and a relatively long title", 123, help="testing help without a column"
-)
+st.metric("Relatively long title with help", 123, help="testing help without a column")
 
 st.metric("label title", None, None, help="testing help without a column")
 

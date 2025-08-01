@@ -943,3 +943,24 @@ def goto_app(page: Page, url: str) -> None:
     """
     page.goto(url)
     wait_for_app_loaded(page)
+
+
+def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
+    """Get a metric with the given label.
+
+    Parameters
+    ----------
+    locator : Locator | Page
+        The locator to search for the metric.
+
+    label : str | Pattern[str]
+        The label of the metric to get.
+
+    Returns
+    -------
+    Locator
+        The metric element.
+    """
+    element = locator.get_by_test_id("stMetric").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
