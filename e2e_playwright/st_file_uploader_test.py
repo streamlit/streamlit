@@ -18,6 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pytest
 from playwright.sync_api import ConsoleMessage, FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
@@ -284,6 +285,8 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
+# Firefox doesn't support directory uploads via Playwright's file chooser API
+@pytest.mark.skip_browser("firefox")
 def test_uploads_directory_with_multiple_files(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -342,6 +345,8 @@ def test_uploads_directory_with_multiple_files(
         expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
+# Firefox doesn't support directory uploads via Playwright's file chooser API
+@pytest.mark.skip_browser("firefox")
 def test_directory_upload_with_file_type_filtering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -422,6 +427,8 @@ def test_directory_upload_with_file_type_filtering(
     assert_snapshot(file_uploader, name="st_file_uploader-directory_filtered")
 
 
+# Firefox doesn't support directory uploads via Playwright's file chooser API
+@pytest.mark.skip_browser("firefox")
 def test_directory_upload_empty_directory(app: Page):
     """Test that directory upload handles empty directories gracefully."""
     uploader_index = 3  # Directory uploader index
