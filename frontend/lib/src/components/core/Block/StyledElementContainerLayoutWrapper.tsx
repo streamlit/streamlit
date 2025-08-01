@@ -71,6 +71,7 @@ const WIDTH_STRETCH_OVERRIDE = [
   // images is managed in the ImageList component.
   // This also covers st.pyplot() which is a special case of st.image.
   "imgs",
+  "skeleton",
 ]
 
 const VISIBLE_OVERFLOW_OVERRIDE = [
