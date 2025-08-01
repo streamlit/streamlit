@@ -946,15 +946,15 @@ def goto_app(page: Page, url: str) -> None:
 
 
 def get_metric(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
-    """Get a metric with the given label.
+    """Get a metric element with the given label.
 
     Parameters
     ----------
     locator : Locator | Page
-        The locator to search for the metric.
+        The locator to search for the metric element.
 
     label : str | Pattern[str]
-        The label of the metric to get.
+        The label of the metric element to get.
 
     Returns
     -------
