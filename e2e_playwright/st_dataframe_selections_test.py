@@ -687,6 +687,7 @@ def test_multi_row_column_and_cell_select(
     # Select some columns (with command key)
     app.keyboard.down(COMMAND_KEY)
     select_column(canvas, 2, has_row_marker_col=True)
+    wait_for_app_run(app)
     select_column(canvas, 3, has_row_marker_col=True)
     app.keyboard.up(COMMAND_KEY)
 
