@@ -49,7 +49,6 @@ def file_upload_helper(app: Page, chat_input: Locator, files: list[FilePayload])
 def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.chat_input widgets are correctly rendered via screenshot matching."""
     # set taller height to ensure inputs do not overlap
-    # Modified to test artifact naming with commit SHA
     app.set_viewport_size({"width": 750, "height": 2000})
 
     chat_input_widgets = app.get_by_test_id("stChatInput")
