@@ -198,7 +198,7 @@ def test_multi_row_select(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
-        "{'selection': {'rows': [0, 2], 'columns': []}}",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
@@ -239,7 +239,7 @@ def test_multi_row_by_keeping_mouse_pressed(app: Page):
     expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
-        "{'selection': {'rows': [1, 2, 3], 'columns': []}}",
+        "{'selection': {'rows': [1, 2, 3], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
