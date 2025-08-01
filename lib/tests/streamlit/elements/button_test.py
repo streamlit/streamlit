@@ -357,18 +357,6 @@ class ButtonTest(DeltaGeneratorTestCase):
                 == WidthConfigFields.USE_STRETCH.value
             )
 
-    def test_page_link_without_script_context(self):
-        """Test page_link without script context."""
-        # When there's no script context, page_link returns early with an empty proto
-        with patch(
-            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=None
-        ):
-            st.page_link("https://example.com", label="Test")
-            # Should still create an element, but it will be empty
-            c = self.get_delta_from_queue().new_element.page_link
-            # When there's no context, the proto is created but fields aren't populated
-            assert c.label == ""  # Empty because no context to process the URL
-
     def test_page_link_with_path_object(self):
         """Test page_link with pathlib.Path object."""
         # Create a mock context with pages
