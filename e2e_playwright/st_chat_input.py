@@ -58,28 +58,15 @@ st.write("Chat input 4 (single file) - value:", v4)
 v5 = st.container().chat_input("Chat input 5 (multiple files)", accept_file="multiple")
 st.write("Chat input 5 (multiple files) - value:", v5)
 
-# Add directory upload test scenario
-v6 = st.container().chat_input(
-    "Chat input 6 (directory)", accept_file="directory", file_type=["txt", "py", "md"]
-)
-st.write("Chat input 6 (directory) - value:", v6)
+v6 = st.container().chat_input("Chat input 7 (width=300px)", width=300)
+v7 = st.container().chat_input("Chat input 8 (width='stretch')", width="stretch")
 
-v7 = st.container().chat_input("Chat input 7 (width=300px)", width=300)
-v8 = st.container().chat_input("Chat input 8 (width='stretch')", width="stretch")
 
-# Add directory upload with specific file type restrictions
-v9 = st.container().chat_input(
-    "Chat input 9 (restricted directory - only .txt)",
-    accept_file="directory",
-    file_type="txt",
-)
-st.write("Chat input 9 (restricted directory) - value:", v9)
-
-v10 = st.chat_input(
-    "Chat input 10 (bottom, max_chars, long placeholder) "
+v8 = st.chat_input(
+    "Chat input 8 (bottom, max_chars, long placeholder) "
     "This is a very long placeholder text that should span multiple lines "
     "and cause the chat input to grow vertically to accommodate all the "
     "text properly when displayed in the UI",
     max_chars=200,
 )
-st.write("Chat input 10 (bottom, max_chars) - value:", v10)
+st.write("Chat input 8 (bottom, max_chars) - value:", v8)

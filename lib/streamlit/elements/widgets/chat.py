@@ -391,7 +391,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
-        accept_file: Literal[True, "multiple", "directory"],
+        accept_file: Literal[True, "multiple"],
         file_type: str | Sequence[str] | None = None,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
@@ -407,7 +407,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
-        accept_file: bool | Literal["multiple", "directory"] = False,
+        accept_file: bool | Literal["multiple"] = False,
         file_type: str | Sequence[str] | None = None,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
@@ -442,8 +442,6 @@ class ChatMixin:
             - ``True``: The user can add a single file to their submission.
             - ``"multiple"``: The user can add multiple files to their
               submission.
-            - ``"directory"``: The user can add a directory (all files within
-              the directory) to their submission.
 
             When the widget is configured to accept files, the accepted file
             types can be configured with the ``file_type`` parameter.
@@ -616,9 +614,9 @@ class ChatMixin:
             writes_allowed=True,
         )
 
-        if accept_file not in {True, False, "multiple", "directory"}:
+        if accept_file not in {True, False, "multiple"}:
             raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+                "The `accept_file` parameter must be a boolean or 'multiple'."
             )
 
         ctx = get_script_run_ctx()
@@ -679,7 +677,7 @@ class ChatMixin:
         chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
 
         serde = ChatInputSerde(
-            accept_files=bool(accept_file) or accept_file == "directory",
+            accept_files=bool(accept_file),
             allowed_types=file_type,
         )
         widget_state = register_widget(  # type: ignore[misc]

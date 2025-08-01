@@ -37,31 +37,17 @@ const ChatFileUploadDropzone = ({
   getInputProps,
   acceptFile,
   inputHeight,
-}: Props): React.ReactElement => {
-  const inputProps = getInputProps()
-
-  // Apply webkitdirectory attribute for directory uploads
-  if (acceptFile === AcceptFileValue.Directory) {
-    inputProps.webkitdirectory = ""
-    inputProps.multiple = true
-  }
-
-  return (
-    <>
-      <StyledChatFileUploadDropzone height={inputHeight} {...getRootProps()}>
-        <input {...inputProps} />
-      </StyledChatFileUploadDropzone>
-      <StyledChatFileUploadDropzoneLabel height={inputHeight}>
-        {`Drag and drop ${
-          acceptFile === AcceptFileValue.Multiple
-            ? "files"
-            : acceptFile === AcceptFileValue.Directory
-              ? "a directory"
-              : "a file"
-        } here`}
-      </StyledChatFileUploadDropzoneLabel>
-    </>
-  )
-}
+}: Props): React.ReactElement => (
+  <>
+    <StyledChatFileUploadDropzone height={inputHeight} {...getRootProps()}>
+      <input {...getInputProps()} />
+    </StyledChatFileUploadDropzone>
+    <StyledChatFileUploadDropzoneLabel height={inputHeight}>
+      {`Drag and drop ${
+        acceptFile === AcceptFileValue.Multiple ? "files" : "a file"
+      } here`}
+    </StyledChatFileUploadDropzoneLabel>
+  </>
+)
 
 export default memo(ChatFileUploadDropzone)

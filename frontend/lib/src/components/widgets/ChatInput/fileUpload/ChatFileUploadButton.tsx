@@ -47,48 +47,34 @@ const ChatFileUploadButton = ({
   acceptFile,
   disabled,
   theme,
-}: Props): React.ReactElement => {
-  const inputProps = getInputProps()
-
-  // Apply webkitdirectory attribute for directory uploads
-  if (acceptFile === AcceptFileValue.Directory) {
-    inputProps.webkitdirectory = ""
-    inputProps.multiple = true
-  }
-
-  return (
-    <StyledFileUploadButtonContainer disabled={disabled}>
-      <StyledFileUploadButton
-        data-testid="stChatInputFileUploadButton"
-        disabled={disabled}
-        {...getRootProps()}
+}: Props): React.ReactElement => (
+  <StyledFileUploadButtonContainer disabled={disabled}>
+    <StyledFileUploadButton
+      data-testid="stChatInputFileUploadButton"
+      disabled={disabled}
+      {...getRootProps()}
+    >
+      <input {...getInputProps()} />
+      <TooltipIcon
+        content={`Upload or drag and drop ${
+          acceptFile === AcceptFileValue.Multiple ? "files" : "a file"
+        }`}
+        placement={Placement.TOP}
+        onMouseEnterDelay={500}
       >
-        <input {...inputProps} />
-        <TooltipIcon
-          content={`Upload or drag and drop ${
-            acceptFile === AcceptFileValue.Multiple
-              ? "files"
-              : acceptFile === AcceptFileValue.Directory
-                ? "a directory"
-                : "a file"
-          }`}
-          placement={Placement.TOP}
-          onMouseEnterDelay={500}
-        >
-          <BaseButton kind={BaseButtonKind.MINIMAL} disabled={disabled}>
-            <Icon
-              content={AttachFile}
-              size="lg"
-              color={
-                disabled ? theme.colors.fadedText40 : theme.colors.fadedText60
-              }
-            />
-          </BaseButton>
-        </TooltipIcon>
-      </StyledFileUploadButton>
-      <StyledVerticalDivider />
-    </StyledFileUploadButtonContainer>
-  )
-}
+        <BaseButton kind={BaseButtonKind.MINIMAL} disabled={disabled}>
+          <Icon
+            content={AttachFile}
+            size="lg"
+            color={
+              disabled ? theme.colors.fadedText40 : theme.colors.fadedText60
+            }
+          />
+        </BaseButton>
+      </TooltipIcon>
+    </StyledFileUploadButton>
+    <StyledVerticalDivider />
+  </StyledFileUploadButtonContainer>
+)
 
 export default memo(ChatFileUploadButton)

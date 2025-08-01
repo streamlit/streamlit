@@ -17,11 +17,7 @@
 import zip from "lodash/zip"
 import { ErrorCode as FileErrorCode, FileRejection } from "react-dropzone"
 
-import {
-  ChatInput as ChatInputProto,
-  FileURLs as FileURLsProto,
-  IFileURLs,
-} from "@streamlit/protobuf"
+import { FileURLs as FileURLsProto, IFileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
@@ -29,7 +25,6 @@ import { getRejectedFileInfo } from "~lib/util/FileHelper"
 
 interface CreateDropHandlerParams {
   acceptMultipleFiles: boolean
-  acceptDirectoryFiles: boolean
   maxFileSize: number
   uploadClient: FileUploadClient
   uploadFile: (fileURLs: FileURLsProto, file: File) => void
@@ -37,58 +32,11 @@ interface CreateDropHandlerParams {
   getNextLocalFileId: () => number
   deleteExistingFiles: () => void
   onUploadComplete: () => void
-  element: ChatInputProto
-}
-
-/**
- * Helper function to check if a file matches the accepted extensions
- */
-const isFileTypeAllowed = (file: File, element: ChatInputProto): boolean => {
-  const acceptedExtensions = element.fileType
-
-  // If no extensions are specified, allow all files
-  if (!acceptedExtensions || acceptedExtensions.length === 0) {
-    return true
-  }
-
-  // Check if the file extension matches any of the accepted extensions
-  const fileName = file.name.toLowerCase()
-  return acceptedExtensions.some(ext => fileName.endsWith(ext.toLowerCase()))
-}
-
-/**
- * Helper function to separate directory files into accepted and rejected based on file type
- */
-const filterDirectoryFiles = (
-  files: File[],
-  element: ChatInputProto
-): { accepted: File[]; rejected: FileRejection[] } => {
-  const accepted: File[] = []
-  const rejected: FileRejection[] = []
-
-  files.forEach(file => {
-    if (isFileTypeAllowed(file, element)) {
-      accepted.push(file)
-    } else {
-      rejected.push({
-        file,
-        errors: [
-          {
-            code: "file-invalid-type",
-            message: `${file.type} files are not allowed.`,
-          },
-        ],
-      })
-    }
-  })
-
-  return { accepted, rejected }
 }
 
 export const createDropHandler =
   ({
     acceptMultipleFiles,
-    acceptDirectoryFiles,
     maxFileSize,
     uploadClient,
     uploadFile,
@@ -96,22 +44,8 @@ export const createDropHandler =
     getNextLocalFileId,
     deleteExistingFiles,
     onUploadComplete,
-    element,
   }: CreateDropHandlerParams) =>
   (acceptedFiles: File[], rejectedFiles: FileRejection[]): void => {
-    // For directory uploads, we need to do our own file type filtering
-    // because webkitdirectory bypasses react-dropzone's normal validation
-    if (acceptDirectoryFiles && acceptedFiles.length > 0) {
-      const { accepted, rejected } = filterDirectoryFiles(
-        acceptedFiles,
-        element
-      )
-      acceptedFiles = accepted
-      rejectedFiles = [...rejectedFiles, ...rejected]
-
-      // Directory uploads filter files automatically based on type restrictions
-    }
-
     // If only single file upload is allowed but multiple were dropped/selected,
     // all files will be rejected by default. In this case, we take the first
     // valid file into acceptedFiles, and reject the rest.
