@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from datetime import date
 
 import pandas as pd
 
@@ -48,7 +49,7 @@ with st.container(horizontal=True, border=True, key="layout-horizontal-buttons")
     st.button("X", width="stretch")
 
 with st.container(horizontal=True, key="layout-horizontal-inputs"):
-    st.date_input("Date Range")
+    st.date_input("Date Range", date(1970, 1, 1))
     st.selectbox("Group by", ["Foo"])
     st.multiselect("Deployment", ["All"], default=["All"])
 
