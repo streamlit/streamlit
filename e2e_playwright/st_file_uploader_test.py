@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -42,15 +44,24 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     -------
         Path to the temporary directory
     """
-    temp_dir = tempfile.mkdtemp()
+    # Use a deterministic directory name for consistent test results
+    temp_base = tempfile.gettempdir()
+    temp_dir = os.path.join(temp_base, "streamlit_e2e_test_dir_uploader")
     temp_path = Path(temp_dir)
+
+    # Clean up any existing directory
+    if temp_path.exists():
+        shutil.rmtree(temp_path)
+
+    # Create the directory
+    temp_path.mkdir(parents=True, exist_ok=True)
 
     for file_info in file_data:
         file_path = temp_path / file_info["path"]
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_bytes(file_info["content"])
 
-    return temp_dir
+    return str(temp_dir)
 
 
 def test_file_uploader_render_correctly(
