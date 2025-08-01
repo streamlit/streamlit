@@ -16,13 +16,22 @@
 
 from __future__ import annotations
 
+import io
+import tempfile
+from pathlib import Path
 from typing import Any, Callable
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.widgets.button import marshall_file
+from streamlit.errors import StreamlitAPIException, StreamlitPageNotFoundError
+from streamlit.navigation.page import StreamlitPage
+from streamlit.proto.DownloadButton_pb2 import (
+    DownloadButton as DownloadButtonProto,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -257,3 +266,320 @@ class ButtonTest(DeltaGeneratorTestCase):
             with self.subTest(f"{button_type} with width {width}"):
                 with pytest.raises(StreamlitAPIException):
                     button_func(width=width)
+
+    def test_button_invalid_type(self):
+        """Test button with invalid type parameter."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.button("test", type="invalid")
+        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
+
+    def test_download_button_invalid_type(self):
+        """Test download_button with invalid type parameter."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.download_button("test", data="data", type="invalid")
+        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
+
+    def test_link_button_invalid_type(self):
+        """Test link_button with invalid type parameter."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.link_button("test", "https://example.com", type="invalid")
+        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
+
+    def test_button_with_help(self):
+        """Test button with help parameter."""
+        st.button("test", help="This is help text")
+        c = self.get_delta_from_queue().new_element.button
+        assert c.help == "This is help text"
+
+    def test_button_with_help_multiline(self):
+        """Test button with multiline help parameter using dedent."""
+        st.button(
+            "test",
+            help="""
+            This is a multiline help text.
+            It should be dedented properly.
+        """,
+        )
+        c = self.get_delta_from_queue().new_element.button
+        # The help text should be dedented
+        assert "This is a multiline help text." in c.help
+        assert "It should be dedented properly." in c.help
+
+    def test_download_button_with_help(self):
+        """Test download_button with help parameter."""
+        st.download_button("test", data="data", help="Download help text")
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.help == "Download help text"
+
+    def test_link_button_with_help(self):
+        """Test link_button with help parameter."""
+        st.link_button("test", "https://example.com", help="Link help text")
+        c = self.get_delta_from_queue().new_element.link_button
+        assert c.help == "Link help text"
+
+    def test_page_link_with_help(self):
+        """Test page_link with help parameter."""
+        st.page_link("https://example.com", label="Test", help="Page link help")
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.help == "Page link help"
+
+    def test_download_button_in_form(self):
+        """Test that download_button raises error when used in form."""
+        with st.form("test_form"):
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                st.download_button("test", data="data")
+        assert "can't be used in an `st.form()`" in str(exc_info.value)
+
+    def test_button_serde_serialize(self):
+        """Test ButtonSerde serialize method."""
+        from streamlit.elements.widgets.button import ButtonSerde
+
+        serde = ButtonSerde()
+        # Test serialization with True value
+        assert serde.serialize(True) is True
+        # Test serialization with False value
+        assert serde.serialize(False) is False
+        # Test serialization with non-boolean values
+        assert serde.serialize(1) is True
+        assert serde.serialize(0) is False
+        assert serde.serialize("") is False
+        assert serde.serialize("text") is True
+
+    def test_page_link_in_sidebar(self):
+        """Test that page_link in sidebar uses stretch width."""
+        # Create a mock sidebar that returns True for in_sidebar
+        with patch("streamlit.elements.widgets.button.in_sidebar", return_value=True):
+            st.sidebar.page_link("https://example.com", label="Test", width="content")
+            el = self.get_delta_from_queue().new_element
+            # Even though we specified content, it should be stretch in sidebar
+            assert (
+                el.width_config.WhichOneof("width_spec")
+                == WidthConfigFields.USE_STRETCH.value
+            )
+
+    def test_page_link_without_script_context(self):
+        """Test page_link without script context."""
+        # Note: When there's no script context, we still have the test context from DeltaGeneratorTestCase
+        # The original get_script_run_ctx is already saved and restored by DeltaGeneratorTestCase
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            # page_link with URL should still work even without script context
+            st.page_link("https://example.com", label="Test")
+            # Should still create the element with our test context
+            c = self.get_delta_from_queue().new_element.page_link
+            assert c.label == "Test"
+
+    def test_page_link_with_path_object(self):
+        """Test page_link with pathlib.Path object."""
+        # Create a mock context with pages
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page1": {
+                "script_path": "/app/pages/page1.py",
+                "page_name": "Page 1",
+                "url_pathname": "page1",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch("os.path.realpath", return_value="/app/pages/page1.py"):
+                    st.page_link(Path("pages/page1.py"))
+                    c = self.get_delta_from_queue().new_element.page_link
+                    assert c.page == "page1"
+                    assert c.page_script_hash == "hash123"
+                    assert c.label == "Page 1"
+
+    def test_page_link_page_not_found(self):
+        """Test page_link with non-existent page."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {}
+
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            with patch(
+                "streamlit.file_util.get_main_script_directory", return_value="/app"
+            ):
+                with patch(
+                    "os.path.realpath", return_value="/app/pages/nonexistent.py"
+                ):
+                    with pytest.raises(StreamlitPageNotFoundError):
+                        st.page_link("pages/nonexistent.py")
+
+    def test_page_link_with_streamlit_page(self):
+        """Test page_link with StreamlitPage object."""
+        # Create a StreamlitPage manually without going through the constructor
+        # that checks for file existence
+        page = MagicMock(spec=StreamlitPage)
+        page._page = Path("/app/page.py")
+        page._title = "Test Page"
+        page._icon = "🏠"
+        page._url_path = "test-page"
+        page._script_hash = "test_hash"
+        page._default = False
+        page.title = "Test Page"
+        page.icon = "🏠"
+        page.url_path = "test-page"
+
+        ctx = MagicMock()
+        with patch(
+            "streamlit.elements.widgets.button.get_script_run_ctx", return_value=ctx
+        ):
+            st.page_link(page)
+            c = self.get_delta_from_queue().new_element.page_link
+            assert c.page == "test-page"
+            assert c.page_script_hash == "test_hash"
+            assert c.label == "Test Page"
+            assert c.icon == "🏠"
+
+    def test_marshall_file_with_text_io(self):
+        """Test marshall_file with TextIOWrapper."""
+
+        # Create a TextIOWrapper
+        text_io = io.TextIOWrapper(io.BytesIO(), encoding="utf-8", write_through=True)
+        text_io.write("Hello, World!")
+        text_io.seek(0)
+
+        proto = DownloadButtonProto()
+        marshall_file("test_coords", text_io, proto, None)
+
+        # The mock runtime in DeltaGeneratorTestCase creates a real MediaFileManager
+        assert proto.url.startswith("/media/")
+        assert proto.url.endswith(".txt")
+
+    def test_marshall_file_with_bytes_io(self):
+        """Test marshall_file with BytesIO."""
+
+        bytes_data = io.BytesIO(b"Binary data")
+        proto = DownloadButtonProto()
+        marshall_file("test_coords", bytes_data, proto, None)
+
+        # The mock runtime in DeltaGeneratorTestCase creates a real MediaFileManager
+        assert proto.url.startswith("/media/")
+        assert proto.url.endswith(".bin")
+
+    def test_marshall_file_with_buffered_reader(self):
+        """Test marshall_file with BufferedReader."""
+        # Create a temporary file to test BufferedReader
+
+        with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp:
+            tmp.write(b"Test data")
+            tmp_path = tmp.name
+
+        try:
+            with open(tmp_path, "rb") as f:
+                proto = DownloadButtonProto()
+                marshall_file("test_coords", f, proto, None)
+                # The mock runtime in DeltaGeneratorTestCase creates a real MediaFileManager
+                assert proto.url.startswith("/media/")
+                assert proto.url.endswith(".bin")
+        finally:
+            import os
+
+            os.unlink(tmp_path)
+
+    def test_marshall_file_with_raw_io(self):
+        """Test marshall_file with RawIOBase."""
+
+        # Create a custom RawIOBase for testing
+        class MockRawIO(io.RawIOBase):
+            def __init__(self, data):
+                self.data = data
+                self.pos = 0
+
+            def read(self, size=-1):
+                if size == -1:
+                    result = self.data[self.pos :]
+                    self.pos = len(self.data)
+                else:
+                    result = self.data[self.pos : self.pos + size]
+                    self.pos += len(result)
+                return result
+
+            def seek(self, pos, whence=0):
+                if whence == 0:
+                    self.pos = pos
+                return self.pos
+
+        raw_io = MockRawIO(b"Raw IO data")
+        proto = DownloadButtonProto()
+        marshall_file("test_coords", raw_io, proto, None)
+
+        # The mock runtime in DeltaGeneratorTestCase creates a real MediaFileManager
+        assert proto.url.startswith("/media/")
+        assert proto.url.endswith(".bin")
+
+    def test_marshall_file_invalid_data_type(self):
+        """Test marshall_file with invalid data type."""
+
+        proto = DownloadButtonProto()
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            marshall_file("test_coords", {"invalid": "data"}, proto, None)
+
+        assert "Invalid binary data format" in str(exc_info.value)
+
+    def test_marshall_file_with_runtime(self):
+        """Test marshall_file with runtime exists."""
+
+        # Mock runtime.exists() to return True
+        mock_runtime = MagicMock()
+        mock_runtime.exists.return_value = True
+        mock_instance = MagicMock()
+        mock_instance.media_file_mgr.add.return_value = "/media/test_file"
+        mock_runtime.get_instance.return_value = mock_instance
+
+        with patch("streamlit.elements.widgets.button.runtime", mock_runtime):
+            proto = DownloadButtonProto()
+            marshall_file("test_coords", "test data", proto, None, "test.txt")
+
+            assert proto.url == "/media/test_file"
+            mock_instance.media_file_mgr.add.assert_called_once()
+
+    def test_marshall_file_empty_raw_io(self):
+        """Test marshall_file with RawIOBase that returns None."""
+
+        class EmptyRawIO(io.RawIOBase):
+            def read(self, size=-1):
+                return None
+
+            def seek(self, pos, whence=0):
+                return 0
+
+        raw_io = EmptyRawIO()
+        proto = DownloadButtonProto()
+        # The mock runtime in DeltaGeneratorTestCase creates a real MediaFileManager
+        # so the URL will be populated
+        marshall_file("test_coords", raw_io, proto, None)
+
+        # Empty data should result in an empty file being added
+        assert proto.url.startswith("/media/")
+        assert proto.url.endswith(".bin")
+
+    def test_download_button_on_click_rerun(self):
+        """Test download_button with on_click='rerun'."""
+        st.download_button("test", data="data", on_click="rerun")
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.ignore_rerun is False
+
+    def test_download_button_on_click_none(self):
+        """Test download_button with on_click=None (should behave like 'rerun')."""
+        st.download_button("test", data="data", on_click=None)
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.ignore_rerun is False
+
+    def test_download_button_on_click_callback(self):
+        """Test download_button with callback function."""
+
+        def callback():
+            pass
+
+        st.download_button("test", data="data", on_click=callback)
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.ignore_rerun is False
