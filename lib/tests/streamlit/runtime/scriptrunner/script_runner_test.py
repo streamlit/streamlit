@@ -615,6 +615,7 @@ class ScriptRunnerTest(AsyncTestCase):
             assert call_kwargs["uncaught_exception"] == "AttributeError"
 
     @parameterized.expand([(True,), (False,)])
+    @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_runtime_error(self, show_error_details: bool):
         """Tests that we correctly handle scripts with runtime errors."""
         with testutil.patch_config_options(
