@@ -20,6 +20,7 @@ import xxhash from "xxhashjs"
 
 import {
   Alert as AlertProto,
+  ChatInput as ChatInputProto,
   Element,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Skeleton as SkeletonProto,
@@ -463,6 +464,28 @@ export function labelVisibilityProtoValueToEnum(
       return LabelVisibilityOptions.Collapsed
     default:
       return LabelVisibilityOptions.Visible
+  }
+}
+
+export enum AcceptFileValue {
+  None,
+  Single,
+  Multiple,
+}
+
+export function chatInputAcceptFileProtoValueToEnum(
+  value: ChatInputProto.AcceptFile
+): AcceptFileValue {
+  switch (value) {
+    case ChatInputProto.AcceptFile.NONE:
+      return AcceptFileValue.None
+    case ChatInputProto.AcceptFile.SINGLE:
+      return AcceptFileValue.Single
+    case ChatInputProto.AcceptFile.MULTIPLE:
+      return AcceptFileValue.Multiple
+    default:
+      assertNever(value)
+      return AcceptFileValue.None
   }
 }
 
