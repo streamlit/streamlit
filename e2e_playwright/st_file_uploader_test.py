@@ -46,12 +46,15 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     """
     # Use a deterministic directory name for consistent test results
     temp_base = tempfile.gettempdir()
-    temp_dir = os.path.join(temp_base, "streamlit_e2e_test_dir_uploader")
+    # Create a nested structure so the uploaded directory preserves relative paths
+    test_base_dir = os.path.join(temp_base, "streamlit_e2e_test_base")
+    temp_dir = os.path.join(test_base_dir, "upload_dir")
     temp_path = Path(temp_dir)
 
     # Clean up any existing directory
-    if temp_path.exists():
-        shutil.rmtree(temp_path)
+    base_path = Path(test_base_dir)
+    if base_path.exists():
+        shutil.rmtree(base_path)
 
     # Create the directory
     temp_path.mkdir(parents=True, exist_ok=True)
