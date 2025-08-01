@@ -220,7 +220,7 @@ def test_metric_chart_hover(themed_app: Page, assert_snapshot: ImageCompareFunct
 
     # Take a screenshot of the chart while hovering
     assert_snapshot(
-        chart_element,
+        metric_element,
         name="st_metric-chart_hover",
     )
 
