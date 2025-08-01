@@ -20,6 +20,7 @@ import io
 import os
 import tempfile
 from pathlib import Path
+from textwrap import dedent
 from typing import Any, Callable
 from unittest.mock import MagicMock, patch
 
@@ -107,33 +108,41 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert not c.is_form_submitter
         assert not c.disabled
 
-    @parameterized.expand(["primary", "secondary", "tertiary"])
-    def test_type(self, type):
+    @parameterized.expand(
+        [
+            (name, command, type_)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+            for type_ in ["primary", "secondary", "tertiary"]
+        ]
+    )
+    def test_type(self, name: str, command: Callable[..., Any], type_: str):
         """Test that it can be called with type param."""
-        st.button("the label", type=type)
+        command(type=type_)
 
-        c = self.get_delta_from_queue().new_element.button
-        assert c.type == type
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.type == type_
 
-    def test_emoji_icon(self):
-        """Test that it can be called with emoji icon."""
-        st.button("the label", icon="⚡")
+    @parameterized.expand(
+        [
+            (name, command, icon)
+            for name, command in get_button_command_matrix()
+            for icon in ["⚡", ":material/thumb_up:"]
+        ]
+    )
+    def test_icon(self, name: str, command: Callable[..., Any], icon: str):
+        """Test that it can be called with an icon."""
+        command(icon=icon)
 
-        c = self.get_delta_from_queue().new_element.button
-        assert c.icon == "⚡"
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.icon == icon
 
-    def test_material_icon(self):
-        """Test that it can be called with material icon."""
-        st.button("the label", icon=":material/thumb_up:")
-
-        c = self.get_delta_from_queue().new_element.button
-        assert c.icon == ":material/thumb_up:"
-
-    def test_just_disabled(self):
+    @parameterized.expand(get_button_command_matrix())
+    def test_just_disabled(self, name: str, command: Callable[..., Any]):
         """Test that it can be called with disabled param."""
-        st.button("the label", disabled=True)
+        command(disabled=True)
 
-        c = self.get_delta_from_queue().new_element.button
+        c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.disabled
 
     def test_use_container_width_true(self):
@@ -268,61 +277,41 @@ class ButtonTest(DeltaGeneratorTestCase):
                 with pytest.raises(StreamlitAPIException):
                     button_func(width=width)
 
-    def test_button_invalid_type(self):
-        """Test button with invalid type parameter."""
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+        ]
+    )
+    def test_invalid_type(self, name: str, command: Callable[..., Any]):
+        """Test with invalid type parameter."""
         with pytest.raises(StreamlitAPIException) as exc_info:
-            st.button("test", type="invalid")
+            command(type="invalid")
         assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
 
-    def test_download_button_invalid_type(self):
-        """Test download_button with invalid type parameter."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.download_button("test", data="data", type="invalid")
-        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
-
-    def test_link_button_invalid_type(self):
-        """Test link_button with invalid type parameter."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.link_button("test", "https://example.com", type="invalid")
-        assert 'must be "primary", "secondary", or "tertiary"' in str(exc_info.value)
-
-    def test_button_with_help(self):
-        """Test button with help parameter."""
-        st.button("test", help="This is help text")
-        c = self.get_delta_from_queue().new_element.button
-        assert c.help == "This is help text"
-
-    def test_button_with_help_multiline(self):
-        """Test button with multiline help parameter using dedent."""
-        st.button(
-            "test",
-            help="""
-            This is a multiline help text.
-            It should be dedented properly.
+    @parameterized.expand(
+        [
+            (name, command, "help text 1")
+            for name, command in get_button_command_matrix()
+        ]
+        + [
+            (
+                name,
+                command,
+                """
+        This is a multiline help text.
+        It should be dedented properly.
         """,
-        )
-        c = self.get_delta_from_queue().new_element.button
-        # The help text should be dedented
-        assert "This is a multiline help text." in c.help
-        assert "It should be dedented properly." in c.help
-
-    def test_download_button_with_help(self):
-        """Test download_button with help parameter."""
-        st.download_button("test", data="data", help="Download help text")
-        c = self.get_delta_from_queue().new_element.download_button
-        assert c.help == "Download help text"
-
-    def test_link_button_with_help(self):
-        """Test link_button with help parameter."""
-        st.link_button("test", "https://example.com", help="Link help text")
-        c = self.get_delta_from_queue().new_element.link_button
-        assert c.help == "Link help text"
-
-    def test_page_link_with_help(self):
-        """Test page_link with help parameter."""
-        st.page_link("https://example.com", label="Test", help="Page link help")
-        c = self.get_delta_from_queue().new_element.page_link
-        assert c.help == "Page link help"
+            )
+            for name, command in get_button_command_matrix()
+        ]
+    )
+    def test_with_help(self, name: str, command: Callable[..., Any], help_text: str):
+        """Test with help parameter."""
+        command(help=help_text)
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        assert c.help == dedent(help_text)
 
     def test_download_button_in_form(self):
         """Test that download_button raises error when used in form."""
