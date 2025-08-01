@@ -40,7 +40,6 @@ column_config = {
     "col_4": column_with_fixed_width,
 }
 
-st.header("Row & column selections:")
 st.subheader("single-row select")
 selection = st.dataframe(
     df,
@@ -176,8 +175,7 @@ if "runs" not in st.session_state:
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
-st.header("Dataframe with Index:")
-
+st.subheader("Dataframe with Index:")
 
 selection = st.dataframe(
     df,
@@ -191,7 +189,6 @@ selection = st.dataframe(
 )
 st.write("No selection on index column:", str(selection))
 
-st.header("Cell selections:")
 st.subheader("single-cell select")
 selection = st.dataframe(
     df,
