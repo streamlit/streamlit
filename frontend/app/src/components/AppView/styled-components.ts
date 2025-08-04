@@ -148,8 +148,10 @@ export const StyledAppViewBlockContainer =
       let topPadding = littlePadding // Default: 2.25rem
 
       if (!embedded) {
-        // Non-embedded apps always get 6rem or 8rem
-        topPadding = hasTopNav ? "8rem" : "6rem"
+        // Non-embedded apps always get:
+        //     - 8rem if hasTopNav
+        //     - 2.25rem (default) if no topNav
+        topPadding = hasTopNav ? "8rem" : littlePadding
       } else if (showPadding || showToolbar) {
         // 6rem if embedded with show_padding or show_toolbar
         topPadding = "6rem"
