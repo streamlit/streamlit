@@ -15,6 +15,10 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.vega_utils import (
+    assert_vega_chart_height,
+    assert_vega_chart_width,
+)
 
 TOTAL_LINE_CHARTS = 13
 
@@ -24,8 +28,10 @@ def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     line_chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
-    # Also make sure that all canvas objects are rendered:
-    expect(line_chart_elements.locator("canvas")).to_have_count(TOTAL_LINE_CHARTS)
+    # Also make sure that all Vega display objects are rendered:
+    expect(line_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_LINE_CHARTS
+    )
 
     assert_snapshot(line_chart_elements.nth(0), name="st_line_chart-empty_chart")
     assert_snapshot(line_chart_elements.nth(1), name="st_line_chart-basic_df")
@@ -57,8 +63,10 @@ def test_themed_line_chart_rendering(
     line_chart_elements = themed_app.get_by_test_id("stVegaLiteChart")
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
-    # Also make sure that all canvas objects are rendered:
-    expect(line_chart_elements.locator("canvas")).to_have_count(TOTAL_LINE_CHARTS)
+    # Also make sure that all Vega display objects are rendered:
+    expect(line_chart_elements.locator("[role='graphics-document']")).to_have_count(
+        TOTAL_LINE_CHARTS
+    )
 
     # Only test a single chart per built-in chart type:
     assert_snapshot(line_chart_elements.nth(1), name="st_line_chart_themed")
@@ -73,7 +81,9 @@ def test_multi_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(multi_line_chart).to_be_visible()
 
     multi_line_chart.scroll_into_view_if_needed()
-    multi_line_chart.locator("canvas").hover(position={"x": 100, "y": 100}, force=True)
+    multi_line_chart.locator("[role='graphics-document']").hover(
+        position={"x": 100, "y": 100}, force=True
+    )
 
     expect(app.locator("#vg-tooltip-element")).to_be_visible()
 
@@ -87,7 +97,9 @@ def test_single_line_hover(app: Page, assert_snapshot: ImageCompareFunction):
     expect(single_line_chart).to_be_visible()
 
     single_line_chart.scroll_into_view_if_needed()
-    single_line_chart.locator("canvas").hover(position={"x": 100, "y": 100}, force=True)
+    single_line_chart.locator("[role='graphics-document']").hover(
+        position={"x": 100, "y": 100}, force=True
+    )
 
     expect(app.locator("#vg-tooltip-element")).to_be_visible()
     assert_snapshot(single_line_chart, name="st_line_chart-single_line_hover")
@@ -106,12 +118,12 @@ def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunc
     wait_for_app_run(app)
 
     # Wait for the chart to update
-    chart_canvas = add_rows_chart.locator("canvas")
-    expect(chart_canvas).to_be_visible()
+    vega_display = add_rows_chart.locator("[role='graphics-document']")
+    expect(vega_display).to_be_visible()
 
     # Check that the chart has the correct styling params
-    expect(chart_canvas).to_have_attribute("width", "600")
-    expect(chart_canvas).to_have_attribute("height", "300")
+    assert_vega_chart_width(add_rows_chart, 600)
+    assert_vega_chart_height(add_rows_chart, 300)
 
     assert_snapshot(add_rows_chart, name="st_line_chart-add_rows_preserves_styling")
 
@@ -126,11 +138,11 @@ def test_column_order_with_colors(app: Page, assert_snapshot: ImageCompareFuncti
     expect(column_order_chart).to_be_visible()
 
     # The chart should have 3 lines in the specified order
-    chart_canvas = column_order_chart.locator("canvas")
-    expect(chart_canvas).to_be_visible()
+    vega_display = column_order_chart.locator("[role='graphics-document']")
+    expect(vega_display).to_be_visible()
 
     # Hover to show tooltip and verify the order
-    chart_canvas.hover(position={"x": 50, "y": 100}, force=True)
+    vega_display.hover(position={"x": 50, "y": 100}, force=True)
 
     # Snapshot the chart to verify colors are applied in correct order
     assert_snapshot(column_order_chart, name="st_line_chart-column_order_preserved")
