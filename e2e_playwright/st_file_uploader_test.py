@@ -37,11 +37,14 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     """
     Create a temporary directory with files for directory upload testing.
 
-    Args:
-        file_data: List of dict with 'path' and 'content' keys
+    Parameters
+    ----------
+    file_data : list[dict[str, Any]]
+        List of dict with 'path' and 'content' keys
 
     Returns
     -------
+    str
         Path to the temporary directory
     """
     # Use a deterministic directory name for consistent test results
@@ -682,6 +685,7 @@ def test_custom_css_class_via_key(app: Page):
 
 
 def test_file_uploader_works_with_fragments(app: Page):
+    """Test that file uploader works correctly within fragments."""
     file_name1 = "form_file1.txt"
     file_content1 = b"form_file1content"
 
