@@ -18,7 +18,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import pytest
 from playwright.sync_api import ConsoleMessage, FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
@@ -73,9 +72,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(
-        14
-    )  # Updated count to include new directory uploaders
+    expect(file_uploaders).to_have_count(14)
 
     assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
     assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
@@ -285,8 +282,6 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
-# Firefox doesn't support directory uploads via Playwright's file chooser API
-@pytest.mark.skip_browser("firefox")
 def test_uploads_directory_with_multiple_files(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -345,8 +340,6 @@ def test_uploads_directory_with_multiple_files(
         expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
-# Firefox doesn't support directory uploads via Playwright's file chooser API
-@pytest.mark.skip_browser("firefox")
 def test_directory_upload_with_file_type_filtering(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -427,8 +420,6 @@ def test_directory_upload_with_file_type_filtering(
     assert_snapshot(file_uploader, name="st_file_uploader-directory_filtered")
 
 
-# Firefox doesn't support directory uploads via Playwright's file chooser API
-@pytest.mark.skip_browser("firefox")
 def test_directory_upload_empty_directory(app: Page):
     """Test that directory upload handles empty directories gracefully."""
     uploader_index = 3  # Directory uploader index
@@ -592,7 +583,7 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     file_name1 = "example5.txt"
     file_content1 = b"Hello world!"
 
-    uploader_index = 7  # Shifted due to new directory uploader at index 3
+    uploader_index = 7
 
     # Script contains counter variable stored in session_state with
     # default value 0. We increment counter inside file_uploader callback
@@ -632,7 +623,7 @@ def test_works_inside_form(app: Page):
     file_name1 = "form_file1.txt"
     file_content1 = b"form_file1content"
 
-    uploader_index = 4  # Form file uploader (not the directory uploader at index 3)
+    uploader_index = 4
 
     with app.expect_file_chooser() as fc_info:
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
@@ -697,9 +688,7 @@ def test_file_uploader_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("File uploader in Fragment: False")).to_be_visible()
 
-    uploader_index = (
-        8  # Fragment uploader shifted due to new directory uploader at index 3
-    )
+    uploader_index = 8
 
     with app.expect_file_chooser() as fc_info:
         app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
@@ -821,7 +810,7 @@ def test_file_uploader_widths(
     """Test that file_uploader renders correctly with different width settings."""
     file_uploaders = app.get_by_test_id("stFileUploader")
 
-    expect(file_uploaders).to_have_count(14)  # Updated for 2 new directory uploaders
+    expect(file_uploaders).to_have_count(14)
 
     stretch_uploader = file_uploaders.nth(11)
     pixel_width_uploader = file_uploaders.nth(12)

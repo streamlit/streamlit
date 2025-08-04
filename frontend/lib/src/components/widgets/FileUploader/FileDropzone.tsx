@@ -57,12 +57,7 @@ const FileDropzone = ({
     useFsAccessApi={false}
   >
     {({ getRootProps, getInputProps }) => {
-      const inputProps = getInputProps()
-
-      // When directory upload is enabled, we need to allow multiple files
-      if (acceptDirectory) {
-        inputProps.multiple = true
-      }
+      const inputProps = getInputProps({ multiple: !!acceptDirectory })
 
       return (
         <StyledFileDropzoneSection

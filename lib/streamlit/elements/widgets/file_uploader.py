@@ -67,7 +67,10 @@ SomeUploadedFiles: TypeAlias = Union[
     None,
 ]
 
-# Type alias for accept_multiple_files parameter
+# Type alias for accept_multiple_files parameter.
+# If True, multiple files can be uploaded.
+# If False, only a single file can be uploaded.
+# If set to the literal "directory", users can upload an entire directory (folder) of files.
 AcceptMultipleFiles: TypeAlias = Union[bool, Literal["directory"]]
 
 

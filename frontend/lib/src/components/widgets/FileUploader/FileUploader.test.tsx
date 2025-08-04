@@ -34,11 +34,21 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import FileUploader, { Props } from "./FileUploader"
 
-const createFile = (filename = "filename.txt"): File => {
-  return new File(["Text in a file!"], filename, {
+const createFile = (
+  filename = "filename.txt",
+  webkitRelativePath?: string
+): File => {
+  const file = new File(["Text in a file!"], filename, {
     type: "text/plain",
     lastModified: 0,
   })
+  if (webkitRelativePath) {
+    Object.defineProperty(file, "webkitRelativePath", {
+      value: webkitRelativePath,
+      writable: false,
+    })
+  }
+  return file
 }
 
 const buildFileUploaderStateProto = (
@@ -450,10 +460,9 @@ describe("FileUploader widget tests", () => {
     expect(fileElements.length).toBe(3)
 
     // Verify all files are accepted since they match the allowed types
-    const errorElements = screen.queryAllByTestId(
-      "stFileUploaderFileErrorMessage"
-    )
-    expect(errorElements.length).toBe(0)
+    expect(
+      screen.queryByTestId("stFileUploaderFileErrorMessage")
+    ).not.toBeInTheDocument()
 
     // Verify that setFileUploaderStateValue was called (internal structure may vary)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalled()
@@ -466,7 +475,6 @@ describe("FileUploader widget tests", () => {
       type: [".txt"], // Only allow .txt files
     })
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
-    const consoleSpy = vi.spyOn(console, "log")
     render(<FileUploader {...props} />)
 
     const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
@@ -522,8 +530,6 @@ describe("FileUploader widget tests", () => {
 
     // Only valid .txt files should be uploaded - verify widget state was updated
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalled()
-
-    consoleSpy.mockRestore()
   })
 
   it("renders directory upload button text correctly", () => {
@@ -567,12 +573,8 @@ describe("FileUploader widget tests", () => {
 
     // Create files with webkitRelativePath to simulate directory structure
     const directoryFiles = [
-      Object.assign(createFile("project/src/main.py"), {
-        webkitRelativePath: "project/src/main.py",
-      }),
-      Object.assign(createFile("project/tests/test_main.py"), {
-        webkitRelativePath: "project/tests/test_main.py",
-      }),
+      createFile("project/src/main.py", "project/src/main.py"),
+      createFile("project/tests/test_main.py", "project/tests/test_main.py"),
     ]
 
     await user.upload(fileDropZoneInput, directoryFiles)
@@ -616,8 +618,7 @@ describe("FileUploader widget tests", () => {
     })
 
     // No file elements should be created
-    const fileElements = screen.queryAllByTestId("stFileUploaderFile")
-    expect(fileElements.length).toBe(0)
+    expect(screen.queryByTestId("stFileUploaderFile")).not.toBeInTheDocument()
 
     // Widget state should be initialized but not updated with files for empty directory
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
@@ -732,8 +733,7 @@ describe("FileUploader widget tests", () => {
 
     await user.click(within(deleteBtn).getByRole("button"))
 
-    const fileNames = screen.queryAllByTestId("stFileUploaderFile")
-    expect(fileNames.length).toBe(0)
+    expect(screen.queryByTestId("stFileUploaderFile")).not.toBeInTheDocument()
 
     // WidgetStateManager will still have been called once, during component mounting
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
@@ -789,8 +789,7 @@ describe("FileUploader widget tests", () => {
     await user.click(within(firstDeleteBtn).getByRole("button"))
 
     // File should be gone
-    const fileNamesAfterDelete = screen.queryAllByTestId("stFileUploaderFile")
-    expect(fileNamesAfterDelete.length).toBe(0)
+    expect(screen.queryByTestId("stFileUploaderFile")).not.toBeInTheDocument()
   })
 
   it("handles upload error", async () => {
@@ -904,8 +903,7 @@ describe("FileUploader widget tests", () => {
     rerender(<FileUploader {...props} />)
 
     // Our widget should be reset, and the widgetMgr should be updated
-    const fileNames = screen.queryAllByTestId("stFileUploaderFile")
-    expect(fileNames.length).toBe(0)
+    expect(screen.queryByTestId("stFileUploaderFile")).not.toBeInTheDocument()
 
     // WidgetStateManager will still have been called once, during component mounting
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(

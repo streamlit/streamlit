@@ -101,7 +101,7 @@ describe("FileDropzoneInstructions widget", () => {
     })
     render(<FileDropzoneInstructions {...props} />)
 
-    expect(screen.getByText(/• TXT, PY/)).toBeInTheDocument()
+    expect(screen.getByText(/• TXT, PY/)).toBeVisible()
   })
 
   it("shows size limit with directory upload", () => {
@@ -111,6 +111,6 @@ describe("FileDropzoneInstructions widget", () => {
     })
     render(<FileDropzoneInstructions {...props} />)
 
-    expect(screen.getByText("Limit 5KB per file")).toBeInTheDocument()
+    expect(screen.getByText("Limit 5KB per file")).toBeVisible()
   })
 })

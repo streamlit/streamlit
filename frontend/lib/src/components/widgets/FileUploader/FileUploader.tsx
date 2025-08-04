@@ -283,13 +283,15 @@ class FileUploader extends PureComponent<InnerProps, State> {
   ): void => {
     const { element } = this.props
     const { multipleFiles } = element
-    const isDirectoryUpload = Boolean(
-      (element as InnerProps["element"] & { acceptDirectory?: boolean })
-        .acceptDirectory
-    )
+    const isDirectoryUpload = Boolean(element.acceptDirectory)
 
     // For directory uploads, we need to do our own file type filtering
-    // because webkitdirectory bypasses react-dropzone's normal validation
+    // because webkitdirectory bypasses react-dropzone's normal validation.
+    // TODO: Consider unifying validation logic to avoid divergence between
+    // single/multiple file uploads and directory uploads. Currently, regular
+    // uploads use react-dropzone's built-in validation while directory uploads
+    // use our custom filterDirectoryFiles method. This could lead to
+    // inconsistent behavior.
     if (isDirectoryUpload && acceptedFiles.length > 0) {
       const { accepted, rejected } = this.filterDirectoryFiles(acceptedFiles)
       acceptedFiles = accepted
@@ -369,9 +371,7 @@ class FileUploader extends PureComponent<InnerProps, State> {
     const cancelToken = axios.CancelToken.source()
 
     // For directory uploads, use the relative path to preserve directory structure
-    const fileName =
-      (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
-      file.name
+    const fileName = file.webkitRelativePath || file.name
 
     const uploadingFileInfo = new UploadFileInfo(
       fileName,
@@ -620,10 +620,7 @@ class FileUploader extends PureComponent<InnerProps, State> {
           maxSizeBytes={this.maxUploadSizeInBytes}
           label={element.label}
           disabled={disabled}
-          acceptDirectory={Boolean(
-            (element as InnerProps["element"] & { acceptDirectory?: boolean })
-              .acceptDirectory
-          )}
+          acceptDirectory={Boolean(element.acceptDirectory)}
         />
         {newestToOldestFiles.length > 0 && (
           <UploadedFiles

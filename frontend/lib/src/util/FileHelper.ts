@@ -135,9 +135,7 @@ export const getRejectedFileInfo = (
   const { file, errors } = rejected
 
   // For directory uploads, use the relative path to preserve directory structure
-  const fileName =
-    (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
-    file.name
+  const fileName = file.webkitRelativePath || file.name
 
   return new UploadFileInfo(fileName, file.size, fileId, {
     type: "error",
