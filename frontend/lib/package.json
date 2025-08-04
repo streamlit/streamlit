@@ -146,7 +146,7 @@
     "@types/lodash": "~4.17.20",
     "@types/mapbox-gl": "~1.13.10",
     "@types/moment-duration-format": "~2.2.6",
-    "@types/plotly.js": "^3.0.2",
+    "@types/plotly.js": "^3.0.3",
     "@types/react": "^18.2.0",
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^18.2.0",
