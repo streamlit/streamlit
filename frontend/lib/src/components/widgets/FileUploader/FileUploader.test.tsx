@@ -52,7 +52,6 @@ const createFile = (
   return file
 }
 
-
 const buildFileUploaderStateProto = (
   fileUrlsArray: IFileURLs[]
 ): FileUploaderStateProto =>
@@ -476,7 +475,6 @@ describe("FileUploader widget tests", () => {
       createFile("docs/image.jpg", "docs/image.jpg", "image/jpeg"),
       createFile("docs/document.pdf", "docs/document.pdf", "application/pdf"),
     ]
-
 
     fireEvent.drop(fileDropZone, {
       dataTransfer: {
