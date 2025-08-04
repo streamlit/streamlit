@@ -25,12 +25,12 @@ import React, {
 
 import { toaster, type ToastOverrides } from "baseui/toast"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Kind } from "~lib/components/shared/AlertContainer"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { Kind } from "~lib/components/shared/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
 import {
   StyledMessageWrapper,

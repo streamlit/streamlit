@@ -13,12 +13,16 @@
 # limitations under the License.
 
 import textwrap
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns  # type: ignore
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 np.random.seed(0)
 
@@ -43,9 +47,9 @@ st.pyplot(fig, use_container_width=False)
 st.write("Advanced Seaborn figure:")
 # Generate data
 data_points = 100
-x_data: "np.typing.NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
-y_data: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
-data2: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 2)
+x_data: "NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
+y_data: "NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
+data2: "NDArray[np.float64]" = np.random.randn(data_points, 2)
 
 # Generate plot
 fig, ax = plt.subplots(figsize=(4.5, 4.5))

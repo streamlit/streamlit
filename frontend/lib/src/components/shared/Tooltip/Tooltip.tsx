@@ -29,8 +29,8 @@ import {
   StatefulTooltip,
 } from "baseui/tooltip"
 
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledTooltipContentWrapper } from "./styled-components"
 import { useTooltipMeasurementSideEffect } from "./useTooltipMeasurementSideEffect"

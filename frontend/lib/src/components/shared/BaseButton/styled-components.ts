@@ -417,7 +417,7 @@ export const StyledBorderlessIconButton = styled(
       outline: "none",
     },
     "&:hover": {
-      color: theme.colors.text,
+      color: theme.colors.bodyText,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       color: theme.colors.fadedText10,

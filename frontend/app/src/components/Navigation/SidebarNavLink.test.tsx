@@ -19,9 +19,9 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { render } from "@streamlit/lib"
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import { render } from "@streamlit/lib"
 import { PageConfig } from "@streamlit/protobuf"
 
 import SidebarNavLink, { SidebarNavLinkProps } from "./SidebarNavLink"

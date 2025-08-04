@@ -31,26 +31,27 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
+import { shouldChildrenStretch } from "~lib/components/core/Layout/utils"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   DynamicButtonLabel,
 } from "~lib/components/shared/BaseButton"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
+import { Placement } from "~lib/components/shared/Tooltip"
+import TooltipIcon from "~lib/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
 } from "~lib/components/widgets/BaseWidget"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { EmotionTheme } from "~lib/theme"
-import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
+import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -338,8 +339,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     fragmentId,
   })
 
-  // This determines whether the buttons will stretch to fill the container or if they should take up the width of their content.
-  const containerWidth = !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
+  const containerWidth = shouldChildrenStretch(widthConfig)
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,

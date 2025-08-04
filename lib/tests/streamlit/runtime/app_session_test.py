@@ -1388,22 +1388,30 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # font field uses a deprecated enum:
         assert new_session_msg.custom_theme.body_font == ""
         assert not new_session_msg.custom_theme.font_faces
-        assert not new_session_msg.custom_theme.chart_categorical_colors
-        assert not new_session_msg.custom_theme.chart_sequential_colors
 
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.HasField("base_radius")
+        assert not new_session_msg.custom_theme.HasField("button_radius")
         assert not new_session_msg.custom_theme.HasField("border_color")
+        assert not new_session_msg.custom_theme.HasField("dataframe_border_color")
         assert not new_session_msg.custom_theme.HasField("show_widget_border")
         assert not new_session_msg.custom_theme.HasField("link_color")
         assert not new_session_msg.custom_theme.HasField("link_underline")
         assert not new_session_msg.custom_theme.HasField("base_font_size")
         assert not new_session_msg.custom_theme.HasField("base_font_weight")
-        assert not new_session_msg.custom_theme.HasField("code_background_color")
+        assert not new_session_msg.custom_theme.HasField("code_font_size")
+        assert not new_session_msg.custom_theme.HasField("code_font_weight")
         assert not new_session_msg.custom_theme.HasField("show_sidebar_border")
+        assert not new_session_msg.custom_theme.HasField("code_background_color")
         assert not new_session_msg.custom_theme.HasField(
             "dataframe_header_background_color"
         )
+
+        # Fields that are marked as repeated in proto:
+        assert not new_session_msg.custom_theme.heading_font_sizes
+        assert not new_session_msg.custom_theme.heading_font_weights
+        assert not new_session_msg.custom_theme.chart_categorical_colors
+        assert not new_session_msg.custom_theme.chart_sequential_colors
 
         app_session._populate_theme_msg(
             new_session_msg.custom_theme.sidebar,
@@ -1419,16 +1427,31 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.sidebar.HasField("base_radius")
+        assert not new_session_msg.custom_theme.sidebar.HasField("button_radius")
         assert not new_session_msg.custom_theme.sidebar.HasField("border_color")
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "dataframe_border_color"
+        )
         assert not new_session_msg.custom_theme.sidebar.HasField("show_widget_border")
         assert not new_session_msg.custom_theme.sidebar.HasField("link_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("link_underline")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
+        assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("code_font_size")
+        assert not new_session_msg.custom_theme.sidebar.HasField("code_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "code_background_color"
         )
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_header_background_color"
         )
+
+        # Fields that are marked as repeated in proto:
+        assert not new_session_msg.custom_theme.sidebar.heading_font_sizes
+        assert not new_session_msg.custom_theme.sidebar.heading_font_weights
+        assert not new_session_msg.custom_theme.sidebar.chart_categorical_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_sequential_colors
 
     @patch("streamlit.runtime.app_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -1447,12 +1470,21 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.text_color == "black"
         assert new_session_msg.custom_theme.secondary_background_color == "blue"
         assert new_session_msg.custom_theme.base_radius == "1.2rem"
+        assert new_session_msg.custom_theme.button_radius == "medium"
         assert new_session_msg.custom_theme.border_color == "#ff0000"
+        assert new_session_msg.custom_theme.dataframe_border_color == "#280f63"
         assert new_session_msg.custom_theme.show_widget_border is True
         assert new_session_msg.custom_theme.link_color == "#2EC163"
         assert new_session_msg.custom_theme.link_underline is False
         assert new_session_msg.custom_theme.base_font_size == 14
         assert new_session_msg.custom_theme.base_font_weight == 300
+        assert new_session_msg.custom_theme.code_font_size == "12px"
+        assert new_session_msg.custom_theme.code_font_weight == 300
+        assert new_session_msg.custom_theme.show_sidebar_border is True
+        assert new_session_msg.custom_theme.code_background_color == "blue"
+        assert (
+            new_session_msg.custom_theme.dataframe_header_background_color == "purple"
+        )
         assert new_session_msg.custom_theme.heading_font_sizes == [
             "2.875rem",
             "2.75rem",
@@ -1471,11 +1503,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             600,
             600,
         ]
-        assert new_session_msg.custom_theme.code_background_color == "blue"
-        assert (
-            new_session_msg.custom_theme.dataframe_header_background_color == "purple"
-        )
-        assert new_session_msg.custom_theme.show_sidebar_border is True
+
         # The value from `theme.font` will be placed in body_font since
         # font uses a deprecated enum:
         assert new_session_msg.custom_theme.heading_font == "Inter Bold"
@@ -1530,10 +1558,14 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.sidebar.text_color == "black"
         assert new_session_msg.custom_theme.sidebar.secondary_background_color == "blue"
         assert new_session_msg.custom_theme.sidebar.base_radius == "1.2rem"
+        assert new_session_msg.custom_theme.sidebar.button_radius == "medium"
         assert new_session_msg.custom_theme.sidebar.border_color == "#ff0000"
+        assert new_session_msg.custom_theme.sidebar.dataframe_border_color == "#280f63"
         assert new_session_msg.custom_theme.sidebar.show_widget_border is True
         assert new_session_msg.custom_theme.sidebar.link_color == "#2EC163"
         assert new_session_msg.custom_theme.sidebar.link_underline is False
+        assert new_session_msg.custom_theme.sidebar.code_font_size == "12px"
+        assert new_session_msg.custom_theme.sidebar.code_font_weight == 500
         assert new_session_msg.custom_theme.sidebar.heading_font == "Inter Bold"
         assert new_session_msg.custom_theme.sidebar.heading_font_sizes == [
             "2.125rem",
