@@ -1400,7 +1400,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: @sindresorhus/is, @sindresorhus/slugify, @sindresorhus/transliterate, decamelize, escape-string-regexp, filter-obj, find-up, get-stream, humanize-string, import-fresh, is-plain-obj, locate-path, p-limit, p-locate, parse-json, query-string, split-on-first, wrap-ansi, yocto-queue. A copy of the source code may be downloaded from git+https://github.com/sindresorhus/is.git (@sindresorhus/is), git+https://github.com/sindresorhus/slugify.git (@sindresorhus/slugify), git+https://github.com/sindresorhus/transliterate.git (@sindresorhus/transliterate), git+https://github.com/sindresorhus/decamelize.git (decamelize), git+https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), git+https://github.com/sindresorhus/filter-obj.git (filter-obj), git+https://github.com/sindresorhus/find-up.git (find-up), git+https://github.com/sindresorhus/get-stream.git (get-stream), git+https://github.com/sindresorhus/humanize-string.git (humanize-string), git+https://github.com/sindresorhus/import-fresh.git (import-fresh), git+https://github.com/sindresorhus/is-plain-obj.git (is-plain-obj), git+https://github.com/sindresorhus/locate-path.git (locate-path), git+https://github.com/sindresorhus/p-limit.git (p-limit), git+https://github.com/sindresorhus/p-locate.git (p-locate), git+https://github.com/sindresorhus/parse-json.git (parse-json), git+https://github.com/sindresorhus/query-string.git (query-string), git+https://github.com/sindresorhus/split-on-first.git (split-on-first), git+https://github.com/chalk/wrap-ansi.git (wrap-ansi), git+https://github.com/sindresorhus/yocto-queue.git (yocto-queue). This software contains the following license and notice below:
+The following software may be included in this product: @sindresorhus/is, @sindresorhus/slugify, @sindresorhus/transliterate, ansi-regex, ansi-styles, decamelize, escape-string-regexp, filter-obj, find-up, get-east-asian-width, get-stream, humanize-string, import-fresh, is-plain-obj, locate-path, p-limit, p-locate, parse-json, query-string, split-on-first, string-width, strip-ansi, wrap-ansi, yocto-queue. A copy of the source code may be downloaded from git+https://github.com/sindresorhus/is.git (@sindresorhus/is), git+https://github.com/sindresorhus/slugify.git (@sindresorhus/slugify), git+https://github.com/sindresorhus/transliterate.git (@sindresorhus/transliterate), git+https://github.com/chalk/ansi-regex.git (ansi-regex), git+https://github.com/chalk/ansi-styles.git (ansi-styles), git+https://github.com/sindresorhus/decamelize.git (decamelize), git+https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), git+https://github.com/sindresorhus/filter-obj.git (filter-obj), git+https://github.com/sindresorhus/find-up.git (find-up), git+https://github.com/sindresorhus/get-east-asian-width.git (get-east-asian-width), git+https://github.com/sindresorhus/get-stream.git (get-stream), git+https://github.com/sindresorhus/humanize-string.git (humanize-string), git+https://github.com/sindresorhus/import-fresh.git (import-fresh), git+https://github.com/sindresorhus/is-plain-obj.git (is-plain-obj), git+https://github.com/sindresorhus/locate-path.git (locate-path), git+https://github.com/sindresorhus/p-limit.git (p-limit), git+https://github.com/sindresorhus/p-locate.git (p-locate), git+https://github.com/sindresorhus/parse-json.git (parse-json), git+https://github.com/sindresorhus/query-string.git (query-string), git+https://github.com/sindresorhus/split-on-first.git (split-on-first), git+https://github.com/sindresorhus/string-width.git (string-width), git+https://github.com/chalk/strip-ansi.git (strip-ansi), git+https://github.com/chalk/wrap-ansi.git (wrap-ansi), git+https://github.com/sindresorhus/yocto-queue.git (yocto-queue). This software contains the following license and notice below:
 
 MIT License
 
@@ -1650,32 +1650,6 @@ The following software may be included in this product: @types/brotli, @types/co
 MIT License
 
     Copyright (c) Microsoft Corporation.
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE
-
------
-
-The following software may be included in this product: @types/geojson. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git. This software contains the following license and notice below:
-
-MIT License
-
-    Copyright (c) Microsoft Corporation. All rights reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -6617,6 +6591,32 @@ Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
 
 -----
 
+The following software may be included in this product: formdata-polyfill. A copy of the source code may be downloaded from git+https://jimmywarting@github.com/jimmywarting/FormData.git. This software contains the following license and notice below:
+
+MIT License
+
+Copyright (c) 2016 Jimmy Karl Roland Wärting
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
 The following software may be included in this product: from2, glsl-resolve, map-limit. A copy of the source code may be downloaded from git://github.com/hughsk/from2 (from2), git://github.com/hughsk/glsl-resolve (glsl-resolve), git://github.com/hughsk/map-limit (map-limit). This software contains the following license and notice below:
 
 ## The MIT License (MIT) ##
@@ -10249,6 +10249,32 @@ The following software may be included in this product: node-fetch. A copy of th
 The MIT License (MIT)
 
 Copyright (c) 2016 David Frank
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
+The following software may be included in this product: node-fetch. A copy of the source code may be downloaded from https://github.com/node-fetch/node-fetch.git. This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright (c) 2016 - 2020 Node Fetch Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -15138,7 +15164,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -----
 
-The following software may be included in this product: vega, vega-canvas, vega-crossfilter, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-format, vega-functions, vega-geo, vega-hierarchy, vega-interpreter, vega-label, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-typings, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from git+https://github.com/vega/vega.git (vega), git+https://github.com/vega/vega.git (vega-canvas), git+https://github.com/vega/vega.git (vega-crossfilter), git+https://github.com/vega/vega.git (vega-dataflow), git+https://github.com/vega/vega.git (vega-encode), git+https://github.com/vega/vega.git (vega-event-selector), git+https://github.com/vega/vega.git (vega-expression), git+https://github.com/vega/vega.git (vega-force), git+https://github.com/vega/vega.git (vega-format), git+https://github.com/vega/vega.git (vega-functions), git+https://github.com/vega/vega.git (vega-geo), git+https://github.com/vega/vega.git (vega-hierarchy), git+https://github.com/vega/vega.git (vega-interpreter), git+https://github.com/vega/vega.git (vega-label), git+https://github.com/vega/vega.git (vega-loader), git+https://github.com/vega/vega.git (vega-parser), git+https://github.com/vega/vega.git (vega-projection), git+https://github.com/vega/vega.git (vega-regression), git+https://github.com/vega/vega.git (vega-runtime), git+https://github.com/vega/vega.git (vega-scale), git+https://github.com/vega/vega.git (vega-scenegraph), git+https://github.com/vega/vega.git (vega-selections), git+https://github.com/vega/vega.git (vega-statistics), git+https://github.com/vega/vega.git (vega-time), git+https://github.com/vega/vega.git (vega-transforms), git+https://github.com/vega/vega.git (vega-typings), git+https://github.com/vega/vega.git (vega-util), git+https://github.com/vega/vega.git (vega-view), git+https://github.com/vega/vega.git (vega-view-transforms), git+https://github.com/vega/vega.git (vega-voronoi), git+https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
+The following software may be included in this product: vega, vega-canvas, vega-crossfilter, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-format, vega-functions, vega-geo, vega-hierarchy, vega-interpreter, vega-label, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from git+https://github.com/vega/vega.git (vega), git+https://github.com/vega/vega.git (vega-canvas), git+https://github.com/vega/vega.git (vega-crossfilter), git+https://github.com/vega/vega.git (vega-dataflow), git+https://github.com/vega/vega.git (vega-encode), git+https://github.com/vega/vega.git (vega-event-selector), git+https://github.com/vega/vega.git (vega-expression), git+https://github.com/vega/vega.git (vega-force), git+https://github.com/vega/vega.git (vega-format), git+https://github.com/vega/vega.git (vega-functions), git+https://github.com/vega/vega.git (vega-geo), git+https://github.com/vega/vega.git (vega-hierarchy), git+https://github.com/vega/vega.git (vega-interpreter), git+https://github.com/vega/vega.git (vega-label), git+https://github.com/vega/vega.git (vega-loader), git+https://github.com/vega/vega.git (vega-parser), git+https://github.com/vega/vega.git (vega-projection), git+https://github.com/vega/vega.git (vega-regression), git+https://github.com/vega/vega.git (vega-runtime), git+https://github.com/vega/vega.git (vega-scale), git+https://github.com/vega/vega.git (vega-scenegraph), git+https://github.com/vega/vega.git (vega-selections), git+https://github.com/vega/vega.git (vega-statistics), git+https://github.com/vega/vega.git (vega-time), git+https://github.com/vega/vega.git (vega-transforms), git+https://github.com/vega/vega.git (vega-util), git+https://github.com/vega/vega.git (vega-view), git+https://github.com/vega/vega.git (vega-view-transforms), git+https://github.com/vega/vega.git (vega-voronoi), git+https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
 
 Copyright (c) 2015-2023, University of Washington Interactive Data Lab
 All rights reserved.
@@ -15170,7 +15196,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: vega-embed. A copy of the source code may be downloaded from http://github.com/vega/vega-embed.git. This software contains the following license and notice below:
+The following software may be included in this product: vega-embed. A copy of the source code may be downloaded from git+http://github.com/vega/vega-embed.git. This software contains the following license and notice below:
 
 Copyright (c) 2015, University of Washington Interactive Data Lab
 All rights reserved.
@@ -15202,7 +15228,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: vega-lite. A copy of the source code may be downloaded from https://github.com/vega/vega-lite.git. This software contains the following license and notice below:
+The following software may be included in this product: vega-lite. A copy of the source code may be downloaded from git+https://github.com/vega/vega-lite.git. This software contains the following license and notice below:
 
 Copyright (c) 2015, University of Washington Interactive Data Lab.
 All rights reserved.
@@ -15268,7 +15294,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: vega-themes. A copy of the source code may be downloaded from https://github.com/vega/vega-themes.git. This software contains the following license and notice below:
+The following software may be included in this product: vega-themes. A copy of the source code may be downloaded from git+https://github.com/vega/vega-themes.git. This software contains the following license and notice below:
 
 Copyright (c) 2016, University of Washington Interactive Data Lab
 All rights reserved.
@@ -15300,7 +15326,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: vega-tooltip. A copy of the source code may be downloaded from https://github.com/vega/vega-tooltip.git. This software contains the following license and notice below:
+The following software may be included in this product: vega-tooltip. A copy of the source code may be downloaded from git+https://github.com/vega/vega-tooltip.git. This software contains the following license and notice below:
 
 Copyright 2016 Interactive Data Lab and contributors
 

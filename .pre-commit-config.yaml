@@ -208,6 +208,8 @@ repos:
           (?x)
           |^.vscode/launch\.json$
           |^.vscode/settings\.json$
+          |^frontend/app/tsconfig.json
+          |^frontend/lib/tsconfig.json
       - id: check-toml
       - id: check-yaml
         exclude: lib/conda-recipe/meta.yaml
