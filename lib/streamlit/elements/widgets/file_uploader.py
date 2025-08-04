@@ -159,6 +159,8 @@ class FileUploaderMixin:
     # Multiple overloads are defined on `file_uploader()` below to represent
     # the different return types of `file_uploader()`.
     # These return types differ according to the value of the `accept_multiple_files` argument.
+    # There must be 2x2=4 overloads to cover all the possible arguments,
+    # as these overloads must be mutually exclusive for mypy.
     # There are 3 associated variables, each with 2+ options.
     # 1. The `accept_multiple_files` argument is set as `True` or `"directory"`,
     #    or it is set as `False` or omitted, in which case the default value `False`.

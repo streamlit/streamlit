@@ -296,8 +296,6 @@ class FileUploader extends PureComponent<InnerProps, State> {
       const { accepted, rejected } = this.filterDirectoryFiles(acceptedFiles)
       acceptedFiles = accepted
       rejectedFiles = [...rejectedFiles, ...rejected]
-
-      // Directory uploads filter files automatically based on type restrictions
     }
 
     // If this is a single-file uploader and multiple files were dropped,

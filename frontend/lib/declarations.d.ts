@@ -17,11 +17,6 @@
 /// <reference types="vite/client" />
 /// <reference types="vitest/globals" />
 
-// Extend the File interface to include webkitRelativePath for directory uploads
-interface File {
-  webkitRelativePath?: string
-}
-
 declare module "@loaders.gl/core"
 
 declare module "@loaders.gl/csv"

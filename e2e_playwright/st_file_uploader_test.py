@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import ConsoleMessage, FilePayload, Page, Route, expect
+from playwright.sync_api import FilePayload, Page, Route, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -334,13 +334,12 @@ def test_uploads_directory_with_multiple_files(
 
     # Test deleting files from directory upload
     delete_buttons = app.get_by_test_id("stFileUploaderDeleteBtn")
-    if delete_buttons.count() > 0:
-        delete_buttons.first.click()
-        wait_for_app_run(app)
+    delete_buttons.first.click()
+    wait_for_app_run(app)
 
-        # Verify file count decreased
-        uploader_text = app.get_by_test_id("stText").nth(uploader_index)
-        expect(uploader_text).to_contain_text("Directory contains 2 files:")
+    # Verify file count decreased
+    uploader_text = app.get_by_test_id("stText").nth(uploader_index)
+    expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
 def test_directory_upload_with_file_type_filtering(
@@ -348,17 +347,6 @@ def test_directory_upload_with_file_type_filtering(
 ):
     """Test that directory upload correctly filters files by type."""
     uploader_index = 13  # Restricted directory uploader index
-
-    # Capture console messages to verify filtering feedback
-    message_detected = False
-
-    def check_console_message(msg: ConsoleMessage) -> None:
-        nonlocal message_detected
-        text = msg.text
-        if "Directory upload:" in text and "files rejected" in text:
-            message_detected = True
-
-    app.on("console", check_console_message)
 
     # Create a temporary directory with test files
     directory_data = [
@@ -411,13 +399,6 @@ def test_directory_upload_with_file_type_filtering(
             break
 
     assert found, "Could not find restricted directory output"
-
-    # Check if a message was detected, but don't fail if not
-    # The directory upload filtering might not always log a console message
-    if message_detected:
-        print("Console message detected about file rejection")
-    else:
-        print("No console message detected, but continuing with test")
 
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
     assert_snapshot(file_uploader, name="st_file_uploader-directory_filtered")

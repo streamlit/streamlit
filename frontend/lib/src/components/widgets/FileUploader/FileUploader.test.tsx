@@ -422,22 +422,10 @@ describe("FileUploader widget tests", () => {
 
     // Simulate directory upload with files in different folders
     const directoryFiles = [
-      new File(["print('hello')"], "project/main.py", {
-        type: "text/plain",
-        lastModified: 0,
-      }),
-      new File(["def test(): pass"], "project/tests/test_main.py", {
-        type: "text/plain",
-        lastModified: 0,
-      }),
-      new File(["# Project README"], "project/README.md", {
-        type: "text/plain",
-        lastModified: 0,
-      }),
-      new File(["Configuration"], "project/config.txt", {
-        type: "text/plain",
-        lastModified: 0,
-      }),
+      createFile("project/main.py", "project/main.py"),
+      createFile("project/tests/test_main.py", "project/tests/test_main.py"),
+      createFile("project/README.md", "project/README.md"),
+      createFile("project/config.txt", "project/config.txt"),
     ]
 
     fireEvent.drop(fileDropZone, {
@@ -481,21 +469,11 @@ describe("FileUploader widget tests", () => {
 
     // Mix of valid and invalid files for directory upload
     const mixedFiles = [
-      new File(["Valid content"], "docs/valid.txt", {
-        type: "text/plain",
-        lastModified: 0,
-      }),
-      new File(["Also valid"], "docs/subfolder/another.txt", {
-        type: "text/plain",
-        lastModified: 0,
-      }),
-      new File(["Invalid file"], "docs/image.jpg", {
-        type: "image/jpeg",
-        lastModified: 0,
-      }),
-      new File(["Another invalid"], "docs/document.pdf", {
+      createFile("docs/valid.txt", "docs/valid.txt"),
+      createFile("docs/subfolder/another.txt", "docs/subfolder/another.txt"),
+      Object.assign(createFile("docs/image.jpg"), { type: "image/jpeg" }),
+      Object.assign(createFile("docs/document.pdf"), {
         type: "application/pdf",
-        lastModified: 0,
       }),
     ]
 
@@ -525,9 +503,6 @@ describe("FileUploader widget tests", () => {
     )
     expect(errorElements.length).toBe(1)
 
-    // Console message is only called if files reach our filtering logic, but react-dropzone handles this first
-    // So we don't expect any console messages
-
     // Only valid .txt files should be uploaded - verify widget state was updated
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalled()
   })
@@ -542,7 +517,7 @@ describe("FileUploader widget tests", () => {
     const browseButton = screen.getByRole("button", {
       name: "Browse directories",
     })
-    expect(browseButton).toBeInTheDocument()
+    expect(browseButton).toBeVisible()
   })
 
   it("sets webkitdirectory attribute for directory uploads", () => {
@@ -633,7 +608,7 @@ describe("FileUploader widget tests", () => {
 
     // Check that browse button shows directory text
     const browseButton = screen.getByText("Browse directories")
-    expect(browseButton).toBeInTheDocument()
+    expect(browseButton).toBeVisible()
 
     // Verify dropzone has webkitdirectory attribute
     const input = screen.getByTestId("stFileUploaderDropzoneInput")
