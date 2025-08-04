@@ -57,7 +57,9 @@ const FileDropzone = ({
     useFsAccessApi={false}
   >
     {({ getRootProps, getInputProps }) => {
-      const inputProps = getInputProps({ multiple: !!acceptDirectory })
+      const inputProps = getInputProps({
+        multiple: multiple || !!acceptDirectory,
+      })
 
       return (
         <StyledFileDropzoneSection
