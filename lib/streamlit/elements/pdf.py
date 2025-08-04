@@ -111,7 +111,7 @@ class PdfMixin:
         file_param: str | bytes
 
         if isinstance(data, (str, Path)):
-            data_str = str(data)
+            data_str = str(data).strip()  # Strip whitespace from URLs
             if url_util.is_url(data_str, allowed_schemas=("http", "https")):
                 # It's a URL - pass directly
                 file_param = data_str
