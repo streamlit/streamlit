@@ -36,10 +36,11 @@ import FileUploader, { Props } from "./FileUploader"
 
 const createFile = (
   filename = "filename.txt",
-  webkitRelativePath?: string
+  webkitRelativePath?: string,
+  type = "text/plain"
 ): File => {
   const file = new File(["Text in a file!"], filename, {
-    type: "text/plain",
+    type,
     lastModified: 0,
   })
   if (webkitRelativePath) {
@@ -50,6 +51,7 @@ const createFile = (
   }
   return file
 }
+
 
 const buildFileUploaderStateProto = (
   fileUrlsArray: IFileURLs[]
@@ -471,11 +473,10 @@ describe("FileUploader widget tests", () => {
     const mixedFiles = [
       createFile("docs/valid.txt", "docs/valid.txt"),
       createFile("docs/subfolder/another.txt", "docs/subfolder/another.txt"),
-      Object.assign(createFile("docs/image.jpg"), { type: "image/jpeg" }),
-      Object.assign(createFile("docs/document.pdf"), {
-        type: "application/pdf",
-      }),
+      createFile("docs/image.jpg", "docs/image.jpg", "image/jpeg"),
+      createFile("docs/document.pdf", "docs/document.pdf", "application/pdf"),
     ]
+
 
     fireEvent.drop(fileDropZone, {
       dataTransfer: {
