@@ -61,4 +61,22 @@ describe("FileDropzoneInstructions widget", () => {
     render(<FileDropzoneInstructions {...props} />)
     expect(screen.getByText(/• JPG, CSV.GZ, PNG, TAR.GZ/)).toBeInTheDocument()
   })
+
+  it("deduplicates equivalent extensions (shows only JPG when both JPG and JPEG are present)", () => {
+    const props = getProps({
+      acceptedExtensions: [".jpg", ".jpeg", ".png"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+    expect(screen.getByText(/• JPG, PNG/)).toBeInTheDocument()
+    // Should not show JPEG
+    expect(screen.queryByText(/JPEG/)).not.toBeInTheDocument()
+  })
+
+  it("shows JPEG when only JPEG is present (no JPG)", () => {
+    const props = getProps({
+      acceptedExtensions: [".jpeg", ".png"],
+    })
+    render(<FileDropzoneInstructions {...props} />)
+    expect(screen.getByText(/• JPEG, PNG/)).toBeInTheDocument()
+  })
 })
