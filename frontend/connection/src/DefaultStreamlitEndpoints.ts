@@ -252,11 +252,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     cancelToken?: CancelToken
   ): Promise<void> {
     const form = new FormData()
-    // For directory uploads, use the relative path to preserve directory structure
-    const fileName =
-      (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
-      file.name
-    form.append(file.name, file, fileName)
+    const { name, webkitRelativePath } = file
+    // For directory uploads, use the relative path as fileName to preserve directory structure
+    const fileName = webkitRelativePath || name
+    form.append(name, file, fileName)
 
     const headers: Record<string, string> = this.getAdditionalHeaders()
 

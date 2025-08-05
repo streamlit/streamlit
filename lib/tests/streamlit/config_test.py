@@ -555,6 +555,7 @@ class ConfigTest(unittest.TestCase):
                 "server.corsAllowedOrigins",
                 "server.scriptHealthCheckEnabled",
                 "server.enableWebsocketCompression",
+                "server.websocketPingInterval",
                 "server.enableXsrfProtection",
                 "server.fileWatcherType",
                 "server.folderWatchList",
