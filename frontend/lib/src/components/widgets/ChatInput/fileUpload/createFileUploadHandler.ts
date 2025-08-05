@@ -47,9 +47,7 @@ export const createUploadFileHandler =
     const cancelToken = axios.CancelToken.source()
 
     // For directory uploads, use the relative path to preserve directory structure
-    const fileName =
-      (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
-      file.name
+    const fileName = file.webkitRelativePath || file.name
 
     const uploadingFileInfo = new UploadFileInfo(
       fileName,
