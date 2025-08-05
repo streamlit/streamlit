@@ -112,8 +112,8 @@ class PlotlySelectionState(TypedDict, total=False):
     displays additional information. Try selecting points in the following
     example:
 
-    >>> import streamlit as st
     >>> import plotly.express as px
+    >>> import streamlit as st
     >>>
     >>> df = px.data.iris()
     >>> fig = px.scatter(
@@ -189,10 +189,10 @@ class PlotlyState(TypedDict, total=False):
     box, or lasso). The current selection state is available through Session
     State or as the output of the chart function.
 
-    >>> import streamlit as st
     >>> import plotly.express as px
+    >>> import streamlit as st
     >>>
-    >>> df = px.data.iris()  # iris is a pandas DataFrame
+    >>> df = px.data.iris()
     >>> fig = px.scatter(df, x="sepal_width", y="sepal_length")
     >>>
     >>> event = st.plotly_chart(fig, key="iris", on_select="rerun")
@@ -432,30 +432,26 @@ class PlotlyMixin:
 
         Examples
         --------
-        **Example 1: Basic Plotly Chart**
+        **Example 1: Basic Plotly chart**
 
         The example below comes from the examples at https://plot.ly/python.
         Note that ``plotly.figure_factory`` requires ``scipy`` to run.
 
-        >>> import streamlit as st
-        >>> import numpy as np
         >>> import plotly.figure_factory as ff
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> # Add histogram data
-        >>> x1 = np.random.randn(200) - 2
-        >>> x2 = np.random.randn(200)
-        >>> x3 = np.random.randn(200) + 2
+        >>> hist_data = [
+        ...     rng(0).standard_normal(200) - 2,
+        ...     rng(1).standard_normal(200),
+        ...     rng(2).standard_normal(200) + 2,
+        ... ]
+        >>> group_labels = ["Group 1", "Group 2", "Group 3"]
         >>>
-        >>> # Group data together
-        >>> hist_data = [x1, x2, x3]
-        >>>
-        >>> group_labels = ['Group 1', 'Group 2', 'Group 3']
-        >>>
-        >>> # Create distplot with custom bin_size
         >>> fig = ff.create_distplot(
-        ...         hist_data, group_labels, bin_size=[.1, .25, .5])
+        ...     hist_data, group_labels, bin_size=[0.1, 0.25, 0.5]
+        ... )
         >>>
-        >>> # Plot!
         >>> st.plotly_chart(fig)
 
         .. output::
@@ -470,8 +466,8 @@ class PlotlyMixin:
         zoom. In the following example, scroll zoom is disabled, but the zoom
         buttons are still enabled in the modebar.
 
-        >>> import streamlit as st
         >>> import plotly.graph_objects as go
+        >>> import streamlit as st
         >>>
         >>> fig = go.Figure()
         >>> fig.add_trace(

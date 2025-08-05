@@ -156,7 +156,7 @@ class ButtonMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -400,7 +400,7 @@ class ButtonMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
@@ -648,7 +648,7 @@ class ButtonMixin:
             - ``"secondary"`` (default): The button's background coordinates
               with the app's background color for normal emphasis.
             - ``"tertiary"``: The button is plain text without a border or
-              background for subtly.
+              background for subtlety.
 
         icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``

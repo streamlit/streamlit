@@ -413,8 +413,21 @@ class CacheDataAPI:
         arguments match a previous function call. Alternatively, you can
         declare custom hashing functions with ``hash_funcs``.
 
-        To cache global resources, use ``st.cache_resource`` instead. Learn more
-        about caching at https://docs.streamlit.io/develop/concepts/architecture/caching.
+        Cached values are available to all users of your app. If you need to
+        save results that should only be accessible within a session, use
+        `Session State
+        <https://docs.streamlit.io/develop/concepts/architecture/session-state>`_
+        instead. Within each user session, an ``@st.cache_data``-decorated
+        function returns a *copy* of the cached return value (if the value is
+        already cached). To cache shared global resources (singletons), use
+        ``st.cache_resource`` instead. To learn more about caching, see
+        `Caching overview
+        <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
+
+        .. note::
+            Caching async functions is not supported. To upvote this feature,
+            see GitHub issue `#8308
+            <https://github.com/streamlit/streamlit/issues/8308>`_.
 
         Parameters
         ----------
