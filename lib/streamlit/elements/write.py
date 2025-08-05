@@ -86,7 +86,8 @@ class WriteMixin:
             The generator or iterable to stream.
 
             If you pass an async generator, Streamlit will internally convert
-            it to a sync generator.
+            it to a sync generator. If the generator depends on a cached object
+            with async references, this can raise an error.
 
             .. note::
                 To use additional LLM libraries, you can create a wrapper to

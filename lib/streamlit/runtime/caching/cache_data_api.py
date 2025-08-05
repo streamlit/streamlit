@@ -416,7 +416,7 @@ class CacheDataAPI:
         Cached values are available to all users of your app. If you need to
         save results that should only be accessible within a session, use
         `Session State
-        <https://docs.streamlit.io/develop/concepts/architecture/session-stat>`_
+        <https://docs.streamlit.io/develop/concepts/architecture/session-state>`_
         instead. Within each user session, an ``@st.cache_data``-decorated
         function returns a *copy* of the cached return value (if the value is
         already cached). To cache shared global resources (singletons), use
