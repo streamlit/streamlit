@@ -65,24 +65,36 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 
-def _get_websocket_ping_interval() -> int:
-    """Get the websocket ping interval from config or default based on Tornado version."""
+def _get_websocket_ping_interval_and_timeout() -> tuple[int, int]:
+    """Get the websocket ping interval and timeout from config or defaults.
+
+    Returns
+    -------
+        tuple: (ping_interval, ping_timeout)
+    """
     configured_interval = config.get_option("server.websocketPingInterval")
+
     if configured_interval is not None:
         # User has explicitly set a value
+        interval = int(configured_interval)
+
         # Warn if using Tornado 6.5+ with low interval
-        if not is_tornado_version_less_than("6.5.0") and configured_interval < 30:
+        if not is_tornado_version_less_than("6.5.0") and interval < 30:
             _LOGGER.warning(
                 "You have set server.websocketPingInterval to %s, but Tornado >= 6.5 "
-                "requires websocket_ping_interval >= websocket_ping_timeout (30s). "
-                "This may cause connection issues. See "
-                "https://github.com/tornadoweb/tornado/pull/3376#issuecomment-2984887076 "
-                "for more information.",
-                configured_interval,
+                "requires websocket_ping_interval >= websocket_ping_timeout. "
+                "To comply, we are setting both the ping interval and ping timeout to %s. "
+                "Depending on the specific deployment setup, this may cause connection issues.",
+                interval,
+                interval,
             )
-        return int(configured_interval)
-    # Use default behavior
-    return 1 if is_tornado_version_less_than("6.5.0") else 30
+
+        # When user configures interval, set timeout to match
+        return interval, interval
+
+    # Default behavior: respect Tornado version for interval, always 30s timeout
+    default_interval = 1 if is_tornado_version_less_than("6.5.0") else 30
+    return default_interval, 30
 
 
 def get_tornado_settings() -> dict[str, Any]:
@@ -90,16 +102,7 @@ def get_tornado_settings() -> dict[str, Any]:
 
     This is a function to allow for testing and dynamic configuration.
     """
-    ping_interval = _get_websocket_ping_interval()
-
-    # Determine timeout based on configuration
-    configured_interval = config.get_option("server.websocketPingInterval")
-    if configured_interval is not None:
-        # If user configured the interval, set timeout to match
-        ping_timeout = ping_interval
-    else:
-        # Default case: always use 30s timeout (original behavior)
-        ping_timeout = 30
+    ping_interval, ping_timeout = _get_websocket_ping_interval_and_timeout()
 
     return {
         # Gzip HTTP responses.
