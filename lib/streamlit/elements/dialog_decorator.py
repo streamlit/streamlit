@@ -163,16 +163,15 @@ def dialog_decorator(
     called. Any values from the dialog that need to be accessed from the wider
     app should generally be stored in Session State.
 
-    If a dialog is dismissible, a user can dismiss a modal dialog by clicking
-    outside of it, clicking the "**X**" in its upper-right corner, or pressing
-    ``ESC`` on their keyboard. You can configure whether this triggers a rerun
-    of the app by setting the ``on_dismiss`` parameter.
+    If a dialog is dismissible, a user can dismiss it by clicking outside of
+    it, clicking the "**X**" in its upper-right corner, or pressing ``ESC`` on
+    their keyboard. You can configure whether this triggers a rerun of the app
+    by setting the ``on_dismiss`` parameter.
 
     If a dialog is not dismissible, it must be closed programmatically by
-    calling ``st.rerun()`` inside the dialog function. This is useful for cases
-    where you want to ensure that the dialog is always closed programmatically,
-    such as when the dialog contains a form that must be submitted before
-    closing.
+    calling ``st.rerun()`` inside the dialog function. This is useful when you
+    want to ensure that the dialog is always closed programmatically, such as
+    when the dialog contains a form that must be submitted before closing.
 
     ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
@@ -235,8 +234,8 @@ def dialog_decorator(
         How the dialog should respond to dismissal events.
         This can be one of the following:
 
-        - ``"ignore"`` (default): Streamlit will not rerun when the user
-          dismisses the dialog.
+        - ``"ignore"`` (default): Streamlit will not rerun the app when the
+          user dismisses the dialog.
 
         - ``"rerun"``: Streamlit will rerun the app when the user dismisses
           the dialog.
