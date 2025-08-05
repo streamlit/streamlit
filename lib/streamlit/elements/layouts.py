@@ -146,7 +146,8 @@ class LayoutsMixin:
               fill the width of the container. A standalone element is aligned
               to the left.
 
-              When ``horizontal`` is ``False``, this is the same as ``"left"``.
+              When ``horizontal`` is ``False``, ``"distribute"`` aligns the
+              elements the same as ``"left"``.
 
         vertical_alignment : "top", "center", "bottom", or "distribute"
             The vertical alignment of the elements inside the container. This
@@ -163,7 +164,8 @@ class LayoutsMixin:
               fill the height of the container. A standalone element is aligned
               to the top.
 
-              When ``horizontal`` is ``True``, this is the same as ``"top"``.
+              When ``horizontal`` is ``True``, ``"distribute"`` aligns the
+              elements the same as ``"top"``.
 
         gap : "small", "medium", "large", or None
             The minimum gap size between the elements inside the container.
