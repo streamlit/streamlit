@@ -126,6 +126,35 @@ conda-package              Create conda distribution files.
 ---
 
 <!--
+description: Implementation guide for new features
+globs:
+alwaysApply: false
+-->
+
+
+## New Feature - Implementation Guide
+
+- Most features need to be implemented in the backend in `lib/streamlit/`, the frontend `frontend/` and will need changes to our protobuf definitions in `proto/`.
+- New features should be covered by Python Unit Tests in `lib/tests`, Vitest Unit Tests, and e2e playwright tests in `e2e_playwright/`.
+- Implementing new element commands requires additional steps to correctly register the element (see notes below).
+
+### Order of implementation
+
+1. implement protobuf changes in `proto/` & run: `make protobuf` (-> @protobuf.mdc)
+   - Note: new elements need to be added to `proto/streamlit/proto/Element.proto`.
+2. implement backend implementation in `lib/streamlit/` (-> @python_lib.mdc)
+   - Note: new elements need to be added to `lib/streamlit/__init__.py`
+3. implement Python unit tests in `lib/tests` & run via: `PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py` (-> @python_tests.mdc)
+   - Note: new elements need to be added to `lib/tests/streamlit/element_mocks.py`
+4. implement frontend changes in `frontend/` (-> @typescript.mdc)
+   - Note: new elements need to be added to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`
+5. implement vitest unit tests in `*.test.tsx` & run via: `cd frontend && yarn vitest lib/src/components/elements/NewElement/NewElement.test.tsx` (-> @typescript_tests.mdc)
+6. implement e2e playwright test in `e2e_playwright/` & run via: `make run-e2e-test e2e_playwright/name_of_the_test.py` (-> @e2e_playwright.mdc)
+7. run `make autofix` to auto-fix linting and formatting issues.
+
+---
+
+<!--
 description:
 globs:
 alwaysApply: true
@@ -376,6 +405,7 @@ globs: *.ts,*.tsx
 alwaysApply: false
 -->
 
+
 ## TypeScript Test Guide
 
 - Test Framework: Vitest
@@ -396,3 +426,36 @@ alwaysApply: false
 - Run All Tests: `yarn test`
 - Run Specific File: `yarn test lib/src/components/path/component.test.tsx`
 - Run Specific Test: `yarn test -t "the test name" lib/src/components/path/component.test.tsx`
+
+### React Testing Library best practices
+
+Cheat sheet for queries from RTL:
+
+|            | No Match | 1 Match | 1+ Match | Await? |
+| ---------- | -------- | ------- | -------- | ------ |
+| getBy      | throw    | return  | throw    | No     |
+| findBy     | throw    | return  | throw    | Yes    |
+| queryBy    | null     | return  | throw    | No     |
+| getAllBy   | throw    | array   | array    | No     |
+| findAllBy  | throw    | array   | array    | Yes    |
+| queryAllBy | []       | array   | array    | No     |
+
+- Utilizing any query that throws if not found AND asserting using `toBeInTheDocument` is redundant and must be avoided. Prefer `toBeVisible` instead.
+- User interactions should utilize the `userEvent` library.
+- Tests should be written in a way that asserts user behavior, not implementation details.
+
+#### Query Priority Order
+
+Based on the Guiding Principles, your test should resemble how users interact with your code (component, page, etc.) as much as possible. With this in mind, we recommend this order of priority:
+
+1. Queries Accessible to Everyone Queries that reflect the experience of visual/mouse users as well as those that use assistive technology.
+
+   - getByRole, getByLabelText, getByPlaceholderText, getByText, getByDisplayValue
+
+2. Semantic Queries HTML5 and ARIA compliant selectors. Note that the user experience of interacting with these attributes varies greatly across browsers and assistive technology.
+
+   - getByAltText, getByTitle
+
+3. Test IDs
+
+   - getByTestId - The user cannot see (or hear) these, so this is only recommended for cases where you can't match by role or text or it doesn't make sense (e.g. the text is dynamic).

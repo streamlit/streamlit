@@ -20,9 +20,9 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { ImageList as ImageListProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
-import { mockEndpoints } from "~lib/mocks/mocks"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { mockEndpoints } from "~lib/mocks/mocks"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import ImageList, { ImageListProps } from "./ImageList"
 
@@ -122,5 +122,179 @@ describe("ImageList Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("crossOrigin attribute", () => {
+    it.each([
+      { resourceCrossOriginMode: "anonymous" },
+      { resourceCrossOriginMode: "use-credentials" },
+      { resourceCrossOriginMode: undefined },
+    ] as const)(
+      "don't set crossOrigin attribute when window.__streamlit?.BACKEND_BASE_URL is not set",
+      ({ resourceCrossOriginMode }) => {
+        const props = getProps()
+        renderWithContexts(<ImageList {...props} />, {
+          libConfig: { resourceCrossOriginMode },
+        })
+        const images = screen.getAllByRole("img")
+        expect(images).toHaveLength(2)
+        images.forEach(image => {
+          expect(image).not.toHaveAttribute("crossOrigin")
+        })
+      }
+    )
+
+    describe("with BACKEND_BASE_URL set", () => {
+      const originalStreamlit = window.__streamlit
+
+      beforeEach(() => {
+        window.__streamlit = {
+          BACKEND_BASE_URL: "https://backend.example.com:8080/app",
+        }
+      })
+
+      afterEach(() => {
+        window.__streamlit = originalStreamlit
+      })
+
+      it.each([
+        {
+          expected: "anonymous",
+          resourceCrossOriginMode: "anonymous",
+          imgs: [
+            { caption: "a", url: "/media/image1.png" },
+            { caption: "b", url: "/media/image2.png" },
+          ],
+          scenario: "relative URLs with anonymous mode",
+        },
+        {
+          expected: "use-credentials",
+          resourceCrossOriginMode: "use-credentials",
+          imgs: [
+            { caption: "a", url: "/media/image1.png" },
+            { caption: "b", url: "/media/image2.png" },
+          ],
+          scenario: "relative URLs with use-credentials mode",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: undefined,
+          imgs: [
+            { caption: "a", url: "/media/image1.png" },
+            { caption: "b", url: "/media/image2.png" },
+          ],
+          scenario: "relative URLs with undefined mode",
+        },
+        {
+          expected: "anonymous",
+          resourceCrossOriginMode: "anonymous",
+          imgs: [
+            {
+              caption: "a",
+              url: "https://backend.example.com:8080/media/image1.png",
+            },
+            {
+              caption: "b",
+              url: "https://backend.example.com:8080/media/image2.png",
+            },
+          ],
+          scenario: "same origin as BACKEND_BASE_URL with anonymous mode",
+        },
+        {
+          expected: "use-credentials",
+          resourceCrossOriginMode: "use-credentials",
+          imgs: [
+            {
+              caption: "a",
+              url: "https://backend.example.com:8080/media/image1.png",
+            },
+            {
+              caption: "b",
+              url: "https://backend.example.com:8080/media/image2.png",
+            },
+          ],
+          scenario:
+            "same origin as BACKEND_BASE_URL with use-credentials mode",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: undefined,
+          imgs: [
+            {
+              caption: "a",
+              url: "https://backend.example.com:8080/media/image1.png",
+            },
+            {
+              caption: "b",
+              url: "https://backend.example.com:8080/media/image2.png",
+            },
+          ],
+          scenario: "same origin as BACKEND_BASE_URL with undefined mode",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: "anonymous",
+          imgs: [
+            {
+              caption: "a",
+              url: "https://external.example.com/media/image1.png",
+            },
+            {
+              caption: "b",
+              url: "https://external.example.com/media/image2.png",
+            },
+          ],
+          scenario: "different hostname than BACKEND_BASE_URL",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: "anonymous",
+          imgs: [
+            {
+              caption: "a",
+              url: "https://backend.example.com:9000/media/image1.png",
+            },
+            {
+              caption: "b",
+              url: "https://backend.example.com:9000/media/image2.png",
+            },
+          ],
+          scenario: "different port than BACKEND_BASE_URL",
+        },
+        {
+          expected: undefined,
+          resourceCrossOriginMode: "anonymous",
+          imgs: [
+            {
+              caption: "a",
+              url: "http://backend.example.com:8080/media/image1.png",
+            },
+            {
+              caption: "b",
+              url: "http://backend.example.com:8080/media/image2.png",
+            },
+          ],
+          scenario: "different protocol than BACKEND_BASE_URL",
+        },
+      ] as const)(
+        "sets crossOrigin to $expected when $scenario",
+        ({ expected, resourceCrossOriginMode, imgs }) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const props = getProps({ imgs: imgs as any })
+          renderWithContexts(<ImageList {...props} />, {
+            libConfig: { resourceCrossOriginMode },
+          })
+          const images = screen.getAllByRole("img")
+          expect(images).toHaveLength(2)
+          images.forEach(image => {
+            if (expected) {
+              expect(image).toHaveAttribute("crossOrigin", expected)
+            } else {
+              expect(image).not.toHaveAttribute("crossOrigin")
+            }
+          })
+        }
+      )
+    })
   })
 })

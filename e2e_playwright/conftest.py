@@ -906,13 +906,13 @@ def wait_for_app_run(
         For example, pydeck charts have a debounce timeout of 200ms.
     """
 
-    page = None
-    if isinstance(page_or_locator, Page):
-        page = page_or_locator
-    elif isinstance(page_or_locator, Locator):
+    page: Page
+    if isinstance(page_or_locator, Locator):
         page = page_or_locator.page
     elif isinstance(page_or_locator, FrameLocator):
         page = page_or_locator.owner.page
+    else:
+        page = page_or_locator
 
     page.wait_for_timeout(initial_wait)
 

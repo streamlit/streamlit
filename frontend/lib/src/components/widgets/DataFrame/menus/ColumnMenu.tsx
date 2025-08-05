@@ -25,11 +25,12 @@ import React, {
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 import { getLogger } from "loglevel"
 
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 import { DynamicIcon } from "~lib/components/shared/Icon"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
 
+import FormattingMenu from "./FormattingMenu"
 import {
   StyledColumnHeaderRow,
   StyledColumnNameText,
@@ -40,7 +41,6 @@ import {
   StyledMenuListItem,
   StyledTypeIconContainer,
 } from "./styled-components"
-import FormattingMenu from "./FormattingMenu"
 
 const LOG = getLogger("ColumnMenu")
 

@@ -74,6 +74,15 @@ export default defineConfig({
         find: "react-syntax-highlighter",
         replacement: "react-syntax-highlighter/dist/cjs/index.js",
       },
+      // TODO: #moduleResolutionBundler
+      // Fix for vega-embed v7 ES module structure
+      {
+        find: "vega-embed",
+        replacement: path.resolve(
+          __dirname,
+          "../node_modules/vega-embed/build/embed.js"
+        ),
+      },
       ...profilerAliases,
     ],
   },

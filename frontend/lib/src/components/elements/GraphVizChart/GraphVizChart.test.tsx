@@ -16,9 +16,9 @@
 
 import React from "react"
 
-import { Mock, MockInstance } from "vitest"
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
+import { Mock, MockInstance } from "vitest"
 
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 

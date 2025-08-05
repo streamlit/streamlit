@@ -16,8 +16,8 @@
 
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
-import { isValidOrigin } from "~lib/util/UriUtil"
 import { PresetThemeName } from "~lib/theme/types"
+import { isValidOrigin } from "~lib/util/UriUtil"
 
 import {
   AppConfig,

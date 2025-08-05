@@ -21,22 +21,30 @@ from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    Gap,
     Height,
+    HorizontalAlignment,
+    VerticalAlignment,
+    Width,
     WidthWithoutContent,
+    get_align,
+    get_gap_size,
     get_height_config,
+    get_justify,
     get_width_config,
     validate_height,
+    validate_horizontal_alignment,
+    validate_vertical_alignment,
     validate_width,
 )
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidColumnSpecError,
     StreamlitInvalidVerticalAlignmentError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
 
@@ -44,6 +52,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
+    from streamlit.runtime.state import WidgetCallback
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 
@@ -57,6 +66,10 @@ class LayoutsMixin:
         key: Key | None = None,
         width: WidthWithoutContent = "stretch",
         height: Height = "content",
+        horizontal: bool = False,
+        horizontal_alignment: HorizontalAlignment = "left",
+        vertical_alignment: VerticalAlignment = "top",
+        gap: Gap | None = "small",
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -100,6 +113,30 @@ class LayoutsMixin:
             ``"stretch"`` (default), Streamlit sets the width of the container to
             match the width of the parent container. If an integer is provided,
             the container will be set to the specified width.
+
+        horizontal : bool
+            Make this a container with a horizontal layout. If this is ``True``,
+            the elements inside the container will be laid out horizontally.
+            If this is ``False`` (default), the elements inside the container will
+            be laid out vertically.
+
+        horizontal_alignment : "left", "center", "right", or "distribute"
+            The horizontal alignment of the content inside the container. The
+            default is ``"left"``.
+
+        vertical_alignment : "top", "center", "bottom", or "distribute"
+            The vertical alignment of the content inside the container. The
+            default is ``"top"``.
+
+        gap : "small", "medium", "large", or None
+            The size of the gap between the elements inside the container. This can be one of the following:
+
+            - ``"small"`` (default): 1rem gap between the elements.
+            - ``"medium"``: 2rem gap between the elements.
+            - ``"large"``: 4rem gap between the elements.
+            - ``None``: No gap between the elements.
+
+            The rem unit is relative to the ``theme.baseFontSize`` configuration option.
 
         Examples
         --------
@@ -166,7 +203,27 @@ class LayoutsMixin:
         key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
-        block_proto.flex_container.wrap = False
+        block_proto.flex_container.border = border or False
+        block_proto.flex_container.gap_config.gap_size = get_gap_size(
+            gap, "st.container"
+        )
+
+        validate_horizontal_alignment(horizontal_alignment)
+        validate_vertical_alignment(vertical_alignment)
+        if horizontal:
+            block_proto.flex_container.wrap = True
+            block_proto.flex_container.direction = (
+                BlockProto.FlexContainer.Direction.HORIZONTAL
+            )
+            block_proto.flex_container.justify = get_justify(horizontal_alignment)
+            block_proto.flex_container.align = get_align(vertical_alignment)
+        else:
+            block_proto.flex_container.wrap = False
+            block_proto.flex_container.direction = (
+                BlockProto.FlexContainer.Direction.VERTICAL
+            )
+            block_proto.flex_container.justify = get_justify(vertical_alignment)
+            block_proto.flex_container.align = get_align(horizontal_alignment)
 
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
@@ -201,7 +258,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: Literal["small", "medium", "large"] | None = "small",
+        gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
@@ -386,28 +443,11 @@ class LayoutsMixin:
 
         if vertical_alignment not in vertical_alignment_mapping:
             raise StreamlitInvalidVerticalAlignmentError(
-                vertical_alignment=vertical_alignment
+                vertical_alignment=vertical_alignment,
+                element_type="st.columns",
             )
 
-        def column_gap(gap: str | None) -> GapSize.ValueType:
-            gap_mapping = {
-                "small": GapSize.SMALL,
-                "medium": GapSize.MEDIUM,
-                "large": GapSize.LARGE,
-            }
-
-            if isinstance(gap, str):
-                gap_size = gap.lower()
-                valid_sizes = gap_mapping.keys()
-
-                if gap_size in valid_sizes:
-                    return gap_mapping[gap_size]
-            elif gap is None:
-                return GapSize.NONE
-
-            raise StreamlitInvalidColumnGapError(gap=gap)
-
-        gap_size = column_gap(gap)
+        gap_size = get_gap_size(gap, "st.columns")
         gap_config = GapConfig()
         gap_config.gap_size = gap_size
 
@@ -429,6 +469,7 @@ class LayoutsMixin:
         block_proto.flex_container.wrap = True
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
+        block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH
 
         validate_width(width=width)
         block_proto.width_config.CopyFrom(get_width_config(width=width))
@@ -702,7 +743,8 @@ class LayoutsMixin:
         help: str | None = None,
         icon: str | None = None,
         disabled: bool = False,
-        use_container_width: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
     ) -> DeltaGenerator:
         r"""Insert a popover container.
 
@@ -770,17 +812,36 @@ class LayoutsMixin:
             ``True``. The default is ``False``.
 
         use_container_width : bool
-            Whether to expand the button's width to fill its parent container.
-            If ``use_container_width`` is ``False`` (default), Streamlit sizes
-            the button to fit its contents. If ``use_container_width`` is
-            ``True``, the width of the button matches its parent container.
+                Whether to expand the button's width to fill its parent container.
+                If ``use_container_width`` is ``False`` (default), Streamlit sizes
+                the button to fit its contents. If ``use_container_width`` is
+                ``True``, the width of the button matches its parent container.
+                In both cases, if the contents of the button are wider than the
+                parent container, the contents will line wrap.
+                The popover container's minimum width matches the width of its
+                button. The popover container may be wider than its button to fit
+                the container's contents.
 
-            In both cases, if the contents of the button are wider than the
-            parent container, the contents will line wrap.
+        width : int, "stretch", or "content"
+            An optional width for the popover button. This can be one of the
+            following:
 
-            The popover containter's minimimun width matches the width of its
+            - An integer which corresponds to the desired button width in
+              pixels.
+            - ``"stretch"``: The button's width expands to fill its parent
+              container.
+            - ``"content"`` (default): The button's width is set to fit its
+              contents.
+
+            The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
+
+        .. deprecated::
+            ``use_container_width`` will be removed in a future version. Please use
+            the ``width`` parameter instead. For ``use_container_width=True``,
+            use ``width="stretch"``. For ``use_container_width=False``,
+            use ``width="content"``.
 
         Examples
         --------
@@ -819,9 +880,11 @@ class LayoutsMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for a popover")
 
+        if use_container_width is not None:
+            width = "stretch" if use_container_width else "content"
+
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
-        popover_proto.use_container_width = use_container_width
         popover_proto.disabled = disabled
         if help:
             popover_proto.help = str(help)
@@ -831,6 +894,9 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.popover.CopyFrom(popover_proto)
+
+        validate_width(width, allow_content=True)
+        block_proto.width_config.CopyFrom(get_width_config(width))
 
         return self.dg._block(block_proto=block_proto)
 
@@ -968,6 +1034,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
+        on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
         """Inserts the dialog container.
 
@@ -975,7 +1042,7 @@ class LayoutsMixin:
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
         return get_dg_singleton_instance().dialog_container_cls._create(
-            self.dg, title, dismissible=dismissible, width=width
+            self.dg, title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
         )
 
     @property

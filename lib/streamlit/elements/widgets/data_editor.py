@@ -337,8 +337,8 @@ def _apply_row_additions(
     if isinstance(df.index, pd.RangeIndex):
         # Extract metadata from the range index:
         index_type = "range"
-        index_stop = cast("int", df.index.stop)
-        index_step = cast("int", df.index.step)
+        index_stop = df.index.stop
+        index_step = df.index.step
     elif isinstance(df.index, pd.Index) and pd.api.types.is_integer_dtype(
         df.index.dtype
     ):
@@ -726,8 +726,8 @@ class DataEditorMixin:
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
 
-        args : tuple
-            An optional tuple of args to pass to the callback.
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback.
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.

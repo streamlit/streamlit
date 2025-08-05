@@ -24,10 +24,10 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { mockEndpoints, render } from "@streamlit/lib"
-import { Logo, PageConfig } from "@streamlit/protobuf"
 import { AppContextProps } from "@streamlit/app/src/components/AppContext"
 import * as StreamlitContextProviderModule from "@streamlit/app/src/components/StreamlitContextProvider"
+import { mockEndpoints, render } from "@streamlit/lib"
+import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 
@@ -126,6 +126,7 @@ const SAMPLE_PAGES_WITH_URLS = [
 
 describe("Sidebar Component", () => {
   beforeEach(() => {
+    window.localStorage.clear()
     mockAppContext({})
   })
 
@@ -208,11 +209,11 @@ describe("Sidebar Component", () => {
       const collapseButton = screen.getByTestId("stSidebarCollapseButton")
 
       // Hidden when not hovering
-      expect(collapseButton).toHaveStyle("display: none")
+      expect(collapseButton).toHaveStyle("visibility: hidden")
 
       // Visible when hovering over header
       await user.hover(screen.getByTestId("stSidebarHeader"))
-      expect(collapseButton).toHaveStyle("display: inline")
+      expect(collapseButton).toHaveStyle("visibility: visible")
     })
   })
 
@@ -257,6 +258,45 @@ describe("Sidebar Component", () => {
       expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
         `padding-top: ${expectedPadding}`
       )
+    })
+
+    it("shows navigation when there is one section with multiple pages", () => {
+      const appPagesWithSection = [
+        {
+          pageName: "page1",
+          pageScriptHash: "hash1",
+          sectionHeader: "Section 1",
+        },
+        {
+          pageName: "page2",
+          pageScriptHash: "hash2",
+          sectionHeader: "Section 1",
+        },
+      ]
+      mockAppContext({
+        appPages: appPagesWithSection,
+        navSections: ["Section 1"],
+      })
+      renderSidebar()
+
+      expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
+    })
+
+    it("hides navigation when there is one section with one page", () => {
+      const appPagesWithSection = [
+        {
+          pageName: "page1",
+          pageScriptHash: "hash1",
+          sectionHeader: "Section 1",
+        },
+      ]
+      mockAppContext({
+        appPages: appPagesWithSection,
+        navSections: ["Section 1"],
+      })
+      renderSidebar()
+
+      expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
     })
   })
 
@@ -398,6 +438,28 @@ describe("Sidebar Component", () => {
         "onerror triggered",
         LOGO_IMAGE_URL
       )
+    })
+  })
+
+  describe("Width Persistence", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    it("should initialize with default width when no localStorage value exists", () => {
+      renderSidebar({})
+
+      const sidebar = screen.getByTestId("stSidebar")
+      expect(sidebar).toHaveStyle("width: 256px")
+    })
+
+    it("should initialize with saved width when localStorage value exists", () => {
+      window.localStorage.setItem("sidebarWidth", "320")
+
+      renderSidebar({})
+
+      const sidebar = screen.getByTestId("stSidebar")
+      expect(sidebar).toHaveStyle("width: 320px")
     })
   })
 })
