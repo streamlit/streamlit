@@ -71,7 +71,22 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
 def directory_upload_helper(
     app: Page, chat_input: Locator, file_data: list[dict[str, Any]]
 ) -> None:
-    """Helper function for directory uploads in chat input."""
+    """
+    Helper function for uploading directories in tests.
+
+    Parameters
+    ----------
+    app : Page
+        The Playwright page object
+    chat_input : Locator
+        The chat input widget locator
+    file_data : list[dict[str, Any]]
+        List of dictionaries containing file path and content information
+
+    Returns
+    -------
+    None
+    """
     temp_dir = create_temp_directory_with_files(file_data)
     upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
 
@@ -208,7 +223,9 @@ def test_submit_hover_state_with_input_value(
     """Test the submit button's hover state when input value is present."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input = app.get_by_test_id("stChatInput").nth(7)
+    chat_input = app.get_by_test_id("stChatInput").nth(
+        9
+    )  # Chat input with max_chars=200
     chat_input_area = chat_input.locator("textarea")
     chat_input_area.type("Corgi")
 
