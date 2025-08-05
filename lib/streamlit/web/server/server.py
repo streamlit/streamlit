@@ -64,20 +64,61 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-TORNADO_SETTINGS = {
-    # Gzip HTTP responses.
-    "compress_response": True,
-    # Ping every 30s to keep WS alive.
-    # With recent versions of Tornado, this value must be greater than or
-    # equal to websocket_ping_timeout.
-    # For details, see https://github.com/tornadoweb/tornado/pull/3376
-    # For compatibility with older versions of Tornado, we set the value to 1.
-    "websocket_ping_interval": 1 if is_tornado_version_less_than("6.5.0") else 30,
-    # If we don't get a ping response within 30s, the connection
-    # is timed out.
-    "websocket_ping_timeout": 30,
-    "xsrf_cookie_name": "_streamlit_xsrf",
-}
+
+def _get_websocket_ping_interval_and_timeout() -> tuple[int, int]:
+    """Get the websocket ping interval and timeout from config or defaults.
+
+    Returns
+    -------
+        tuple: (ping_interval, ping_timeout)
+    """
+    configured_interval = config.get_option("server.websocketPingInterval")
+
+    if configured_interval is not None:
+        # User has explicitly set a value
+        interval = int(configured_interval)
+
+        # Warn if using Tornado 6.5+ with low interval
+        if not is_tornado_version_less_than("6.5.0") and interval < 30:
+            _LOGGER.warning(
+                "You have set server.websocketPingInterval to %s, but Tornado >= 6.5 "
+                "requires websocket_ping_interval >= websocket_ping_timeout. "
+                "To comply, we are setting both the ping interval and ping timeout to %s. "
+                "Depending on the specific deployment setup, this may cause connection issues.",
+                interval,
+                interval,
+            )
+
+        # When user configures interval, set timeout to match
+        return interval, interval
+
+    # Default behavior: respect Tornado version for interval, always 30s timeout
+    default_interval = 1 if is_tornado_version_less_than("6.5.0") else 30
+    return default_interval, 30
+
+
+def get_tornado_settings() -> dict[str, Any]:
+    """Get Tornado settings for the server.
+
+    This is a function to allow for testing and dynamic configuration.
+    """
+    ping_interval, ping_timeout = _get_websocket_ping_interval_and_timeout()
+
+    return {
+        # Gzip HTTP responses.
+        "compress_response": True,
+        # Ping interval for websocket keepalive.
+        # With recent versions of Tornado, this value must be greater than or
+        # equal to websocket_ping_timeout.
+        # For details, see https://github.com/tornadoweb/tornado/pull/3376
+        # For compatibility with older versions of Tornado, we set the value to 1.
+        "websocket_ping_interval": ping_interval,
+        # If we don't get a ping response within this time, the connection
+        # is timed out.
+        "websocket_ping_timeout": ping_timeout,
+        "xsrf_cookie_name": "_streamlit_xsrf",
+    }
+
 
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
@@ -450,7 +491,7 @@ class Server:
             xsrf_cookies=is_xsrf_enabled(),
             # Set the websocket message size. The default value is too low.
             websocket_max_message_size=get_max_message_size_bytes(),
-            **TORNADO_SETTINGS,  # type: ignore[arg-type]
+            **get_tornado_settings(),
         )
 
     @property
