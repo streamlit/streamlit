@@ -60,4 +60,66 @@ describe("FileDropzone widget", () => {
       screen.queryByTestId("stFileUploaderDropzoneInput")
     ).toHaveAttribute("accept", [STREAMLIT_MIME_TYPE, ".jpg"].join(","))
   })
+
+  it("renders directory upload button with correct text", () => {
+    const props = getProps({
+      acceptDirectory: true,
+    })
+    render(<FileDropzone {...props} />)
+
+    const button = screen.getByRole("button")
+    expect(button).toHaveTextContent("Browse directories")
+  })
+
+  it("renders regular file upload button text when not directory mode", () => {
+    const props = getProps({
+      acceptDirectory: false,
+    })
+    render(<FileDropzone {...props} />)
+
+    const button = screen.getByRole("button")
+    expect(button).toHaveTextContent("Browse files")
+  })
+
+  it("sets webkitdirectory attribute for directory uploads", () => {
+    const props = getProps({
+      acceptDirectory: true,
+    })
+    render(<FileDropzone {...props} />)
+
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).toHaveAttribute("webkitdirectory", "")
+  })
+
+  it("sets multiple attribute for directory uploads", () => {
+    const props = getProps({
+      acceptDirectory: true,
+      multiple: false, // Even if multiple is false, directory mode should force it to true
+    })
+    render(<FileDropzone {...props} />)
+
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).toHaveAttribute("multiple")
+  })
+
+  it("does not set webkitdirectory attribute for regular file uploads", () => {
+    const props = getProps({
+      acceptDirectory: false,
+    })
+    render(<FileDropzone {...props} />)
+
+    const input = screen.getByTestId("stFileUploaderDropzoneInput")
+    expect(input).not.toHaveAttribute("webkitdirectory")
+  })
+
+  it("disables directory upload button when disabled", () => {
+    const props = getProps({
+      acceptDirectory: true,
+      disabled: true,
+    })
+    render(<FileDropzone {...props} />)
+
+    const button = screen.getByRole("button")
+    expect(button).toBeDisabled()
+  })
 })
