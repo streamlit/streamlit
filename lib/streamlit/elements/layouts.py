@@ -886,36 +886,40 @@ class LayoutsMixin:
             ``True``. The default is ``False``.
 
         use_container_width : bool
-                Whether to expand the button's width to fill its parent container.
-                If ``use_container_width`` is ``False`` (default), Streamlit sizes
-                the button to fit its contents. If ``use_container_width`` is
-                ``True``, the width of the button matches its parent container.
-                In both cases, if the contents of the button are wider than the
-                parent container, the contents will line wrap.
-                The popover container's minimum width matches the width of its
-                button. The popover container may be wider than its button to fit
-                the container's contents.
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its content. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the content of the button is wider than the
+            parent container, the content will line wrap.
+
+            The popover container's minimum width matches the width of its
+            button. The popover container may be wider than its button to fit
+            the container's content.
 
         width : int, "stretch", or "content"
-            An optional width for the popover button. This can be one of the
-            following:
+            The width of the button. This can be one of the following:
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
 
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
 
         .. deprecated::
-            ``use_container_width`` will be removed in a future version. Please use
-            the ``width`` parameter instead. For ``use_container_width=True``,
-            use ``width="stretch"``. For ``use_container_width=False``,
-            use ``width="content"``.
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Examples
         --------
