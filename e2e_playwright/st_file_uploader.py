@@ -54,6 +54,24 @@ else:
 if runtime.exists():
     st.write(repr(st.session_state.multiple) == repr(multiple_files))
 
+# Add directory upload test scenario
+directory_files = st.file_uploader(
+    "Drop a directory:",
+    type=["txt", "py", "md"],
+    accept_multiple_files="directory",
+    key="directory",
+)
+if not directory_files:
+    st.text("No directory upload")
+else:
+    st.text(f"Directory contains {len(directory_files)} files:")
+    for file in directory_files:
+        st.text(f"- {file.name}: {len(file.read())} bytes")
+        file.seek(0)  # Reset file pointer for potential reuse
+
+if runtime.exists():
+    st.write(repr(st.session_state.directory) == repr(directory_files))
+
 with st.form("foo"):
     form_file = st.file_uploader("Inside form:", type=["txt"])
     st.form_submit_button("Submit")
@@ -127,6 +145,23 @@ with col1:
 
 st.file_uploader("Width Stretch", width="stretch", key="uploader_stretch")
 st.file_uploader("Width 300px", width=300, key="uploader_300px")
+
+# Add directory upload with specific file type restrictions
+restricted_directory = st.file_uploader(
+    "Restricted directory (only .txt files):",
+    type=["txt"],
+    accept_multiple_files="directory",
+    key="restricted_directory",
+)
+if not restricted_directory:
+    st.text("No restricted directory upload")
+else:
+    st.text(f"Restricted directory contains {len(restricted_directory)} .txt files:")
+    for file in restricted_directory:
+        st.text(f"- {file.name}")
+
+if runtime.exists():
+    st.write(repr(st.session_state.restricted_directory) == repr(restricted_directory))
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0

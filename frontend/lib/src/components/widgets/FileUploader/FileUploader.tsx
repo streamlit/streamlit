@@ -225,6 +225,51 @@ class FileUploader extends PureComponent<InnerProps, State> {
   }
 
   /**
+   * Helper function to check if a file matches the accepted extensions
+   */
+  private isFileTypeAllowed = (file: File): boolean => {
+    const { element } = this.props
+    const { type: acceptedExtensions } = element
+
+    // If no extensions are specified, allow all files
+    if (!acceptedExtensions || acceptedExtensions.length === 0) {
+      return true
+    }
+
+    // Check if the file extension matches any of the accepted extensions
+    const fileName = file.name.toLowerCase()
+    return acceptedExtensions.some(ext => fileName.endsWith(ext.toLowerCase()))
+  }
+
+  /**
+   * Helper function to separate directory files into accepted and rejected based on file type
+   */
+  private filterDirectoryFiles = (
+    files: File[]
+  ): { accepted: File[]; rejected: FileRejection[] } => {
+    const accepted: File[] = []
+    const rejected: FileRejection[] = []
+
+    files.forEach(file => {
+      if (this.isFileTypeAllowed(file)) {
+        accepted.push(file)
+      } else {
+        rejected.push({
+          file,
+          errors: [
+            {
+              code: "file-invalid-type",
+              message: `${file.type} files are not allowed.`,
+            },
+          ],
+        })
+      }
+    })
+
+    return { accepted, rejected }
+  }
+
+  /**
    * Called by react-dropzone when files and drag-and-dropped onto the widget.
    *
    * @param acceptedFiles an array of files.
@@ -238,6 +283,20 @@ class FileUploader extends PureComponent<InnerProps, State> {
   ): void => {
     const { element } = this.props
     const { multipleFiles } = element
+    const isDirectoryUpload = Boolean(element.acceptDirectory)
+
+    // For directory uploads, we need to do our own file type filtering
+    // because webkitdirectory bypasses react-dropzone's normal validation.
+    // TODO: Consider unifying validation logic to avoid divergence between
+    // single/multiple file uploads and directory uploads. Currently, regular
+    // uploads use react-dropzone's built-in validation while directory uploads
+    // use our custom filterDirectoryFiles method. This could lead to
+    // inconsistent behavior.
+    if (isDirectoryUpload && acceptedFiles.length > 0) {
+      const { accepted, rejected } = this.filterDirectoryFiles(acceptedFiles)
+      acceptedFiles = accepted
+      rejectedFiles = [...rejectedFiles, ...rejected]
+    }
 
     // If this is a single-file uploader and multiple files were dropped,
     // all the files will be rejected. In this case, we pull out the first
@@ -308,8 +367,12 @@ class FileUploader extends PureComponent<InnerProps, State> {
   public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
+
+    // For directory uploads, use the relative path to preserve directory structure
+    const fileName = file.webkitRelativePath || file.name
+
     const uploadingFileInfo = new UploadFileInfo(
-      file.name,
+      fileName,
       file.size,
       this.nextLocalFileId(),
       {
@@ -555,6 +618,7 @@ class FileUploader extends PureComponent<InnerProps, State> {
           maxSizeBytes={this.maxUploadSizeInBytes}
           label={element.label}
           disabled={disabled}
+          acceptDirectory={Boolean(element.acceptDirectory)}
         />
         {newestToOldestFiles.length > 0 && (
           <UploadedFiles
