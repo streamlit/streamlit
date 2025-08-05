@@ -53,7 +53,14 @@ const isFileTypeAllowed = (file: File, element: ChatInputProto): boolean => {
 
   // Check if the file extension matches any of the accepted extensions
   const fileName = file.name.toLowerCase()
-  return acceptedExtensions.some(ext => fileName.endsWith(ext.toLowerCase()))
+  return acceptedExtensions.some(ext => {
+    const extLower = ext.toLowerCase()
+    // Ensure we're matching at an extension boundary (preceded by a period or starting with one)
+    return (
+      fileName.endsWith(extLower) &&
+      (extLower.startsWith(".") || fileName.endsWith(`.${extLower}`))
+    )
+  })
 }
 
 /**
@@ -108,8 +115,6 @@ export const createDropHandler =
       )
       acceptedFiles = accepted
       rejectedFiles = [...rejectedFiles, ...rejected]
-
-      // Directory uploads filter files automatically based on type restrictions
     }
 
     // If only single file upload is allowed but multiple were dropped/selected,
