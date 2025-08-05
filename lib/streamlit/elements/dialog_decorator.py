@@ -163,14 +163,15 @@ def dialog_decorator(
     called. Any values from the dialog that need to be accessed from the wider
     app should generally be stored in Session State.
 
-    A user can dismiss a modal dialog by clicking outside of it, clicking the
-    "**X**" in its upper-right corner, or pressing ``ESC`` on their keyboard.
-    Dismissing a modal dialog does not trigger an app rerun. To close the modal
-    dialog programmatically, call ``st.rerun()`` explicitly inside of the
-    dialog function. To enforce that dialogs are always closed programmatically,
-    you can set the ``dismissible`` parameter to ``False``. This will hide the "**X**"
-    button in the upper-right corner of the dialog and prevent the user from dismissing
-    the dialog by clicking outside of it or pressing ``ESC``.
+    If a dialog is dismissible, a user can dismiss it by clicking outside of
+    it, clicking the "**X**" in its upper-right corner, or pressing ``ESC`` on
+    their keyboard. You can configure whether this triggers a rerun of the app
+    by setting the ``on_dismiss`` parameter.
+
+    If a dialog is not dismissible, it must be closed programmatically by
+    calling ``st.rerun()`` inside the dialog function. This is useful when you
+    want to ensure that the dialog is always closed programmatically, such as
+    when the dialog contains a form that must be submitted before closing.
 
     ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
@@ -217,21 +218,24 @@ def dialog_decorator(
         modal dialog will be about 750 pixels wide.
 
     dismissible : bool
-        Whether the modal dialog can be dismissed by the user by clicking outside of
-        it or by pressing ``ESC``. Setting it to False also hides the ``X``
-        button in the upper-right corner of the dialog.
+        Whether the modal dialog can be dismissed by the user. If this is
+        ``True`` (default), the user can dismiss the dialog by clicking
+        outside of it, clicking the "**X**" in its upper-right corner, or
+        pressing ``ESC`` on their keyboard. If this is ``False``, the "**X**"
+        in the upper-right corner is hidden and the dialog must be closed
+        programmatically by calling ``st.rerun()`` inside the dialog function.
 
         .. note::
-            Setting ``dismissible`` to False does not guarantee that all
-            interactions in the main app are blocked. Please don't rely on
-            dismissible for security-critical checks.
+            Setting ``dismissible`` to ``False`` does not guarantee that all
+            interactions in the main app are blocked. Don't rely on
+            ``dismissible`` for security-critical checks.
 
-    on_dismiss : "ignore", "rerun" or callable
+    on_dismiss : "ignore", "rerun", or callable
         How the dialog should respond to dismissal events.
-        ``on_dismiss`` can be one of the following:
+        This can be one of the following:
 
-        - ``"ignore"`` (default): Streamlit will not rerun on dismissal
-          of the dialog.
+        - ``"ignore"`` (default): Streamlit will not rerun the app when the
+          user dismisses the dialog.
 
         - ``"rerun"``: Streamlit will rerun the app when the user dismisses
           the dialog.

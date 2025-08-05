@@ -180,11 +180,6 @@ class ButtonMixin:
             The default is ``False``.
 
         use_container_width : bool
-                This parameter will be removed in a future version. Use the
-                ``width`` parameter instead. For ``use_container_width=True``,
-                use ``width="stretch"``. For ``use_container_width=False``,
-                use ``width="content"``.
-
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -193,16 +188,24 @@ class ButtonMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
-        width : int, "stretch", or "content"
-            An optional width for the button. This can be one of the
-            following:
+        width : "content", "stretch", or int
+            The width of the button. This can be one of the following:
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Returns
         -------
@@ -237,11 +240,11 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> left, middle, right = st.columns(3)
-        >>> if left.button("Plain button", use_container_width=True):
+        >>> if left.button("Plain button", width="stretch"):
         ...     left.markdown("You clicked the plain button.")
-        >>> if middle.button("Emoji button", icon="😃", use_container_width=True):
+        >>> if middle.button("Emoji button", icon="😃", width="stretch"):
         ...     middle.markdown("You clicked the emoji button.")
-        >>> if right.button("Material button", icon=":material/mood:", use_container_width=True):
+        >>> if right.button("Material button", icon=":material/mood:", width="stretch"):
         ...     right.markdown("You clicked the Material button.")
 
         .. output::
@@ -421,11 +424,6 @@ class ButtonMixin:
             ``True``. The default is ``False``.
 
         use_container_width : bool
-                This parameter will be removed in a future version. Use the
-                ``width`` parameter instead. For ``use_container_width=True``,
-                use ``width="stretch"``. For ``use_container_width=False``,
-                use ``width="content"``.
-
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -434,16 +432,24 @@ class ButtonMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
-        width : int, "stretch", or "content"
-            An optional width for the download button. This can be one of the
-            following:
+        width : "content", "stretch", or int
+            The width of the download button. This can be one of the following:
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Returns
         -------
@@ -674,16 +680,24 @@ class ButtonMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
-        width : int, "stretch", or "content"
-            An optional width for the link button. This can be one of the
-            following:
+        width : "content", "stretch", or int
+            The width of the link button. This can be one of the following:
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Example
         -------
@@ -798,16 +812,24 @@ class ButtonMixin:
             The default is ``True`` for page links in the sidebar and ``False``
             for those in the main app.
 
-        width : int, "stretch", or "content"
-            An optional width for the page link. This can be one of the
-            following:
+        width : "content", "stretch", or int
+            The width of the page-link button. This can be one of the following:
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Example
         -------
