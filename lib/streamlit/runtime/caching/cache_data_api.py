@@ -424,6 +424,11 @@ class CacheDataAPI:
         `Caching overview
         <https://docs.streamlit.io/develop/concepts/architecture/caching>`_.
 
+        .. note::
+            Caching async functions is not supported. To upvote this feature,
+            see GitHub issue `#8308
+            <https://github.com/streamlit/streamlit/issues/8308>`_.
+
         Parameters
         ----------
         func : callable

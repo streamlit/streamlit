@@ -309,7 +309,9 @@ class CacheResourceAPI:
             ``Event loop closed`` error.
 
             To upvote official ``asyncio`` support, see GitHub issue `#8488
-            <https://github.com/streamlit/streamlit/issues/8488>`_.
+            <https://github.com/streamlit/streamlit/issues/8488>`_. To upvote
+            official support for caching async functions, see GitHub issue
+            `#8308 <https://github.com/streamlit/streamlit/issues/8308>`_.
 
         Parameters
         ----------
