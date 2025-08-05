@@ -308,6 +308,9 @@ class CacheResourceAPI:
             loops in its normal operation and make the cached object raise an
             ``Event loop closed`` error.
 
+            To upvote official ``asyncio`` support, see GitHub issue `#8488
+            <https://github.com/streamlit/streamlit/issues/8488>`_.
+
         Parameters
         ----------
         func : callable
