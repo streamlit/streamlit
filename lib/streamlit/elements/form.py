@@ -279,6 +279,7 @@ class FormMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
             this is ``None`` (default), no tooltip is displayed.
@@ -286,12 +287,16 @@ class FormMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
         on_click : callable
             An optional callback invoked when this button is clicked.
+
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
             of the following:
@@ -319,6 +324,7 @@ class FormMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
             user can interact with the button. If this is ``True``, the button
@@ -329,11 +335,6 @@ class FormMixin:
             ``enter_to_submit=False``.
 
         use_container_width : bool
-                This parameter will be removed in a future version. Use the
-                ``width`` parameter instead. For ``use_container_width=True``,
-                use ``width="stretch"``. For ``use_container_width=False``,
-                use ``width="content"``.
-
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
             the button to fit its contents. If ``use_container_width`` is
@@ -342,16 +343,24 @@ class FormMixin:
             In both cases, if the contents of the button are wider than the
             parent container, the contents will line wrap.
 
-        width : int, "stretch", or "content"
-            An optional width for the submit button. This can be one of the
-            following:
+        width : "content", "stretch", or int
+            The width of the button. This can be one of the following:
 
-            - An integer which corresponds to the desired button width in
-              pixels.
-            - ``"stretch"``: The button's width expands to fill its parent
+            - ``"content"`` (default): The width of the button matches the
+              width of its content, but doesn't exceed the width of the parent
               container.
-            - ``"content"`` (default): The button's width is set to fit its
-              contents.
+            - ``"stretch"``: The width of the button matches the width of the
+              parent container.
+            - An integer specifying the width in pixels: The button has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the button matches the width
+              of the parent container.
+
+        .. deprecated::
+            ``use_container_width`` is deprecated and will be removed in a
+            future release. For ``use_container_width=True``, use
+            ``width="stretch"``. For ``use_container_width=False``, use
+            ``width="content"``.
 
         Returns
         -------
