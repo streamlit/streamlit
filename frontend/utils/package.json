@@ -12,7 +12,8 @@
     ".": {
       "require": "./dist/streamlit-utils.cjs.js",
       "import": "./dist/streamlit-utils.es.js",
-      "default": "./dist/streamlit-utils.umd.js"
+      "default": "./dist/streamlit-utils.umd.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "scripts": {
