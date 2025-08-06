@@ -122,21 +122,7 @@ describe("useCopyToClipboard", () => {
     expect(result.current.isCopied).toBe(false)
   })
 
-  it("should not copy when no text is provided", async () => {
-    const { result } = renderHook(() => useCopyToClipboard())
-
-    expect(result.current.isCopied).toBe(false)
-
-    // eslint-disable-next-line @typescript-eslint/require-await
-    await act(async () => {
-      result.current.copyToClipboard()
-    })
-
-    expect(mockWriteText).not.toHaveBeenCalled()
-    expect(result.current.isCopied).toBe(false)
-  })
-
-  it("should not copy when empty text is provided", async () => {
+  it("should copy empty text", async () => {
     const { result } = renderHook(() => useCopyToClipboard())
 
     expect(result.current.isCopied).toBe(false)
@@ -146,7 +132,7 @@ describe("useCopyToClipboard", () => {
       result.current.copyToClipboard("")
     })
 
-    expect(mockWriteText).not.toHaveBeenCalled()
-    expect(result.current.isCopied).toBe(false)
+    expect(mockWriteText).toHaveBeenCalledWith("")
+    expect(result.current.isCopied).toBe(true)
   })
 })

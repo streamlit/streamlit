@@ -24,7 +24,7 @@ const LOG = getLogger("useCopyToClipboard")
 
 export type UseCopyToClipboardResult = {
   isCopied: boolean
-  copyToClipboard: (text?: string) => void
+  copyToClipboard: (text: string) => void
 }
 
 export const useCopyToClipboard = ({
@@ -46,11 +46,7 @@ export const useCopyToClipboard = ({
   )
 
   const copyToClipboard = useCallback(
-    (text?: string) => {
-      if (!text) {
-        return
-      }
-
+    (text: string) => {
       const performCopy = async (): Promise<void> => {
         try {
           // eslint-disable-next-line no-restricted-properties -- This is the only expected usage of navigator.clipboard
@@ -59,7 +55,7 @@ export const useCopyToClipboard = ({
           // Restart the timeout on each successful copy to reset the timer
           restart()
         } catch (error) {
-          LOG.error("Failed to copy exception details to clipboard:", error)
+          LOG.error("Failed to copy text to clipboard:", error)
           setIsCopied(false)
         }
       }

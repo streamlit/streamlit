@@ -47,7 +47,7 @@ function useTimeout(
     callbackRef.current = callback
   }, [callback])
 
-  useEffect(() => {
+  const setupTimeout = useCallback(() => {
     // Clear any existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
@@ -60,6 +60,10 @@ function useTimeout(
         callbackRef.current()
       }, timeoutMs)
     }
+  }, [timeoutMs])
+
+  useEffect(() => {
+    setupTimeout()
 
     return () => {
       if (timeoutRef.current) {
@@ -67,7 +71,7 @@ function useTimeout(
         timeoutRef.current = null
       }
     }
-  }, [timeoutMs])
+  }, [setupTimeout])
 
   const clear = useCallback(() => {
     if (timeoutRef.current) {
@@ -77,19 +81,8 @@ function useTimeout(
   }, [])
 
   const restart = useCallback(() => {
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
-    }
-
-    // Set new timeout if timeoutMs is not null
-    if (timeoutMs !== null) {
-      timeoutRef.current = setTimeout(() => {
-        callbackRef.current()
-      }, timeoutMs)
-    }
-  }, [timeoutMs])
+    setupTimeout()
+  }, [setupTimeout])
 
   return { clear, restart }
 }
