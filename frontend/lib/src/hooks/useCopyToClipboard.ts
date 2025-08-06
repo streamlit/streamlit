@@ -16,21 +16,20 @@
 
 import { useCallback, useState } from "react"
 
+import { getLogger } from "loglevel"
+
 import useTimeout from "./useTimeout"
+
+const LOG = getLogger("useCopyToClipboard")
 
 export type UseCopyToClipboardResult = {
   isCopied: boolean
-  copyToClipboard: (inlineText?: string) => void
+  copyToClipboard: (text?: string) => void
 }
 
 export const useCopyToClipboard = ({
-  text,
   timeout = 2_000,
 }: {
-  /**
-   * The text to copy to the clipboard.
-   */
-  text?: string
   /**
    * The (optional) timeout in milliseconds to reset the copied state. Default
    * is 2 seconds.
@@ -47,19 +46,20 @@ export const useCopyToClipboard = ({
   )
 
   const copyToClipboard = useCallback(
-    (inlineText?: string) => {
-      const textToCopy = inlineText ?? text
-      if (!textToCopy) {
+    (text?: string) => {
+      if (!text) {
         return
       }
 
       const performCopy = async (): Promise<void> => {
         try {
-          await navigator.clipboard.writeText(textToCopy)
+          // eslint-disable-next-line no-restricted-properties -- This is the only expected usage of navigator.clipboard
+          await navigator.clipboard.writeText(text)
           setIsCopied(true)
           // Restart the timeout on each successful copy to reset the timer
           restart()
-        } catch {
+        } catch (error) {
+          LOG.error("Failed to copy exception details to clipboard:", error)
           setIsCopied(false)
         }
       }
@@ -68,7 +68,7 @@ export const useCopyToClipboard = ({
       // callback into `onClick` pass the type-checker
       void performCopy()
     },
-    [text, restart]
+    [restart]
   )
 
   return { isCopied, copyToClipboard }

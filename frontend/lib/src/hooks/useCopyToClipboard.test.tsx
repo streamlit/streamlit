@@ -40,14 +40,14 @@ describe("useCopyToClipboard", () => {
   it("should copy text to clipboard and reset after timeout", async () => {
     const text = "Hello World"
     const timeout = 100
-    const { result } = renderHook(() => useCopyToClipboard({ text, timeout }))
+    const { result } = renderHook(() => useCopyToClipboard({ timeout }))
 
     expect(result.current.isCopied).toBe(false)
 
     // Perform copy
     // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
-      result.current.copyToClipboard()
+      result.current.copyToClipboard(text)
     })
 
     expect(mockWriteText).toHaveBeenCalledWith(text)
@@ -63,12 +63,12 @@ describe("useCopyToClipboard", () => {
   it("should restart timeout on multiple rapid clicks", async () => {
     const text = "Hello World"
     const timeout = 200
-    const { result } = renderHook(() => useCopyToClipboard({ text, timeout }))
+    const { result } = renderHook(() => useCopyToClipboard({ timeout }))
 
     // First copy
     // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
-      result.current.copyToClipboard()
+      result.current.copyToClipboard(text)
     })
     expect(result.current.isCopied).toBe(true)
 
@@ -78,7 +78,7 @@ describe("useCopyToClipboard", () => {
     })
     // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
-      result.current.copyToClipboard()
+      result.current.copyToClipboard(text)
     })
     expect(result.current.isCopied).toBe(true)
 
@@ -88,7 +88,7 @@ describe("useCopyToClipboard", () => {
     })
     // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
-      result.current.copyToClipboard()
+      result.current.copyToClipboard(text)
     })
     expect(result.current.isCopied).toBe(true)
 
@@ -112,13 +112,41 @@ describe("useCopyToClipboard", () => {
     const text = "Hello World"
     mockWriteText.mockRejectedValue(new Error("Clipboard write failed"))
 
-    const { result } = renderHook(() => useCopyToClipboard({ text }))
+    const { result } = renderHook(() => useCopyToClipboard())
+
+    // eslint-disable-next-line @typescript-eslint/require-await
+    await act(async () => {
+      result.current.copyToClipboard(text)
+    })
+
+    expect(result.current.isCopied).toBe(false)
+  })
+
+  it("should not copy when no text is provided", async () => {
+    const { result } = renderHook(() => useCopyToClipboard())
+
+    expect(result.current.isCopied).toBe(false)
 
     // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
       result.current.copyToClipboard()
     })
 
+    expect(mockWriteText).not.toHaveBeenCalled()
+    expect(result.current.isCopied).toBe(false)
+  })
+
+  it("should not copy when empty text is provided", async () => {
+    const { result } = renderHook(() => useCopyToClipboard())
+
+    expect(result.current.isCopied).toBe(false)
+
+    // eslint-disable-next-line @typescript-eslint/require-await
+    await act(async () => {
+      result.current.copyToClipboard("")
+    })
+
+    expect(mockWriteText).not.toHaveBeenCalled()
     expect(result.current.isCopied).toBe(false)
   })
 })

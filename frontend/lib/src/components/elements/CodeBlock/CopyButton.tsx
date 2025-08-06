@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, useRef } from "react"
+import React, { memo, useCallback, useRef } from "react"
 
 import { Check as CheckIcon, Copy as CopyIcon } from "react-feather"
 
@@ -32,14 +32,18 @@ const CopyButton: React.FC<Props> = ({ text }) => {
   const theme = useEmotionTheme()
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  const { isCopied, copyToClipboard } = useCopyToClipboard({ text })
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
+
+  const handleCopy = useCallback(() => {
+    copyToClipboard(text)
+  }, [copyToClipboard, text])
 
   return (
     <StyledCopyButton
       data-testid="stCodeCopyButton"
       title="Copy to clipboard"
       ref={buttonRef}
-      onClick={copyToClipboard}
+      onClick={handleCopy}
     >
       {/* Convert size to px because using rem works but logs a console error (at least on webkit) */}
       {isCopied ? (

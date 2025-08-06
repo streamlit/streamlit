@@ -94,9 +94,6 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
   const { activeTheme, addThemes, setTheme } = useContext(LibContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
-  const config = toMinimalToml(themeInput)
-
-  const { isCopied, copyToClipboard } = useCopyToClipboard({ text: config })
 
   const updateTheme = (customTheme: ThemeConfig): void => {
     addThemes([customTheme])
@@ -111,11 +108,15 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
     updateTheme(customTheme)
   }
 
+  const config = toMinimalToml(themeInput)
+
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
+
   const copyConfig = (): void => {
     props.metricsMgr.enqueue("menuClick", {
       label: "copyThemeToClipboard",
     })
-    copyToClipboard()
+    copyToClipboard(config)
   }
 
   const onClickedBack = (): void => {

@@ -29,6 +29,7 @@ Object.assign(navigator, {
 })
 
 describe("CopyButton Element", () => {
+  // eslint-disable-next-line no-restricted-properties -- This is fine in tests
   const mockWriteText = vi.mocked(navigator.clipboard.writeText)
 
   beforeEach(() => {

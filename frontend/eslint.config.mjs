@@ -204,6 +204,11 @@ export default tseslint.config([
           property: "innerHeight",
           message: "Please use the `useWindowDimensionsContext` hook instead.",
         },
+        {
+          object: "navigator",
+          property: "clipboard",
+          message: "Please use the `useCopyToClipboard` hook instead.",
+        },
       ],
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
