@@ -248,17 +248,15 @@ class ContextPropertiesNoneTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("theme", "color_scheme", "dark", "dark"),
-            ("timezone", "timezone", "America/New_York", "America/New_York"),
-            ("timezone_offset", "timezone_offset", -300, -300),
-            ("locale", "locale", "en-US", "en-US"),
-            ("is_embedded", "is_embedded", True, True),
+            ("theme",),
+            ("timezone",),
+            ("timezone_offset",),
+            ("locale",),
+            ("is_embedded",),
         ]
     )
     @patch("streamlit.runtime.context.get_script_run_ctx", MagicMock(return_value=None))
-    def test_property_none_context(
-        self, property_name, attribute_name, test_value, expected_value
-    ):
+    def test_property_none_context(self, property_name):
         """Test that properties return None when context is None."""
         if property_name == "theme":
             assert getattr(st.context, property_name).type is None
@@ -267,22 +265,15 @@ class ContextPropertiesNoneTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("theme", "color_scheme", "dark", "dark"),
-            ("timezone", "timezone", "America/New_York", "America/New_York"),
-            ("timezone_offset", "timezone_offset", -300, -300),
-            ("locale", "locale", "en-US", "en-US"),
-            ("is_embedded", "is_embedded", True, True),
+            ("theme",),
+            ("timezone",),
+            ("timezone_offset",),
+            ("locale",),
+            ("is_embedded",),
         ]
     )
     @patch("streamlit.runtime.context.get_script_run_ctx")
-    def test_property_none_context_info(
-        self,
-        property_name,
-        attribute_name,
-        test_value,
-        expected_value,
-        mock_get_script_run_ctx,
-    ):
+    def test_property_none_context_info(self, property_name, mock_get_script_run_ctx):
         """Test that properties return None when context_info is None."""
         mock_ctx = MagicMock()
         mock_ctx.context_info = None
