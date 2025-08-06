@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import logging
 import os
 import secrets
@@ -964,6 +965,27 @@ _create_option(
     """,
     default_val=120,
     type_=int,
+)
+
+_create_option(
+    "server.trustedUserHeaders",
+    description="""
+        HTTP headers to embed in st.user.
+
+        Configures HTTP headers whose values, on websocket connect, will be saved in
+        st.user. Each key is the header name to map, and each value is the key in
+        st.user to save the value under.
+
+        If configured using an environment variable or CLI option, it should be a
+        single JSON-formatted dict of string-to-string.
+
+        Note: This is an experimental API subject to change.
+    """,
+    default_val={},
+    # This is used by click. We accept a JSON string, so this is a str.
+    type_=str,
+    # Hide until API is finalized.
+    visibility="hidden",
 )
 
 # Config Section: Browser #
@@ -1987,6 +2009,41 @@ def _set_development_mode() -> None:
     development.is_development_mode = get_option("global.developmentMode")
 
 
+def _parse_trusted_user_headers() -> None:
+    """Convert string-valued server.trustedUserHeaders to a dict.
+
+    If server.trustedUserHeaders is configured from an environment variable or from
+    the CLI, it will be a JSON string. Parse this and set the value to the resulting
+    dict, after validation.
+    """
+    options = get_config_options()
+    trusted_user_headers = options["server.trustedUserHeaders"]
+    if isinstance(trusted_user_headers.value, str):
+        try:
+            parsed_value = json.loads(trusted_user_headers.value)
+            # Validate that this is an object with string values.
+            if not isinstance(parsed_value, dict):
+                # Config validation is using RuntimeError deliberately; ingore warning
+                # about making this TypeError.
+                # ruff: noqa: TRY004
+                raise RuntimeError("server.trustedUserHeaders JSON must be an object")
+            for json_key, json_value in parsed_value.items():
+                if not isinstance(json_value, str):
+                    raise RuntimeError(
+                        "server.trustedUserHeaders JSON must only have string values. "
+                        f'got bad value for key "{json_key}": {json_value}'
+                    )
+            set_option(
+                "server.trustedUserHeaders",
+                parsed_value,
+                where_defined=trusted_user_headers.where_defined,
+            )
+        except json.decoder.JSONDecodeError as jde:
+            raise RuntimeError(
+                f"bad JSON value for server.trustedUserHeaders: {jde.msg}"
+            )
+
+
 def on_config_parsed(
     func: Callable[[], None], force_connect: bool = False, lock: bool = False
 ) -> Callable[[], None]:
@@ -2046,3 +2103,6 @@ def on_config_parsed(
 # may edit config options based on the values of other config options.
 on_config_parsed(_check_conflicts, lock=True)
 on_config_parsed(_set_development_mode)
+# Update server.trustedUserHeaders from any JSON string that was set. Take out the
+# lock, since this is mutating the config.
+on_config_parsed(_parse_trusted_user_headers, lock=True)
