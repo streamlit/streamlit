@@ -943,7 +943,6 @@ class DataEditorMixin:
             "data_editor",
             user_key=key,
             dg=self.dg,
-            key_as_main_identity=True,
             data=arrow_bytes,
             width=width,
             height=height,

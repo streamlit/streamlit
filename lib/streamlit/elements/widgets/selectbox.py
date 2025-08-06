@@ -542,7 +542,6 @@ class SelectboxMixin:
             "selectbox",
             user_key=key,
             dg=self.dg,
-            key_as_main_identity=True,
             label=label,
             options=formatted_options,
             index=index,
