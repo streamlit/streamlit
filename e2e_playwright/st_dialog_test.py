@@ -370,10 +370,8 @@ def test_dialogs_have_different_fragment_ids(app: Page):
 def test_dialog_copy_buttons_work(app: Page):
     """Test that the copy buttons in the dialog work as expected.
 
-    We paste the copied content into an input field. We could use
-    playwright's app.evaluate("navigator.clipboard.readText()") to get
-    the copied text, but then we have to grant permission to the user
-    agent to allow accessing the clipboard.
+    We paste the copied content into an input field to verify that the copy
+    button works.
     """
 
     open_dialog_with_copy_buttons(app)
