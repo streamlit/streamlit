@@ -926,6 +926,24 @@ _create_option(
 )
 
 _create_option(
+    "server.websocketPingInterval",
+    description="""
+        The interval (in seconds) at which the server pings the client to keep
+        the websocket connection alive.
+
+        The default value should work for most deployments. However, if you're
+        experiencing frequent disconnections in certain proxy setups (e.g.,
+        "Connection error" messages), you may want to try adjusting this value.
+
+        Note: When you set this option, Streamlit automatically sets the ping
+        timeout to match this interval. For Tornado >=6.5, a value less than 30
+        may cause connection issues.
+    """,
+    default_val=None,
+    type_=int,
+)
+
+_create_option(
     "server.enableStaticServing",
     description="""
         Enable serving files from a `static` directory in the running app's
