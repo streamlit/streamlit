@@ -24,13 +24,15 @@ from e2e_playwright.shared.app_utils import (
     get_text_area,
 )
 
+NUM_TEXT_AREAS = 23
+
 
 def test_text_area_widget_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = themed_app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(23)
+    expect(text_area_widgets).to_have_count(NUM_TEXT_AREAS)
 
     assert_snapshot(
         get_text_area(themed_app, "text area 1 (default)"), name="st_text_area-default"
@@ -78,7 +80,7 @@ def test_text_area_widget_rendering(
 def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the st.text_area widgets are correctly rendered via screenshot matching."""
     text_area_widgets = app.get_by_test_id("stTextArea")
-    expect(text_area_widgets).to_have_count(23)
+    expect(text_area_widgets).to_have_count(NUM_TEXT_AREAS)
 
     assert_snapshot(
         get_text_area(app, "text area 11 (height=250)"), name="st_text_area-height_250"
