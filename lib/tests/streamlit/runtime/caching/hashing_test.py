@@ -531,6 +531,14 @@ class HashTest(unittest.TestCase):
         assert get_hash(im5) != get_hash(im6)
 
     def test_pydantic_model(self):
+        """Test that Pydantic models are properly hashed.
+        
+        Verifies that:
+        - The same model instance hashes consistently
+        - Two identical model instances produce the same hash
+        - Models with different field values produce different hashes
+        - Different model classes with the same field values produce different hashes
+        """
         class Foo(pydantic.BaseModel):
             name: str
 
