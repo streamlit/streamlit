@@ -107,17 +107,16 @@ class DataframeSelectionState(TypedDict, total=False):
     Try selecting some rows. To select multiple columns, hold ``Ctrl`` while
     selecting columns. Hold ``Shift`` to select a range of columns.
 
-    >>> import streamlit as st
     >>> import pandas as pd
-    >>> import numpy as np
+    >>> import streamlit as st
+    >>> from numpy.random import default_rng as rng
     >>>
-    >>> if "df" not in st.session_state:
-    >>>     st.session_state.df = pd.DataFrame(
-    ...         np.random.randn(12, 5), columns=["a", "b", "c", "d", "e"]
-    ...     )
+    >>> df = pd.DataFrame(
+    ...     rng(0).standard_normal((12, 5)), columns=["a", "b", "c", "d", "e"]
+    ... )
     >>>
     >>> event = st.dataframe(
-    ...     st.session_state.df,
+    ...     df,
     ...     key="data",
     ...     on_select="rerun",
     ...     selection_mode=["multi-row", "multi-column"],
@@ -441,13 +440,15 @@ class ArrowMixin:
         --------
         **Example 1: Display a dataframe**
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((50, 20)), columns=("col %d" % i for i in range(20))
+        ... )
         >>>
-        >>> st.dataframe(df)  # Same as st.write(df)
+        >>> st.dataframe(df)
 
         .. output::
            https://doc-dataframe.streamlit.app/
@@ -458,11 +459,13 @@ class ArrowMixin:
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
-        >>> df = pd.DataFrame(np.random.randn(10, 20), columns=("col %d" % i for i in range(20)))
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((10, 20)), columns=("col %d" % i for i in range(20))
+        ... )
         >>>
         >>> st.dataframe(df.style.highlight_max(axis=0))
 
@@ -474,34 +477,39 @@ class ArrowMixin:
 
         You can customize a dataframe via ``column_config``, ``hide_index``, or ``column_order``.
 
-        >>> import random
         >>> import pandas as pd
         >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
         >>> df = pd.DataFrame(
-        >>>     {
-        >>>         "name": ["Roadmap", "Extras", "Issues"],
-        >>>         "url": ["https://roadmap.streamlit.app", "https://extras.streamlit.app", "https://issues.streamlit.app"],
-        >>>         "stars": [random.randint(0, 1000) for _ in range(3)],
-        >>>         "views_history": [[random.randint(0, 5000) for _ in range(30)] for _ in range(3)],
-        >>>     }
-        >>> )
+        ...     {
+        ...         "name": ["Roadmap", "Extras", "Issues"],
+        ...         "url": [
+        ...             "https://roadmap.streamlit.app",
+        ...             "https://extras.streamlit.app",
+        ...             "https://issues.streamlit.app",
+        ...         ],
+        ...         "stars": rng(0).integers(0, 1000, size=3),
+        ...         "views_history": rng(0).integers(0, 5000, size=(3, 30)).tolist(),
+        ...     }
+        ... )
+        >>>
         >>> st.dataframe(
-        >>>     df,
-        >>>     column_config={
-        >>>         "name": "App name",
-        >>>         "stars": st.column_config.NumberColumn(
-        >>>             "Github Stars",
-        >>>             help="Number of stars on GitHub",
-        >>>             format="%d ⭐",
-        >>>         ),
-        >>>         "url": st.column_config.LinkColumn("App URL"),
-        >>>         "views_history": st.column_config.LineChartColumn(
-        >>>             "Views (past 30 days)", y_min=0, y_max=5000
-        >>>         ),
-        >>>     },
-        >>>     hide_index=True,
-        >>> )
+        ...     df,
+        ...     column_config={
+        ...         "name": "App name",
+        ...         "stars": st.column_config.NumberColumn(
+        ...             "Github Stars",
+        ...             help="Number of stars on GitHub",
+        ...             format="%d ⭐",
+        ...         ),
+        ...         "url": st.column_config.LinkColumn("App URL"),
+        ...         "views_history": st.column_config.LineChartColumn(
+        ...             "Views (past 30 days)", y_min=0, y_max=5000
+        ...         ),
+        ...     },
+        ...     hide_index=True,
+        ... )
 
         .. output::
            https://doc-dataframe-config.streamlit.app/
@@ -511,22 +519,28 @@ class ArrowMixin:
 
         You can use column configuration to format your index.
 
-        >>> import streamlit as st
+        >>> from datetime import datetime, date
+        >>> import numpy as np
         >>> import pandas as pd
-        >>> from datetime import date
+        >>> import streamlit as st
         >>>
-        >>> df = pd.DataFrame(
-        >>>     {
-        >>>         "Date": [date(2024, 1, 1), date(2024, 2, 1), date(2024, 3, 1)],
-        >>>         "Total": [13429, 23564, 23452],
-        >>>     }
-        >>> )
-        >>> df.set_index("Date", inplace=True)
+        >>> @st.cache_data
+        >>> def load_data():
+        >>>     year = datetime.now().year
+        >>>     df = pd.DataFrame(
+        ...         {
+        ...             "Date": [date(year, month, 1) for month in range(1, 4)],
+        ...             "Total": np.random.randint(1000, 5000, size=3),
+        ...         }
+        ...     )
+        >>>     df.set_index("Date", inplace=True)
+        >>>     return df
         >>>
+        >>> df = load_data()
         >>> config = {
-        >>>     "_index": st.column_config.DateColumn("Month", format="MMM YYYY"),
-        >>>     "Total": st.column_config.NumberColumn("Total ($)"),
-        >>> }
+        ...     "_index": st.column_config.DateColumn("Month", format="MMM YYYY"),
+        ...     "Total": st.column_config.NumberColumn("Total ($)"),
+        ... }
         >>>
         >>> st.dataframe(df, column_config=config)
 
@@ -680,12 +694,13 @@ class ArrowMixin:
         --------
         **Example 1: Display a simple dataframe as a static table**
 
-        >>> import streamlit as st
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
         >>> df = pd.DataFrame(
-        ...     np.random.randn(10, 5), columns=("col %d" % i for i in range(5))
+        ...     rng(0).standard_normal(size=(10, 5)),
+        ...     columns=("col %d" % i for i in range(5)),
         ... )
         >>>
         >>> st.table(df)
@@ -696,19 +711,22 @@ class ArrowMixin:
 
         **Example 2: Display a table of Markdown strings**
 
-        >>> import streamlit as st
         >>> import pandas as pd
+        >>> import streamlit as st
         >>>
         >>> df = pd.DataFrame(
         ...     {
         ...         "Command": ["**st.table**", "*st.dataframe*"],
         ...         "Type": ["`static`", "`interactive`"],
         ...         "Docs": [
-        ...             "[:rainbow[docs]](https://docs.streamlit.io/develop/api-reference/data/st.dataframe)",
-        ...             "[:book:](https://docs.streamlit.io/develop/api-reference/data/st.table)",
+        ...             "[:rainbow[docs]](https://docs.streamlit.io"
+        ...             "/develop/api-reference/data/st.dataframe)",
+        ...             "[:open_book:](https://docs.streamlit.io"
+        ...             "/develop/api-reference/data/st.table)",
         ...         ],
         ...     }
         ... )
+        >>>
         >>> st.table(df)
 
         .. output::
@@ -757,32 +775,30 @@ class ArrowMixin:
 
         Example
         -------
-        >>> import streamlit as st
+        >>> import time
         >>> import pandas as pd
-        >>> import numpy as np
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
         >>>
         >>> df1 = pd.DataFrame(
-        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-        ... )
-        >>>
-        >>> my_table = st.table(df1)
+        >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+        >>> )
         >>>
         >>> df2 = pd.DataFrame(
-        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-        ... )
+        >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+        >>> )
         >>>
+        >>> my_table = st.table(df1)
+        >>> time.sleep(1)
         >>> my_table.add_rows(df2)
-        >>> # Now the table shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
 
         You can do the same thing with plots. For example, if you want to add
         more data to a line chart:
 
         >>> # Assuming df1 and df2 from the example above still exist...
         >>> my_chart = st.line_chart(df1)
+        >>> time.sleep(1)
         >>> my_chart.add_rows(df2)
-        >>> # Now the chart shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
 
         And for plots whose datasets are named, you can pass the data with a
         keyword argument where the key is the name:
@@ -848,30 +864,30 @@ def _arrow_add_rows(
 
     Example
     -------
-    >>> import streamlit as st
+    >>> import time
     >>> import pandas as pd
-    >>> import numpy as np
+    >>> import streamlit as st
+    >>> from numpy.random import default_rng as rng
     >>>
     >>> df1 = pd.DataFrame(
-    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-    ... )
-    >>> my_table = st.table(df1)
+    >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+    >>> )
     >>>
     >>> df2 = pd.DataFrame(
-    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-    ... )
+    >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+    >>> )
+    >>>
+    >>> my_table = st.table(df1)
+    >>> time.sleep(1)
     >>> my_table.add_rows(df2)
-    >>> # Now the table shown in the Streamlit app contains the data for
-    >>> # df1 followed by the data for df2.
 
     You can do the same thing with plots. For example, if you want to add
     more data to a line chart:
 
     >>> # Assuming df1 and df2 from the example above still exist...
     >>> my_chart = st.line_chart(df1)
+    >>> time.sleep(1)
     >>> my_chart.add_rows(df2)
-    >>> # Now the chart shown in the Streamlit app contains the data for
-    >>> # df1 followed by the data for df2.
 
     And for plots whose datasets are named, you can pass the data with a
     keyword argument where the key is the name:

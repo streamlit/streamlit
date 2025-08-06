@@ -430,16 +430,16 @@ class LayoutsMixin:
         You can just call methods directly on the returned objects:
 
         >>> import streamlit as st
-        >>> import numpy as np
+        >>> from numpy.random import default_rng as rng
         >>>
+        >>> df = rng(0).standard_normal((10, 1))
         >>> col1, col2 = st.columns([3, 1])
-        >>> data = np.random.randn(10, 1)
         >>>
         >>> col1.subheader("A wide column with a chart")
-        >>> col1.line_chart(data)
+        >>> col1.line_chart(df)
         >>>
         >>> col2.subheader("A narrow column with the data")
-        >>> col2.write(data)
+        >>> col2.write(df)
 
         .. output ::
             https://doc-columns2.streamlit.app/
@@ -466,7 +466,6 @@ class LayoutsMixin:
         Adjust vertical alignment to customize your grid layouts.
 
         >>> import streamlit as st
-        >>> import numpy as np
         >>>
         >>> vertical_alignment = st.selectbox(
         >>>     "Vertical alignment", ["top", "center", "bottom"], index=2
@@ -639,17 +638,17 @@ class LayoutsMixin:
         Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
-        >>> import numpy as np
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = rng(0).standard_normal((10, 1))
         >>>
         >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
-        >>> data = np.random.randn(10, 1)
         >>>
         >>> tab1.subheader("A tab with a chart")
-        >>> tab1.line_chart(data)
+        >>> tab1.line_chart(df)
         >>>
         >>> tab2.subheader("A tab with the data")
-        >>> tab2.write(data)
-
+        >>> tab2.write(df)
 
         .. output ::
             https://doc-tabs2.streamlit.app/
