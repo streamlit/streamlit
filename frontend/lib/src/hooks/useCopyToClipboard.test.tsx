@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook } from "@testing-library/react"
 
 import { useCopyToClipboard } from "./useCopyToClipboard"
 
@@ -28,8 +28,13 @@ Object.assign(navigator, {
 
 describe("useCopyToClipboard", () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     mockWriteText.mockReset()
     mockWriteText.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("should copy text to clipboard and reset after timeout", async () => {
@@ -49,9 +54,10 @@ describe("useCopyToClipboard", () => {
     expect(result.current.isCopied).toBe(true)
 
     // Wait for timeout to reset
-    await waitFor(() => expect(result.current.isCopied).toBe(false), {
-      timeout: timeout * 2,
+    act(() => {
+      vi.advanceTimersByTime(timeout)
     })
+    expect(result.current.isCopied).toBe(false)
   })
 
   it("should restart timeout on multiple rapid clicks", async () => {
@@ -67,7 +73,9 @@ describe("useCopyToClipboard", () => {
     expect(result.current.isCopied).toBe(true)
 
     // Wait for half the timeout, then copy again
-    await new Promise(r => setTimeout(r, timeout / 2))
+    act(() => {
+      vi.advanceTimersByTime(timeout / 2)
+    })
     // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
       result.current.copyToClipboard()
@@ -75,7 +83,9 @@ describe("useCopyToClipboard", () => {
     expect(result.current.isCopied).toBe(true)
 
     // Wait for half the timeout again, then copy one more time
-    await new Promise(r => setTimeout(r, timeout / 2))
+    act(() => {
+      vi.advanceTimersByTime(timeout / 2)
+    })
     // eslint-disable-next-line @typescript-eslint/require-await
     await act(async () => {
       result.current.copyToClipboard()
@@ -84,13 +94,16 @@ describe("useCopyToClipboard", () => {
 
     // Now wait for the full timeout from the last copy
     // Should still be copied after the original timeout would have expired
-    await new Promise(r => setTimeout(r, timeout / 2))
+    act(() => {
+      vi.advanceTimersByTime(timeout / 2)
+    })
     expect(result.current.isCopied).toBe(true)
 
     // But should reset after the full timeout from the last copy
-    await waitFor(() => expect(result.current.isCopied).toBe(false), {
-      timeout: timeout,
+    act(() => {
+      vi.advanceTimersByTime(timeout / 2)
     })
+    expect(result.current.isCopied).toBe(false)
 
     expect(mockWriteText).toHaveBeenCalledTimes(3)
   })

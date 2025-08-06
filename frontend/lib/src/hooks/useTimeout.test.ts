@@ -14,39 +14,48 @@
  * limitations under the License.
  */
 
-import { renderHook, waitFor } from "@testing-library/react"
+import { renderHook } from "@testing-library/react"
 
 import useTimeout from "./useTimeout"
 
 describe("timeout function", () => {
-  it("should call the callback function after timeout", async () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("should call the callback function after timeout", () => {
     const callback = vi.fn()
     const timeoutDelayMs = 50
     renderHook(() => useTimeout(callback, timeoutDelayMs))
-    await waitFor(() => expect(callback).toHaveBeenCalledTimes(1), {
-      timeout: 2 * timeoutDelayMs,
-    })
+
+    expect(callback).toHaveBeenCalledTimes(0)
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it("should not call the callback function when cancel timeout", async () => {
+  it("should not call the callback function when cancel timeout", () => {
     const callback = vi.fn()
     const timeoutDelayMs = 100
     const { result } = renderHook(() => useTimeout(callback, timeoutDelayMs))
     const { clear } = result.current
     clear()
-    await new Promise(r => setTimeout(r, 2 * timeoutDelayMs))
+    vi.advanceTimersByTime(2 * timeoutDelayMs)
     expect(callback).toHaveBeenCalledTimes(0)
   })
 
-  it("should not call the callback when timeoutMs is null", async () => {
+  it("should not call the callback when timeoutMs is null", () => {
     const callback = vi.fn()
     renderHook(() => useTimeout(callback, null))
     // Wait longer than a typical timeout to ensure callback isn't called
-    await new Promise(r => setTimeout(r, 200))
+    vi.advanceTimersByTime(200)
     expect(callback).toHaveBeenCalledTimes(0)
   })
 
-  it("should start timeout when timeoutMs changes from null to a number", async () => {
+  it("should start timeout when timeoutMs changes from null to a number", () => {
     const callback = vi.fn()
     const timeoutDelayMs = 50
     let timeoutMs: number | null = null
@@ -54,7 +63,7 @@ describe("timeout function", () => {
     const { rerender } = renderHook(() => useTimeout(callback, timeoutMs))
 
     // Initially no timeout should be set
-    await new Promise(r => setTimeout(r, 100))
+    vi.advanceTimersByTime(100)
     expect(callback).toHaveBeenCalledTimes(0)
 
     // Change timeoutMs to a number
@@ -62,12 +71,11 @@ describe("timeout function", () => {
     rerender()
 
     // Now callback should be called after the timeout
-    await waitFor(() => expect(callback).toHaveBeenCalledTimes(1), {
-      timeout: 2 * timeoutDelayMs,
-    })
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it("should clear timeout when timeoutMs changes from a number to null", async () => {
+  it("should clear timeout when timeoutMs changes from a number to null", () => {
     const callback = vi.fn()
     const timeoutDelayMs = 100
     let timeoutMs: number | null = timeoutDelayMs
@@ -79,11 +87,11 @@ describe("timeout function", () => {
     rerender()
 
     // Wait longer than the original timeout to ensure callback isn't called
-    await new Promise(r => setTimeout(r, 2 * timeoutDelayMs))
+    vi.advanceTimersByTime(2 * timeoutDelayMs)
     expect(callback).toHaveBeenCalledTimes(0)
   })
 
-  it("should handle multiple transitions between null and number values", async () => {
+  it("should handle multiple transitions between null and number values", () => {
     const callback = vi.fn()
     const timeoutDelayMs = 50
     let timeoutMs: number | null = null
@@ -91,28 +99,26 @@ describe("timeout function", () => {
     const { rerender } = renderHook(() => useTimeout(callback, timeoutMs))
 
     // Start with null - no callback
-    await new Promise(r => setTimeout(r, 100))
+    vi.advanceTimersByTime(100)
     expect(callback).toHaveBeenCalledTimes(0)
 
     // Change to number - should trigger callback
     timeoutMs = timeoutDelayMs
     rerender()
-    await waitFor(() => expect(callback).toHaveBeenCalledTimes(1), {
-      timeout: 2 * timeoutDelayMs,
-    })
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
 
     // Change back to null - no more callbacks
     timeoutMs = null
     rerender()
-    await new Promise(r => setTimeout(r, 100))
+    vi.advanceTimersByTime(100)
     expect(callback).toHaveBeenCalledTimes(1)
 
     // Change to number again - should trigger callback again
     timeoutMs = timeoutDelayMs
     rerender()
-    await waitFor(() => expect(callback).toHaveBeenCalledTimes(2), {
-      timeout: 2 * timeoutDelayMs,
-    })
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(2)
   })
 
   it("should clear timeout using the clear function when timeoutMs is null", () => {
@@ -124,7 +130,7 @@ describe("timeout function", () => {
     expect(() => clear()).not.toThrow()
   })
 
-  it("should handle changing from one number to another", async () => {
+  it("should handle changing from one number to another", () => {
     const callback = vi.fn()
     let timeoutMs = 200 // Long initial timeout
 
@@ -135,22 +141,21 @@ describe("timeout function", () => {
     rerender()
 
     // Should only call callback once with the new shorter timeout
-    await waitFor(() => expect(callback).toHaveBeenCalledTimes(1), {
-      timeout: 100,
-    })
+    vi.advanceTimersByTime(50)
+    expect(callback).toHaveBeenCalledTimes(1)
 
     // Ensure it doesn't call again after the original longer timeout
-    await new Promise(r => setTimeout(r, 200))
+    vi.advanceTimersByTime(200)
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it("should restart timeout when restart function is called", async () => {
+  it("should restart timeout when restart function is called", () => {
     const callback = vi.fn()
     const timeoutDelayMs = 100
     const { result } = renderHook(() => useTimeout(callback, timeoutDelayMs))
 
     // Wait for half the timeout duration, then restart
-    await new Promise(r => setTimeout(r, timeoutDelayMs / 2))
+    vi.advanceTimersByTime(timeoutDelayMs / 2)
     const { restart } = result.current
     restart()
 
@@ -158,32 +163,30 @@ describe("timeout function", () => {
     expect(callback).toHaveBeenCalledTimes(0)
 
     // Wait for the full timeout duration from restart
-    await waitFor(() => expect(callback).toHaveBeenCalledTimes(1), {
-      timeout: 2 * timeoutDelayMs,
-    })
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it("should handle multiple restarts before timeout fires", async () => {
+  it("should handle multiple restarts before timeout fires", () => {
     const callback = vi.fn()
     const timeoutDelayMs = 80
     const { result } = renderHook(() => useTimeout(callback, timeoutDelayMs))
     const { restart } = result.current
 
     // Restart multiple times rapidly
-    await new Promise(r => setTimeout(r, 20))
+    vi.advanceTimersByTime(20)
     restart()
-    await new Promise(r => setTimeout(r, 20))
+    vi.advanceTimersByTime(20)
     restart()
-    await new Promise(r => setTimeout(r, 20))
+    vi.advanceTimersByTime(20)
     restart()
 
     // Should not have called callback yet
     expect(callback).toHaveBeenCalledTimes(0)
 
     // Wait for the timeout from the last restart
-    await waitFor(() => expect(callback).toHaveBeenCalledTimes(1), {
-      timeout: 2 * timeoutDelayMs,
-    })
+    vi.advanceTimersByTime(timeoutDelayMs)
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 
   it("should not restart timeout when timeoutMs is null", () => {
@@ -195,8 +198,7 @@ describe("timeout function", () => {
     expect(() => restart()).not.toThrow()
 
     // Wait a bit and ensure callback was never called
-    setTimeout(() => {
-      expect(callback).toHaveBeenCalledTimes(0)
-    }, 100)
+    vi.advanceTimersByTime(100)
+    expect(callback).toHaveBeenCalledTimes(0)
   })
 })
