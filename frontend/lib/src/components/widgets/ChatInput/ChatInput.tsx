@@ -298,6 +298,7 @@ function ChatInput({
     )
     setFiles([])
     setValue("")
+    autoExpand.clearScrollHeight()
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {

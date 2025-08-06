@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.47.1",
+  "version": "1.48.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,8 @@
     ".": {
       "require": "./dist/streamlit-connection.cjs.js",
       "import": "./dist/streamlit-connection.es.js",
-      "default": "./dist/streamlit-connection.umd.js"
+      "default": "./dist/streamlit-connection.umd.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "scripts": {

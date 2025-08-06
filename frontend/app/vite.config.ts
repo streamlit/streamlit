@@ -17,7 +17,6 @@ import { defineConfig } from "vite"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import path from "path"
 import viteTsconfigPaths from "vite-tsconfig-paths"
 
 const BASE = "./"
@@ -73,15 +72,6 @@ export default defineConfig({
       {
         find: "react-syntax-highlighter",
         replacement: "react-syntax-highlighter/dist/cjs/index.js",
-      },
-      // TODO: #moduleResolutionBundler
-      // Fix for vega-embed v7 ES module structure
-      {
-        find: "vega-embed",
-        replacement: path.resolve(
-          __dirname,
-          "../node_modules/vega-embed/build/embed.js"
-        ),
       },
       ...profilerAliases,
     ],
