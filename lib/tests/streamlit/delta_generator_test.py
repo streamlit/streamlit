@@ -796,6 +796,111 @@ class KeyWidgetIdTests(DeltaGeneratorTestCase):
         assert id1 != id2
 
 
+class KeyAsMainIdentityTests(DeltaGeneratorTestCase):
+    """Test key_as_main_identity parameter in compute_and_register_element_id."""
+
+    @parameterized.expand(
+        [
+            # test_name, key_as_main_identity, user_key, expect_same_id, description
+            (
+                "with_key_true",
+                True,
+                "test_key",
+                True,
+                "key_as_main_identity=True with user_key should ignore kwargs",
+            ),
+            (
+                "without_key_true",
+                True,
+                None,
+                False,
+                "key_as_main_identity=True without user_key should use kwargs",
+            ),
+            (
+                "with_key_false",
+                False,
+                "test_key2",
+                False,
+                "key_as_main_identity=False should always use kwargs",
+            ),
+            (
+                "with_key_default",
+                None,  # Not specified
+                "test_key3",
+                False,
+                "key_as_main_identity not specified should use kwargs (default False)",
+            ),
+        ]
+    )
+    def test_key_as_main_identity_behavior(
+        self, _name, key_as_main_identity, user_key, expect_same_id, description
+    ):
+        """Test key_as_main_identity parameter behavior with various configurations."""
+        # Prepare kwargs for compute_and_register_element_id
+        kwargs = {
+            "element_type": "text_input",
+            "user_key": user_key,
+            "label": "Label #1",
+            "default": "Value #1",
+            "dg": None,
+        }
+
+        # Add key_as_main_identity only if it's not None (to test default behavior)
+        if key_as_main_identity is not None:
+            kwargs["key_as_main_identity"] = key_as_main_identity
+
+        # Create first element
+        id1 = compute_and_register_element_id(**kwargs)
+
+        # Clear the widget registry to allow reusing the same key
+        ctx = get_script_run_ctx()
+        ctx.widget_ids_this_run.clear()
+        ctx.widget_user_keys_this_run.clear()
+
+        # Create second element with different kwargs
+        kwargs["label"] = "Different Label"
+        kwargs["default"] = "Different Value"
+        id2 = compute_and_register_element_id(**kwargs)
+
+        # Assert based on expected behavior
+        if expect_same_id:
+            assert id1 == id2, f"IDs should be equal: {description}"
+        else:
+            assert id1 != id2, f"IDs should be different: {description}"
+
+    def test_key_as_main_identity_different_element_types(self):
+        """When key_as_main_identity=True with same user_key,
+        different element types should still produce different IDs."""
+        # Create text_input with key_as_main_identity=True
+        id1 = compute_and_register_element_id(
+            "text_input",
+            user_key="shared_key",
+            key_as_main_identity=True,
+            label="Label #1",
+            default="Value #1",
+            dg=None,
+        )
+
+        # Clear the widget registry to allow reusing the same key
+        ctx = get_script_run_ctx()
+        ctx.widget_ids_this_run.clear()
+        ctx.widget_user_keys_this_run.clear()
+
+        # Create text_area with same key - different element type
+        id2 = compute_and_register_element_id(
+            "text_area",
+            user_key="shared_key",
+            key_as_main_identity=True,
+            label="Label #1",
+            default="Value #1",
+            dg=None,
+        )
+
+        assert id1 != id2, (
+            "IDs should be different for different element types even with same key"
+        )
+
+
 class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Images"""
 
