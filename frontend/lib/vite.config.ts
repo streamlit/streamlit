@@ -63,12 +63,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "~lib": path.resolve(__dirname, "../lib/src"),
-      // TODO: #moduleResolutionBundler
-      // Fix for vega-embed v7 ES module structure
-      "vega-embed": path.resolve(
-        __dirname,
-        "../node_modules/vega-embed/build/embed.js"
-      ),
     },
   },
   test: {
