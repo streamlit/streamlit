@@ -221,6 +221,10 @@ def compute_and_register_element_id(
         Some common parameters like key, disabled,
         format_func, label_visibility, args, kwargs, on_change, and
         the active_script_hash are not supposed to be added here
+
+    key_as_main_identity : bool
+        If True, if a key is provided by the user, we don't include
+        command kwargs in the element ID computation.
     """
     ctx = get_script_run_ctx()
 
