@@ -209,6 +209,71 @@ describe("useTextInputAutoExpand", () => {
     })
   })
 
+  describe("dependencies", () => {
+    it("should update scroll height when dependencies change", () => {
+      const reactiveRef = createMockTextareaRef()
+
+      let dependency = "initial"
+      const { result, rerender } = renderHook(() =>
+        useTextInputAutoExpand({
+          textareaRef: reactiveRef,
+          dependencies: [dependency],
+        })
+      )
+
+      // Initial state should not be extended
+      expect(result.current.isExtended).toBe(false)
+      expect(result.current.height).toBe("2.5rem")
+
+      // Simulate content growth by changing scrollHeight
+      Object.defineProperty(reactiveRef.current!, "scrollHeight", {
+        value: 80, // Now significantly greater than offsetHeight
+        writable: true,
+        configurable: true,
+      })
+
+      // Change dependency and rerender - this should trigger updateScrollHeight
+      dependency = "changed"
+      rerender()
+
+      // Should now be extended due to dependency change triggering recalculation
+      expect(result.current.isExtended).toBe(true)
+      expect(result.current.height).toBe("81px") // new scrollHeight + ROUNDING_OFFSET
+    })
+
+    it("should handle multiple dependencies", () => {
+      const multiDepRef = createMockTextareaRef()
+
+      let dep1 = "a"
+      const dep2 = "b"
+      const { result, rerender } = renderHook(() =>
+        useTextInputAutoExpand({
+          textareaRef: multiDepRef,
+          dependencies: [dep1, dep2],
+        })
+      )
+
+      // Initial state should not be extended
+      expect(result.current.isExtended).toBe(false)
+      expect(result.current.height).toBe("2.5rem")
+
+      // Simulate content growth by changing scrollHeight
+      Object.defineProperty(multiDepRef.current!, "scrollHeight", {
+        value: 100, // Now significantly greater than offsetHeight
+        writable: true,
+        configurable: true,
+      })
+
+      // Change one dependency and rerender - this should trigger updateScrollHeight
+      dep1 = "changed1"
+      rerender()
+
+      // Should now be extended due to dependencies change triggering recalculation
+      expect(result.current.isExtended).toBe(true)
+      expect(result.current.height).toBe("101px") // new scrollHeight + ROUNDING_OFFSET
+    })
+  })
+
   describe("updateScrollHeight function", () => {
     it("should handle null textarea ref in updateScrollHeight", () => {
       const nullRef = { current: null }

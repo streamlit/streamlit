@@ -20,7 +20,6 @@ import React, {
   memo,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -115,11 +114,8 @@ function ChatInput({
 
   const autoExpand = useTextInputAutoExpand({
     textareaRef: chatInputRef,
+    dependencies: [placeholder],
   })
-
-  useLayoutEffect(() => {
-    autoExpand.updateScrollHeight()
-  }, [placeholder, autoExpand])
 
   /**
    * @returns True if the user-specified state.value has not yet been synced to
