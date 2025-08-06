@@ -914,8 +914,6 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
-            # download_button is not allowed to be used in a form.
-            form_id=None,
             dg=self.dg,
             label=label,
             icon=icon,
@@ -1123,8 +1121,6 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "button",
             user_key=key,
-            # Only the
-            form_id=form_id,
             dg=self.dg,
             label=label,
             icon=icon,

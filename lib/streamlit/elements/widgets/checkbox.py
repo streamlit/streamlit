@@ -342,7 +342,6 @@ class CheckboxMixin:
         element_id = compute_and_register_element_id(
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
             user_key=key,
-            form_id=current_form_id(self.dg),
             dg=self.dg,
             label=label,
             value=bool(value),
