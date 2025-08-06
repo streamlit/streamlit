@@ -20,7 +20,7 @@ import useTimeout from "./useTimeout"
 
 export type UseCopyToClipboardResult = {
   isCopied: boolean
-  copyToClipboard: () => void
+  copyToClipboard: (inlineText?: string) => void
 }
 
 export const useCopyToClipboard = ({
@@ -30,13 +30,13 @@ export const useCopyToClipboard = ({
   /**
    * The text to copy to the clipboard.
    */
-  text: string
+  text?: string
   /**
    * The (optional) timeout in milliseconds to reset the copied state. Default
    * is 2 seconds.
    */
   timeout?: number
-}): UseCopyToClipboardResult => {
+} = {}): UseCopyToClipboardResult => {
   const [isCopied, setIsCopied] = useState(false)
 
   const { restart } = useTimeout(
@@ -46,22 +46,30 @@ export const useCopyToClipboard = ({
     isCopied ? timeout : null
   )
 
-  const copyToClipboard = useCallback(() => {
-    const performCopy = async (): Promise<void> => {
-      try {
-        await navigator.clipboard.writeText(text)
-        setIsCopied(true)
-        // Restart the timeout on each successful copy to reset the timer
-        restart()
-      } catch {
-        setIsCopied(false)
+  const copyToClipboard = useCallback(
+    (inlineText?: string) => {
+      const textToCopy = inlineText ?? text
+      if (!textToCopy) {
+        return
       }
-    }
 
-    // Call the async function but don't return the promise to make passing the
-    // callback into `onClick` pass the type-checker
-    void performCopy()
-  }, [text, restart])
+      const performCopy = async (): Promise<void> => {
+        try {
+          await navigator.clipboard.writeText(textToCopy)
+          setIsCopied(true)
+          // Restart the timeout on each successful copy to reset the timer
+          restart()
+        } catch {
+          setIsCopied(false)
+        }
+      }
+
+      // Call the async function but don't return the promise to make passing the
+      // callback into `onClick` pass the type-checker
+      void performCopy()
+    },
+    [text, restart]
+  )
 
   return { isCopied, copyToClipboard }
 }
