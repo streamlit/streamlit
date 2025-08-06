@@ -33,12 +33,12 @@ def test_data_frame_with_different_sizes(app: Page):
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "400px"},
         {"width": "704px", "height": "400px"},
-        {"width": "226px", "height": "400px"},
+        {"width": "229px", "height": "400px"},
         {"width": "704px", "height": "400px"},
         {"width": "200px", "height": "100px"},
         {"width": "704px", "height": "3537px"},
         {"width": "704px", "height": "142px"},
-        {"width": "226px", "height": "142px"},
+        {"width": "229px", "height": "142px"},
         {"width": "400px", "height": "300px"},
     ]
 
