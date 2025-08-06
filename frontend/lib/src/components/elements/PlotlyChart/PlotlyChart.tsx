@@ -111,12 +111,18 @@ export function PlotlyChart({
     // If there was already a state with a figure using the same id,
     // use that to recover the state. This happens in some situations
     // where a component un-mounts and mounts again.
-    const initialFigureState = widgetMgr.getElementState(element.id, "figure")
+    const initialFigureState = element.id
+      ? widgetMgr.getElementState(element.id, "figure")
+      : undefined
     if (initialFigureState) {
       return initialFigureState
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
+
+  useEffect(() => {
+    setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
+  }, [initialFigureSpec])
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
   const isLassoSelectionActivated =
@@ -185,12 +191,14 @@ export function PlotlyChart({
       config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
     return config
-    // We want to reload the plotlyConfig object whenever the element id changes
+    // We want to reload the plotlyConfig object whenever the element
+    // id or spec changes
     // TODO: Update to match React best practices
     // eslint-disable-next-line react-hooks/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.id,
+    element.spec,
     element.config,
     isFullScreen,
     disableFullscreenMode,
@@ -283,6 +291,7 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.id,
+    initialFigureSpec,
     isSelectionActivated,
     isPointsSelectionActivated,
     isBoxSelectionActivated,
@@ -487,12 +496,16 @@ export function PlotlyChart({
             : undefined
         }
         onInitialized={figure => {
-          widgetMgr.setElementState(element.id, "figure", figure)
+          if (element.id) {
+            widgetMgr.setElementState(element.id, "figure", figure)
+          }
         }}
         // Update the figure state on every change to the figure itself:
         onUpdate={figure => {
-          // Save the updated figure state to allow it to be recovered
-          widgetMgr.setElementState(element.id, "figure", figure)
+          if (element.id) {
+            // Save the updated figure state to allow it to be recovered
+            widgetMgr.setElementState(element.id, "figure", figure)
+          }
           setPlotlyFigure(figure)
         }}
       />

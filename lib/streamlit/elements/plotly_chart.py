@@ -550,24 +550,22 @@ class PlotlyMixin:
 
         ctx = get_script_run_ctx()
 
-        # We are computing the widget id for all plotly uses
-        # to also allow non-widget Plotly charts to keep their state
-        # when the frontend component gets unmounted and remounted.
-        plotly_chart_proto.id = compute_and_register_element_id(
-            "plotly_chart",
-            user_key=key,
-            form_id=plotly_chart_proto.form_id,
-            dg=self.dg,
-            plotly_spec=plotly_chart_proto.spec,
-            plotly_config=plotly_chart_proto.config,
-            selection_mode=selection_mode,
-            is_selection_activated=is_selection_activated,
-            theme=theme,
-            use_container_width=use_container_width,
-        )
-
         if is_selection_activated:
             # Selections are activated, treat plotly chart as a widget:
+
+            plotly_chart_proto.id = compute_and_register_element_id(
+                "plotly_chart",
+                user_key=key,
+                form_id=plotly_chart_proto.form_id,
+                dg=self.dg,
+                plotly_spec=plotly_chart_proto.spec,
+                plotly_config=plotly_chart_proto.config,
+                selection_mode=selection_mode,
+                is_selection_activated=is_selection_activated,
+                theme=theme,
+                use_container_width=use_container_width,
+            )
+
             plotly_chart_proto.selection_mode.extend(
                 parse_selection_mode(selection_mode)
             )
