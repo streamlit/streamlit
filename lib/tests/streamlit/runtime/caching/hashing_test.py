@@ -33,6 +33,7 @@ from unittest.mock import MagicMock, Mock
 
 import numpy as np
 import pandas as pd
+import pydantic
 import pytest
 from parameterized import parameterized
 from PIL import Image
@@ -528,6 +529,23 @@ class HashTest(unittest.TestCase):
 
         assert get_hash(im4) == get_hash(im5)
         assert get_hash(im5) != get_hash(im6)
+
+    def test_pydantic_model(self):
+        class Foo(pydantic.BaseModel):
+            name: str
+
+        class Bar(pydantic.BaseModel):
+            name: str
+
+        m1 = Foo(name="fake_name1")
+        m1_again = Foo(name="fake_name1")
+        m2 = Foo(name="fake_name2")
+        m3 = Bar(name="fake_name1")
+
+        assert get_hash(m1) == get_hash(m1)
+        assert get_hash(m1) == get_hash(m1_again)
+        assert get_hash(m1) != get_hash(m2)
+        assert get_hash(m1) != get_hash(m3)
 
     @parameterized.expand(
         [
