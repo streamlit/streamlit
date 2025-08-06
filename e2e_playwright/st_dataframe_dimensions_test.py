@@ -21,6 +21,28 @@ from e2e_playwright.shared.app_utils import click_button
 def test_data_frame_with_different_sizes(app: Page):
     """Test that st.dataframe should show different sizes as expected."""
 
+    # Mock the document font size to ensure consistent behavior across environments
+    # This prevents content width calculations from varying due to browser font size differences
+    app.add_init_script("""
+        // Mock getComputedStyle to return consistent 16px font size for document element
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = function(element, pseudoElement) {
+            const computedStyle = originalGetComputedStyle.call(this, element, pseudoElement);
+            if (element === document.documentElement) {
+                // Return a proxy that overrides fontSize property
+                return new Proxy(computedStyle, {
+                    get(target, prop) {
+                        if (prop === 'fontSize') {
+                            return '16px';
+                        }
+                        return target[prop];
+                    }
+                });
+            }
+            return computedStyle;
+        };
+    """)
+
     expected = [
         {"width": "704px", "height": "400px"},
         {"width": "250px", "height": "150px"},
